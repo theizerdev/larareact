@@ -55,11 +55,7 @@ class InstallCommand extends Command
         $this->call('larareact:db');
 
         $this->comment('Generating frontend routes and actions...');
-        try {
-            $this->call('wayfinder:generate');
-        } catch (\Exception $e) {
-            $this->warn('Could not generate frontend types automatically: ' . $e->getMessage());
-        }
+        $this->runCommands([PHP_BINARY.' artisan wayfinder:generate']);
 
         $this->comment('Installing Node dependencies...');
         $this->installNodeDependencies();
