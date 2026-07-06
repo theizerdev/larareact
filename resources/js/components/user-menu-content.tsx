@@ -12,12 +12,15 @@ import { logout } from '@/routes';
 import { edit } from '@/routes/profile';
 import type { User } from '@/types';
 
+import { useTranslate } from '@/hooks/use-translate';
+
 type Props = {
     user: User;
 };
 
 export function UserMenuContent({ user }: Props) {
     const cleanup = useMobileNavigation();
+    const { __ } = useTranslate();
 
     const handleLogout = () => {
         cleanup();
@@ -41,7 +44,7 @@ export function UserMenuContent({ user }: Props) {
                         onClick={cleanup}
                     >
                         <Settings className="mr-2" />
-                        Settings
+                        {__('Settings')}
                     </Link>
                 </DropdownMenuItem>
             </DropdownMenuGroup>
@@ -55,7 +58,7 @@ export function UserMenuContent({ user }: Props) {
                     data-test="logout-button"
                 >
                     <LogOut className="mr-2" />
-                    Log out
+                    {__('Log out')}
                 </Link>
             </DropdownMenuItem>
         </>

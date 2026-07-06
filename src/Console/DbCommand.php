@@ -17,8 +17,9 @@ class DbCommand extends Command
     {
         $this->info('Starting database configuration...');
 
-        if (!$this->configureDatabase()) {
+        if (! $this->configureDatabase()) {
             $this->error('Database configuration failed.');
+
             return self::FAILURE;
         }
 
@@ -26,7 +27,8 @@ class DbCommand extends Command
         try {
             $this->call('migrate', ['--force' => true]);
         } catch (\Exception $e) {
-            $this->error('Migrations failed: ' . $e->getMessage());
+            $this->error('Migrations failed: '.$e->getMessage());
+
             return self::FAILURE;
         }
 
@@ -43,12 +45,13 @@ class DbCommand extends Command
     {
         $envPath = base_path('.env');
 
-        if (!file_exists($envPath)) {
+        if (! file_exists($envPath)) {
             if (file_exists(base_path('.env.example'))) {
                 copy(base_path('.env.example'), $envPath);
                 $this->info('Created .env file from .env.example.');
             } else {
                 $this->error('.env file not found and .env.example is missing.');
+
                 return false;
             }
         }
@@ -69,10 +72,10 @@ class DbCommand extends Command
             $database = $this->ask('SQLite database file path?', 'database/database.sqlite');
             $databasePath = base_path($database);
             $dir = dirname($databasePath);
-            if (!is_dir($dir)) {
+            if (! is_dir($dir)) {
                 mkdir($dir, 0755, true);
             }
-            if (!file_exists($databasePath)) {
+            if (! file_exists($databasePath)) {
                 touch($databasePath);
                 $this->info("Created SQLite database file: {$database}");
             }
@@ -85,7 +88,7 @@ class DbCommand extends Command
         }
 
         // Test and create DB if it does not exist
-        if (!$this->testAndCreateDatabase($driver, $host, $port, $database, $username, $password)) {
+        if (! $this->testAndCreateDatabase($driver, $host, $port, $database, $username, $password)) {
             return false;
         }
 
@@ -112,7 +115,8 @@ class DbCommand extends Command
         DB::purge($driver);
         DB::reconnect($driver);
 
-        $this->info("Database configured and connected successfully.");
+        $this->info('Database configured and connected successfully.');
+
         return true;
     }
 
@@ -125,7 +129,7 @@ class DbCommand extends Command
         try {
             // Temporary configure connection to test
             config([
-                "database.connections.temp_test" => [
+                'database.connections.temp_test' => [
                     'driver' => $driver,
                     'host' => $host,
                     'port' => $port,
@@ -136,27 +140,30 @@ class DbCommand extends Command
                     'collation' => 'utf8mb4_unicode_ci',
                     'prefix' => '',
                     'sslmode' => 'prefer',
-                ]
+                ],
             ]);
 
             DB::purge('temp_test');
             DB::connection('temp_test')->getPdo();
+
             return true;
         } catch (\Exception $e) {
             // If connection failed, let's see if it is because the database is missing
             $message = $e->getMessage();
-            
+
             if (str_contains($message, 'Unknown database') || str_contains($message, 'does not exist')) {
                 $this->comment("Database '{$database}' does not exist. Attempting to create it...");
-                
+
                 if ($driver === 'mysql') {
                     try {
                         $pdo = new \PDO("mysql:host={$host};port={$port}", $username, $password);
                         $pdo->exec(sprintf('CREATE DATABASE IF NOT EXISTS `%s` CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;', $database));
                         $this->info("Database '{$database}' created successfully.");
+
                         return true;
                     } catch (\PDOException $pdoEx) {
-                        $this->error("Failed to create database: " . $pdoEx->getMessage());
+                        $this->error('Failed to create database: '.$pdoEx->getMessage());
+
                         return false;
                     }
                 } elseif ($driver === 'pgsql') {
@@ -164,18 +171,21 @@ class DbCommand extends Command
                         $pdo = new \PDO("pgsql:host={$host};port={$port};dbname=postgres", $username, $password);
                         $pdo->exec(sprintf('CREATE DATABASE "%s";', $database));
                         $this->info("Database '{$database}' created successfully.");
+
                         return true;
                     } catch (\PDOException $pdoEx) {
                         if (str_contains($pdoEx->getMessage(), 'already exists')) {
                             return true;
                         }
-                        $this->error("Failed to create database: " . $pdoEx->getMessage());
+                        $this->error('Failed to create database: '.$pdoEx->getMessage());
+
                         return false;
                     }
                 }
             }
 
-            $this->error("Connection failed: " . $message);
+            $this->error('Connection failed: '.$message);
+
             return false;
         }
     }
@@ -183,8 +193,9 @@ class DbCommand extends Command
     protected function createFirstUser(): void
     {
         $userClass = '\App\Models\User';
-        if (!class_exists($userClass)) {
+        if (! class_exists($userClass)) {
             $this->error("User model [{$userClass}] not found. Skipping user creation.");
+
             return;
         }
 
@@ -212,11 +223,12 @@ class DbCommand extends Command
             if ($this->confirm('Would you like to try again?', true)) {
                 $this->createFirstUser();
             }
+
             return;
         }
 
         try {
-            $user = new $userClass();
+            $user = new $userClass;
             $user->name = $name;
             $user->email = $email;
             $user->password = Hash::make($password);
@@ -225,7 +237,7 @@ class DbCommand extends Command
 
             $this->info("User '{$name}' <{$email}> created successfully!");
         } catch (\Exception $e) {
-            $this->error("Failed to create user: " . $e->getMessage());
+            $this->error('Failed to create user: '.$e->getMessage());
         }
     }
 

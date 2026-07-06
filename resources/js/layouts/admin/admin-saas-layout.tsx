@@ -40,6 +40,8 @@ import { edit as appearanceEdit } from '@/routes/appearance';
 import { edit as profileEdit } from '@/routes/profile';
 import { edit as securityEdit } from '@/routes/security';
 import type { BreadcrumbItem, NavItem } from '@/types';
+import { useTranslate } from '@/hooks/use-translate';
+import LanguageToggle from '@/components/language-toggle';
 
 type AdminSaasLayoutProps = {
     children: React.ReactNode;
@@ -57,6 +59,7 @@ const mainNavItems: NavItem[] = [
 function NavItem({ item, collapsed }: { item: NavItem; collapsed: boolean }) {
     const { url } = usePage();
     const active = url.startsWith(item.href as string);
+    const { __ } = useTranslate();
 
     const linkContent = (
         <Link
@@ -75,7 +78,7 @@ function NavItem({ item, collapsed }: { item: NavItem; collapsed: boolean }) {
                     collapsed && 'opacity-0',
                 )}
             >
-                {item.title}
+                {__(item.title)}
             </span>
         </Link>
     );
@@ -83,7 +86,7 @@ function NavItem({ item, collapsed }: { item: NavItem; collapsed: boolean }) {
     return collapsed ? (
         <Tooltip>
             <TooltipTrigger asChild>{linkContent}</TooltipTrigger>
-            <TooltipContent side="right">{item.title}</TooltipContent>
+            <TooltipContent side="right">{__(item.title)}</TooltipContent>
         </Tooltip>
     ) : (
         linkContent
@@ -100,6 +103,7 @@ export default function AdminSaasLayout({
     const { appearance, resolvedAppearance, updateAppearance } =
         useAppearance();
     const [collapsed, setCollapsed] = React.useState(false);
+    const { __ } = useTranslate();
 
     const [notifications, setNotifications] = React.useState([
         {
@@ -143,7 +147,11 @@ export default function AdminSaasLayout({
                             className="flex items-center gap-3 overflow-hidden"
                         >
                             <div className="flex shrink-0 items-center justify-center bg-transparent">
-                                <img src="/image/logo/larareact_icon.png" alt="LaraReact Icon" className="h-9 w-auto object-contain" />
+                                <img
+                                    src="/image/logo/larareact_icon.png"
+                                    alt="LaraReact Icon"
+                                    className="h-9 w-auto object-contain"
+                                />
                             </div>
                             <span
                                 className={cn(
@@ -244,7 +252,7 @@ export default function AdminSaasLayout({
                                             className="cursor-pointer"
                                         >
                                             <User className="mr-2 size-4" />
-                                            Perfil
+                                            {__('Profile')}
                                         </Link>
                                     </DropdownMenuItem>
                                     <DropdownMenuItem asChild>
@@ -253,7 +261,7 @@ export default function AdminSaasLayout({
                                             className="cursor-pointer"
                                         >
                                             <Settings className="mr-2 size-4" />
-                                            Apariencia
+                                            {__('Appearance')}
                                         </Link>
                                     </DropdownMenuItem>
                                     <DropdownMenuItem asChild>
@@ -262,7 +270,7 @@ export default function AdminSaasLayout({
                                             className="cursor-pointer"
                                         >
                                             <Shield className="mr-2 size-4" />
-                                            Seguridad
+                                            {__('Security')}
                                         </Link>
                                     </DropdownMenuItem>
                                     <DropdownMenuSeparator />
@@ -274,7 +282,7 @@ export default function AdminSaasLayout({
                                             className="w-full cursor-pointer text-destructive focus:text-destructive"
                                         >
                                             <LogOut className="mr-2 size-4" />
-                                            Cerrar sesión
+                                            {__('Log out')}
                                         </Link>
                                     </DropdownMenuItem>
                                 </DropdownMenuContent>
@@ -298,7 +306,7 @@ export default function AdminSaasLayout({
                                 className="flex items-center gap-1 transition-colors hover:text-foreground"
                             >
                                 <Home className="size-3.5" />
-                                <span>Inicio</span>
+                                <span>{__('Home')}</span>
                             </Link>
                             {breadcrumbs.map((crumb, index) => (
                                 <React.Fragment
@@ -307,14 +315,14 @@ export default function AdminSaasLayout({
                                     <span className="text-border">/</span>
                                     {index === breadcrumbs.length - 1 ? (
                                         <span className="font-medium text-foreground">
-                                            {crumb.title}
+                                            {__(crumb.title)}
                                         </span>
                                     ) : (
                                         <Link
                                             href={crumb.href}
                                             className="hover:text-foreground"
                                         >
-                                            {crumb.title}
+                                            {__(crumb.title)}
                                         </Link>
                                     )}
                                 </React.Fragment>
@@ -322,6 +330,9 @@ export default function AdminSaasLayout({
                         </nav>
 
                         <div className="flex items-center gap-2">
+                            {/* Language toggle */}
+                            <LanguageToggle />
+
                             {/* Theme toggle */}
                             <DropdownMenu>
                                 <DropdownMenuTrigger asChild>

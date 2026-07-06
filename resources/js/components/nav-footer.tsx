@@ -9,6 +9,8 @@ import {
 import { toUrl } from '@/lib/utils';
 import type { NavItem } from '@/types';
 
+import { useTranslate } from '@/hooks/use-translate';
+
 export function NavFooter({
     items,
     className,
@@ -16,6 +18,8 @@ export function NavFooter({
 }: ComponentPropsWithoutRef<typeof SidebarGroup> & {
     items: NavItem[];
 }) {
+    const { __ } = useTranslate();
+
     return (
         <SidebarGroup
             {...props}
@@ -37,7 +41,7 @@ export function NavFooter({
                                     {item.icon && (
                                         <item.icon className="h-5 w-5" />
                                     )}
-                                    <span>{item.title}</span>
+                                    <span>{__(item.title)}</span>
                                 </a>
                             </SidebarMenuButton>
                         </SidebarMenuItem>

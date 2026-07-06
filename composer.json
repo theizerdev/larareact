@@ -45,12 +45,12 @@
     },
     "autoload": {
         "psr-4": {
+            "App\\": "app/",
             "TheizerDev\\LaraReact\\": "src/"
         }
     },
     "autoload-dev": {
         "psr-4": {
-            "App\\": "app/",
             "Database\\Factories\\": "database/factories/",
             "Database\\Seeders\\": "database/seeders/",
             "Tests\\": "tests/"

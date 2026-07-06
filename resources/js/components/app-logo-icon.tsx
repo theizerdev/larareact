@@ -2,13 +2,29 @@ import type { SVGAttributes } from 'react';
 
 export default function AppLogoIcon(props: SVGAttributes<SVGElement>) {
     return (
-        <svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg" {...props}>
+        <svg
+            viewBox="0 0 100 100"
+            xmlns="http://www.w3.org/2000/svg"
+            {...props}
+        >
             <defs>
-                <linearGradient id="laravel-grad" x1="0%" y1="0%" x2="100%" y2="100%">
+                <linearGradient
+                    id="laravel-grad"
+                    x1="0%"
+                    y1="0%"
+                    x2="100%"
+                    y2="100%"
+                >
                     <stop offset="0%" stopColor="#FF2D20" />
                     <stop offset="100%" stopColor="#FF754C" />
                 </linearGradient>
-                <linearGradient id="react-grad" x1="0%" y1="0%" x2="100%" y2="100%">
+                <linearGradient
+                    id="react-grad"
+                    x1="0%"
+                    y1="0%"
+                    x2="100%"
+                    y2="100%"
+                >
                     <stop offset="0%" stopColor="#00F2FE" />
                     <stop offset="100%" stopColor="#4FACFE" />
                 </linearGradient>

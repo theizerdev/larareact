@@ -3,8 +3,6 @@
 namespace TheizerDev\LaraReact\Console;
 
 use Illuminate\Console\Command;
-use Illuminate\Filesystem\Filesystem;
-use Illuminate\Support\Str;
 use Symfony\Component\Process\Process;
 
 class InstallCommand extends Command
@@ -127,7 +125,7 @@ class InstallCommand extends Command
         // Insert FortifyServiceProvider before the closing bracket of the array
         $content = preg_replace(
             '/(\n)(\];)/s',
-            "$1    App\\Providers\\FortifyServiceProvider::class,$1$2",
+            '$1    App\\Providers\\FortifyServiceProvider::class,$1$2',
             $content,
             1
         );
@@ -247,8 +245,8 @@ class InstallCommand extends Command
             $this->output->write($line);
         });
 
-        if (!$process->isSuccessful()) {
-            throw new \RuntimeException('Command failed: ' . implode(' && ', $commands));
+        if (! $process->isSuccessful()) {
+            throw new \RuntimeException('Command failed: '.implode(' && ', $commands));
         }
     }
 }

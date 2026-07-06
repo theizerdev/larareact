@@ -30,7 +30,7 @@ file_put_contents('test-providers.php', $providers);
 $content = file_get_contents('test-providers.php');
 $content = preg_replace(
     '/(\n)(\];)/s',
-    "$1    App\\Providers\\FortifyServiceProvider::class,$1$2",
+    '$1    App\\Providers\\FortifyServiceProvider::class,$1$2',
     $content,
     1
 );

@@ -38,6 +38,9 @@ import { dashboard, home, logout } from '@/routes';
 import { edit as appearanceEdit } from '@/routes/appearance';
 import { edit as profileEdit } from '@/routes/profile';
 import type { BreadcrumbItem, NavItem } from '@/types';
+import AppLogoIcon from '@/components/app-logo-icon';
+import { useTranslate } from '@/hooks/use-translate';
+import LanguageToggle from '@/components/language-toggle';
 
 type AdminHeaderLayoutProps = {
     children: React.ReactNode;
@@ -61,6 +64,7 @@ function NavLink({
 }) {
     const { url } = usePage();
     const active = url.startsWith(item.href as string);
+    const { __ } = useTranslate();
 
     return (
         <Link
@@ -77,7 +81,7 @@ function NavLink({
             )}
         >
             {item.icon && <item.icon className="size-4" />}
-            {item.title}
+            {__(item.title)}
         </Link>
     );
 }
@@ -90,6 +94,7 @@ export default function AdminHeaderLayout({
     const { auth, name } = page.props;
     const getInitials = useInitials();
     const { resolvedAppearance, updateAppearance } = useAppearance();
+    const { __ } = useTranslate();
 
     return (
         <div className="flex min-h-svh flex-col bg-background">
@@ -103,7 +108,11 @@ export default function AdminHeaderLayout({
                             className="flex items-center gap-2.5"
                         >
                             <div className="flex items-center justify-center bg-transparent">
-                                <img src="/image/logo/larareact_icon.png" alt="LaraReact Icon" className="h-8 w-auto object-contain" />
+                                <img
+                                    src="/image/logo/larareact_icon.png"
+                                    alt="LaraReact Icon"
+                                    className="h-8 w-auto object-contain"
+                                />
                             </div>
                             <span className="hidden text-lg font-semibold tracking-tight sm:inline">
                                 {name}
@@ -141,6 +150,8 @@ export default function AdminHeaderLayout({
                             <Bell className="size-5" />
                             <span className="absolute top-2 right-2 h-2 w-2 rounded-full bg-destructive ring-2 ring-background" />
                         </Button>
+
+                        <LanguageToggle />
 
                         <Button
                             variant="ghost"
@@ -198,7 +209,7 @@ export default function AdminHeaderLayout({
                                         className="cursor-pointer"
                                     >
                                         <User className="mr-2 size-4" />
-                                        Perfil
+                                        {__('Profile')}
                                     </Link>
                                 </DropdownMenuItem>
                                 <DropdownMenuItem asChild>
@@ -207,7 +218,7 @@ export default function AdminHeaderLayout({
                                         className="cursor-pointer"
                                     >
                                         <Settings className="mr-2 size-4" />
-                                        Apariencia
+                                        {__('Appearance')}
                                     </Link>
                                 </DropdownMenuItem>
                                 <DropdownMenuSeparator />
@@ -219,7 +230,7 @@ export default function AdminHeaderLayout({
                                         className="w-full cursor-pointer text-destructive focus:text-destructive"
                                     >
                                         <LogOut className="mr-2 size-4" />
-                                        Cerrar sesión
+                                        {__('Log out')}
                                     </Link>
                                 </DropdownMenuItem>
                             </DropdownMenuContent>
@@ -269,21 +280,23 @@ export default function AdminHeaderLayout({
                             className="flex items-center gap-1 transition-colors hover:text-foreground"
                         >
                             <Home className="size-3.5" />
-                            <span className="hidden sm:inline">Inicio</span>
+                            <span className="hidden sm:inline">
+                                {__('Home')}
+                            </span>
                         </Link>
                         {breadcrumbs.map((crumb, index) => (
                             <React.Fragment key={toUrl(crumb.href)}>
                                 <span className="text-border">/</span>
                                 {index === breadcrumbs.length - 1 ? (
                                     <span className="font-medium text-foreground">
-                                        {crumb.title}
+                                        {__(crumb.title)}
                                     </span>
                                 ) : (
                                     <Link
                                         href={crumb.href}
                                         className="hover:text-foreground"
                                     >
-                                        {crumb.title}
+                                        {__(crumb.title)}
                                     </Link>
                                 )}
                             </React.Fragment>
