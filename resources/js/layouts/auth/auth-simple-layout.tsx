@@ -16,7 +16,7 @@ export default function AuthSimpleLayout({
                             href={home()}
                             className="flex flex-col items-center gap-2 font-medium"
                         >
-                            <img src="/image/logo/larareact_logo_transparent.png" alt="LaraReact Logo" className="h-10 w-auto object-contain" />
+                            <img src="/image/logo/larareact_logo_transparent.png" alt="LaraReact Logo" className="h-14 w-auto object-contain" />
                             <span className="sr-only">{title}</span>
                         </Link>
 

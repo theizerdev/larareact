@@ -14,7 +14,6 @@ import {
     User,
 } from 'lucide-react';
 import * as React from 'react';
-import AppLogoIcon from '@/components/app-logo-icon';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import {
@@ -103,8 +102,8 @@ export default function AdminHeaderLayout({
                             href={home()}
                             className="flex items-center gap-2.5"
                         >
-                            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-to-br from-indigo-500 to-violet-600 text-white shadow-sm">
-                                <AppLogoIcon className="size-5 fill-current" />
+                            <div className="flex items-center justify-center bg-transparent">
+                                <img src="/image/logo/larareact_icon.png" alt="LaraReact Icon" className="h-8 w-auto object-contain" />
                             </div>
                             <span className="hidden text-lg font-semibold tracking-tight sm:inline">
                                 {name}

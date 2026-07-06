@@ -23,7 +23,7 @@ export default function AuthSplitLayout({
                     href={home()}
                     className="relative z-10 flex items-center font-semibold"
                 >
-                    <img src="/image/logo/larareact_logo_transparent.png" alt="LaraReact Logo" className="h-10 w-auto object-contain" />
+                    <img src="/image/logo/larareact_logo_transparent.png" alt="LaraReact Logo" className="h-14 w-auto object-contain" />
                 </Link>
 
                 <div className="relative z-10 max-w-md">
@@ -53,7 +53,7 @@ export default function AuthSplitLayout({
                         href={home()}
                         className="mb-8 flex items-center justify-center lg:hidden"
                     >
-                        <img src="/image/logo/larareact_logo_transparent.png" alt="LaraReact Logo" className="h-10 w-auto object-contain" />
+                        <img src="/image/logo/larareact_logo_transparent.png" alt="LaraReact Logo" className="h-14 w-auto object-contain" />
                     </Link>
 
                     <div className="mb-8 space-y-2 text-center">

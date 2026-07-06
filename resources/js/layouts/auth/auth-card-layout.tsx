@@ -25,7 +25,7 @@ export default function AuthCardLayout({
                     href={home()}
                     className="flex items-center gap-2 self-center font-medium"
                 >
-                    <img src="/image/logo/larareact_logo_transparent.png" alt="LaraReact Logo" className="h-10 w-auto object-contain" />
+                    <img src="/image/logo/larareact_logo_transparent.png" alt="LaraReact Logo" className="h-14 w-auto object-contain" />
                 </Link>
 
                 <div className="flex flex-col gap-6">
