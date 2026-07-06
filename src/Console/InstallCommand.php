@@ -54,6 +54,13 @@ class InstallCommand extends Command
         // Run the interactive database connection, migration, and user setup
         $this->call('larareact:db');
 
+        $this->comment('Generating frontend routes and actions...');
+        try {
+            $this->call('wayfinder:generate');
+        } catch (\Exception $e) {
+            $this->warn('Could not generate frontend types automatically: ' . $e->getMessage());
+        }
+
         $this->comment('Installing Node dependencies...');
         $this->installNodeDependencies();
 
