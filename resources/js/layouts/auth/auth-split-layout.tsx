@@ -1,6 +1,5 @@
 import { Link, usePage } from '@inertiajs/react';
 import { ShieldCheck } from 'lucide-react';
-import AppLogoIcon from '@/components/app-logo-icon';
 import { home } from '@/routes';
 import type { AuthLayoutProps } from '@/types';
 
@@ -22,12 +21,9 @@ export default function AuthSplitLayout({
 
                 <Link
                     href={home()}
-                    className="relative z-10 flex items-center gap-3 text-lg font-semibold"
+                    className="relative z-10 flex items-center font-semibold"
                 >
-                    <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-white/10 backdrop-blur-sm">
-                        <AppLogoIcon className="size-6 fill-current text-white" />
-                    </div>
-                    {name}
+                    <img src="/image/logo/larareact_logo_transparent.png" alt="LaraReact Logo" className="h-10 w-auto" />
                 </Link>
 
                 <div className="relative z-10 max-w-md">
@@ -55,12 +51,9 @@ export default function AuthSplitLayout({
                 <div className="w-full max-w-sm">
                     <Link
                         href={home()}
-                        className="mb-8 flex items-center justify-center gap-3 lg:hidden"
+                        className="mb-8 flex items-center justify-center lg:hidden"
                     >
-                        <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary/10">
-                            <AppLogoIcon className="size-6 fill-current text-primary" />
-                        </div>
-                        <span className="text-lg font-semibold">{name}</span>
+                        <img src="/image/logo/larareact_logo_transparent.png" alt="LaraReact Logo" className="h-10 w-auto" />
                     </Link>
 
                     <div className="mb-8 space-y-2 text-center">

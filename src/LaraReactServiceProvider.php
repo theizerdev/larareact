@@ -34,6 +34,7 @@ class LaraReactServiceProvider extends ServiceProvider
             __DIR__.'/../resources/js' => resource_path('js'),
             __DIR__.'/../resources/css' => resource_path('css'),
             __DIR__.'/../resources/views' => resource_path('views'),
+            __DIR__.'/../public/image' => public_path('image'),
         ], 'larareact-assets');
 
         $this->publishes([

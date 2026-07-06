@@ -1,5 +1,7 @@
 # LaraReact
 
+![LaraReact Logo](public/image/logo/larareact_full_logo.jpg)
+
 Base interface package for Laravel + React + shadcn/ui admin systems.
 
 ## Installation

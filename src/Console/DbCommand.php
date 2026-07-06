@@ -216,11 +216,13 @@ class DbCommand extends Command
         }
 
         try {
-            $userClass::create([
-                'name' => $name,
-                'email' => $email,
-                'password' => Hash::make($password),
-            ]);
+            $user = new $userClass();
+            $user->name = $name;
+            $user->email = $email;
+            $user->password = Hash::make($password);
+            $user->email_verified_at = now();
+            $user->save();
+
             $this->info("User '{$name}' <{$email}> created successfully!");
         } catch (\Exception $e) {
             $this->error("Failed to create user: " . $e->getMessage());
