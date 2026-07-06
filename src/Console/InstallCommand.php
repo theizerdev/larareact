@@ -21,6 +21,13 @@ class InstallCommand extends Command
         $this->configureDatabase();
 
         $this->comment('Publishing LaraReact application files...');
+        $this->ensureDirectoryExists(app_path('Providers'));
+        $this->ensureDirectoryExists(app_path('Http/Middleware'));
+        $this->ensureDirectoryExists(app_path('Http/Controllers/Settings'));
+        $this->ensureDirectoryExists(app_path('Http/Requests/Settings'));
+        $this->ensureDirectoryExists(app_path('Actions/Fortify'));
+        $this->ensureDirectoryExists(app_path('Concerns'));
+        $this->ensureDirectoryExists(base_path('routes'));
         $this->callSilent('vendor:publish', ['--tag' => 'larareact-app', '--force' => true]);
 
         $this->comment('Publishing LaraReact configuration...');
@@ -263,6 +270,13 @@ class InstallCommand extends Command
 
         // No use statements found, insert after <?php
         return preg_replace('/(<\?php\n)/', "$1{$useStatement}\n", $content, 1);
+    }
+
+    protected function ensureDirectoryExists(string $path): void
+    {
+        if (! is_dir($path)) {
+            mkdir($path, 0755, true);
+        }
     }
 
     protected function installNodeDependencies(): void

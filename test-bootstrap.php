@@ -1,5 +1,19 @@
 <?php
 
+function insertAfterLastUse(string $content, string $useStatement): string
+{
+    if (preg_match_all('/^use\s+.+?;\n/m', $content, $matches)) {
+        $lastUse = end($matches[0]);
+        $position = strrpos($content, $lastUse);
+
+        if ($position !== false) {
+            return substr_replace($content, $lastUse.$useStatement."\n", $position, strlen($lastUse));
+        }
+    }
+
+    return preg_replace('/(<\?php\n)/', "$1{$useStatement}\n", $content, 1);
+}
+
 // Test registerFortifyProvider
 $providers = <<<'PHP'
 <?php
@@ -55,7 +69,6 @@ file_put_contents('test-app.php', $bootstrap);
 
 $content = file_get_contents('test-app.php');
 
-// Add use statements
 $uses = [
     'use App\\Http\\Middleware\\HandleAppearance;',
     'use App\\Http\\Middleware\\HandleInertiaRequests;',
@@ -64,28 +77,18 @@ $uses = [
 
 foreach ($uses as $useStatement) {
     if (! str_contains($content, $useStatement)) {
-        if (preg_match_all('/^use\s+.+?;\n/m', $content, $matches)) {
-            $lastUse = end($matches[0]);
-            $position = strrpos($content, $lastUse);
-            if ($position !== false) {
-                $content = substr_replace($content, $lastUse.$useStatement."\n", $position, strlen($lastUse));
-            }
-        } else {
-            $content = preg_replace('/(<\?php\n)/', "$1{$useStatement}\n", $content, 1);
-        }
+        $content = insertAfterLastUse($content, $useStatement);
     }
 }
 
-// Configure routing
 if (! str_contains($content, 'larareact.php')) {
     $content = preg_replace(
-        '/(->withRouting\(\s*web:\s*)(__DIR__\'.+?\'\s*,)/s',
+        '/(->withRouting\(\s*web:\s*)(__DIR__\'\.\.\/routes\/web\.php\'\s*,)/s',
         "$1[\n            __DIR__.'/../routes/web.php',\n            __DIR__.'/../routes/larareact.php',\n            __DIR__.'/../routes/larareact-settings.php',\n        ], ",
         $content
     );
 }
 
-// Configure middleware
 if (! str_contains($content, 'HandleAppearance::class')) {
     $content = preg_replace(
         '/(->withMiddleware\(function\s*\(Middleware\s*\$middleware\)\s*:\s*void\s*\{)(\s*\})/s',
