@@ -38,6 +38,15 @@ class InstallCommand extends Command
         $this->comment('Publishing LaraReact build files...');
         $this->callSilent('vendor:publish', ['--tag' => 'larareact-build', '--force' => true]);
 
+        // Clean up default Laravel config files to prevent conflicts
+        if (file_exists(base_path('vite.config.js'))) {
+            unlink(base_path('vite.config.js'));
+            $this->info('Removed default vite.config.js (using vite.config.ts instead).');
+        }
+        if (file_exists(resource_path('js/app.js'))) {
+            unlink(resource_path('js/app.js'));
+        }
+
         $this->comment('Configuring Laravel bootstrap files...');
         $this->registerFortifyProvider();
         $this->configureBootstrapApp();
