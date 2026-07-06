@@ -164,7 +164,7 @@ class InstallCommand extends Command
         // Configure routing to include LaraReact routes
         if (! str_contains($content, 'larareact.php')) {
             $content = preg_replace(
-                '/(->withRouting\(\s*web:\s*)(__DIR__\'.+?\'\s*,)/s',
+                '/(->withRouting\(\s*web:\s*)([^,]+,)/s',
                 "$1[\n            __DIR__.'/../routes/web.php',\n            __DIR__.'/../routes/larareact.php',\n            __DIR__.'/../routes/larareact-settings.php',\n        ], ",
                 $content
             );
@@ -173,8 +173,8 @@ class InstallCommand extends Command
         // Configure middleware if not already configured
         if (! str_contains($content, 'HandleAppearance::class')) {
             $content = preg_replace(
-                '/(->withMiddleware\(function\s*\(Middleware\s*\$middleware\)\s*:\s*void\s*\{)(\s*\})/s',
-                "$1\n        \$middleware->encryptCookies(except: ['appearance', 'sidebar_state']);\n\n        \$middleware->web(append: [\n            HandleAppearance::class,\n            HandleInertiaRequests::class,\n            AddLinkHeadersForPreloadedAssets::class,\n        ]);\n    }$2",
+                '/(->withMiddleware\(\s*function\s*\(\s*Middleware\s*\$middleware\s*\)\s*(?::\s*void\s*)?\{\s*)(?:(?:\/\/)?\s*)(\}\s*\))/s',
+                "$1\n        \$middleware->encryptCookies(except: ['appearance', 'sidebar_state']);\n\n        \$middleware->web(append: [\n            HandleAppearance::class,\n            HandleInertiaRequests::class,\n            AddLinkHeadersForPreloadedAssets::class,\n        ]);\n    $2",
                 $content
             );
         }
@@ -246,5 +246,9 @@ class InstallCommand extends Command
         $process->run(function ($type, $line) {
             $this->output->write($line);
         });
+
+        if (!$process->isSuccessful()) {
+            throw new \RuntimeException('Command failed: ' . implode(' && ', $commands));
+        }
     }
 }
