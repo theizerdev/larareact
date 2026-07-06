@@ -35,6 +35,9 @@ class LaraReactServiceProvider extends ServiceProvider
             __DIR__.'/../resources/css' => resource_path('css'),
             __DIR__.'/../resources/views' => resource_path('views'),
             __DIR__.'/../public/image' => public_path('image'),
+            __DIR__.'/../public/favicon.svg' => public_path('favicon.svg'),
+            __DIR__.'/../public/favicon.ico' => public_path('favicon.ico'),
+            __DIR__.'/../public/apple-touch-icon.png' => public_path('apple-touch-icon.png'),
         ], 'larareact-assets');
 
         $this->publishes([
