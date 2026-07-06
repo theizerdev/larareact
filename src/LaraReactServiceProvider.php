@@ -15,6 +15,8 @@ class LaraReactServiceProvider extends ServiceProvider
         $this->mergeConfigFrom(
             __DIR__.'/../config/larareact.php', 'larareact'
         );
+
+        $this->registerFortifyFallbacks();
     }
 
     /**
@@ -55,7 +57,39 @@ class LaraReactServiceProvider extends ServiceProvider
         if ($this->app->runningInConsole()) {
             $this->commands([
                 InstallCommand::class,
+                Console\DbCommand::class,
             ]);
+        }
+    }
+
+    /**
+     * Register fallback bindings for Fortify's view response contracts
+     * to prevent "not instantiable" errors before installation is completed.
+     */
+    protected function registerFortifyFallbacks(): void
+    {
+        if (class_exists(\Laravel\Fortify\Fortify::class)) {
+            $this->app->bindIf(\Laravel\Fortify\Contracts\LoginViewResponse::class, fn () => new class implements \Laravel\Fortify\Contracts\LoginViewResponse {
+                public function toResponse($request) { return response('Please run php artisan larareact:install to complete the setup.', 503); }
+            });
+            $this->app->bindIf(\Laravel\Fortify\Contracts\RegisterViewResponse::class, fn () => new class implements \Laravel\Fortify\Contracts\RegisterViewResponse {
+                public function toResponse($request) { return response('Please run php artisan larareact:install to complete the setup.', 503); }
+            });
+            $this->app->bindIf(\Laravel\Fortify\Contracts\ResetPasswordViewResponse::class, fn () => new class implements \Laravel\Fortify\Contracts\ResetPasswordViewResponse {
+                public function toResponse($request) { return response('Please run php artisan larareact:install to complete the setup.', 503); }
+            });
+            $this->app->bindIf(\Laravel\Fortify\Contracts\RequestPasswordResetLinkViewResponse::class, fn () => new class implements \Laravel\Fortify\Contracts\RequestPasswordResetLinkViewResponse {
+                public function toResponse($request) { return response('Please run php artisan larareact:install to complete the setup.', 503); }
+            });
+            $this->app->bindIf(\Laravel\Fortify\Contracts\VerifyEmailViewResponse::class, fn () => new class implements \Laravel\Fortify\Contracts\VerifyEmailViewResponse {
+                public function toResponse($request) { return response('Please run php artisan larareact:install to complete the setup.', 503); }
+            });
+            $this->app->bindIf(\Laravel\Fortify\Contracts\TwoFactorChallengeViewResponse::class, fn () => new class implements \Laravel\Fortify\Contracts\TwoFactorChallengeViewResponse {
+                public function toResponse($request) { return response('Please run php artisan larareact:install to complete the setup.', 503); }
+            });
+            $this->app->bindIf(\Laravel\Fortify\Contracts\ConfirmPasswordViewResponse::class, fn () => new class implements \Laravel\Fortify\Contracts\ConfirmPasswordViewResponse {
+                public function toResponse($request) { return response('Please run php artisan larareact:install to complete the setup.', 503); }
+            });
         }
     }
 }

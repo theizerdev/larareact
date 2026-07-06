@@ -18,7 +18,6 @@ class InstallCommand extends Command
     {
         $this->setupEnvironment();
         $this->generateAppKey();
-        $this->configureDatabase();
 
         $this->comment('Publishing LaraReact application files...');
         $this->ensureDirectoryExists(app_path('Providers'));
@@ -43,8 +42,8 @@ class InstallCommand extends Command
         $this->registerFortifyProvider();
         $this->configureBootstrapApp();
 
-        $this->comment('Running database migrations...');
-        $this->call('migrate', ['--force' => true]);
+        // Run the interactive database connection, migration, and user setup
+        $this->call('larareact:db');
 
         $this->comment('Installing Node dependencies...');
         $this->installNodeDependencies();
@@ -82,90 +81,6 @@ class InstallCommand extends Command
         $this->comment('Generating application key...');
         $this->callSilent('key:generate', ['--force' => true]);
         $this->info('Application key generated.');
-    }
-
-    protected function configureDatabase(): void
-    {
-        $envPath = base_path('.env');
-
-        if (! file_exists($envPath)) {
-            $this->warn('.env file not found. Skipping database configuration.');
-
-            return;
-        }
-
-        $this->comment('Configuring database...');
-
-        $driver = $this->choice(
-            'Which database driver would you like to use?',
-            ['sqlite', 'mysql', 'pgsql'],
-            'sqlite'
-        );
-
-        $env = file_get_contents($envPath);
-
-        match ($driver) {
-            'sqlite' => $env = $this->configureSqlite($env),
-            'mysql' => $env = $this->configureMysql($env),
-            'pgsql' => $env = $this->configurePgsql($env),
-        };
-
-        file_put_contents($envPath, $env);
-
-        $this->info("Database configured to use {$driver}.");
-    }
-
-    protected function configureSqlite(string $env): string
-    {
-        $env = $this->setEnvValue($env, 'DB_CONNECTION', 'sqlite');
-        $env = $this->setEnvValue($env, 'DB_DATABASE', 'database/database.sqlite');
-        $env = $this->setEnvValue($env, 'DB_HOST', '');
-        $env = $this->setEnvValue($env, 'DB_PORT', '');
-        $env = $this->setEnvValue($env, 'DB_USERNAME', '');
-        $env = $this->setEnvValue($env, 'DB_PASSWORD', '');
-
-        $databasePath = database_path('database.sqlite');
-        if (! file_exists($databasePath)) {
-            touch($databasePath);
-        }
-
-        return $env;
-    }
-
-    protected function configureMysql(string $env): string
-    {
-        $host = $this->ask('Database host?', '127.0.0.1');
-        $port = $this->ask('Database port?', '3306');
-        $database = $this->ask('Database name?', 'larareact');
-        $username = $this->ask('Database username?', 'root');
-        $password = $this->secret('Database password?');
-
-        $env = $this->setEnvValue($env, 'DB_CONNECTION', 'mysql');
-        $env = $this->setEnvValue($env, 'DB_HOST', $host);
-        $env = $this->setEnvValue($env, 'DB_PORT', $port);
-        $env = $this->setEnvValue($env, 'DB_DATABASE', $database);
-        $env = $this->setEnvValue($env, 'DB_USERNAME', $username);
-        $env = $this->setEnvValue($env, 'DB_PASSWORD', $password ?? '');
-
-        return $env;
-    }
-
-    protected function configurePgsql(string $env): string
-    {
-        $host = $this->ask('Database host?', '127.0.0.1');
-        $port = $this->ask('Database port?', '5432');
-        $database = $this->ask('Database name?', 'larareact');
-        $username = $this->ask('Database username?', 'postgres');
-        $password = $this->secret('Database password?');
-
-        $env = $this->setEnvValue($env, 'DB_CONNECTION', 'pgsql');
-        $env = $this->setEnvValue($env, 'DB_HOST', $host);
-        $env = $this->setEnvValue($env, 'DB_PORT', $port);
-        $env = $this->setEnvValue($env, 'DB_DATABASE', $database);
-        $env = $this->setEnvValue($env, 'DB_USERNAME', $username);
-        $env = $this->setEnvValue($env, 'DB_PASSWORD', $password ?? '');
-
-        return $env;
     }
 
     protected function setEnvValue(string $env, string $key, string $value): string
