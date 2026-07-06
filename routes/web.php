@@ -12,4 +12,6 @@ Route::middleware(['auth', 'verified'])->group(function () {
     });
 });
 
-require __DIR__.'/larareact-settings.php';
+if (file_exists(__DIR__.'/larareact-settings.php')) {
+    require __DIR__.'/larareact-settings.php';
+}
