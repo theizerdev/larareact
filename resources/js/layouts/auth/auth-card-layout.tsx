@@ -28,7 +28,7 @@ export default function AuthCardLayout({
                     <img
                         src="/image/logo/larareact_logo_transparent.png"
                         alt="LaraReact Logo"
-                        className="h-14 w-auto object-contain"
+                        className="h-40 w-auto object-contain"
                     />
                 </Link>
 

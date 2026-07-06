@@ -72,5 +72,14 @@
   "Latest system actions": "Últimas acciones del sistema",
   "System action :index": "Acción del sistema :index",
   "Platform": "Plataforma",
-  ":time hours ago": "Hace :time horas"
+  ":time hours ago": "Hace :time horas",
+  "Notifications": "Notificaciones",
+  "Mark all as read": "Marcar todas como leídas",
+  "No notifications": "No tienes notificaciones",
+  "Welcome to the system": "Bienvenido al sistema",
+  "Your account has been created successfully.": "Tu cuenta ha sido creada exitosamente.",
+  "A few minutes ago": "Hace unos minutos",
+  "Update completed": "Actualización completada",
+  "The system has been updated successfully.": "El sistema se actualizó correctamente.",
+  "2 hours ago": "Hace 2 horas"
 }

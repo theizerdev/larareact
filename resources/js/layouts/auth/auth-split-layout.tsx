@@ -26,7 +26,7 @@ export default function AuthSplitLayout({
                     <img
                         src="/image/logo/larareact_logo_transparent.png"
                         alt="LaraReact Logo"
-                        className="h-14 w-auto object-contain"
+                        className="h-40 w-auto object-contain"
                     />
                 </Link>
 
@@ -60,7 +60,7 @@ export default function AuthSplitLayout({
                         <img
                             src="/image/logo/larareact_logo_transparent.png"
                             alt="LaraReact Logo"
-                            className="h-14 w-auto object-contain"
+                            className="h-20 w-auto object-contain"
                         />
                     </Link>
 

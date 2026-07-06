@@ -108,16 +108,16 @@ export default function AdminSaasLayout({
     const [notifications, setNotifications] = React.useState([
         {
             id: '1',
-            title: 'Bienvenido al sistema',
-            message: 'Tu cuenta ha sido creada exitosamente.',
-            time: 'Hace unos minutos',
+            title: 'Welcome to the system',
+            message: 'Your account has been created successfully.',
+            time: 'A few minutes ago',
             read: false,
         },
         {
             id: '2',
-            title: 'Actualización completada',
-            message: 'El sistema se actualizó correctamente.',
-            time: 'Hace 2 horas',
+            title: 'Update completed',
+            message: 'The system has been updated successfully.',
+            time: '2 hours ago',
             read: false,
         },
     ]);
@@ -411,21 +411,21 @@ export default function AdminSaasLayout({
                                 >
                                     <div className="flex items-center justify-between px-3 py-2">
                                         <p className="text-sm font-semibold">
-                                            Notificaciones
+                                            {__('Notifications')}
                                         </p>
                                         <Button
                                             variant="ghost"
                                             size="sm"
                                             className="h-auto px-2 py-1 text-xs"
                                         >
-                                            Marcar todas como leídas
+                                            {__('Mark all as read')}
                                         </Button>
                                     </div>
                                     <DropdownMenuSeparator />
                                     <div className="max-h-80 overflow-y-auto">
                                         {notifications.length === 0 ? (
                                             <div className="px-3 py-6 text-center text-sm text-muted-foreground">
-                                                No tienes notificaciones
+                                                {__('No notifications')}
                                             </div>
                                         ) : (
                                             notifications.map(
@@ -450,19 +450,19 @@ export default function AdminSaasLayout({
                                                             />
                                                             <div className="flex-1 space-y-1">
                                                                 <p className="text-sm font-medium">
-                                                                    {
-                                                                        notification.title
-                                                                    }
+                                                                    {__(
+                                                                        notification.title,
+                                                                    )}
                                                                 </p>
                                                                 <p className="text-xs text-muted-foreground">
-                                                                    {
-                                                                        notification.message
-                                                                    }
+                                                                    {__(
+                                                                        notification.message,
+                                                                    )}
                                                                 </p>
                                                                 <p className="text-xs text-muted-foreground">
-                                                                    {
-                                                                        notification.time
-                                                                    }
+                                                                    {__(
+                                                                        notification.time,
+                                                                    )}
                                                                 </p>
                                                             </div>
                                                         </div>
