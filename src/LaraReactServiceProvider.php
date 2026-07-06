@@ -45,7 +45,7 @@ class LaraReactServiceProvider extends ServiceProvider
             __DIR__.'/../app/Actions/Fortify' => app_path('Actions/Fortify'),
             __DIR__.'/../app/Concerns' => app_path('Concerns'),
             __DIR__.'/../routes/web.php' => base_path('routes/larareact.php'),
-            __DIR__.'/../routes/settings.php' => base_path('routes/larareact-settings.php'),
+            __DIR__.'/../routes/larareact-settings.php' => base_path('routes/larareact-settings.php'),
         ], 'larareact-app');
 
         $this->publishes([
