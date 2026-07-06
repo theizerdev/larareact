@@ -1,5 +1,4 @@
 import { Link } from '@inertiajs/react';
-import AppLogoFull from '@/components/app-logo-full';
 import { home } from '@/routes';
 import type { AuthLayoutProps } from '@/types';
 
@@ -17,7 +16,7 @@ export default function AuthSimpleLayout({
                             href={home()}
                             className="flex flex-col items-center gap-2 font-medium"
                         >
-                            <AppLogoFull />
+                            <img src="/image/logo/larareact_logo_transparent.png" alt="LaraReact Logo" className="h-10 w-auto object-contain" />
                             <span className="sr-only">{title}</span>
                         </Link>
 
