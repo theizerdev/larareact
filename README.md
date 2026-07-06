@@ -7,7 +7,7 @@ Base interface package for Laravel + React + shadcn/ui admin systems.
 Install the package via Composer:
 
 ```bash
-composer require larareact/larareact
+composer require theizerdev/larareact
 ```
 
 After installing the package, run the install command:

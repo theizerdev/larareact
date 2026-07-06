@@ -1,6 +1,6 @@
 <?php
 
-namespace LaraReact\LaraReact\Console;
+namespace TheizerDev\LaraReact\Console;
 
 use Illuminate\Console\Command;
 use Symfony\Component\Process\Process;

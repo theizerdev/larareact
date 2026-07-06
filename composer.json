@@ -1,6 +1,6 @@
 {
     "$schema": "https://getcomposer.org/schema.json",
-    "name": "larareact/larareact",
+    "name": "theizerdev/larareact",
     "type": "library",
     "description": "Base interface package for Laravel + React + shadcn/ui admin systems.",
     "keywords": [
@@ -14,10 +14,15 @@
     "license": "MIT",
     "authors": [
         {
-            "name": "LaraReact",
-            "email": "hello@larareact.dev"
+            "name": "theizerdev",
+            "email": "hello@theizerdev.com"
         }
     ],
+    "homepage": "https://github.com/theizerdev/larareact",
+    "support": {
+        "issues": "https://github.com/theizerdev/larareact/issues",
+        "source": "https://github.com/theizerdev/larareact"
+    },
     "require": {
         "php": "^8.3",
         "inertiajs/inertia-laravel": "^3.0",
@@ -40,7 +45,7 @@
     },
     "autoload": {
         "psr-4": {
-            "LaraReact\\LaraReact\\": "src/",
+            "TheizerDev\\LaraReact\\": "src/",
             "App\\": "app/",
             "Database\\Factories\\": "database/factories/",
             "Database\\Seeders\\": "database/seeders/"
@@ -108,7 +113,7 @@
     "extra": {
         "laravel": {
             "providers": [
-                "LaraReact\\LaraReact\\LaraReactServiceProvider"
+                "TheizerDev\\LaraReact\\LaraReactServiceProvider"
             ],
             "dont-discover": []
         }

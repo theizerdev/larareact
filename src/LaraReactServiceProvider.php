@@ -1,9 +1,9 @@
 <?php
 
-namespace LaraReact\LaraReact;
+namespace TheizerDev\LaraReact;
 
 use Illuminate\Support\ServiceProvider;
-use LaraReact\LaraReact\Console\InstallCommand;
+use TheizerDev\LaraReact\Console\InstallCommand;
 
 class LaraReactServiceProvider extends ServiceProvider
 {
