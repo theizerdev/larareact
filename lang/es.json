@@ -152,5 +152,10 @@
   "Total records": "Total de registros",
   "Search": "Buscar",
   "No countries found": "No se encontraron países",
-  "You have not registered any countries in the database yet.": "Aún no has registrado ningún país en la base de datos."
+  "You have not registered any countries in the database yet.": "Aún no has registrado ningún país en la base de datos.",
+  "Country created successfully.": "País creado exitosamente.",
+  "There was an error creating the country. Please try again.": "Hubo un error al intentar crear el país. Por favor, inténtelo de nuevo.",
+  "There was an error deleting the countries. Please try again.": "Hubo un error al intentar eliminar los países. Por favor, inténtelo de nuevo.",
+  "Status updated successfully.": "Estado actualizado exitosamente.",
+  "There was an error updating the status. Please try again.": "Hubo un error al intentar cambiar el estado. Por favor, inténtelo de nuevo."
 }

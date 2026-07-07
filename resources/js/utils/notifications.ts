@@ -1,36 +1,17 @@
 /**
- * Módulo de Notificaciones Reutilizable con SweetAlert2
+ * Módulo de Notificaciones Reutilizable con Sonner (Toast)
  *
- * Este módulo encapsula la configuración de SweetAlert2 para mostrar notificaciones
- * de una manera consistente en toda la aplicación.
+ * Este módulo encapsula las notificaciones de Sonner para mostrar alertas
+ * de una manera consistente y no intrusiva en toda la aplicación.
  */
-import Swal from 'sweetalert2';
-
-/**
- * @description
- * Configuración base para las notificaciones.
- * Se utiliza un estilo personalizado y se oculta el botón de confirmación
- * para alertas que son puramente informativas.
- */
-const Alert = Swal.mixin({
-    buttonsStyling: false, // Opcional: si usas clases de Tailwind/Bootstrap para estilizar
-    customClass: {
-        confirmButton: 'btn btn-primary', // Ejemplo de clases personalizadas
-        cancelButton: 'btn btn-danger',
-    },
-});
+import { toast } from 'sonner';
 
 /**
  * Dispara una notificación de éxito.
  * @param {string} title - El mensaje a mostrar.
  */
 export function notifySuccess(title: string) {
-    Alert.fire({
-        icon: 'success',
-        title: title,
-        showConfirmButton: false,
-        timer: 2000, // Cierra automáticamente después de 2 segundos
-    });
+    toast.success(title);
 }
 
 /**
@@ -38,10 +19,7 @@ export function notifySuccess(title: string) {
  * @param {string} title - El mensaje a mostrar.
  */
 export function notifyError(title: string) {
-    Alert.fire({
-        icon: 'error',
-        title: title,
-    });
+    toast.error(title);
 }
 
 /**
@@ -49,10 +27,7 @@ export function notifyError(title: string) {
  * @param {string} title - El mensaje a mostrar.
  */
 export function notifyWarning(title: string) {
-    Alert.fire({
-        icon: 'warning',
-        title: title,
-    });
+    toast.warning(title);
 }
 
 /**
@@ -60,8 +35,5 @@ export function notifyWarning(title: string) {
  * @param {string} title - El mensaje a mostrar.
  */
 export function notifyInfo(title: string) {
-    Alert.fire({
-        icon: 'info',
-        title: title,
-    });
+    toast.info(title);
 }

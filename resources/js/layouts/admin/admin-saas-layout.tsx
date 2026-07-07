@@ -4,6 +4,7 @@ import {
     Check,
     ChevronLeft,
     ChevronRight,
+    ChevronDown,
     Home,
     LayoutDashboard,
     LogOut,
@@ -14,6 +15,7 @@ import {
     Shield,
     Sun,
     User,
+    Globe,
 } from 'lucide-react';
 import * as React from 'react';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -39,6 +41,7 @@ import { dashboard, home, logout } from '@/routes';
 import { edit as appearanceEdit } from '@/routes/appearance';
 import { edit as profileEdit } from '@/routes/profile';
 import { edit as securityEdit } from '@/routes/security';
+import { index as paisesIndex } from '@/routes/admin/paises';
 import type { BreadcrumbItem, NavItem } from '@/types';
 import { useTranslate } from '@/hooks/use-translate';
 import LanguageToggle from '@/components/language-toggle';
@@ -55,6 +58,8 @@ const mainNavItems: NavItem[] = [
         icon: LayoutDashboard,
     },
 ];
+
+// We removed settingsNavItems as they are now defined inline in the CollapsibleNavItem component.
 
 function NavItem({ item, collapsed }: { item: NavItem; collapsed: boolean }) {
     const { url } = usePage();
@@ -90,6 +95,118 @@ function NavItem({ item, collapsed }: { item: NavItem; collapsed: boolean }) {
         </Tooltip>
     ) : (
         linkContent
+    );
+}
+
+function CollapsibleNavItem({
+    title,
+    icon: Icon,
+    items,
+    collapsed,
+}: {
+    title: string;
+    icon: React.ComponentType<any>;
+    items: { title: string; href: string }[];
+    collapsed: boolean;
+}) {
+    const { url } = usePage();
+    const { __ } = useTranslate();
+
+    // Determine if any of the sub-items are active
+    const isAnyActive = items.some((item) => url.startsWith(item.href));
+
+    // State to toggle open/closed
+    const [isOpen, setIsOpen] = React.useState(isAnyActive);
+
+    // Keep it open if one of the children becomes active
+    React.useEffect(() => {
+        if (isAnyActive) {
+            setIsOpen(true);
+        }
+    }, [isAnyActive]);
+
+    const handleToggle = (e: React.MouseEvent) => {
+        e.preventDefault();
+        setIsOpen(!isOpen);
+    };
+
+    if (collapsed) {
+        return (
+            <Tooltip>
+                <TooltipTrigger asChild>
+                    <button
+                        onClick={handleToggle}
+                        className={cn(
+                            'group flex w-full items-center justify-center rounded-lg p-2.5 text-sm font-medium transition-all text-slate-400 hover:bg-white/5 hover:text-slate-100',
+                            isAnyActive && 'bg-indigo-500/10 text-indigo-400'
+                        )}
+                    >
+                        <Icon className="size-5 shrink-0" />
+                    </button>
+                </TooltipTrigger>
+                <TooltipContent side="right">
+                    <div className="flex flex-col gap-1 p-1">
+                        <p className="font-semibold text-white border-b border-white/10 pb-1 mb-1">{__(title)}</p>
+                        {items.map((item, idx) => (
+                            <Link
+                                key={idx}
+                                href={item.href}
+                                className={cn(
+                                    'text-xs py-1 px-2 rounded hover:bg-white/10 block',
+                                    url.startsWith(item.href) ? 'text-indigo-400 font-semibold' : 'text-slate-400'
+                                )}
+                            >
+                                {__(item.title)}
+                            </Link>
+                        ))}
+                    </div>
+                </TooltipContent>
+            </Tooltip>
+        );
+    }
+
+    return (
+        <div className="space-y-1">
+            <button
+                onClick={handleToggle}
+                className={cn(
+                    'group flex w-full items-center justify-between rounded-lg px-3 py-2.5 text-sm font-medium transition-all text-slate-400 hover:bg-white/5 hover:text-slate-100',
+                    isAnyActive && 'text-slate-200'
+                )}
+            >
+                <div className="flex items-center gap-3">
+                    <Icon className="size-5 shrink-0" />
+                    <span className="whitespace-nowrap">{__(title)}</span>
+                </div>
+                {isOpen ? (
+                    <ChevronDown className="size-4 text-slate-500 group-hover:text-slate-300" />
+                ) : (
+                    <ChevronRight className="size-4 text-slate-500 group-hover:text-slate-300" />
+                )}
+            </button>
+
+            {isOpen && (
+                <div className="pl-9 space-y-1 transition-all duration-300">
+                    {items.map((item, idx) => {
+                        const active = url.startsWith(item.href);
+                        return (
+                            <Link
+                                key={idx}
+                                href={item.href}
+                                className={cn(
+                                    'flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-all block',
+                                    active
+                                        ? 'text-indigo-400'
+                                        : 'text-slate-500 hover:text-slate-300'
+                                )}
+                            >
+                                {__(item.title)}
+                            </Link>
+                        );
+                    })}
+                </div>
+            )}
+        </div>
     );
 }
 
@@ -187,7 +304,7 @@ export default function AdminSaasLayout({
                                 collapsed && 'opacity-0',
                             )}
                         >
-                            Plataforma
+                            {__('Platform')}
                         </p>
                         {mainNavItems.map((item) => (
                             <NavItem
@@ -196,6 +313,21 @@ export default function AdminSaasLayout({
                                 collapsed={collapsed}
                             />
                         ))}
+
+                        <div className="pt-4">
+                            <CollapsibleNavItem
+                                title="Settings"
+                                icon={Settings}
+                                collapsed={collapsed}
+                                items={[
+
+                                    {
+                                        title: 'Countries',
+                                        href: paisesIndex.url(),
+                                    },
+                                ]}
+                            />
+                        </div>
                     </nav>
 
                     {/* Bottom section */}
@@ -253,15 +385,6 @@ export default function AdminSaasLayout({
                                         >
                                             <User className="mr-2 size-4" />
                                             {__('Profile')}
-                                        </Link>
-                                    </DropdownMenuItem>
-                                    <DropdownMenuItem asChild>
-                                        <Link
-                                            href={appearanceEdit()}
-                                            className="cursor-pointer"
-                                        >
-                                            <Settings className="mr-2 size-4" />
-                                            {__('Appearance')}
                                         </Link>
                                     </DropdownMenuItem>
                                     <DropdownMenuItem asChild>

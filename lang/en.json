@@ -79,5 +79,10 @@
   "Total records": "Total records",
   "Search": "Search",
   "No countries found": "No countries found",
-  "You have not registered any countries in the database yet.": "You have not registered any countries in the database yet."
+  "You have not registered any countries in the database yet.": "You have not registered any countries in the database yet.",
+  "Country created successfully.": "Country created successfully.",
+  "There was an error creating the country. Please try again.": "There was an error creating the country. Please try again.",
+  "There was an error deleting the countries. Please try again.": "There was an error deleting the countries. Please try again.",
+  "Status updated successfully.": "Status updated successfully.",
+  "There was an error updating the status. Please try again.": "There was an error updating the status. Please try again."
 }

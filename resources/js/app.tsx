@@ -14,7 +14,7 @@ createInertiaApp({
         const pages = import.meta.glob(
             ['./Pages/**/*.tsx', '!./Pages/**/Partials/**/*.tsx'],
             { eager: true }
-        );
+        ) as Record<string, any>;
         return pages[`./Pages/${name}.tsx`];
     },
     layout: (name) => {

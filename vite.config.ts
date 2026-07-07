@@ -29,6 +29,9 @@ export default defineConfig({
         }),
     ],
     server: {
+        hmr: {
+            host: 'localhost',
+        },
         watch: {
             usePolling: true, // Obliga a Vite a revisar cambios de forma continua (ideal para WSL2, Docker o Windows)
         },

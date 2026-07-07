@@ -206,8 +206,7 @@ export default function PaisesIndexPage({ auth, paises, stats, filters }: Paises
     };
 
     const handleBulkDeleteConfirm = () => {
-        bulkDelete(bulkDestroy.url(), {
-            data: { ids: selectedIds },
+        router.post(bulkDestroy.url(), { ids: selectedIds }, {
             onSuccess: () => {
                 setSelectedIds([]);
                 setIsDeleteDialogOpen(false);
@@ -260,6 +259,7 @@ export default function PaisesIndexPage({ auth, paises, stats, filters }: Paises
             header: 'Status',
             sortable: true,
             sortKey: 'activo',
+            stopRowClick: true,
             cell: (pais) => (
                 <div className="flex items-center space-x-2">
                     <Switch
@@ -281,6 +281,7 @@ export default function PaisesIndexPage({ auth, paises, stats, filters }: Paises
             header: 'Actions',
             className: 'text-right',
             hideable: false,
+            stopRowClick: true,
             cell: (pais) => (
                 <DropdownMenu>
                     <DropdownMenuTrigger asChild>

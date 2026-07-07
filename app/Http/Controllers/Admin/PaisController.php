@@ -78,9 +78,21 @@ class PaisController extends Controller
             'activo' => 'boolean',
         ]);
 
-        Pais::create($validated);
+        try {
+            Pais::create($validated);
 
-        return back();
+            return back()->with('notification', [
+                'type' => 'success',
+                'message' => __('Country created successfully.')
+            ]);
+        } catch (\Exception $e) {
+            Log::error("Error al crear el país: " . $e->getMessage());
+
+            return back()->with('notification', [
+                'type' => 'error',
+                'message' => __('There was an error creating the country. Please try again.')
+            ]);
+        }
     }
 
     public function update(Request $request, Pais $pais)
@@ -89,8 +101,19 @@ class PaisController extends Controller
             'nombre' => 'required|string|max:255',
             'codigo_iso2' => 'required|string|max:2|unique:pais,codigo_iso2,' . $pais->id,
             'codigo_iso3' => 'required|string|max:3|unique:pais,codigo_iso3,' . $pais->id,
+            'codigo_telefonico' => 'nullable|string|max:10',
+            'moneda_principal' => 'nullable|string|max:3',
+            'idioma_principal' => 'nullable|string|max:5',
+            'continente' => 'nullable|string|max:50',
             'latitud' => 'nullable|numeric|between:-90,90',
             'longitud' => 'nullable|numeric|between:-180,180',
+            'zona_horaria' => 'nullable|string|max:50',
+            'formato_fecha' => 'nullable|string|max:20',
+            'formato_moneda' => 'nullable|string|max:20',
+            'impuesto_predeterminado' => 'nullable|numeric|min:0',
+            'separador_miles' => 'nullable|string|max:1',
+            'separador_decimales' => 'nullable|string|max:1',
+            'decimales_moneda' => 'nullable|integer|min:0',
             'activo' => 'boolean',
         ]);
 
@@ -115,10 +138,22 @@ class PaisController extends Controller
 
     public function toggleStatus(Pais $pais)
     {
-        $pais->activo = !$pais->activo;
-        $pais->save();
+        try {
+            $pais->activo = !$pais->activo;
+            $pais->save();
 
-        return back();
+            return back()->with('notification', [
+                'type' => 'success',
+                'message' => __('Status updated successfully.')
+            ]);
+        } catch (\Exception $e) {
+            Log::error("Error al cambiar el estado del país {$pais->id}: " . $e->getMessage());
+
+            return back()->with('notification', [
+                'type' => 'error',
+                'message' => __('There was an error updating the status. Please try again.')
+            ]);
+        }
     }
 
     public function bulkDestroy(Request $request)
@@ -149,7 +184,7 @@ class PaisController extends Controller
 
             return back()->with('notification', [
                 'type' => 'error',
-                'message' => 'Hubo un error al intentar eliminar los países. Por favor, inténtelo de nuevo.'
+                'message' => __('There was an error deleting the countries. Please try again.')
             ]);
         }
     }
