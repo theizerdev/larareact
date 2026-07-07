@@ -24,43 +24,42 @@ Sistema de administración full-stack construido con **Laravel 13 + React 19 + s
 - **Sonner** - Sistema de notificaciones toast
 - **Vite 8.0** - Build tool ultrarrápido para desarrollo
 
-## Instalación
+## Instalación como Paquete (Uso Principal)
 
-### Instalación Automática
+LaraReact está diseñado para ser instalado como dependencia en tus proyectos Laravel existentes o nuevos:
+
 ```bash
-# Crear nuevo proyecto
-composer create-project theizerdev/larareact mi-proyecto
-cd mi-proyecto
-
-# Configurar entorno
-composer run setup
+# En tu proyecto Laravel (nuevo o existente)
+composer require theizerdev/larareact
 ```
 
-El script de setup automatiza:
-- Copia del archivo .env
-- Generación de APP_KEY
-- Ejecución de migraciones
-- Instalación de dependencias npm
-- Build de assets de producción
+Después de instalar el paquete, ejecuta el comando de instalación para publicar todos los assets:
 
-### Instalación Manual
 ```bash
-# Instalar dependencias PHP
-composer install
+php artisan larareact:install
+```
 
-# Copiar archivo de entorno
+Este comando publica automáticamente:
+- Archivos de configuración
+- Componentes React (shadcn/ui + componentes personalizados)
+- Assets CSS y JavaScript
+- Archivos de idioma para multilenguaje
+- Migraciones del módulo de países
+
+### Instalación Completa desde el Repositorio (Desarrollo)
+
+Si quieres contribuir o modificar LaraReact, clona el repositorio completo:
+
+```bash
+# Clonar y configurar
+git clone https://github.com/theizerdev/larareact.git
+cd larareact
+composer install
+npm install
 cp .env.example .env
 php artisan key:generate
-
-# Instalar dependencias frontend
-npm install
-
-# Ejecutar migraciones
 php artisan migrate --force
-
-# Compilar assets
-npm run build
-```
+npm run dev
 
 ## Módulos del Sistema
 
