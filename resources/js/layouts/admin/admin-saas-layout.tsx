@@ -221,12 +221,12 @@ export default function AdminSaasLayout({
     const page = usePage();
     const { auth, name } = page.props;
     const getInitials = useInitials();
-    const { 
-        settings, 
-        appearance, 
-        resolvedAppearance, 
-        updateAppearance, 
-        updateSetting 
+    const {
+        settings,
+        appearance,
+        resolvedAppearance,
+        updateAppearance,
+        updateSetting
     } = useTemplateSettings();
     const collapsed = settings.collapsed;
     const setCollapsed = (val: boolean) => updateSetting('collapsed', val);
@@ -472,7 +472,7 @@ export default function AdminSaasLayout({
                     )}
                 >
                     {/* Top bar */}
-                    <header 
+                    <header
                         className={cn(
                             'h-16 items-center justify-between border-b px-6 transition-all flex',
                             settings.navbarType === 'sticky' && 'sticky top-0 z-30 bg-background/80 backdrop-blur-xl',
@@ -489,7 +489,7 @@ export default function AdminSaasLayout({
                             >
                                 <Menu className="size-5" />
                             </Button>
-                            
+
                             <nav className="flex items-center gap-2 text-sm text-muted-foreground">
                                 <Link
                                     href={home()}
@@ -669,7 +669,7 @@ export default function AdminSaasLayout({
                     </header>
 
                     {/* Page content */}
-                    <main 
+                    <main
                         className={cn(
                             'flex-1 p-6 lg:p-8',
                             settings.contentWidth === 'compact' ? 'mx-auto max-w-[1200px] w-full' : 'w-full'
