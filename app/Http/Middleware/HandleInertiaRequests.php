@@ -35,6 +35,8 @@ class HandleInertiaRequests extends Middleware
      */
     public function share(Request $request): array
     {
+        $currentLocale = app()->getLocale();
+        \Log::debug("HandleInertiaRequests: current locale is '{$currentLocale}'");
         return [
             ...parent::share($request),
             'name' => config('app.name'),
@@ -42,10 +44,11 @@ class HandleInertiaRequests extends Middleware
                 'user' => $request->user(),
             ],
             'sidebarOpen' => ! $request->hasCookie('sidebar_state') || $request->cookie('sidebar_state') === 'true',
-            'locale' => app()->getLocale(),
-            'translations' => file_exists($path = base_path('lang/'.app()->getLocale().'.json'))
+            'locale' => $currentLocale,
+            'translations' => file_exists($path = base_path('lang/'.$currentLocale.'.json'))
                 ? json_decode(file_get_contents($path) ?: '{}', true)
                 : [],
+            'notification' => fn () => $request->session()->pull('notification'),
         ];
     }
 }

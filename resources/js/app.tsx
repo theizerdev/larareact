@@ -10,6 +10,13 @@ const appName = import.meta.env.VITE_APP_NAME || 'Laravel';
 
 createInertiaApp({
     title: (title) => (title ? `${title} - ${appName}` : appName),
+    resolve: (name) => {
+        const pages = import.meta.glob(
+            ['./Pages/**/*.tsx', '!./Pages/**/Partials/**/*.tsx'],
+            { eager: true }
+        );
+        return pages[`./Pages/${name}.tsx`];
+    },
     layout: (name) => {
         switch (true) {
             case name === 'welcome':

@@ -9,17 +9,10 @@ use Spatie\Activitylog\Traits\LogsActivity;
 
 class Pais extends Model
 {
-    use HasSpanishActivityLog, LogsActivity;
+   
 
     protected $table = 'pais';
 
-    public function getActivitylogOptions(): LogOptions
-    {
-        return LogOptions::defaults()
-            ->logOnly(['nombre', 'codigo_iso2', 'activo'])
-            ->logOnlyDirty()
-            ->setDescriptionForEvent(fn(string $eventName) => static::getSpanishDescription($eventName));
-    }
 
     protected $fillable = [
         'nombre',

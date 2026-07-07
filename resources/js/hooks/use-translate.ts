@@ -3,6 +3,7 @@ import { usePage } from '@inertiajs/react';
 export function useTranslate() {
     const { props } = usePage();
     const translations = (props as any).translations || {};
+    const locale = (props as any).locale;
 
     const __ = (key: string, replace: Record<string, string> = {}) => {
         let translation =

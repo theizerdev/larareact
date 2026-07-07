@@ -23,6 +23,14 @@ Route::middleware(['auth', 'verified'])->group(function () {
     });
 });
 
+Route::middleware(['auth', 'verified'])->group(function () {
+    // ... otras rutas
+    Route::get('/admin/paises', [App\Http\Controllers\Admin\PaisController::class, 'index'])->name('admin.paises.index');
+    Route::post('/admin/paises', [App\Http\Controllers\Admin\PaisController::class, 'store'])->name('admin.paises.store');
+    Route::put('/admin/paises/{pais}', [App\Http\Controllers\Admin\PaisController::class, 'update'])->name('admin.paises.update');
+    Route::post('/admin/paises/bulk-destroy', [App\Http\Controllers\Admin\PaisController::class, 'bulkDestroy'])->name('admin.paises.bulk-destroy');
+});
+
 if (file_exists(__DIR__.'/larareact-settings.php')) {
     require __DIR__.'/larareact-settings.php';
 }
