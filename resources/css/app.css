@@ -141,3 +141,76 @@
         @apply bg-background text-foreground;
     }
 }
+
+/* ==========================================================================
+   Template Customizer Variables and Overrides
+   ========================================================================== */
+
+/* Primary Color Presets (Light Mode) */
+:root[data-primary="indigo"] {
+    --primary: oklch(0.585 0.233 277.117);
+    --primary-foreground: oklch(0.985 0 0);
+}
+:root[data-primary="teal"] {
+    --primary: oklch(0.644 0.135 162.962);
+    --primary-foreground: oklch(0.985 0 0);
+}
+:root[data-primary="orange"] {
+    --primary: oklch(0.705 0.213 47.608);
+    --primary-foreground: oklch(0.985 0 0);
+}
+:root[data-primary="pink"] {
+    --primary: oklch(0.627 0.265 303.9);
+    --primary-foreground: oklch(0.985 0 0);
+}
+:root[data-primary="blue"] {
+    --primary: oklch(0.6 0.118 184.704);
+    --primary-foreground: oklch(0.985 0 0);
+}
+
+/* Primary Color Presets (Dark Mode) */
+.dark[data-primary="indigo"] {
+    --primary: oklch(0.656 0.17 274.376);
+    --primary-foreground: oklch(0.205 0 0);
+}
+.dark[data-primary="teal"] {
+    --primary: oklch(0.696 0.17 162.48);
+    --primary-foreground: oklch(0.205 0 0);
+}
+.dark[data-primary="orange"] {
+    --primary: oklch(0.769 0.188 70.08);
+    --primary-foreground: oklch(0.205 0 0);
+}
+.dark[data-primary="pink"] {
+    --primary: oklch(0.7 0.2 300);
+    --primary-foreground: oklch(0.205 0 0);
+}
+.dark[data-primary="blue"] {
+    --primary: oklch(0.65 0.12 185);
+    --primary-foreground: oklch(0.205 0 0);
+}
+
+/* Bordered Skin Overrides */
+html[data-skin="bordered"] {
+    --border: oklch(0.85 0 0);
+    --sidebar-border: oklch(0.85 0 0);
+}
+html[data-skin="bordered"].dark {
+    --border: oklch(0.35 0 0);
+    --sidebar-border: oklch(0.35 0 0);
+}
+html[data-skin="bordered"] .bg-card,
+html[data-skin="bordered"] .rounded-lg.border,
+html[data-skin="bordered"] .rounded-md.border {
+    box-shadow: none !important;
+    border-color: var(--border) !important;
+}
+
+/* Semi-Dark Sidebar Override (Forces dark sidebar theme on light pages) */
+html[data-sidebar="dark"]:not(.dark) {
+    --sidebar: oklch(0.145 0 0);
+    --sidebar-foreground: oklch(0.85 0 0);
+    --sidebar-border: oklch(0.25 0 0);
+    --sidebar-accent: oklch(0.25 0 0);
+    --sidebar-accent-foreground: oklch(0.985 0 0);
+}

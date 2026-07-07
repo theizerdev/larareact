@@ -3,6 +3,7 @@ import type { BreadcrumbItem } from '@/types';
 import { usePage } from '@inertiajs/react';
 import { useEffect } from 'react';
 import { notifyError, notifySuccess } from '@/utils/notifications';
+import { TemplateSettingsProvider } from '@/hooks/use-template-settings';
 
 export default function AdminLayout({
     breadcrumbs = [],
@@ -28,6 +29,8 @@ export default function AdminLayout({
     }, [notification]);
 
     return (
-        <AdminSaasLayout breadcrumbs={breadcrumbs}>{children}</AdminSaasLayout>
+        <TemplateSettingsProvider>
+            <AdminSaasLayout breadcrumbs={breadcrumbs}>{children}</AdminSaasLayout>
+        </TemplateSettingsProvider>
     );
 }

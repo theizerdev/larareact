@@ -10,6 +10,7 @@ Route::middleware(['auth'])->group(function () {
 
     Route::get('settings/profile', [ProfileController::class, 'edit'])->name('profile.edit');
     Route::patch('settings/profile', [ProfileController::class, 'update'])->name('profile.update');
+    Route::put('settings/layout', [ProfileController::class, 'updateLayout'])->name('profile.layout.update');
 });
 
 Route::middleware(['auth', 'verified'])->group(function () {

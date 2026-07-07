@@ -16,6 +16,8 @@ import {
     Sun,
     User,
     Globe,
+    Menu,
+    X,
 } from 'lucide-react';
 import * as React from 'react';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -45,6 +47,8 @@ import { index as paisesIndex } from '@/routes/admin/paises';
 import type { BreadcrumbItem, NavItem } from '@/types';
 import { useTranslate } from '@/hooks/use-translate';
 import LanguageToggle from '@/components/language-toggle';
+import { useTemplateSettings } from '@/hooks/use-template-settings';
+import TemplateCustomizer from '@/components/template-customizer';
 
 type AdminSaasLayoutProps = {
     children: React.ReactNode;
@@ -72,8 +76,8 @@ function NavItem({ item, collapsed }: { item: NavItem; collapsed: boolean }) {
             className={cn(
                 'group flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-all',
                 active
-                    ? 'bg-indigo-500/10 text-indigo-400'
-                    : 'text-slate-400 hover:bg-white/5 hover:text-slate-100',
+                    ? 'bg-primary/10 text-primary font-semibold'
+                    : 'text-sidebar-foreground/70 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground',
             )}
         >
             {item.icon && <item.icon className="size-5 shrink-0" />}
@@ -137,8 +141,8 @@ function CollapsibleNavItem({
                     <button
                         onClick={handleToggle}
                         className={cn(
-                            'group flex w-full items-center justify-center rounded-lg p-2.5 text-sm font-medium transition-all text-slate-400 hover:bg-white/5 hover:text-slate-100',
-                            isAnyActive && 'bg-indigo-500/10 text-indigo-400'
+                            'group flex w-full items-center justify-center rounded-lg p-2.5 text-sm font-medium transition-all text-sidebar-foreground/70 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground',
+                            isAnyActive && 'bg-primary/10 text-primary'
                         )}
                     >
                         <Icon className="size-5 shrink-0" />
@@ -146,14 +150,14 @@ function CollapsibleNavItem({
                 </TooltipTrigger>
                 <TooltipContent side="right">
                     <div className="flex flex-col gap-1 p-1">
-                        <p className="font-semibold text-white border-b border-white/10 pb-1 mb-1">{__(title)}</p>
+                        <p className="font-semibold text-white border-b border-sidebar-border pb-1 mb-1">{__(title)}</p>
                         {items.map((item, idx) => (
                             <Link
                                 key={idx}
                                 href={item.href}
                                 className={cn(
-                                    'text-xs py-1 px-2 rounded hover:bg-white/10 block',
-                                    url.startsWith(item.href) ? 'text-indigo-400 font-semibold' : 'text-slate-400'
+                                    'text-xs py-1 px-2 rounded hover:bg-sidebar-accent block',
+                                    url.startsWith(item.href) ? 'text-primary font-semibold' : 'text-sidebar-foreground/80'
                                 )}
                             >
                                 {__(item.title)}
@@ -170,8 +174,8 @@ function CollapsibleNavItem({
             <button
                 onClick={handleToggle}
                 className={cn(
-                    'group flex w-full items-center justify-between rounded-lg px-3 py-2.5 text-sm font-medium transition-all text-slate-400 hover:bg-white/5 hover:text-slate-100',
-                    isAnyActive && 'text-slate-200'
+                    'group flex w-full items-center justify-between rounded-lg px-3 py-2.5 text-sm font-medium transition-all text-sidebar-foreground/70 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground',
+                    isAnyActive && 'bg-sidebar-accent/30 text-sidebar-foreground/90 font-semibold'
                 )}
             >
                 <div className="flex items-center gap-3">
@@ -196,8 +200,8 @@ function CollapsibleNavItem({
                                 className={cn(
                                     'flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-all block',
                                     active
-                                        ? 'text-indigo-400'
-                                        : 'text-slate-500 hover:text-slate-300'
+                                        ? 'text-primary font-semibold'
+                                        : 'text-sidebar-foreground/60 hover:text-sidebar-accent-foreground'
                                 )}
                             >
                                 {__(item.title)}
@@ -217,9 +221,16 @@ export default function AdminSaasLayout({
     const page = usePage();
     const { auth, name } = page.props;
     const getInitials = useInitials();
-    const { appearance, resolvedAppearance, updateAppearance } =
-        useAppearance();
-    const [collapsed, setCollapsed] = React.useState(false);
+    const { 
+        settings, 
+        appearance, 
+        resolvedAppearance, 
+        updateAppearance, 
+        updateSetting 
+    } = useTemplateSettings();
+    const collapsed = settings.collapsed;
+    const setCollapsed = (val: boolean) => updateSetting('collapsed', val);
+    const [mobileMenuOpen, setMobileMenuOpen] = React.useState(false);
     const { __ } = useTranslate();
 
     const [notifications, setNotifications] = React.useState([
@@ -250,15 +261,42 @@ export default function AdminSaasLayout({
     return (
         <TooltipProvider delayDuration={0}>
             <div className="flex min-h-svh bg-background">
-                {/* Dark sidebar */}
+                {/* Mobile sidebar backdrop overlay */}
+                {mobileMenuOpen && (
+                    <div
+                        className="fixed inset-0 z-40 bg-slate-950/60 backdrop-blur-sm lg:hidden transition-opacity"
+                        onClick={() => setMobileMenuOpen(false)}
+                    />
+                )}
+
+                {/* Sidebar */}
                 <aside
                     className={cn(
-                        'fixed inset-y-0 left-0 z-40 flex flex-col border-r border-white/10 bg-slate-950 text-slate-300 transition-all duration-300',
-                        collapsed ? 'w-[72px]' : 'w-64',
+                        'fixed inset-y-0 left-0 z-50 flex flex-col border-r border-sidebar-border bg-sidebar text-sidebar-foreground transition-all duration-300',
+                        collapsed ? 'lg:w-[72px]' : 'lg:w-64',
+                        mobileMenuOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0',
+                        'w-64 lg:flex',
                     )}
                 >
+                    {/* Desktop Collapse Toggle Button (Floating Embedded) */}
+                    <div
+                        className="hidden lg:flex absolute top-[10px] -right-[22px] z-50 h-11 w-11 items-center justify-center rounded-full bg-slate-100 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-sm"
+                    >
+                        <button
+                            onClick={() => setCollapsed(!collapsed)}
+                            className="h-7 w-7 items-center justify-center rounded-full bg-primary hover:bg-primary/90 text-primary-foreground shadow focus:outline-none cursor-pointer flex border border-primary/20"
+                            title={collapsed ? __('Expand sidebar') : __('Collapse sidebar')}
+                        >
+                            {collapsed ? (
+                                <ChevronRight className="size-4" />
+                            ) : (
+                                <ChevronLeft className="size-4" />
+                            )}
+                        </button>
+                    </div>
+
                     {/* Logo area */}
-                    <div className="flex h-16 items-center border-b border-white/10 px-4">
+                    <div className="flex h-16 items-center justify-between border-b border-sidebar-border px-4">
                         <Link
                             href={home()}
                             className="flex items-center gap-3 overflow-hidden"
@@ -279,17 +317,25 @@ export default function AdminSaasLayout({
                                 {name}
                             </span>
                         </Link>
+                        <Button
+                            variant="ghost"
+                            size="icon"
+                            className="lg:hidden text-slate-400 hover:bg-white/5 hover:text-slate-100"
+                            onClick={() => setMobileMenuOpen(false)}
+                        >
+                            <X className="size-5" />
+                        </Button>
                     </div>
 
                     {/* Search */}
                     <div className="px-3 py-4">
                         <div className="relative">
-                            <Search className="absolute top-1/2 left-3 size-4 -translate-y-1/2 text-slate-500" />
+                            <Search className="absolute top-1/2 left-3 size-4 -translate-y-1/2 text-sidebar-foreground/50" />
                             <Input
                                 type="search"
                                 placeholder={collapsed ? '' : 'Buscar...'}
                                 className={cn(
-                                    'h-9 border-slate-800 bg-slate-900/50 pl-9 text-sm text-slate-200 placeholder:text-slate-500 focus-visible:ring-indigo-500',
+                                    'h-9 border-sidebar-border bg-sidebar-accent/30 pl-9 text-sm text-sidebar-foreground placeholder:text-sidebar-foreground/50 focus-visible:ring-primary',
                                     collapsed && 'w-full pl-9',
                                 )}
                             />
@@ -320,10 +366,13 @@ export default function AdminSaasLayout({
                                 icon={Settings}
                                 collapsed={collapsed}
                                 items={[
-
                                     {
                                         title: 'Countries',
                                         href: paisesIndex.url(),
+                                    },
+                                    {
+                                        title: 'Appearance',
+                                        href: appearanceEdit().url,
                                     },
                                 ]}
                             />
@@ -331,19 +380,19 @@ export default function AdminSaasLayout({
                     </nav>
 
                     {/* Bottom section */}
-                    <div className="border-t border-white/10 p-3">
+                    <div className="border-t border-sidebar-border p-3">
                         <div
                             className={cn(
-                                'mb-3 flex items-center gap-3 rounded-lg bg-white/5 p-3 transition-all',
+                                'mb-3 flex items-center gap-3 rounded-lg bg-sidebar-accent/50 p-3 transition-all',
                                 collapsed && 'justify-center px-2',
                             )}
                         >
-                            <Avatar className="size-9 shrink-0 border border-white/10">
+                            <Avatar className="size-9 shrink-0 border border-sidebar-border">
                                 <AvatarImage
                                     src={auth.user?.avatar}
                                     alt={auth.user?.name}
                                 />
-                                <AvatarFallback className="bg-gradient-to-br from-indigo-500 to-violet-600 text-xs font-medium text-white">
+                                <AvatarFallback className="bg-primary text-primary-foreground text-xs font-medium">
                                     {getInitials(auth.user?.name ?? '')}
                                 </AvatarFallback>
                             </Avatar>
@@ -353,10 +402,10 @@ export default function AdminSaasLayout({
                                     collapsed && 'opacity-0',
                                 )}
                             >
-                                <p className="truncate text-sm font-medium text-white">
+                                <p className="truncate text-sm font-medium text-sidebar-foreground">
                                     {auth.user?.name}
                                 </p>
-                                <p className="truncate text-xs text-slate-500">
+                                <p className="truncate text-xs text-sidebar-foreground/50">
                                     {auth.user?.email}
                                 </p>
                             </div>
@@ -368,7 +417,7 @@ export default function AdminSaasLayout({
                                     <Button
                                         variant="ghost"
                                         size="icon"
-                                        className="text-slate-400 hover:bg-white/5 hover:text-slate-100"
+                                        className="text-sidebar-foreground/60 hover:bg-sidebar-accent hover:text-sidebar-foreground"
                                     >
                                         <Settings className="size-4" />
                                     </Button>
@@ -417,40 +466,59 @@ export default function AdminSaasLayout({
                 {/* Main content area */}
                 <div
                     className={cn(
-                        'flex flex-1 flex-col transition-all duration-300',
-                        collapsed ? 'pl-[72px]' : 'pl-64',
+                        'flex flex-1 flex-col transition-all duration-300 min-w-0',
+                        collapsed ? 'lg:pl-[72px]' : 'lg:pl-64',
+                        'pl-0',
                     )}
                 >
                     {/* Top bar */}
-                    <header className="sticky top-0 z-30 flex h-16 items-center justify-between border-b bg-background/80 px-6 backdrop-blur-xl">
-                        <nav className="flex items-center gap-2 text-sm text-muted-foreground">
-                            <Link
-                                href={home()}
-                                className="flex items-center gap-1 transition-colors hover:text-foreground"
+                    <header 
+                        className={cn(
+                            'h-16 items-center justify-between border-b px-6 transition-all flex',
+                            settings.navbarType === 'sticky' && 'sticky top-0 z-30 bg-background/80 backdrop-blur-xl',
+                            settings.navbarType === 'static' && 'relative bg-background',
+                            settings.navbarType === 'hidden' && 'hidden'
+                        )}
+                    >
+                        <div className="flex items-center gap-3">
+                            <Button
+                                variant="ghost"
+                                size="icon"
+                                className="lg:hidden text-muted-foreground hover:bg-accent -ml-2"
+                                onClick={() => setMobileMenuOpen(true)}
                             >
-                                <Home className="size-3.5" />
-                                <span>{__('Home')}</span>
-                            </Link>
-                            {breadcrumbs.map((crumb, index) => (
-                                <React.Fragment
-                                    key={`${toUrl(crumb.href)}-${index}`}
+                                <Menu className="size-5" />
+                            </Button>
+                            
+                            <nav className="flex items-center gap-2 text-sm text-muted-foreground">
+                                <Link
+                                    href={home()}
+                                    className="flex items-center gap-1 transition-colors hover:text-foreground shrink-0"
                                 >
-                                    <span className="text-border">/</span>
-                                    {index === breadcrumbs.length - 1 ? (
-                                        <span className="font-medium text-foreground">
-                                            {__(crumb.title)}
-                                        </span>
-                                    ) : (
-                                        <Link
-                                            href={crumb.href}
-                                            className="hover:text-foreground"
-                                        >
-                                            {__(crumb.title)}
-                                        </Link>
-                                    )}
-                                </React.Fragment>
-                            ))}
-                        </nav>
+                                    <Home className="size-3.5" />
+                                    <span className="hidden sm:inline">{__('Home')}</span>
+                                </Link>
+                                {breadcrumbs.map((crumb, index) => (
+                                    <React.Fragment
+                                        key={`${toUrl(crumb.href)}-${index}`}
+                                    >
+                                        <span className="text-border shrink-0">/</span>
+                                        {index === breadcrumbs.length - 1 ? (
+                                            <span className="font-medium text-foreground truncate max-w-[120px] sm:max-w-none">
+                                                {__(crumb.title)}
+                                            </span>
+                                        ) : (
+                                            <Link
+                                                href={crumb.href}
+                                                className="hover:text-foreground shrink-0 truncate max-w-[120px] sm:max-w-none"
+                                            >
+                                                {__(crumb.title)}
+                                            </Link>
+                                        )}
+                                    </React.Fragment>
+                                ))}
+                            </nav>
+                        </div>
 
                         <div className="flex items-center gap-2">
                             {/* Language toggle */}
@@ -597,24 +665,20 @@ export default function AdminSaasLayout({
                                 </DropdownMenuContent>
                             </DropdownMenu>
 
-                            <Button
-                                variant="ghost"
-                                size="icon"
-                                onClick={() => setCollapsed(!collapsed)}
-                                className="hidden lg:flex"
-                            >
-                                {collapsed ? (
-                                    <ChevronRight className="size-5" />
-                                ) : (
-                                    <ChevronLeft className="size-5" />
-                                )}
-                            </Button>
                         </div>
                     </header>
 
                     {/* Page content */}
-                    <main className="flex-1 p-6 lg:p-8">{children}</main>
+                    <main 
+                        className={cn(
+                            'flex-1 p-6 lg:p-8',
+                            settings.contentWidth === 'compact' ? 'mx-auto max-w-[1200px] w-full' : 'w-full'
+                        )}
+                    >
+                        {children}
+                    </main>
                 </div>
+                <TemplateCustomizer />
             </div>
         </TooltipProvider>
     );

@@ -59,4 +59,26 @@ class ProfileController extends Controller
 
         return redirect('/');
     }
+
+    /**
+     * Update the user's layout settings.
+     */
+    public function updateLayout(Request $request): RedirectResponse
+    {
+        $validated = $request->validate([
+            'primaryColor' => 'required|string|max:50',
+            'skin' => 'required|string|in:default,bordered',
+            'semiDark' => 'required|boolean',
+            'collapsed' => 'required|boolean',
+            'navbarType' => 'required|string|in:sticky,static,hidden',
+            'contentWidth' => 'required|string|in:compact,wide',
+            'direction' => 'required|string|in:ltr,rtl',
+        ]);
+
+        $user = $request->user();
+        $user->layout_settings = $validated;
+        $user->save();
+
+        return back();
+    }
 }
