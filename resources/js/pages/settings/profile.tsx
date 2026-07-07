@@ -47,6 +47,21 @@ export default function Profile({
                         {({ processing, errors }) => (
                             <>
                                 <FormField
+                                    label="Usuario"
+                                    htmlFor="username"
+                                    error={errors.username}
+                                    required
+                                >
+                                    <Input
+                                        id="username"
+                                        defaultValue={auth.user.username}
+                                        name="username"
+                                        required
+                                        autoComplete="username"
+                                        placeholder="Usuario de acceso"
+                                    />
+                                </FormField>
+                                <FormField
                                     label="Nombre"
                                     htmlFor="name"
                                     error={errors.name}
@@ -79,6 +94,24 @@ export default function Profile({
                                     />
                                 </FormField>
 
+                                <FormField
+                                    label="Numero telefónico"
+                                    htmlFor="telefono"
+                                    error={errors.telefono}
+                                    required
+                                >
+                                    <Input
+                                        id="telefono"
+                                        defaultValue={auth.user.telefono}
+                                        name="telefono"
+                                        required
+                                        autoComplete="telefono"
+                                        placeholder="Numero telefónico"
+                                    />
+                                </FormField>
+
+
+
                                 {mustVerifyEmail &&
                                     auth.user.email_verified_at === null && (
                                         <div>
@@ -96,12 +129,12 @@ export default function Profile({
 
                                             {status ===
                                                 'verification-link-sent' && (
-                                                <div className="mt-2 text-sm font-medium text-emerald-600">
-                                                    Se ha enviado un nuevo
-                                                    enlace de verificación a tu
-                                                    correo.
-                                                </div>
-                                            )}
+                                                    <div className="mt-2 text-sm font-medium text-emerald-600">
+                                                        Se ha enviado un nuevo
+                                                        enlace de verificación a tu
+                                                        correo.
+                                                    </div>
+                                                )}
                                         </div>
                                     )}
 
