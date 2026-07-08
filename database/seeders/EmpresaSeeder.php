@@ -20,7 +20,8 @@ class EmpresaSeeder extends Seeder
             'direccion' => 'Av. Principal con Calle Secundaria, Edificio Central, Caracas',
             'telefono' => '+58 212 555 5555',
             'email' => 'contacto@empresaprincipal.com',
-            'pais_id' => 1 // Asumiendo que el ID 1 corresponde a Venezuela (o al primer país)
+            'pais_id' => 20,
+            'pais_telefono_id' => 20
         ]);
     }
 }

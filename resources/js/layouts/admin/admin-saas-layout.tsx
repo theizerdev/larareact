@@ -44,6 +44,8 @@ import { edit as appearanceEdit } from '@/routes/appearance';
 import { edit as profileEdit } from '@/routes/profile';
 import { edit as securityEdit } from '@/routes/security';
 import { index as paisesIndex } from '@/routes/admin/paises';
+import { index as empresasIndex } from '@/routes/admin/empresas';
+import { Building2 } from 'lucide-react';
 import type { BreadcrumbItem, NavItem } from '@/types';
 import { useTranslate } from '@/hooks/use-translate';
 import LanguageToggle from '@/components/language-toggle';
@@ -366,6 +368,10 @@ export default function AdminSaasLayout({
                                 icon={Settings}
                                 collapsed={collapsed}
                                 items={[
+                                    {
+                                        title: 'Companies',
+                                        href: empresasIndex.url(),
+                                    },
                                     {
                                         title: 'Countries',
                                         href: paisesIndex.url(),

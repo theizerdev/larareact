@@ -26,6 +26,7 @@ class Empresa extends Model
         'pais_id',
         'razon_social',
         'documento',
+        'pais_telefono_id',
         'logo',
         'logo_mini',
         'direccion',

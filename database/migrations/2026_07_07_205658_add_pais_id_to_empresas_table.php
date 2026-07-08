@@ -14,6 +14,8 @@ return new class extends Migration
         Schema::table('empresas', function (Blueprint $table) {
             $table->unsignedBigInteger('pais_id')->nullable()->after('id');
             $table->foreign('pais_id')->references('id')->on('pais')->onDelete('set null');
+            $table->unsignedBigInteger('pais_telefono_id')->nullable()->after('id');
+            $table->foreign('pais_telefono_id')->references('id')->on('pais')->onDelete('set null');
         });
     }
 
@@ -23,8 +25,8 @@ return new class extends Migration
     public function down(): void
     {
         Schema::table('empresas', function (Blueprint $table) {
-            $table->dropForeign(['pais_id']);
-            $table->dropColumn('pais_id');
+            $table->dropForeign(['pais_id','pais_telefono_id']);
+            $table->dropColumn(['pais_id','pais_telefono_id']);
         });
     }
 };
