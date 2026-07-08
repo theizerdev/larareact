@@ -10,6 +10,7 @@ import { Button } from '@/components/ui/button';
 import { FormField } from '@/components/ui/form-field';
 import { PageHeader } from '@/components/ui/page-header';
 import { SectionCard } from '@/components/ui/section-card';
+import { useTranslate } from '@/hooks/use-translate';
 import { edit } from '@/routes/security';
 
 type Props = {
@@ -18,25 +19,27 @@ type Props = {
     ManageTwoFactorProps;
 
 export default function Security(props: Props) {
+    const { __ } = useTranslate();
     const passwordInput = useRef<HTMLInputElement>(null);
     const currentPasswordInput = useRef<HTMLInputElement>(null);
 
     return (
         <>
-            <Head title="Configuración de seguridad" />
+            <Head title={`${__('Settings')} - ${__('Security')}`} />
 
             <div className="flex flex-col gap-8">
                 <PageHeader
-                    title="Seguridad"
-                    description="Administra tu contraseña y métodos de autenticación"
+                    title={__('Security')}
+                    description={__('Manage your password and authentication methods')}
                 />
 
                 <SectionCard
-                    title="Actualizar contraseña"
-                    description="Asegúrate de usar una contraseña larga y aleatoria para mantener tu cuenta segura"
+                    title={__('Update password')}
+                    description={__('Make sure to use a long, random password to keep your account secure')}
                 >
                     <Form
-                        {...SecurityController.update.form()}
+                        method="put"
+                        action="/settings/password"
                         options={{
                             preserveScroll: true,
                         }}
@@ -60,7 +63,7 @@ export default function Security(props: Props) {
                         {({ errors, processing }) => (
                             <>
                                 <FormField
-                                    label="Contraseña actual"
+                                    label={__('Current password')}
                                     htmlFor="current_password"
                                     error={errors.current_password}
                                     required
@@ -70,12 +73,12 @@ export default function Security(props: Props) {
                                         ref={currentPasswordInput}
                                         name="current_password"
                                         autoComplete="current-password"
-                                        placeholder="Contraseña actual"
+                                        placeholder={__('Current password')}
                                     />
                                 </FormField>
 
                                 <FormField
-                                    label="Nueva contraseña"
+                                    label={__('New password')}
                                     htmlFor="password"
                                     error={errors.password}
                                     required
@@ -85,13 +88,13 @@ export default function Security(props: Props) {
                                         ref={passwordInput}
                                         name="password"
                                         autoComplete="new-password"
-                                        placeholder="Nueva contraseña"
+                                        placeholder={__('New password')}
                                         passwordrules={props.passwordRules}
                                     />
                                 </FormField>
 
                                 <FormField
-                                    label="Confirmar contraseña"
+                                    label={__('Confirm password')}
                                     htmlFor="password_confirmation"
                                     error={errors.password_confirmation}
                                     required
@@ -100,7 +103,7 @@ export default function Security(props: Props) {
                                         id="password_confirmation"
                                         name="password_confirmation"
                                         autoComplete="new-password"
-                                        placeholder="Confirmar contraseña"
+                                        placeholder={__('Confirm password')}
                                         passwordrules={props.passwordRules}
                                     />
                                 </FormField>
@@ -110,7 +113,7 @@ export default function Security(props: Props) {
                                         disabled={processing}
                                         data-test="update-password-button"
                                     >
-                                        Guardar cambios
+                                        {__('Save Changes')}
                                     </Button>
                                 </div>
                             </>

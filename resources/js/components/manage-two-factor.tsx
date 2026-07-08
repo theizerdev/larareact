@@ -6,6 +6,7 @@ import TwoFactorRecoveryCodes from '@/components/two-factor-recovery-codes';
 import TwoFactorSetupModal from '@/components/two-factor-setup-modal';
 import { Button } from '@/components/ui/button';
 import { useTwoFactorAuth } from '@/hooks/use-two-factor-auth';
+import { useTranslate } from '@/hooks/use-translate';
 import { disable, enable } from '@/routes/two-factor';
 
 export type Props = {
@@ -15,6 +16,7 @@ export type Props = {
 };
 
 export default function ManageTwoFactor(props: Props) {
+    const { __ } = useTranslate();
     const requiresConfirmation = props.requiresConfirmation ?? false;
     const twoFactorEnabled = props.twoFactorEnabled ?? false;
 
@@ -48,26 +50,27 @@ export default function ManageTwoFactor(props: Props) {
         <div className="space-y-6">
             <Heading
                 variant="small"
-                title="Two-factor authentication"
-                description="Manage your two-factor authentication settings"
+                title={__('Two-factor authentication')}
+                description={__('Manage your two-factor authentication settings')}
             />
             {twoFactorEnabled ? (
                 <div className="flex flex-col items-start justify-start space-y-4">
                     <p className="text-sm text-muted-foreground">
-                        You will be prompted for a secure, random pin during
-                        login, which you can retrieve from the TOTP-supported
-                        application on your phone.
+                        {__('You will be prompted for a secure, random pin during login, which you can retrieve from the TOTP-supported application on your phone.')}
                     </p>
 
                     <div className="relative inline">
-                        <Form {...disable.form()}>
+                        <Form
+                            method="delete"
+                            action="/user/two-factor-authentication"
+                        >
                             {({ processing }) => (
                                 <Button
                                     variant="destructive"
                                     type="submit"
                                     disabled={processing}
                                 >
-                                    Disable 2FA
+                                    {__('Disable 2FA')}
                                 </Button>
                             )}
                         </Form>
@@ -82,26 +85,24 @@ export default function ManageTwoFactor(props: Props) {
             ) : (
                 <div className="flex flex-col items-start justify-start space-y-4">
                     <p className="text-sm text-muted-foreground">
-                        When you enable two-factor authentication, you will be
-                        prompted for a secure pin during login. This pin can be
-                        retrieved from a TOTP-supported application on your
-                        phone.
+                        {__('When you enable two-factor authentication, you will be prompted for a secure, random pin during login. This pin can be retrieved from a TOTP-supported application on your phone.')}
                     </p>
 
                     <div>
                         {hasSetupData ? (
                             <Button onClick={() => setShowSetupModal(true)}>
                                 <ShieldCheck />
-                                Continue setup
+                                {__('Continue setup')}
                             </Button>
                         ) : (
                             <Form
-                                {...enable.form()}
+                                method="post"
+                                action="/user/two-factor-authentication"
                                 onSuccess={() => setShowSetupModal(true)}
                             >
                                 {({ processing }) => (
                                     <Button type="submit" disabled={processing}>
-                                        Enable 2FA
+                                        {__('Enable 2FA')}
                                     </Button>
                                 )}
                             </Form>

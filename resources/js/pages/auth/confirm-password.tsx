@@ -1,4 +1,4 @@
-import { Form, Head } from '@inertiajs/react';
+import { Head, useForm } from '@inertiajs/react';
 import {
     index as confirmOptions,
     store as confirmStore,
@@ -10,51 +10,63 @@ import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { Spinner } from '@/components/ui/spinner';
 import { store } from '@/routes/password/confirm';
+import { useTranslate } from '@/hooks/use-translate';
 
 export default function ConfirmPassword() {
+    const { __ } = useTranslate();
+    const { data, setData, post, processing, errors, reset } = useForm({
+        password: '',
+    });
+
+    const handleSubmit = (e: React.FormEvent) => {
+        e.preventDefault();
+        post(store.url(), {
+            onFinish: () => reset('password'),
+        });
+    };
+
     return (
         <>
-            <Head title="Confirm password" />
+            <Head title={__('Confirm password')} />
 
             <PasskeyVerify
                 routes={{
                     options: confirmOptions(),
                     submit: confirmStore(),
                 }}
-                label="Confirm with passkey"
-                loadingLabel="Confirming..."
-                separator="Or confirm with password"
+                label={__('Confirm with passkey')}
+                loadingLabel={__('Confirming...')}
+                separator={__('Or confirm with password')}
             />
 
-            <Form {...store.form()} resetOnSuccess={['password']}>
-                {({ processing, errors }) => (
-                    <div className="space-y-6">
-                        <div className="grid gap-2">
-                            <Label htmlFor="password">Password</Label>
-                            <PasswordInput
-                                id="password"
-                                name="password"
-                                placeholder="Password"
-                                autoComplete="current-password"
-                                autoFocus
-                            />
+            <form onSubmit={handleSubmit} className="space-y-6">
+                <div className="grid gap-2">
+                    <Label htmlFor="password">{__('Password')}</Label>
+                    <PasswordInput
+                        id="password"
+                        name="password"
+                        value={data.password}
+                        onChange={(e) => setData('password', e.target.value)}
+                        placeholder={__('Password')}
+                        autoComplete="current-password"
+                        autoFocus
+                    />
 
-                            <InputError message={errors.password} />
-                        </div>
+                    <InputError message={errors.password} />
+                </div>
 
-                        <div className="flex items-center">
-                            <Button
-                                className="w-full"
-                                disabled={processing}
-                                data-test="confirm-password-button"
-                            >
-                                {processing && <Spinner />}
-                                Confirm password
-                            </Button>
-                        </div>
-                    </div>
-                )}
-            </Form>
+                <div className="flex items-center">
+                    <Button
+                        className="w-full"
+                        type="submit"
+                        disabled={processing}
+                        data-test="confirm-password-button"
+                    >
+                        {processing && <Spinner />}
+                        {__('Confirm password')}
+                    </Button>
+                </div>
+            </form>
         </>
     );
 }
