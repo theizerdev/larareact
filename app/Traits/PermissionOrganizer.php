@@ -43,7 +43,9 @@ trait PermissionOrganizer
             'dashboard' => 'Dashboard',
             'usuarios' => 'Usuarios',
             'roles' => 'Roles',
-            'grupos' => 'Grupos',
+            'empresas' => 'Empresas',
+            'sucursales' => 'Sucursales',
+            
             default => ucfirst($module)
         };
     }

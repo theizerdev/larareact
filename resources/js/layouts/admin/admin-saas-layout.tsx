@@ -46,6 +46,7 @@ import { edit as securityEdit } from '@/routes/security';
 import { index as paisesIndex } from '@/routes/admin/paises';
 import { index as empresasIndex } from '@/routes/admin/empresas';
 import { index as sucursalesIndex } from '@/routes/admin/sucursales';
+import { index as rolesIndex } from '@/routes/admin/roles';
 import { Building2, GitBranch } from 'lucide-react';
 import type { BreadcrumbItem, NavItem } from '@/types';
 import { useTranslate } from '@/hooks/use-translate';
@@ -384,6 +385,20 @@ export default function AdminSaasLayout({
                                     {
                                         title: 'Appearance',
                                         href: appearanceEdit().url,
+                                    },
+                                ]}
+                            />
+                        </div>
+
+                        <div className="pt-2">
+                            <CollapsibleNavItem
+                                title="Security"
+                                icon={Shield}
+                                collapsed={collapsed}
+                                items={[
+                                    {
+                                        title: 'Roles',
+                                        href: rolesIndex.url(),
                                     },
                                 ]}
                             />
