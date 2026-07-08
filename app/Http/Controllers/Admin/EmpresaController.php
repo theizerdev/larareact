@@ -143,8 +143,8 @@ class EmpresaController extends Controller
     public function updateLogos(Request $request, Empresa $empresa)
     {
         $request->validate([
-            'logo'      => 'nullable|image|mimes:jpeg,png,jpg,webp|max:2048',
-            'logo_mini' => 'nullable|image|mimes:jpeg,png,jpg,webp|max:1024',
+            'logo'      => 'nullable|image|mimes:jpeg,png,jpg,webp|max:5120',
+            'logo_mini' => 'nullable|image|mimes:jpeg,png,jpg,webp|max:2048',
         ]);
 
         try {

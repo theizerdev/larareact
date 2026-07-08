@@ -13,6 +13,7 @@ return new class extends Migration
     {
         Schema::table('empresas', function (Blueprint $table) {
             $table->string('logo')->nullable()->after('documento');
+            $table->string('logo_mini')->nullable()->after('logo');
         });
     }
 
@@ -22,7 +23,7 @@ return new class extends Migration
     public function down(): void
     {
         Schema::table('empresas', function (Blueprint $table) {
-            $table->dropColumn('logo');
+            $table->dropColumn(['logo_mini', 'logo']);
         });
     }
 };

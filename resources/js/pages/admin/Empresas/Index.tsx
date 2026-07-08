@@ -1,4 +1,4 @@
-import React, { useState, Suspense, lazy } from 'react';
+import React, { useState, Suspense, lazy, useRef } from 'react';
 import { Head, useForm, router } from '@inertiajs/react';
 import { Breadcrumbs } from '@/components/breadcrumbs';
 import { Button } from '@/components/ui/button';
@@ -12,6 +12,7 @@ import { Paginated } from '@/types/app';
 import { DataTable, ColumnDef } from '@/components/data-table';
 import { cn, cleanParams } from '@/lib/utils';
 import { useTranslate } from '@/hooks/use-translate';
+import { notifySuccess, notifyError } from '@/utils/notifications';
 import {
     DropdownMenu,
     DropdownMenuContent,
@@ -29,6 +30,9 @@ import {
     Phone,
     Mail,
     MapPin,
+    ImageIcon,
+    Upload,
+    X,
 } from 'lucide-react';
 import {
     Dialog,
@@ -130,6 +134,15 @@ export default function EmpresasIndexPage({ auth, empresas, stats, paises, filte
     const [activeTab, setActiveTab]             = useState('general');
     const [isTableLoading, setIsTableLoading]   = useState(false);
 
+    // Logos
+    const [logoFile, setLogoFile]           = useState<File | null>(null);
+    const [logoMiniFile, setLogoMiniFile]   = useState<File | null>(null);
+    const [logoPreview, setLogoPreview]     = useState<string | null>(null);
+    const [logoMiniPreview, setLogoMiniPreview] = useState<string | null>(null);
+    const [uploadingLogos, setUploadingLogos]   = useState(false);
+    const logoInputRef     = useRef<HTMLInputElement>(null);
+    const logoMiniInputRef = useRef<HTMLInputElement>(null);
+
     // Filtros
     const [searchTerm, setSearchTerm]       = useState(filters.search || '');
     const [statusFilter, setStatusFilter]   = useState(filters.status || '');
@@ -174,6 +187,10 @@ export default function EmpresasIndexPage({ auth, empresas, stats, paises, filte
         setEditingEmpresa(null);
         reset();
         setActiveTab('general');
+        setLogoFile(null);
+        setLogoMiniFile(null);
+        setLogoPreview(null);
+        setLogoMiniPreview(null);
         setIsModalOpen(true);
     };
 
@@ -192,19 +209,79 @@ export default function EmpresasIndexPage({ auth, empresas, stats, paises, filte
             latitud:             empresa.latitud ?? null,
             longitud:            empresa.longitud ?? null,
         });
+        setLogoFile(null);
+        setLogoMiniFile(null);
+        setLogoPreview(empresa.logo || null);
+        setLogoMiniPreview(empresa.logo_mini || null);
         setActiveTab('general');
         setIsModalOpen(true);
+    };
+
+    const handleLogoFileChange = (file: File | null, type: 'logo' | 'logo_mini') => {
+        if (!file) return;
+        const reader = new FileReader();
+        reader.onloadend = () => {
+            if (type === 'logo') {
+                setLogoFile(file);
+                setLogoPreview(reader.result as string);
+            } else {
+                setLogoMiniFile(file);
+                setLogoMiniPreview(reader.result as string);
+            }
+        };
+        reader.readAsDataURL(file);
+    };
+
+    const handleUploadLogos = () => {
+        if (!editingEmpresa) return;
+        if (!logoFile && !logoMiniFile) return;
+
+        const formData = new FormData();
+        if (logoFile)     formData.append('logo',      logoFile);
+        if (logoMiniFile) formData.append('logo_mini', logoMiniFile);
+
+        setUploadingLogos(true);
+        router.post(`/admin/empresas/${editingEmpresa.id}/logos`, formData, {
+            forceFormData: true,
+            onSuccess: () => {
+                setLogoFile(null);
+                setLogoMiniFile(null);
+                notifySuccess(__('Logos updated successfully.'));
+            },
+            onError: (errors) => {
+                console.error('[Logo Upload] Validation errors:', errors);
+                // Mostrar el primer error de validación recibido del servidor
+                const firstError = Object.values(errors)[0] as string | undefined;
+                notifyError(firstError ?? __('There was an error updating the logos. Please try again.'));
+            },
+            onFinish: () => setUploadingLogos(false),
+        });
     };
 
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
         if (editingEmpresa) {
             put(`/admin/empresas/${editingEmpresa.id}`, {
-                onSuccess: () => { setIsModalOpen(false); setEditingEmpresa(null); reset(); },
+                onSuccess: () => {
+                    setIsModalOpen(false);
+                    setEditingEmpresa(null);
+                    reset();
+                    notifySuccess(__('Company updated successfully.'));
+                },
+                onError: () => {
+                    notifyError(__('Please review the highlighted fields.'));
+                },
             });
         } else {
             post('/admin/empresas', {
-                onSuccess: () => { setIsModalOpen(false); reset(); },
+                onSuccess: () => {
+                    setIsModalOpen(false);
+                    reset();
+                    notifySuccess(__('Company created successfully.'));
+                },
+                onError: () => {
+                    notifyError(__('Please review the highlighted fields.'));
+                },
             });
         }
     };
@@ -443,7 +520,7 @@ export default function EmpresasIndexPage({ auth, empresas, stats, paises, filte
 
                         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full mt-4">
                             {/* ── Navbar de tabs ── */}
-                            <TabsList className="grid grid-cols-3 w-full mb-6">
+                            <TabsList className={`grid w-full mb-6 ${editingEmpresa ? 'grid-cols-4' : 'grid-cols-3'}`}>
                                 <TabsTrigger value="general" className="flex items-center gap-2">
                                     <Building2 className="h-4 w-4" />
                                     {__('General')}
@@ -456,6 +533,12 @@ export default function EmpresasIndexPage({ auth, empresas, stats, paises, filte
                                     <MapPin className="h-4 w-4" />
                                     {__('Location')}
                                 </TabsTrigger>
+                                {editingEmpresa && (
+                                    <TabsTrigger value="logos" className="flex items-center gap-2">
+                                        <ImageIcon className="h-4 w-4" />
+                                        {__('Logos')}
+                                    </TabsTrigger>
+                                )}
                             </TabsList>
 
                             {/* ══ Tab 1: Información General ══════════════════════════════════════ */}
@@ -656,6 +739,181 @@ export default function EmpresasIndexPage({ auth, empresas, stats, paises, filte
                                     {__('Click on the map to set the exact location. The address will be obtained automatically.')}
                                 </p>
                             </TabsContent>
+                            {/* ══ Tab 4: Logos ═══════════════════════════════════════════════════════ */}
+                            {editingEmpresa && (
+                                <TabsContent value="logos" className="space-y-6">
+                                    <p className="text-sm text-muted-foreground">
+                                        {__('Upload the company logos. The main logo is used in reports and documents. The mini logo (favicon) is used in the browser tab and small display areas.')}
+                                    </p>
+
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                        {/* Logo principal */}
+                                        <div className="space-y-3">
+                                            <Label className="flex items-center gap-2">
+                                                <ImageIcon className="h-4 w-4 text-indigo-500" />
+                                                {__('Main Logo')}
+                                                <span className="text-xs text-muted-foreground ml-1">({__('Reports & Documents')})</span>
+                                            </Label>
+
+                                            {/* Preview / Drop zone */}
+                                            <div
+                                                onClick={() => logoInputRef.current?.click()}
+                                                onDragOver={(e) => e.preventDefault()}
+                                                onDrop={(e) => {
+                                                    e.preventDefault();
+                                                    const file = e.dataTransfer.files[0];
+                                                    if (file) handleLogoFileChange(file, 'logo');
+                                                }}
+                                                className="relative group cursor-pointer rounded-xl border-2 border-dashed border-slate-200 dark:border-slate-700 hover:border-indigo-400 dark:hover:border-indigo-500 transition-all duration-200 overflow-hidden bg-slate-50 dark:bg-slate-900/40 hover:bg-indigo-50/40 dark:hover:bg-indigo-950/20"
+                                                style={{ minHeight: '180px' }}
+                                            >
+                                                {logoPreview ? (
+                                                    <>
+                                                        <img
+                                                            src={logoPreview}
+                                                            alt="Logo principal"
+                                                            className="w-full h-44 object-contain p-4"
+                                                        />
+                                                        <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                                                            <div className="text-white text-center">
+                                                                <Upload className="h-6 w-6 mx-auto mb-1" />
+                                                                <p className="text-xs">{__('Click to change')}</p>
+                                                            </div>
+                                                        </div>
+                                                        {logoFile && (
+                                                            <button
+                                                                type="button"
+                                                                onClick={(e) => { e.stopPropagation(); setLogoFile(null); setLogoPreview(editingEmpresa?.logo || null); }}
+                                                                className="absolute top-2 right-2 bg-white dark:bg-slate-800 rounded-full p-1 shadow hover:bg-red-50 dark:hover:bg-red-900/30 text-slate-500 hover:text-red-500 transition-colors"
+                                                            >
+                                                                <X className="h-3.5 w-3.5" />
+                                                            </button>
+                                                        )}
+                                                    </>
+                                                ) : (
+                                                    <div className="flex flex-col items-center justify-center h-44 gap-2 text-slate-400">
+                                                        <div className="w-14 h-14 rounded-full bg-indigo-100 dark:bg-indigo-900/30 flex items-center justify-center">
+                                                            <ImageIcon className="h-7 w-7 text-indigo-400" />
+                                                        </div>
+                                                        <p className="text-xs font-medium">{__('Click or drag to upload')}</p>
+                                                        <p className="text-xs text-slate-300">PNG, JPG, WEBP · max 5MB</p>
+                                                    </div>
+                                                )}
+                                            </div>
+
+                                            <input
+                                                ref={logoInputRef}
+                                                type="file"
+                                                accept="image/jpeg,image/png,image/jpg,image/webp"
+                                                className="hidden"
+                                                onChange={(e) => handleLogoFileChange(e.target.files?.[0] ?? null, 'logo')}
+                                            />
+
+                                            {logoFile && (
+                                                <p className="text-xs text-indigo-600 dark:text-indigo-400 font-medium flex items-center gap-1">
+                                                    <Upload className="h-3 w-3" />
+                                                    {logoFile.name} ({(logoFile.size / 1024).toFixed(0)} KB)
+                                                </p>
+                                            )}
+                                        </div>
+
+                                        {/* Logo mini (favicon) */}
+                                        <div className="space-y-3">
+                                            <Label className="flex items-center gap-2">
+                                                <ImageIcon className="h-4 w-4 text-purple-500" />
+                                                {__('Mini Logo')}
+                                                <span className="text-xs text-muted-foreground ml-1">({__('Favicon & small areas')})</span>
+                                            </Label>
+
+                                            <div
+                                                onClick={() => logoMiniInputRef.current?.click()}
+                                                onDragOver={(e) => e.preventDefault()}
+                                                onDrop={(e) => {
+                                                    e.preventDefault();
+                                                    const file = e.dataTransfer.files[0];
+                                                    if (file) handleLogoFileChange(file, 'logo_mini');
+                                                }}
+                                                className="relative group cursor-pointer rounded-xl border-2 border-dashed border-slate-200 dark:border-slate-700 hover:border-purple-400 dark:hover:border-purple-500 transition-all duration-200 overflow-hidden bg-slate-50 dark:bg-slate-900/40 hover:bg-purple-50/40 dark:hover:bg-purple-950/20"
+                                                style={{ minHeight: '180px' }}
+                                            >
+                                                {logoMiniPreview ? (
+                                                    <>
+                                                        <img
+                                                            src={logoMiniPreview}
+                                                            alt="Logo mini"
+                                                            className="w-full h-44 object-contain p-4"
+                                                        />
+                                                        <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                                                            <div className="text-white text-center">
+                                                                <Upload className="h-6 w-6 mx-auto mb-1" />
+                                                                <p className="text-xs">{__('Click to change')}</p>
+                                                            </div>
+                                                        </div>
+                                                        {logoMiniFile && (
+                                                            <button
+                                                                type="button"
+                                                                onClick={(e) => { e.stopPropagation(); setLogoMiniFile(null); setLogoMiniPreview(editingEmpresa?.logo_mini || null); }}
+                                                                className="absolute top-2 right-2 bg-white dark:bg-slate-800 rounded-full p-1 shadow hover:bg-red-50 dark:hover:bg-red-900/30 text-slate-500 hover:text-red-500 transition-colors"
+                                                            >
+                                                                <X className="h-3.5 w-3.5" />
+                                                            </button>
+                                                        )}
+                                                    </>
+                                                ) : (
+                                                    <div className="flex flex-col items-center justify-center h-44 gap-2 text-slate-400">
+                                                        <div className="w-14 h-14 rounded-full bg-purple-100 dark:bg-purple-900/30 flex items-center justify-center">
+                                                            <ImageIcon className="h-7 w-7 text-purple-400" />
+                                                        </div>
+                                                        <p className="text-xs font-medium">{__('Click or drag to upload')}</p>
+                                                        <p className="text-xs text-slate-300">PNG, JPG, WEBP · max 2MB</p>
+                                                    </div>
+                                                )}
+                                            </div>
+
+                                            <input
+                                                ref={logoMiniInputRef}
+                                                type="file"
+                                                accept="image/jpeg,image/png,image/jpg,image/webp"
+                                                className="hidden"
+                                                onChange={(e) => handleLogoFileChange(e.target.files?.[0] ?? null, 'logo_mini')}
+                                            />
+
+                                            {logoMiniFile && (
+                                                <p className="text-xs text-purple-600 dark:text-purple-400 font-medium flex items-center gap-1">
+                                                    <Upload className="h-3 w-3" />
+                                                    {logoMiniFile.name} ({(logoMiniFile.size / 1024).toFixed(0)} KB)
+                                                </p>
+                                            )}
+                                        </div>
+                                    </div>
+
+                                    {/* Botón de subida de logos */}
+                                    <div className="flex justify-end pt-2 border-t">
+                                        <Button
+                                            type="button"
+                                            onClick={handleUploadLogos}
+                                            disabled={uploadingLogos || (!logoFile && !logoMiniFile)}
+                                            className="bg-indigo-600 hover:bg-indigo-700 text-white"
+                                        >
+                                            {uploadingLogos ? (
+                                                <>
+                                                    <svg className="animate-spin h-4 w-4 mr-2" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                                                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                                                    </svg>
+                                                    {__('Uploading...')}
+                                                </>
+                                            ) : (
+                                                <>
+                                                    <Upload className="h-4 w-4 mr-2" />
+                                                    {__('Upload Logos')}
+                                                </>
+                                            )}
+                                        </Button>
+                                    </div>
+                                </TabsContent>
+                            )}
+
                         </Tabs>
 
                         <DialogFooter className="mt-6 pt-6 border-t">
