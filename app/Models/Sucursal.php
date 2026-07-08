@@ -25,6 +25,7 @@ class Sucursal extends Model
     protected $fillable = [
         'empresa_id',
         'nombre',
+        'pais_telefono_id',
         'telefono',
         'direccion',
         'latitud',
@@ -47,5 +48,13 @@ class Sucursal extends Model
     public function empresa(): BelongsTo
     {
         return $this->belongsTo(Empresa::class);
+    }
+
+    /**
+     * Get the pais used for the phone prefix of this sucursal.
+     */
+    public function paisTelefono(): BelongsTo
+    {
+        return $this->belongsTo(Pais::class, 'pais_telefono_id');
     }
 }

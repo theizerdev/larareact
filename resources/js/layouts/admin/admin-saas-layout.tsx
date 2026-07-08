@@ -45,7 +45,8 @@ import { edit as profileEdit } from '@/routes/profile';
 import { edit as securityEdit } from '@/routes/security';
 import { index as paisesIndex } from '@/routes/admin/paises';
 import { index as empresasIndex } from '@/routes/admin/empresas';
-import { Building2 } from 'lucide-react';
+import { index as sucursalesIndex } from '@/routes/admin/sucursales';
+import { Building2, GitBranch } from 'lucide-react';
 import type { BreadcrumbItem, NavItem } from '@/types';
 import { useTranslate } from '@/hooks/use-translate';
 import LanguageToggle from '@/components/language-toggle';
@@ -371,6 +372,10 @@ export default function AdminSaasLayout({
                                     {
                                         title: 'Companies',
                                         href: empresasIndex.url(),
+                                    },
+                                    {
+                                        title: 'Branches',
+                                        href: sucursalesIndex.url(),
                                     },
                                     {
                                         title: 'Countries',

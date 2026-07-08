@@ -12,10 +12,10 @@ createInertiaApp({
     title: (title) => (title ? `${title} - ${appName}` : appName),
     resolve: (name) => {
         const pages = import.meta.glob(
-            ['./Pages/**/*.tsx', '!./Pages/**/Partials/**/*.tsx'],
+            ['./pages/**/*.tsx', '!./pages/**/Partials/**/*.tsx'],
             { eager: true }
         ) as Record<string, any>;
-        return pages[`./Pages/${name}.tsx`];
+        return pages[`./pages/${name}.tsx`];
     },
     layout: (name) => {
         switch (true) {
