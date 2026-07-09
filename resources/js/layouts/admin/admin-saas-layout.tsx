@@ -47,6 +47,7 @@ import { index as paisesIndex } from '@/routes/admin/paises';
 import { index as empresasIndex } from '@/routes/admin/empresas';
 import { index as sucursalesIndex } from '@/routes/admin/sucursales';
 import { index as rolesIndex } from '@/routes/admin/roles';
+import { index as usuariosIndex } from '@/routes/admin/usuarios';
 import { Building2, GitBranch } from 'lucide-react';
 import type { BreadcrumbItem, NavItem } from '@/types';
 import { useTranslate } from '@/hooks/use-translate';
@@ -396,6 +397,10 @@ export default function AdminSaasLayout({
                                 icon={Shield}
                                 collapsed={collapsed}
                                 items={[
+                                    {
+                                        title: 'Users',
+                                        href: usuariosIndex.url(),
+                                    },
                                     {
                                         title: 'Roles',
                                         href: rolesIndex.url(),

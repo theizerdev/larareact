@@ -37,7 +37,7 @@ use Spatie\Permission\Traits\HasRoles;
  * @property string|null $two_factor_recovery_codes
  * @property Carbon|null $two_factor_confirmed_at
  */
-#[Fillable(['name', 'username', 'status', 'email', 'password', 'telefono', 'empresa_id', 'sucursal_id','layout_settings'])]
+#[Fillable(['name', 'username', 'status', 'email', 'password', 'telefono', 'pais_telefono_id', 'empresa_id', 'sucursal_id','layout_settings'])]
 #[Hidden(['password', 'remember_token', 'whatsapp_otp', 'two_factor_secret', 'two_factor_recovery_codes'])]
 class User extends Authenticatable implements PasskeyUser
 {
@@ -55,7 +55,6 @@ class User extends Authenticatable implements PasskeyUser
             'email_verified_at' => 'datetime',
             'phone_verified_at' => 'datetime',
             'two_factor_confirmed_at' => 'datetime',
-            'two_factor_confirmed_at' => 'datetime',
             'password' => 'hashed',
             'layout_settings' => 'array',
         ];
@@ -69,5 +68,10 @@ class User extends Authenticatable implements PasskeyUser
     public function sucursal()
     {
         return $this->belongsTo(Sucursal::class);
+    }
+
+    public function paisTelefono()
+    {
+        return $this->belongsTo(Pais::class, 'pais_telefono_id');
     }
 }
