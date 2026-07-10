@@ -41,7 +41,13 @@ class HandleInertiaRequests extends Middleware
             ...parent::share($request),
             'name' => config('app.name'),
             'auth' => [
-                'user' => $request->user(),
+                'user' => $request->user() ? array_merge($request->user()->toArray(), [
+                    'empresa' => $request->user()->empresa ? [
+                        'id' => $request->user()->empresa->id,
+                        'mapbox_api_key' => $request->user()->empresa->mapbox_api_key,
+                        'mapbox_active' => (bool)$request->user()->empresa->mapbox_active,
+                    ] : null
+                ]) : null,
             ],
             'sidebarOpen' => ! $request->hasCookie('sidebar_state') || $request->cookie('sidebar_state') === 'true',
             'locale' => $currentLocale,

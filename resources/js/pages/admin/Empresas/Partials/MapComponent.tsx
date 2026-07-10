@@ -1,4 +1,5 @@
-import React from 'react';
+import React, { useState } from 'react';
+import MapboxMap from '@/components/mapbox-map';
 
 interface MapComponentProps {
     center: [number, number];
@@ -8,103 +9,46 @@ interface MapComponentProps {
     onLocationSelected: (lat: number, lng: number, address?: string) => void;
 }
 
-/**
- * Componente de mapa Leaflet para registrar la ubicación de una empresa.
- * Carga react-leaflet dinámicamente (SSR-safe).
- * Al hacer clic en el mapa, actualiza lat/lng e intenta obtener la dirección via Nominatim.
- */
-const EmpresaMapComponent: React.FC<MapComponentProps> = (props) => {
-    const [LeafletComponents, setLeafletComponents] = React.useState<{
-        MapContainer: any;
-        TileLayer: any;
-        Marker: any;
-        useMapEvents: any;
-        useMap: any;
-    } | null>(null);
-    const [isGeocodingLoading, setIsGeocodingLoading] = React.useState(false);
+const EmpresaMapComponent: React.FC<MapComponentProps> = ({
+    markerPosition,
+    zoom,
+    onLocationSelected
+}) => {
+    const [isGeocodingLoading, setIsGeocodingLoading] = useState(false);
 
-    React.useEffect(() => {
-        import('react-leaflet').then((mod) => {
-            setLeafletComponents({
-                MapContainer: mod.MapContainer,
-                TileLayer: mod.TileLayer,
-                Marker: mod.Marker,
-                useMapEvents: mod.useMapEvents,
-                useMap: mod.useMap,
-            });
-        });
-    }, []);
+    const lat = markerPosition ? markerPosition[0] : 0;
+    const lng = markerPosition ? markerPosition[1] : 0;
 
-    if (!LeafletComponents) {
-        return (
-            <div className="flex items-center justify-center h-full">
-                <p className="text-slate-500 text-sm">Cargando mapa...</p>
-            </div>
-        );
-    }
+    const handleLocationChange = async (newLat: number, newLng: number) => {
+        onLocationSelected(newLat, newLng);
 
-    const { MapContainer, TileLayer, Marker, useMapEvents, useMap } = LeafletComponents;
-
-    /**
-     * Componente interno que sincroniza el centro del mapa cuando cambia el prop `center`.
-     */
-    const MapCenterSync: React.FC<{ center: [number, number]; zoom: number }> = ({ center, zoom }) => {
-        const map = useMap();
-        React.useEffect(() => {
-            map.setView(center, zoom, { animate: true });
-        }, [center[0], center[1], zoom]);
-        return null;
-    };
-
-    /**
-     * Componente interno que maneja los clics en el mapa.
-     * Realiza geocoding inverso con OpenStreetMap Nominatim.
-     */
-    const MapClickHandler: React.FC<{
-        onLocationSelected: (lat: number, lng: number, address?: string) => void;
-        setGeocodingLoading: (v: boolean) => void;
-    }> = ({ onLocationSelected, setGeocodingLoading }) => {
-        useMapEvents({
-            async click(e: any) {
-                const { lat, lng } = e.latlng;
-                // Notificar coordenadas inmediatamente
-                onLocationSelected(lat, lng);
-                // Intentar geocoding inverso
-                try {
-                    setGeocodingLoading(true);
-                    const res = await fetch(
-                        `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&accept-language=es`,
-                        { headers: { 'Accept-Language': 'es' } }
-                    );
-                    if (res.ok) {
-                        const data = await res.json();
-                        const address = data.display_name ?? '';
-                        onLocationSelected(lat, lng, address);
-                    }
-                } catch (_) {
-                    // Si falla el geocoding, no pasa nada — las coordenadas ya están
-                } finally {
-                    setGeocodingLoading(false);
-                }
-            },
-        });
-        return null;
+        try {
+            setIsGeocodingLoading(true);
+            const res = await fetch(
+                `https://nominatim.openstreetmap.org/reverse?format=json&lat=${newLat}&lon=${newLng}&accept-language=es`,
+                { headers: { 'Accept-Language': 'es' } }
+            );
+            if (res.ok) {
+                const data = await res.json();
+                const address = data.display_name ?? '';
+                onLocationSelected(newLat, newLng, address);
+            }
+        } catch (_) {
+            // Error silencioso
+        } finally {
+            setIsGeocodingLoading(false);
+        }
     };
 
     return (
-        <div style={{ position: 'relative', height: '100%', width: '100%' }}>
-            <MapContainer center={props.center} zoom={props.zoom} style={props.style}>
-                <TileLayer
-                    url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-                    attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
-                />
-                <MapCenterSync center={props.center} zoom={props.zoom} />
-                {props.markerPosition && <Marker position={props.markerPosition} />}
-                <MapClickHandler
-                    onLocationSelected={props.onLocationSelected}
-                    setGeocodingLoading={setIsGeocodingLoading}
-                />
-            </MapContainer>
+        <div className="relative w-full h-full" style={{ minHeight: '320px' }}>
+            <MapboxMap
+                lat={lat}
+                lng={lng}
+                zoom={zoom}
+                onChange={handleLocationChange}
+                interactive={true}
+            />
             {isGeocodingLoading && (
                 <div
                     style={{

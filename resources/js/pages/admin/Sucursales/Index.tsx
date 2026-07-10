@@ -56,11 +56,7 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import PhoneInputGroup from '../Empresas/Partials/PhoneInputGroup';
 
-// Carga diferida del mapa (SSR-safe)
 const SucursalMapComponent = lazy(() => {
-    if (typeof window !== 'undefined') {
-        import('leaflet/dist/leaflet.css');
-    }
     return import('../Empresas/Partials/MapComponent').then((mod) => ({ default: mod.default }));
 });
 

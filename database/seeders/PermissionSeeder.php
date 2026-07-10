@@ -52,7 +52,9 @@ class PermissionSeeder extends Seeder
                 'sucursales.edit' => 'Editar Sucursal',
                 'sucursales.delete' => 'Eliminar Sucursal',
 
-                
+                // Módulo: Integraciones
+                'integrations.view' => 'Ver Integraciones',
+                'integrations.edit' => 'Editar Integraciones',
             ],
             // Sector: Monitoreo
             'monitoreo' => [
@@ -77,6 +79,8 @@ class PermissionSeeder extends Seeder
                     str_starts_with($permission, 'roles.') => 'roles',
                     str_starts_with($permission, 'paises.') => 'paises',
                     str_starts_with($permission, 'empresas.') => 'empresas',
+                    str_starts_with($permission, 'sucursales.') => 'sucursales',
+                    str_starts_with($permission, 'integrations.') => 'integraciones',
                     str_starts_with($permission, 'monitoreo.') => 'monitoreo',
     
                     default => 'general',

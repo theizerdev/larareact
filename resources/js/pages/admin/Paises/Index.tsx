@@ -33,12 +33,7 @@ import { Switch } from '@/components/ui/switch';
 import { DeleteConfirmationDialog } from '@/components/delete-confirmation-dialog';
 import { Label } from '@/components/ui/label';
 
-// Solo importamos el mapa y sus dependencias en el cliente para evitar errores de SSR
 const MapComponent = lazy(() => {
-    // Cargamos el CSS de Leaflet solo en el cliente
-    if (typeof window !== 'undefined') {
-        import('leaflet/dist/leaflet.css');
-    }
     // Importamos el componente del mapa
     return import('./Partials/MapComponent').then(mod => ({ default: mod.default }));
 });

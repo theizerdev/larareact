@@ -55,6 +55,7 @@ import { index as sessionMonitoringIndex } from '@/routes/admin/monitoring/sessi
 import { index as logMonitoringIndex } from '@/routes/admin/monitoring/logs';
 import { index as queuesMonitoringIndex } from '@/routes/admin/monitoring/queues';
 import { index as tasksMonitoringIndex } from '@/routes/admin/monitoring/tasks';
+import { index as integrationsIndex } from '@/routes/admin/integrations';
 import { Building2, GitBranch } from 'lucide-react';
 import type { BreadcrumbItem, NavItem } from '@/types';
 import { useTranslate } from '@/hooks/use-translate';
@@ -389,6 +390,10 @@ export default function AdminSaasLayout({
                                     {
                                         title: 'Countries',
                                         href: paisesIndex.url(),
+                                    },
+                                    {
+                                        title: 'Integrations',
+                                        href: integrationsIndex.url(),
                                     },
                                     {
                                         title: 'Appearance',
