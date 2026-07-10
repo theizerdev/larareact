@@ -6,6 +6,7 @@ import { Progress } from '@/components/ui/progress';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Breadcrumbs } from '@/components/breadcrumbs';
+import { useTranslate } from '@/hooks/use-translate';
 import Chart from 'react-apexcharts';
 
 interface ServerInfo {
@@ -40,6 +41,7 @@ interface LiveMetrics {
 }
 
 export default function ServerMonitoring({ serverInfo }: PageProps) {
+    const { __ } = useTranslate();
     const [metrics, setMetrics] = useState<LiveMetrics | null>(null);
     const [cpuHistory, setCpuHistory] = useState<number[]>(Array(15).fill(0));
     const [ramHistory, setRamHistory] = useState<number[]>(Array(15).fill(0));
@@ -123,24 +125,24 @@ export default function ServerMonitoring({ serverInfo }: PageProps) {
 
     const lineChartSeries = [
         {
-            name: 'Uso de CPU',
+            name: __('Uso de CPU'),
             data: cpuHistory
         },
         {
-            name: 'Uso de RAM',
+            name: __('Uso de RAM'),
             data: ramHistory
         }
     ];
 
     const breadcrumbs = [
-        { title: 'Dashboard', href: '/admin/dashboard' },
-        { title: 'Monitoreo', href: '#' },
-        { title: 'Servidor', href: '/admin/monitoring/server' }
+        { title: __('Dashboard'), href: '/admin/dashboard' },
+        { title: __('Monitoring'), href: '#' },
+        { title: __('Server'), href: '/admin/monitoring/server' }
     ];
 
     return (
         <>
-            <Head title="Monitoreo del Servidor" />
+            <Head title={__('Server Monitoring')} />
             <div className="space-y-6">
                 <Breadcrumbs breadcrumbs={breadcrumbs} />
 
@@ -149,10 +151,10 @@ export default function ServerMonitoring({ serverInfo }: PageProps) {
                     <div>
                         <h1 className="text-3xl font-bold tracking-tight flex items-center gap-3">
                             <Server className="h-8 w-8 text-rose-600" />
-                            Monitoreo del Servidor
+                            {__('Server Monitoring')}
                         </h1>
                         <p className="text-muted-foreground mt-1">
-                            Monitorea el consumo de CPU, memoria RAM, velocidad de red, logs del sistema y almacenamiento en tiempo real.
+                            {__('Monitor CPU consumption, RAM memory, network speed, system logs, and storage in real-time.')}
                         </p>
                     </div>
                     <Button 
@@ -163,7 +165,7 @@ export default function ServerMonitoring({ serverInfo }: PageProps) {
                         disabled={loading}
                     >
                         <RefreshCw className="h-4 w-4" />
-                        Refrescar
+                        {__('Refrescar')}
                     </Button>
                 </div>
 
@@ -171,7 +173,7 @@ export default function ServerMonitoring({ serverInfo }: PageProps) {
                 <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
                     <Card className="shadow-sm">
                         <CardHeader className="flex flex-row items-center justify-between pb-2">
-                            <CardTitle className="text-sm font-semibold text-muted-foreground uppercase">Sistema Operativo</CardTitle>
+                            <CardTitle className="text-sm font-semibold text-muted-foreground uppercase">{__('Sistema Operativo')}</CardTitle>
                             <Info className="h-5 w-5 text-indigo-500" />
                         </CardHeader>
                         <CardContent>
@@ -182,7 +184,7 @@ export default function ServerMonitoring({ serverInfo }: PageProps) {
 
                     <Card className="shadow-sm">
                         <CardHeader className="flex flex-row items-center justify-between pb-2">
-                            <CardTitle className="text-sm font-semibold text-muted-foreground uppercase">Software & PHP</CardTitle>
+                            <CardTitle className="text-sm font-semibold text-muted-foreground uppercase">{__('Software & PHP')}</CardTitle>
                             <Terminal className="h-5 w-5 text-blue-500" />
                         </CardHeader>
                         <CardContent>
@@ -193,7 +195,7 @@ export default function ServerMonitoring({ serverInfo }: PageProps) {
 
                     <Card className="shadow-sm">
                         <CardHeader className="flex flex-row items-center justify-between pb-2">
-                            <CardTitle className="text-sm font-semibold text-muted-foreground uppercase">CPU & Carga (Load Avg)</CardTitle>
+                            <CardTitle className="text-sm font-semibold text-muted-foreground uppercase">{__('CPU & Carga (Load Avg)')}</CardTitle>
                             <Cpu className="h-5 w-5 text-emerald-500" />
                         </CardHeader>
                         <CardContent>
@@ -201,14 +203,14 @@ export default function ServerMonitoring({ serverInfo }: PageProps) {
                                 {metrics ? `${metrics.cpu_usage}%` : '--%'}
                             </div>
                             <p className="text-xs text-muted-foreground mt-1">
-                                Promedio: {metrics ? metrics.load_average.join(' | ') : '--'}
+                                {__('Promedio:')} {metrics ? metrics.load_average.join(' | ') : '--'}
                             </p>
                         </CardContent>
                     </Card>
 
                     <Card className="shadow-sm">
                         <CardHeader className="flex flex-row items-center justify-between pb-2">
-                            <CardTitle className="text-sm font-semibold text-muted-foreground uppercase">Memoria RAM</CardTitle>
+                            <CardTitle className="text-sm font-semibold text-muted-foreground uppercase">{__('Memoria RAM')}</CardTitle>
                             <Activity className="h-5 w-5 text-amber-500" />
                         </CardHeader>
                         <CardContent>
@@ -225,15 +227,16 @@ export default function ServerMonitoring({ serverInfo }: PageProps) {
                     </Card>
                 </div>
 
+
                 {/* Graficos y Telemetría en Vivo */}
                 <div className="grid gap-6 lg:grid-cols-3">
                     <Card className="lg:col-span-2 shadow-sm">
                         <CardHeader>
                             <CardTitle className="flex items-center gap-2">
                                 <Activity className="h-5 w-5 text-indigo-500" />
-                                Carga de Recursos del Sistema (CPU & RAM)
+                                {__('Carga de Recursos del Sistema (CPU & RAM)')}
                             </CardTitle>
-                            <CardDescription>Historial de consumo activo en vivo de CPU y Memoria (3s de refresco).</CardDescription>
+                            <CardDescription>{__('Historial de consumo activo en vivo de CPU y Memoria (3s de refresco).')}</CardDescription>
                         </CardHeader>
                         <CardContent>
                             <Chart 
@@ -249,14 +252,14 @@ export default function ServerMonitoring({ serverInfo }: PageProps) {
                         <CardHeader>
                             <CardTitle className="flex items-center gap-2">
                                 <HardDrive className="h-5 w-5 text-blue-500" />
-                                Almacenamiento en Disco
+                                {__('Almacenamiento en Disco')}
                             </CardTitle>
-                            <CardDescription>Distribución física del disco principal.</CardDescription>
+                            <CardDescription>{__('Distribución física del disco principal.')}</CardDescription>
                         </CardHeader>
                         <CardContent className="space-y-4">
                             <div className="space-y-2">
                                 <div className="flex justify-between text-sm">
-                                    <span className="text-muted-foreground">Disco Usado:</span>
+                                    <span className="text-muted-foreground">{__('Disco Usado:')}</span>
                                     <span className="font-semibold">{serverInfo.disk_used_gb} GB ({serverInfo.disk_used_percent}%)</span>
                                 </div>
                                 <Progress value={serverInfo.disk_used_percent} className="h-3" />
@@ -264,11 +267,11 @@ export default function ServerMonitoring({ serverInfo }: PageProps) {
 
                             <div className="pt-4 border-t space-y-2 text-sm">
                                 <div className="flex justify-between">
-                                    <span className="text-muted-foreground">Espacio Libre:</span>
+                                    <span className="text-muted-foreground">{__('Espacio Libre:')}</span>
                                     <span>{roundGb(serverInfo.disk_total_gb - serverInfo.disk_used_gb)} GB</span>
                                 </div>
                                 <div className="flex justify-between">
-                                    <span className="text-muted-foreground">Espacio Total:</span>
+                                    <span className="text-muted-foreground">{__('Espacio Total:')}</span>
                                     <span>{serverInfo.disk_total_gb} GB</span>
                                 </div>
                             </div>
@@ -282,14 +285,14 @@ export default function ServerMonitoring({ serverInfo }: PageProps) {
                         <CardHeader>
                             <CardTitle className="flex items-center gap-2">
                                 <Network className="h-5 w-5 text-blue-500" />
-                                Ancho de Banda (Red)
+                                {__('Ancho de Banda (Red)')}
                             </CardTitle>
-                            <CardDescription>Velocidad de carga y descarga de red en tiempo real.</CardDescription>
+                            <CardDescription>{__('Velocidad de carga y descarga de red en tiempo real.')}</CardDescription>
                         </CardHeader>
                         <CardContent className="space-y-6">
                             <div className="flex justify-between items-center p-3 border rounded-lg bg-slate-50 dark:bg-slate-900/50">
                                 <div>
-                                    <p className="text-xs text-muted-foreground">Velocidad de Entrada</p>
+                                    <p className="text-xs text-muted-foreground">{__('Velocidad de Entrada')}</p>
                                     <p className="text-xl font-bold tabular-nums text-emerald-600 dark:text-emerald-400">
                                         {metrics ? `${metrics.network_in_mbps} Mbps` : '-- Mbps'}
                                     </p>
@@ -299,7 +302,7 @@ export default function ServerMonitoring({ serverInfo }: PageProps) {
 
                             <div className="flex justify-between items-center p-3 border rounded-lg bg-slate-50 dark:bg-slate-900/50">
                                 <div>
-                                    <p className="text-xs text-muted-foreground">Velocidad de Salida</p>
+                                    <p className="text-xs text-muted-foreground">{__('Velocidad de Salida')}</p>
                                     <p className="text-xl font-bold tabular-nums text-indigo-600 dark:text-indigo-400">
                                         {metrics ? `${metrics.network_out_mbps} Mbps` : '-- Mbps'}
                                     </p>
@@ -313,9 +316,9 @@ export default function ServerMonitoring({ serverInfo }: PageProps) {
                         <CardHeader>
                             <CardTitle className="flex items-center gap-2">
                                 <Terminal className="h-5 w-5 text-rose-500" />
-                                Logs de Actividad del Servidor
+                                {__('Logs de Actividad del Servidor')}
                             </CardTitle>
-                            <CardDescription>Últimas acciones y eventos de logs registrados en el sistema.</CardDescription>
+                            <CardDescription>{__('Últimas acciones y eventos de logs registrados en el sistema.')}</CardDescription>
                         </CardHeader>
                         <CardContent>
                             <div className="space-y-3 font-mono text-xs">

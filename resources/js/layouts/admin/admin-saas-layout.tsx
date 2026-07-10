@@ -54,6 +54,7 @@ import { index as serverMonitoringIndex } from '@/routes/admin/monitoring/server
 import { index as sessionMonitoringIndex } from '@/routes/admin/monitoring/sessions';
 import { index as logMonitoringIndex } from '@/routes/admin/monitoring/logs';
 import { index as queuesMonitoringIndex } from '@/routes/admin/monitoring/queues';
+import { index as tasksMonitoringIndex } from '@/routes/admin/monitoring/tasks';
 import { Building2, GitBranch } from 'lucide-react';
 import type { BreadcrumbItem, NavItem } from '@/types';
 import { useTranslate } from '@/hooks/use-translate';
@@ -440,6 +441,10 @@ export default function AdminSaasLayout({
                                     {
                                         title: 'Queue Monitor',
                                         href: queuesMonitoringIndex.url(),
+                                    },
+                                    {
+                                        title: 'Scheduled Tasks',
+                                        href: tasksMonitoringIndex.url(),
                                     },
                                 ]}
                             />

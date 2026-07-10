@@ -8,6 +8,7 @@ import { Button } from '@/components/ui/button';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { Breadcrumbs } from '@/components/breadcrumbs';
+import { useTranslate } from '@/hooks/use-translate';
 import Chart from 'react-apexcharts';
 
 interface TableInfo {
@@ -59,6 +60,7 @@ interface LiveMetrics {
 }
 
 export default function DatabaseMonitoring({ dbInfo }: PageProps) {
+    const { __ } = useTranslate();
     const [metrics, setMetrics] = useState<LiveMetrics | null>(null);
     const [qpsHistory, setQpsHistory] = useState<number[]>(Array(15).fill(0));
     const [timeLabels, setTimeLabels] = useState<string[]>(Array(15).fill(''));
@@ -135,7 +137,7 @@ export default function DatabaseMonitoring({ dbInfo }: PageProps) {
 
     const lineChartSeries = [
         {
-            name: 'Consultas / Seg',
+            name: __('Queries / Sec'),
             data: qpsHistory
         }
     ];
@@ -156,7 +158,7 @@ export default function DatabaseMonitoring({ dbInfo }: PageProps) {
                         show: true,
                         total: {
                             show: true,
-                            label: 'Total Queries',
+                            label: __('Total Queries'),
                             color: '#94a3b8',
                             formatter: () => {
                                 if (!metrics) return '0';
@@ -182,14 +184,14 @@ export default function DatabaseMonitoring({ dbInfo }: PageProps) {
         : [0, 0, 0, 0];
 
     const breadcrumbs = [
-        { title: 'Dashboard', href: '/admin/dashboard' },
-        { title: 'Monitoreo', href: '#' },
-        { title: 'Base de Datos', href: '/admin/monitoring/database' }
+        { title: __('Dashboard'), href: '/admin/dashboard' },
+        { title: __('Monitoring'), href: '#' },
+        { title: __('Database'), href: '/admin/monitoring/database' }
     ];
 
     return (
         <>
-            <Head title="Monitoreo de Base de Datos" />
+            <Head title={__('Database Monitoring')} />
             <div className="space-y-6">
                 <Breadcrumbs breadcrumbs={breadcrumbs} />
 
@@ -198,10 +200,10 @@ export default function DatabaseMonitoring({ dbInfo }: PageProps) {
                     <div>
                         <h1 className="text-3xl font-bold tracking-tight flex items-center gap-3">
                             <Database className="h-8 w-8 text-indigo-600" />
-                            Monitoreo de Base de Datos
+                            {__('Database Monitoring')}
                         </h1>
                         <p className="text-muted-foreground mt-1">
-                            Visualiza métricas del motor SQL, consultas en vivo, logs lentos y optimización de almacenamiento.
+                            {__('View SQL engine metrics, live queries, slow logs, and storage optimization.')}
                         </p>
                     </div>
                     <Button 
@@ -212,48 +214,49 @@ export default function DatabaseMonitoring({ dbInfo }: PageProps) {
                         disabled={loading}
                     >
                         <RefreshCw className="h-4 w-4" />
-                        Refrescar
+                        {__('Refrescar')}
                     </Button>
                 </div>
+
 
                 {/* Resumen Cards */}
                 <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
                     <Card className="shadow-sm">
                         <CardHeader className="flex flex-row items-center justify-between pb-2">
-                            <CardTitle className="text-sm font-semibold text-muted-foreground uppercase">Motor & Versión</CardTitle>
+                            <CardTitle className="text-sm font-semibold text-muted-foreground uppercase">{__('Engine & Version')}</CardTitle>
                             <Cpu className="h-5 w-5 text-indigo-500" />
                         </CardHeader>
                         <CardContent>
                             <div className="text-2xl font-bold capitalize">{dbInfo.driver}</div>
-                            <p className="text-xs text-muted-foreground mt-1">Versión {dbInfo.version}</p>
+                            <p className="text-xs text-muted-foreground mt-1">{__('Version')} {dbInfo.version}</p>
                         </CardContent>
                     </Card>
 
                     <Card className="shadow-sm">
                         <CardHeader className="flex flex-row items-center justify-between pb-2">
-                            <CardTitle className="text-sm font-semibold text-muted-foreground uppercase">Tamaño Total</CardTitle>
+                            <CardTitle className="text-sm font-semibold text-muted-foreground uppercase">{__('Total Size')}</CardTitle>
                             <HardDrive className="h-5 w-5 text-blue-500" />
                         </CardHeader>
                         <CardContent>
                             <div className="text-2xl font-bold">{dbInfo.total_size_mb} MB</div>
-                            <p className="text-xs text-muted-foreground mt-1">Espacio de almacenamiento ocupado</p>
+                            <p className="text-xs text-muted-foreground mt-1">{__('Occupied storage space')}</p>
                         </CardContent>
                     </Card>
 
                     <Card className="shadow-sm">
                         <CardHeader className="flex flex-row items-center justify-between pb-2">
-                            <CardTitle className="text-sm font-semibold text-muted-foreground uppercase">Tablas del Sistema</CardTitle>
+                            <CardTitle className="text-sm font-semibold text-muted-foreground uppercase">{__('System Tables')}</CardTitle>
                             <Layers className="h-5 w-5 text-emerald-500" />
                         </CardHeader>
                         <CardContent>
                             <div className="text-2xl font-bold">{dbInfo.total_tables}</div>
-                            <p className="text-xs text-muted-foreground mt-1">{dbInfo.total_rows.toLocaleString()} filas registradas</p>
+                            <p className="text-xs text-muted-foreground mt-1">{dbInfo.total_rows.toLocaleString()} {__('rows registered')}</p>
                         </CardContent>
                     </Card>
 
                     <Card className="shadow-sm">
                         <CardHeader className="flex flex-row items-center justify-between pb-2">
-                            <CardTitle className="text-sm font-semibold text-muted-foreground uppercase">Conexiones</CardTitle>
+                            <CardTitle className="text-sm font-semibold text-muted-foreground uppercase">{__('Connections')}</CardTitle>
                             <Activity className="h-5 w-5 text-amber-500" />
                         </CardHeader>
                         <CardContent>
@@ -276,9 +279,9 @@ export default function DatabaseMonitoring({ dbInfo }: PageProps) {
                         <CardHeader>
                             <CardTitle className="flex items-center gap-2">
                                 <Activity className="h-5 w-5 text-indigo-500" />
-                                Consultas por Segundo (QPS)
+                                {__('Consultas por Segundo (QPS)')}
                             </CardTitle>
-                            <CardDescription>Carga transaccional actual en tiempo real (3s de refresco).</CardDescription>
+                            <CardDescription>{__('Carga transaccional actual en tiempo real (3s de refresco).')}</CardDescription>
                         </CardHeader>
                         <CardContent>
                             <Chart 
@@ -294,9 +297,9 @@ export default function DatabaseMonitoring({ dbInfo }: PageProps) {
                         <CardHeader>
                             <CardTitle className="flex items-center gap-2">
                                 <Hash className="h-5 w-5 text-blue-500" />
-                                Distribución de Consultas
+                                {__('Distribución de Consultas')}
                             </CardTitle>
-                            <CardDescription>Estadística del tipo de operaciones ejecutadas.</CardDescription>
+                            <CardDescription>{__('Estadística del tipo de operaciones ejecutadas.')}</CardDescription>
                         </CardHeader>
                         <CardContent className="flex flex-col justify-between h-[300px]">
                             <div className="pt-2">
@@ -314,25 +317,25 @@ export default function DatabaseMonitoring({ dbInfo }: PageProps) {
                 {/* Detalle Radix UI Tabs */}
                 <Tabs defaultValue="tables" className="w-full">
                     <TabsList className="grid grid-cols-3 max-w-[480px]">
-                        <TabsTrigger value="tables">Tablas y Tamaño</TabsTrigger>
-                        <TabsTrigger value="processes">Procesos Activos</TabsTrigger>
-                        <TabsTrigger value="slow-queries">Slow Queries</TabsTrigger>
+                        <TabsTrigger value="tables">{__('Tablas y Tamaño')}</TabsTrigger>
+                        <TabsTrigger value="processes">{__('Procesos Activos')}</TabsTrigger>
+                        <TabsTrigger value="slow-queries">{__('Slow Queries')}</TabsTrigger>
                     </TabsList>
 
                     {/* Tab 1: Tablas y filas */}
                     <TabsContent value="tables" className="mt-4">
                         <Card className="shadow-sm">
                             <CardHeader>
-                                <CardTitle>Tamaño de Tablas y Almacenamiento</CardTitle>
-                                <CardDescription>Listado y volumen físico de datos por cada tabla en la BD.</CardDescription>
+                                <CardTitle>{__('Tamaño de Tablas y Almacenamiento')}</CardTitle>
+                                <CardDescription>{__('Listado y volumen físico de datos por cada tabla en la BD.')}</CardDescription>
                             </CardHeader>
                             <CardContent>
                                 <Table>
                                     <TableHeader>
                                         <TableRow>
-                                            <TableHead>Nombre de la Tabla</TableHead>
-                                            <TableHead className="text-right">Filas Estimadas</TableHead>
-                                            <TableHead className="text-right">Tamaño Físico (MB)</TableHead>
+                                            <TableHead>{__('Nombre de la Tabla')}</TableHead>
+                                            <TableHead className="text-right">{__('Filas Estimadas')}</TableHead>
+                                            <TableHead className="text-right">{__('Tamaño Físico (MB)')}</TableHead>
                                         </TableRow>
                                     </TableHeader>
                                     <TableBody>
@@ -359,20 +362,20 @@ export default function DatabaseMonitoring({ dbInfo }: PageProps) {
                     <TabsContent value="processes" className="mt-4">
                         <Card className="shadow-sm">
                             <CardHeader>
-                                <CardTitle>Lista de Procesos (Threads)</CardTitle>
-                                <CardDescription>Conexiones activas actualmente procesadas por la base de datos.</CardDescription>
+                                <CardTitle>{__('Lista de Procesos (Threads)')}</CardTitle>
+                                <CardDescription>{__('Conexiones activas actualmente procesadas por la base de datos.')}</CardDescription>
                             </CardHeader>
                             <CardContent>
                                 <Table>
                                     <TableHeader>
                                         <TableRow>
-                                            <TableHead className="w-16">ID</TableHead>
-                                            <TableHead>Usuario</TableHead>
-                                            <TableHead>Host</TableHead>
-                                            <TableHead>Comando</TableHead>
-                                            <TableHead className="text-right">Tiempo (s)</TableHead>
-                                            <TableHead>Estado</TableHead>
-                                            <TableHead className="max-w-[300px] truncate">Query</TableHead>
+                                            <TableHead className="w-16">{__('ID')}</TableHead>
+                                            <TableHead>{__('Usuario')}</TableHead>
+                                            <TableHead>{__('Host')}</TableHead>
+                                            <TableHead>{__('Comando')}</TableHead>
+                                            <TableHead className="text-right">{__('Tiempo (s)')}</TableHead>
+                                            <TableHead>{__('Estado')}</TableHead>
+                                            <TableHead className="max-w-[300px] truncate">{__('Query')}</TableHead>
                                         </TableRow>
                                     </TableHeader>
                                     <TableBody>
@@ -389,7 +392,7 @@ export default function DatabaseMonitoring({ dbInfo }: PageProps) {
                                                 <TableCell className="text-right tabular-nums font-mono text-xs">{p.time}</TableCell>
                                                 <TableCell className="text-xs text-slate-600">{p.state || 'idle'}</TableCell>
                                                 <TableCell className="font-mono text-xs max-w-[300px] truncate text-slate-700 dark:text-slate-300" title={p.info}>
-                                                    {p.info || <span className="italic text-muted-foreground">Ninguno</span>}
+                                                    {p.info || <span className="italic text-muted-foreground">{__('Ninguno')}</span>}
                                                 </TableCell>
                                             </TableRow>
                                         ))}
@@ -405,9 +408,9 @@ export default function DatabaseMonitoring({ dbInfo }: PageProps) {
                             <CardHeader>
                                 <CardTitle className="flex items-center gap-2">
                                     <ShieldAlert className="h-5 w-5 text-amber-500" />
-                                    Registro de Slow Queries
+                                    {__('Registro de Slow Queries')}
                                 </CardTitle>
-                                <CardDescription>Alertas de consultas que exceden el tiempo óptimo de respuesta (100ms).</CardDescription>
+                                <CardDescription>{__('Alertas de consultas que exceden el tiempo óptimo de respuesta (100ms).')}</CardDescription>
                             </CardHeader>
                             <CardContent>
                                 <div className="space-y-4">
@@ -417,10 +420,10 @@ export default function DatabaseMonitoring({ dbInfo }: PageProps) {
                                                 <p className="font-mono text-xs bg-white dark:bg-slate-900 p-2.5 rounded border overflow-x-auto text-red-800 dark:text-red-300">
                                                     {q.query}
                                                 </p>
-                                                <p className="text-xs text-muted-foreground">Ejecutado a las {q.time}</p>
+                                                <p className="text-xs text-muted-foreground">{__('Ejecutado a las')} {q.time}</p>
                                             </div>
                                             <div className="flex gap-2 self-start md:self-auto items-center">
-                                                <span className="text-xs text-muted-foreground">Duración:</span>
+                                                <span className="text-xs text-muted-foreground">{__('Duración:')}</span>
                                                 <Badge variant="destructive" className="font-mono text-xs">
                                                     {q.duration}
                                                 </Badge>

@@ -33,12 +33,12 @@ export default function LogMonitoring({ logs, logSizeMb }: PageProps) {
 
     const handleClearLogs = () => {
         Swal.fire({
-            title: __('¿Estás seguro?'),
-            text: __('Esta acción eliminará de forma permanente todo el contenido del archivo laravel.log.'),
+            title: __('Are you sure?'),
+            text: __('This action will permanently delete all contents of laravel.log.'),
             icon: 'warning',
             showCancelButton: true,
-            confirmButtonText: __('Sí, limpiar logs'),
-            cancelButtonText: __('Cancelar'),
+            confirmButtonText: __('Yes, clear logs'),
+            cancelButtonText: __('Cancel'),
             customClass: {
                 confirmButton: 'bg-destructive text-destructive-foreground hover:bg-destructive/90',
             }
@@ -47,7 +47,7 @@ export default function LogMonitoring({ logs, logSizeMb }: PageProps) {
                 router.delete('/admin/monitoring/logs/clear', {
                     preserveScroll: true,
                     onSuccess: () => {
-                        Swal.fire(__('Logs Limpiados'), __('El archivo de logs se ha vaciado correctamente.'), 'success');
+                        Swal.fire(__('Logs Cleared'), __('The log file has been cleared successfully.'), 'success');
                     }
                 });
             }
@@ -95,10 +95,10 @@ export default function LogMonitoring({ logs, logSizeMb }: PageProps) {
                     <div>
                         <h1 className="text-3xl font-bold tracking-tight flex items-center gap-3">
                             <Terminal className="h-8 w-8 text-indigo-600" />
-                            {__('Logs de Actividad del Sistema')}
+                            {__('System Logs Monitoring')}
                         </h1>
                         <p className="text-muted-foreground mt-1">
-                            {__('Visualiza y audita las últimas advertencias, excepciones y trazas de error del framework.')}
+                            {__('View and audit the framework\'s latest warnings, exceptions, and error traces.')}
                         </p>
                     </div>
 
@@ -110,7 +110,7 @@ export default function LogMonitoring({ logs, logSizeMb }: PageProps) {
                             onClick={() => window.open('/admin/monitoring/logs/download')}
                         >
                             <Download className="h-4 w-4" />
-                            {__('Descargar Log')}
+                            {__('Download Log')}
                         </Button>
                         <Button 
                             variant="destructive" 
@@ -119,7 +119,7 @@ export default function LogMonitoring({ logs, logSizeMb }: PageProps) {
                             onClick={handleClearLogs}
                         >
                             <Trash2 className="h-4 w-4" />
-                            {__('Limpiar Log')}
+                            {__('Clear Log')}
                         </Button>
                     </div>
                 </div>
@@ -132,10 +132,10 @@ export default function LogMonitoring({ logs, logSizeMb }: PageProps) {
                         </div>
                         <div>
                             <p className="text-sm font-semibold text-slate-800 dark:text-slate-200">
-                                {__('Archivo laravel.log')}
+                                {__('laravel.log File')}
                             </p>
                             <p className="text-xs text-muted-foreground">
-                                {__('Tamaño actual del archivo:')} <span className="font-semibold text-indigo-600">{logSizeMb} MB</span>
+                                {__('Current file size:')} <span className="font-semibold text-indigo-600">{logSizeMb} MB</span>
                             </p>
                         </div>
                     </CardContent>
@@ -147,11 +147,11 @@ export default function LogMonitoring({ logs, logSizeMb }: PageProps) {
                         <div className="flex flex-col gap-4 sm:flex-row sm:items-end">
                             {/* Buscar */}
                             <div className="flex-1 space-y-1.5">
-                                <span className="text-xs font-medium text-muted-foreground">{__('Buscador rápido')}</span>
+                                <span className="text-xs font-medium text-muted-foreground">{__('Quick Search')}</span>
                                 <div className="relative">
                                     <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                                     <Input
-                                        placeholder={__('Buscar en el mensaje o stack trace...')}
+                                        placeholder={__('Search message or stack trace...')}
                                         value={search}
                                         onChange={(e) => setSearch(e.target.value)}
                                         className="pl-9"
@@ -161,13 +161,13 @@ export default function LogMonitoring({ logs, logSizeMb }: PageProps) {
 
                             {/* Nivel */}
                             <div className="w-full sm:w-48 space-y-1.5">
-                                <span className="text-xs font-medium text-muted-foreground">{__('Nivel de Alerta')}</span>
+                                <span className="text-xs font-medium text-muted-foreground">{__('Alert Level')}</span>
                                 <Select value={levelFilter} onValueChange={setLevelFilter}>
                                     <SelectTrigger>
-                                        <SelectValue placeholder={__('Todos')} />
+                                        <SelectValue placeholder={__('All')} />
                                     </SelectTrigger>
                                     <SelectContent>
-                                        <SelectItem value="all">{__('Todos')}</SelectItem>
+                                        <SelectItem value="all">{__('All')}</SelectItem>
                                         <SelectItem value="error">{__('Errors / Critical')}</SelectItem>
                                         <SelectItem value="warning">{__('Warnings')}</SelectItem>
                                         <SelectItem value="info">{__('Info / Debug')}</SelectItem>
@@ -185,9 +185,9 @@ export default function LogMonitoring({ logs, logSizeMb }: PageProps) {
                             <TableHeader>
                                 <TableRow>
                                     <TableHead className="w-48">{__('Timestamp')}</TableHead>
-                                    <TableHead className="w-32">{__('Nivel')}</TableHead>
-                                    <TableHead>{__('Mensaje')}</TableHead>
-                                    <TableHead className="w-24 text-right">{__('Detalles')}</TableHead>
+                                    <TableHead className="w-32">{__('Level')}</TableHead>
+                                    <TableHead>{__('Message')}</TableHead>
+                                    <TableHead className="w-24 text-right">{__('Details')}</TableHead>
                                 </TableRow>
                             </TableHeader>
                             <TableBody>
@@ -210,7 +210,7 @@ export default function LogMonitoring({ logs, logSizeMb }: PageProps) {
                                                     variant="ghost" 
                                                     size="icon" 
                                                     onClick={() => setSelectedLog(log)}
-                                                    title={__('Ver Stack Trace')}
+                                                    title={__('View Stack Trace')}
                                                 >
                                                     <Eye className="h-4 w-4 text-indigo-500" />
                                                 </Button>
@@ -224,7 +224,7 @@ export default function LogMonitoring({ logs, logSizeMb }: PageProps) {
                                 {filteredLogs.length === 0 && (
                                     <TableRow>
                                         <TableCell colSpan={4} className="text-center py-8 text-muted-foreground">
-                                            {__('No se encontraron registros de logs en este nivel.')}
+                                            {__('No log records found for this level.')}
                                         </TableCell>
                                     </TableRow>
                                 )}
@@ -240,7 +240,7 @@ export default function LogMonitoring({ logs, logSizeMb }: PageProps) {
                     <DialogHeader>
                         <DialogTitle className="flex items-center gap-2 text-rose-600">
                             <AlertCircle className="h-5 w-5" />
-                            {__('Detalle de la Excepción')}
+                            {__('Exception Detail')}
                         </DialogTitle>
                         <DialogDescription className="font-mono text-xs bg-slate-50 dark:bg-slate-950 p-3 rounded border border-red-100 dark:border-red-950 text-slate-800 dark:text-slate-300 mt-2 whitespace-pre-wrap select-text">
                             {selectedLog?.message}
@@ -249,7 +249,7 @@ export default function LogMonitoring({ logs, logSizeMb }: PageProps) {
 
                     {selectedLog?.stack_trace && (
                         <div className="mt-4 space-y-2">
-                            <p className="text-xs font-semibold text-muted-foreground">{__('Stack Trace completo:')}</p>
+                            <p className="text-xs font-semibold text-muted-foreground">{__('Full Stack Trace:')}</p>
                             <pre className="text-[10px] font-mono bg-slate-950 text-slate-300 p-4 rounded-lg overflow-x-auto whitespace-pre select-text border border-slate-800 max-h-[45vh] overscroll-contain">
                                 {selectedLog.stack_trace}
                             </pre>

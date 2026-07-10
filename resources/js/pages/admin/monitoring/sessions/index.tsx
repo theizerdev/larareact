@@ -65,12 +65,12 @@ export default function SessionMonitoring({ sessions }: PageProps) {
 
     const handleRevokeSession = (sessionId: string) => {
         Swal.fire({
-            title: __('¿Estás seguro?'),
-            text: __('Se cerrará la sesión de este dispositivo inmediatamente.'),
+            title: __('Are you sure?'),
+            text: __('This device session will be logged out immediately.'),
             icon: 'warning',
             showCancelButton: true,
-            confirmButtonText: __('Sí, cerrar sesión'),
-            cancelButtonText: __('Cancelar'),
+            confirmButtonText: __('Yes, log out'),
+            cancelButtonText: __('Cancel'),
             customClass: {
                 confirmButton: 'bg-destructive text-destructive-foreground hover:bg-destructive/90',
             }
@@ -79,7 +79,7 @@ export default function SessionMonitoring({ sessions }: PageProps) {
                 router.delete(`/admin/monitoring/sessions/${sessionId}`, {
                     preserveScroll: true,
                     onSuccess: () => {
-                        Swal.fire(__('Sesión revocada'), __('El dispositivo ha sido desconectado.'), 'success');
+                        Swal.fire(__('Session revoked'), __('The device has been disconnected.'), 'success');
                     }
                 });
             }
@@ -103,10 +103,10 @@ export default function SessionMonitoring({ sessions }: PageProps) {
                     <div>
                         <h1 className="text-3xl font-bold tracking-tight flex items-center gap-3">
                             <Shield className="h-8 w-8 text-indigo-600" />
-                            {__('Monitoreo de Sesiones de Usuario')}
+                            {__('User Sessions Monitoring')}
                         </h1>
                         <p className="text-muted-foreground mt-1">
-                            {__('Administra y supervisa los dispositivos y ubicaciones activas con acceso a la plataforma.')}
+                            {__('Manage and monitor active devices and locations with access to the platform.')}
                         </p>
                     </div>
                 </div>
@@ -116,10 +116,10 @@ export default function SessionMonitoring({ sessions }: PageProps) {
                     <CardHeader>
                         <CardTitle className="flex items-center gap-2 text-base">
                             <Key className="h-5 w-5 text-indigo-500" />
-                            {__('Seguridad de la Cuenta')}
+                            {__('Account Security')}
                         </CardTitle>
                         <CardDescription>
-                            {__('Si es necesario, puedes cerrar sesión en otros dispositivos. Si ves una sesión sospechosa, te recomendamos cambiar tu contraseña inmediatamente.')}
+                            {__('If necessary, you may log out of your other browser sessions across all of your devices. If you suspect an unauthorized access, you should change your password immediately.')}
                         </CardDescription>
                     </CardHeader>
                 </Card>
@@ -127,19 +127,19 @@ export default function SessionMonitoring({ sessions }: PageProps) {
                 {/* Lista de Sesiones */}
                 <Card className="shadow-sm">
                     <CardHeader>
-                        <CardTitle>{__('Sesiones Activas')} ({sessions.length})</CardTitle>
-                        <CardDescription>{__('Lista de navegadores y sistemas operativos conectados recientemente.')}</CardDescription>
+                        <CardTitle>{__('Active Sessions')} ({sessions.length})</CardTitle>
+                        <CardDescription>{__('A list of browsers and operating systems connected recently.')}</CardDescription>
                     </CardHeader>
                     <CardContent>
                         <Table>
                             <TableHeader>
                                 <TableRow>
-                                    <TableHead>{__('Usuario')}</TableHead>
-                                    <TableHead>{__('Dispositivo / Navegador')}</TableHead>
-                                    <TableHead>{__('Dirección IP')}</TableHead>
-                                    <TableHead>{__('Ubicación')}</TableHead>
-                                    <TableHead>{__('Última Actividad')}</TableHead>
-                                    <TableHead className="text-right">{__('Acción')}</TableHead>
+                                    <TableHead>{__('User')}</TableHead>
+                                    <TableHead>{__('Device / Browser')}</TableHead>
+                                    <TableHead>{__('IP Address')}</TableHead>
+                                    <TableHead>{__('Location')}</TableHead>
+                                    <TableHead>{__('Last Activity')}</TableHead>
+                                    <TableHead className="text-right">{__('Action')}</TableHead>
                                 </TableRow>
                             </TableHeader>
                             <TableBody>
@@ -155,7 +155,7 @@ export default function SessionMonitoring({ sessions }: PageProps) {
                                                 </Avatar>
                                                 <div>
                                                     <p className="font-semibold text-sm">{session.user_name}</p>
-                                                    <p className="text-xs text-muted-foreground">{session.user_email || 'No disponible'}</p>
+                                                    <p className="text-xs text-muted-foreground">{session.user_email || __('Not available')}</p>
                                                 </div>
                                             </div>
                                         </TableCell>
@@ -193,7 +193,7 @@ export default function SessionMonitoring({ sessions }: PageProps) {
                                         <TableCell>
                                             {session.is_current_device ? (
                                                 <Badge variant="default" className="bg-emerald-600 hover:bg-emerald-600 text-white gap-1 text-[10px] px-1.5 py-0">
-                                                    {__('Dispositivo Actual')}
+                                                    {__('Current Device')}
                                                 </Badge>
                                             ) : (
                                                 <span className="text-xs text-muted-foreground">{session.last_active}</span>
@@ -208,12 +208,12 @@ export default function SessionMonitoring({ sessions }: PageProps) {
                                                     size="icon"
                                                     className="text-red-500 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-950/20"
                                                     onClick={() => handleRevokeSession(session.id)}
-                                                    title={__('Cerrar sesión remotamente')}
+                                                    title={__('Log out remotely')}
                                                 >
                                                     <Trash2 className="h-4 w-4" />
                                                 </Button>
                                             ) : (
-                                                <span className="text-xs text-muted-foreground italic px-2">{__('Activo')}</span>
+                                                <span className="text-xs text-muted-foreground italic px-2">{__('Active')}</span>
                                             )}
                                         </TableCell>
                                     </TableRow>
