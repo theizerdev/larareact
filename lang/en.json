@@ -292,5 +292,6 @@
   "Failed to load Mapbox map. Please check your Access Token configuration.": "Failed to load Mapbox map. Please check your Access Token configuration.",
   "Map Engine Error": "Map Engine Error",
   "No active company associated with your user.": "No active company associated with your user.",
-  "Mapbox integration settings updated successfully.": "Mapbox integration settings updated successfully."
+  "Mapbox integration settings updated successfully.": "Mapbox integration settings updated successfully.",
+  "Catalog": "Catalog"
 }

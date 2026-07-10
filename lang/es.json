@@ -561,5 +561,6 @@
   "Failed to load Mapbox map. Please check your Access Token configuration.": "No se pudo cargar el mapa de Mapbox. Por favor revisa la configuración de tu Token de Acceso.",
   "Map Engine Error": "Error del Motor de Mapas",
   "No active company associated with your user.": "No hay una empresa activa asociada a tu usuario.",
-  "Mapbox integration settings updated successfully.": "La configuración de la integración de Mapbox se actualizó con éxito."
+  "Mapbox integration settings updated successfully.": "La configuración de la integración de Mapbox se actualizó con éxito.",
+  "Catalog": "Catálogo"
 }

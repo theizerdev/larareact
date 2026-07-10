@@ -19,6 +19,7 @@ import {
     Menu,
     X,
     Activity,
+    Link2,
 } from 'lucide-react';
 import * as React from 'react';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -392,12 +393,22 @@ export default function AdminSaasLayout({
                                         href: paisesIndex.url(),
                                     },
                                     {
-                                        title: 'Integrations',
-                                        href: integrationsIndex.url(),
-                                    },
-                                    {
                                         title: 'Appearance',
                                         href: appearanceEdit().url,
+                                    },
+                                ]}
+                            />
+                        </div>
+
+                        <div className="pt-2">
+                            <CollapsibleNavItem
+                                title="Integrations"
+                                icon={Link2}
+                                collapsed={collapsed}
+                                items={[
+                                    {
+                                        title: 'Catalog',
+                                        href: integrationsIndex.url(),
                                     },
                                 ]}
                             />

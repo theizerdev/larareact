@@ -33,6 +33,7 @@ export default function MapboxMap({
     const mapboxApiKey = auth?.user?.empresa?.mapbox_api_key;
     const mapboxActive = auth?.user?.empresa?.mapbox_active;
 
+    // Efecto 1: Inicializar el mapa una sola vez
     useEffect(() => {
         if (!mapboxActive || !mapboxApiKey) {
             setMapError(__('Mapbox integration is not active or token is missing. Please configure it in Settings > Integrations.'));
@@ -43,14 +44,12 @@ export default function MapboxMap({
 
         if (!mapContainerRef.current) return;
 
-        // Detectar si el tema oscuro está activo
         const isDark = document.documentElement.classList.contains('dark');
         const mapStyle = isDark 
             ? 'mapbox://styles/mapbox/dark-v11' 
             : 'mapbox://styles/mapbox/streets-v12';
 
         try {
-            // Inicializar mapa
             const map = new mapboxgl.Map({
                 container: mapContainerRef.current,
                 style: mapStyle,
@@ -61,16 +60,15 @@ export default function MapboxMap({
 
             mapRef.current = map;
 
-            // Añadir controles de navegación
             if (interactive) {
                 map.addControl(new mapboxgl.NavigationControl(), 'top-right');
             }
 
-            // Añadir marcador principal (arrastrable si onChange está definido)
+            // Crear el marcador principal inicial
             if (lat !== undefined && lng !== undefined) {
                 const marker = new mapboxgl.Marker({
                     draggable: interactive && !!onChange,
-                    color: '#6366f1' // Color indigo
+                    color: '#6366f1'
                 })
                 .setLngLat([lng, lat])
                 .addTo(map);
@@ -83,7 +81,6 @@ export default function MapboxMap({
                         onChange(lngLat.lat, lngLat.lng);
                     });
 
-                    // Clic en el mapa para mover el marcador
                     map.on('click', (e) => {
                         marker.setLngLat(e.lngLat);
                         onChange(e.lngLat.lat, e.lngLat.lng);
@@ -91,7 +88,7 @@ export default function MapboxMap({
                 }
             }
 
-            // Añadir otros marcadores estáticos (ej: listado de países/sucursales)
+            // Añadir marcadores estáticos
             markers.forEach((m) => {
                 if (m.lat && m.lng) {
                     const el = document.createElement('div');
@@ -117,9 +114,26 @@ export default function MapboxMap({
         return () => {
             if (mapRef.current) {
                 mapRef.current.remove();
+                mapRef.current = null;
+                markerRef.current = null;
             }
         };
-    }, [lat, lng, mapboxApiKey, mapboxActive, markers]);
+    }, [mapboxApiKey, mapboxActive, markers.length]);
+
+    // Efecto 2: Sincronizar coordenadas cuando cambian externamente sin destruir el mapa
+    useEffect(() => {
+        if (mapRef.current && markerRef.current && lat !== undefined && lng !== undefined) {
+            const currentLngLat = markerRef.current.getLngLat();
+            // Evitar ciclos de actualización si la diferencia es mínima
+            if (Math.abs(currentLngLat.lat - lat) > 0.0001 || Math.abs(currentLngLat.lng - lng) > 0.0001) {
+                markerRef.current.setLngLat([lng, lat]);
+                mapRef.current.easeTo({
+                    center: [lng, lat],
+                    essential: true
+                });
+            }
+        }
+    }, [lat, lng]);
 
     if (mapError) {
         return (
