@@ -51,6 +51,7 @@ import { index as rolesIndex } from '@/routes/admin/roles';
 import { index as usuariosIndex } from '@/routes/admin/usuarios';
 import { index as dbMonitoringIndex } from '@/routes/admin/monitoring/database';
 import { index as serverMonitoringIndex } from '@/routes/admin/monitoring/server';
+import { index as sessionMonitoringIndex } from '@/routes/admin/monitoring/sessions';
 import { Building2, GitBranch } from 'lucide-react';
 import type { BreadcrumbItem, NavItem } from '@/types';
 import { useTranslate } from '@/hooks/use-translate';
@@ -425,6 +426,10 @@ export default function AdminSaasLayout({
                                     {
                                         title: 'Server',
                                         href: serverMonitoringIndex.url(),
+                                    },
+                                    {
+                                        title: 'User Sessions',
+                                        href: sessionMonitoringIndex.url(),
                                     },
                                 ]}
                             />

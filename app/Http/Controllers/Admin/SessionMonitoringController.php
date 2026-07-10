@@ -20,7 +20,7 @@ class SessionMonitoringController extends Controller
         // Obtener todas las sesiones de la base de datos
         $sessions = DB::table('sessions')
             ->leftJoin('users', 'sessions.user_id', '=', 'users.id')
-            ->select('sessions.id', 'sessions.user_id', 'sessions.ip_address', 'sessions.user_agent', 'sessions.last_activity', 'users.name as user_name', 'users.email as user_email', 'users.avatar as user_avatar')
+            ->select('sessions.id', 'sessions.user_id', 'sessions.ip_address', 'sessions.user_agent', 'sessions.last_activity', 'users.name as user_name', 'users.email as user_email')
             ->orderBy('sessions.last_activity', 'desc')
             ->get();
 
@@ -38,7 +38,6 @@ class SessionMonitoringController extends Controller
                 'user_id' => $session->user_id,
                 'user_name' => $session->user_name ?? 'Invitado / Desconectado',
                 'user_email' => $session->user_email,
-                'user_avatar' => $session->user_avatar,
                 'ip_address' => $session->ip_address,
                 'location' => $location,
                 'os' => $agent['os'],
