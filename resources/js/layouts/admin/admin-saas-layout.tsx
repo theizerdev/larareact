@@ -52,6 +52,8 @@ import { index as usuariosIndex } from '@/routes/admin/usuarios';
 import { index as dbMonitoringIndex } from '@/routes/admin/monitoring/database';
 import { index as serverMonitoringIndex } from '@/routes/admin/monitoring/server';
 import { index as sessionMonitoringIndex } from '@/routes/admin/monitoring/sessions';
+import { index as logMonitoringIndex } from '@/routes/admin/monitoring/logs';
+import { index as queuesMonitoringIndex } from '@/routes/admin/monitoring/queues';
 import { Building2, GitBranch } from 'lucide-react';
 import type { BreadcrumbItem, NavItem } from '@/types';
 import { useTranslate } from '@/hooks/use-translate';
@@ -430,6 +432,14 @@ export default function AdminSaasLayout({
                                     {
                                         title: 'User Sessions',
                                         href: sessionMonitoringIndex.url(),
+                                    },
+                                    {
+                                        title: 'System Logs',
+                                        href: logMonitoringIndex.url(),
+                                    },
+                                    {
+                                        title: 'Queue Monitor',
+                                        href: queuesMonitoringIndex.url(),
                                     },
                                 ]}
                             />

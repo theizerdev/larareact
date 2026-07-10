@@ -8,6 +8,7 @@ import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Breadcrumbs } from '@/components/breadcrumbs';
 import { useInitials } from '@/hooks/use-initials';
+import { useTranslate } from '@/hooks/use-translate';
 import Swal from 'sweetalert2';
 
 interface SessionItem {
@@ -60,15 +61,16 @@ const IpLocation: React.FC<{ ip: string; defaultLocation: string }> = ({ ip, def
 
 export default function SessionMonitoring({ sessions }: PageProps) {
     const getInitials = useInitials();
+    const { __ } = useTranslate();
 
     const handleRevokeSession = (sessionId: string) => {
         Swal.fire({
-            title: '¿Estás seguro?',
-            text: 'Se cerrará la sesión de este dispositivo inmediatamente.',
+            title: __('¿Estás seguro?'),
+            text: __('Se cerrará la sesión de este dispositivo inmediatamente.'),
             icon: 'warning',
             showCancelButton: true,
-            confirmButtonText: 'Sí, cerrar sesión',
-            cancelButtonText: 'Cancelar',
+            confirmButtonText: __('Sí, cerrar sesión'),
+            cancelButtonText: __('Cancelar'),
             customClass: {
                 confirmButton: 'bg-destructive text-destructive-foreground hover:bg-destructive/90',
             }
@@ -77,7 +79,7 @@ export default function SessionMonitoring({ sessions }: PageProps) {
                 router.delete(`/admin/monitoring/sessions/${sessionId}`, {
                     preserveScroll: true,
                     onSuccess: () => {
-                        Swal.fire('Sesión revocada', 'El dispositivo ha sido desconectado.', 'success');
+                        Swal.fire(__('Sesión revocada'), __('El dispositivo ha sido desconectado.'), 'success');
                     }
                 });
             }
@@ -85,14 +87,14 @@ export default function SessionMonitoring({ sessions }: PageProps) {
     };
 
     const breadcrumbs = [
-        { title: 'Dashboard', href: '/admin/dashboard' },
-        { title: 'Monitoreo', href: '#' },
-        { title: 'Sesiones de Usuario', href: '/admin/monitoring/sessions' }
+        { title: __('Dashboard'), href: '/admin/dashboard' },
+        { title: __('Monitoring'), href: '#' },
+        { title: __('User Sessions'), href: '/admin/monitoring/sessions' }
     ];
 
     return (
         <>
-            <Head title="Monitoreo de Sesiones" />
+            <Head title={__('User Sessions')} />
             <div className="space-y-6">
                 <Breadcrumbs breadcrumbs={breadcrumbs} />
 
@@ -101,10 +103,10 @@ export default function SessionMonitoring({ sessions }: PageProps) {
                     <div>
                         <h1 className="text-3xl font-bold tracking-tight flex items-center gap-3">
                             <Shield className="h-8 w-8 text-indigo-600" />
-                            Monitoreo de Sesiones de Usuario
+                            {__('Monitoreo de Sesiones de Usuario')}
                         </h1>
                         <p className="text-muted-foreground mt-1">
-                            Administra y supervisa los dispositivos y ubicaciones activas con acceso a la plataforma.
+                            {__('Administra y supervisa los dispositivos y ubicaciones activas con acceso a la plataforma.')}
                         </p>
                     </div>
                 </div>
@@ -114,10 +116,10 @@ export default function SessionMonitoring({ sessions }: PageProps) {
                     <CardHeader>
                         <CardTitle className="flex items-center gap-2 text-base">
                             <Key className="h-5 w-5 text-indigo-500" />
-                            Seguridad de la Cuenta
+                            {__('Seguridad de la Cuenta')}
                         </CardTitle>
                         <CardDescription>
-                            Si es necesario, puedes cerrar sesión en otros dispositivos. Si ves una sesión sospechosa, te recomendamos cambiar tu contraseña inmediatamente.
+                            {__('Si es necesario, puedes cerrar sesión en otros dispositivos. Si ves una sesión sospechosa, te recomendamos cambiar tu contraseña inmediatamente.')}
                         </CardDescription>
                     </CardHeader>
                 </Card>
@@ -125,19 +127,19 @@ export default function SessionMonitoring({ sessions }: PageProps) {
                 {/* Lista de Sesiones */}
                 <Card className="shadow-sm">
                     <CardHeader>
-                        <CardTitle>Sesiones Activas ({sessions.length})</CardTitle>
-                        <CardDescription>Lista de navegadores y sistemas operativos conectados recientemente.</CardDescription>
+                        <CardTitle>{__('Sesiones Activas')} ({sessions.length})</CardTitle>
+                        <CardDescription>{__('Lista de navegadores y sistemas operativos conectados recientemente.')}</CardDescription>
                     </CardHeader>
                     <CardContent>
                         <Table>
                             <TableHeader>
                                 <TableRow>
-                                    <TableHead>Usuario</TableHead>
-                                    <TableHead>Dispositivo / Navegador</TableHead>
-                                    <TableHead>Dirección IP</TableHead>
-                                    <TableHead>Ubicación</TableHead>
-                                    <TableHead>Última Actividad</TableHead>
-                                    <TableHead className="text-right">Acción</TableHead>
+                                    <TableHead>{__('Usuario')}</TableHead>
+                                    <TableHead>{__('Dispositivo / Navegador')}</TableHead>
+                                    <TableHead>{__('Dirección IP')}</TableHead>
+                                    <TableHead>{__('Ubicación')}</TableHead>
+                                    <TableHead>{__('Última Actividad')}</TableHead>
+                                    <TableHead className="text-right">{__('Acción')}</TableHead>
                                 </TableRow>
                             </TableHeader>
                             <TableBody>
@@ -191,7 +193,7 @@ export default function SessionMonitoring({ sessions }: PageProps) {
                                         <TableCell>
                                             {session.is_current_device ? (
                                                 <Badge variant="default" className="bg-emerald-600 hover:bg-emerald-600 text-white gap-1 text-[10px] px-1.5 py-0">
-                                                    Dispositivo Actual
+                                                    {__('Dispositivo Actual')}
                                                 </Badge>
                                             ) : (
                                                 <span className="text-xs text-muted-foreground">{session.last_active}</span>
@@ -206,12 +208,12 @@ export default function SessionMonitoring({ sessions }: PageProps) {
                                                     size="icon"
                                                     className="text-red-500 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-950/20"
                                                     onClick={() => handleRevokeSession(session.id)}
-                                                    title="Cerrar sesión remotamente"
+                                                    title={__('Cerrar sesión remotamente')}
                                                 >
                                                     <Trash2 className="h-4 w-4" />
                                                 </Button>
                                             ) : (
-                                                <span className="text-xs text-muted-foreground italic px-2">Activo</span>
+                                                <span className="text-xs text-muted-foreground italic px-2">{__('Activo')}</span>
                                             )}
                                         </TableCell>
                                     </TableRow>
