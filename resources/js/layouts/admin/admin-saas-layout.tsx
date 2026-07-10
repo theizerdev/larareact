@@ -18,6 +18,7 @@ import {
     Globe,
     Menu,
     X,
+    Activity,
 } from 'lucide-react';
 import * as React from 'react';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -48,6 +49,7 @@ import { index as empresasIndex } from '@/routes/admin/empresas';
 import { index as sucursalesIndex } from '@/routes/admin/sucursales';
 import { index as rolesIndex } from '@/routes/admin/roles';
 import { index as usuariosIndex } from '@/routes/admin/usuarios';
+import { index as dbMonitoringIndex } from '@/routes/admin/monitoring/database';
 import { Building2, GitBranch } from 'lucide-react';
 import type { BreadcrumbItem, NavItem } from '@/types';
 import { useTranslate } from '@/hooks/use-translate';
@@ -404,6 +406,20 @@ export default function AdminSaasLayout({
                                     {
                                         title: 'Roles',
                                         href: rolesIndex.url(),
+                                    },
+                                ]}
+                            />
+                        </div>
+
+                        <div className="pt-2">
+                            <CollapsibleNavItem
+                                title="Monitoring"
+                                icon={Activity}
+                                collapsed={collapsed}
+                                items={[
+                                    {
+                                        title: 'Database',
+                                        href: dbMonitoringIndex.url(),
                                     },
                                 ]}
                             />
