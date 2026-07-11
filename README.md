@@ -93,6 +93,25 @@ npm run dev
 - Eliminación masiva de registros seleccionados
 - Exportación de datos
 
+### 🗺️ Módulo de Mapas y Navegación 3D (Mapbox + Google Places)
+- **Búsqueda e Indicaciones en Venezuela**: Planificador de rutas inteligente con cobertura completa de direcciones, estaciones de metro y puntos de interés (POIs) en Venezuela.
+- **Buscador Dual Inteligente**: Integra sugerencias predictivas combinando Google Places Autocomplete, Mapbox Searchbox y OpenStreetMap (Nominatim).
+- **Asignación de Pines Interactiva**: Permite hacer clic directamente sobre el mapa para fijar dinámicamente las coordenadas de partida y destino.
+- **Navegador 3D Real-Time**: Interfaz cockpit inmersiva a pantalla completa con cámara inclinada a 60° y rotación automática de brújula según el sentido de viaje.
+- **Asistente de Voz Inteligente**: Lee en voz alta las indicaciones giro a giro mediante la API de SpeechSynthesis, adaptándose automáticamente al idioma del navegador (Español/Inglés).
+- **Simulador de Conducción**: Modos dinámicos para simular la navegación paso a paso a lo largo de la ruta en tiempo real, ideal para pruebas de desarrollo locales.
+- **Alertas de Conectividad**: Notificaciones emergentes discretas (Toasts) sobre disponibilidad de señal GPS y fallbacks automáticos.
+
+### 💬 Módulo de Integración de WhatsApp API
+- Panel de control de enlace para mensajería automatizada de la empresa.
+- Gestión de tokens de autenticación API y credenciales de servidor.
+- Sincronización del estado de conexión de WhatsApp y simulación de envío de mensajes de prueba.
+
+### 🖥️ Módulo de Monitoreo del Sistema y Servidor
+- **Dashboard de Servidor**: Gráficos interactivos de consumo de CPU, Memoria RAM, Almacenamiento y Red en tiempo real.
+- **Auditoría de Logs**: Visor integrado de logs de Laravel y base de datos con filtros de severidad y búsquedas.
+- **Monitoreo de Procesos y Colas**: Panel de control para verificar el estado de las colas de trabajo (Queues), tareas programadas e historial de sesiones de usuario activas.
+
 ### 🗺️ Características Técnicas Destacadas
 - **SSR Seguro**: Mapas Leaflet cargados solo en cliente para evitar errores de window undefined
 - **Lazy Loading**: Componentes pesados cargados bajo demanda
@@ -131,17 +150,24 @@ composer run test    # Ejecutar tests PHPUnit + linters
 ## Estructura de Archivos Clave
 ```
 ├── app/
-│   ├── Http/
-│   │   └── Controllers/Admin/PaisController.php  # Controlador de países
-│   └── Models/Pais.php                           # Modelo de país con lógica de negocio
+│   ├── Http/Controllers/Admin/
+│   │   ├── PaisController.php         # Controlador de países
+│   │   ├── IntegrationController.php  # Controlador de Mapbox, Navegación y WhatsApp
+│   │   └── DbMonitoringController.php # Controladores de Monitoreo de BD y Servidor
+│   └── Models/
+│       ├── Pais.php                   # Modelo de país
+│       ├── Empresa.php                # Modelo de empresa y tokens de WhatsApp/Mapbox
+│       └── Sucursal.php               # Modelo de sucursal
 ├── resources/
 │   ├── js/
-│   │   ├── Pages/Admin/Paises/                   # Páginas del módulo
-│   │   │   ├── Index.tsx                         # Página principal
-│   │   │   └── Partials/                         # Componentes parciales
-│   │   └── components/pagination.tsx             # Componente de paginación genérico
-│   └── lang/es/paises.php                        # Traducciones español
-└── lang/en/paises.php                            # Traducciones inglés (pendiente)
+│   │   ├── pages/admin/integrations/
+│   │   │   ├── map.tsx                # Planificador de rutas de Venezuela
+│   │   │   └── navigation.tsx         # Navegador 3D en tiempo real (Full Screen)
+│   │   ├── ssr.tsx                    # Punto de entrada SSR para compilación en servidor
+│   │   └── components/pagination.tsx  # Componente de paginación genérico
+│   └── lang/
+│       ├── es.json                    # Traducciones en español
+│       └── en.json                    # Traducciones en inglés
 ```
 
 ## Requisitos del Sistema
