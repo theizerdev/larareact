@@ -33,11 +33,11 @@ class SyncAllWhatsAppCompanies extends Command
 
         // Obtener empresas a sincronizar
         $query = DB::table('empresas');
-        
-        if (!$this->option('force')) {
+
+        if (! $this->option('force')) {
             $query->where(function ($q) {
                 $q->whereNull('whatsapp_api_key')
-                  ->orWhere('whatsapp_api_key', '');
+                    ->orWhere('whatsapp_api_key', '');
             });
         }
 
@@ -45,6 +45,7 @@ class SyncAllWhatsAppCompanies extends Command
 
         if ($empresas->isEmpty()) {
             $this->info('✅ No hay empresas para sincronizar.');
+
             return 0;
         }
 
@@ -59,20 +60,20 @@ class SyncAllWhatsAppCompanies extends Command
 
         foreach ($empresas as $empresa) {
             $result = $this->syncEmpresa($empresa);
-            
+
             if ($result) {
                 $success++;
             } else {
                 $failed++;
             }
-            
+
             $bar->advance();
         }
 
         $bar->finish();
         $this->newLine(2);
 
-        $this->info("✅ Sincronización completada:");
+        $this->info('✅ Sincronización completada:');
         $this->table(
             ['Métrica', 'Cantidad'],
             [
@@ -94,8 +95,8 @@ class SyncAllWhatsAppCompanies extends Command
             // Generar API key si no existe
             $apiKey = $empresa->whatsapp_api_key;
             if (empty($apiKey)) {
-                $apiKey = 'wa_' . $empresa->id . '_' . bin2hex(random_bytes(8));
-                
+                $apiKey = 'wa_'.$empresa->id.'_'.bin2hex(random_bytes(8));
+
                 // Actualizar la empresa con la nueva API key
                 DB::table('empresas')
                     ->where('id', $empresa->id)
@@ -103,8 +104,8 @@ class SyncAllWhatsAppCompanies extends Command
             }
 
             // Sincronizar con tabla companies en larawhatsapp
-            $webhookUrl = config('whatsapp.api_url') . '/api/whatsapp/webhook';
-            
+            $webhookUrl = config('whatsapp.api_url').'/api/whatsapp/webhook';
+
             DB::connection('whatsapp_api')->table('companies')->updateOrInsert(
                 ['id' => $empresa->id],
                 [
@@ -114,7 +115,7 @@ class SyncAllWhatsAppCompanies extends Command
                     'rateLimitPerMinute' => $empresa->whatsapp_rate_limit ?? 60,
                     'isActive' => 1,
                     'createdAt' => now(),
-                    'updatedAt' => now()
+                    'updatedAt' => now(),
                 ]
             );
 
@@ -123,8 +124,9 @@ class SyncAllWhatsAppCompanies extends Command
         } catch (\Exception $e) {
             Log::error('Error sincronizando empresa con WhatsApp API', [
                 'empresa_id' => $empresa->id,
-                'error' => $e->getMessage()
+                'error' => $e->getMessage(),
             ]);
+
             return false;
         }
     }

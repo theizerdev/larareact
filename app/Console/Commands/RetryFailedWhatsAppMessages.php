@@ -2,11 +2,10 @@
 
 namespace App\Console\Commands;
 
-use Illuminate\Console\Command;
 use App\Models\WhatsAppMessage;
-use App\Models\WhatsAppScheduledMessage;
 use App\Services\WhatsAppService;
 use Carbon\Carbon;
+use Illuminate\Console\Command;
 
 class RetryFailedWhatsAppMessages extends Command
 {
@@ -40,9 +39,10 @@ class RetryFailedWhatsAppMessages extends Command
 
         // Obtener mensajes que pueden ser reenviados
         $failedMessages = $this->getRetryableMessages($days, $maxRetries);
-        
+
         if ($failedMessages->isEmpty()) {
             $this->info('No se encontraron mensajes para reenviar.');
+
             return;
         }
 
@@ -54,13 +54,14 @@ class RetryFailedWhatsAppMessages extends Command
                 $failedMessages->map(function ($message) {
                     return [
                         $message->id,
-                        $message->recipient_phone . ' (' . $message->recipient_name . ')',
+                        $message->recipient_phone.' ('.$message->recipient_name.')',
                         $message->status,
                         $message->error_message ?: 'Simulado',
-                        $message->sent_at->format('Y-m-d H:i:s')
+                        $message->sent_at->format('Y-m-d H:i:s'),
                     ];
                 })
             );
+
             return;
         }
 
@@ -68,8 +69,9 @@ class RetryFailedWhatsAppMessages extends Command
         $whatsAppService = app(WhatsAppService::class);
         $connectionTest = $whatsAppService->testConnection();
 
-        if (!$connectionTest['success']) {
-            $this->error('El servicio de WhatsApp no está disponible: ' . $connectionTest['message']);
+        if (! $connectionTest['success']) {
+            $this->error('El servicio de WhatsApp no está disponible: '.$connectionTest['message']);
+
             return 1;
         }
 
@@ -81,19 +83,19 @@ class RetryFailedWhatsAppMessages extends Command
         foreach ($failedMessages as $message) {
             try {
                 $this->info("Reenviando mensaje #{$message->id} a {$message->recipient_phone}...");
-                
+
                 $result = $this->retryMessage($message, $whatsAppService);
-                
+
                 if ($result['success']) {
                     $successCount++;
-                    $this->info("✓ Mensaje reenviado exitosamente");
+                    $this->info('✓ Mensaje reenviado exitosamente');
                 } else {
                     $failedCount++;
-                    $this->error("✗ Error al reenviar: " . $result['message']);
+                    $this->error('✗ Error al reenviar: '.$result['message']);
                 }
             } catch (\Exception $e) {
                 $failedCount++;
-                $this->error("✗ Excepción al reenviar: " . $e->getMessage());
+                $this->error('✗ Excepción al reenviar: '.$e->getMessage());
             }
 
             // Pequeña pausa entre mensajes para evitar sobrecarga
@@ -103,7 +105,7 @@ class RetryFailedWhatsAppMessages extends Command
         $this->info("\nResumen del reenvío:");
         $this->info("✓ Exitosos: {$successCount}");
         $this->info("✗ Fallidos: {$failedCount}");
-        $this->info("Total: " . ($successCount + $failedCount));
+        $this->info('Total: '.($successCount + $failedCount));
 
         return 0;
     }
@@ -117,16 +119,16 @@ class RetryFailedWhatsAppMessages extends Command
 
         return WhatsAppMessage::where('created_at', '>=', $cutoffDate)
             ->where('direction', 'outbound')
-            ->where(function ($query) use ($maxRetries) {
+            ->where(function ($query) {
                 // Mensajes fallidos o con errores
                 $query->where('status', 'failed')
-                      ->orWhereNotNull('error_message');
-                      
+                    ->orWhereNotNull('error_message');
+
                 // Mensajes simulados (éxito pero sin message_id real)
                 $query->orWhere(function ($q) {
                     $q->where('status', 'sent')
-                      ->whereNull('message_id')
-                      ->orWhere('message_id', 'like', 'msg_%'); // IDs generados internamente
+                        ->whereNull('message_id')
+                        ->orWhere('message_id', 'like', 'msg_%'); // IDs generados internamente
                 });
             })
             ->where(function ($query) use ($maxRetries) {
@@ -158,7 +160,7 @@ class RetryFailedWhatsAppMessages extends Command
                 'phone' => $message->recipient_phone,
                 'message' => $content,
                 'template' => $template ? $template->name : null,
-                'parameters' => $variables
+                'parameters' => $variables,
             ]);
 
             if ($result['success']) {
@@ -172,8 +174,8 @@ class RetryFailedWhatsAppMessages extends Command
                         'retried_at' => now()->toDateTimeString(),
                         'retry_count' => ($message->metadata['retry_count'] ?? 0) + 1,
                         'original_status' => $message->status,
-                        'original_error' => $message->error_message
-                    ])
+                        'original_error' => $message->error_message,
+                    ]),
                 ]);
 
                 // Crear un nuevo registro para el historial de reenvíos
@@ -191,8 +193,8 @@ class RetryFailedWhatsAppMessages extends Command
                     'metadata' => [
                         'is_retry' => true,
                         'original_message_id' => $message->id,
-                        'retry_successful' => true
-                    ]
+                        'retry_successful' => true,
+                    ],
                 ]);
 
                 return ['success' => true, 'message' => 'Mensaje reenviado exitosamente'];
@@ -202,8 +204,8 @@ class RetryFailedWhatsAppMessages extends Command
                     'metadata' => array_merge($message->metadata ?? [], [
                         'retried_at' => now()->toDateTimeString(),
                         'retry_count' => ($message->metadata['retry_count'] ?? 0) + 1,
-                        'last_retry_error' => $result['message'] ?? 'Error desconocido'
-                    ])
+                        'last_retry_error' => $result['message'] ?? 'Error desconocido',
+                    ]),
                 ]);
 
                 return ['success' => false, 'message' => $result['message'] ?? 'Error al reenviar'];
@@ -214,11 +216,11 @@ class RetryFailedWhatsAppMessages extends Command
                 'metadata' => array_merge($message->metadata ?? [], [
                     'retried_at' => now()->toDateTimeString(),
                     'retry_count' => ($message->metadata['retry_count'] ?? 0) + 1,
-                    'last_retry_exception' => $e->getMessage()
-                ])
+                    'last_retry_exception' => $e->getMessage(),
+                ]),
             ]);
 
-            return ['success' => false, 'message' => 'Excepción: ' . $e->getMessage()];
+            return ['success' => false, 'message' => 'Excepción: '.$e->getMessage()];
         }
     }
 }

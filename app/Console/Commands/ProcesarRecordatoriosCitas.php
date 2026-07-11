@@ -10,6 +10,7 @@ use Illuminate\Support\Facades\Log;
 class ProcesarRecordatoriosCitas extends Command
 {
     protected $signature = 'citas:procesar-recordatorios';
+
     protected $description = 'Procesar y enviar recordatorios de citas pendientes';
 
     public function handle()
@@ -30,7 +31,7 @@ class ProcesarRecordatoriosCitas extends Command
                 $this->info("📤 Procesando recordatorio #{$recordatorio->id} para cita #{$recordatorio->cita_id}");
 
                 $service = CitaNotificationService::forCompany($recordatorio->cita->empresa_id);
-                
+
                 // Enviar recordatorio según el canal
                 switch ($recordatorio->canal) {
                     case 'whatsapp':
@@ -49,29 +50,29 @@ class ProcesarRecordatoriosCitas extends Command
                 if ($enviado) {
                     $recordatorio->marcarComoEnviado();
                     $enviados++;
-                    $this->info("✅ Recordatorio enviado exitosamente");
+                    $this->info('✅ Recordatorio enviado exitosamente');
                 } else {
-                    $recordatorio->marcarComoFallido('Error al enviar por ' . $recordatorio->canal);
+                    $recordatorio->marcarComoFallido('Error al enviar por '.$recordatorio->canal);
                     $fallidos++;
-                    $this->error("❌ Error al enviar recordatorio");
+                    $this->error('❌ Error al enviar recordatorio');
                 }
 
             } catch (\Exception $e) {
                 Log::error('Error procesando recordatorio', [
                     'recordatorio_id' => $recordatorio->id,
-                    'error' => $e->getMessage()
+                    'error' => $e->getMessage(),
                 ]);
-                
+
                 $recordatorio->marcarComoFallido($e->getMessage());
                 $fallidos++;
                 $this->error("❌ Error procesando recordatorio: {$e->getMessage()}");
             }
         }
 
-        $this->info("📊 Resumen:");
+        $this->info('📊 Resumen:');
         $this->info("   ✅ Enviados: {$enviados}");
         $this->info("   ❌ Fallidos: {$fallidos}");
-        $this->info("🎉 Procesamiento completado!");
+        $this->info('🎉 Procesamiento completado!');
 
         return Command::SUCCESS;
     }
@@ -81,20 +82,21 @@ class ProcesarRecordatoriosCitas extends Command
         try {
             // Verificar que el paciente tenga WhatsApp
             $paciente = $recordatorio->cita->paciente;
-            if (!$paciente->telefono) {
+            if (! $paciente->telefono) {
                 throw new \Exception('Paciente sin número de teléfono');
             }
 
             // Enviar el mensaje personalizado
             $mensaje = $recordatorio->mensaje ?: $recordatorio->cita->generarMensajeRecordatorio($recordatorio->tipo);
-            
+
             return $service->enviarRecordatorio($recordatorio->cita, $mensaje);
-            
+
         } catch (\Exception $e) {
             Log::error('Error enviando WhatsApp', [
                 'recordatorio_id' => $recordatorio->id,
-                'error' => $e->getMessage()
+                'error' => $e->getMessage(),
             ]);
+
             return false;
         }
     }

@@ -2,13 +2,14 @@
 
 namespace App\Console\Commands;
 
+use Carbon\Carbon;
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\DB;
-use Carbon\Carbon;
 
 class CheckFinancialStats extends Command
 {
     protected $signature = 'financial:check';
+
     protected $description = 'Verificar estadísticas financieras del dashboard';
 
     public function handle()
@@ -16,17 +17,17 @@ class CheckFinancialStats extends Command
         $now = Carbon::now();
         $startDate = $now->copy()->subDays(30);
 
-        $this->info("Período actual: " . $startDate->format('Y-m-d') . " hasta " . $now->format('Y-m-d'));
+        $this->info('Período actual: '.$startDate->format('Y-m-d').' hasta '.$now->format('Y-m-d'));
 
         $totalIncome = DB::table('pagos')
             ->where('estado', 'completado')
             ->where('fecha_pago', '>=', $startDate)
             ->sum('monto');
 
-        $this->info("Ingresos últimos 30 días: $" . $totalIncome);
+        $this->info('Ingresos últimos 30 días: $'.$totalIncome);
 
         $previousStart = $startDate->copy()->subDays(30);
-        $this->info("Período anterior: " . $previousStart->format('Y-m-d') . " hasta " . $startDate->format('Y-m-d'));
+        $this->info('Período anterior: '.$previousStart->format('Y-m-d').' hasta '.$startDate->format('Y-m-d'));
 
         $previousIncome = DB::table('pagos')
             ->where('estado', 'completado')
@@ -34,21 +35,21 @@ class CheckFinancialStats extends Command
             ->where('fecha_pago', '<', $startDate)
             ->sum('monto');
 
-        $this->info("Ingresos período anterior: $" . $previousIncome);
+        $this->info('Ingresos período anterior: $'.$previousIncome);
 
         if ($previousIncome > 0) {
             $change = (($totalIncome - $previousIncome) / $previousIncome) * 100;
-            $this->info("Cambio: " . round($change, 2) . "%");
+            $this->info('Cambio: '.round($change, 2).'%');
 
             if ($change > 0) {
-                $this->info("📈 Aumento");
+                $this->info('📈 Aumento');
             } elseif ($change < 0) {
-                $this->info("📉 Disminución");
+                $this->info('📉 Disminución');
             } else {
-                $this->info("➡️ Sin cambio");
+                $this->info('➡️ Sin cambio');
             }
         } else {
-            $this->info("Cambio: No hay datos del período anterior");
+            $this->info('Cambio: No hay datos del período anterior');
         }
 
         // Verificar también ingresos pendientes
@@ -64,10 +65,10 @@ class CheckFinancialStats extends Command
 
         $totalPending = $pendingIncomePagos + $pendingIncomeSchedule;
 
-        $this->info("");
-        $this->info("Ingresos pendientes:");
-        $this->info("- Pagos: $" . $pendingIncomePagos);
-        $this->info("- Cronograma: $" . $pendingIncomeSchedule);
-        $this->info("- Total pendiente: $" . $totalPending);
+        $this->info('');
+        $this->info('Ingresos pendientes:');
+        $this->info('- Pagos: $'.$pendingIncomePagos);
+        $this->info('- Cronograma: $'.$pendingIncomeSchedule);
+        $this->info('- Total pendiente: $'.$totalPending);
     }
 }

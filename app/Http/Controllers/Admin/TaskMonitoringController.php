@@ -3,10 +3,10 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
-use Illuminate\Http\Request;
-use Illuminate\Console\Scheduling\Schedule;
-use Illuminate\Support\Facades\Artisan;
 use Cron\CronExpression;
+use Illuminate\Console\Scheduling\Schedule;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Artisan;
 
 class TaskMonitoringController extends Controller
 {
@@ -18,10 +18,10 @@ class TaskMonitoringController extends Controller
         $tasks = collect($schedule->events())->map(function ($event, $index) {
             // Obtener comando o descripción legible
             $command = $event->command;
-            
+
             // Si es un comando de Artisan, limpiamos la ruta del binario PHP
             if (preg_match('/artisan[\'"]?\s+([^\s]+)/', $command, $matches)) {
-                $command = 'artisan ' . $matches[1];
+                $command = 'artisan '.$matches[1];
             } else {
                 $command = $event->description ?: ($event->callback instanceof \Closure ? 'Closure Callback' : 'Command Task');
             }
@@ -80,12 +80,12 @@ class TaskMonitoringController extends Controller
 
             return back()->with('notification', [
                 'type' => 'success',
-                'message' => __('Task executed successfully. Output: ') . trim($output),
+                'message' => __('Task executed successfully. Output: ').trim($output),
             ]);
         } catch (\Exception $e) {
             return back()->with('notification', [
                 'type' => 'error',
-                'message' => __('Error executing task: ') . $e->getMessage(),
+                'message' => __('Error executing task: ').$e->getMessage(),
             ]);
         }
     }

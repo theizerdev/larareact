@@ -31,7 +31,7 @@ class UpdateAdminComponents extends Command
         $stats = [
             'updated' => 0,
             'skipped' => 0,
-            'errors' => 0
+            'errors' => 0,
         ];
 
         // Procesar componentes de Admin
@@ -46,7 +46,7 @@ class UpdateAdminComponents extends Command
             [
                 ['Actualizados', $stats['updated']],
                 ['Omitidos', $stats['skipped']],
-                ['Errores', $stats['errors']]
+                ['Errores', $stats['errors']],
             ]
         );
 
@@ -55,8 +55,9 @@ class UpdateAdminComponents extends Command
 
     private function processDirectory($directory, $type, &$stats)
     {
-        if (!File::exists($directory)) {
+        if (! File::exists($directory)) {
             $this->warn("Directorio no encontrado: $directory");
+
             return;
         }
 
@@ -72,7 +73,7 @@ class UpdateAdminComponents extends Command
             switch ($result) {
                 case 'updated':
                     $stats['updated']++;
-                    $relativePath = str_replace(base_path() . '/', '', $file->getRealPath());
+                    $relativePath = str_replace(base_path().'/', '', $file->getRealPath());
                     $this->info("✅ Actualizado: $relativePath");
                     break;
                 case 'already_has_trait':
@@ -83,7 +84,7 @@ class UpdateAdminComponents extends Command
                     break;
                 case 'error':
                     $stats['errors']++;
-                    $relativePath = str_replace(base_path() . '/', '', $file->getRealPath());
+                    $relativePath = str_replace(base_path().'/', '', $file->getRealPath());
                     $this->error("❌ Error: $relativePath");
                     break;
             }
@@ -112,7 +113,7 @@ class UpdateAdminComponents extends Command
                 $namespaceLine = $matches[0];
                 $newContent = str_replace(
                     $namespaceLine,
-                    $namespaceLine . "\nuse App\\Traits\\HasDynamicLayout;",
+                    $namespaceLine."\nuse App\\Traits\\HasDynamicLayout;",
                     $content
                 );
                 $content = $newContent;
@@ -122,13 +123,13 @@ class UpdateAdminComponents extends Command
             $traitPattern = '/use\s+([^;]+);/';
             preg_match_all($traitPattern, $content, $traitMatches);
 
-            if (!empty($traitMatches[0])) {
+            if (! empty($traitMatches[0])) {
                 // Encontrar la última línea de traits
                 $lastTraitLine = end($traitMatches[0]);
 
                 if (strpos($lastTraitLine, 'HasDynamicLayout') === false) {
                     // Agregar HasDynamicLayout
-                    $newTraitLine = rtrim($lastTraitLine, ';') . ', HasDynamicLayout;';
+                    $newTraitLine = rtrim($lastTraitLine, ';').', HasDynamicLayout;';
                     $content = str_replace($lastTraitLine, $newTraitLine, $content);
                 }
             }
@@ -152,7 +153,7 @@ class UpdateAdminComponents extends Command
                     // Agregar layout dinámico
                     $newRender = str_replace(
                         $matches[1],
-                        $matches[1] . '->layout($this->getLayout())',
+                        $matches[1].'->layout($this->getLayout())',
                         $matches[0]
                     );
                     $content = str_replace($matches[0], $newRender, $content);
@@ -162,6 +163,7 @@ class UpdateAdminComponents extends Command
             // Guardar cambios
             if ($content !== $originalContent) {
                 File::put($filePath, $content);
+
                 return 'updated';
             }
 

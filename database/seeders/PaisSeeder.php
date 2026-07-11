@@ -4,7 +4,6 @@ namespace Database\Seeders;
 
 use App\Models\Pais;
 use Illuminate\Database\Seeder;
-use Illuminate\Database\Eloquent\Model;
 
 class PaisSeeder extends Seeder
 {
@@ -32,7 +31,7 @@ class PaisSeeder extends Seeder
                 'decimales_moneda' => 2,
                 'activo' => true,
                 'latitud' => -34.6118,
-                'longitud' => -58.3960
+                'longitud' => -58.3960,
             ],
             [
                 'nombre' => 'Bolivia',
@@ -51,7 +50,7 @@ class PaisSeeder extends Seeder
                 'decimales_moneda' => 2,
                 'activo' => true,
                 'latitud' => -16.5000,
-                'longitud' => -68.1193
+                'longitud' => -68.1193,
             ],
             [
                 'nombre' => 'Brasil',
@@ -70,7 +69,7 @@ class PaisSeeder extends Seeder
                 'decimales_moneda' => 2,
                 'activo' => true,
                 'latitud' => -15.7801,
-                'longitud' => -47.9292
+                'longitud' => -47.9292,
             ],
             [
                 'nombre' => 'Chile',
@@ -89,7 +88,7 @@ class PaisSeeder extends Seeder
                 'decimales_moneda' => 0,
                 'activo' => true,
                 'latitud' => -33.4489,
-                'longitud' => -70.6693
+                'longitud' => -70.6693,
             ],
             [
                 'nombre' => 'Colombia',
@@ -108,7 +107,7 @@ class PaisSeeder extends Seeder
                 'decimales_moneda' => 2,
                 'activo' => true,
                 'latitud' => 4.7110,
-                'longitud' => -74.0721
+                'longitud' => -74.0721,
             ],
             [
                 'nombre' => 'Costa Rica',
@@ -127,7 +126,7 @@ class PaisSeeder extends Seeder
                 'decimales_moneda' => 2,
                 'activo' => true,
                 'latitud' => 9.9281,
-                'longitud' => -84.0907
+                'longitud' => -84.0907,
             ],
             [
                 'nombre' => 'Cuba',
@@ -146,7 +145,7 @@ class PaisSeeder extends Seeder
                 'decimales_moneda' => 2,
                 'activo' => true,
                 'latitud' => 23.1136,
-                'longitud' => -82.3666
+                'longitud' => -82.3666,
             ],
             [
                 'nombre' => 'Ecuador',
@@ -165,7 +164,7 @@ class PaisSeeder extends Seeder
                 'decimales_moneda' => 2,
                 'activo' => true,
                 'latitud' => -0.1807,
-                'longitud' => -78.4678
+                'longitud' => -78.4678,
             ],
             [
                 'nombre' => 'El Salvador',
@@ -184,7 +183,7 @@ class PaisSeeder extends Seeder
                 'decimales_moneda' => 2,
                 'activo' => true,
                 'latitud' => 13.6929,
-                'longitud' => -89.2182
+                'longitud' => -89.2182,
             ],
             [
                 'nombre' => 'Guatemala',
@@ -203,7 +202,7 @@ class PaisSeeder extends Seeder
                 'decimales_moneda' => 2,
                 'activo' => true,
                 'latitud' => 14.6349,
-                'longitud' => -90.5069
+                'longitud' => -90.5069,
             ],
             [
                 'nombre' => 'Honduras',
@@ -222,7 +221,7 @@ class PaisSeeder extends Seeder
                 'decimales_moneda' => 2,
                 'activo' => true,
                 'latitud' => 14.0723,
-                'longitud' => -87.1921
+                'longitud' => -87.1921,
             ],
             [
                 'nombre' => 'México',
@@ -241,7 +240,7 @@ class PaisSeeder extends Seeder
                 'decimales_moneda' => 2,
                 'activo' => true,
                 'latitud' => 19.4326,
-                'longitud' => -99.1332
+                'longitud' => -99.1332,
             ],
             [
                 'nombre' => 'Nicaragua',
@@ -260,7 +259,7 @@ class PaisSeeder extends Seeder
                 'decimales_moneda' => 2,
                 'activo' => true,
                 'latitud' => 12.1146,
-                'longitud' => -86.2807
+                'longitud' => -86.2807,
             ],
             [
                 'nombre' => 'Panamá',
@@ -279,7 +278,7 @@ class PaisSeeder extends Seeder
                 'decimales_moneda' => 2,
                 'activo' => true,
                 'latitud' => 8.9824,
-                'longitud' => -79.5199
+                'longitud' => -79.5199,
             ],
             [
                 'nombre' => 'Paraguay',
@@ -298,7 +297,7 @@ class PaisSeeder extends Seeder
                 'decimales_moneda' => 2,
                 'activo' => true,
                 'latitud' => -25.2637,
-                'longitud' => -57.5759
+                'longitud' => -57.5759,
             ],
             [
                 'nombre' => 'Perú',
@@ -317,7 +316,7 @@ class PaisSeeder extends Seeder
                 'decimales_moneda' => 2,
                 'activo' => true,
                 'latitud' => -12.0464,
-                'longitud' => -77.0428
+                'longitud' => -77.0428,
             ],
             [
                 'nombre' => 'Puerto Rico',
@@ -336,7 +335,7 @@ class PaisSeeder extends Seeder
                 'decimales_moneda' => 2,
                 'activo' => true,
                 'latitud' => 18.4655,
-                'longitud' => -66.1057
+                'longitud' => -66.1057,
             ],
             [
                 'nombre' => 'República Dominicana',
@@ -355,7 +354,7 @@ class PaisSeeder extends Seeder
                 'decimales_moneda' => 2,
                 'activo' => true,
                 'latitud' => 18.4861,
-                'longitud' => -69.9312
+                'longitud' => -69.9312,
             ],
             [
                 'nombre' => 'Uruguay',
@@ -374,7 +373,7 @@ class PaisSeeder extends Seeder
                 'decimales_moneda' => 2,
                 'activo' => true,
                 'latitud' => -34.9011,
-                'longitud' => -56.1645
+                'longitud' => -56.1645,
             ],
             [
                 'nombre' => 'Venezuela',
@@ -393,8 +392,8 @@ class PaisSeeder extends Seeder
                 'decimales_moneda' => 2,
                 'activo' => true,
                 'latitud' => 10.4806,
-                'longitud' => -66.9036
-            ]
+                'longitud' => -66.9036,
+            ],
         ];
 
         // Insertar o actualizar los países
@@ -406,6 +405,6 @@ class PaisSeeder extends Seeder
         }
 
         $this->command->info('✅ Países latinoamericanos procesados exitosamente');
-        $this->command->info('📊 Total de países procesados: ' . count($paisesLatinoamericanos));
+        $this->command->info('📊 Total de países procesados: '.count($paisesLatinoamericanos));
     }
 }

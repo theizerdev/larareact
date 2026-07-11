@@ -33,9 +33,9 @@ class UserAgentParser
         }
 
         // Detectar Navegador
-        if (preg_match('/chrome|crios/i', $userAgent) && !preg_match('/edge|edg/i', $userAgent)) {
+        if (preg_match('/chrome|crios/i', $userAgent) && ! preg_match('/edge|edg/i', $userAgent)) {
             $browser = 'Chrome';
-        } elseif (preg_match('/safari/i', $userAgent) && !preg_match('/chrome|crios/i', $userAgent)) {
+        } elseif (preg_match('/safari/i', $userAgent) && ! preg_match('/chrome|crios/i', $userAgent)) {
             $browser = 'Safari';
         } elseif (preg_match('/firefox|iceweasel/i', $userAgent)) {
             $browser = 'Firefox';

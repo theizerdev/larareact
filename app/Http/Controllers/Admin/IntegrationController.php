@@ -3,12 +3,11 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
-use Illuminate\Http\Request;
 use App\Models\Empresa;
 use App\Models\Pais;
 use App\Services\WhatsAppService;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Artisan;
-use Illuminate\Support\Facades\Log;
 
 class IntegrationController extends Controller
 {
@@ -19,7 +18,7 @@ class IntegrationController extends Controller
     {
         $empresa = $request->user()->empresa;
 
-        if (!$empresa) {
+        if (! $empresa) {
             return redirect()->route('admin.dashboard')->with('notification', [
                 'type' => 'error',
                 'message' => __('No active company associated with your user.'),
@@ -36,10 +35,10 @@ class IntegrationController extends Controller
 
         return inertia('admin/integrations/index', [
             'mapbox_api_key' => $empresa->mapbox_api_key,
-            'mapbox_active' => (bool)$empresa->mapbox_active,
+            'mapbox_active' => (bool) $empresa->mapbox_active,
             'google_maps_api_key' => $empresa->google_maps_api_key,
-            'google_maps_active' => (bool)$empresa->google_maps_active,
-            'whatsapp_active' => (bool)$empresa->whatsapp_active,
+            'google_maps_active' => (bool) $empresa->google_maps_active,
+            'whatsapp_active' => (bool) $empresa->whatsapp_active,
             'whatsapp_connected' => $whatsappConnected,
         ]);
     }
@@ -51,7 +50,7 @@ class IntegrationController extends Controller
     {
         $empresa = $request->user()->empresa;
 
-        if (!$empresa) {
+        if (! $empresa) {
             return redirect()->route('admin.dashboard')->with('notification', [
                 'type' => 'error',
                 'message' => __('No active company associated with your user.'),
@@ -60,9 +59,9 @@ class IntegrationController extends Controller
 
         return inertia('admin/integrations/map', [
             'mapbox_api_key' => $empresa->mapbox_api_key,
-            'mapbox_active' => (bool)$empresa->mapbox_active,
+            'mapbox_active' => (bool) $empresa->mapbox_active,
             'google_maps_api_key' => $empresa->google_maps_api_key,
-            'google_maps_active' => (bool)$empresa->google_maps_active,
+            'google_maps_active' => (bool) $empresa->google_maps_active,
         ]);
     }
 
@@ -73,7 +72,7 @@ class IntegrationController extends Controller
     {
         $empresa = $request->user()->empresa;
 
-        if (!$empresa) {
+        if (! $empresa) {
             return redirect()->route('admin.dashboard')->with('notification', [
                 'type' => 'error',
                 'message' => __('No active company associated with your user.'),
@@ -82,9 +81,9 @@ class IntegrationController extends Controller
 
         return inertia('admin/integrations/navigation', [
             'mapbox_api_key' => $empresa->mapbox_api_key,
-            'mapbox_active' => (bool)$empresa->mapbox_active,
+            'mapbox_active' => (bool) $empresa->mapbox_active,
             'google_maps_api_key' => $empresa->google_maps_api_key,
-            'google_maps_active' => (bool)$empresa->google_maps_active,
+            'google_maps_active' => (bool) $empresa->google_maps_active,
         ]);
     }
 
@@ -95,7 +94,7 @@ class IntegrationController extends Controller
     {
         $empresa = $request->user()->empresa;
 
-        if (!$empresa) {
+        if (! $empresa) {
             return back()->with('notification', [
                 'type' => 'error',
                 'message' => __('No active company associated with your user.'),
@@ -125,7 +124,7 @@ class IntegrationController extends Controller
     {
         $empresa = $request->user()->empresa;
 
-        if (!$empresa) {
+        if (! $empresa) {
             return back()->with('notification', [
                 'type' => 'error',
                 'message' => __('No active company associated with your user.'),
@@ -155,7 +154,7 @@ class IntegrationController extends Controller
     {
         $empresa = $request->user()->empresa;
 
-        if (!$empresa) {
+        if (! $empresa) {
             return redirect()->route('admin.dashboard')->with('notification', [
                 'type' => 'error',
                 'message' => __('No active company associated with your user.'),
@@ -177,7 +176,7 @@ class IntegrationController extends Controller
         $paises = Pais::where('activo', true)
             ->orderBy('nombre', 'asc')
             ->get(['id', 'nombre', 'codigo_iso2', 'codigo_telefonico']);
-            
+
         return inertia('admin/integrations/whatsapp', [
             'paises' => $paises,
             'empresa_id' => $empresa->id,
@@ -185,7 +184,7 @@ class IntegrationController extends Controller
             'whatsapp_api_key' => $empresa->whatsapp_api_key,
             'whatsapp_api_url' => $empresa->whatsapp_api_url ?? config('whatsapp.api_url', 'http://82.165.213.124:8092'),
             'whatsapp_rate_limit' => $empresa->whatsapp_rate_limit ?? 60,
-            'whatsapp_active' => (bool)$empresa->whatsapp_active,
+            'whatsapp_active' => (bool) $empresa->whatsapp_active,
             'whatsapp_phone' => $empresa->whatsapp_phone,
             'whatsapp_status' => $empresa->whatsapp_status,
             'live_status' => $status,
@@ -201,7 +200,7 @@ class IntegrationController extends Controller
     {
         $empresa = $request->user()->empresa;
 
-        if (!$empresa) {
+        if (! $empresa) {
             return response()->json(['success' => false, 'error' => 'No active company found.'], 404);
         }
 
@@ -226,7 +225,7 @@ class IntegrationController extends Controller
     {
         $empresa = $request->user()->empresa;
 
-        if (!$empresa) {
+        if (! $empresa) {
             return back()->with('notification', [
                 'type' => 'error',
                 'message' => __('No active company associated with your user.'),
@@ -258,7 +257,7 @@ class IntegrationController extends Controller
     {
         $empresa = $request->user()->empresa;
 
-        if (!$empresa) {
+        if (! $empresa) {
             return back()->with('notification', [
                 'type' => 'error',
                 'message' => __('No active company associated with your user.'),
@@ -266,10 +265,10 @@ class IntegrationController extends Controller
         }
 
         $randomPart = bin2hex(random_bytes(16));
-        $token = 'whatsapp-' . $empresa->id . '-' . substr($randomPart, 0, 16);
+        $token = 'whatsapp-'.$empresa->id.'-'.substr($randomPart, 0, 16);
 
         $empresa->update([
-            'whatsapp_api_key' => $token
+            'whatsapp_api_key' => $token,
         ]);
 
         return back()->with('notification', [
@@ -285,7 +284,7 @@ class IntegrationController extends Controller
     {
         $empresa = $request->user()->empresa;
 
-        if (!$empresa) {
+        if (! $empresa) {
             return back()->with('notification', [
                 'type' => 'error',
                 'message' => __('No active company associated with your user.'),
@@ -301,7 +300,7 @@ class IntegrationController extends Controller
 
         try {
             Artisan::call('whatsapp:sync-company', [
-                'empresa' => $empresa->id
+                'empresa' => $empresa->id,
             ]);
 
             return back()->with('notification', [
@@ -311,7 +310,7 @@ class IntegrationController extends Controller
         } catch (\Exception $e) {
             return back()->with('notification', [
                 'type' => 'error',
-                'message' => __('Failed to sync company: ') . $e->getMessage(),
+                'message' => __('Failed to sync company: ').$e->getMessage(),
             ]);
         }
     }
@@ -323,7 +322,7 @@ class IntegrationController extends Controller
     {
         $empresa = $request->user()->empresa;
 
-        if (!$empresa) {
+        if (! $empresa) {
             return back()->with('notification', [
                 'type' => 'error',
                 'message' => __('No active company associated with your user.'),
@@ -353,7 +352,7 @@ class IntegrationController extends Controller
     {
         $empresa = $request->user()->empresa;
 
-        if (!$empresa) {
+        if (! $empresa) {
             return back()->with('notification', [
                 'type' => 'error',
                 'message' => __('No active company associated with your user.'),
@@ -382,7 +381,7 @@ class IntegrationController extends Controller
     {
         $empresa = $request->user()->empresa;
 
-        if (!$empresa) {
+        if (! $empresa) {
             return back()->with('notification', [
                 'type' => 'error',
                 'message' => __('No active company associated with your user.'),
@@ -405,7 +404,7 @@ class IntegrationController extends Controller
     {
         $empresa = $request->user()->empresa;
 
-        if (!$empresa) {
+        if (! $empresa) {
             return back()->with('notification', [
                 'type' => 'error',
                 'message' => __('No active company associated with your user.'),
@@ -418,7 +417,7 @@ class IntegrationController extends Controller
         ]);
 
         $whatsappService = new WhatsAppService($empresa);
-        
+
         // Ejecutar envío saltándose opt-in por ser prueba (isWelcome = true)
         $result = $whatsappService->sendMessage($validated['to'], $validated['message'], true);
 
@@ -430,9 +429,10 @@ class IntegrationController extends Controller
         }
 
         $error = $result['error'] ?? __('Failed to send message. Check WhatsApp server logs.');
+
         return back()->with('notification', [
             'type' => 'error',
-            'message' => __('Error: ') . $error,
+            'message' => __('Error: ').$error,
         ]);
     }
 
@@ -446,7 +446,7 @@ class IntegrationController extends Controller
             if (isset($status['user']['id'])) {
                 $livePhone = explode('@', $status['user']['id'])[0];
             }
-            
+
             $empresa->update([
                 'whatsapp_status' => 'connected',
                 'whatsapp_phone' => $livePhone ?? $empresa->whatsapp_phone,

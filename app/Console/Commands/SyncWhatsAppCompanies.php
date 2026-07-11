@@ -35,23 +35,25 @@ class SyncWhatsAppCompanies extends Command
         // Si se especifica una empresa
         if ($empresaId = $this->option('empresa')) {
             $empresa = Empresa::find($empresaId);
-            
-            if (!$empresa) {
+
+            if (! $empresa) {
                 $this->error("❌ Empresa con ID {$empresaId} no encontrada.");
+
                 return 1;
             }
 
             $this->syncEmpresa($empresa, $whatsappService);
+
             return 0;
         }
 
         // Obtener empresas a sincronizar
         $query = Empresa::query();
-        
-        if (!$this->option('all')) {
+
+        if (! $this->option('all')) {
             $query->where(function ($q) {
                 $q->whereNull('whatsapp_api_key')
-                  ->orWhere('whatsapp_api_key', '');
+                    ->orWhere('whatsapp_api_key', '');
             });
         }
 
@@ -59,6 +61,7 @@ class SyncWhatsAppCompanies extends Command
 
         if ($empresas->isEmpty()) {
             $this->info('✅ Todas las empresas ya tienen API key de WhatsApp configurada.');
+
             return 0;
         }
 
@@ -73,20 +76,20 @@ class SyncWhatsAppCompanies extends Command
 
         foreach ($empresas as $empresa) {
             $result = $this->syncEmpresa($empresa, $whatsappService, false);
-            
+
             if ($result) {
                 $success++;
             } else {
                 $failed++;
             }
-            
+
             $bar->advance();
         }
 
         $bar->finish();
         $this->newLine(2);
 
-        $this->info("✅ Sincronización completada:");
+        $this->info('✅ Sincronización completada:');
         $this->table(
             ['Métrica', 'Cantidad'],
             [
@@ -113,14 +116,16 @@ class SyncWhatsAppCompanies extends Command
         if ($apiKey) {
             if ($verbose) {
                 $this->info("  ✅ API Key generada: {$apiKey}");
-                $this->info("  📱 WhatsApp activo: " . ($empresa->whatsapp_active ? 'Sí' : 'No (pendiente conexión)'));
+                $this->info('  📱 WhatsApp activo: '.($empresa->whatsapp_active ? 'Sí' : 'No (pendiente conexión)'));
             }
+
             return true;
         }
 
         if ($verbose) {
-            $this->error("  ❌ Error al sincronizar empresa");
+            $this->error('  ❌ Error al sincronizar empresa');
         }
+
         return false;
     }
 }

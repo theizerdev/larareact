@@ -8,6 +8,7 @@ use Illuminate\Console\Command;
 class TestCarnetPng extends Command
 {
     protected $signature = 'test:carnet-png';
+
     protected $description = 'Probar la generación de carnet PNG';
 
     public function handle()
@@ -15,11 +16,12 @@ class TestCarnetPng extends Command
         // Encontrar un paciente menor
         $paciente = Paciente::whereHas('empresa')
             ->whereNotNull('fecha_nacimiento')
-            ->whereRaw("TIMESTAMPDIFF(YEAR, fecha_nacimiento, CURDATE()) < 18")
+            ->whereRaw('TIMESTAMPDIFF(YEAR, fecha_nacimiento, CURDATE()) < 18')
             ->first();
 
-        if (!$paciente) {
+        if (! $paciente) {
             $this->error('No se encontró ningún paciente menor.');
+
             return 1;
         }
 
@@ -30,7 +32,7 @@ class TestCarnetPng extends Command
         $this->info("URL del carnet PNG: https://medical.test/admin/pacientes/{$paciente->id}/carnet-menor.png");
         $this->info("URL del carnet HTML: https://medical.test/admin/pacientes/{$paciente->id}/carnet-menor");
         $this->info("URL del carnet PDF: https://medical.test/admin/pacientes/{$paciente->id}/carnet-menor.pdf");
-        
+
         return 0;
     }
 }

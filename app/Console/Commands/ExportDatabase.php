@@ -4,7 +4,6 @@ namespace App\Console\Commands;
 
 use App\Exports\DynamicDatabaseExport;
 use Illuminate\Console\Command;
-use Illuminate\Support\Facades\Storage;
 use Maatwebsite\Excel\Facades\Excel;
 
 class ExportDatabase extends Command
@@ -40,8 +39,9 @@ class ExportDatabase extends Command
         $output = $this->option('output');
 
         // Validar formato
-        if (!in_array($format, ['excel', 'csv', 'pdf'])) {
+        if (! in_array($format, ['excel', 'csv', 'pdf'])) {
             $this->error('Formato no válido. Use: excel, csv o pdf');
+
             return 1;
         }
 
@@ -57,17 +57,17 @@ class ExportDatabase extends Command
                 $processedConditions[] = [
                     'column' => $column,
                     'operator' => '=',
-                    'value' => $value
+                    'value' => $value,
                 ];
             }
         }
 
         // Procesar columnas
-        $selectedColumns = !empty($columns) ? $columns : ['*'];
+        $selectedColumns = ! empty($columns) ? $columns : ['*'];
 
         // Crear nombre de archivo si no se proporciona
-        if (!$output) {
-            $output = "{$table}_export_" . now()->format('Y-m-d_H-i-s');
+        if (! $output) {
+            $output = "{$table}_export_".now()->format('Y-m-d_H-i-s');
         }
 
         try {
@@ -85,7 +85,7 @@ class ExportDatabase extends Command
             $export = new DynamicDatabaseExport($exportData);
 
             // Determinar la extensión del archivo
-            $extension = match($format) {
+            $extension = match ($format) {
                 'excel' => 'xlsx',
                 'csv' => 'csv',
                 'pdf' => 'pdf',
@@ -102,19 +102,20 @@ class ExportDatabase extends Command
                 Excel::store($export, $path, 'public');
             }
 
-            $this->info("✅ Exportación completada exitosamente!");
+            $this->info('✅ Exportación completada exitosamente!');
             $this->info("📁 Archivo guardado: storage/app/public/{$path}");
 
             // Mostrar estadísticas
             $this->info("📊 Tabla: {$table}");
-            $this->info("📝 Columnas: " . (in_array('*', $selectedColumns) ? 'Todas' : implode(', ', $selectedColumns)));
-            $this->info("🔍 Condiciones: " . (empty($processedConditions) ? 'Ninguna' : count($processedConditions)));
-            $this->info("💾 Formato: " . strtoupper($format));
+            $this->info('📝 Columnas: '.(in_array('*', $selectedColumns) ? 'Todas' : implode(', ', $selectedColumns)));
+            $this->info('🔍 Condiciones: '.(empty($processedConditions) ? 'Ninguna' : count($processedConditions)));
+            $this->info('💾 Formato: '.strtoupper($format));
 
             return 0;
 
         } catch (\Exception $e) {
-            $this->error('❌ Error durante la exportación: ' . $e->getMessage());
+            $this->error('❌ Error durante la exportación: '.$e->getMessage());
+
             return 1;
         }
     }

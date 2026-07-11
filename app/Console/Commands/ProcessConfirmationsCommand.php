@@ -2,8 +2,8 @@
 
 namespace App\Console\Commands;
 
-use App\Models\CitaConfirmacion;
 use App\Jobs\RetryFailedConfirmation;
+use App\Models\CitaConfirmacion;
 use App\Services\CitaConfirmationService;
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\Log;
@@ -57,7 +57,7 @@ class ProcessConfirmationsCommand extends Command
                 break;
         }
 
-        $this->info("Procesamiento completado:");
+        $this->info('Procesamiento completado:');
         $this->info("- Total procesadas: {$procesadas}");
         $this->info("- Exitosas: {$exitosas}");
         $this->info("- Fallidas: {$fallidas}");
@@ -66,7 +66,7 @@ class ProcessConfirmationsCommand extends Command
             'type' => $type,
             'procesadas' => $procesadas,
             'exitosas' => $exitosas,
-            'fallidas' => $fallidas
+            'fallidas' => $fallidas,
         ]);
 
         return 0;
@@ -94,7 +94,7 @@ class ProcessConfirmationsCommand extends Command
                 $this->info("Confirmación {$confirmacion->id} marcada como expirada");
             } catch (\Exception $e) {
                 Log::error("Error marcando confirmación como expirada: {$e->getMessage()}", [
-                    'confirmacion_id' => $confirmacion->id
+                    'confirmacion_id' => $confirmacion->id,
                 ]);
                 $fallidas++;
             }
@@ -120,20 +120,20 @@ class ProcessConfirmationsCommand extends Command
         foreach ($pendientes as $confirmacion) {
             try {
                 // Verificar si puede reintentar
-                if (!$confirmacion->puedeReintentar()) {
+                if (! $confirmacion->puedeReintentar()) {
                     continue;
                 }
 
                 // Despachar job de reintento
                 RetryFailedConfirmation::dispatch($confirmacion->id);
-                
+
                 $exitosas++;
                 $contador++;
 
                 $this->info("Reintento programado para confirmación {$confirmacion->id}");
             } catch (\Exception $e) {
                 Log::error("Error programando reintento: {$e->getMessage()}", [
-                    'confirmacion_id' => $confirmacion->id
+                    'confirmacion_id' => $confirmacion->id,
                 ]);
                 $fallidas++;
             }
@@ -157,17 +157,17 @@ class ProcessConfirmationsCommand extends Command
             ->limit($limit)
             ->get();
 
-        $service = new CitaConfirmationService();
+        $service = new CitaConfirmationService;
         $contador = 0;
 
         foreach ($pendientes as $confirmacion) {
             try {
                 $resultado = $service->enviarConfirmacion($confirmacion);
-                
+
                 if ($resultado) {
                     $confirmacion->update([
                         'fecha_envio' => now(),
-                        'intentos' => 1
+                        'intentos' => 1,
                     ]);
                     $exitosas++;
                     $this->info("Confirmación {$confirmacion->id} enviada exitosamente");
@@ -175,12 +175,12 @@ class ProcessConfirmationsCommand extends Command
                     $fallidas++;
                     $this->warn("Error enviando confirmación {$confirmacion->id}");
                 }
-                
+
                 $contador++;
 
             } catch (\Exception $e) {
                 Log::error("Error enviando confirmación pendiente: {$e->getMessage()}", [
-                    'confirmacion_id' => $confirmacion->id
+                    'confirmacion_id' => $confirmacion->id,
                 ]);
                 $fallidas++;
             }

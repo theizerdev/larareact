@@ -35,19 +35,21 @@ class CheckCajasData extends Command
 
         if ($totalCajas === 0) {
             $this->warn('No hay cajas registradas en la base de datos');
+
             return;
         }
 
         // Obtener usuario actual
         $user = auth()->user() ?? User::first();
-        if (!$user) {
+        if (! $user) {
             $this->error('No hay usuarios en la base de datos');
+
             return;
         }
 
         $this->info("Usuario: {$user->name}");
-        $this->info("Empresa ID: " . ($user->empresa_id ?? 'null'));
-        $this->info("Sucursal ID: " . ($user->sucursal_id ?? 'null'));
+        $this->info('Empresa ID: '.($user->empresa_id ?? 'null'));
+        $this->info('Sucursal ID: '.($user->sucursal_id ?? 'null'));
 
         // Verificar cajas por empresa y sucursal
         $cajasPorEmpresa = Caja::where('empresa_id', $user->empresa_id)->count();

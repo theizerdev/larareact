@@ -28,9 +28,9 @@ class UserController extends Controller
         if ($search) {
             $query->where(function ($q) use ($search) {
                 $q->where('name', 'like', "%{$search}%")
-                  ->orWhere('email', 'like', "%{$search}%")
-                  ->orWhere('username', 'like', "%{$search}%")
-                  ->orWhere('telefono', 'like', "%{$search}%");
+                    ->orWhere('email', 'like', "%{$search}%")
+                    ->orWhere('username', 'like', "%{$search}%")
+                    ->orWhere('telefono', 'like', "%{$search}%");
             });
         }
 
@@ -95,7 +95,7 @@ class UserController extends Controller
                 'message' => __('User created successfully.'),
             ]);
         } catch (\Exception $e) {
-            Log::error('Error al crear usuario: ' . $e->getMessage());
+            Log::error('Error al crear usuario: '.$e->getMessage());
 
             return back()->with('notification', [
                 'type' => 'error',
@@ -120,7 +120,7 @@ class UserController extends Controller
         ]);
 
         try {
-            if (!empty($validated['password'])) {
+            if (! empty($validated['password'])) {
                 $validated['password'] = Hash::make($validated['password']);
             } else {
                 unset($validated['password']);
@@ -137,7 +137,7 @@ class UserController extends Controller
                 'message' => __('User updated successfully.'),
             ]);
         } catch (\Exception $e) {
-            Log::error("Error al actualizar usuario {$user->id}: " . $e->getMessage());
+            Log::error("Error al actualizar usuario {$user->id}: ".$e->getMessage());
 
             return back()->with('notification', [
                 'type' => 'error',
@@ -156,7 +156,7 @@ class UserController extends Controller
                 'message' => __('User deleted successfully.'),
             ]);
         } catch (\Exception $e) {
-            Log::error("Error al eliminar usuario {$user->id}: " . $e->getMessage());
+            Log::error("Error al eliminar usuario {$user->id}: ".$e->getMessage());
 
             return back()->with('notification', [
                 'type' => 'error',
@@ -176,7 +176,7 @@ class UserController extends Controller
                 'message' => __('Status updated successfully.'),
             ]);
         } catch (\Exception $e) {
-            Log::error("Error al cambiar estado de usuario {$user->id}: " . $e->getMessage());
+            Log::error("Error al cambiar estado de usuario {$user->id}: ".$e->getMessage());
 
             return back()->with('notification', [
                 'type' => 'error',

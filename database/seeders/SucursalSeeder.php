@@ -2,10 +2,9 @@
 
 namespace Database\Seeders;
 
-use Illuminate\Database\Console\Seeds\WithoutModelEvents;
-use Illuminate\Database\Seeder;
-use App\Models\Sucursal;
 use App\Models\Empresa;
+use App\Models\Sucursal;
+use Illuminate\Database\Seeder;
 
 class SucursalSeeder extends Seeder
 {
@@ -18,11 +17,11 @@ class SucursalSeeder extends Seeder
 
         if ($empresa) {
             Sucursal::firstOrCreate([
-                'nombre' => 'Sucursal Principal'
+                'nombre' => 'Sucursal Principal',
             ], [
                 'empresa_id' => $empresa->id,
                 'direccion' => 'Planta Baja, Local 1',
-                'telefono' => '+58 212 555 5556'
+                'telefono' => '+58 212 555 5556',
             ]);
         }
     }

@@ -3,8 +3,6 @@
 namespace App\Console\Commands;
 
 use Illuminate\Console\Command;
-use App\Jobs\RetryFailedWhatsAppMessages;
-use Carbon\Carbon;
 
 class SetupWhatsAppAutoRetry extends Command
 {
@@ -32,8 +30,9 @@ class SetupWhatsAppAutoRetry extends Command
     public function handle(): int
     {
         if ($this->option('disable')) {
-            $this->info("Desactivando reenvío automático...");
+            $this->info('Desactivando reenvío automático...');
             $this->warn("Para desactivar completamente, elimina la línea del crontab que contiene 'whatsapp:schedule-retry'");
+
             return Command::SUCCESS;
         }
 
@@ -41,32 +40,33 @@ class SetupWhatsAppAutoRetry extends Command
         $maxRetries = $this->option('max-retries');
         $interval = $this->option('interval');
 
-        $this->info("Configurando reenvío automático de mensajes fallidos de WhatsApp...");
+        $this->info('Configurando reenvío automático de mensajes fallidos de WhatsApp...');
         $this->info("Días: {$days}, Máximo de reintentos: {$maxRetries}");
         $this->info("Frecuencia: {$interval}");
 
         // Validar opciones
-        if (!in_array($interval, ['hourly', 'daily', 'weekly'])) {
-            $this->error("Frecuencia inválida. Use: hourly, daily, o weekly");
+        if (! in_array($interval, ['hourly', 'daily', 'weekly'])) {
+            $this->error('Frecuencia inválida. Use: hourly, daily, o weekly');
+
             return Command::FAILURE;
         }
 
         // Generar el comando cron
         $cronExpression = $this->generateCronExpression($interval);
-        $command = "cd " . base_path() . " && php artisan whatsapp:schedule-retry --days={$days} --max-retries={$maxRetries}";
+        $command = 'cd '.base_path()." && php artisan whatsapp:schedule-retry --days={$days} --max-retries={$maxRetries}";
 
         $this->info("Comando a ejecutar: {$command}");
         $this->info("Expresión cron: {$cronExpression}");
 
         // Mostrar instrucciones
         $this->newLine();
-        $this->info("Para activar el reenvío automático, agrega la siguiente línea a tu crontab:");
+        $this->info('Para activar el reenvío automático, agrega la siguiente línea a tu crontab:');
         $this->line("{$cronExpression} {$command}");
         $this->newLine();
-        $this->info("Para editar tu crontab, ejecuta:");
-        $this->line("crontab -e");
+        $this->info('Para editar tu crontab, ejecuta:');
+        $this->line('crontab -e');
         $this->newLine();
-        $this->warn("Nota: Asegúrate de que el servicio cron esté activo en tu servidor.");
+        $this->warn('Nota: Asegúrate de que el servicio cron esté activo en tu servidor.');
 
         return Command::SUCCESS;
     }

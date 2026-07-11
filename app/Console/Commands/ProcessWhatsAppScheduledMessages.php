@@ -2,9 +2,8 @@
 
 namespace App\Console\Commands;
 
-use Illuminate\Console\Command;
 use App\Jobs\ProcessScheduledWhatsAppMessages;
-use Carbon\Carbon;
+use Illuminate\Console\Command;
 
 class ProcessWhatsAppScheduledMessages extends Command
 {
@@ -30,10 +29,10 @@ class ProcessWhatsAppScheduledMessages extends Command
     public function handle()
     {
         $this->info('Iniciando procesamiento de mensajes programados de WhatsApp...');
-        
+
         $delay = (int) $this->option('delay');
         $force = $this->option('force');
-        
+
         if ($delay > 0) {
             $this->info("Procesamiento retrasado por {$delay} minutos");
             sleep($delay * 60);
@@ -50,10 +49,12 @@ class ProcessWhatsAppScheduledMessages extends Command
             }
 
             $this->info('Procesamiento de mensajes programados completado');
+
             return Command::SUCCESS;
 
         } catch (\Exception $e) {
-            $this->error('Error al procesar mensajes: ' . $e->getMessage());
+            $this->error('Error al procesar mensajes: '.$e->getMessage());
+
             return Command::FAILURE;
         }
     }

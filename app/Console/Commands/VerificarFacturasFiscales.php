@@ -2,12 +2,13 @@
 
 namespace App\Console\Commands;
 
-use Illuminate\Console\Command;
 use App\Models\Pago;
+use Illuminate\Console\Command;
 
 class VerificarFacturasFiscales extends Command
 {
     protected $signature = 'facturas:verificar';
+
     protected $description = 'Verifica y actualiza facturas fiscales en el sistema';
 
     public function handle()
@@ -45,7 +46,7 @@ class VerificarFacturasFiscales extends Command
                 foreach ($pagos as $pago) {
                     try {
                         // Generar número de control fiscal si no tiene
-                        if (!$pago->numero_control_fiscal) {
+                        if (! $pago->numero_control_fiscal) {
                             $anio = $pago->fecha->format('Y');
                             $mes = $pago->fecha->format('m');
                             $consecutivo = str_pad($pago->id, 8, '0', STR_PAD_LEFT);

@@ -3,8 +3,8 @@
 namespace App\Services;
 
 use App\Models\Empresa;
-use Illuminate\Support\Facades\Http;
 use Illuminate\Http\Client\ConnectionException;
+use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 
 class WhatsAppService
@@ -20,6 +20,7 @@ class WhatsAppService
     public function setTimeout(int $seconds): self
     {
         $this->timeout = $seconds;
+
         return $this;
     }
 
@@ -50,7 +51,7 @@ class WhatsAppService
      */
     private function resolveCredentials(array $credentials): void
     {
-        if (!empty($credentials['api_url'])) {
+        if (! empty($credentials['api_url'])) {
             $this->baseUrl = $credentials['api_url'];
         }
 
@@ -58,14 +59,14 @@ class WhatsAppService
         $this->companyId = $credentials['empresa_id'] ?? $credentials['company_id'] ?? 1;
         $this->apiKey = $credentials['api_key'] ?? $credentials['apiKey'] ?? null;
 
-        if (!$this->apiKey && $this->companyId) {
+        if (! $this->apiKey && $this->companyId) {
             $empresaModel = Empresa::find($this->companyId);
             if ($empresaModel) {
                 $this->apiKey = $empresaModel->whatsapp_api_key;
             }
         }
 
-        if (!$this->apiKey) {
+        if (! $this->apiKey) {
             $this->apiKey = config('whatsapp.api_key', 'test-api-key-vargas-centro');
         }
     }
@@ -86,16 +87,17 @@ class WhatsAppService
         }
 
         // Si no logramos resolver un modelo de empresa por parámetro o por usuario autenticado, usamos la empresa 1 por defecto (tienda principal)
-        if (!$empresaModel) {
+        if (! $empresaModel) {
             $empresaModel = Empresa::find(1);
         }
 
         if ($empresaModel) {
             $this->companyId = $empresaModel->id;
             $this->apiKey = $empresaModel->whatsapp_api_key ?? config('whatsapp.api_key', 'test-api-key-vargas-centro');
-            if (!empty($empresaModel->whatsapp_api_url)) {
+            if (! empty($empresaModel->whatsapp_api_url)) {
                 $this->baseUrl = rtrim($empresaModel->whatsapp_api_url, '/');
             }
+
             return;
         }
 
@@ -446,6 +448,7 @@ class WhatsAppService
                     ->filter(function ($m) use ($today) {
                         $createdAt = $m['createdAt'] ?? $m['created_at'] ?? '';
                         $status = $m['status'] ?? '';
+
                         return in_array($status, ['sent', 'delivered', 'read', 'received'])
                             && str_starts_with($createdAt, $today);
                     })

@@ -2,9 +2,8 @@
 
 namespace App\Console\Commands;
 
-use Illuminate\Console\Command;
 use App\Jobs\RetryFailedWhatsAppMessages;
-use Carbon\Carbon;
+use Illuminate\Console\Command;
 
 class DevRetryWhatsApp extends Command
 {
@@ -32,20 +31,21 @@ class DevRetryWhatsApp extends Command
         $days = $this->option('days');
         $maxRetries = $this->option('max-retries');
 
-        $this->info("🚀 Modo DESARROLLO - Reenviando mensajes fallidos de WhatsApp...");
+        $this->info('🚀 Modo DESARROLLO - Reenviando mensajes fallidos de WhatsApp...');
         $this->info("📅 Días: {$days}, 🔢 Máximo de reintentos: {$maxRetries}");
-        $this->warn("⚠️  Advertencia: No se verifica el estado del servicio de WhatsApp");
+        $this->warn('⚠️  Advertencia: No se verifica el estado del servicio de WhatsApp');
 
         try {
             // Despachar el job directamente sin verificar el servicio
             RetryFailedWhatsAppMessages::dispatch($days, $maxRetries);
-            
-            $this->info("✅ Job de reenvío despachado exitosamente");
-            $this->info("⏳ Los mensajes fallidos serán procesados en segundo plano");
-            
+
+            $this->info('✅ Job de reenvío despachado exitosamente');
+            $this->info('⏳ Los mensajes fallidos serán procesados en segundo plano');
+
             return Command::SUCCESS;
         } catch (\Exception $e) {
-            $this->error("❌ Error al despachar el job: " . $e->getMessage());
+            $this->error('❌ Error al despachar el job: '.$e->getMessage());
+
             return Command::FAILURE;
         }
     }

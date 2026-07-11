@@ -50,8 +50,7 @@ trait HasGroupRoles
     /**
      * Check if the user has the given role (direct or inherited from group).
      *
-     * @param  string|int|\Spatie\Permission\Contracts\Role|\Illuminate\Database\Eloquent\Collection  $roles
-     * @param  string|null  $guard
+     * @param  string|int|Role|Collection  $roles
      */
     public function hasRole($roles, ?string $guard = null): bool
     {
@@ -89,8 +88,7 @@ trait HasGroupRoles
     /**
      * Check if the user has any of the given roles.
      *
-     * @param  string|array|\Illuminate\Database\Eloquent\Collection  $roles
-     * @param  string|null  $guard
+     * @param  string|array|Collection  $roles
      */
     public function hasAnyRole($roles, ?string $guard = null): bool
     {
@@ -120,8 +118,7 @@ trait HasGroupRoles
     /**
      * Check if the user has all of the given roles.
      *
-     * @param  string|array|\Illuminate\Database\Eloquent\Collection  $roles
-     * @param  string|null  $guard
+     * @param  string|array|Collection  $roles
      */
     public function hasAllRoles($roles, ?string $guard = null): bool
     {
@@ -151,8 +148,7 @@ trait HasGroupRoles
     /**
      * Check if the user has the given permission (direct or inherited from group).
      *
-     * @param  string|int|\Spatie\Permission\Contracts\Permission  $permission
-     * @param  string|null  $guard
+     * @param  string|int|Permission  $permission
      */
     public function hasPermissionTo($permission, ?string $guard = null): bool
     {
@@ -172,8 +168,7 @@ trait HasGroupRoles
     /**
      * Check if the user has any of the given permissions.
      *
-     * @param  string|array|\Illuminate\Database\Eloquent\Collection  $permissions
-     * @param  string|null  $guard
+     * @param  string|array|Collection  $permissions
      */
     public function hasAnyPermission($permissions, ?string $guard = null): bool
     {
@@ -203,8 +198,7 @@ trait HasGroupRoles
     /**
      * Check if the user has all of the given permissions.
      *
-     * @param  string|array|\Illuminate\Database\Eloquent\Collection  $permissions
-     * @param  string|null  $guard
+     * @param  string|array|Collection  $permissions
      */
     public function hasAllPermissions($permissions, ?string $guard = null): bool
     {

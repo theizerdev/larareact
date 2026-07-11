@@ -64,7 +64,7 @@ return [
             ]) : [],
         ],
 
-         'whatsapp_api' => [
+        'whatsapp_api' => [
             'driver' => 'mysql',
             'host' => env('DB_HOSTAPI', 'pupiladev_db'),
             'port' => env('DB_PORTAPI', '3306'),

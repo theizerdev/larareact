@@ -151,6 +151,7 @@ class InstallCommand extends Command
             'use App\\Http\\Middleware\\HandleAppearance;',
             'use App\\Http\\Middleware\\HandleInertiaRequests;',
             'use Illuminate\\Http\\Middleware\\AddLinkHeadersForPreloadedAssets;',
+            'use Illuminate\\Support\\Facades\\Route;',
         ];
 
         foreach ($uses as $useStatement) {
@@ -166,6 +167,22 @@ class InstallCommand extends Command
                 "$1[\n            __DIR__.'/../routes/web.php',\n            __DIR__.'/../routes/larareact.php',\n            __DIR__.'/../routes/larareact-settings.php',\n        ], ",
                 $content
             );
+        }
+
+        if (! str_contains($content, 'routes/admin.php')) {
+            if (str_contains($content, 'then:')) {
+                $content = preg_replace(
+                    '/(then:\s*function\s*\(\)\s*\{)/s',
+                    "$1\n            Route::middleware(['web', 'auth'])\n                ->prefix('admin')\n                ->name('admin.')\n                ->group(base_path('routes/admin.php'));\n",
+                    $content
+                );
+            } else {
+                $content = preg_replace(
+                    '/(health:\s*\'[^\']+\',?)/s',
+                    "$1\n        then: function () {\n            Route::middleware(['web', 'auth'])\n                ->prefix('admin')\n                ->name('admin.')\n                ->group(base_path('routes/admin.php'));\n        },",
+                    $content
+                );
+            }
         }
 
         // Configure middleware if not already configured

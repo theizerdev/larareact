@@ -12,7 +12,7 @@ trait PermissionOrganizer
     public function getPermissionsBySector()
     {
         $permissions = Permission::orderBy('sector')->orderBy('module')->orderBy('name')->get();
-        
+
         return $permissions->groupBy('sector')->map(function ($sectorPermissions) {
             return $sectorPermissions->groupBy('module');
         });
@@ -39,13 +39,13 @@ trait PermissionOrganizer
      */
     public function getModuleDisplayName(string $module): string
     {
-        return match($module) {
+        return match ($module) {
             'dashboard' => 'Dashboard',
             'usuarios' => 'Usuarios',
             'roles' => 'Roles',
             'empresas' => 'Empresas',
             'sucursales' => 'Sucursales',
-            
+
             default => ucfirst($module)
         };
     }

@@ -68,14 +68,14 @@ class LogMonitoringController extends Controller
      */
     private function readLastLines($filepath, $lines = 100)
     {
-        $handle = fopen($filepath, "r");
+        $handle = fopen($filepath, 'r');
         $linecounter = $lines;
         $pos = -2;
         $beginning = false;
         $text = [];
 
         while ($linecounter > 0) {
-            $t = " ";
+            $t = ' ';
             while ($t != "\n") {
                 if (fseek($handle, $pos, SEEK_END) == -1) {
                     $beginning = true;
@@ -94,7 +94,8 @@ class LogMonitoringController extends Controller
             }
         }
         fclose($handle);
-        return implode("", array_reverse($text));
+
+        return implode('', array_reverse($text));
     }
 
     /**
@@ -104,7 +105,7 @@ class LogMonitoringController extends Controller
     {
         $pattern = '/\[(\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2})\] (\w+)\.(\w+): (.*)/';
         $parts = preg_split($pattern, $rawContent, -1, PREG_SPLIT_DELIM_CAPTURE);
-        
+
         $logs = [];
         $count = count($parts);
 
@@ -117,7 +118,7 @@ class LogMonitoringController extends Controller
         for ($i = 1; $i < $count; $i += 5) {
             if (isset($parts[$i])) {
                 $rawMessage = $parts[$i + 3] ?? '';
-                
+
                 // Separar el mensaje principal de la traza de errores (Stack Trace)
                 $messageLines = explode("\n", $rawMessage);
                 $title = $messageLines[0];

@@ -3,9 +3,10 @@
 namespace App\Console\Commands;
 
 use App\Models\Cita;
+use App\Models\CitaRecordatorio;
+use App\Models\Especialidad;
 use App\Models\Medico;
 use App\Models\Paciente;
-use App\Models\Especialidad;
 use App\Models\Sucursal;
 use Carbon\Carbon;
 use Illuminate\Console\Command;
@@ -51,6 +52,7 @@ class TestAnalyticsCitas extends Command
 
         if ($medicos->isEmpty() || $pacientes->isEmpty() || $especialidades->isEmpty()) {
             $this->error('❌ No hay suficientes datos base (médicos, pacientes o especialidades)');
+
             return 1;
         }
 
@@ -64,7 +66,7 @@ class TestAnalyticsCitas extends Command
             try {
                 // Generar fecha aleatoria dentro del período
                 $fecha = Carbon::now()->subDays(rand(0, $dias))->addHours(rand(8, 18));
-                
+
                 // Seleccionar médico, paciente y especialidad aleatorios
                 $medico = $medicos->random();
                 $paciente = $pacientes->random();
@@ -105,7 +107,7 @@ class TestAnalyticsCitas extends Command
                 $bar->advance();
 
             } catch (\Exception $e) {
-                $this->error("\n❌ Error creando cita: " . $e->getMessage());
+                $this->error("\n❌ Error creando cita: ".$e->getMessage());
             }
         }
 
@@ -113,7 +115,7 @@ class TestAnalyticsCitas extends Command
         $this->newLine();
 
         $this->info("✅ Citas creadas exitosamente: {$citasCreadas}");
-        
+
         // Mostrar distribución por estados
         $distribucion = Cita::forUser()
             ->whereDate('fecha_inicio', '>=', Carbon::now()->subDays($dias))
@@ -122,16 +124,16 @@ class TestAnalyticsCitas extends Command
             ->pluck('total', 'estado')
             ->toArray();
 
-        $this->info("📊 Distribución por estados:");
+        $this->info('📊 Distribución por estados:');
         foreach ($distribucion as $estado => $total) {
             $this->info("   {$estado}: {$total}");
         }
 
         // Mostrar estadísticas generales
         $totalCitas = Cita::forUser()->count();
-        $totalRecordatorios = \App\Models\CitaRecordatorio::count();
+        $totalRecordatorios = CitaRecordatorio::count();
 
-        $this->info("📈 Estadísticas generales:");
+        $this->info('📈 Estadísticas generales:');
         $this->info("   Total de citas en el sistema: {$totalCitas}");
         $this->info("   Total de recordatorios: {$totalRecordatorios}");
 
@@ -148,7 +150,7 @@ class TestAnalyticsCitas extends Command
             Cita::ESTADO_NO_ASISTIO,
         ];
 
-        return match($tipo) {
+        return match ($tipo) {
             'todas' => $todosEstados,
             'confirmadas' => [Cita::ESTADO_CONFIRMADA],
             'canceladas' => [Cita::ESTADO_CANCELADA, Cita::ESTADO_NO_ASISTIO],
@@ -162,22 +164,22 @@ class TestAnalyticsCitas extends Command
     {
         // Distribución realista basada en datos típicos de clínicas
         $distribucion = [];
-        
+
         // 60% confirmadas/completadas
         for ($i = 0; $i < 60; $i++) {
             $distribucion[] = $i < 45 ? Cita::ESTADO_CONFIRMADA : Cita::ESTADO_FINALIZADA;
         }
-        
+
         // 25% pendientes
         for ($i = 0; $i < 25; $i++) {
             $distribucion[] = Cita::ESTADO_PENDIENTE;
         }
-        
+
         // 15% canceladas/no asistidas
         for ($i = 0; $i < 15; $i++) {
             $distribucion[] = $i < 10 ? Cita::ESTADO_CANCELADA : Cita::ESTADO_NO_ASISTIO;
         }
-        
+
         return $distribucion;
     }
 
@@ -186,33 +188,33 @@ class TestAnalyticsCitas extends Command
         if (count($estadosDisponibles) === 1) {
             return $estadosDisponibles[0];
         }
-        
+
         return $estadosDisponibles[array_rand($estadosDisponibles)];
     }
 
     private function generarMotivo(string $estado): string
     {
-        return match($estado) {
+        return match ($estado) {
             Cita::ESTADO_CANCELADA => [
                 'Cancelado por el paciente',
                 'Emergencia personal',
                 'Cambio de horario solicitado',
                 'Enfermedad del paciente',
-                'Motivos personales'
+                'Motivos personales',
             ][rand(0, 4)],
             Cita::ESTADO_NO_ASISTIO => [
                 'No se presentó a la cita',
                 'Olvidó la cita',
                 'Problemas de transporte',
                 'Emergencia imprevista',
-                'Sin aviso previo'
+                'Sin aviso previo',
             ][rand(0, 4)],
             Cita::ESTADO_FINALIZADA => [
                 'Consulta médica general',
                 'Revisión de rutina',
                 'Control de seguimiento',
                 'Chequeo médico',
-                'Consulta especializada'
+                'Consulta especializada',
             ][rand(0, 4)],
             default => 'Cita médica programada'
         };
@@ -226,11 +228,12 @@ class TestAnalyticsCitas extends Command
                 'Se ofreció nueva fecha disponible',
                 'Se registró en lista de espera',
                 'Se enviaron nuevas opciones de horario',
-                'Se contactará para confirmar nueva cita'
+                'Se contactará para confirmar nueva cita',
             ];
+
             return $notas[rand(0, count($notas) - 1)];
         }
-        
+
         return null;
     }
 }

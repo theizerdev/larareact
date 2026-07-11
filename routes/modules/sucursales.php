@@ -1,7 +1,7 @@
 <?php
 
-use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\Admin\SucursalController;
+use Illuminate\Support\Facades\Route;
 
 Route::middleware(['verified'])->group(function () {
     Route::get('/sucursales', [SucursalController::class, 'index'])->name('sucursales.index');

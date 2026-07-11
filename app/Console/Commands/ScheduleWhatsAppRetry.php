@@ -2,10 +2,9 @@
 
 namespace App\Console\Commands;
 
-use Illuminate\Console\Command;
 use App\Jobs\RetryFailedWhatsAppMessages;
 use App\Services\WhatsAppService;
-use Carbon\Carbon;
+use Illuminate\Console\Command;
 
 class ScheduleWhatsAppRetry extends Command
 {
@@ -35,35 +34,37 @@ class ScheduleWhatsAppRetry extends Command
         $maxRetries = $this->option('max-retries');
         $force = $this->option('force');
 
-        $this->info("Programando reenvío de mensajes fallidos de WhatsApp...");
+        $this->info('Programando reenvío de mensajes fallidos de WhatsApp...');
         $this->info("Días: {$days}, Máximo de reintentos: {$maxRetries}");
 
         // Verificar el estado del servicio de WhatsApp
-        if (!$force) {
-            $this->info("Verificando estado del servicio de WhatsApp...");
-            
+        if (! $force) {
+            $this->info('Verificando estado del servicio de WhatsApp...');
+
             $whatsAppService = app(WhatsAppService::class);
             $connectionTest = $whatsAppService->testConnection();
 
-            if (!$connectionTest['success']) {
-                $this->error("Servicio de WhatsApp no disponible: " . ($connectionTest['message'] ?? 'Error desconocido'));
-                $this->error("Use --force para programar el reenvío de todos modos");
+            if (! $connectionTest['success']) {
+                $this->error('Servicio de WhatsApp no disponible: '.($connectionTest['message'] ?? 'Error desconocido'));
+                $this->error('Use --force para programar el reenvío de todos modos');
+
                 return Command::FAILURE;
             }
 
-            $this->info("Servicio de WhatsApp disponible ✓");
+            $this->info('Servicio de WhatsApp disponible ✓');
         }
 
         try {
             // Despachar el job
             RetryFailedWhatsAppMessages::dispatch($days, $maxRetries);
-            
-            $this->info("Job de reenvío programado exitosamente");
-            $this->info("Los mensajes fallidos serán procesados en segundo plano");
-            
+
+            $this->info('Job de reenvío programado exitosamente');
+            $this->info('Los mensajes fallidos serán procesados en segundo plano');
+
             return Command::SUCCESS;
         } catch (\Exception $e) {
-            $this->error("Error al programar el job: " . $e->getMessage());
+            $this->error('Error al programar el job: '.$e->getMessage());
+
             return Command::FAILURE;
         }
     }

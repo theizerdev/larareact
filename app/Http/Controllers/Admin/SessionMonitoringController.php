@@ -2,11 +2,11 @@
 
 namespace App\Http\Controllers\Admin;
 
+use App\Helpers\UserAgentParser;
 use App\Http\Controllers\Controller;
+use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
-use App\Helpers\UserAgentParser;
-use Carbon\Carbon;
 
 class SessionMonitoringController extends Controller
 {
@@ -26,7 +26,7 @@ class SessionMonitoringController extends Controller
 
         $formattedSessions = $sessions->map(function ($session) use ($currentSessionId) {
             $agent = UserAgentParser::parse($session->user_agent);
-            
+
             // Determinar ubicación preliminar de la IP
             $location = 'Desconocida';
             if ($session->ip_address === '127.0.0.1' || $session->ip_address === '::1') {

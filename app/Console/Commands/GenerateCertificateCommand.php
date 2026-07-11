@@ -2,11 +2,11 @@
 
 namespace App\Console\Commands;
 
-use Illuminate\Console\Command;
-use App\Models\Matricula;
+use App\Models\AcademicRecord;
 use App\Models\AcademicStatusTracking;
 use App\Models\Certificate;
-use App\Models\AcademicRecord;
+use App\Models\Matricula;
+use Illuminate\Console\Command;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 
@@ -40,12 +40,13 @@ class GenerateCertificateCommand extends Command
         $type = $this->option('type') ?? Certificate::TYPE_COMPLETION;
         $force = $this->option('force');
 
-        if (!in_array($type, [
+        if (! in_array($type, [
             Certificate::TYPE_COMPLETION,
             Certificate::TYPE_CONDUCT,
-            Certificate::TYPE_ACADEMIC
+            Certificate::TYPE_ACADEMIC,
         ])) {
             $this->error("❌ Tipo de certificado inválido: {$type}");
+
             return Command::FAILURE;
         }
 
@@ -53,10 +54,10 @@ class GenerateCertificateCommand extends Command
             $matriculas = Matricula::where('id', $matriculaId)->get();
         } else {
             $matriculas = Matricula::where('estado', 'activo')
-                                  ->whereHas('academicStatusTracking', function($query) {
-                                      $query->where('academic_status', AcademicStatusTracking::STATUS_COMPLETED);
-                                  })
-                                  ->get();
+                ->whereHas('academicStatusTracking', function ($query) {
+                    $query->where('academic_status', AcademicStatusTracking::STATUS_COMPLETED);
+                })
+                ->get();
         }
 
         $generated = 0;
@@ -66,11 +67,11 @@ class GenerateCertificateCommand extends Command
         foreach ($matriculas as $matricula) {
             try {
                 DB::beginTransaction();
-                
+
                 $result = $this->generateCertificate($matricula, $type, $force);
-                
+
                 DB::commit();
-                
+
                 if ($result === 'generated') {
                     $generated++;
                     $this->info("✅ Certificado generado para matrícula {$matricula->id}");
@@ -78,11 +79,11 @@ class GenerateCertificateCommand extends Command
                     $skipped++;
                     $this->warn("⚠️ Certificado ya existe para matrícula {$matricula->id}");
                 }
-                
+
             } catch (\Exception $e) {
                 DB::rollBack();
                 $errors++;
-                $this->error("❌ Error en matrícula {$matricula->id}: " . $e->getMessage());
+                $this->error("❌ Error en matrícula {$matricula->id}: ".$e->getMessage());
             }
         }
 
@@ -90,7 +91,7 @@ class GenerateCertificateCommand extends Command
         $this->info("✅ Generados: {$generated}");
         $this->info("⚠️ Omitidos: {$skipped}");
         $this->info("❌ Errores: {$errors}");
-        $this->info("✅ Proceso completado");
+        $this->info('✅ Proceso completado');
 
         return Command::SUCCESS;
     }
@@ -98,11 +99,11 @@ class GenerateCertificateCommand extends Command
     private function generateCertificate(Matricula $matricula, string $type, bool $force): string
     {
         // Verificar si ya existe un certificado activo del mismo tipo
-        if (!$force) {
+        if (! $force) {
             $existingCertificate = Certificate::where('matricula_id', $matricula->id)
-                                            ->where('certificate_type', $type)
-                                            ->where('status', Certificate::STATUS_ACTIVE)
-                                            ->first();
+                ->where('certificate_type', $type)
+                ->where('status', Certificate::STATUS_ACTIVE)
+                ->first();
 
             if ($existingCertificate) {
                 return 'skipped';
@@ -111,11 +112,11 @@ class GenerateCertificateCommand extends Command
 
         // Obtener el estado académico actual
         $academicStatus = AcademicStatusTracking::where('matricula_id', $matricula->id)
-                                               ->where('status', AcademicStatusTracking::TRACKING_ACTIVE)
-                                               ->first();
+            ->where('status', AcademicStatusTracking::TRACKING_ACTIVE)
+            ->first();
 
-        if (!$academicStatus) {
-            throw new \Exception("No se encontró estado académico para la matrícula");
+        if (! $academicStatus) {
+            throw new \Exception('No se encontró estado académico para la matrícula');
         }
 
         // Obtener registros académicos
@@ -186,21 +187,21 @@ class GenerateCertificateCommand extends Command
         $program = $matricula->programa;
         $period = $matricula->periodo;
 
-        $content = "CERTIFICADO DE ";
-        
+        $content = 'CERTIFICADO DE ';
+
         switch ($type) {
             case Certificate::TYPE_COMPLETION:
-                $content .= "COMPLETACIÓN DE ESTUDIOS";
+                $content .= 'COMPLETACIÓN DE ESTUDIOS';
                 $body = "La institución certifica que el/la estudiante {$student->full_name} ha completado exitosamente el período académico {$period->name} en el programa {$program->name}.";
                 break;
-                
+
             case Certificate::TYPE_CONDUCT:
-                $content .= "CONDUCTA";
+                $content .= 'CONDUCTA';
                 $body = "La institución certifica que el/la estudiante {$student->full_name} ha mantenido una conducta {$academicStatus->conduct_grade} durante el período académico {$period->name}.";
                 break;
-                
+
             case Certificate::TYPE_ACADEMIC:
-                $content .= "RENDIMIENTO ACADÉMICO";
+                $content .= 'RENDIMIENTO ACADÉMICO';
                 $body = "La institución certifica que el/la estudiante {$student->full_name} ha obtenido un promedio de {$academicStatus->period_average} en el período académico {$period->name}.";
                 break;
         }
@@ -216,7 +217,7 @@ class GenerateCertificateCommand extends Command
 
     private function generateCertificateNumber(Matricula $matricula, string $type): string
     {
-        $prefix = match($type) {
+        $prefix = match ($type) {
             Certificate::TYPE_COMPLETION => 'COM',
             Certificate::TYPE_CONDUCT => 'CON',
             Certificate::TYPE_ACADEMIC => 'ACA',
@@ -225,7 +226,7 @@ class GenerateCertificateCommand extends Command
 
         $year = date('Y');
         $sequence = str_pad(Certificate::whereYear('created_at', $year)->count() + 1, 6, '0', STR_PAD_LEFT);
-        
+
         return "{$prefix}-{$year}-{$sequence}";
     }
 

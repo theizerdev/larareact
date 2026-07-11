@@ -2,11 +2,10 @@
 
 namespace App\Console\Commands;
 
-use Illuminate\Console\Command;
-use App\Models\Matricula;
-use App\Models\AcademicStatusTracking;
 use App\Models\AcademicRecord;
-use App\Models\Certificate;
+use App\Models\AcademicStatusTracking;
+use App\Models\Matricula;
+use Illuminate\Console\Command;
 use Illuminate\Support\Facades\DB;
 
 class SyncAcademicStatusCommand extends Command
@@ -33,7 +32,7 @@ class SyncAcademicStatusCommand extends Command
         $this->info('Iniciando sincronización de estado académico...');
 
         $matriculaId = $this->option('matricula_id');
-        
+
         if ($matriculaId) {
             $matriculas = Matricula::where('id', $matriculaId)->get();
         } else {
@@ -46,24 +45,24 @@ class SyncAcademicStatusCommand extends Command
         foreach ($matriculas as $matricula) {
             try {
                 DB::beginTransaction();
-                
+
                 $this->syncAcademicStatus($matricula);
-                
+
                 DB::commit();
                 $processed++;
                 $this->info("✅ Matrícula {$matricula->id} sincronizada exitosamente");
-                
+
             } catch (\Exception $e) {
                 DB::rollBack();
                 $errors++;
-                $this->error("❌ Error en matrícula {$matricula->id}: " . $e->getMessage());
+                $this->error("❌ Error en matrícula {$matricula->id}: ".$e->getMessage());
             }
         }
 
         $this->info("\n📊 Resumen:");
         $this->info("✅ Procesadas: {$processed}");
         $this->info("❌ Errores: {$errors}");
-        $this->info("✅ Sincronización completada");
+        $this->info('✅ Sincronización completada');
 
         return Command::SUCCESS;
     }
@@ -72,9 +71,10 @@ class SyncAcademicStatusCommand extends Command
     {
         // Obtener registros académicos de la matrícula
         $academicRecords = AcademicRecord::where('matricula_id', $matricula->id)->get();
-        
+
         if ($academicRecords->isEmpty()) {
             $this->warn("⚠️ No hay registros académicos para la matrícula {$matricula->id}");
+
             return;
         }
 
@@ -83,13 +83,13 @@ class SyncAcademicStatusCommand extends Command
         $approvedSubjects = $academicRecords->where('status', AcademicRecord::STATUS_COMPLETED)->where('promoted', true)->count();
         $failedSubjects = $academicRecords->where('status', AcademicRecord::STATUS_FAILED)->count();
         $inRecoverySubjects = $academicRecords->where('in_recovery', true)->count();
-        
+
         // Calcular promedio
         $average = $academicRecords->avg('final_grade');
-        
+
         // Determinar estado académico
         $academicStatus = $this->determineAcademicStatus($approvedSubjects, $totalSubjects, $failedSubjects);
-        
+
         // Determinar nivel de rendimiento
         $performanceLevel = $this->determinePerformanceLevel($average);
 
@@ -120,17 +120,19 @@ class SyncAcademicStatusCommand extends Command
 
         // Actualizar registros académicos con el tracking ID
         AcademicRecord::where('matricula_id', $matricula->id)
-                     ->update(['status' => $this->mapAcademicStatus($academicStatus)]);
+            ->update(['status' => $this->mapAcademicStatus($academicStatus)]);
 
         $this->info("📈 Estado académico: {$academicStatus}, Promedio: {$average}, Aprobadas: {$approvedSubjects}/{$totalSubjects}");
     }
 
     private function determineAcademicStatus($approved, $total, $failed)
     {
-        if ($total == 0) return AcademicStatusTracking::STATUS_ACTIVE;
-        
+        if ($total == 0) {
+            return AcademicStatusTracking::STATUS_ACTIVE;
+        }
+
         $approvalRate = ($approved / $total) * 100;
-        
+
         if ($approvalRate >= 70) {
             return AcademicStatusTracking::STATUS_COMPLETED;
         } elseif ($approvalRate >= 50) {
@@ -144,15 +146,22 @@ class SyncAcademicStatusCommand extends Command
 
     private function determinePerformanceLevel($average)
     {
-        if ($average >= 90) return AcademicStatusTracking::PERFORMANCE_EXCELLENT;
-        if ($average >= 80) return AcademicStatusTracking::PERFORMANCE_GOOD;
-        if ($average >= 70) return AcademicStatusTracking::PERFORMANCE_AVERAGE;
+        if ($average >= 90) {
+            return AcademicStatusTracking::PERFORMANCE_EXCELLENT;
+        }
+        if ($average >= 80) {
+            return AcademicStatusTracking::PERFORMANCE_GOOD;
+        }
+        if ($average >= 70) {
+            return AcademicStatusTracking::PERFORMANCE_AVERAGE;
+        }
+
         return AcademicStatusTracking::PERFORMANCE_POOR;
     }
 
     private function mapAcademicStatus($academicStatus)
     {
-        return match($academicStatus) {
+        return match ($academicStatus) {
             AcademicStatusTracking::STATUS_COMPLETED => AcademicRecord::STATUS_COMPLETED,
             AcademicStatusTracking::STATUS_WITHDRAWN => AcademicRecord::STATUS_WITHDRAWN,
             default => AcademicRecord::STATUS_ENROLLED,

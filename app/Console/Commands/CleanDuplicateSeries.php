@@ -2,13 +2,14 @@
 
 namespace App\Console\Commands;
 
-use Illuminate\Console\Command;
 use App\Models\Serie;
+use Illuminate\Console\Command;
 use Illuminate\Support\Facades\DB;
 
 class CleanDuplicateSeries extends Command
 {
     protected $signature = 'series:clean-duplicates';
+
     protected $description = 'Limpia series duplicadas manteniendo la más reciente';
 
     public function handle()

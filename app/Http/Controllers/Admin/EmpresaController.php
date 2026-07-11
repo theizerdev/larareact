@@ -23,9 +23,9 @@ class EmpresaController extends Controller
         if ($search) {
             $query->where(function ($q) use ($search) {
                 $q->where('razon_social', 'like', "%{$search}%")
-                  ->orWhere('documento', 'like', "%{$search}%")
-                  ->orWhere('email', 'like', "%{$search}%")
-                  ->orWhere('telefono', 'like', "%{$search}%");
+                    ->orWhere('documento', 'like', "%{$search}%")
+                    ->orWhere('email', 'like', "%{$search}%")
+                    ->orWhere('telefono', 'like', "%{$search}%");
             });
         }
 
@@ -36,34 +36,34 @@ class EmpresaController extends Controller
         $empresas = $query->orderBy('razon_social', 'asc')->paginate($perPage)->withQueryString();
 
         $stats = [
-            'total'     => Empresa::count(),
-            'activos'   => Empresa::where('status', true)->count(),
+            'total' => Empresa::count(),
+            'activos' => Empresa::where('status', true)->count(),
             'inactivos' => Empresa::where('status', false)->count(),
         ];
 
         return inertia('admin/Empresas/Index', [
             'empresas' => $empresas,
-            'stats'    => $stats,
-            'paises'   => Pais::where('activo', true)
+            'stats' => $stats,
+            'paises' => Pais::where('activo', true)
                 ->orderBy('nombre', 'asc')
                 ->get(['id', 'nombre', 'codigo_iso2', 'codigo_telefonico', 'latitud', 'longitud']),
-            'filters'  => $request->only(['search', 'status', 'perPage']),
+            'filters' => $request->only(['search', 'status', 'perPage']),
         ]);
     }
 
     public function store(Request $request)
     {
         $validated = $request->validate([
-            'razon_social'        => 'required|string|max:255',
-            'documento'           => 'required|string|max:255|unique:empresas,documento',
-            'pais_id'             => 'nullable|exists:pais,id',
-            'direccion'           => 'nullable|string',
-            'latitud'             => 'nullable|numeric',
-            'longitud'            => 'nullable|numeric',
-            'telefono'            => 'nullable|string|max:255',
-            'email'               => 'nullable|email|max:255',
+            'razon_social' => 'required|string|max:255',
+            'documento' => 'required|string|max:255|unique:empresas,documento',
+            'pais_id' => 'nullable|exists:pais,id',
+            'direccion' => 'nullable|string',
+            'latitud' => 'nullable|numeric',
+            'longitud' => 'nullable|numeric',
+            'telefono' => 'nullable|string|max:255',
+            'email' => 'nullable|email|max:255',
             'representante_legal' => 'nullable|string|max:255',
-            'status'              => 'boolean',
+            'status' => 'boolean',
         ]);
 
         try {
@@ -73,14 +73,14 @@ class EmpresaController extends Controller
             $empresa->save();
 
             return back()->with('notification', [
-                'type'    => 'success',
+                'type' => 'success',
                 'message' => __('Company created successfully.'),
             ]);
         } catch (\Exception $e) {
-            Log::error('Error al crear empresa: ' . $e->getMessage());
+            Log::error('Error al crear empresa: '.$e->getMessage());
 
             return back()->with('notification', [
-                'type'    => 'error',
+                'type' => 'error',
                 'message' => __('There was an error creating the company. Please try again.'),
             ]);
         }
@@ -89,16 +89,16 @@ class EmpresaController extends Controller
     public function update(Request $request, Empresa $empresa)
     {
         $validated = $request->validate([
-            'razon_social'        => 'required|string|max:255',
-            'documento'           => 'required|string|max:255|unique:empresas,documento,' . $empresa->id,
-            'pais_id'             => 'nullable|exists:pais,id',
-            'direccion'           => 'nullable|string',
-            'latitud'             => 'nullable|numeric',
-            'longitud'            => 'nullable|numeric',
-            'telefono'            => 'nullable|string|max:255',
-            'email'               => 'nullable|email|max:255',
+            'razon_social' => 'required|string|max:255',
+            'documento' => 'required|string|max:255|unique:empresas,documento,'.$empresa->id,
+            'pais_id' => 'nullable|exists:pais,id',
+            'direccion' => 'nullable|string',
+            'latitud' => 'nullable|numeric',
+            'longitud' => 'nullable|numeric',
+            'telefono' => 'nullable|string|max:255',
+            'email' => 'nullable|email|max:255',
             'representante_legal' => 'nullable|string|max:255',
-            'status'              => 'boolean',
+            'status' => 'boolean',
         ]);
 
         try {
@@ -107,14 +107,14 @@ class EmpresaController extends Controller
             });
 
             return back()->with('notification', [
-                'type'    => 'success',
+                'type' => 'success',
                 'message' => __('Company updated successfully.'),
             ]);
         } catch (\Exception $e) {
-            Log::error("Error al actualizar empresa {$empresa->id}: " . $e->getMessage());
+            Log::error("Error al actualizar empresa {$empresa->id}: ".$e->getMessage());
 
             return back()->with('notification', [
-                'type'    => 'error',
+                'type' => 'error',
                 'message' => __('There was an error updating the company. Please try again.'),
             ]);
         }
@@ -123,18 +123,18 @@ class EmpresaController extends Controller
     public function toggleStatus(Empresa $empresa)
     {
         try {
-            $empresa->status = !$empresa->status;
+            $empresa->status = ! $empresa->status;
             $empresa->save();
 
             return back()->with('notification', [
-                'type'    => 'success',
+                'type' => 'success',
                 'message' => __('Status updated successfully.'),
             ]);
         } catch (\Exception $e) {
-            Log::error("Error al cambiar estado de empresa {$empresa->id}: " . $e->getMessage());
+            Log::error("Error al cambiar estado de empresa {$empresa->id}: ".$e->getMessage());
 
             return back()->with('notification', [
-                'type'    => 'error',
+                'type' => 'error',
                 'message' => __('There was an error updating the status. Please try again.'),
             ]);
         }
@@ -143,32 +143,32 @@ class EmpresaController extends Controller
     public function updateLogos(Request $request, Empresa $empresa)
     {
         $request->validate([
-            'logo'      => 'nullable|image|mimes:jpeg,png,jpg,webp|max:5120',
+            'logo' => 'nullable|image|mimes:jpeg,png,jpg,webp|max:5120',
             'logo_mini' => 'nullable|image|mimes:jpeg,png,jpg,webp|max:2048',
         ]);
 
         try {
             if ($request->hasFile('logo')) {
                 $path = $request->file('logo')->store('empresas/logos', 'public');
-                $empresa->logo = '/storage/' . $path;
+                $empresa->logo = '/storage/'.$path;
             }
 
             if ($request->hasFile('logo_mini')) {
                 $path = $request->file('logo_mini')->store('empresas/logos_mini', 'public');
-                $empresa->logo_mini = '/storage/' . $path;
+                $empresa->logo_mini = '/storage/'.$path;
             }
 
             $empresa->save();
 
             return back()->with('notification', [
-                'type'    => 'success',
+                'type' => 'success',
                 'message' => __('Logos updated successfully.'),
             ]);
         } catch (\Exception $e) {
-            Log::error("Error al actualizar logos de empresa {$empresa->id}: " . $e->getMessage());
+            Log::error("Error al actualizar logos de empresa {$empresa->id}: ".$e->getMessage());
 
             return back()->with('notification', [
-                'type'    => 'error',
+                'type' => 'error',
                 'message' => __('There was an error updating the logos. Please try again.'),
             ]);
         }

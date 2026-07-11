@@ -2,8 +2,8 @@
 
 namespace App\Console\Commands;
 
-use Illuminate\Console\Command;
 use App\Models\Consulta;
+use Illuminate\Console\Command;
 
 class VerificarEspecialidadConsultas extends Command
 {
@@ -37,12 +37,12 @@ class VerificarEspecialidadConsultas extends Command
             ->limit(10)
             ->get();
 
-        foreach($consultasSalaEspera as $consulta) {
-            $this->line("ID: {$consulta->id} | " .
-                      "Paciente: {$consulta->paciente->nombre_completo} | " .
-                      "Médico: {$consulta->medico->nombre_completo} | " .
-                      "Especialidad: " . ($consulta->especialidad ? $consulta->especialidad->nombre : 'SIN ESPECIALIDAD') . " | " .
-                      "Especialidad ID: " . ($consulta->especialidad_id ?? 'NULL'));
+        foreach ($consultasSalaEspera as $consulta) {
+            $this->line("ID: {$consulta->id} | ".
+                      "Paciente: {$consulta->paciente->nombre_completo} | ".
+                      "Médico: {$consulta->medico->nombre_completo} | ".
+                      'Especialidad: '.($consulta->especialidad ? $consulta->especialidad->nombre : 'SIN ESPECIALIDAD').' | '.
+                      'Especialidad ID: '.($consulta->especialidad_id ?? 'NULL'));
         }
 
         $this->newLine();
@@ -53,12 +53,12 @@ class VerificarEspecialidadConsultas extends Command
             ->limit(10)
             ->get();
 
-        foreach($consultasEnfermeria as $consulta) {
-            $this->line("ID: {$consulta->id} | " .
-                      "Paciente: {$consulta->paciente->nombre_completo} | " .
-                      "Médico: {$consulta->medico->nombre_completo} | " .
-                      "Especialidad: " . ($consulta->especialidad ? $consulta->especialidad->nombre : 'SIN ESPECIALIDAD') . " | " .
-                      "Especialidad ID: " . ($consulta->especialidad_id ?? 'NULL'));
+        foreach ($consultasEnfermeria as $consulta) {
+            $this->line("ID: {$consulta->id} | ".
+                      "Paciente: {$consulta->paciente->nombre_completo} | ".
+                      "Médico: {$consulta->medico->nombre_completo} | ".
+                      'Especialidad: '.($consulta->especialidad ? $consulta->especialidad->nombre : 'SIN ESPECIALIDAD').' | '.
+                      'Especialidad ID: '.($consulta->especialidad_id ?? 'NULL'));
         }
 
         $this->newLine();
@@ -73,18 +73,18 @@ class VerificarEspecialidadConsultas extends Command
         $sinEspecialidadSala = Consulta::where('estado', 'sala_espera')
             ->whereNull('especialidad_id')
             ->count();
-            
+
         $sinEspecialidadEnfermeria = Consulta::where('estado', 'en_enfermeria')
             ->whereNull('especialidad_id')
             ->count();
 
         $this->line("Total en sala de espera: {$totalSalaEspera}");
         $this->line("Sin especialidad en sala de espera: {$sinEspecialidadSala}");
-        $this->line("Con especialidad en sala de espera: " . ($totalSalaEspera - $sinEspecialidadSala));
+        $this->line('Con especialidad en sala de espera: '.($totalSalaEspera - $sinEspecialidadSala));
         $this->newLine();
         $this->line("Total en enfermería: {$totalEnfermeria}");
         $this->line("Sin especialidad en enfermería: {$sinEspecialidadEnfermeria}");
-        $this->line("Con especialidad en enfermería: " . ($totalEnfermeria - $sinEspecialidadEnfermeria));
+        $this->line('Con especialidad en enfermería: '.($totalEnfermeria - $sinEspecialidadEnfermeria));
 
         // Verificar el flujo de estados
         $this->newLine();
@@ -96,16 +96,16 @@ class VerificarEspecialidadConsultas extends Command
             ->first();
 
         if ($ejemploConsulta) {
-            $this->line("Ejemplo de consulta sin especialidad:");
+            $this->line('Ejemplo de consulta sin especialidad:');
             $this->line("ID: {$ejemploConsulta->id}");
             $this->line("Estado actual: {$ejemploConsulta->estado}");
             $this->line("Médico asignado: {$ejemploConsulta->medico->nombre_completo}");
-            $this->line("¿El médico tiene especialidad? " . ($ejemploConsulta->medico->especialidad ? 'SÍ' : 'NO'));
+            $this->line('¿El médico tiene especialidad? '.($ejemploConsulta->medico->especialidad ? 'SÍ' : 'NO'));
             if ($ejemploConsulta->medico->especialidad) {
                 $this->line("Especialidad del médico: {$ejemploConsulta->medico->especialidad->nombre}");
             }
         } else {
-            $this->line("No se encontraron consultas en enfermería sin especialidad");
+            $this->line('No se encontraron consultas en enfermería sin especialidad');
         }
 
         // Verificar cómo se crean las consultas
@@ -115,8 +115,8 @@ class VerificarEspecialidadConsultas extends Command
 
         // Verificar últimas consultas creadas
         $ultimasConsultas = Consulta::latest()->limit(5)->get();
-        foreach($ultimasConsultas as $consulta) {
-            $this->line("ID: {$consulta->id} | Estado: {$consulta->estado} | Especialidad ID: " . ($consulta->especialidad_id ?? 'NULL') . " | Médico ID: {$consulta->medico_id}");
+        foreach ($ultimasConsultas as $consulta) {
+            $this->line("ID: {$consulta->id} | Estado: {$consulta->estado} | Especialidad ID: ".($consulta->especialidad_id ?? 'NULL')." | Médico ID: {$consulta->medico_id}");
         }
 
         $this->newLine();

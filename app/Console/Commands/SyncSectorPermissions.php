@@ -4,7 +4,6 @@ namespace App\Console\Commands;
 
 use Illuminate\Console\Command;
 use Spatie\Permission\Models\Permission;
-use Spatie\Permission\Models\Role;
 
 class SyncSectorPermissions extends Command
 {
@@ -30,28 +29,28 @@ class SyncSectorPermissions extends Command
      */
     protected $sectorMapping = [
         'medico' => [
-            'tipo-consultas', 'pacientes', 'medicos', 'citas', 
-            'especialidades', 'subespecialidades', 'medico-horarios'
+            'tipo-consultas', 'pacientes', 'medicos', 'citas',
+            'especialidades', 'subespecialidades', 'medico-horarios',
         ],
         'administracion' => [
-            'cajas', 'pagos', 'conceptos_pago', 'exchange-rates', 
-            'series', 'reglas mora', 'late-payment-rules'
+            'cajas', 'pagos', 'conceptos_pago', 'exchange-rates',
+            'series', 'reglas mora', 'late-payment-rules',
         ],
         'configuracion' => [
-            'empresas', 'sucursales', 'paises', 'users', 
-            'roles', 'permissions', 'regional-configuration', 'template-customization'
+            'empresas', 'sucursales', 'paises', 'users',
+            'roles', 'permissions', 'regional-configuration', 'template-customization',
         ],
         'monitoreo' => [
-            'active sessions', 'activity log', 'database export', 
-            'monitoreo', 'notifications', 'dashboard'
+            'active sessions', 'activity log', 'database export',
+            'monitoreo', 'notifications', 'dashboard',
         ],
         'whatsapp' => [
-            'whatsapp', 'whatsapp templates', 'whatsapp messages', 
-            'whatsapp statistics', 'whatsapp retry'
+            'whatsapp', 'whatsapp templates', 'whatsapp messages',
+            'whatsapp statistics', 'whatsapp retry',
         ],
         'sistema' => [
-            'system', 'api', 'jwt'
-        ]
+            'system', 'api', 'jwt',
+        ],
     ];
 
     /**
@@ -61,18 +60,21 @@ class SyncSectorPermissions extends Command
     {
         if ($this->option('show')) {
             $this->showSectors();
+
             return;
         }
 
         if ($this->option('reset')) {
             $this->resetSectors();
             $this->info('✅ Sectores reseteados exitosamente');
+
             return;
         }
 
         if ($this->option('migrate')) {
             $this->migrateExistingPermissions();
             $this->info('✅ Permisos migrados a sectores exitosamente');
+
             return;
         }
 
@@ -97,6 +99,7 @@ class SyncSectorPermissions extends Command
 
         if ($sectors->isEmpty()) {
             $this->warn('⚠️ No hay permisos con sectores asignados');
+
             return;
         }
 
@@ -105,7 +108,7 @@ class SyncSectorPermissions extends Command
             return [
                 $sector->sector,
                 $sector->sector_name ?? $this->getSectorEmoji($sector->sector),
-                $sector->total
+                $sector->total,
             ];
         });
 
@@ -115,7 +118,7 @@ class SyncSectorPermissions extends Command
         foreach ($sectors as $sector) {
             $this->newLine();
             $this->info("📋 {$sector->sector_name} ({$sector->sector}):");
-            
+
             $permissions = Permission::where('sector', $sector->sector)
                 ->select('name', 'module')
                 ->orderBy('module')
@@ -138,17 +141,17 @@ class SyncSectorPermissions extends Command
     protected function migrateExistingPermissions(): void
     {
         $this->info('🔄 Migrando permisos existentes a sectores...');
-        
+
         $permissions = Permission::whereNull('sector')->get();
         $migrated = 0;
 
         foreach ($permissions as $permission) {
             $sector = $this->determineSector($permission->name);
-            
+
             if ($sector) {
                 $permission->update([
                     'sector' => $sector,
-                    'sector_name' => $this->getSectorName($sector)
+                    'sector_name' => $this->getSectorName($sector),
                 ]);
                 $migrated++;
             }
@@ -171,11 +174,21 @@ class SyncSectorPermissions extends Command
         }
 
         // Lógica adicional para permisos específicos
-        if (str_contains($permissionName, 'cita')) return 'medico';
-        if (str_contains($permissionName, 'pago')) return 'administracion';
-        if (str_contains($permissionName, 'user')) return 'configuracion';
-        if (str_contains($permissionName, 'session')) return 'monitoreo';
-        if (str_contains($permissionName, 'whatsapp')) return 'comunicaciones';
+        if (str_contains($permissionName, 'cita')) {
+            return 'medico';
+        }
+        if (str_contains($permissionName, 'pago')) {
+            return 'administracion';
+        }
+        if (str_contains($permissionName, 'user')) {
+            return 'configuracion';
+        }
+        if (str_contains($permissionName, 'session')) {
+            return 'monitoreo';
+        }
+        if (str_contains($permissionName, 'whatsapp')) {
+            return 'comunicaciones';
+        }
 
         return 'sistema'; // Por defecto
     }
@@ -196,7 +209,7 @@ class SyncSectorPermissions extends Command
     {
         Permission::whereNotNull('sector')->update([
             'sector' => null,
-            'sector_name' => null
+            'sector_name' => null,
         ]);
     }
 
@@ -212,7 +225,7 @@ class SyncSectorPermissions extends Command
             'monitoreo' => '📊 Monitoreo',
             'whatsapp' => '📱 WhatsApp',
             'comunicaciones' => '📢 Comunicaciones',
-            'sistema' => '🔧 Sistema'
+            'sistema' => '🔧 Sistema',
         ];
 
         return $names[$sector] ?? ucfirst($sector);
@@ -230,7 +243,7 @@ class SyncSectorPermissions extends Command
             'monitoreo' => '📊',
             'whatsapp' => '📱',
             'comunicaciones' => '📢',
-            'sistema' => '🔧'
+            'sistema' => '🔧',
         ];
 
         return $emojis[$sector] ?? '📋';

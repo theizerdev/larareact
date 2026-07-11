@@ -22,13 +22,14 @@ class MigrateMessagingFromCompanies extends Command
         $force = $this->option('force');
 
         $this->info('=== Migración de Credenciales de Mensajería ===');
-        $this->info('Modo: ' . ($dryRun ? 'SIMULACIÓN (dry-run)' : 'PRODUCCIÓN'));
+        $this->info('Modo: '.($dryRun ? 'SIMULACIÓN (dry-run)' : 'PRODUCCIÓN'));
 
         // Obtener provider de WhatsApp Lite
         $provider = MessagingProvider::where('slug', 'whatsapp_lite')->first();
 
         if (! $provider) {
             $this->error('No se encontró el provider WhatsApp Lite. Ejecute el seeder primero.');
+
             return self::FAILURE;
         }
 
@@ -39,6 +40,7 @@ class MigrateMessagingFromCompanies extends Command
 
         if ($empresas->isEmpty()) {
             $this->warn('No se encontraron empresas con configuración de WhatsApp.');
+
             return self::SUCCESS;
         }
 
@@ -61,6 +63,7 @@ class MigrateMessagingFromCompanies extends Command
                 $this->line("  [SKIP] Empresa {$empresa->id} ({$empresa->nombre}): Ya existe conexión");
                 $skipped++;
                 $progressBar->advance();
+
                 continue;
             }
 
@@ -80,7 +83,7 @@ class MigrateMessagingFromCompanies extends Command
 
             if ($dryRun) {
                 $this->line("  [DRY-RUN] Empresa {$empresa->id} ({$empresa->nombre}):");
-                $this->line("    - Credenciales: " . ($empresa->whatsapp_api_key ? '✓ Configurado' : '✗ Vacío'));
+                $this->line('    - Credenciales: '.($empresa->whatsapp_api_key ? '✓ Configurado' : '✗ Vacío'));
                 $this->line("    - Estado: {$status}");
             } else {
                 // Crear o actualizar conexión

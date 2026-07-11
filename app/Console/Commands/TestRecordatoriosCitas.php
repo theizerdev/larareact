@@ -4,17 +4,17 @@ namespace App\Console\Commands;
 
 use App\Models\Cita;
 use App\Models\CitaRecordatorio;
+use App\Models\Empresa;
+use App\Models\Especialidad;
 use App\Models\Medico;
 use App\Models\Paciente;
-use App\Models\Especialidad;
 use App\Models\Sucursal;
-use App\Models\Empresa;
-use Carbon\Carbon;
 use Illuminate\Console\Command;
 
 class TestRecordatoriosCitas extends Command
 {
     protected $signature = 'citas:test-recordatorios {--cantidad=5 : Número de citas de prueba a crear}';
+
     protected $description = 'Crear citas de prueba con recordatorios para probar el sistema';
 
     public function handle()
@@ -28,7 +28,7 @@ class TestRecordatoriosCitas extends Command
         $medico = Medico::first();
         $paciente = Paciente::first();
 
-        if (!$empresa || !$sucursal || !$especialidad || !$medico || !$paciente) {
+        if (! $empresa || ! $sucursal || ! $especialidad || ! $medico || ! $paciente) {
             $this->error('❌ No hay datos suficientes para crear citas de prueba.');
             $this->info('Asegúrese de tener al menos:');
             $this->info('- 1 empresa');
@@ -36,6 +36,7 @@ class TestRecordatoriosCitas extends Command
             $this->info('- 1 especialidad');
             $this->info('- 1 médico');
             $this->info('- 1 paciente');
+
             return Command::FAILURE;
         }
 
@@ -45,7 +46,7 @@ class TestRecordatoriosCitas extends Command
             try {
                 // Crear cita para mañana a las 10:00 AM
                 $fechaCita = now()->addDay()->setTime(10 + $i, 0, 0);
-                
+
                 $cita = Cita::create([
                     'paciente_id' => $paciente->id,
                     'medico_id' => $medico->id,
@@ -54,7 +55,7 @@ class TestRecordatoriosCitas extends Command
                     'sucursal_id' => $sucursal->id,
                     'fecha_inicio' => $fechaCita,
                     'fecha_fin' => $fechaCita->copy()->addMinutes(30),
-                    'motivo' => 'Consulta de prueba #' . ($i + 1),
+                    'motivo' => 'Consulta de prueba #'.($i + 1),
                     'estado' => 'confirmada',
                     'notas' => 'Cita creada para prueba de recordatorios',
                     'created_by' => 1,
@@ -64,7 +65,7 @@ class TestRecordatoriosCitas extends Command
                 $cita->programarRecordatorios();
 
                 $this->info("✅ Cita #{$cita->id} creada para {$fechaCita->format('d/m/Y H:i')}");
-                
+
                 // Mostrar recordatorios creados
                 $recordatorios = $cita->recordatorios;
                 foreach ($recordatorios as $recordatorio) {
@@ -80,7 +81,7 @@ class TestRecordatoriosCitas extends Command
 
         $this->info("\n📊 Resumen:");
         $this->info("✅ Citas creadas: {$citasCreadas}");
-        $this->info("📅 Total recordatorios: " . CitaRecordatorio::count());
+        $this->info('📅 Total recordatorios: '.CitaRecordatorio::count());
 
         // Probar el comando de procesamiento
         $this->info("\n🚀 Procesando recordatorios...");

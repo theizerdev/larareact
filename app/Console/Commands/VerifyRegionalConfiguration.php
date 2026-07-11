@@ -2,10 +2,9 @@
 
 namespace App\Console\Commands;
 
-use Illuminate\Console\Command;
-use App\Services\RegionalConfigurationService;
 use App\Models\Empresa;
-use App\Models\Pais;
+use App\Services\RegionalConfigurationService;
+use Illuminate\Console\Command;
 
 class VerifyRegionalConfiguration extends Command
 {
@@ -56,7 +55,7 @@ class VerifyRegionalConfiguration extends Command
         $this->info('\n✅ Verificando componentes Livewire...');
         $components = [
             'RegionalConfigurationIndicator' => app_path('Livewire/RegionalConfigurationIndicator.php'),
-            'TestRegionalConfiguration' => app_path('Livewire/TestRegionalConfiguration.php')
+            'TestRegionalConfiguration' => app_path('Livewire/TestRegionalConfiguration.php'),
         ];
 
         foreach ($components as $name => $path) {
@@ -71,7 +70,7 @@ class VerifyRegionalConfiguration extends Command
         $this->info('\n✅ Verificando vistas...');
         $views = [
             'regional-configuration-indicator' => resource_path('views/livewire/regional-configuration-indicator.blade.php'),
-            'test-regional-configuration' => resource_path('views/livewire/test-regional-configuration.blade.php')
+            'test-regional-configuration' => resource_path('views/livewire/test-regional-configuration.blade.php'),
         ];
 
         foreach ($views as $name => $path) {
@@ -85,7 +84,7 @@ class VerifyRegionalConfiguration extends Command
         // 6. Verificar rutas
         $this->info('\n✅ Verificando rutas...');
         $routes = [
-            'test.regional-configuration' => '/test/regional-configuration'
+            'test.regional-configuration' => '/test/regional-configuration',
         ];
 
         foreach ($routes as $name => $path) {
@@ -97,7 +96,7 @@ class VerifyRegionalConfiguration extends Command
                     $this->error("❌ Ruta {$name} no registrada");
                 }
             } catch (\Exception $e) {
-                $this->error("❌ Error verificando ruta {$name}: " . $e->getMessage());
+                $this->error("❌ Error verificando ruta {$name}: ".$e->getMessage());
             }
         }
 
@@ -122,7 +121,7 @@ class VerifyRegionalConfiguration extends Command
 
                 $this->info("Empresa: {$empresa->razon_social}");
                 $this->info("País: {$empresa->pais->nombre}");
-                $this->info("Configuración aplicada:");
+                $this->info('Configuración aplicada:');
                 $this->table(
                     ['Configuración', 'Valor'],
                     collect($config)->map(function ($value, $key) {
@@ -134,8 +133,8 @@ class VerifyRegionalConfiguration extends Command
                 $this->info("\n✅ Prueba de formateo:");
                 $testAmount = 1234.56;
                 $testDate = now();
-                $this->info("Monto: {$testAmount} → " . RegionalConfigurationService::formatMoney($testAmount));
-                $this->info("Fecha: {$testDate->format('Y-m-d H:i:s')} → " . RegionalConfigurationService::formatDate($testDate));
+                $this->info("Monto: {$testAmount} → ".RegionalConfigurationService::formatMoney($testAmount));
+                $this->info("Fecha: {$testDate->format('Y-m-d H:i:s')} → ".RegionalConfigurationService::formatDate($testDate));
             } else {
                 $this->error("❌ Empresa con ID {$empresaId} no encontrada");
             }

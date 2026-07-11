@@ -17,28 +17,29 @@ class ImportLostrinis extends Command
      */
     public function handle()
     {
-        $this->info("🚀 Starting database integration from abastolostrinis.sql...");
+        $this->info('🚀 Starting database integration from abastolostrinis.sql...');
 
         $sqlPath = base_path('abastolostrinis.sql');
-        if (!file_exists($sqlPath)) {
+        if (! file_exists($sqlPath)) {
             $this->error("❌ SQL dump file not found at: {$sqlPath}");
+
             return 1;
         }
 
-        $this->info("Reading SQL dump file...");
+        $this->info('Reading SQL dump file...');
         $sqlContent = file_get_contents($sqlPath);
 
-        $this->info("Disabling foreign key checks...");
+        $this->info('Disabling foreign key checks...');
         DB::statement('SET FOREIGN_KEY_CHECKS=0;');
 
         try {
-            $this->info("Importing raw SQL dump into staging tables...");
+            $this->info('Importing raw SQL dump into staging tables...');
             // Execute the raw SQL multi-statements
             DB::unprepared($sqlContent);
-            $this->info("Staging tables imported successfully.");
+            $this->info('Staging tables imported successfully.');
 
             // Truncate/delete existing records from standard tables
-            $this->warn("Clearing existing catalog tables...");
+            $this->warn('Clearing existing catalog tables...');
             DB::table('wishlists')->delete();
             DB::table('reviews')->delete();
             DB::table('product_variant_attribute_values')->delete();
@@ -48,10 +49,10 @@ class ImportLostrinis extends Command
             DB::table('products')->delete();
             DB::table('brands')->delete();
             DB::table('categories')->delete();
-            $this->info("Existing catalog data cleared.");
+            $this->info('Existing catalog data cleared.');
 
             // 1. Migrate Categories
-            $this->info("Migrating categories...");
+            $this->info('Migrating categories...');
             $stagingCategorias = DB::table('categorias')->get();
             $categoryCount = 0;
             foreach ($stagingCategorias as $cat) {
@@ -76,7 +77,7 @@ class ImportLostrinis extends Command
             $this->info("✓ {$categoryCount} categories imported.");
 
             // 2. Migrate Brands
-            $this->info("Migrating brands...");
+            $this->info('Migrating brands...');
             $stagingMarcas = DB::table('marcas')->get();
             $brandCount = 0;
             foreach ($stagingMarcas as $brand) {
@@ -98,7 +99,7 @@ class ImportLostrinis extends Command
             $this->info("✓ {$brandCount} brands imported.");
 
             // 3. Migrate Products
-            $this->info("Migrating products...");
+            $this->info('Migrating products...');
             $stagingProductos = DB::table('productos')->get();
             $productCount = 0;
             $usedSlugs = [];
@@ -106,7 +107,7 @@ class ImportLostrinis extends Command
             foreach ($stagingProductos as $prod) {
                 $sku = $prod->code ?: $prod->sku;
                 if (empty($sku)) {
-                    $sku = 'PRD-' . strtoupper(Str::random(8));
+                    $sku = 'PRD-'.strtoupper(Str::random(8));
                 }
 
                 // Ensure unique slug
@@ -114,7 +115,7 @@ class ImportLostrinis extends Command
                 $slug = $baseSlug;
                 $counter = 1;
                 while (in_array($slug, $usedSlugs) || DB::table('products')->where('slug', $slug)->exists()) {
-                    $slug = $baseSlug . '-' . $counter;
+                    $slug = $baseSlug.'-'.$counter;
                     $counter++;
                 }
                 $usedSlugs[] = $slug;
@@ -158,7 +159,7 @@ class ImportLostrinis extends Command
             $this->info("✓ {$productCount} products imported.");
 
             // 4. Migrate Product Variants
-            $this->info("Migrating product variants and dynamic attributes...");
+            $this->info('Migrating product variants and dynamic attributes...');
             $stagingVariants = DB::table('producto_variants')->get();
             $variantCount = 0;
             $usedVariantSkus = [];
@@ -167,21 +168,22 @@ class ImportLostrinis extends Command
                 // Ensure unique SKU
                 $vSku = $var->sku;
                 if (empty($vSku)) {
-                    $vSku = 'PV-' . $var->producto_id . '-' . $var->id;
+                    $vSku = 'PV-'.$var->producto_id.'-'.$var->id;
                 }
 
                 $baseSku = $vSku;
                 $skuCounter = 1;
                 while (in_array($vSku, $usedVariantSkus) || DB::table('product_variants')->where('sku', $vSku)->exists()) {
-                    $vSku = $baseSku . '-' . $skuCounter;
+                    $vSku = $baseSku.'-'.$skuCounter;
                     $skuCounter++;
                 }
                 $usedVariantSkus[] = $vSku;
 
                 // Verify that the product parent exists
                 $parentExists = DB::table('products')->where('id', $var->producto_id)->exists();
-                if (!$parentExists) {
+                if (! $parentExists) {
                     $this->warn("⚠️ Skipping variant ID {$var->id} because parent product ID {$var->producto_id} does not exist.");
+
                     continue;
                 }
 
@@ -205,7 +207,7 @@ class ImportLostrinis extends Command
                 ]);
 
                 // Parse the values JSON column (e.g. {"Peso": "500gr"})
-                if (!empty($var->values)) {
+                if (! empty($var->values)) {
                     $attrs = json_decode($var->values, true);
                     if (is_array($attrs)) {
                         foreach ($attrs as $attrName => $valStr) {
@@ -216,7 +218,7 @@ class ImportLostrinis extends Command
                             // A. Find or create attribute
                             $attrSlug = Str::slug($attrName);
                             $attributeId = DB::table('attributes')->where('slug', $attrSlug)->value('id');
-                            if (!$attributeId) {
+                            if (! $attributeId) {
                                 $attributeId = DB::table('attributes')->insertGetId([
                                     'nombre' => $attrName,
                                     'slug' => $attrSlug,
@@ -235,7 +237,7 @@ class ImportLostrinis extends Command
                                 ->where('attribute_id', $attributeId)
                                 ->where('valor', $valStr)
                                 ->value('id');
-                            if (!$valueId) {
+                            if (! $valueId) {
                                 $valueId = DB::table('attribute_values')->insertGetId([
                                     'attribute_id' => $attributeId,
                                     'valor' => $valStr,
@@ -252,7 +254,7 @@ class ImportLostrinis extends Command
                                 ->where('attribute_value_id', $valueId)
                                 ->exists();
 
-                            if (!$linkExists) {
+                            if (! $linkExists) {
                                 DB::table('product_variant_attribute_values')->insert([
                                     'product_variant_id' => $var->id,
                                     'attribute_value_id' => $valueId,
@@ -267,7 +269,7 @@ class ImportLostrinis extends Command
             $this->info("✓ {$variantCount} product variants imported and attribute linked.");
 
             // 5. Scan and import main product images from public/app/productos/{id}/
-            $this->info("Scanning public/app/productos/ directories for product images...");
+            $this->info('Scanning public/app/productos/ directories for product images...');
             $productosPath = public_path('app/productos');
             $scannedProducts = 0;
             $scannedImages = 0;
@@ -275,13 +277,13 @@ class ImportLostrinis extends Command
             if (is_dir($productosPath)) {
                 $dirContents = scandir($productosPath);
                 foreach ($dirContents as $item) {
-                    if (is_numeric($item) && is_dir($productosPath . '/' . $item)) {
+                    if (is_numeric($item) && is_dir($productosPath.'/'.$item)) {
                         // Scan files in public/app/productos/{id}/ and public/app/productos/{id}/images/
                         $searchPaths = [
-                            $productosPath . '/' . $item,
-                            $productosPath . '/' . $item . '/images',
+                            $productosPath.'/'.$item,
+                            $productosPath.'/'.$item.'/images',
                         ];
-                        
+
                         $productImagesList = [];
                         foreach ($searchPaths as $path) {
                             if (is_dir($path)) {
@@ -290,20 +292,20 @@ class ImportLostrinis extends Command
                                     if ($file === '.' || $file === '..') {
                                         continue;
                                     }
-                                    if (is_dir($path . '/' . $file)) {
+                                    if (is_dir($path.'/'.$file)) {
                                         continue;
                                     }
                                     if (str_starts_with($file, 'thumb_')) {
                                         continue;
                                     }
-                                    
+
                                     $extension = strtolower(pathinfo($file, PATHINFO_EXTENSION));
                                     if (in_array($extension, ['jpg', 'jpeg', 'png', 'webp', 'gif'])) {
                                         // Store path relative to public/
-                                        $relPath = str_replace(public_path() . DIRECTORY_SEPARATOR, '', $path . '/' . $file);
+                                        $relPath = str_replace(public_path().DIRECTORY_SEPARATOR, '', $path.'/'.$file);
                                         $relPath = str_replace('\\', '/', $relPath);
-                                        
-                                        if (!in_array($relPath, $productImagesList)) {
+
+                                        if (! in_array($relPath, $productImagesList)) {
                                             $productImagesList[] = $relPath;
                                         }
                                     }
@@ -311,7 +313,7 @@ class ImportLostrinis extends Command
                             }
                         }
 
-                        if (!empty($productImagesList)) {
+                        if (! empty($productImagesList)) {
                             // The first image is the main image
                             $mainImgPath = $productImagesList[0];
 
@@ -340,22 +342,23 @@ class ImportLostrinis extends Command
             $this->info("✓ Scanned and updated {$scannedProducts} products with {$scannedImages} images.");
 
         } catch (\Exception $e) {
-            $this->error("❌ An error occurred during database migration: " . $e->getMessage());
+            $this->error('❌ An error occurred during database migration: '.$e->getMessage());
             $this->error($e->getTraceAsString());
         } finally {
             // Clean up staging tables
-            $this->info("Cleaning up staging tables...");
+            $this->info('Cleaning up staging tables...');
             DB::statement('DROP TABLE IF EXISTS producto_variants');
             DB::statement('DROP TABLE IF EXISTS productos');
             DB::statement('DROP TABLE IF EXISTS marcas');
             DB::statement('DROP TABLE IF EXISTS categorias');
             DB::statement('DROP TABLE IF EXISTS product_batches');
 
-            $this->info("Re-enabling foreign key checks...");
+            $this->info('Re-enabling foreign key checks...');
             DB::statement('SET FOREIGN_KEY_CHECKS=1;');
         }
 
-        $this->info("🎉 Database integration completed successfully!");
+        $this->info('🎉 Database integration completed successfully!');
+
         return 0;
     }
 
@@ -372,18 +375,18 @@ class ImportLostrinis extends Command
         $publicAppDir = public_path('app/productos');
 
         // Check 1: directly in public/app/productos/
-        if (file_exists($publicAppDir . '/' . $filename)) {
-            return 'app/productos/' . $filename;
+        if (file_exists($publicAppDir.'/'.$filename)) {
+            return 'app/productos/'.$filename;
         }
 
         // Check 2: in public/app/productos/{productId}/
-        if (file_exists($publicAppDir . '/' . $productId . '/' . $filename)) {
-            return 'app/productos/' . $productId . '/' . $filename;
+        if (file_exists($publicAppDir.'/'.$productId.'/'.$filename)) {
+            return 'app/productos/'.$productId.'/'.$filename;
         }
 
         // Check 3: in public/app/productos/{productId}/images/
-        if (file_exists($publicAppDir . '/' . $productId . '/images/' . $filename)) {
-            return 'app/productos/' . $productId . '/images/' . $filename;
+        if (file_exists($publicAppDir.'/'.$productId.'/images/'.$filename)) {
+            return 'app/productos/'.$productId.'/images/'.$filename;
         }
 
         // Check 4: recursive search
@@ -391,7 +394,8 @@ class ImportLostrinis extends Command
             $dir = new \RecursiveDirectoryIterator($publicAppDir);
             foreach (new \RecursiveIteratorIterator($dir) as $file) {
                 if ($file->isFile() && $file->getFilename() === $filename) {
-                    $path = str_replace(public_path() . DIRECTORY_SEPARATOR, '', $file->getPathname());
+                    $path = str_replace(public_path().DIRECTORY_SEPARATOR, '', $file->getPathname());
+
                     return str_replace('\\', '/', $path);
                 }
             }

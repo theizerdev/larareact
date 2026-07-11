@@ -9,6 +9,7 @@ use Illuminate\Console\Command;
 class VerificarRecordatoriosCitas extends Command
 {
     protected $signature = 'citas:verificar-recordatorios {--empresa= : ID de la empresa}';
+
     protected $description = 'Verificar el estado de los recordatorios de citas';
 
     public function handle()
@@ -19,10 +20,10 @@ class VerificarRecordatoriosCitas extends Command
 
         // Estadísticas generales
         $total = CitaRecordatorio::when($empresaId, function ($query) use ($empresaId) {
-                $query->whereHas('cita', function ($q) use ($empresaId) {
-                    $q->where('empresa_id', $empresaId);
-                });
-            })->count();
+            $query->whereHas('cita', function ($q) use ($empresaId) {
+                $q->where('empresa_id', $empresaId);
+            });
+        })->count();
 
         $pendientes = CitaRecordatorio::pendientes()
             ->when($empresaId, function ($query) use ($empresaId) {
@@ -45,7 +46,7 @@ class VerificarRecordatoriosCitas extends Command
                 });
             })->count();
 
-        $this->info("📈 Estadísticas Generales:");
+        $this->info('📈 Estadísticas Generales:');
         $this->info("   📋 Total de recordatorios: {$total}");
         $this->info("   ⏰ Pendientes: {$pendientes}");
         $this->info("   ✅ Enviados: {$enviados}");
@@ -54,10 +55,10 @@ class VerificarRecordatoriosCitas extends Command
         // Recordatorios por tipo
         $this->info("\n📅 Por Tipo:");
         $porTipo = CitaRecordatorio::when($empresaId, function ($query) use ($empresaId) {
-                $query->whereHas('cita', function ($q) use ($empresaId) {
-                    $q->where('empresa_id', $empresaId);
-                });
-            })
+            $query->whereHas('cita', function ($q) use ($empresaId) {
+                $q->where('empresa_id', $empresaId);
+            });
+        })
             ->selectRaw('tipo, COUNT(*) as total')
             ->groupBy('tipo')
             ->get();
@@ -69,10 +70,10 @@ class VerificarRecordatoriosCitas extends Command
         // Recordatorios por canal
         $this->info("\n📱 Por Canal:");
         $porCanal = CitaRecordatorio::when($empresaId, function ($query) use ($empresaId) {
-                $query->whereHas('cita', function ($q) use ($empresaId) {
-                    $q->where('empresa_id', $empresaId);
-                });
-            })
+            $query->whereHas('cita', function ($q) use ($empresaId) {
+                $q->where('empresa_id', $empresaId);
+            });
+        })
             ->selectRaw('canal, COUNT(*) as total')
             ->groupBy('canal')
             ->get();
@@ -94,7 +95,7 @@ class VerificarRecordatoriosCitas extends Command
             ->get();
 
         if ($proximos->isEmpty()) {
-            $this->info("   No hay recordatorios próximos a vencer.");
+            $this->info('   No hay recordatorios próximos a vencer.');
         } else {
             foreach ($proximos as $recordatorio) {
                 $cita = $recordatorio->cita;
@@ -116,9 +117,9 @@ class VerificarRecordatoriosCitas extends Command
 
         if ($vencidos > 0) {
             $this->warn("   ⚠️  Hay {$vencidos} recordatorios vencidos que deben ser procesados.");
-            $this->info("   Ejecute: php artisan citas:procesar-recordatorios");
+            $this->info('   Ejecute: php artisan citas:procesar-recordatorios');
         } else {
-            $this->info("   No hay recordatorios vencidos.");
+            $this->info('   No hay recordatorios vencidos.');
         }
 
         // Errores recientes
@@ -135,7 +136,7 @@ class VerificarRecordatoriosCitas extends Command
             ->get();
 
         if ($errores->isEmpty()) {
-            $this->info("   No hay errores recientes.");
+            $this->info('   No hay errores recientes.');
         } else {
             foreach ($errores as $error) {
                 $this->error("   Cita #{$error->cita_id} - {$error->error_mensaje}");

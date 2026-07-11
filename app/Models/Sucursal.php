@@ -19,7 +19,7 @@ class Sucursal extends Model
         return LogOptions::defaults()
             ->logOnly(['nombre', 'telefono', 'direccion', 'status', 'empresa_id'])
             ->logOnlyDirty()
-            ->setDescriptionForEvent(fn(string $eventName) => static::getSpanishDescription($eventName));
+            ->setDescriptionForEvent(fn (string $eventName) => static::getSpanishDescription($eventName));
     }
 
     protected $fillable = [

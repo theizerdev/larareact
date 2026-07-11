@@ -2,8 +2,8 @@
 
 namespace App\Console\Commands;
 
-use Illuminate\Console\Command;
 use App\Jobs\SendAutomaticNotifications;
+use Illuminate\Console\Command;
 
 class SendAutomaticNotificationsCommand extends Command
 {
@@ -27,10 +27,10 @@ class SendAutomaticNotificationsCommand extends Command
     public function handle()
     {
         $this->info('Enviando notificaciones automáticas...');
-        
+
         // Despachar el job
         SendAutomaticNotifications::dispatch();
-        
+
         $this->info('Notificaciones automáticas enviadas correctamente.');
     }
 }

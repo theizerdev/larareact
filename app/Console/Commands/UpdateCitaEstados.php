@@ -2,14 +2,15 @@
 
 namespace App\Console\Commands;
 
-use Illuminate\Console\Command;
 use App\Models\Cita;
 use App\Services\CitaNotificationService;
 use Carbon\Carbon;
+use Illuminate\Console\Command;
 
 class UpdateCitaEstados extends Command
 {
     protected $signature = 'citas:update-estados {--grace=15}';
+
     protected $description = 'Actualiza estados de citas a en_curso/completada/no_asistio según la hora';
 
     public function handle()
@@ -47,10 +48,11 @@ class UpdateCitaEstados extends Command
                     ->withProperties([
                         'previous' => $estadoAnterior,
                         'new' => Cita::ESTADO_EN_CURSO,
-                        'source' => 'scheduler'
+                        'source' => 'scheduler',
                     ])
                     ->log('cita_estado_actualizado_automaticamente');
-            } catch (\Throwable $e) {}
+            } catch (\Throwable $e) {
+            }
         }
     }
 
@@ -71,10 +73,11 @@ class UpdateCitaEstados extends Command
                     ->withProperties([
                         'previous' => $estadoAnterior,
                         'new' => Cita::ESTADO_FINALIZADA,
-                        'source' => 'scheduler'
+                        'source' => 'scheduler',
                     ])
                     ->log('cita_estado_actualizado_automaticamente');
-            } catch (\Throwable $e) {}
+            } catch (\Throwable $e) {
+            }
         }
     }
 
@@ -95,10 +98,11 @@ class UpdateCitaEstados extends Command
                     ->withProperties([
                         'previous' => $estadoAnterior,
                         'new' => Cita::ESTADO_NO_ASISTIO,
-                        'source' => 'scheduler'
+                        'source' => 'scheduler',
                     ])
                     ->log('cita_estado_actualizado_automaticamente');
-            } catch (\Throwable $e) {}
+            } catch (\Throwable $e) {
+            }
         }
     }
 }

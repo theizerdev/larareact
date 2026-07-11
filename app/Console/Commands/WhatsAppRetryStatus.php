@@ -32,27 +32,27 @@ class WhatsAppRetryStatus extends Command
     {
         $days = $this->option('days');
         $detailed = $this->option('detailed');
-        
+
         $this->info('Estado del Sistema de Reenvío WhatsApp');
         $this->info('==========================================');
         $this->newLine();
 
         // Estadísticas generales
         $this->showGeneralStats($days);
-        
+
         if ($detailed) {
             $this->showDetailedStats($days);
         }
-        
+
         $this->showRecommendations();
-        
+
         return Command::SUCCESS;
     }
 
     private function showGeneralStats(int $days)
     {
         $cutoffDate = Carbon::now()->subDays($days);
-        
+
         // Mensajes reenviables
         $retryable = WhatsAppMessage::where('direction', 'outbound')
             ->where('created_at', '>=', $cutoffDate)
@@ -94,16 +94,16 @@ class WhatsAppRetryStatus extends Command
                 ['Tasa de éxito de reenvíos', "{$successRate}%"],
             ]
         );
-        
+
         $this->newLine();
     }
 
     private function showDetailedStats(int $days)
     {
         $cutoffDate = Carbon::now()->subDays($days);
-        
+
         $this->info('Distribución por Estado:');
-        
+
         // Distribución por estado de mensajes con reintentos
         $statusDistribution = WhatsAppMessage::where('direction', 'outbound')
             ->where('created_at', '>=', $cutoffDate)
@@ -113,7 +113,7 @@ class WhatsAppRetryStatus extends Command
             ->pluck('count', 'status')
             ->toArray();
 
-        if (!empty($statusDistribution)) {
+        if (! empty($statusDistribution)) {
             $statusData = [];
             foreach ($statusDistribution as $status => $count) {
                 $statusData[] = [ucfirst($status), format_money($count)];
@@ -122,11 +122,11 @@ class WhatsAppRetryStatus extends Command
         } else {
             $this->info('No hay mensajes con reintentos en el período.');
         }
-        
+
         $this->newLine();
-        
+
         $this->info('Distribución por Número de Reintentos:');
-        
+
         // Distribución por número de reintentos
         $retryDistribution = WhatsAppMessage::where('direction', 'outbound')
             ->where('created_at', '>=', $cutoffDate)
@@ -137,7 +137,7 @@ class WhatsAppRetryStatus extends Command
             ->pluck('count', 'retry_count')
             ->toArray();
 
-        if (!empty($retryDistribution)) {
+        if (! empty($retryDistribution)) {
             $retryData = [];
             foreach ($retryDistribution as $retries => $count) {
                 $retryData[] = ["{$retries} reintentos", format_money($count)];
@@ -146,12 +146,12 @@ class WhatsAppRetryStatus extends Command
         } else {
             $this->info('No hay mensajes con reintentos en el período.');
         }
-        
+
         $this->newLine();
-        
+
         // Top 10 contactos con más reintentos
         $this->info('Top 10 Contactos con Más Reintentos:');
-        
+
         $topContacts = WhatsAppMessage::where('direction', 'outbound')
             ->where('created_at', '>=', $cutoffDate)
             ->where('retry_count', '>', 0)
@@ -166,16 +166,16 @@ class WhatsAppRetryStatus extends Command
             foreach ($topContacts as $contact) {
                 $name = $contact->recipient_name ?: $contact->recipient_phone;
                 $contactData[] = [
-                    substr($name, 0, 20) . (strlen($name) > 20 ? '...' : ''),
+                    substr($name, 0, 20).(strlen($name) > 20 ? '...' : ''),
                     format_money($contact->total_messages),
-                    format_money($contact->total_retries)
+                    format_money($contact->total_retries),
                 ];
             }
             $this->table(['Contacto', 'Mensajes', 'Reintentos'], $contactData);
         } else {
             $this->info('No hay contactos con reintentos en el período.');
         }
-        
+
         $this->newLine();
     }
 
@@ -183,12 +183,12 @@ class WhatsAppRetryStatus extends Command
     {
         $this->info('Recomendaciones:');
         $this->info('================');
-        
+
         // Obtener estadísticas para recomendaciones
         $retryable = WhatsAppMessage::where('direction', 'outbound')
             ->retryable()
             ->count();
-            
+
         $maxRetriesExceeded = WhatsAppMessage::where('direction', 'outbound')
             ->maxRetriesExceeded()
             ->count();
@@ -204,7 +204,7 @@ class WhatsAppRetryStatus extends Command
         }
 
         if (empty($recommendations)) {
-            $recommendations[] = "• El sistema de reenvío está funcionando correctamente. No hay acciones pendientes.";
+            $recommendations[] = '• El sistema de reenvío está funcionando correctamente. No hay acciones pendientes.';
         }
 
         $recommendations[] = "• Usa 'php artisan whatsapp:schedule-retry' para reenviar mensajes fallidos.";

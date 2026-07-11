@@ -3,7 +3,6 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
-use Illuminate\Http\Request;
 
 class ServerMonitoringController extends Controller
 {
@@ -37,7 +36,7 @@ class ServerMonitoringController extends Controller
                 'disk_used_gb' => $diskUsedGb,
                 'disk_used_percent' => $diskUsedPercent,
                 'hostname' => gethostname(),
-            ]
+            ],
         ]);
     }
 
@@ -69,7 +68,7 @@ class ServerMonitoringController extends Controller
                 ['time' => now()->subSeconds(rand(5, 20))->format('H:i:s'), 'level' => 'info', 'message' => 'Worker queue started processing job #8320'],
                 ['time' => now()->subSeconds(rand(30, 90))->format('H:i:s'), 'level' => 'info', 'message' => 'User login successful for superadmin@example.com'],
                 ['time' => now()->subSeconds(rand(120, 200))->format('H:i:s'), 'level' => 'warning', 'message' => 'API request to external gateway timed out (retrying)'],
-            ]
+            ],
         ]);
     }
 }

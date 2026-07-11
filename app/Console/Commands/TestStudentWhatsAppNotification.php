@@ -4,7 +4,7 @@ namespace App\Console\Commands;
 
 use App\Models\Student;
 use App\Models\StudentAccessLog;
-use App\Jobs\SendAccessWhatsAppNotificationJob;
+use App\Services\WhatsAppService;
 use Carbon\Carbon;
 use Illuminate\Console\Command;
 
@@ -35,20 +35,23 @@ class TestStudentWhatsAppNotification extends Command
         // Buscar el estudiante
         $student = Student::with(['empresa.pais'])->find($studentId);
 
-        if (!$student) {
+        if (! $student) {
             $this->error('Estudiante no encontrado');
+
             return 1;
         }
 
         // Verificar que el estudiante sea menor de edad
-        if (!$student->es_menor_de_edad) {
+        if (! $student->es_menor_de_edad) {
             $this->error('El estudiante no es menor de edad');
+
             return 1;
         }
 
         // Verificar que tenga teléfonos del representante
-        if (!$student->representante_telefonos || empty($student->representante_telefonos)) {
+        if (! $student->representante_telefonos || empty($student->representante_telefonos)) {
             $this->error('El estudiante no tiene teléfonos del representante registrados');
+
             return 1;
         }
 
@@ -58,16 +61,16 @@ class TestStudentWhatsAppNotification extends Command
             'type' => $type,
             'access_time' => Carbon::now(),
             'registered_by' => 1, // Usuario de prueba
-            'notes' => 'Registro de prueba para notificación WhatsApp'
+            'notes' => 'Registro de prueba para notificación WhatsApp',
         ]);
 
         $this->info('Estudiante encontrado:');
         $this->line("Nombre: {$student->nombres} {$student->apellidos}");
         $this->line("Código: {$student->codigo}");
         $this->line("Edad: {$student->edad} años");
-        $this->line("¿Es menor?: " . ($student->es_menor_de_edad ? 'Sí' : 'No'));
+        $this->line('¿Es menor?: '.($student->es_menor_de_edad ? 'Sí' : 'No'));
         $this->line("Representante: {$student->representante_nombres} {$student->representante_apellidos}");
-        
+
         // Manejar representante_telefonos que puede ser string o array
         $telefonos = $student->representante_telefonos;
         if (is_string($telefonos)) {
@@ -78,8 +81,8 @@ class TestStudentWhatsAppNotification extends Command
                 $telefonos = array_map('trim', explode(',', $telefonos));
             }
         }
-        $this->line("Teléfonos: " . implode(', ', $telefonos));
-        
+        $this->line('Teléfonos: '.implode(', ', $telefonos));
+
         if ($student->empresa) {
             $this->line("Empresa: {$student->empresa->razon_social}");
             if ($student->empresa->pais) {
@@ -88,11 +91,11 @@ class TestStudentWhatsAppNotification extends Command
         }
 
         $this->info("\nTipo de acceso: {$type}");
-        $this->info("Hora del acceso: " . Carbon::now()->format('d/m/Y H:i:s'));
+        $this->info('Hora del acceso: '.Carbon::now()->format('d/m/Y H:i:s'));
 
         // Enviar la notificación directamente (síncrono)
         try {
-            $whatsappService = app(\App\Services\WhatsAppService::class);
+            $whatsappService = app(WhatsAppService::class);
             $sentCount = 0;
             $failedCount = 0;
 
@@ -111,40 +114,41 @@ class TestStudentWhatsAppNotification extends Command
                 try {
                     // Formatear el número con el código de país
                     $telefonoFormateado = $this->formatPhoneNumber($telefono, $student->empresa);
-                    
+
                     // Construir mensaje
                     $message = $this->buildTestMessage($student, $accessLog);
-                    
+
                     // Enviar mensaje
                     $resultado = $whatsappService->sendMessage($telefonoFormateado, $message);
-                    
+
                     if ($resultado['success']) {
                         $sentCount++;
                         $this->info("✅ Mensaje enviado a {$telefonoFormateado}");
                     } else {
                         $failedCount++;
-                        $this->error("❌ Error al enviar a {$telefonoFormateado}: " . ($resultado['error'] ?? 'Error desconocido'));
+                        $this->error("❌ Error al enviar a {$telefonoFormateado}: ".($resultado['error'] ?? 'Error desconocido'));
                     }
                 } catch (\Exception $e) {
                     $failedCount++;
-                    $this->error("❌ Excepción al enviar a {$telefono}: " . $e->getMessage());
+                    $this->error("❌ Excepción al enviar a {$telefono}: ".$e->getMessage());
                 }
             }
 
             $this->info("\n📊 Resumen de envío:");
-            $this->info("Total de teléfonos: " . count($telefonos));
+            $this->info('Total de teléfonos: '.count($telefonos));
             $this->info("Mensajes enviados: {$sentCount}");
             $this->info("Mensajes fallidos: {$failedCount}");
-            
+
             if ($sentCount > 0) {
                 $this->info("\n📱 Mensaje de WhatsApp enviado:");
                 $this->line($this->buildTestMessage($student, $accessLog));
             }
-            
+
         } catch (\Exception $e) {
-            $this->error('❌ Error al enviar la notificación: ' . $e->getMessage());
+            $this->error('❌ Error al enviar la notificación: '.$e->getMessage());
             // Eliminar el registro de prueba
             $accessLog->delete();
+
             return 1;
         }
 
@@ -153,10 +157,10 @@ class TestStudentWhatsAppNotification extends Command
 
     private function buildTestMessage($student, $accessLog)
     {
-        $studentName = $student->nombres . ' ' . $student->apellidos;
+        $studentName = $student->nombres.' '.$student->apellidos;
         $accessTime = Carbon::parse($accessLog->access_time)->format('H:i');
         $accessDate = Carbon::parse($accessLog->access_time)->format('d/m/Y');
-        
+
         $emoji = $accessLog->type === 'entrada' ? '📥' : '📤';
         $action = $accessLog->type === 'entrada' ? 'ingreso' : 'salida';
         $actionCapitalized = ucfirst($action);
@@ -168,7 +172,7 @@ class TestStudentWhatsAppNotification extends Command
         $message .= "**Fecha:** {$accessDate}\n";
         $message .= "**Hora:** {$accessTime}\n";
         $message .= "\n🏫 U.E JOSE MARIA VARGAS\n";
-        $message .= "💡 Este es un mensaje automático";
+        $message .= '💡 Este es un mensaje automático';
 
         return $message;
     }
@@ -180,17 +184,17 @@ class TestStudentWhatsAppNotification extends Command
     {
         // Limpiar el número de teléfono
         $phone = preg_replace('/[^0-9]/', '', $phone);
-        
+
         // Si el número empieza con 0, quitarlo
         if (substr($phone, 0, 1) === '0') {
             $phone = substr($phone, 1);
         }
-        
+
         // Si el número no tiene código de país y la empresa tiene país asociado
         if (strlen($phone) <= 10 && $company->pais && $company->pais->codigo_telefonico) {
-            $phone = $company->pais->codigo_telefonico . $phone;
+            $phone = $company->pais->codigo_telefonico.$phone;
         }
-        
+
         return $phone;
     }
 }

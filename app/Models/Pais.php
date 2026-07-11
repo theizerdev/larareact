@@ -2,17 +2,11 @@
 
 namespace App\Models;
 
-use App\Traits\HasSpanishActivityLog;
 use Illuminate\Database\Eloquent\Model;
-use Spatie\Activitylog\LogOptions;
-use Spatie\Activitylog\Traits\LogsActivity;
 
 class Pais extends Model
 {
-   
-
     protected $table = 'pais';
-
 
     protected $fillable = [
         'nombre',
@@ -47,7 +41,7 @@ class Pais extends Model
      */
     public function getSimboloMonedaAttribute(): string
     {
-        return match($this->moneda_principal) {
+        return match ($this->moneda_principal) {
             'VES' => 'Bs.',
             'EUR' => '€',
             'COP' => '$',

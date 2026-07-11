@@ -2,14 +2,17 @@
 
 namespace App\Console\Commands;
 
-use Illuminate\Console\Command;
+use App\Models\ConceptoPago;
+use App\Models\Matricula;
 use App\Models\Pago;
-use App\Models\Student;
+use App\Models\User;
 use Carbon\Carbon;
+use Illuminate\Console\Command;
 
 class AddTestData extends Command
 {
     protected $signature = 'test:data';
+
     protected $description = 'Agregar datos de prueba para ver el cambio porcentual';
 
     public function handle()
@@ -17,28 +20,30 @@ class AddTestData extends Command
         $this->info('Agregando datos de prueba...');
 
         // Buscar una matrícula activa
-        $matricula = \App\Models\Matricula::where('estado', 'activo')->first();
+        $matricula = Matricula::where('estado', 'activo')->first();
 
-        if (!$matricula) {
+        if (! $matricula) {
             $this->error('No hay matrículas activas');
+
             return;
         }
 
         // Buscar un usuario administrativo
-        $user = \App\Models\User::where('email', 'like', '%admin%')->first();
-        if (!$user) {
-            $user = \App\Models\User::first();
+        $user = User::where('email', 'like', '%admin%')->first();
+        if (! $user) {
+            $user = User::first();
         }
 
         // Buscar un concepto de pago
-        $concepto = \App\Models\ConceptoPago::first();
-        if (!$concepto) {
+        $concepto = ConceptoPago::first();
+        if (! $concepto) {
             $this->error('No hay conceptos de pago');
+
             return;
         }
 
         // Crear pago en el período anterior (hace 45 días)
-        $pagoAnterior = new Pago();
+        $pagoAnterior = new Pago;
         $pagoAnterior->matricula_id = $matricula->id;
         $pagoAnterior->concepto_pago_id = $concepto->id;
         $pagoAnterior->user_id = $user->id;
@@ -54,7 +59,7 @@ class AddTestData extends Command
         $this->info('✅ Pago creado en período anterior: $200 hace 45 días');
 
         // Crear pago adicional en el período actual
-        $pagoActual = new Pago();
+        $pagoActual = new Pago;
         $pagoActual->matricula_id = $matricula->id;
         $pagoActual->concepto_pago_id = $concepto->id;
         $pagoActual->user_id = $user->id;

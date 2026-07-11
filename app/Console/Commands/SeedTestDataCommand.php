@@ -79,7 +79,7 @@ class SeedTestDataCommand extends Command
             'conceptos_pago',  // Independent
             'niveles_educativos', // Independent
             'turnos',          // Independent
-            'school_periods'   // Independent
+            'school_periods',   // Independent
         ];
 
         foreach ($tables as $table) {

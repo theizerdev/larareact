@@ -3,11 +3,11 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
-use Illuminate\Http\Request;
-use Spatie\Permission\Models\Role;
-use Spatie\Permission\Models\Permission;
-use Illuminate\Support\Facades\DB;
 use App\Traits\PermissionOrganizer;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
+use Spatie\Permission\Models\Permission;
+use Spatie\Permission\Models\Role;
 
 class RoleController extends Controller
 {
@@ -36,7 +36,7 @@ class RoleController extends Controller
                 return [
                     'id' => $permission->id,
                     'name' => $permission->name,
-                    'slug' => str($permission->name)->limit(10, '...')
+                    'slug' => str($permission->name)->limit(10, '...'),
                 ];
             });
 
@@ -50,13 +50,14 @@ class RoleController extends Controller
                     $firstName = $nameParts[0] ?? '';
                     $lastName = $nameParts[1] ?? '';
                     $initials = strtoupper(
-                        ($firstName ? substr($firstName, 0, 1) : '') .
+                        ($firstName ? substr($firstName, 0, 1) : '').
                         ($lastName ? substr($lastName, 0, 1) : '')
                     );
+
                     return [
                         'id' => $user->id,
                         'name' => $user->name,
-                        'initials' => $initials
+                        'initials' => $initials,
                     ];
                 }),
                 'more_users_count' => $moreUsersCount,
@@ -65,13 +66,13 @@ class RoleController extends Controller
                     return [
                         'id' => $permission->id,
                         'name' => $permission->name,
-                        'slug' => str($permission->name)->limit(10, '...')
+                        'slug' => str($permission->name)->limit(10, '...'),
                     ];
                 }),
                 'more_permissions_count' => $morePermissionsCount,
                 // Todos los permisos para el modal de edición
                 'all_permissions' => $allPermissions,
-                'is_super_admin' => $role->name === 'Super Admin'
+                'is_super_admin' => $role->name === 'Super Admin',
             ];
         });
 
@@ -116,7 +117,7 @@ class RoleController extends Controller
         }
 
         $validated = $request->validate([
-            'name' => 'required|string|max:255|unique:roles,name,' . $role->id,
+            'name' => 'required|string|max:255|unique:roles,name,'.$role->id,
             'permissions' => 'array',
             'permissions.*' => 'exists:permissions,name',
         ]);
@@ -141,6 +142,7 @@ class RoleController extends Controller
         }
 
         $role->delete();
+
         return back();
     }
 }

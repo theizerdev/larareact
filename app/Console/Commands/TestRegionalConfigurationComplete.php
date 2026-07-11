@@ -2,9 +2,9 @@
 
 namespace App\Console\Commands;
 
-use Illuminate\Console\Command;
-use App\Services\RegionalConfigurationService;
 use App\Models\Empresa;
+use App\Services\RegionalConfigurationService;
+use Illuminate\Console\Command;
 
 class TestRegionalConfigurationComplete extends Command
 {
@@ -43,8 +43,8 @@ class TestRegionalConfigurationComplete extends Command
         $this->info('\n💰 Prueba de formateo:');
         $testAmount = 1234.56;
         $testDate = now();
-        $this->info("Monto: {$testAmount} → " . RegionalConfigurationService::formatMoney($testAmount));
-        $this->info("Fecha: {$testDate->format('Y-m-d H:i:s')} → " . RegionalConfigurationService::formatDate($testDate));
+        $this->info("Monto: {$testAmount} → ".RegionalConfigurationService::formatMoney($testAmount));
+        $this->info("Fecha: {$testDate->format('Y-m-d H:i:s')} → ".RegionalConfigurationService::formatDate($testDate));
 
         // 3. Probar con empresa específica
         $empresaId = $this->option('empresa_id');
@@ -55,7 +55,7 @@ class TestRegionalConfigurationComplete extends Command
                 RegionalConfigurationService::setRegionalConfiguration($empresa);
 
                 $newConfig = RegionalConfigurationService::getCurrentConfiguration();
-                $this->info("Nueva configuración:");
+                $this->info('Nueva configuración:');
                 $this->table(
                     ['Configuración', 'Valor'],
                     collect($newConfig)->map(function ($value, $key) {
@@ -65,8 +65,8 @@ class TestRegionalConfigurationComplete extends Command
 
                 // Probar formateo con nueva configuración
                 $this->info("\n💰 Formateo con nueva configuración:");
-                $this->info("Monto: {$testAmount} → " . RegionalConfigurationService::formatMoney($testAmount));
-                $this->info("Fecha: {$testDate->format('Y-m-d H:i:s')} → " . RegionalConfigurationService::formatDate($testDate));
+                $this->info("Monto: {$testAmount} → ".RegionalConfigurationService::formatMoney($testAmount));
+                $this->info("Fecha: {$testDate->format('Y-m-d H:i:s')} → ".RegionalConfigurationService::formatDate($testDate));
             } else {
                 $this->error("❌ Empresa con ID {$empresaId} no encontrada");
             }
@@ -101,7 +101,7 @@ class TestRegionalConfigurationComplete extends Command
                 $this->error('❌ Ruta de prueba no encontrada');
             }
         } catch (\Exception $e) {
-            $this->error('❌ Error verificando ruta: ' . $e->getMessage());
+            $this->error('❌ Error verificando ruta: '.$e->getMessage());
         }
 
         // 5. Instrucciones para prueba web

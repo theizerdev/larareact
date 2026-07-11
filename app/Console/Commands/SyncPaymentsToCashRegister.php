@@ -4,7 +4,6 @@ namespace App\Console\Commands;
 
 use App\Models\CashMovement;
 use App\Models\CashRegister;
-use App\Models\Order;
 use App\Models\Payment;
 use Illuminate\Console\Command;
 
@@ -34,6 +33,7 @@ class SyncPaymentsToCashRegister extends Command
 
         if ($registers->isEmpty()) {
             $this->error('No se encontraron cajas abiertas.');
+
             return self::FAILURE;
         }
 
@@ -55,13 +55,14 @@ class SyncPaymentsToCashRegister extends Command
             $orphanPayments = Payment::where('estado', 'completado')
                 ->where('user_id', $register->user_id)
                 ->where('fecha_pago', '>=', $register->fecha_apertura)
-                ->when(!empty($linkedPaymentIds), fn($q) => $q->whereNotIn('id', $linkedPaymentIds))
+                ->when(! empty($linkedPaymentIds), fn ($q) => $q->whereNotIn('id', $linkedPaymentIds))
                 ->with('order')
                 ->get();
 
             if ($orphanPayments->isEmpty()) {
                 $this->line('  ✓ Todos los pagos están sincronizados.');
                 $this->newLine();
+
                 continue;
             }
 
@@ -76,11 +77,11 @@ class SyncPaymentsToCashRegister extends Command
                     $payment->id,
                     $orderNum,
                     $payment->metodo_pago_label,
-                    '$' . number_format($payment->amount, 2),
+                    '$'.number_format($payment->amount, 2),
                     $payment->fecha_pago?->format('d/m/Y H:i') ?? '-',
                 ];
 
-                if (!$dryRun) {
+                if (! $dryRun) {
                     CashMovement::create([
                         'cash_register_id' => $register->id,
                         'tipo' => 'ingreso',

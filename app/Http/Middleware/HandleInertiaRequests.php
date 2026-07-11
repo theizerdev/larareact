@@ -37,6 +37,7 @@ class HandleInertiaRequests extends Middleware
     {
         $currentLocale = app()->getLocale();
         \Log::debug("HandleInertiaRequests: current locale is '{$currentLocale}'");
+
         return [
             ...parent::share($request),
             'name' => config('app.name'),
@@ -45,10 +46,10 @@ class HandleInertiaRequests extends Middleware
                     'empresa' => $request->user()->empresa ? [
                         'id' => $request->user()->empresa->id,
                         'mapbox_api_key' => $request->user()->empresa->mapbox_api_key,
-                        'mapbox_active' => (bool)$request->user()->empresa->mapbox_active,
+                        'mapbox_active' => (bool) $request->user()->empresa->mapbox_active,
                         'google_maps_api_key' => $request->user()->empresa->google_maps_api_key,
-                        'google_maps_active' => (bool)$request->user()->empresa->google_maps_active,
-                    ] : null
+                        'google_maps_active' => (bool) $request->user()->empresa->google_maps_active,
+                    ] : null,
                 ]) : null,
             ],
             'sidebarOpen' => ! $request->hasCookie('sidebar_state') || $request->cookie('sidebar_state') === 'true',

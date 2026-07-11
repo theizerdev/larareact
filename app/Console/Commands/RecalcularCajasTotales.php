@@ -2,12 +2,13 @@
 
 namespace App\Console\Commands;
 
-use Illuminate\Console\Command;
 use App\Models\Caja;
+use Illuminate\Console\Command;
 
 class RecalcularCajasTotales extends Command
 {
     protected $signature = 'cajas:recalcular-totales';
+
     protected $description = 'Recalcula los totales de todas las cajas existentes';
 
     public function handle()

@@ -2,13 +2,12 @@
 
 namespace Database\Seeders;
 
-use Illuminate\Database\Console\Seeds\WithoutModelEvents;
-use Illuminate\Database\Seeder;
-use App\Models\User;
 use App\Models\Empresa;
 use App\Models\Sucursal;
-use Spatie\Permission\Models\Role;
+use App\Models\User;
+use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\Hash;
+use Spatie\Permission\Models\Role;
 
 class UsersSeeder extends Seeder
 {
@@ -26,7 +25,7 @@ class UsersSeeder extends Seeder
             $username = strtolower(str_replace('-', '', $role->name));
 
             $user = User::firstOrCreate([
-                'email' => "{$username}@example.com"
+                'email' => "{$username}@example.com",
             ], [
                 'name' => "Usuario {$name}",
                 'username' => $username,
@@ -37,8 +36,7 @@ class UsersSeeder extends Seeder
                 'email_verified_at' => now(),
             ]);
 
-
-                $user->assignRole($role->name);
+            $user->assignRole($role->name);
 
         }
     }

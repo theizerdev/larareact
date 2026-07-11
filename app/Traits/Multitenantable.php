@@ -12,10 +12,10 @@ trait Multitenantable
         static::creating(function ($model) {
             if (auth()->check()) {
                 $user = auth()->user();
-                if (!$model->empresa_id && $user->empresa_id) {
+                if (! $model->empresa_id && $user->empresa_id) {
                     $model->empresa_id = $user->empresa_id;
                 }
-                if (!$model->sucursal_id && $user->sucursal_id) {
+                if (! $model->sucursal_id && $user->sucursal_id) {
                     $model->sucursal_id = $user->sucursal_id;
                 }
             }
@@ -24,7 +24,7 @@ trait Multitenantable
         // Global scope: filtra por empresa y sucursal del usuario autenticado
         // El Super Administrador no tiene filtro (ve todos los tenants)
         static::addGlobalScope('multitenancy', function (Builder $builder) {
-            if (!auth()->check()) {
+            if (! auth()->check()) {
                 return;
             }
 

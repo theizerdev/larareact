@@ -23,9 +23,9 @@ class PaisController extends Controller
         if ($search) {
             $query->where(function ($q) use ($search) {
                 $q->where('nombre', 'like', "%{$search}%")
-                  ->orWhere('codigo_iso2', 'like', "%{$search}%")
-                  ->orWhere('codigo_iso3', 'like', "%{$search}%")
-                  ->orWhere('moneda_principal', 'like', "%{$search}%");
+                    ->orWhere('codigo_iso2', 'like', "%{$search}%")
+                    ->orWhere('codigo_iso3', 'like', "%{$search}%")
+                    ->orWhere('moneda_principal', 'like', "%{$search}%");
             });
         }
 
@@ -83,14 +83,14 @@ class PaisController extends Controller
 
             return back()->with('notification', [
                 'type' => 'success',
-                'message' => __('Country created successfully.')
+                'message' => __('Country created successfully.'),
             ]);
         } catch (\Exception $e) {
-            Log::error("Error al crear el país: " . $e->getMessage());
+            Log::error('Error al crear el país: '.$e->getMessage());
 
             return back()->with('notification', [
                 'type' => 'error',
-                'message' => __('There was an error creating the country. Please try again.')
+                'message' => __('There was an error creating the country. Please try again.'),
             ]);
         }
     }
@@ -99,8 +99,8 @@ class PaisController extends Controller
     {
         $validated = $request->validate([
             'nombre' => 'required|string|max:255',
-            'codigo_iso2' => 'required|string|max:2|unique:pais,codigo_iso2,' . $pais->id,
-            'codigo_iso3' => 'required|string|max:3|unique:pais,codigo_iso3,' . $pais->id,
+            'codigo_iso2' => 'required|string|max:2|unique:pais,codigo_iso2,'.$pais->id,
+            'codigo_iso3' => 'required|string|max:3|unique:pais,codigo_iso3,'.$pais->id,
             'codigo_telefonico' => 'nullable|string|max:10',
             'moneda_principal' => 'nullable|string|max:3',
             'idioma_principal' => 'nullable|string|max:5',
@@ -124,14 +124,14 @@ class PaisController extends Controller
 
             return back()->with('notification', [
                 'type' => 'success',
-                'message' => __('Country updated successfully.')
+                'message' => __('Country updated successfully.'),
             ]);
         } catch (\Exception $e) {
-            Log::error("Error al actualizar el país {$pais->id}: " . $e->getMessage());
+            Log::error("Error al actualizar el país {$pais->id}: ".$e->getMessage());
 
             return back()->with('notification', [
                 'type' => 'error',
-                'message' => __('There was an error updating the country. Please try again.')
+                'message' => __('There was an error updating the country. Please try again.'),
             ]);
         }
     }
@@ -139,19 +139,19 @@ class PaisController extends Controller
     public function toggleStatus(Pais $pais)
     {
         try {
-            $pais->activo = !$pais->activo;
+            $pais->activo = ! $pais->activo;
             $pais->save();
 
             return back()->with('notification', [
                 'type' => 'success',
-                'message' => __('Status updated successfully.')
+                'message' => __('Status updated successfully.'),
             ]);
         } catch (\Exception $e) {
-            Log::error("Error al cambiar el estado del país {$pais->id}: " . $e->getMessage());
+            Log::error("Error al cambiar el estado del país {$pais->id}: ".$e->getMessage());
 
             return back()->with('notification', [
                 'type' => 'error',
-                'message' => __('There was an error updating the status. Please try again.')
+                'message' => __('There was an error updating the status. Please try again.'),
             ]);
         }
     }
@@ -176,15 +176,15 @@ class PaisController extends Controller
 
             return back()->with('notification', [
                 'type' => 'success',
-                'message' => $message
+                'message' => $message,
             ]);
         } catch (\Exception $e) {
             DB::rollBack();
-            Log::error("Error en la eliminación masiva de países: " . $e->getMessage());
+            Log::error('Error en la eliminación masiva de países: '.$e->getMessage());
 
             return back()->with('notification', [
                 'type' => 'error',
-                'message' => __('There was an error deleting the countries. Please try again.')
+                'message' => __('There was an error deleting the countries. Please try again.'),
             ]);
         }
     }

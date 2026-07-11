@@ -2,10 +2,9 @@
 
 namespace App\Console\Commands;
 
-use Illuminate\Console\Command;
-use App\Services\RegionalConfigurationService;
 use App\Models\Empresa;
-use App\Models\Pais;
+use App\Services\RegionalConfigurationService;
+use Illuminate\Console\Command;
 
 class TestRegionalConfiguration extends Command
 {
@@ -76,12 +75,12 @@ class TestRegionalConfiguration extends Command
         $this->info("\n=== Prueba de Formateo ===");
         $amount = 1234.56;
         $this->info("Monto original: {$amount}");
-        $this->info("Monto formateado: " . RegionalConfigurationService::formatMoney($amount));
+        $this->info('Monto formateado: '.RegionalConfigurationService::formatMoney($amount));
 
         // Probar formateo de fecha
         $date = now();
         $this->info("Fecha actual: {$date}");
-        $this->info("Fecha formateada: " . RegionalConfigurationService::formatDate($date));
+        $this->info('Fecha formateada: '.RegionalConfigurationService::formatDate($date));
 
         $this->info("\n✅ Prueba de configuración regional completada");
 

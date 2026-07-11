@@ -1,7 +1,7 @@
 <?php
 
-use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\Admin\EmpresaController;
+use Illuminate\Support\Facades\Route;
 
 Route::middleware(['verified'])->group(function () {
     Route::get('/empresas', [EmpresaController::class, 'index'])->name('empresas.index');
