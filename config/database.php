@@ -64,6 +64,20 @@ return [
             ]) : [],
         ],
 
+         'whatsapp_api' => [
+            'driver' => 'mysql',
+            'host' => env('DB_HOSTAPI', 'pupiladev_db'),
+            'port' => env('DB_PORTAPI', '3306'),
+            'database' => env('DB_DATABASEAPI', 'larawhatsapp_dev'),
+            'username' => env('DB_USERNAMEAPI', 'whatsapp_dev_user'),
+            'password' => env('DB_PASSWORDAPI', 'Wh4t5App_Dev_Pass_8d7AlpxJ'),
+            'charset' => 'utf8mb4',
+            'collation' => 'utf8mb4_unicode_ci',
+            'prefix' => '',
+            'strict' => true,
+            'engine' => null,
+        ],
+
         'mariadb' => [
             'driver' => 'mariadb',
             'url' => env('DB_URL'),
