@@ -1,15 +1,15 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { Head, router } from '@inertiajs/react';
-import { 
-    Navigation, 
-    ArrowLeft, 
-    Play, 
-    Square, 
-    Compass, 
-    Volume2, 
-    VolumeX, 
-    Loader2, 
-    MapPin, 
+import {
+    Navigation,
+    ArrowLeft,
+    Play,
+    Square,
+    Compass,
+    Volume2,
+    VolumeX,
+    Loader2,
+    MapPin,
     AlertCircle,
     Gauge,
     Clock,
@@ -34,8 +34,8 @@ interface GuidanceStep {
     type: string;
 }
 
-export default function NavigationScreen({ 
-    mapbox_api_key, 
+export default function NavigationScreen({
+    mapbox_api_key,
     mapbox_active,
     google_maps_api_key,
     google_maps_active
@@ -57,12 +57,12 @@ export default function NavigationScreen({
     const [loading, setLoading] = useState(true);
     const [routeCoords, setRouteCoords] = useState<number[][]>([]);
     const [steps, setSteps] = useState<GuidanceStep[]>([]);
-    
+
     const [nextInstruction, setNextInstruction] = useState<string>('');
     const [nextStepType, setNextStepType] = useState<string>('');
     const [remainingDistance, setRemainingDistance] = useState<number | null>(null); // in meters
     const [remainingDuration, setRemainingDuration] = useState<number | null>(null); // in seconds
-    
+
     // GPS & Simulation Tracking states
     const [simulating, setSimulating] = useState(false);
     const [activeGps, setActiveGps] = useState(false);
@@ -112,8 +112,8 @@ export default function NavigationScreen({
 
         const y = Math.sin(lon2 - lon1) * Math.cos(lat2);
         const x = Math.cos(lat1) * Math.sin(lat2) -
-                  Math.sin(lat1) * Math.cos(lat2) * Math.cos(lon2 - lon1);
-                  
+            Math.sin(lat1) * Math.cos(lat2) * Math.cos(lon2 - lon1);
+
         const bearing = Math.atan2(y, x) * 180 / Math.PI;
         return (bearing + 360) % 360;
     };
@@ -126,17 +126,17 @@ export default function NavigationScreen({
         const lat1 = p1[1] * Math.PI / 180;
         const lat2 = p2[1] * Math.PI / 180;
 
-        const a = Math.sin(dLat/2) * Math.sin(dLat/2) +
-                  Math.cos(lat1) * Math.cos(lat2) * 
-                  Math.sin(dLon/2) * Math.sin(dLon/2);
-        const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+        const a = Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+            Math.cos(lat1) * Math.cos(lat2) *
+            Math.sin(dLon / 2) * Math.sin(dLon / 2);
+        const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
         return R * c;
     };
 
     const calculatePathDistance = (path: number[][]) => {
         let d = 0;
         for (let i = 0; i < path.length - 1; i++) {
-            d += calculateDistance(path[i], path[i+1]);
+            d += calculateDistance(path[i], path[i + 1]);
         }
         return d;
     };
@@ -147,7 +147,7 @@ export default function NavigationScreen({
 
         const loadRouteData = async () => {
             setLoading(true);
-            
+
             // If Google Maps is active, use Google's Directions Service if available via Script
             if (google_maps_active && (window as any).google?.maps?.places) {
                 try {
@@ -164,7 +164,7 @@ export default function NavigationScreen({
                     }, (response: any, status: any) => {
                         if (status === google.maps.DirectionsStatus.OK && response && response.routes[0]) {
                             const leg = response.routes[0].legs[0];
-                            
+
                             setRemainingDistance(leg.distance ? leg.distance.value : 0);
                             setRemainingDuration(leg.duration ? leg.duration.value : 0);
 
@@ -250,7 +250,7 @@ export default function NavigationScreen({
         if (remainingDuration === null) return;
         const now = new Date();
         now.setSeconds(now.getSeconds() + remainingDuration);
-        
+
         let hrs = now.getHours();
         const mins = now.getMinutes().toString().padStart(2, '0');
         const ampm = hrs >= 12 ? 'PM' : 'AM';
@@ -308,7 +308,7 @@ export default function NavigationScreen({
 
             // Add starting pulsing location marker (Outer container for positioning, Inner container for visual animation)
             const markerEl = document.createElement('div');
-            
+
             const pulseEl = document.createElement('div');
             pulseEl.className = 'navigation-pulsing-marker';
             pulseEl.style.width = '24px';
@@ -343,7 +343,7 @@ export default function NavigationScreen({
         try {
             window.speechSynthesis.cancel();
             const utterance = new SpeechSynthesisUtterance(text);
-            
+
             // Match browser system/application active language
             const htmlLang = document.documentElement.lang;
             const navLang = navigator.language;
@@ -352,7 +352,7 @@ export default function NavigationScreen({
                 speakLang = 'en-US';
             }
             utterance.lang = speakLang;
-            
+
             window.speechSynthesis.speak(utterance);
         } catch (e) {
             console.error('Speech synthesis error:', e);
@@ -526,7 +526,7 @@ export default function NavigationScreen({
                     const remainingPath = routeCoords.slice(closestIdx);
                     const distLeft = calculateDistance(gpsCoords, routeCoords[closestIdx]) + calculatePathDistance(remainingPath);
                     setRemainingDistance(distLeft);
-                    
+
                     // Simple ETA estimate
                     const currentSpeedKmh = gpsSpeed ? gpsSpeed * 3.6 : 30; // fallback to 30 km/h
                     const durLeft = Math.round(distLeft / (currentSpeedKmh / 3.6));
@@ -581,7 +581,7 @@ export default function NavigationScreen({
         <>
             <Head title={__('Real-Time Navigation')} />
             <div className="w-screen h-screen relative bg-slate-950 text-slate-100 overflow-hidden select-none">
-                
+
                 {/* Back and Controls Header Overlay */}
                 <div className="absolute top-4 left-4 right-4 z-50 flex items-center justify-between pointer-events-none">
                     <Button
@@ -631,7 +631,7 @@ export default function NavigationScreen({
                 {/* Bottom Stats & Navigation controls overlay */}
                 {!loading && (
                     <div className="absolute bottom-6 left-1/2 -translate-x-1/2 z-40 w-full max-w-4xl px-4 space-y-4">
-                        
+
                         {/* Simulation / GPS active alerts banner */}
                         {(simulating || activeGps) && (
                             <div className="bg-slate-900/90 border border-slate-800 p-2.5 rounded-lg text-center flex items-center justify-center gap-2 text-xs shadow-lg max-w-xs mx-auto backdrop-blur-sm animate-bounce">
@@ -644,7 +644,7 @@ export default function NavigationScreen({
 
                         {/* Navigation cockpit HUD panel */}
                         <div className="bg-slate-900/95 border border-slate-800 shadow-2xl rounded-2xl p-5 flex flex-col lg:flex-row items-stretch gap-5 backdrop-blur-md">
-                            
+
                             {/* Speedometer panel */}
                             <div className="bg-slate-800/40 border border-slate-850 p-3 px-5 rounded-xl flex items-center gap-3.5 shrink-0 justify-center">
                                 <div className="p-2.5 bg-emerald-500/10 rounded-lg text-emerald-400 border border-emerald-500/20">
@@ -708,11 +708,10 @@ export default function NavigationScreen({
 
                                 <Button
                                     onClick={toggleGpsTracking}
-                                    className={`flex-1 lg:flex-none font-bold h-11 px-4 gap-2 shadow-lg ${
-                                        activeGps 
-                                            ? 'bg-blue-600 hover:bg-blue-700 text-white' 
-                                            : 'bg-slate-800 hover:bg-slate-700 text-slate-100 border border-slate-700'
-                                    }`}
+                                    className={`flex-1 lg:flex-none font-bold h-11 px-4 gap-2 shadow-lg ${activeGps
+                                        ? 'bg-blue-600 hover:bg-blue-700 text-white'
+                                        : 'bg-slate-800 hover:bg-slate-700 text-slate-100 border border-slate-700'
+                                        }`}
                                 >
                                     <Compass className={`h-4 w-4 ${activeGps ? 'animate-spin' : ''}`} />
                                     {activeGps ? __('GPS Off') : __('GPS Tracking')}

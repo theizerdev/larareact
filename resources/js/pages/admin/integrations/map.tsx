@@ -1,23 +1,24 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Head, router } from '@inertiajs/react';
-import { 
-    Map as MapIcon, 
-    RefreshCw, 
-    LocateFixed, 
-    Route, 
-    ArrowUpDown, 
-    Car, 
-    Footprints, 
-    Bike, 
-    Trash2, 
-    Loader2, 
-    MapPin, 
-    Navigation, 
-    Compass, 
-    AlertCircle, 
-    ChevronRight, 
-    Menu, 
-    Info 
+import {
+    Map as MapIcon,
+    RefreshCw,
+    LocateFixed,
+    Route,
+    ArrowUpDown,
+    Car,
+    Footprints,
+    Bike,
+    Trash2,
+    Loader2,
+    MapPin,
+    Navigation,
+    Compass,
+    AlertCircle,
+    ChevronRight,
+    Menu,
+    Info,
+    ArrowLeft
 } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -50,8 +51,8 @@ interface RouteStep {
     duration: number;
 }
 
-export default function MapboxIntegration({ 
-    mapbox_api_key, 
+export default function MapboxIntegration({
+    mapbox_api_key,
     mapbox_active,
     google_maps_api_key,
     google_maps_active
@@ -141,8 +142,8 @@ export default function MapboxIntegration({
         mapboxgl.accessToken = mapbox_api_key;
 
         const isDark = document.documentElement.classList.contains('dark');
-        const mapStyle = isDark 
-            ? 'mapbox://styles/mapbox/dark-v11' 
+        const mapStyle = isDark
+            ? 'mapbox://styles/mapbox/dark-v11'
             : 'mapbox://styles/mapbox/streets-v12';
 
         map.current = new mapboxgl.Map({
@@ -175,11 +176,11 @@ export default function MapboxIntegration({
         if (!map.current) return;
         const handleStyleChange = () => {
             const isDark = document.documentElement.classList.contains('dark');
-            const styleUrl = isDark 
-                ? 'mapbox://styles/mapbox/dark-v11' 
+            const styleUrl = isDark
+                ? 'mapbox://styles/mapbox/dark-v11'
                 : 'mapbox://styles/mapbox/streets-v12';
             map.current?.setStyle(styleUrl);
-            
+
             // Re-render route layer once the new style loads
             map.current?.once('style.load', () => {
                 if (originCoord && destCoord) {
@@ -347,7 +348,7 @@ export default function MapboxIntegration({
     // Clear route visual lines from map
     const clearRouteLayer = () => {
         if (!map.current) return;
-        
+
         if (map.current.getLayer('route')) {
             map.current.removeLayer('route');
         }
@@ -383,10 +384,10 @@ export default function MapboxIntegration({
                     if (status === google.maps.DirectionsStatus.OK && response && response.routes[0]) {
                         const route = response.routes[0];
                         const leg = route.legs[0];
-                        
+
                         setRouteDistance(leg.distance ? leg.distance.value : 0); // meters
                         setRouteDuration(leg.duration ? leg.duration.value : 0); // seconds
-                        
+
                         // Parse instructions removing HTML formatting tags
                         const steps = (leg.steps || []).map((s: any) => ({
                             maneuver: {
@@ -426,7 +427,7 @@ export default function MapboxIntegration({
         try {
             const mapboxProfile = `mapbox/${profile}`;
             const url = `https://api.mapbox.com/directions/v5/${mapboxProfile}/${originCoord[0]},${originCoord[1]};${destCoord[0]},${destCoord[1]}?geometries=geojson&steps=true&language=es&access_token=${mapbox_api_key}`;
-            
+
             const res = await fetch(url);
             const data = await res.json();
 
@@ -445,7 +446,7 @@ export default function MapboxIntegration({
             const route = data.routes[0];
             setRouteDistance(route.distance);
             setRouteDuration(route.duration);
-            
+
             if (route.legs && route.legs[0]) {
                 setRouteSteps(route.legs[0].steps || []);
             }
@@ -550,7 +551,7 @@ export default function MapboxIntegration({
                 const url = `https://api.mapbox.com/search/searchbox/v1/retrieve/${item.id}?access_token=${mapbox_api_key}&session_token=${mapboxSessionToken.current}`;
                 const res = await fetch(url);
                 const data = await res.json();
-                
+
                 if (data.features && data.features[0]) {
                     const coords = data.features[0].geometry.coordinates; // [lng, lat]
                     if (type === 'origin') {
@@ -567,6 +568,7 @@ export default function MapboxIntegration({
                 setLoadingRoute(false);
             }
             setActiveInput(null);
+
             return;
         }
 
@@ -598,7 +600,7 @@ export default function MapboxIntegration({
         setOriginQuery('');
         setOriginCoord(null);
         setOriginSuggestions([]);
-        
+
         setDestQuery('');
         setDestCoord(null);
         setDestSuggestions([]);
@@ -632,7 +634,7 @@ export default function MapboxIntegration({
                 setOriginCoord([longitude, latitude]);
                 setOriginQuery(`${latitude.toFixed(5)}, ${longitude.toFixed(5)} (${__('My Location')})`);
                 setActiveInput(null);
-                
+
                 map.current?.flyTo({
                     center: [longitude, latitude],
                     zoom: 14
@@ -682,7 +684,7 @@ export default function MapboxIntegration({
             if (!activeInput) return;
 
             const { lng, lat } = e.lngLat;
-            
+
             // Set temporary coordinate first
             if (activeInput === 'origin') {
                 setOriginCoord([lng, lat]);
@@ -737,7 +739,7 @@ export default function MapboxIntegration({
             } else if (activeInput === 'destination') {
                 setDestQuery(address);
             }
-            
+
             // Auto close input focus after selecting
             setActiveInput(null);
         };
@@ -797,63 +799,73 @@ export default function MapboxIntegration({
     return (
         <>
             <Head title={__('Mapbox Navigation')} />
-            <div className="space-y-6">
-                <Breadcrumbs breadcrumbs={breadcrumbs} />
+            <div className="w-screen h-screen relative overflow-hidden bg-slate-100 dark:bg-slate-950 select-none">
+                
+                {/* Background Map Container */}
+                <div ref={mapContainer} className="absolute inset-0 w-full h-full z-0" />
 
-                {/* Dashboard-like Route Planner Layout */}
-                <div className="flex flex-col lg:flex-row gap-6 h-[720px] items-stretch">
-                    
-                    {/* Left Sidebar Control Panel */}
-                    <Card className="w-full lg:w-[420px] shrink-0 shadow-sm border-t-4 border-t-indigo-600 flex flex-col h-full overflow-hidden bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl">
-                        
+                {/* Floating Control Sidebar */}
+                <div className="absolute top-4 left-4 bottom-4 z-10 w-[420px] max-w-[calc(100vw-32px)] flex flex-col h-full pointer-events-none">
+                    <Card className="flex-1 shadow-2xl border border-slate-200/60 dark:border-slate-800/60 flex flex-col h-full overflow-hidden bg-white/95 dark:bg-slate-900/95 backdrop-blur-md rounded-2xl pointer-events-auto">
+
                         {/* Control Box Headers & Inputs */}
                         <div className="p-4 border-b border-slate-100 dark:border-slate-800 space-y-4 shrink-0 bg-slate-50/50 dark:bg-slate-900/50">
-                            <div>
-                                <CardTitle className="text-lg flex items-center gap-2">
-                                    <Route className="h-5 w-5 text-indigo-600" />
-                                    {__('Route Planner')}
+                            <div className="flex items-start justify-between gap-4">
+                                <div className="space-y-1">
+                                    <CardTitle className="text-base flex items-center gap-2">
+                                        <Route className="h-4.5 w-4.5 text-indigo-600 animate-pulse" />
+                                        {__('Route Planner')}
+                                    </CardTitle>
+                                    <CardDescription className="text-[10px]">
+                                        {google_maps_active && isGoogleScriptLoaded
+                                            ? __('Planning routes inside Venezuela using high-accuracy Google Maps Places.')
+                                            : __('Search address suggestions and plan routes inside Venezuela.')}
+                                    </CardDescription>
+                                </div>
+                                <div className="flex items-center gap-2 shrink-0">
                                     {google_maps_active && isGoogleScriptLoaded && (
-                                        <span className="text-[10px] bg-blue-100 dark:bg-blue-950 text-blue-800 dark:text-blue-300 font-bold px-2 py-0.5 rounded-full uppercase tracking-wider">Google</span>
+                                        <span className="text-[9px] bg-blue-100 dark:bg-blue-950 text-blue-800 dark:text-blue-300 font-black px-2 py-0.5 rounded-full uppercase tracking-wider">Google</span>
                                     )}
-                                </CardTitle>
-                                <CardDescription className="text-xs">
-                                    {google_maps_active && isGoogleScriptLoaded
-                                        ? __('Planning routes inside Venezuela using high-accuracy Google Maps Places.')
-                                        : __('Search address suggestions and plan routes inside Venezuela.')}
-                                </CardDescription>
+                                    <Button
+                                        variant="ghost"
+                                        size="icon"
+                                        onClick={() => router.visit('/admin/integrations')}
+                                        className="h-8 w-8 text-slate-500 hover:text-slate-750 dark:text-slate-400 dark:hover:text-slate-200 rounded-full"
+                                        title={__('Exit')}
+                                    >
+                                        <ArrowLeft className="h-4 w-4" />
+                                    </Button>
+                                </div>
                             </div>
 
                             {/* Mode profiles */}
                             <div className="flex bg-slate-100 dark:bg-slate-800 p-1 rounded-lg">
                                 <button
                                     onClick={() => setProfile('driving')}
-                                    className={`flex-1 flex items-center justify-center gap-1.5 py-1.5 px-3 rounded-md text-xs font-semibold transition-all ${
-                                        profile === 'driving' 
-                                            ? 'bg-white dark:bg-slate-950 text-indigo-600 shadow-sm' 
-                                            : 'text-slate-500 hover:text-slate-700 dark:hover:text-slate-300'
-                                    }`}
+                                    className={`flex-1 flex items-center justify-center gap-1.5 py-1.5 px-3 rounded-md text-xs font-semibold transition-all ${profile === 'driving'
+                                        ? 'bg-white dark:bg-slate-950 text-indigo-600 shadow-sm'
+                                        : 'text-slate-500 hover:text-slate-700 dark:hover:text-slate-300'
+                                        }`}
                                 >
                                     <Car className="h-3.5 w-3.5" />
                                     {__('Driving')}
                                 </button>
                                 <button
                                     onClick={() => setProfile('cycling')}
-                                    className={`flex-1 flex-1 flex items-center justify-center gap-1.5 py-1.5 px-3 rounded-md text-xs font-semibold transition-all ${
-                                        profile === 'cycling' 
-                                            ? 'bg-white dark:bg-slate-950 text-indigo-600 shadow-sm' 
-                                            : 'text-slate-500 hover:text-slate-700 dark:hover:text-slate-300'
-                                    }`}
+                                    className={`flex-1 flex-1 flex items-center justify-center gap-1.5 py-1.5 px-3 rounded-md text-xs font-semibold transition-all ${profile === 'cycling'
+                                        ? 'bg-white dark:bg-slate-950 text-indigo-600 shadow-sm'
+                                        : 'text-slate-500 hover:text-slate-700 dark:hover:text-slate-300'
+                                        }`}
                                 >
                                     <Bike className="h-3.5 w-3.5" />
                                     {__('Cycling')}
                                 </button>
                                 <button
                                     onClick={() => setProfile('walking')}
-                                    className={`flex-1 flex items-center justify-center gap-1.5 py-1.5 px-3 rounded-md text-xs font-semibold transition-all ${
-                                        profile === 'walking' 
-                                            ? 'bg-white dark:bg-slate-950 text-indigo-600 shadow-sm' 
-                                            : 'text-slate-500 hover:text-slate-700 dark:hover:text-slate-300'
-                                    }`}
+                                    className={`flex-1 flex items-center justify-center gap-1.5 py-1.5 px-3 rounded-md text-xs font-semibold transition-all ${profile === 'walking'
+                                        ? 'bg-white dark:bg-slate-950 text-indigo-600 shadow-sm'
+                                        : 'text-slate-500 hover:text-slate-700 dark:hover:text-slate-300'
+                                        }`}
                                 >
                                     <Footprints className="h-3.5 w-3.5" />
                                     {__('Walking')}
@@ -1011,7 +1023,7 @@ export default function MapboxIntegration({
                                         onClick={() => {
                                             router.visit(`/admin/integrations/map/navigation?origin_lng=${originCoord[0]}&origin_lat=${originCoord[1]}&dest_lng=${destCoord[0]}&dest_lat=${destCoord[1]}&profile=${profile}`);
                                         }}
-                                        className="w-full bg-emerald-650 hover:bg-emerald-700 dark:bg-emerald-600 dark:hover:bg-emerald-500 text-white font-bold py-2.5 shadow-md flex items-center justify-center gap-2 rounded-lg transition-all"
+                                        className="w-full bg-emerald-500 hover:bg-emerald-600 dark:bg-emerald-600 dark:hover:bg-emerald-500 text-white font-bold py-2.5 shadow-md flex items-center justify-center gap-2 rounded-lg transition-all"
                                     >
                                         <Navigation className="h-5 w-5 animate-pulse" />
                                         {__('Start Navigation')}
@@ -1023,7 +1035,7 @@ export default function MapboxIntegration({
                                             <Menu className="h-3.5 w-3.5" />
                                             {__('Directions steps')}
                                         </h3>
-                                        
+
                                         {/* Step Rows */}
                                         <div className="divide-y divide-slate-100 dark:divide-slate-800 border border-slate-100 dark:border-slate-850 rounded-lg overflow-hidden bg-slate-50/25 dark:bg-slate-900/20">
                                             {routeSteps.map((step, idx) => (
@@ -1058,11 +1070,6 @@ export default function MapboxIntegration({
                                 </div>
                             )}
                         </div>
-                    </Card>
-
-                    {/* Right Map Canvas Panel */}
-                    <Card className="flex-1 shadow-sm h-full relative overflow-hidden rounded-xl border border-slate-200 dark:border-slate-800">
-                        <div ref={mapContainer} className="absolute inset-0 w-full h-full" />
                     </Card>
                 </div>
             </div>
