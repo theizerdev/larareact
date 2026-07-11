@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Head, useForm } from '@inertiajs/react';
+import { Head, useForm, Link } from '@inertiajs/react';
 import { Settings2, Map, ShieldCheck, Save, MessageSquare, CreditCard, ExternalLink } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -13,9 +13,11 @@ import Swal from 'sweetalert2';
 interface PageProps {
     mapbox_api_key: string | null;
     mapbox_active: boolean;
+    whatsapp_active: boolean;
+    whatsapp_connected: boolean;
 }
 
-export default function Integrations({ mapbox_api_key, mapbox_active }: PageProps) {
+export default function Integrations({ mapbox_api_key, mapbox_active, whatsapp_active, whatsapp_connected }: PageProps) {
     const { __ } = useTranslate();
 
     const { data, setData, put, processing } = useForm({
@@ -127,26 +129,35 @@ export default function Integrations({ mapbox_api_key, mapbox_active }: PageProp
                         </form>
                     </Card>
 
-                    {/* Placeholder Premium 1: WhatsApp Integration */}
-                    <Card className="shadow-sm border-t-4 border-t-emerald-600 opacity-80 flex flex-col justify-between">
+                    {/* WhatsApp Integration */}
+                    <Card className="shadow-sm border-t-4 border-t-emerald-600 flex flex-col justify-between">
                         <CardHeader>
-                            <div className="flex items-center gap-2">
-                                <div className="p-2 rounded bg-emerald-50 dark:bg-emerald-950/20 text-emerald-600">
-                                    <MessageSquare className="h-5 w-5" />
+                            <div className="flex items-center justify-between">
+                                <div className="flex items-center gap-2">
+                                    <div className="p-2 rounded bg-emerald-50 dark:bg-emerald-950/20 text-emerald-600">
+                                        <MessageSquare className="h-5 w-5" />
+                                    </div>
+                                    <div>
+                                        <CardTitle>{__('WhatsApp API')}</CardTitle>
+                                        <CardDescription>{__('Automate customer messaging and trigger notification alerts.')}</CardDescription>
+                                    </div>
                                 </div>
-                                <div>
-                                    <CardTitle>{__('WhatsApp API')}</CardTitle>
-                                    <CardDescription>{__('Automate customer messaging and trigger notification alerts.')}</CardDescription>
-                                </div>
+                                <BadgeWhatsAppStatus active={whatsapp_active} connected={whatsapp_connected} />
                             </div>
                         </CardHeader>
-                        <CardContent className="flex-1 flex flex-col justify-center items-center py-6 text-center">
-                            <ShieldCheck className="h-10 w-10 text-emerald-500 mb-2" />
-                            <p className="text-sm font-semibold text-slate-800 dark:text-slate-200">{__('Fully Integrated')}</p>
-                            <p className="text-xs text-muted-foreground max-w-xs mt-1">
-                                {__('WhatsApp settings are configured dynamically within each individual Company profile.')}
+                        <CardContent className="flex-1 py-4 text-sm text-slate-600 dark:text-slate-400">
+                            <p>
+                                {__('Connect your corporate WhatsApp account using QR code. Send transactional alerts, customer reminders, and manage templates.')}
                             </p>
                         </CardContent>
+                        <CardFooter className="border-t bg-slate-50/50 dark:bg-slate-900/10 px-6 py-4 flex justify-end">
+                            <Link href="/admin/integrations/whatsapp">
+                                <Button variant="outline" size="sm" className="gap-2 border-emerald-200 text-emerald-700 hover:bg-emerald-50 hover:text-emerald-800 dark:border-emerald-900/50 dark:text-emerald-400 dark:hover:bg-emerald-950/20">
+                                    <Settings2 className="h-4 w-4" />
+                                    {__('Configure')}
+                                </Button>
+                            </Link>
+                        </CardFooter>
                     </Card>
 
                     {/* Placeholder Premium 2: Stripe Integration */}
@@ -186,6 +197,29 @@ function BadgeStatus({ active }: { active: boolean }) {
                 : 'bg-slate-100 text-slate-800 dark:bg-slate-900 dark:text-slate-400'
         }`}>
             {active ? __('Active') : __('Inactive')}
+        </span>
+    );
+}
+
+function BadgeWhatsAppStatus({ active, connected }: { active: boolean; connected: boolean }) {
+    const { __ } = useTranslate();
+    if (!active) {
+        return (
+            <span className="text-[10px] uppercase font-bold tracking-wider px-2 py-0.5 rounded-full bg-slate-100 text-slate-800 dark:bg-slate-900 dark:text-slate-400">
+                {__('Inactive')}
+            </span>
+        );
+    }
+    if (connected) {
+        return (
+            <span className="text-[10px] uppercase font-bold tracking-wider px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300">
+                {__('Connected')}
+            </span>
+        );
+    }
+    return (
+        <span className="text-[10px] uppercase font-bold tracking-wider px-2 py-0.5 rounded-full bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-300">
+            {__('Disconnected')}
         </span>
     );
 }
