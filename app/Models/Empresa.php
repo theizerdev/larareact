@@ -46,6 +46,8 @@ class Empresa extends Model
         'whatsapp_last_connected',
         'mapbox_api_key',
         'mapbox_active',
+        'google_maps_api_key',
+        'google_maps_active',
     ];
 
     protected function casts(): array
@@ -58,6 +60,7 @@ class Empresa extends Model
             'whatsapp_rate_limit' => 'integer',
             'whatsapp_last_connected' => 'datetime',
             'mapbox_active' => 'boolean',
+            'google_maps_active' => 'boolean',
         ];
     }
 

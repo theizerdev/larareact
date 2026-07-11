@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { Head, useForm, router } from '@inertiajs/react';
-import { 
-    Settings2, MessageSquare, QrCode, RefreshCw, Power, Send, Key, 
-    Database, AlertTriangle, CheckCircle2, Copy, Check, Activity, Phone 
+import {
+    Settings2, MessageSquare, QrCode, RefreshCw, Power, Send, Key,
+    Database, AlertTriangle, CheckCircle2, Copy, Check, Activity, Phone
 } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -12,6 +12,7 @@ import { Label } from '@/components/ui/label';
 import { Breadcrumbs } from '@/components/breadcrumbs';
 import { useTranslate } from '@/hooks/use-translate';
 import Swal from 'sweetalert2';
+import PhoneInputGroup, { PaisPhoneOption } from '@/pages/admin/Empresas/Partials/PhoneInputGroup';
 
 interface LiveStatus {
     isConnected: boolean;
@@ -36,6 +37,7 @@ interface PageProps {
     whatsapp_phone: string | null;
     whatsapp_status: string | null;
     live_status: LiveStatus | null;
+    paises: PaisPhoneOption[];
 }
 
 export default function WhatsAppIntegration({
@@ -47,7 +49,8 @@ export default function WhatsAppIntegration({
     whatsapp_active,
     whatsapp_phone,
     whatsapp_status,
-    live_status
+    live_status,
+    paises
 }: PageProps) {
     const { __ } = useTranslate();
     const [copied, setCopied] = useState(false);
@@ -64,7 +67,8 @@ export default function WhatsAppIntegration({
 
     // Formulario de mensaje de prueba
     const [testMessage, setTestMessage] = useState({
-        to: '',
+        paisId: '',
+        phoneNumber: '',
         message: __('Hello! This is a test message from the WhatsApp integration panel.'),
     });
 
@@ -74,7 +78,7 @@ export default function WhatsAppIntegration({
 
         // Solo hacemos polling si la integración está activa y no está completamente conectada con éxito
         const shouldPoll = whatsapp_active && (!liveStatusState?.isConnected || liveStatusState?.connectionState === 'connecting' || liveStatusState?.connectionState === 'qr_ready');
-        
+
         if (shouldPoll) {
             setIsPolling(true);
             intervalId = setInterval(async () => {
@@ -84,7 +88,7 @@ export default function WhatsAppIntegration({
                         const data = await response.json();
                         if (data.success) {
                             setLiveStatusState(data.status);
-                            
+
                             // Si se conectó exitosamente durante el polling, recargar la página para actualizar props
                             if (data.status?.isConnected && !liveStatusState?.isConnected) {
                                 Swal.fire({
@@ -259,19 +263,32 @@ export default function WhatsAppIntegration({
         });
     };
 
+    const getFullPhoneNumber = () => {
+        if (!testMessage.paisId || !testMessage.phoneNumber) return '';
+        const selectedPais = paises.find(p => p.id === Number(testMessage.paisId));
+        if (!selectedPais?.codigo_telefonico) return '';
+        const cleanCode = selectedPais.codigo_telefonico.replace(/^\+/, '');
+        return `${cleanCode}${testMessage.phoneNumber.replace(/\D/g, '')}`;
+    };
+
     const handleSendMessage = (e: React.FormEvent) => {
         e.preventDefault();
-        if (!testMessage.to) {
+        const fullNumber = getFullPhoneNumber();
+
+        if (!fullNumber) {
             Swal.fire({
                 title: __('Missing Phone'),
-                text: __('Please provide a destination phone number.'),
+                text: __('Please select a country and enter a valid phone number.'),
                 icon: 'error',
             });
             return;
         }
 
         setSendingMsg(true);
-        router.post('/admin/integrations/whatsapp/send-message', testMessage, {
+        router.post('/admin/integrations/whatsapp/send-message', {
+            to: fullNumber,
+            message: testMessage.message
+        }, {
             preserveScroll: true,
             onSuccess: () => {
                 setSendingMsg(false);
@@ -282,6 +299,7 @@ export default function WhatsAppIntegration({
                     timer: 2000,
                     showConfirmButton: false,
                 });
+                setTestMessage(prev => ({ ...prev, paisId: '', phoneNumber: '', message: '' }));
             },
             onError: (errors) => {
                 setSendingMsg(false);
@@ -434,9 +452,9 @@ export default function WhatsAppIntegration({
                                                 value={whatsapp_api_key || __('No token generated')}
                                                 className="font-mono text-sm bg-slate-50 dark:bg-slate-900 text-slate-600 select-all"
                                             />
-                                            <Button 
-                                                type="button" 
-                                                variant="outline" 
+                                            <Button
+                                                type="button"
+                                                variant="outline"
                                                 onClick={copyToClipboard}
                                                 disabled={!whatsapp_api_key}
                                                 className="shrink-0"
@@ -459,18 +477,18 @@ export default function WhatsAppIntegration({
 
                                     {/* Button Group */}
                                     <div className="grid grid-cols-2 gap-2 w-full mt-1">
-                                        <Button 
-                                            type="button" 
-                                            variant="outline" 
-                                            onClick={handleGenerateToken} 
+                                        <Button
+                                            type="button"
+                                            variant="outline"
+                                            onClick={handleGenerateToken}
                                             className="gap-1 text-slate-700 hover:text-slate-900 border-slate-200 text-xs"
                                         >
                                             <Key className="h-3.5 w-3.5" />
                                             {__('Generate Token')}
                                         </Button>
-                                        <Button 
-                                            type="button" 
-                                            variant="outline" 
+                                        <Button
+                                            type="button"
+                                            variant="outline"
                                             onClick={handleSyncCompany}
                                             disabled={!whatsapp_api_key}
                                             className="gap-1 text-slate-700 hover:text-emerald-700 border-slate-200 text-xs"
@@ -578,11 +596,11 @@ export default function WhatsAppIntegration({
                                         <p className="text-sm text-muted-foreground max-w-md mx-auto">
                                             {__('Open WhatsApp on your phone, go to Menu or Settings > Linked Devices > Link a Device, and point your camera to this screen.')}
                                         </p>
-                                        
+
                                         {/* QR container */}
                                         <div className="relative mx-auto w-64 h-64 border-4 border-slate-100 rounded-lg p-4 bg-white shadow-sm flex items-center justify-center">
-                                            <img 
-                                                src={liveStatusState.qrCode} 
+                                            <img
+                                                src={liveStatusState.qrCode}
                                                 alt="WhatsApp QR Code"
                                                 className="w-full h-full object-contain select-none"
                                             />
@@ -612,8 +630,8 @@ export default function WhatsAppIntegration({
                                         <p className="text-sm text-muted-foreground max-w-sm">
                                             {__('There is no active session. Click Connect to initiate a new session and generate a linking QR code.')}
                                         </p>
-                                        <Button 
-                                            onClick={handleConnect} 
+                                        <Button
+                                            onClick={handleConnect}
                                             disabled={!whatsapp_api_key}
                                             className="gap-2 bg-emerald-600 hover:bg-emerald-700 text-white font-medium"
                                         >
@@ -630,55 +648,59 @@ export default function WhatsAppIntegration({
                             </CardContent>
                         </Card>
 
-                        {/* Test Messaging Panel */}
-                        {liveStatusState?.isConnected && (
-                            <Card className="shadow-sm border-t-4 border-t-emerald-600 animate-in fade-in slide-in-from-bottom-2 duration-300">
-                                <CardHeader>
-                                    <CardTitle className="text-lg flex items-center gap-2">
-                                        <Send className="h-4 w-4 text-slate-500" />
-                                        {__('Send Test Message')}
-                                    </CardTitle>
-                                    <CardDescription>
-                                        {__('Verify integration output by sending a real-time message to any phone.')}
-                                    </CardDescription>
-                                </CardHeader>
-                                <form onSubmit={handleSendMessage}>
-                                    <CardContent className="space-y-4">
-                                        <div className="space-y-2">
-                                            <Label htmlFor="test_to">{__('Recipient Phone Number')}</Label>
-                                            <Input
-                                                id="test_to"
-                                                placeholder="e.g. 584121234567"
-                                                value={testMessage.to}
-                                                onChange={(e) => setTestMessage(prev => ({ ...prev, to: e.target.value }))}
-                                                className="font-mono"
-                                            />
-                                            <p className="text-xs text-muted-foreground">
-                                                {__('Enter country code followed by number (no spaces or special chars).')}
-                                            </p>
-                                        </div>
-                                        <div className="space-y-2">
-                                            <Label htmlFor="test_msg">{__('Message Text')}</Label>
-                                            <textarea
-                                                id="test_msg"
-                                                rows={3}
-                                                value={testMessage.message}
-                                                onChange={(e) => setTestMessage(prev => ({ ...prev, message: e.target.value }))}
-                                                className="w-full flex min-h-[80px] rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
-                                            />
-                                        </div>
-                                    </CardContent>
-                                    <CardFooter className="border-t bg-slate-50/50 dark:bg-slate-900/10 px-6 py-4 flex justify-end">
-                                        <Button type="submit" disabled={sendingMsg} className="gap-2 bg-emerald-600 hover:bg-emerald-700 text-white">
-                                            <Send className={`h-4 w-4 ${sendingMsg ? 'animate-pulse' : ''}`} />
-                                            {__('Send Message')}
-                                        </Button>
-                                    </CardFooter>
-                                </form>
-                            </Card>
-                        )}
                     </div>
                 </div>
+
+                {/* Test Messaging Panel - Full Width */}
+                {liveStatusState?.isConnected && (
+                    <Card className="shadow-sm border-t-4 border-t-emerald-600 animate-in fade-in slide-in-from-bottom-2 duration-300">
+                        <CardHeader>
+                            <CardTitle className="text-lg flex items-center gap-2">
+                                <Send className="h-4 w-4 text-slate-500" />
+                                {__('Send Test Message')}
+                            </CardTitle>
+                            <CardDescription>
+                                {__('Verify integration output by sending a real-time message to any phone.')}
+                            </CardDescription>
+                        </CardHeader>
+                        <form onSubmit={handleSendMessage}>
+                            <CardContent className="space-y-4">
+                                <div className="grid md:grid-cols-12 gap-4">
+                                    <div className="md:col-span-12 space-y-2">
+                                        <Label>{__('Recipient Phone Number')}</Label>
+                                        <PhoneInputGroup
+                                            paises={paises}
+                                            selectedPaisId={testMessage.paisId}
+                                            phoneValue={testMessage.phoneNumber}
+                                            onPaisChange={(paisId) => setTestMessage(prev => ({ ...prev, paisId: String(paisId) }))}
+                                            onPhoneChange={(phone) => setTestMessage(prev => ({ ...prev, phoneNumber: phone }))}
+                                            placeholder={__('4121234567')}
+                                        />
+                                        <p className="text-xs text-muted-foreground mt-1">
+                                            {__('Select country and enter only the phone number.')}
+                                        </p>
+                                    </div>
+                                    <div className="md:col-span-12 space-y-2">
+                                        <Label htmlFor="test_msg">{__('Message Text')}</Label>
+                                        <textarea
+                                            id="test_msg"
+                                            rows={4}
+                                            value={testMessage.message}
+                                            onChange={(e) => setTestMessage(prev => ({ ...prev, message: e.target.value }))}
+                                            className="w-full flex min-h-[100px] rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                                        />
+                                    </div>
+                                </div>
+                            </CardContent>
+                            <CardFooter className="border-t bg-slate-50/50 dark:bg-slate-900/10 px-6 py-4 flex justify-end">
+                                <Button type="submit" disabled={sendingMsg} className="gap-2 bg-emerald-600 hover:bg-emerald-700 text-white">
+                                    <Send className={`h-4 w-4 ${sendingMsg ? 'animate-pulse' : ''}`} />
+                                    {__('Send Message')}
+                                </Button>
+                            </CardFooter>
+                        </form>
+                    </Card>
+                )}
             </div>
         </>
     );

@@ -13,26 +13,56 @@ import Swal from 'sweetalert2';
 interface PageProps {
     mapbox_api_key: string | null;
     mapbox_active: boolean;
+    google_maps_api_key: string | null;
+    google_maps_active: boolean;
     whatsapp_active: boolean;
     whatsapp_connected: boolean;
 }
 
-export default function Integrations({ mapbox_api_key, mapbox_active, whatsapp_active, whatsapp_connected }: PageProps) {
+export default function Integrations({ 
+    mapbox_api_key, 
+    mapbox_active, 
+    google_maps_api_key,
+    google_maps_active,
+    whatsapp_active, 
+    whatsapp_connected 
+}: PageProps) {
     const { __ } = useTranslate();
 
-    const { data, setData, put, processing } = useForm({
+    const mapboxForm = useForm({
         mapbox_api_key: mapbox_api_key || '',
         mapbox_active: mapbox_active,
     });
 
+    const googleMapsForm = useForm({
+        google_maps_api_key: google_maps_api_key || '',
+        google_maps_active: google_maps_active,
+    });
+
     const handleSaveMapbox = (e: React.FormEvent) => {
         e.preventDefault();
-        put('/admin/integrations/mapbox', {
+        mapboxForm.put('/admin/integrations/mapbox', {
             preserveScroll: true,
             onSuccess: () => {
                 Swal.fire({
                     title: __('Settings Saved'),
                     text: __('Mapbox integration has been successfully updated.'),
+                    icon: 'success',
+                    timer: 2000,
+                    showConfirmButton: false,
+                });
+            },
+        });
+    };
+
+    const handleSaveGoogleMaps = (e: React.FormEvent) => {
+        e.preventDefault();
+        googleMapsForm.put('/admin/integrations/google-maps', {
+            preserveScroll: true,
+            onSuccess: () => {
+                Swal.fire({
+                    title: __('Settings Saved'),
+                    text: __('Google Maps integration has been successfully updated.'),
                     icon: 'success',
                     timer: 2000,
                     showConfirmButton: false,
@@ -80,7 +110,7 @@ export default function Integrations({ mapbox_api_key, mapbox_active, whatsapp_a
                                         <CardDescription>{__('Interactive geolocation and high-performance vector maps.')}</CardDescription>
                                     </div>
                                 </div>
-                                <BadgeStatus active={data.mapbox_active} />
+                                <BadgeStatus active={mapboxForm.data.mapbox_active} />
                             </div>
                         </CardHeader>
                         <form onSubmit={handleSaveMapbox}>
@@ -91,8 +121,8 @@ export default function Integrations({ mapbox_api_key, mapbox_active, whatsapp_a
                                         <p className="text-xs text-muted-foreground">{__('Toggle map engine replacement from Leaflet to Mapbox.')}</p>
                                     </div>
                                     <Switch
-                                        checked={data.mapbox_active}
-                                        onCheckedChange={(checked) => setData('mapbox_active', checked)}
+                                        checked={mapboxForm.data.mapbox_active}
+                                        onCheckedChange={(checked) => mapboxForm.setData('mapbox_active', checked)}
                                     />
                                 </div>
 
@@ -102,16 +132,16 @@ export default function Integrations({ mapbox_api_key, mapbox_active, whatsapp_a
                                         id="mapbox_api_key"
                                         type="password"
                                         placeholder="pk.eyJ1..."
-                                        value={data.mapbox_api_key}
-                                        onChange={(e) => setData('mapbox_api_key', e.target.value)}
-                                        disabled={!data.mapbox_active}
+                                        value={mapboxForm.data.mapbox_api_key}
+                                        onChange={(e) => mapboxForm.setData('mapbox_api_key', e.target.value)}
+                                        disabled={!mapboxForm.data.mapbox_active}
                                         className="font-mono text-sm"
                                     />
                                     <p className="text-xs text-muted-foreground flex items-center gap-1">
                                         <span>{__('Get your token from')}</span>
-                                        <a 
-                                            href="https://mapbox.com" 
-                                            target="_blank" 
+                                        <a
+                                            href="https://mapbox.com"
+                                            target="_blank"
                                             rel="noreferrer"
                                             className="text-indigo-600 hover:underline flex items-center gap-0.5"
                                         >
@@ -120,10 +150,78 @@ export default function Integrations({ mapbox_api_key, mapbox_active, whatsapp_a
                                     </p>
                                 </div>
                             </CardContent>
-                            <CardFooter className="border-t bg-slate-50/50 dark:bg-slate-900/10 px-6 py-4 flex justify-end">
-                                <Button type="submit" disabled={processing} className="gap-2">
+                            <CardFooter className="border-t bg-slate-50/50 dark:bg-slate-900/10 px-6 py-4 flex justify-between">
+                                <Link href="/admin/integrations/map">
+                                    <Button variant="outline" size="sm" className="gap-2 border-indigo-200 text-indigo-700 hover:bg-indigo-50 hover:text-indigo-800 dark:border-indigo-900/50 dark:text-indigo-400 dark:hover:bg-indigo-950/20" disabled={!mapboxForm.data.mapbox_active}>
+                                        <Map className="h-4 w-4" />
+                                        {__('View Routes')}
+                                    </Button>
+                                </Link>
+                                <Button type="submit" disabled={mapboxForm.processing || !mapboxForm.data.mapbox_active} className="gap-2">
                                     <Save className="h-4 w-4" />
-                                    {__('Save Settings')}
+                                    {__('Save Changes')}
+                                </Button>
+                            </CardFooter>
+                        </form>
+                    </Card>
+
+                    {/* Google Maps Integration */}
+                    <Card className="shadow-sm border-t-4 border-t-blue-600 flex flex-col justify-between">
+                        <CardHeader>
+                            <div className="flex items-center justify-between">
+                                <div className="flex items-center gap-2">
+                                    <div className="p-2 rounded bg-blue-50 dark:bg-blue-950/20 text-blue-600">
+                                        <Map className="h-5 w-5" />
+                                    </div>
+                                    <div>
+                                        <CardTitle>{__('Google Maps API')}</CardTitle>
+                                        <CardDescription>{__('High-accuracy geocoding, places autocomplete, and directions service.')}</CardDescription>
+                                    </div>
+                                </div>
+                                <BadgeStatus active={googleMapsForm.data.google_maps_active} />
+                            </div>
+                        </CardHeader>
+                        <form onSubmit={handleSaveGoogleMaps}>
+                            <CardContent className="space-y-4">
+                                <div className="flex items-center justify-between p-3 border rounded-lg bg-slate-50 dark:bg-slate-900/50">
+                                    <div className="space-y-0.5">
+                                        <Label className="text-sm font-medium">{__('Enable Google Maps')}</Label>
+                                        <p className="text-xs text-muted-foreground">{__('Enable Google Maps for routing and geocoding in Venezuela.')}</p>
+                                    </div>
+                                    <Switch
+                                        checked={googleMapsForm.data.google_maps_active}
+                                        onCheckedChange={(checked) => googleMapsForm.setData('google_maps_active', checked)}
+                                    />
+                                </div>
+
+                                <div className="space-y-2">
+                                    <Label htmlFor="google_maps_api_key">{__('Google Maps API Key')}</Label>
+                                    <Input
+                                        id="google_maps_api_key"
+                                        type="password"
+                                        placeholder="AIzaSy..."
+                                        value={googleMapsForm.data.google_maps_api_key}
+                                        onChange={(e) => googleMapsForm.setData('google_maps_api_key', e.target.value)}
+                                        disabled={!googleMapsForm.data.google_maps_active}
+                                        className="font-mono text-sm"
+                                    />
+                                    <p className="text-xs text-muted-foreground flex items-center gap-1">
+                                        <span>{__('Get your API key from')}</span>
+                                        <a
+                                            href="https://console.cloud.google.com"
+                                            target="_blank"
+                                            rel="noreferrer"
+                                            className="text-blue-600 hover:underline flex items-center gap-0.5"
+                                        >
+                                            console.cloud.google.com <ExternalLink className="h-3 w-3 inline" />
+                                        </a>
+                                    </p>
+                                </div>
+                            </CardContent>
+                            <CardFooter className="border-t bg-slate-50/50 dark:bg-slate-900/10 px-6 py-4 flex justify-end">
+                                <Button type="submit" disabled={googleMapsForm.processing || !googleMapsForm.data.google_maps_active} className="gap-2">
+                                    <Save className="h-4 w-4" />
+                                    {__('Save Changes')}
                                 </Button>
                             </CardFooter>
                         </form>
@@ -191,11 +289,10 @@ export default function Integrations({ mapbox_api_key, mapbox_active, whatsapp_a
 function BadgeStatus({ active }: { active: boolean }) {
     const { __ } = useTranslate();
     return (
-        <span className={`text-[10px] uppercase font-bold tracking-wider px-2 py-0.5 rounded-full ${
-            active 
-                ? 'bg-indigo-100 text-indigo-800 dark:bg-indigo-950 dark:text-indigo-300' 
-                : 'bg-slate-100 text-slate-800 dark:bg-slate-900 dark:text-slate-400'
-        }`}>
+        <span className={`text-[10px] uppercase font-bold tracking-wider px-2 py-0.5 rounded-full ${active
+            ? 'bg-indigo-100 text-indigo-800 dark:bg-indigo-950 dark:text-indigo-300'
+            : 'bg-slate-100 text-slate-800 dark:bg-slate-900 dark:text-slate-400'
+            }`}>
             {active ? __('Active') : __('Inactive')}
         </span>
     );

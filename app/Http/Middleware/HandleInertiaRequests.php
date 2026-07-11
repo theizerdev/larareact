@@ -46,6 +46,8 @@ class HandleInertiaRequests extends Middleware
                         'id' => $request->user()->empresa->id,
                         'mapbox_api_key' => $request->user()->empresa->mapbox_api_key,
                         'mapbox_active' => (bool)$request->user()->empresa->mapbox_active,
+                        'google_maps_api_key' => $request->user()->empresa->google_maps_api_key,
+                        'google_maps_active' => (bool)$request->user()->empresa->google_maps_active,
                     ] : null
                 ]) : null,
             ],

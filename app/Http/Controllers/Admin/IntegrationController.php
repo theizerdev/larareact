@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use App\Models\Empresa;
+use App\Models\Pais;
 use App\Services\WhatsAppService;
 use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\Log;
@@ -36,8 +37,54 @@ class IntegrationController extends Controller
         return inertia('admin/integrations/index', [
             'mapbox_api_key' => $empresa->mapbox_api_key,
             'mapbox_active' => (bool)$empresa->mapbox_active,
+            'google_maps_api_key' => $empresa->google_maps_api_key,
+            'google_maps_active' => (bool)$empresa->google_maps_active,
             'whatsapp_active' => (bool)$empresa->whatsapp_active,
             'whatsapp_connected' => $whatsappConnected,
+        ]);
+    }
+
+    /**
+     * Muestra la página de navegación Mapbox.
+     */
+    public function mapboxMap(Request $request)
+    {
+        $empresa = $request->user()->empresa;
+
+        if (!$empresa) {
+            return redirect()->route('admin.dashboard')->with('notification', [
+                'type' => 'error',
+                'message' => __('No active company associated with your user.'),
+            ]);
+        }
+
+        return inertia('admin/integrations/map', [
+            'mapbox_api_key' => $empresa->mapbox_api_key,
+            'mapbox_active' => (bool)$empresa->mapbox_active,
+            'google_maps_api_key' => $empresa->google_maps_api_key,
+            'google_maps_active' => (bool)$empresa->google_maps_active,
+        ]);
+    }
+
+    /**
+     * Muestra la pantalla de navegación en tiempo real.
+     */
+    public function mapboxNavigation(Request $request)
+    {
+        $empresa = $request->user()->empresa;
+
+        if (!$empresa) {
+            return redirect()->route('admin.dashboard')->with('notification', [
+                'type' => 'error',
+                'message' => __('No active company associated with your user.'),
+            ]);
+        }
+
+        return inertia('admin/integrations/navigation', [
+            'mapbox_api_key' => $empresa->mapbox_api_key,
+            'mapbox_active' => (bool)$empresa->mapbox_active,
+            'google_maps_api_key' => $empresa->google_maps_api_key,
+            'google_maps_active' => (bool)$empresa->google_maps_active,
         ]);
     }
 
@@ -72,6 +119,36 @@ class IntegrationController extends Controller
     }
 
     /**
+     * Actualiza la configuración de Google Maps de la empresa del usuario.
+     */
+    public function updateGoogleMaps(Request $request)
+    {
+        $empresa = $request->user()->empresa;
+
+        if (!$empresa) {
+            return back()->with('notification', [
+                'type' => 'error',
+                'message' => __('No active company associated with your user.'),
+            ]);
+        }
+
+        $validated = $request->validate([
+            'google_maps_api_key' => 'nullable|string|max:255',
+            'google_maps_active' => 'required|boolean',
+        ]);
+
+        $empresa->update([
+            'google_maps_api_key' => $validated['google_maps_api_key'],
+            'google_maps_active' => $validated['google_maps_active'],
+        ]);
+
+        return back()->with('notification', [
+            'type' => 'success',
+            'message' => __('Google Maps integration settings updated successfully.'),
+        ]);
+    }
+
+    /**
      * Muestra la interfaz de configuración y estado de WhatsApp.
      */
     public function whatsappIndex(Request $request)
@@ -91,7 +168,18 @@ class IntegrationController extends Controller
         // Sincronizar estado local en DB con estado en vivo
         $this->syncLocalWhatsAppStatus($empresa, $status);
 
+        $currentLocale = app()->getLocale();
+        $translations = file_exists($path = base_path('lang/'.$currentLocale.'.json'))
+            ? json_decode(file_get_contents($path) ?: '{}', true)
+            : [];
+
+        // Obtener lista de países activos para el selector de teléfono
+        $paises = Pais::where('activo', true)
+            ->orderBy('nombre', 'asc')
+            ->get(['id', 'nombre', 'codigo_iso2', 'codigo_telefonico']);
+            
         return inertia('admin/integrations/whatsapp', [
+            'paises' => $paises,
             'empresa_id' => $empresa->id,
             'empresa_nombre' => $empresa->razon_social ?? $empresa->name ?? 'Empresa',
             'whatsapp_api_key' => $empresa->whatsapp_api_key,
@@ -101,6 +189,8 @@ class IntegrationController extends Controller
             'whatsapp_phone' => $empresa->whatsapp_phone,
             'whatsapp_status' => $empresa->whatsapp_status,
             'live_status' => $status,
+            'locale' => $currentLocale,
+            'translations' => $translations,
         ]);
     }
 
