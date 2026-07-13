@@ -10,26 +10,46 @@ use App\Models\Skill;
 use App\Models\Experience;
 use App\Models\Client;
 
+use Illuminate\Http\Request;
+
 class DashboardController extends Controller
 {
-    public function index()
+    public function index(Request $request)
     {
-        // 30 Days Visit Metrics
-        $last30DaysVisits = Visit::where('created_at', '>=', now()->subDays(30))->count();
-        $prev30DaysVisits = Visit::whereBetween('created_at', [now()->subDays(60), now()->subDays(30)])->count();
-        
-        if ($prev30DaysVisits > 0) {
-            $visitsChange = round((($last30DaysVisits - $prev30DaysVisits) / $prev30DaysVisits) * 100, 1);
+        $startDateStr = $request->query('start_date');
+        $endDateStr = $request->query('end_date');
+
+        if ($startDateStr && $endDateStr) {
+            $startDate = \Carbon\Carbon::parse($startDateStr)->startOfDay();
+            $endDate = \Carbon\Carbon::parse($endDateStr)->endOfDay();
+        } else {
+            $startDate = now()->subDays(30)->startOfDay();
+            $endDate = now()->endOfDay();
+        }
+
+        // Calculate length of the range in days
+        $days = $startDate->diffInDays($endDate) ?: 1;
+
+        // Current range visits
+        $currentVisits = Visit::whereBetween('created_at', [$startDate, $endDate])->count();
+
+        // Previous range visits
+        $prevStartDate = $startDate->copy()->subDays($days);
+        $prevEndDate = $startDate->copy();
+        $prevVisits = Visit::whereBetween('created_at', [$prevStartDate, $prevEndDate])->count();
+
+        if ($prevVisits > 0) {
+            $visitsChange = round((($currentVisits - $prevVisits) / $prevVisits) * 100, 1);
             $visitsTrendSign = $visitsChange >= 0 ? '+' : '';
             $visitsChangeFormatted = $visitsTrendSign . $visitsChange . '%';
             $trendDirection = $visitsChange >= 0 ? 'up' : 'down';
         } else {
-            $visitsChangeFormatted = $last30DaysVisits > 0 ? '+100%' : '0%';
+            $visitsChangeFormatted = $currentVisits > 0 ? '+100%' : '0%';
             $trendDirection = 'up';
         }
 
-        // Daily Visits for Last 30 Days Chart
-        $visitsTrendData = Visit::where('created_at', '>=', now()->subDays(30))
+        // Daily visits for chart in the selected range
+        $visitsTrendData = Visit::whereBetween('created_at', [$startDate, $endDate])
             ->selectRaw('DATE(created_at) as date, COUNT(*) as count')
             ->groupBy('date')
             ->orderBy('date', 'asc')
@@ -42,36 +62,49 @@ class DashboardController extends Controller
         }
 
         $chartData = [];
-        for ($i = 29; $i >= 0; $i--) {
-            $dateObj = now()->subDays($i);
-            $dateKey = $dateObj->format('Y-m-d');
+        // Loop through each day from start_date to end_date
+        $tempDate = $startDate->copy();
+        while ($tempDate->lte($endDate)) {
+            $dateKey = $tempDate->format('Y-m-d');
             $chartData[] = [
-                'date' => $dateObj->format('d M'),
+                'date' => $tempDate->format('d M'),
                 'count' => $visitsTrendMap[$dateKey] ?? 0,
             ];
+            $tempDate = $tempDate->addDay();
         }
 
-        // Compilation of stats
+        // Messages count in range
+        $messagesTotal = Message::whereBetween('created_at', [$startDate, $endDate])->count();
+        $messagesUnread = Message::where('is_read', false)->count(); // Keep general unread count
+
+        // Other global portfolio counts
         $stats = [
-            'visits_total' => Visit::count(),
-            'visits_last_30_days' => $last30DaysVisits,
+            'visits_total' => Visit::count(), // keep total visits for context
+            'visits_last_30_days' => $currentVisits, // current selected range visits
             'visits_change' => $visitsChangeFormatted,
             'visits_trend' => $trendDirection,
             'projects_count' => Project::count(),
             'skills_count' => Skill::count(),
             'experiences_count' => Experience::count(),
             'clients_count' => Client::count(),
-            'messages_total' => Message::count(),
-            'messages_unread' => Message::where('is_read', false)->count(),
+            'messages_total' => $messagesTotal,
+            'messages_unread' => $messagesUnread,
         ];
 
-        // Fetch recent messages
-        $recentMessages = Message::orderBy('created_at', 'desc')->take(5)->get();
+        // Fetch recent messages in range
+        $recentMessages = Message::whereBetween('created_at', [$startDate, $endDate])
+            ->orderBy('created_at', 'desc')
+            ->take(5)
+            ->get();
 
         return inertia('Admin/dashboard', [
             'stats' => $stats,
             'chartData' => $chartData,
             'recentMessages' => $recentMessages,
+            'filters' => [
+                'start_date' => $startDate->format('Y-m-d'),
+                'end_date' => $endDate->format('Y-m-d'),
+            ],
         ]);
     }
 }

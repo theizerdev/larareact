@@ -35,7 +35,7 @@ class DbMonitoringController extends Controller
                 $tables = DB::select('
                     SELECT 
                         table_name AS name, 
-                        table_rows AS rows, 
+                        table_rows AS row_count, 
                         ROUND(((data_length + index_length) / 1024 / 1024), 2) AS size_mb 
                     FROM information_schema.TABLES 
                     WHERE table_schema = ?
@@ -45,11 +45,11 @@ class DbMonitoringController extends Controller
                 foreach ($tables as $t) {
                     $tablesInfo[] = [
                         'name' => $t->name,
-                        'rows' => (int) ($t->rows ?? 0),
+                        'rows' => (int) ($t->row_count ?? 0),
                         'size_mb' => (float) ($t->size_mb ?? 0),
                     ];
                     $totalSizeMb += (float) ($t->size_mb ?? 0);
-                    $totalRows += (int) ($t->rows ?? 0);
+                    $totalRows += (int) ($t->row_count ?? 0);
                 }
             } elseif ($dbDriver === 'sqlite') {
                 $versionRow = DB::select('select sqlite_version() as version');
