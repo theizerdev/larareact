@@ -723,5 +723,10 @@
   "Stop": "Detener",
   "Simulate": "Simular",
   "GPS Off": "Apagar GPS",
-  "GPS Tracking": "Seguimiento GPS"
+  "GPS Tracking": "Seguimiento GPS",
+  "Manage Skills": "Administrar Habilidades",
+  "Manage Projects": "Administrar Proyectos",
+  "Manage Experiences": "Administrar Experiencias",
+  "Manage Clients": "Administrar Clientes",
+  "Manage Biography": "Administrar Biografía"
 }

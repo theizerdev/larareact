@@ -20,22 +20,30 @@ createServer((page) =>
                 ['./pages/**/*.tsx', '!./pages/**/Partials/**/*.tsx'],
                 { eager: true }
             ) as Record<string, any>;
-            const pageComponent = pages[`./pages/${name}.tsx`].default || pages[`./pages/${name}.tsx`];
+            
+            const path = `./pages/${name}.tsx`;
+            const pathLower = path.toLowerCase();
+            const matchingKey = Object.keys(pages).find((key) => key.toLowerCase() === pathLower);
+            
+            const pageComponent = matchingKey
+                ? pages[matchingKey].default || pages[matchingKey]
+                : pages[path].default || pages[path];
             
             // Apply layout resolver on SSR
+            const nameLower = name.toLowerCase();
             if (!pageComponent.layout) {
                 switch (true) {
-                    case name === 'welcome':
-                    case name === 'admin/integrations/navigation':
-                    case name === 'admin/integrations/map':
+                    case nameLower === 'welcome':
+                    case nameLower === 'admin/integrations/navigation':
+                    case nameLower === 'admin/integrations/map':
                         pageComponent.layout = null;
                         break;
-                    case name.startsWith('auth/'):
+                    case nameLower.startsWith('auth/'):
                         pageComponent.layout = (page: any) => <AuthLayout>{page}</AuthLayout>;
                         break;
-                    case name.startsWith('admin/'):
-                    case name === 'dashboard':
-                    case name.startsWith('settings/'):
+                    case nameLower.startsWith('admin/'):
+                    case nameLower === 'dashboard':
+                    case nameLower.startsWith('settings/'):
                         pageComponent.layout = (page: any) => <AdminLayout>{page}</AdminLayout>;
                         break;
                     default:

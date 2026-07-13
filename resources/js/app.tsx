@@ -15,19 +15,28 @@ createInertiaApp({
             ['./pages/**/*.tsx', '!./pages/**/Partials/**/*.tsx'],
             { eager: true }
         ) as Record<string, any>;
-        return pages[`./pages/${name}.tsx`];
+        
+        const path = `./pages/${name}.tsx`;
+        const pathLower = path.toLowerCase();
+        const matchingKey = Object.keys(pages).find((key) => key.toLowerCase() === pathLower);
+        
+        if (matchingKey) {
+            return pages[matchingKey];
+        }
+        return pages[path];
     },
     layout: (name) => {
+        const nameLower = name.toLowerCase();
         switch (true) {
-            case name === 'welcome':
-            case name === 'admin/integrations/navigation':
-            case name === 'admin/integrations/map':
+            case nameLower === 'welcome':
+            case nameLower === 'admin/integrations/navigation':
+            case nameLower === 'admin/integrations/map':
                 return null;
-            case name.startsWith('auth/'):
+            case nameLower.startsWith('auth/'):
                 return AuthLayout;
-            case name.startsWith('admin/'):
-            case name === 'dashboard':
-            case name.startsWith('settings/'):
+            case nameLower.startsWith('admin/'):
+            case nameLower === 'dashboard':
+            case nameLower.startsWith('settings/'):
                 return AdminLayout;
             default:
                 return AppLayout;

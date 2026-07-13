@@ -20,6 +20,7 @@ import {
     X,
     Activity,
     Link2,
+    Briefcase,
 } from 'lucide-react';
 import * as React from 'react';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -57,6 +58,12 @@ import { index as logMonitoringIndex } from '@/routes/admin/monitoring/logs';
 import { index as queuesMonitoringIndex } from '@/routes/admin/monitoring/queues';
 import { index as tasksMonitoringIndex } from '@/routes/admin/monitoring/tasks';
 import { index as integrationsIndex } from '@/routes/admin/integrations';
+import { edit as aboutEdit } from '@/routes/admin/about';
+import { index as skillsIndex } from '@/routes/admin/skills';
+import { index as projectsIndex } from '@/routes/admin/projects';
+import { index as experiencesIndex } from '@/routes/admin/experiences';
+import { index as clientsIndex } from '@/routes/admin/clients';
+import { index as messagesIndex } from '@/routes/admin/messages';
 import { Building2, GitBranch } from 'lucide-react';
 import type { BreadcrumbItem, NavItem } from '@/types';
 import { useTranslate } from '@/hooks/use-translate';
@@ -373,6 +380,40 @@ export default function AdminSaasLayout({
                                 collapsed={collapsed}
                             />
                         ))}
+
+                        <div className="pt-2">
+                            <CollapsibleNavItem
+                                title="Portfolio"
+                                icon={Briefcase}
+                                collapsed={collapsed}
+                                items={[
+                                    {
+                                        title: 'Sobre Mí',
+                                        href: aboutEdit.url(),
+                                    },
+                                    {
+                                        title: 'Habilidades',
+                                        href: skillsIndex.url(),
+                                    },
+                                    {
+                                        title: 'Proyectos',
+                                        href: projectsIndex.url(),
+                                    },
+                                    {
+                                        title: 'Experiencia',
+                                        href: experiencesIndex.url(),
+                                    },
+                                    {
+                                        title: 'Clientes',
+                                        href: clientsIndex.url(),
+                                    },
+                                    {
+                                        title: 'Mensajes',
+                                        href: messagesIndex.url(),
+                                    },
+                                ]}
+                            />
+                        </div>
 
                         <div className="pt-4">
                             <CollapsibleNavItem
