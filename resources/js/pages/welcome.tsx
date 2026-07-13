@@ -6,6 +6,9 @@ import 'swiper/css';
 import { dashboard, login } from '@/routes';
 import { store as contactStore } from '@/routes/contact';
 import type { User, About, Project, Skill, Experience, Client } from '@/types';
+import { useTranslate } from '@/hooks/use-translate';
+import LanguageToggle from '@/components/language-toggle';
+import { Menu, X } from 'lucide-react';
 
 interface WelcomeProps {
     auth: { user: User | null };
@@ -146,8 +149,10 @@ const SkillBar = ({ proficiency }: { proficiency: number }) => {
 };
 
 export default function Welcome({ auth, about, projects, skills, experiences, clients = [] }: WelcomeProps) {
+    const { __ } = useTranslate();
     const [theme, setTheme] = useState('dark');
     const [activeFilter, setActiveFilter] = useState('All');
+    const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
     const canvasRef = useRef<HTMLCanvasElement>(null);
     const cursorRef = useRef<HTMLDivElement>(null);
     const [cursorHovered, setCursorHovered] = useState(false);
@@ -402,7 +407,7 @@ export default function Welcome({ auth, about, projects, skills, experiences, cl
             onSuccess: () => {
                 reset();
                 setPhoneInput('');
-                setFormSuccessMessage('¡Mensaje enviado con éxito! Nos pondremos en contacto pronto.');
+                setFormSuccessMessage(__('¡Mensaje enviado con éxito! Nos pondremos en contacto pronto.'));
                 setTimeout(() => setFormSuccessMessage(''), 5000);
             }
         });
@@ -505,19 +510,22 @@ export default function Welcome({ auth, about, projects, skills, experiences, cl
                         </a>
 
                         <nav className="hidden md:flex items-center space-x-8 text-sm font-medium">
-                            <a href="#about" className="hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors">Sobre Mí</a>
-                            <a href="#skills" className="hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors">Habilidades</a>
-                            <a href="#projects" className="hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors">Proyectos</a>
-                            <a href="#experience" className="hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors">Experiencia</a>
-                            <a href="#contact" className="hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors">Contacto</a>
+                            <a href="#about" className="hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors">{__('Sobre Mí')}</a>
+                            <a href="#skills" className="hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors">{__('Habilidades')}</a>
+                            <a href="#projects" className="hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors">{__('Proyectos')}</a>
+                            <a href="#experience" className="hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors">{__('Experiencia')}</a>
+                            <a href="#contact" className="hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors">{__('Contacto')}</a>
                         </nav>
 
                         <div className="flex items-center space-x-4">
+                            {/* Language Toggle */}
+                            <LanguageToggle />
+
                             {/* Theme Toggle */}
                             <button
                                 onClick={toggleTheme}
-                                className="p-2 rounded-full bg-slate-100 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-800 transition-all"
-                                aria-label="Cambiar Tema"
+                                className="p-2 rounded-full bg-slate-100 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-800 transition-all cursor-pointer"
+                                aria-label={__('Cambiar Tema')}
                             >
                                 {theme === 'dark' ? (
                                     <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -546,27 +554,79 @@ export default function Welcome({ auth, about, projects, skills, experiences, cl
                                     Login
                                 </Link>
                             )}
+
+                            {/* Mobile Hamburger Menu Toggle */}
+                            <button
+                                onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+                                className="p-2 rounded-full border border-slate-200 dark:border-slate-800 text-slate-600 dark:text-slate-300 md:hidden hover:bg-slate-100 dark:hover:bg-slate-900 transition-all cursor-pointer"
+                                aria-label={__('Toggle Menu')}
+                            >
+                                {mobileMenuOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
+                            </button>
                         </div>
                     </div>
+
+                    {/* Mobile Navigation Dropdown Menu */}
+                    {mobileMenuOpen && (
+                        <div className="md:hidden border-t border-slate-200/50 dark:border-slate-800/50 bg-white/95 dark:bg-slate-950/95 backdrop-blur-md transition-all duration-300">
+                            <nav className="flex flex-col px-6 py-4 space-y-4 text-sm font-semibold text-slate-700 dark:text-slate-250">
+                                <a 
+                                    href="#about" 
+                                    onClick={() => setMobileMenuOpen(false)} 
+                                    className="hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors"
+                                >
+                                    {__('Sobre Mí')}
+                                </a>
+                                <a 
+                                    href="#skills" 
+                                    onClick={() => setMobileMenuOpen(false)} 
+                                    className="hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors"
+                                >
+                                    {__('Habilidades')}
+                                </a>
+                                <a 
+                                    href="#projects" 
+                                    onClick={() => setMobileMenuOpen(false)} 
+                                    className="hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors"
+                                >
+                                    {__('Proyectos')}
+                                </a>
+                                <a 
+                                    href="#experience" 
+                                    onClick={() => setMobileMenuOpen(false)} 
+                                    className="hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors"
+                                >
+                                    {__('Experiencia')}
+                                </a>
+                                <a 
+                                    href="#contact" 
+                                    onClick={() => setMobileMenuOpen(false)} 
+                                    className="hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors"
+                                >
+                                    {__('Contacto')}
+                                </a>
+                            </nav>
+                        </div>
+                    )}
                 </header>
 
                 {/* Hero Section */}
                 <section className="relative min-h-[calc(100vh-4rem)] flex items-center justify-center px-6 overflow-hidden">
                     <div className="max-w-4xl text-center z-10 space-y-8">
                         <span className="inline-block px-3 py-1 text-xs font-semibold tracking-wider text-indigo-600 dark:text-indigo-400 bg-indigo-100/50 dark:bg-indigo-950/50 border border-indigo-200/50 dark:border-indigo-800/50 rounded-full uppercase">
-                            {about?.hero_badge || 'Disponible para Proyectos'}
+                            {about?.hero_badge || __('Disponible para Proyectos')}
                         </span>
 
                         <h1 className="text-4xl sm:text-6xl md:text-7xl font-extrabold tracking-tight">
-                            Hola, soy <span className="bg-gradient-to-r from-indigo-600 via-violet-500 to-purple-500 dark:from-indigo-400 dark:to-purple-400 bg-clip-text text-transparent">{about?.hero_title || 'Theizer Gonzalez'}</span>
+                            {__('Hola, soy')} <span className="bg-gradient-to-r from-indigo-600 via-violet-500 to-purple-500 dark:from-indigo-400 dark:to-purple-400 bg-clip-text text-transparent">{about?.hero_title || 'Theizer Gonzalez'}</span>
                         </h1>
 
                         <p className="max-w-2xl mx-auto text-lg md:text-xl text-slate-600 dark:text-slate-400 font-light leading-relaxed min-h-[4rem] sm:min-h-0">
-                            Desarrollador Web Full Stack apasionado por construir <Typewriter phrases={[
-                                'aplicaciones interactivas y eficientes.',
-                                'interfaces modernas y fluidas.',
-                                'soluciones web con diseño premium.',
-                                'arquitecturas escalables e intuitivas.'
+                            {__('Desarrollador Web Full Stack apasionado por construir')} <Typewriter phrases={[
+                                __('aplicaciones interactivas y eficientes.'),
+                                __('interfaces modernas y fluidas.'),
+                                __('soluciones web con diseño premium.'),
+                                __('arquitecturas escalables e intuitivas.')
                             ]} />
                         </p>
 
@@ -575,13 +635,13 @@ export default function Welcome({ auth, about, projects, skills, experiences, cl
                                 href="#projects"
                                 className="w-full sm:w-auto px-8 py-3.5 text-sm font-semibold text-white bg-indigo-600 hover:bg-indigo-500 rounded-lg shadow-lg shadow-indigo-600/30 dark:shadow-indigo-500/20 transition-all hover:-translate-y-0.5"
                             >
-                                Ver mis proyectos
+                                {__('Ver Proyectos')}
                             </a>
                             <a
                                 href="#contact"
                                 className="w-full sm:w-auto px-8 py-3.5 text-sm font-semibold bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 hover:bg-slate-50 dark:hover:bg-slate-800 rounded-lg transition-all hover:-translate-y-0.5"
                             >
-                                Contáctame
+                                {__('Contactar')}
                             </a>
                         </div>
                     </div>
@@ -626,26 +686,26 @@ export default function Welcome({ auth, about, projects, skills, experiences, cl
                             </div>
 
                             <div className="md:col-span-7 space-y-6">
-                                <h2 className="text-3xl font-bold tracking-tight">Sobre Mí</h2>
+                                <h2 className="text-3xl font-bold tracking-tight">{__('Sobre Mí')}</h2>
                                 <div
                                     className="text-slate-600 dark:text-slate-400 font-light leading-relaxed prose dark:prose-invert max-w-none"
                                     dangerouslySetInnerHTML={{
-                                        __html: about && about.bio ? about.bio : 'Completa tu biografía profesional en el panel de administración.'
+                                        __html: about && about.bio ? about.bio : __('Completa tu biografía profesional en el panel de administración.')
                                     }}
                                 />
 
                                 <div className="grid grid-cols-2 gap-4 pt-4">
                                     <div className="p-4 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800">
                                         <div className="text-2xl font-bold text-indigo-600 dark:text-indigo-400">
-                                            {about ? about.experience_years : '0 Años'}
+                                            {about ? (about.experience_years.toString().toLowerCase().includes('año') || about.experience_years.toString().toLowerCase().includes('year') ? __(about.experience_years) : `${about.experience_years} ${__('Años')}`) : __('0 Años')}
                                         </div>
-                                        <div className="text-xs text-slate-500 dark:text-slate-400">Experiencia Profesional</div>
+                                        <div className="text-xs text-slate-500 dark:text-slate-400">{__('Experiencia Profesional')}</div>
                                     </div>
                                     <div className="p-4 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800">
                                         <div className="text-2xl font-bold text-indigo-600 dark:text-indigo-400">
-                                            {about ? about.completed_projects : '0 Proyectos'}
+                                            {about ? (about.completed_projects.toString().toLowerCase().includes('proyecto') || about.completed_projects.toString().toLowerCase().includes('project') ? __(about.completed_projects) : `${about.completed_projects} ${__('Proyectos')}`) : __('0 Proyectos')}
                                         </div>
-                                        <div className="text-xs text-slate-500 dark:text-slate-400">Entregados con Éxito</div>
+                                        <div className="text-xs text-slate-500 dark:text-slate-400">{__('Entregados con Éxito')}</div>
                                     </div>
                                 </div>
                             </div>
@@ -657,8 +717,8 @@ export default function Welcome({ auth, about, projects, skills, experiences, cl
                 <section id="skills" className="py-24 bg-slate-100/50 dark:bg-slate-900/30 border-y border-slate-200/50 dark:border-slate-800/50 scroll-mt-16">
                     <div className="max-w-7xl mx-auto px-6">
                         <div className="text-center space-y-3 mb-16">
-                            <h2 className="text-3xl font-bold tracking-tight">Mis Habilidades</h2>
-                            <p className="text-slate-600 dark:text-slate-400 font-light">Tecnologías y herramientas que domino en el desarrollo.</p>
+                            <h2 className="text-3xl font-bold tracking-tight">{__('Habilidades y Tecnologías')}</h2>
+                            <p className="text-slate-600 dark:text-slate-400 font-light">{__('Mi arsenal técnico para dar vida a ideas innovadoras.')}</p>
                         </div>
 
                         <div className="grid md:grid-cols-3 gap-8">
@@ -666,7 +726,7 @@ export default function Welcome({ auth, about, projects, skills, experiences, cl
                                 <ScrollReveal key={category} delay={catIdx * 150}>
                                     <GlowCard className="p-6">
                                         <h3 className="text-lg font-bold text-indigo-600 dark:text-indigo-400 border-b border-slate-100 dark:border-slate-800 pb-3 uppercase tracking-wider text-xs mb-6">
-                                            {category}
+                                            {__(category)}
                                         </h3>
                                         <div className="space-y-4">
                                             {skills[category].map((skill) => (
@@ -690,8 +750,8 @@ export default function Welcome({ auth, about, projects, skills, experiences, cl
                 <section id="projects" className="py-24 max-w-7xl mx-auto px-6 scroll-mt-16">
                     <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 mb-12">
                         <div className="space-y-3">
-                            <h2 className="text-3xl font-bold tracking-tight">Proyectos Recientes</h2>
-                            <p className="text-slate-600 dark:text-slate-400 font-light">Trabajos de desarrollo web en producción y portafolio.</p>
+                            <h2 className="text-3xl font-bold tracking-tight">{__('Proyectos Destacados')}</h2>
+                            <p className="text-slate-600 dark:text-slate-400 font-light">{__('Una selección de mis últimos desarrollos y trabajos representativos.')}</p>
                         </div>
 
                         {/* Filter Tabs */}
@@ -705,7 +765,7 @@ export default function Welcome({ auth, about, projects, skills, experiences, cl
                                         : 'bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 hover:bg-slate-100 dark:hover:bg-slate-800'
                                         }`}
                                 >
-                                    {cat}
+                                    {__(cat)}
                                 </button>
                             ))}
                         </div>
@@ -734,12 +794,12 @@ export default function Welcome({ auth, about, projects, skills, experiences, cl
 
                                             {project.is_featured ? (
                                                 <span className="absolute top-3 left-3 px-2.5 py-0.5 text-[10px] font-bold text-white bg-indigo-600 rounded-full uppercase tracking-wider">
-                                                    Destacado
+                                                    {__('Destacado')}
                                                 </span>
                                             ) : null}
 
                                             <span className="absolute top-3 right-3 px-2.5 py-0.5 text-[10px] font-bold text-slate-600 dark:text-slate-300 bg-slate-150 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-full uppercase tracking-wider">
-                                                {project.category}
+                                                {__(project.category)}
                                             </span>
                                         </div>
 
@@ -762,7 +822,7 @@ export default function Welcome({ auth, about, projects, skills, experiences, cl
                                                         rel="noopener noreferrer"
                                                         className="inline-flex items-center text-xs font-semibold text-indigo-600 dark:text-indigo-400 hover:opacity-80 transition-opacity"
                                                     >
-                                                        Demo En Vivo
+                                                        {__('Demo En Vivo')}
                                                         <svg className="w-3.5 h-3.5 ml-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
                                                         </svg>
@@ -775,7 +835,7 @@ export default function Welcome({ auth, about, projects, skills, experiences, cl
                                                         rel="noopener noreferrer"
                                                         className="inline-flex items-center text-xs font-semibold text-slate-600 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200 transition-colors"
                                                     >
-                                                        Código GitHub
+                                                        {__('Ver Código')}
                                                         <svg className="w-3.5 h-3.5 ml-1" fill="currentColor" viewBox="0 0 24 24">
                                                             <path fillRule="evenodd" d="M12 2C6.477 2 2 6.477 2 12c0 4.42 2.87 8.17 6.84 9.5.5.08.66-.23.66-.5v-1.69c-2.77.6-3.36-1.34-3.36-1.34-.46-1.16-1.11-1.47-1.11-1.47-.9-.62.07-.6.07-.6 1 .07 1.53 1.03 1.53 1.03.9 1.52 2.34 1.07 2.91.83.09-.65.35-1.09.63-1.34-2.22-.25-4.55-1.11-4.55-4.92 0-1.11.38-2 1.03-2.71-.1-.25-.45-1.29.1-2.64 0 0 .84-.27 2.75 1.02.79-.22 1.65-.33 2.5-.33.85 0 1.71.11 2.5.33 1.91-1.29 2.75-1.02 2.75-1.02.55 1.35.2 2.39.1 2.64.65.71 1.03 1.6 1.03 2.71 0 3.82-2.34 4.66-4.57 4.91.36.31.69.92.69 1.85V21c0 .27.16.59.67.5C19.14 20.16 22 16.42 22 12A10 10 0 0012 2z" clipRule="evenodd" />
                                                         </svg>
@@ -788,7 +848,7 @@ export default function Welcome({ auth, about, projects, skills, experiences, cl
                             ))
                         ) : (
                             <div className="col-span-full text-center py-12 text-slate-500">
-                                No hay proyectos cargados en esta categoría.
+                                {__('No hay proyectos cargados en esta categoría.')}
                             </div>
                         )}
                     </div>
@@ -800,10 +860,10 @@ export default function Welcome({ auth, about, projects, skills, experiences, cl
                         <div className="max-w-7xl mx-auto px-6">
                             <div className="text-center space-y-2 mb-10">
                                 <h2 className="text-xs font-semibold tracking-wider text-indigo-600 dark:text-indigo-400 uppercase">
-                                    Clientes Actuales
+                                    {__('Clientes Actuales')}
                                 </h2>
                                 <p className="text-2xl font-bold tracking-tight text-slate-800 dark:text-slate-100">
-                                    Marcas y Empresas que Confían en Mí
+                                    {__('Marcas y Empresas que Confían en Mí')}
                                 </p>
                             </div>
 
@@ -860,8 +920,8 @@ export default function Welcome({ auth, about, projects, skills, experiences, cl
                 <section id="experience" className="py-24 bg-slate-100/50 dark:bg-slate-900/30 border-y border-slate-200/50 dark:border-slate-800/50 scroll-mt-16">
                     <div className="max-w-3xl mx-auto px-6">
                         <div className="text-center space-y-3 mb-16">
-                            <h2 className="text-3xl font-bold tracking-tight">Mi Experiencia</h2>
-                            <p className="text-slate-600 dark:text-slate-400 font-light">Línea de tiempo de mi trayectoria laboral en tecnología.</p>
+                            <h2 className="text-3xl font-bold tracking-tight">{__('Experiencia Laboral')}</h2>
+                            <p className="text-slate-600 dark:text-slate-400 font-light">{__('Mi recorrido profesional en empresas y proyectos freelance.')}</p>
                         </div>
 
                         <div className="relative border-l border-slate-200 dark:border-slate-800 space-y-12 pl-6 ml-4">
@@ -876,7 +936,7 @@ export default function Welcome({ auth, about, projects, skills, experiences, cl
                                             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1">
                                                 <h3 className="text-lg font-bold">{exp.role}</h3>
                                                 <span className="text-xs font-semibold px-2.5 py-1 bg-indigo-50 dark:bg-indigo-950/40 text-indigo-600 dark:text-indigo-400 border border-indigo-100 dark:border-indigo-800/40 rounded-md self-start sm:self-auto">
-                                                    {exp.start_date} – {exp.is_current ? 'Presente' : exp.end_date}
+                                                    {exp.start_date} – {exp.is_current ? __('Presente') : exp.end_date}
                                                 </span>
                                             </div>
                                             <div className="text-sm font-semibold text-slate-500 dark:text-slate-400">{exp.company}</div>
@@ -895,8 +955,8 @@ export default function Welcome({ auth, about, projects, skills, experiences, cl
                 <section id="contact" className="py-24 max-w-xl mx-auto px-6 scroll-mt-16">
                     <ScrollReveal>
                         <div className="text-center space-y-3 mb-12">
-                            <h2 className="text-3xl font-bold tracking-tight">Ponte En Contacto</h2>
-                            <p className="text-slate-600 dark:text-slate-400 font-light">¿Tienes un proyecto en mente? Escríbeme y hagámoslo realidad.</p>
+                            <h2 className="text-3xl font-bold tracking-tight">{__('Ponte En Contacto')}</h2>
+                            <p className="text-slate-600 dark:text-slate-400 font-light">{__('¿Tienes un proyecto en mente? Escríbeme y hagámoslo realidad.')}</p>
                         </div>
 
                         {formSuccessMessage && (
@@ -920,7 +980,7 @@ export default function Welcome({ auth, about, projects, skills, experiences, cl
                             return (
                                 <div className="space-y-1.5 mb-6">
                                     <div className="flex justify-between items-center text-xs font-semibold text-slate-500">
-                                        <span>Completitud del mensaje</span>
+                                        <span>{__('Completitud del mensaje')}</span>
                                         <span className="text-indigo-600 dark:text-indigo-400">{completeness}%</span>
                                     </div>
                                     <div className="h-1.5 w-full bg-slate-100 dark:bg-slate-800 rounded-full overflow-hidden">
@@ -941,7 +1001,7 @@ export default function Welcome({ auth, about, projects, skills, experiences, cl
                         <form onSubmit={handleSubmit} className="space-y-6">
                             <div className="grid grid-cols-2 gap-4">
                                 <div className="space-y-2">
-                                    <label htmlFor="name" className="text-xs font-semibold uppercase tracking-wider text-slate-500">Nombre</label>
+                                    <label htmlFor="name" className="text-xs font-semibold uppercase tracking-wider text-slate-500">{__('Nombre')}</label>
                                     <input
                                         id="name"
                                         type="text"
@@ -953,7 +1013,7 @@ export default function Welcome({ auth, about, projects, skills, experiences, cl
                                     {errors.name && <div className="text-xs text-red-500 mt-1">{errors.name}</div>}
                                 </div>
                                 <div className="space-y-2">
-                                    <label htmlFor="email" className="text-xs font-semibold uppercase tracking-wider text-slate-500">Correo Electrónico</label>
+                                    <label htmlFor="email" className="text-xs font-semibold uppercase tracking-wider text-slate-500">{__('Correo Electrónico')}</label>
                                     <input
                                         id="email"
                                         type="email"
@@ -968,7 +1028,7 @@ export default function Welcome({ auth, about, projects, skills, experiences, cl
 
                             {/* Campo de Teléfono con Selector de Código de País y Buscador */}
                             <div className="space-y-2 relative">
-                                <label htmlFor="phone" className="text-xs font-semibold uppercase tracking-wider text-slate-500">Número Telefónico (Opcional)</label>
+                                <label htmlFor="phone" className="text-xs font-semibold uppercase tracking-wider text-slate-500">{__('Número Telefónico (Opcional)')}</label>
 
                                 <div className="relative flex rounded-lg border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 focus-within:ring-2 focus-within:ring-indigo-500/20 focus-within:border-indigo-500 overflow-visible transition-all">
                                     {/* Selector del Código de País */}
@@ -1006,7 +1066,7 @@ export default function Welcome({ auth, about, projects, skills, experiences, cl
                                                 <div className="p-2 border-b border-slate-100 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/50">
                                                     <input
                                                         type="text"
-                                                        placeholder="Buscar país..."
+                                                        placeholder={__('Buscar país...')}
                                                         value={searchQuery}
                                                         onChange={e => setSearchQuery(e.target.value)}
                                                         className="w-full px-3 py-1.5 text-xs rounded border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-950 focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500 text-slate-800 dark:text-slate-200"
@@ -1032,7 +1092,7 @@ export default function Welcome({ auth, about, projects, skills, experiences, cl
                                                         </li>
                                                     ))}
                                                     {filteredCountries.length === 0 && (
-                                                        <li className="px-4 py-3.5 text-center text-slate-500 dark:text-slate-400">No se encontraron resultados</li>
+                                                        <li className="px-4 py-3.5 text-center text-slate-500 dark:text-slate-400">{__('No se encontraron resultados')}</li>
                                                     )}
                                                 </ul>
                                             </div>
@@ -1043,7 +1103,7 @@ export default function Welcome({ auth, about, projects, skills, experiences, cl
                             </div>
 
                             <div className="space-y-2">
-                                <label htmlFor="subject" className="text-xs font-semibold uppercase tracking-wider text-slate-500">Asunto (Opcional)</label>
+                                <label htmlFor="subject" className="text-xs font-semibold uppercase tracking-wider text-slate-500">{__('Asunto (Opcional)')}</label>
                                 <input
                                     id="subject"
                                     type="text"
@@ -1055,7 +1115,7 @@ export default function Welcome({ auth, about, projects, skills, experiences, cl
                             </div>
 
                             <div className="space-y-2">
-                                <label htmlFor="message" className="text-xs font-semibold uppercase tracking-wider text-slate-500">Mensaje</label>
+                                <label htmlFor="message" className="text-xs font-semibold uppercase tracking-wider text-slate-500">{__('Mensaje')}</label>
                                 <textarea
                                     id="message"
                                     required
@@ -1070,9 +1130,9 @@ export default function Welcome({ auth, about, projects, skills, experiences, cl
                             <button
                                 type="submit"
                                 disabled={processing}
-                                className="w-full py-4 text-sm font-semibold text-white bg-indigo-600 hover:bg-indigo-500 rounded-lg shadow-lg shadow-indigo-600/20 disabled:opacity-50 transition-all"
+                                className="w-full py-4 text-sm font-semibold text-white bg-indigo-600 hover:bg-indigo-500 rounded-lg shadow-lg shadow-indigo-600/20 disabled:opacity-50 transition-all cursor-pointer"
                             >
-                                {processing ? 'Enviando...' : 'Enviar mensaje'}
+                                {processing ? __('Enviando...') : __('Enviar mensaje')}
                             </button>
                         </form>
                     </ScrollReveal>
@@ -1082,7 +1142,7 @@ export default function Welcome({ auth, about, projects, skills, experiences, cl
                 <footer className="border-t border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-950 py-8 transition-colors duration-300">
                     <div className="max-w-7xl mx-auto px-6 flex flex-col md:flex-row items-center justify-between gap-4 text-sm text-slate-500 dark:text-slate-400">
                         <div>
-                            &copy; {new Date().getFullYear()} Theizer Gonzalez. Todos los derechos reservados.
+                            &copy; {new Date().getFullYear()} Theizer Gonzalez. {__('Todos los derechos reservados.')}
                         </div>
                         <div className="flex items-center space-x-6">
                             <a href="https://github.com" target="_blank" rel="noopener noreferrer" className="hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors">
