@@ -432,25 +432,25 @@ export default function Welcome({ auth, about, projects, skills, experiences, cl
         <>
             <Head>
                 <title>{about?.hero_title ? `Portafolio Profesional | ${about.hero_title}` : 'Portafolio Profesional | Theizer Gonzalez'}</title>
-                <meta name="description" content={metaDescription} />
-                <meta name="keywords" content={metaKeywords} />
-                <meta name="author" content={authorName} />
-                <meta name="robots" content="index, follow" />
-                <link rel="canonical" href={siteUrl} />
+                <meta name="description" content={metaDescription} head-key="description" />
+                <meta name="keywords" content={metaKeywords} head-key="keywords" />
+                <meta name="author" content={authorName} head-key="author" />
+                <meta name="robots" content="index, follow" head-key="robots" />
+                <link rel="canonical" href={siteUrl} head-key="canonical" />
 
                 {/* Open Graph / Facebook */}
-                <meta property="og:type" content="website" />
-                <meta property="og:url" content={siteUrl} />
-                <meta property="og:title" content={about?.hero_title ? `Portafolio Profesional | ${about.hero_title}` : 'Portafolio Profesional | Theizer Gonzalez'} />
-                <meta property="og:description" content={metaDescription} />
-                {avatarUrl && <meta property="og:image" content={avatarUrl} />}
+                <meta property="og:type" content="website" head-key="og:type" />
+                <meta property="og:url" content={siteUrl} head-key="og:url" />
+                <meta property="og:title" content={about?.hero_title ? `Portafolio Profesional | ${about.hero_title}` : 'Portafolio Profesional | Theizer Gonzalez'} head-key="og:title" />
+                <meta property="og:description" content={metaDescription} head-key="og:description" />
+                {avatarUrl && <meta property="og:image" content={avatarUrl} head-key="og:image" />}
 
                 {/* Twitter */}
-                <meta name="twitter:card" content="summary_large_image" />
-                <meta name="twitter:url" content={siteUrl} />
-                <meta name="twitter:title" content={about?.hero_title ? `Portafolio Profesional | ${about.hero_title}` : 'Portafolio Profesional | Theizer Gonzalez'} />
-                <meta name="twitter:description" content={metaDescription} />
-                {avatarUrl && <meta name="twitter:image" content={avatarUrl} />}
+                <meta name="twitter:card" content="summary_large_image" head-key="twitter:card" />
+                <meta name="twitter:url" content={siteUrl} head-key="twitter:url" />
+                <meta name="twitter:title" content={about?.hero_title ? `Portafolio Profesional | ${about.hero_title}` : 'Portafolio Profesional | Theizer Gonzalez'} head-key="twitter:title" />
+                <meta name="twitter:description" content={metaDescription} head-key="twitter:description" />
+                {avatarUrl && <meta name="twitter:image" content={avatarUrl} head-key="twitter:image" />}
             </Head>
 
             {/* Custom Interactive Cursor */}
