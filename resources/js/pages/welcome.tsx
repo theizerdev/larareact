@@ -506,7 +506,11 @@ export default function Welcome({ auth, about, projects, skills, experiences, cl
                 <header className="sticky top-0 z-40 w-full backdrop-blur-md bg-white/60 dark:bg-slate-950/60 border-b border-slate-200/50 dark:border-slate-800/50 transition-all duration-300">
                     <div className="max-w-7xl mx-auto px-6 h-16 flex items-center justify-between">
                         <a href="#" className="text-xl font-bold tracking-tight bg-gradient-to-r from-indigo-600 to-violet-500 dark:from-indigo-400 dark:to-purple-400 bg-clip-text text-transparent hover:opacity-85 transition-opacity">
-                            Theizer.dev
+                            <img
+                                src="/image/logo/logo.png"
+                                alt="LaraReact Logo"
+                                className="h-20 w-auto object-contain"
+                            />
                         </a>
 
                         <nav className="hidden md:flex items-center space-x-8 text-sm font-medium">
@@ -571,18 +575,16 @@ export default function Welcome({ auth, about, projects, skills, experiences, cl
                 {/* Off-canvas Mobile Menu */}
                 <div className={`fixed inset-0 z-50 md:hidden ${mobileMenuOpen ? 'visible' : 'invisible'}`}>
                     {/* Backdrop overlay */}
-                    <div 
-                        className={`fixed inset-0 bg-slate-950/40 dark:bg-slate-950/60 backdrop-blur-sm transition-opacity duration-300 ${
-                            mobileMenuOpen ? 'opacity-100' : 'opacity-0'
-                        }`}
+                    <div
+                        className={`fixed inset-0 bg-slate-950/40 dark:bg-slate-950/60 backdrop-blur-sm transition-opacity duration-300 ${mobileMenuOpen ? 'opacity-100' : 'opacity-0'
+                            }`}
                         onClick={() => setMobileMenuOpen(false)}
                     />
 
                     {/* Drawer panel */}
-                    <div 
-                        className={`fixed inset-y-0 right-0 w-80 max-w-[85vw] bg-white/95 dark:bg-slate-950/95 backdrop-blur-md border-l border-slate-200/50 dark:border-slate-800/50 shadow-2xl p-6 flex flex-col justify-between transform transition-transform duration-300 ease-out ${
-                            mobileMenuOpen ? 'translate-x-0' : 'translate-x-full'
-                        }`}
+                    <div
+                        className={`fixed inset-y-0 right-0 w-80 max-w-[85vw] bg-white/95 dark:bg-slate-950/95 backdrop-blur-md border-l border-slate-200/50 dark:border-slate-800/50 shadow-2xl p-6 flex flex-col justify-between transform transition-transform duration-300 ease-out ${mobileMenuOpen ? 'translate-x-0' : 'translate-x-full'
+                            }`}
                     >
                         <div className="space-y-6">
                             {/* Header */}
@@ -649,7 +651,7 @@ export default function Welcome({ auth, about, projects, skills, experiences, cl
                         </span>
 
                         <h1 className="text-4xl sm:text-6xl md:text-7xl font-extrabold tracking-tight">
-                            {__('Hola, soy')} <span className="bg-gradient-to-r from-indigo-600 via-violet-500 to-purple-500 dark:from-indigo-400 dark:to-purple-400 bg-clip-text text-transparent">{about?.hero_title || 'Theizer Gonzalez'}</span>
+                            {__('Hola, soy')} <span className="bg-gradient-to-r from-indigo-600 via-violet-500 to-purple-500 dark:from-indigo-400 dark:to-purple-400 bg-clip-text text-transparent">{about?.hero_title || 'Theizer dev'}</span>
                         </h1>
 
                         <p className="max-w-2xl mx-auto text-lg md:text-xl text-slate-600 dark:text-slate-400 font-light leading-relaxed min-h-[4rem] sm:min-h-0">
@@ -1017,10 +1019,10 @@ export default function Welcome({ auth, about, projects, skills, experiences, cl
                                     <div className="h-1.5 w-full bg-slate-100 dark:bg-slate-800 rounded-full overflow-hidden">
                                         <div
                                             className={`h-full transition-all duration-500 rounded-full ${completeness === 100
-                                                    ? 'bg-emerald-500'
-                                                    : completeness >= 66
-                                                        ? 'bg-indigo-500'
-                                                        : 'bg-indigo-400/50'
+                                                ? 'bg-emerald-500'
+                                                : completeness >= 66
+                                                    ? 'bg-indigo-500'
+                                                    : 'bg-indigo-400/50'
                                                 }`}
                                             style={{ width: `${completeness}%` }}
                                         />
@@ -1173,13 +1175,13 @@ export default function Welcome({ auth, about, projects, skills, experiences, cl
                 <footer className="border-t border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-950 py-8 transition-colors duration-300">
                     <div className="max-w-7xl mx-auto px-6 flex flex-col md:flex-row items-center justify-between gap-4 text-sm text-slate-500 dark:text-slate-400">
                         <div>
-                            &copy; {new Date().getFullYear()} Theizer Gonzalez. {__('Todos los derechos reservados.')}
+                            &copy; {new Date().getFullYear()} Theizer dev. {__('Todos los derechos reservados.')}
                         </div>
                         <div className="flex items-center space-x-6">
-                            <a href="https://github.com" target="_blank" rel="noopener noreferrer" className="hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors">
+                            <a href="https://github.com/theizerdev" target="_blank" rel="noopener noreferrer" className="hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors">
                                 GitHub
                             </a>
-                            <a href="https://linkedin.com" target="_blank" rel="noopener noreferrer" className="hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors">
+                            <a href="https://linkedin.com/in/theizer-gonzalez-1a6459179" target="_blank" rel="noopener noreferrer" className="hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors">
                                 LinkedIn
                             </a>
                         </div>
