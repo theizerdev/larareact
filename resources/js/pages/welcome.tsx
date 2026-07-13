@@ -566,49 +566,80 @@ export default function Welcome({ auth, about, projects, skills, experiences, cl
                         </div>
                     </div>
 
-                    {/* Mobile Navigation Dropdown Menu */}
-                    {mobileMenuOpen && (
-                        <div className="md:hidden border-t border-slate-200/50 dark:border-slate-800/50 bg-white/95 dark:bg-slate-950/95 backdrop-blur-md transition-all duration-300">
-                            <nav className="flex flex-col px-6 py-4 space-y-4 text-sm font-semibold text-slate-700 dark:text-slate-250">
-                                <a 
-                                    href="#about" 
-                                    onClick={() => setMobileMenuOpen(false)} 
-                                    className="hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors"
+                </header>
+
+                {/* Off-canvas Mobile Menu */}
+                <div className={`fixed inset-0 z-50 md:hidden ${mobileMenuOpen ? 'visible' : 'invisible'}`}>
+                    {/* Backdrop overlay */}
+                    <div 
+                        className={`fixed inset-0 bg-slate-950/40 dark:bg-slate-950/60 backdrop-blur-sm transition-opacity duration-300 ${
+                            mobileMenuOpen ? 'opacity-100' : 'opacity-0'
+                        }`}
+                        onClick={() => setMobileMenuOpen(false)}
+                    />
+
+                    {/* Drawer panel */}
+                    <div 
+                        className={`fixed inset-y-0 right-0 w-80 max-w-[85vw] bg-white/95 dark:bg-slate-950/95 backdrop-blur-md border-l border-slate-200/50 dark:border-slate-800/50 shadow-2xl p-6 flex flex-col justify-between transform transition-transform duration-300 ease-out ${
+                            mobileMenuOpen ? 'translate-x-0' : 'translate-x-full'
+                        }`}
+                    >
+                        <div className="space-y-6">
+                            {/* Header */}
+                            <div className="flex items-center justify-between pb-4 border-b border-slate-100 dark:border-slate-900">
+                                <span className="text-lg font-bold bg-gradient-to-r from-indigo-600 to-violet-500 dark:from-indigo-400 dark:to-purple-400 bg-clip-text text-transparent">
+                                    Theizer.dev
+                                </span>
+                                <button
+                                    onClick={() => setMobileMenuOpen(false)}
+                                    className="p-2 rounded-full border border-slate-200 dark:border-slate-800 text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-900 transition-colors cursor-pointer"
+                                    aria-label={__('Cerrar')}
                                 >
-                                    {__('Sobre Mí')}
-                                </a>
-                                <a 
-                                    href="#skills" 
-                                    onClick={() => setMobileMenuOpen(false)} 
-                                    className="hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors"
-                                >
-                                    {__('Habilidades')}
-                                </a>
-                                <a 
-                                    href="#projects" 
-                                    onClick={() => setMobileMenuOpen(false)} 
-                                    className="hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors"
-                                >
-                                    {__('Proyectos')}
-                                </a>
-                                <a 
-                                    href="#experience" 
-                                    onClick={() => setMobileMenuOpen(false)} 
-                                    className="hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors"
-                                >
-                                    {__('Experiencia')}
-                                </a>
-                                <a 
-                                    href="#contact" 
-                                    onClick={() => setMobileMenuOpen(false)} 
-                                    className="hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors"
-                                >
-                                    {__('Contacto')}
-                                </a>
+                                    <X className="h-5 w-5" />
+                                </button>
+                            </div>
+
+                            {/* Body links */}
+                            <nav className="flex flex-col space-y-3">
+                                {[
+                                    { id: 'about', label: 'Sobre Mí' },
+                                    { id: 'skills', label: 'Habilidades' },
+                                    { id: 'projects', label: 'Proyectos' },
+                                    { id: 'experience', label: 'Experiencia' },
+                                    { id: 'contact', label: 'Contacto' },
+                                ].map((item) => (
+                                    <a
+                                        key={item.id}
+                                        href={`#${item.id}`}
+                                        onClick={() => setMobileMenuOpen(false)}
+                                        className="flex items-center px-4 py-3 rounded-xl hover:bg-indigo-50/50 dark:hover:bg-indigo-950/20 text-sm font-semibold text-slate-700 dark:text-slate-350 hover:text-indigo-600 dark:hover:text-indigo-400 transition-all border border-transparent hover:border-indigo-100/50 dark:hover:border-indigo-950/30"
+                                    >
+                                        {__(item.label)}
+                                    </a>
+                                ))}
                             </nav>
                         </div>
-                    )}
-                </header>
+
+                        {/* Footer links */}
+                        <div className="space-y-6 pt-6 border-t border-slate-100 dark:border-slate-900">
+                            {auth.user ? (
+                                <Link
+                                    href={dashboard().url}
+                                    className="flex items-center justify-center w-full py-3 text-sm font-semibold text-white bg-indigo-600 hover:bg-indigo-500 rounded-xl shadow-lg shadow-indigo-600/20 transition-all"
+                                >
+                                    Dashboard
+                                </Link>
+                            ) : (
+                                <Link
+                                    href={login().url}
+                                    className="flex items-center justify-center w-full py-3 text-sm font-semibold border border-slate-200 dark:border-slate-800 hover:bg-slate-50 dark:hover:bg-slate-900 rounded-xl text-slate-750 dark:text-slate-350 transition-all"
+                                >
+                                    Login
+                                </Link>
+                            )}
+                        </div>
+                    </div>
+                </div>
 
                 {/* Hero Section */}
                 <section className="relative min-h-[calc(100vh-4rem)] flex items-center justify-center px-6 overflow-hidden">
