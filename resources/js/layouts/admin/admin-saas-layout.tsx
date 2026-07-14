@@ -48,6 +48,8 @@ import { edit as securityEdit } from '@/routes/security';
 import { index as paisesIndex } from '@/routes/admin/paises';
 import { index as empresasIndex } from '@/routes/admin/empresas';
 import { index as sucursalesIndex } from '@/routes/admin/sucursales';
+import { index as departamentosIndex } from '@/routes/admin/departamentos';
+import { index as cargosIndex } from '@/routes/admin/cargos';
 import { index as rolesIndex } from '@/routes/admin/roles';
 import { index as usuariosIndex } from '@/routes/admin/usuarios';
 import { index as dbMonitoringIndex } from '@/routes/admin/monitoring/database';
@@ -387,6 +389,14 @@ export default function AdminSaasLayout({
                                     {
                                         title: 'Branches',
                                         href: sucursalesIndex.url(),
+                                    },
+                                    {
+                                        title: 'Departments',
+                                        href: departamentosIndex.url(),
+                                    },
+                                    {
+                                        title: 'Positions',
+                                        href: cargosIndex.url(),
                                     },
                                     {
                                         title: 'Countries',
