@@ -180,12 +180,15 @@ export default function ForgotPassword({
 
     const handleVerifyOtp = (otpCode?: string) => {
         const code = otpCode || verifyForm.data.otp;
+        
         verifyForm.transform((data) => ({
             ...data,
             otp: code,
             pais_telefono_id: requestForm.data.pais_telefono_id,
             telefono: requestForm.data.telefono,
-        })).post(verifyOtp().url, {
+        }));
+
+        verifyForm.post(verifyOtp().url, {
             preserveState: true,
             onSuccess: () => {
                 setStep('reset_password');
@@ -195,11 +198,14 @@ export default function ForgotPassword({
 
     const handleResetPassword = (e: React.FormEvent) => {
         e.preventDefault();
+
         resetForm.transform((data) => ({
             ...data,
             pais_telefono_id: requestForm.data.pais_telefono_id,
             telefono: requestForm.data.telefono,
-        })).post(otpReset().url);
+        }));
+
+        resetForm.post(otpReset().url);
     };
 
     return (
@@ -209,13 +215,6 @@ export default function ForgotPassword({
             {/* ── Paso 1: Solicitar Código OTP ── */}
             {step === 'request_otp' && (
                 <div className="space-y-6">
-                    <div className="text-center space-y-1">
-                        <h2 className="text-xl font-semibold tracking-tight">Recuperar por WhatsApp</h2>
-                        <p className="text-sm text-muted-foreground">
-                            Ingresa tu número de teléfono para recibir un código de verificación en tu WhatsApp.
-                        </p>
-                    </div>
-
                     <form onSubmit={handleSendOtp} className="space-y-5">
                         <FormField
                             label="Número telefónico"
@@ -252,13 +251,6 @@ export default function ForgotPassword({
             {/* ── Paso 2: Verificar Código OTP ── */}
             {step === 'verify_otp' && (
                 <div className="space-y-6">
-                    <div className="text-center space-y-1">
-                        <h2 className="text-xl font-semibold tracking-tight">Ingresa el código OTP</h2>
-                        <p className="text-sm text-muted-foreground">
-                            Hemos enviado un código de 6 dígitos al número ingresado.
-                        </p>
-                    </div>
-
                     <div className="space-y-6">
                         <OTPInput
                             key={step}
@@ -302,13 +294,6 @@ export default function ForgotPassword({
             {/* ── Paso 3: Restablecer Contraseña ── */}
             {step === 'reset_password' && (
                 <div className="space-y-6">
-                    <div className="text-center space-y-1">
-                        <h2 className="text-xl font-semibold tracking-tight">Nueva contraseña</h2>
-                        <p className="text-sm text-muted-foreground">
-                            Código OTP verificado correctamente. Define tu nueva contraseña de acceso.
-                        </p>
-                    </div>
-
                     <form onSubmit={handleResetPassword} className="space-y-5">
                         <FormField
                             label="Nueva contraseña"

@@ -36,7 +36,7 @@ class HandleInertiaRequests extends Middleware
     public function share(Request $request): array
     {
         $currentLocale = app()->getLocale();
-        \Log::debug("HandleInertiaRequests: current locale is '{$currentLocale}'");
+       
 
         return [
             ...parent::share($request),

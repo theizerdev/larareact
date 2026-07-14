@@ -39,7 +39,7 @@ class ForgotPasswordOtpController extends Controller
     public function sendOtp(Request $request)
     {
         $request->validate([
-            'pais_telefono_id' => 'required|exists:paises,id',
+            'pais_telefono_id' => 'required|exists:pais,id',
             'telefono' => 'required|string',
         ]);
 
@@ -57,9 +57,8 @@ class ForgotPasswordOtpController extends Controller
         // Generar un OTP de 6 dígitos
         $otp = sprintf('%06d', mt_rand(100000, 999999));
 
-        // Guardar el OTP en el usuario
-        $user->whatsapp_otp = $otp;
-        $user->save();
+        // Guardar el OTP en caché (válido por 10 minutos)
+        \Illuminate\Support\Facades\Cache::put("otp_{$user->id}", $otp, now()->addMinutes(10));
 
         // Obtener el código telefónico del país
         $pais = Pais::find($request->pais_telefono_id);
@@ -78,7 +77,7 @@ class ForgotPasswordOtpController extends Controller
         // Registrar en logs locales para facilitar el testing
         Log::info("OTP generado para {$user->email}: {$otp} (Teléfono: {$cleanNumber})");
 
-        $sent = $whatsappService->sendMessage($cleanNumber, $message);
+        $sent = $whatsappService->sendMessage($cleanNumber, $message,true);
 
         // Limpiar cualquier estado previo de verificación de la sesión
         session()->forget(['otp_verified_phone', 'otp_verified_pais_id', 'otp_verified_at']);
@@ -103,7 +102,7 @@ class ForgotPasswordOtpController extends Controller
     public function verifyOtp(Request $request)
     {
         $request->validate([
-            'pais_telefono_id' => 'required|exists:paises,id',
+            'pais_telefono_id' => 'required|exists:pais,id',
             'telefono' => 'required|string',
             'otp' => 'required|string|size:6',
         ]);
@@ -118,12 +117,17 @@ class ForgotPasswordOtpController extends Controller
             ]);
         }
 
-        // Validar el OTP guardado
-        if ($user->whatsapp_otp !== $request->otp) {
+        // Validar el OTP guardado en caché
+        $cachedOtp = \Illuminate\Support\Facades\Cache::get("otp_{$user->id}");
+
+        if (!$cachedOtp || $cachedOtp !== $request->otp) {
             return back()->withErrors([
-                'otp' => __('El código OTP ingresado es incorrecto.'),
+                'otp' => __('El código OTP ingresado es incorrecto o ha expirado.'),
             ]);
         }
+
+        // Limpiar el OTP de la caché tras ser verificado
+        \Illuminate\Support\Facades\Cache::forget("otp_{$user->id}");
 
         // Registrar el estado de verificación en la sesión
         session([
@@ -144,7 +148,7 @@ class ForgotPasswordOtpController extends Controller
     public function resetPassword(Request $request)
     {
         $request->validate([
-            'pais_telefono_id' => 'required|exists:paises,id',
+            'pais_telefono_id' => 'required|exists:pais,id',
             'telefono' => 'required|string',
             'password' => 'required|string|min:8|confirmed',
         ]);
@@ -173,10 +177,23 @@ class ForgotPasswordOtpController extends Controller
             ]);
         }
 
-        // Actualizar la contraseña del usuario y limpiar el OTP
+        // Actualizar la contraseña del usuario
         $user->password = Hash::make($request->password);
-        $user->whatsapp_otp = null;
         $user->save();
+
+        // Obtener el código telefónico del país y formatear número
+        $pais = Pais::find($request->pais_telefono_id);
+        $codigoTelefonico = $pais->codigo_telefonico;
+        $fullNumber = $codigoTelefonico . $request->telefono;
+        $cleanNumber = preg_replace('/[^0-9]/', '', $fullNumber);
+
+        // Enviar mensaje de confirmación de cambio de contraseña
+        $empresa = $user->empresa ?? Empresa::first();
+        $whatsappService = new WhatsAppService($empresa);
+        
+        $confirmationMessage = "¡Hola! 👋\n\nTu contraseña ha sido actualizada con éxito en nuestro sistema. ¡Para nosotros, tu seguridad es lo primero! 🔒\n\n¿No fuiste tú? Por favor contáctanos de inmediato respondiendo a este mensaje para proteger tu cuenta.\n\nEstamos aquí para ayudarte. 💛";
+        
+        $whatsappService->sendMessage($cleanNumber, $confirmationMessage, true);
 
         // Limpiar las variables de verificación de la sesión
         session()->forget(['otp_verified_phone', 'otp_verified_pais_id', 'otp_verified_at']);
