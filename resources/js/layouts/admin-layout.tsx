@@ -1,9 +1,9 @@
-import AdminSaasLayout from '@/layouts/admin/admin-saas-layout';
-import type { BreadcrumbItem } from '@/types';
 import { usePage } from '@inertiajs/react';
 import { useEffect } from 'react';
-import { notifyError, notifySuccess } from '@/utils/notifications';
 import { TemplateSettingsProvider } from '@/hooks/use-template-settings';
+import AdminSaasLayout from '@/layouts/admin/admin-saas-layout';
+import type { BreadcrumbItem } from '@/types';
+import { notifyError, notifySuccess } from '@/utils/notifications';
 
 export default function AdminLayout({
     breadcrumbs = [],

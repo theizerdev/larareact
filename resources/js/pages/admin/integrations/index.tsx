@@ -1,14 +1,14 @@
-import React, { useState } from 'react';
 import { Head, useForm, Link } from '@inertiajs/react';
 import { Settings2, Map, ShieldCheck, Save, MessageSquare, CreditCard, ExternalLink } from 'lucide-react';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Switch } from '@/components/ui/switch';
-import { Label } from '@/components/ui/label';
-import { Breadcrumbs } from '@/components/breadcrumbs';
-import { useTranslate } from '@/hooks/use-translate';
+import React, { useState } from 'react';
 import Swal from 'sweetalert2';
+import { Breadcrumbs } from '@/components/breadcrumbs';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Switch } from '@/components/ui/switch';
+import { useTranslate } from '@/hooks/use-translate';
 
 interface PageProps {
     mapbox_api_key: string | null;
@@ -288,6 +288,7 @@ export default function Integrations({
 
 function BadgeStatus({ active }: { active: boolean }) {
     const { __ } = useTranslate();
+
     return (
         <span className={`text-[10px] uppercase font-bold tracking-wider px-2 py-0.5 rounded-full ${active
             ? 'bg-indigo-100 text-indigo-800 dark:bg-indigo-950 dark:text-indigo-300'
@@ -300,6 +301,7 @@ function BadgeStatus({ active }: { active: boolean }) {
 
 function BadgeWhatsAppStatus({ active, connected }: { active: boolean; connected: boolean }) {
     const { __ } = useTranslate();
+
     if (!active) {
         return (
             <span className="text-[10px] uppercase font-bold tracking-wider px-2 py-0.5 rounded-full bg-slate-100 text-slate-800 dark:bg-slate-900 dark:text-slate-400">
@@ -307,6 +309,7 @@ function BadgeWhatsAppStatus({ active, connected }: { active: boolean; connected
             </span>
         );
     }
+
     if (connected) {
         return (
             <span className="text-[10px] uppercase font-bold tracking-wider px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300">
@@ -314,6 +317,7 @@ function BadgeWhatsAppStatus({ active, connected }: { active: boolean; connected
             </span>
         );
     }
+
     return (
         <span className="text-[10px] uppercase font-bold tracking-wider px-2 py-0.5 rounded-full bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-300">
             {__('Disconnected')}

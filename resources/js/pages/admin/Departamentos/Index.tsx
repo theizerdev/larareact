@@ -1,24 +1,4 @@
-import React, { useState, Suspense, lazy } from 'react';
 import { Head, useForm, router } from '@inertiajs/react';
-import { Breadcrumbs } from '@/components/breadcrumbs';
-import { Button } from '@/components/ui/button';
-import { FilterBar, FilterField } from '@/components/filter-bar';
-import { Input } from '@/components/ui/input';
-import { ModuleHeader } from '@/components/module-header';
-import type { Auth } from '@/types';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { StatCard } from '@/components/stat-card';
-import { Paginated } from '@/types/app';
-import { DataTable, ColumnDef } from '@/components/data-table';
-import { cn, cleanParams } from '@/lib/utils';
-import { useTranslate } from '@/hooks/use-translate';
-import { notifySuccess, notifyError } from '@/utils/notifications';
-import {
-    DropdownMenu,
-    DropdownMenuContent,
-    DropdownMenuItem,
-    DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu';
 import {
     Layers,
     Plus,
@@ -34,14 +14,13 @@ import {
     Tag,
     Hash,
 } from 'lucide-react';
-import {
-    Dialog,
-    DialogContent,
-    DialogDescription,
-    DialogHeader,
-    DialogTitle,
-    DialogFooter,
-} from '@/components/ui/dialog';
+import React, { useState, Suspense, lazy } from 'react';
+import { Breadcrumbs } from '@/components/breadcrumbs';
+import type { ColumnDef } from '@/components/data-table';
+import { DataTable } from '@/components/data-table';
+import { FilterBar, FilterField } from '@/components/filter-bar';
+import { ModuleHeader } from '@/components/module-header';
+import { StatCard } from '@/components/stat-card';
 import {
     AlertDialog,
     AlertDialogAction,
@@ -52,9 +31,31 @@ import {
     AlertDialogHeader,
     AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
+import { Button } from '@/components/ui/button';
+import {
+    Dialog,
+    DialogContent,
+    DialogDescription,
+    DialogHeader,
+    DialogTitle,
+    DialogFooter,
+} from '@/components/ui/dialog';
+import {
+    DropdownMenu,
+    DropdownMenuContent,
+    DropdownMenuItem,
+    DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { cn, cleanParams } from '@/lib/utils';
+import type { Auth } from '@/types';
+import type { Paginated } from '@/types/app';
+import { useTranslate } from '@/hooks/use-translate';
+import { notifySuccess, notifyError } from '@/utils/notifications';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Switch } from '@/components/ui/switch';
-import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 
 const DepartamentoMapComponent = lazy(() => {
@@ -184,7 +185,10 @@ export default function DepartamentosIndexPage({
     React.useEffect(() => {
         const unbindStart  = router.on('start',  () => setIsTableLoading(true));
         const unbindFinish = router.on('finish', () => setIsTableLoading(false));
-        return () => { unbindStart(); unbindFinish(); };
+
+        return () => {
+ unbindStart(); unbindFinish(); 
+};
     }, []);
 
     // Debounce de filtros
@@ -200,6 +204,7 @@ export default function DepartamentosIndexPage({
                 { preserveState: true, preserveScroll: true }
             );
         }, 300);
+
         return () => clearTimeout(timer);
     }, [searchTerm, statusFilter, perPageFilter]);
 
@@ -229,6 +234,7 @@ export default function DepartamentosIndexPage({
     const handleCreateClick = () => {
         setEditingDepartamento(null);
         reset();
+
         // Si el usuario tiene una empresa y sucursal preasignadas
         if (auth.user?.empresa_id) {
             setData(prev => ({
@@ -238,6 +244,7 @@ export default function DepartamentosIndexPage({
                 user_id: auth.user.id,
             }));
         }
+
         setActiveTab('general');
         setIsModalOpen(true);
     };
@@ -264,6 +271,7 @@ export default function DepartamentosIndexPage({
 
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
+
         if (editingDepartamento) {
             put(`/admin/departamentos/${editingDepartamento.id}`, {
                 onSuccess: () => {
@@ -291,7 +299,10 @@ export default function DepartamentosIndexPage({
     };
 
     const handleDeleteConfirm = () => {
-        if (!deletingDepartamento) return;
+        if (!deletingDepartamento) {
+return;
+}
+
         router.delete(`/admin/departamentos/${deletingDepartamento.id}`, {
             onSuccess: () => {
                 setDeletingDepartamento(null);

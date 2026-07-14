@@ -1,13 +1,13 @@
-import React, { useState } from 'react';
 import { Head, router } from '@inertiajs/react';
 import { Calendar, Play, Clock, ShieldAlert, CheckCircle, RefreshCw, Command } from 'lucide-react';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Badge } from '@/components/ui/badge';
-import { Breadcrumbs } from '@/components/breadcrumbs';
-import { useTranslate } from '@/hooks/use-translate';
+import React, { useState } from 'react';
 import Swal from 'sweetalert2';
+import { Breadcrumbs } from '@/components/breadcrumbs';
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { useTranslate } from '@/hooks/use-translate';
 
 interface TaskItem {
     id: number;

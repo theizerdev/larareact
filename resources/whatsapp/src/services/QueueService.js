@@ -1,9 +1,11 @@
 let redis;
+
 try {
   redis = require('../config/redis');
 } catch (error) {
   redis = null;
 }
+
 const logger = require('../utils/logger');
 
 class QueueService {
@@ -45,12 +47,15 @@ class QueueService {
       return message.id;
     } catch (error) {
       logger.error('Error adding message to queue:', error);
+
       throw error;
     }
   }
 
   async processQueue() {
-    if (this.isProcessing || !redis) return;
+    if (this.isProcessing || !redis) {
+return;
+}
     
     this.isProcessing = true;
     logger.info('Starting queue processing');
@@ -58,7 +63,10 @@ class QueueService {
     try {
       while (true) {
         const messageStr = await redis.brPop(redis.commandOptions({ isolated: true }), this.queueKey, 5);
-        if (!messageStr) break;
+
+        if (!messageStr) {
+break;
+}
 
         const message = JSON.parse(messageStr.element);
         await this.processMessage(message);
@@ -81,11 +89,14 @@ class QueueService {
       if (!this.whatsappManager) {
         throw new Error('WhatsAppManager instance not set in QueueService');
       }
+
       const companyId = message.companyId || 1;
       const service = this.whatsappManager.getService(companyId);
+
       if (!service) {
         throw new Error(`WhatsAppService not found for company ${companyId}`);
       }
+
       await service.sendMessage(message.to, message.content, {
         type: message.type || 'text',
         companyId: companyId
@@ -105,7 +116,10 @@ class QueueService {
   }
 
   async getQueueSize() {
-    if (redis) return await redis.lLen(this.queueKey);
+    if (redis) {
+return await redis.lLen(this.queueKey);
+}
+
     return this.memoryQueue.length;
   }
 }

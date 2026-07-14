@@ -8,11 +8,11 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { UserInfo } from '@/components/user-info';
 import { useMobileNavigation } from '@/hooks/use-mobile-navigation';
+import { useTranslate } from '@/hooks/use-translate';
 import { logout } from '@/routes';
 import { edit } from '@/routes/profile';
 import type { User } from '@/types';
 
-import { useTranslate } from '@/hooks/use-translate';
 
 type Props = {
     user: User;

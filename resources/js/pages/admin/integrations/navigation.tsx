@@ -1,4 +1,3 @@
-import React, { useEffect, useRef, useState } from 'react';
 import { Head, router } from '@inertiajs/react';
 import {
     Navigation,
@@ -15,10 +14,11 @@ import {
     Clock,
     Flag
 } from 'lucide-react';
+import mapboxgl from 'mapbox-gl';
+import React, { useEffect, useRef, useState } from 'react';
+import Swal from 'sweetalert2';
 import { Button } from '@/components/ui/button';
 import { useTranslate } from '@/hooks/use-translate';
-import Swal from 'sweetalert2';
-import mapboxgl from 'mapbox-gl';
 import 'mapbox-gl/dist/mapbox-gl.css';
 
 interface PageProps {
@@ -115,6 +115,7 @@ export default function NavigationScreen({
             Math.sin(lat1) * Math.cos(lat2) * Math.cos(lon2 - lon1);
 
         const bearing = Math.atan2(y, x) * 180 / Math.PI;
+
         return (bearing + 360) % 360;
     };
 
@@ -130,20 +131,25 @@ export default function NavigationScreen({
             Math.cos(lat1) * Math.cos(lat2) *
             Math.sin(dLon / 2) * Math.sin(dLon / 2);
         const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+
         return R * c;
     };
 
     const calculatePathDistance = (path: number[][]) => {
         let d = 0;
+
         for (let i = 0; i < path.length - 1; i++) {
             d += calculateDistance(path[i], path[i + 1]);
         }
+
         return d;
     };
 
     // Fetch Route Coordinates & Navigation steps
     useEffect(() => {
-        if (!params || !mapbox_api_key) return;
+        if (!params || !mapbox_api_key) {
+return;
+}
 
         const loadRouteData = async () => {
             setLoading(true);
@@ -153,8 +159,12 @@ export default function NavigationScreen({
                 try {
                     const google = (window as any).google;
                     let travelMode = google.maps.TravelMode.DRIVING;
-                    if (params.profile === 'walking') travelMode = google.maps.TravelMode.WALKING;
-                    else if (params.profile === 'cycling') travelMode = google.maps.TravelMode.BICYCLING;
+
+                    if (params.profile === 'walking') {
+travelMode = google.maps.TravelMode.WALKING;
+} else if (params.profile === 'cycling') {
+travelMode = google.maps.TravelMode.BICYCLING;
+}
 
                     const directionsService = new google.maps.DirectionsService();
                     directionsService.route({
@@ -189,6 +199,7 @@ export default function NavigationScreen({
                             fetchMapboxRoute(); // Fallback to Mapbox on Google error
                         }
                     });
+
                     return;
                 } catch (err) {
                     console.error('Google Directions navigation load error:', err);
@@ -212,6 +223,7 @@ export default function NavigationScreen({
                         text: __('Could not calculate routing paths.'),
                         icon: 'error'
                     });
+
                     return;
                 }
 
@@ -247,7 +259,10 @@ export default function NavigationScreen({
 
     // Format ETA
     useEffect(() => {
-        if (remainingDuration === null) return;
+        if (remainingDuration === null) {
+return;
+}
+
         const now = new Date();
         now.setSeconds(now.getSeconds() + remainingDuration);
 
@@ -261,7 +276,9 @@ export default function NavigationScreen({
 
     // Initialize Mapbox canvas
     const initializeMap = (coordinates: number[][]) => {
-        if (!mapContainer.current || !mapbox_api_key) return;
+        if (!mapContainer.current || !mapbox_api_key) {
+return;
+}
 
         mapboxgl.accessToken = mapbox_api_key;
 
@@ -332,14 +349,22 @@ export default function NavigationScreen({
     // Clean interval on unmount
     useEffect(() => {
         return () => {
-            if (simIntervalRef.current) clearInterval(simIntervalRef.current);
-            if (gpsWatchId.current !== null) navigator.geolocation.clearWatch(gpsWatchId.current);
+            if (simIntervalRef.current) {
+clearInterval(simIntervalRef.current);
+}
+
+            if (gpsWatchId.current !== null) {
+navigator.geolocation.clearWatch(gpsWatchId.current);
+}
         };
     }, []);
 
     // Speech synthesis for voice cues instruction
     const speakInstruction = (text: string) => {
-        if (muted) return;
+        if (muted) {
+return;
+}
+
         try {
             window.speechSynthesis.cancel();
             const utterance = new SpeechSynthesisUtterance(text);
@@ -348,9 +373,11 @@ export default function NavigationScreen({
             const htmlLang = document.documentElement.lang;
             const navLang = navigator.language;
             let speakLang = 'es-ES';
+
             if (htmlLang?.startsWith('en') || navLang?.startsWith('en')) {
                 speakLang = 'en-US';
             }
+
             utterance.lang = speakLang;
 
             window.speechSynthesis.speak(utterance);
@@ -368,7 +395,10 @@ export default function NavigationScreen({
 
     // Handle simulation animate logic
     const startSimulation = () => {
-        if (simIntervalRef.current) clearInterval(simIntervalRef.current);
+        if (simIntervalRef.current) {
+clearInterval(simIntervalRef.current);
+}
+
         if (gpsWatchId.current !== null) {
             navigator.geolocation.clearWatch(gpsWatchId.current);
             gpsWatchId.current = null;
@@ -380,7 +410,10 @@ export default function NavigationScreen({
         setSpeed(50); // simulated speed in km/h
 
         simIntervalRef.current = setInterval(() => {
-            if (routeCoords.length === 0) return;
+            if (routeCoords.length === 0) {
+return;
+}
+
             const idx = simIndexRef.current;
 
             if (idx >= routeCoords.length - 1) {
@@ -396,6 +429,7 @@ export default function NavigationScreen({
                     icon: 'success',
                     timer: 3000
                 });
+
                 return;
             }
 
@@ -452,6 +486,7 @@ export default function NavigationScreen({
             clearInterval(simIntervalRef.current);
             simIntervalRef.current = null;
         }
+
         setSimulating(false);
         setSpeed(0);
     };
@@ -463,8 +498,10 @@ export default function NavigationScreen({
                 navigator.geolocation.clearWatch(gpsWatchId.current);
                 gpsWatchId.current = null;
             }
+
             setActiveGps(false);
             setSpeed(0);
+
             return;
         }
 
@@ -483,6 +520,7 @@ export default function NavigationScreen({
                 timer: 4000,
                 timerProgressBar: true
             });
+
             return;
         }
 
@@ -516,6 +554,7 @@ export default function NavigationScreen({
 
                     routeCoords.forEach((coord, index) => {
                         const dist = calculateDistance(gpsCoords, coord);
+
                         if (dist < minDistance) {
                             minDistance = dist;
                             closestIdx = index;
@@ -557,23 +596,41 @@ export default function NavigationScreen({
 
     // Helper formats
     const formatDistance = (meters: number) => {
-        if (meters < 1000) return `${meters.toFixed(0)} m`;
+        if (meters < 1000) {
+return `${meters.toFixed(0)} m`;
+}
+
         return `${(meters / 1000).toFixed(1)} km`;
     };
 
     const formatDuration = (seconds: number) => {
         const mins = Math.round(seconds / 60);
-        if (mins < 60) return `${mins} min`;
+
+        if (mins < 60) {
+return `${mins} min`;
+}
+
         const hrs = Math.floor(mins / 60);
         const remMins = mins % 60;
+
         return `${hrs} h ${remMins} min`;
     };
 
     const getDirectionIcon = (type: string) => {
         const lowerType = type.toLowerCase();
-        if (lowerType.includes('arrive')) return <Flag className="h-6 w-6 text-rose-500 fill-rose-100" />;
-        if (lowerType.includes('left')) return <Navigation className="h-6 w-6 text-emerald-400 -rotate-90" />;
-        if (lowerType.includes('right')) return <Navigation className="h-6 w-6 text-emerald-400 rotate-90" />;
+
+        if (lowerType.includes('arrive')) {
+return <Flag className="h-6 w-6 text-rose-500 fill-rose-100" />;
+}
+
+        if (lowerType.includes('left')) {
+return <Navigation className="h-6 w-6 text-emerald-400 -rotate-90" />;
+}
+
+        if (lowerType.includes('right')) {
+return <Navigation className="h-6 w-6 text-emerald-400 rotate-90" />;
+}
+
         return <Navigation className="h-6 w-6 text-emerald-400" />;
     };
 

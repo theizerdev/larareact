@@ -2,10 +2,10 @@ const express = require('express');
 const rateLimit = require('express-rate-limit');
 const { body, validationResult } = require('express-validator');
 const router = express.Router();
+const WhatsAppController = require('../controllers/WhatsAppController');
+const rateLimitByCompany = require('../middleware/rateLimitByCompany');
 const logger = require('../utils/logger');
 const { validateApiKey } = require('./companies');
-const rateLimitByCompany = require('../middleware/rateLimitByCompany');
-const WhatsAppController = require('../controllers/WhatsAppController');
 
 // Aplicar validación de API key a todas las rutas
 router.use(validateApiKey);
@@ -40,14 +40,17 @@ router.post(
   ],
   (req, res) => {
     const errors = validationResult(req);
+
     if (!errors.isEmpty()) {
       logger.warn('Validación de payload fallida en /send', { errors: errors.array() });
+
       return res.status(400).json({
         success: false,
         error: 'Error de validación',
         details: errors.array()
       });
     }
+
     return WhatsAppController.sendMessage(req, res);
   }
 );
@@ -67,14 +70,17 @@ router.post(
   ],
   (req, res) => {
     const errors = validationResult(req);
+
     if (!errors.isEmpty()) {
       logger.warn('Validación de payload fallida en /send-document', { errors: errors.array() });
+
       return res.status(400).json({
         success: false,
         error: 'Error de validación',
         details: errors.array()
       });
     }
+
     return WhatsAppController.sendDocument(req, res);
   }
 );
@@ -92,10 +98,13 @@ router.post(
   ],
   (req, res) => {
     const errors = validationResult(req);
+
     if (!errors.isEmpty()) {
       logger.warn('Validación de payload fallida en /send-interactive', { errors: errors.array() });
+
       return res.status(400).json({ success: false, error: 'Error de validación', details: errors.array() });
     }
+
     return WhatsAppController.sendInteractive(req, res);
   }
 );
@@ -112,10 +121,13 @@ router.post(
   ],
   (req, res) => {
     const errors = validationResult(req);
+
     if (!errors.isEmpty()) {
       logger.warn('Validación de payload fallida en /send-template', { errors: errors.array() });
+
       return res.status(400).json({ success: false, error: 'Error de validación', details: errors.array() });
     }
+
     return WhatsAppController.sendTemplate(req, res);
   }
 );

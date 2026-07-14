@@ -1,13 +1,13 @@
-import React, { useEffect, useState } from 'react';
 import { Head } from '@inertiajs/react';
 import { Server, Activity, HardDrive, Cpu, RefreshCw, Terminal, Network, Info } from 'lucide-react';
+import React, { useEffect, useState } from 'react';
+import Chart from 'react-apexcharts';
+import { Breadcrumbs } from '@/components/breadcrumbs';
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
-import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
-import { Breadcrumbs } from '@/components/breadcrumbs';
 import { useTranslate } from '@/hooks/use-translate';
-import Chart from 'react-apexcharts';
 
 interface ServerInfo {
     os: string;
@@ -52,6 +52,7 @@ export default function ServerMonitoring({ serverInfo }: PageProps) {
         try {
             setLoading(true);
             const res = await fetch('/admin/monitoring/server/metrics');
+
             if (res.ok) {
                 const data: LiveMetrics = await res.json();
                 setMetrics(data);
@@ -76,6 +77,7 @@ export default function ServerMonitoring({ serverInfo }: PageProps) {
     useEffect(() => {
         fetchMetrics();
         const interval = setInterval(fetchMetrics, 3000);
+
         return () => clearInterval(interval);
     }, []);
 

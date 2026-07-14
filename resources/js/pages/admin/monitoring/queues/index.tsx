@@ -1,15 +1,15 @@
-import React, { useState } from 'react';
 import { Head, router } from '@inertiajs/react';
 import { Layers, Play, AlertTriangle, RefreshCw, Trash2, Cpu, HelpCircle, Eye, CornerDownRight } from 'lucide-react';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import React, { useState } from 'react';
+import Swal from 'sweetalert2';
+import { Breadcrumbs } from '@/components/breadcrumbs';
+import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Badge } from '@/components/ui/badge';
-import { Breadcrumbs } from '@/components/breadcrumbs';
 import { useTranslate } from '@/hooks/use-translate';
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import Swal from 'sweetalert2';
 
 interface JobItem {
     id: number;

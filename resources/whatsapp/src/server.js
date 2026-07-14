@@ -1,27 +1,27 @@
-const express = require('express');
-const cors = require('cors');
-const helmet = require('helmet');
-const compression = require('compression');
-const rateLimit = require('express-rate-limit');
 const { createServer } = require('http');
+const compression = require('compression');
+const cors = require('cors');
+const express = require('express');
+const rateLimit = require('express-rate-limit');
+const helmet = require('helmet');
 const { Server } = require('socket.io');
 require('dotenv').config();
 const client = require('prom-client');
 
-const logger = require('./utils/logger');
 const { sequelize } = require('./config/database');
 const redis = require('./config/redis');
-const WhatsAppManager = require('./services/WhatsAppManager');
 const authMiddleware = require('./middleware/auth');
 const errorHandler = require('./middleware/errorHandler');
 
 // Importar rutas
 const authRoutes = require('./routes/auth');
-const whatsappRoutes = require('./routes/whatsapp');
 const messageRoutes = require('./routes/messages');
 const sessionRoutes = require('./routes/sessions');
-const webhookRoutes = require('./routes/webhooks');
 const statsRoutes = require('./routes/stats');
+const webhookRoutes = require('./routes/webhooks');
+const whatsappRoutes = require('./routes/whatsapp');
+const WhatsAppManager = require('./services/WhatsAppManager');
+const logger = require('./utils/logger');
 
 class WhatsAppAPIServer {
   constructor() {
@@ -152,6 +152,7 @@ class WhatsAppAPIServer {
       });
       res.on('finish', () => {
         const duration = Number(process.hrtime.bigint() - start) / 1e6; // ms
+
         try {
           this.requestDuration.observe(duration / 1000); // seconds
           this.requestCounter.inc({

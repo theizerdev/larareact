@@ -1,5 +1,15 @@
+import { router } from '@inertiajs/react';
+import { ArrowUp, ArrowDown, ArrowUpDown, SlidersHorizontal, ChevronDown } from 'lucide-react';
 import React from 'react';
-import { Paginated } from '@/types/app';
+import Pagination from '@/components/pagination';
+import { Button } from '@/components/ui/button';
+import { Checkbox } from '@/components/ui/checkbox';
+import {
+    DropdownMenu,
+    DropdownMenuCheckboxItem,
+    DropdownMenuContent,
+    DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 import {
     Table,
     TableBody,
@@ -8,19 +18,9 @@ import {
     TableHeader,
     TableRow,
 } from '@/components/ui/table';
-import { Checkbox } from '@/components/ui/checkbox';
-import { Button } from '@/components/ui/button';
-import {
-    DropdownMenu,
-    DropdownMenuCheckboxItem,
-    DropdownMenuContent,
-    DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu';
-import Pagination from '@/components/pagination';
-import { router } from '@inertiajs/react';
-import { cn, cleanParams } from '@/lib/utils';
 import { useTranslate } from '@/hooks/use-translate';
-import { ArrowUp, ArrowDown, ArrowUpDown, SlidersHorizontal, ChevronDown } from 'lucide-react';
+import { cn, cleanParams } from '@/lib/utils';
+import type { Paginated } from '@/types/app';
 
 export interface ColumnDef<T> {
     /** Título de la columna o elemento React a renderizar en el header */
@@ -110,7 +110,10 @@ export function DataTable<T>({
 
     const handleSort = (column: ColumnDef<T>) => {
         const key = String(column.sortKey || column.accessorKey || '');
-        if (!key) return;
+
+        if (!key) {
+return;
+}
 
         const direction = currentSortKey === key && currentSortDir === 'asc' ? 'desc' : 'asc';
         router.get(
@@ -144,20 +147,31 @@ export function DataTable<T>({
     const toggleColumnVisibility = (idx: number) => {
         setHiddenColumnIndices((prev) => {
             const next = new Set(prev);
+
             if (next.has(idx)) {
                 next.delete(idx);
             } else {
                 next.add(idx);
             }
+
             return next;
         });
     };
 
     // Helper para determinar la responsividad
     const getResponsiveClass = (hideOn?: 'mobile' | 'tablet') => {
-        if (!hideOn) return '';
-        if (hideOn === 'mobile') return 'hidden sm:table-cell';
-        if (hideOn === 'tablet') return 'hidden md:table-cell';
+        if (!hideOn) {
+return '';
+}
+
+        if (hideOn === 'mobile') {
+return 'hidden sm:table-cell';
+}
+
+        if (hideOn === 'tablet') {
+return 'hidden md:table-cell';
+}
+
         return '';
     };
 
@@ -243,7 +257,10 @@ export function DataTable<T>({
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end" className="w-48">
                             {columns.map((column, idx) => {
-                                if (column.hideable === false) return null;
+                                if (column.hideable === false) {
+return null;
+}
+
                                 // Obtenemos una etiqueta de texto legible para el header
                                 const label =
                                     column.dropdownLabel ? __(column.dropdownLabel) :
@@ -281,7 +298,9 @@ export function DataTable<T>({
                                 </TableHead>
                             )}
                             {columns.map((column, idx) => {
-                                if (hiddenColumnIndices.has(idx)) return null;
+                                if (hiddenColumnIndices.has(idx)) {
+return null;
+}
 
                                 const responsiveClass = getResponsiveClass(column.hideOn);
                                 const isSortActive =
@@ -331,7 +350,10 @@ export function DataTable<T>({
                                         </TableCell>
                                     )}
                                     {columns.map((column, colIdx) => {
-                                        if (hiddenColumnIndices.has(colIdx)) return null;
+                                        if (hiddenColumnIndices.has(colIdx)) {
+return null;
+}
+
                                         return (
                                             <TableCell
                                                 key={colIdx}
@@ -374,9 +396,12 @@ export function DataTable<T>({
                                             </TableCell>
                                         )}
                                         {columns.map((column, colIdx) => {
-                                            if (hiddenColumnIndices.has(colIdx)) return null;
+                                            if (hiddenColumnIndices.has(colIdx)) {
+return null;
+}
 
                                             let cellContent: React.ReactNode = null;
+
                                             if (column.cell) {
                                                 cellContent = column.cell(row);
                                             } else if (column.accessorKey) {

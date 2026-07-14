@@ -1,24 +1,4 @@
-import React, { useState, useMemo } from 'react';
 import { Head, useForm, router } from '@inertiajs/react';
-import { Breadcrumbs } from '@/components/breadcrumbs';
-import { Button } from '@/components/ui/button';
-import { FilterBar, FilterField } from '@/components/filter-bar';
-import { Input } from '@/components/ui/input';
-import { ModuleHeader } from '@/components/module-header';
-import type { Auth } from '@/types';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { StatCard } from '@/components/stat-card';
-import { Paginated } from '@/types/app';
-import { DataTable, ColumnDef } from '@/components/data-table';
-import { cn, cleanParams } from '@/lib/utils';
-import { useTranslate } from '@/hooks/use-translate';
-import { notifySuccess, notifyError } from '@/utils/notifications';
-import {
-    DropdownMenu,
-    DropdownMenuContent,
-    DropdownMenuItem,
-    DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu';
 import {
     User as UserIcon,
     Plus,
@@ -33,14 +13,13 @@ import {
     ShieldAlert,
     Phone,
 } from 'lucide-react';
-import {
-    Dialog,
-    DialogContent,
-    DialogDescription,
-    DialogHeader,
-    DialogTitle,
-    DialogFooter,
-} from '@/components/ui/dialog';
+import React, { useState, useMemo } from 'react';
+import { Breadcrumbs } from '@/components/breadcrumbs';
+import type { ColumnDef } from '@/components/data-table';
+import { DataTable } from '@/components/data-table';
+import { FilterBar, FilterField } from '@/components/filter-bar';
+import { ModuleHeader } from '@/components/module-header';
+import { StatCard } from '@/components/stat-card';
 import {
     AlertDialog,
     AlertDialogAction,
@@ -51,9 +30,31 @@ import {
     AlertDialogHeader,
     AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import {
+    Dialog,
+    DialogContent,
+    DialogDescription,
+    DialogHeader,
+    DialogTitle,
+    DialogFooter,
+} from '@/components/ui/dialog';
+import {
+    DropdownMenu,
+    DropdownMenuContent,
+    DropdownMenuItem,
+    DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
+import { Input } from '@/components/ui/input';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { cn, cleanParams } from '@/lib/utils';
+import type { Auth } from '@/types';
+import type { Paginated } from '@/types/app';
+import { useTranslate } from '@/hooks/use-translate';
+import { notifySuccess, notifyError } from '@/utils/notifications';
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
-import { Badge } from '@/components/ui/badge';
 import { Checkbox } from '@/components/ui/checkbox';
 import PhoneInputGroup from '../Empresas/Partials/PhoneInputGroup';
 
@@ -159,7 +160,10 @@ export default function UsersIndexPage({
     React.useEffect(() => {
         const unbindStart = router.on('start', () => setIsTableLoading(true));
         const unbindFinish = router.on('finish', () => setIsTableLoading(false));
-        return () => { unbindStart(); unbindFinish(); };
+
+        return () => {
+ unbindStart(); unbindFinish(); 
+};
     }, []);
 
     // Filter Query debouncing
@@ -177,6 +181,7 @@ export default function UsersIndexPage({
                 { preserveState: true, preserveScroll: true }
             );
         }, 300);
+
         return () => clearTimeout(timer);
     }, [searchTerm, statusFilter, roleFilter, empresaFilter, perPageFilter]);
 
@@ -185,7 +190,10 @@ export default function UsersIndexPage({
 
     // Filtrar sucursales según la empresa seleccionada
     const filteredSucursales = useMemo(() => {
-        if (!data.empresa_id) return [];
+        if (!data.empresa_id) {
+return [];
+}
+
         return sucursales.filter((s) => s.empresa_id === Number(data.empresa_id));
     }, [data.empresa_id, sucursales]);
 
@@ -216,6 +224,7 @@ export default function UsersIndexPage({
 
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
+
         if (editingUser) {
             put(`/admin/usuarios/${editingUser.id}`, {
                 onSuccess: () => {
@@ -243,7 +252,10 @@ export default function UsersIndexPage({
     };
 
     const handleDeleteConfirm = () => {
-        if (!deletingUser) return;
+        if (!deletingUser) {
+return;
+}
+
         router.delete(`/admin/usuarios/${deletingUser.id}`, {
             onSuccess: () => {
                 setDeletingUser(null);

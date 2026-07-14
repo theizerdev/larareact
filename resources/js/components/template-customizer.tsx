@@ -1,9 +1,3 @@
-import React, { useState, useRef } from 'react';
-import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from '@/components/ui/sheet';
-import { Button } from '@/components/ui/button';
-import { Switch } from '@/components/ui/switch';
-import { useTemplateSettings } from '@/hooks/use-template-settings';
-import { cn } from '@/lib/utils';
 import { 
     Settings, 
     RotateCcw, 
@@ -16,7 +10,13 @@ import {
     Columns,
     Compass
 } from 'lucide-react';
+import React, { useState, useRef } from 'react';
+import { Button } from '@/components/ui/button';
+import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from '@/components/ui/sheet';
+import { Switch } from '@/components/ui/switch';
+import { useTemplateSettings } from '@/hooks/use-template-settings';
 import { useTranslate } from '@/hooks/use-translate';
+import { cn } from '@/lib/utils';
 
 export default function TemplateCustomizer() {
     const { __ } = useTranslate();
@@ -156,6 +156,7 @@ export default function TemplateCustomizer() {
                                 <div className="grid grid-cols-3 gap-2">
                                     {(['light', 'dark', 'system'] as const).map((mode) => {
                                         const isActive = appearance === mode;
+
                                         return (
                                             <button
                                                 key={mode}
@@ -183,6 +184,7 @@ export default function TemplateCustomizer() {
                                 <div className="grid grid-cols-2 gap-3">
                                     {(['default', 'bordered'] as const).map((skinOpt) => {
                                         const isActive = settings.skin === skinOpt;
+
                                         return (
                                             <button
                                                 key={skinOpt}
@@ -249,6 +251,7 @@ export default function TemplateCustomizer() {
                                         { key: true, label: __('Collapsed') }
                                     ].map((opt) => {
                                         const isActive = settings.collapsed === opt.key;
+
                                         return (
                                             <button
                                                 key={String(opt.key)}
@@ -284,6 +287,7 @@ export default function TemplateCustomizer() {
                                 <div className="grid grid-cols-3 gap-2">
                                     {(['sticky', 'static', 'hidden'] as const).map((type) => {
                                         const isActive = settings.navbarType === type;
+
                                         return (
                                             <button
                                                 key={type}
@@ -321,6 +325,7 @@ export default function TemplateCustomizer() {
                                 <div className="grid grid-cols-2 gap-3">
                                     {(['compact', 'wide'] as const).map((widthOpt) => {
                                         const isActive = settings.contentWidth === widthOpt;
+
                                         return (
                                             <button
                                                 key={widthOpt}
@@ -352,6 +357,7 @@ export default function TemplateCustomizer() {
                                 <div className="grid grid-cols-2 gap-3">
                                     {(['ltr', 'rtl'] as const).map((dir) => {
                                         const isActive = settings.direction === dir;
+
                                         return (
                                             <button
                                                 key={dir}
@@ -391,10 +397,15 @@ export default function TemplateCustomizer() {
 // Helper to determine text contrast for hex colors
 function getContrastColor(hex: string): string {
     const cleanHex = hex.replace('#', '');
-    if (cleanHex.length !== 6) return '#ffffff';
+
+    if (cleanHex.length !== 6) {
+return '#ffffff';
+}
+
     const r = parseInt(cleanHex.substring(0, 2), 16);
     const g = parseInt(cleanHex.substring(2, 4), 16);
     const b = parseInt(cleanHex.substring(4, 6), 16);
     const luminance = (0.299 * r + 0.587 * g + 0.114 * b) / 255;
+
     return luminance > 0.6 ? '#0f172a' : '#ffffff';
 }

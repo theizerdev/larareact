@@ -1,18 +1,19 @@
-import React, { useState, useEffect } from 'react';
 import { Head, useForm, router } from '@inertiajs/react';
 import {
     Settings2, MessageSquare, QrCode, RefreshCw, Power, Send, Key,
     Database, AlertTriangle, CheckCircle2, Copy, Check, Activity, Phone
 } from 'lucide-react';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Switch } from '@/components/ui/switch';
-import { Label } from '@/components/ui/label';
-import { Breadcrumbs } from '@/components/breadcrumbs';
-import { useTranslate } from '@/hooks/use-translate';
+import React, { useState, useEffect } from 'react';
 import Swal from 'sweetalert2';
-import PhoneInputGroup, { PaisPhoneOption } from '@/pages/admin/Empresas/Partials/PhoneInputGroup';
+import { Breadcrumbs } from '@/components/breadcrumbs';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Switch } from '@/components/ui/switch';
+import { useTranslate } from '@/hooks/use-translate';
+import type { PaisPhoneOption } from '@/pages/admin/Empresas/Partials/PhoneInputGroup';
+import PhoneInputGroup from '@/pages/admin/Empresas/Partials/PhoneInputGroup';
 
 interface LiveStatus {
     isConnected: boolean;
@@ -84,8 +85,10 @@ export default function WhatsAppIntegration({
             intervalId = setInterval(async () => {
                 try {
                     const response = await fetch('/admin/integrations/whatsapp/status');
+
                     if (response.ok) {
                         const data = await response.json();
+
                         if (data.success) {
                             setLiveStatusState(data.status);
 
@@ -111,7 +114,9 @@ export default function WhatsAppIntegration({
         }
 
         return () => {
-            if (intervalId) clearInterval(intervalId);
+            if (intervalId) {
+clearInterval(intervalId);
+}
         };
     }, [whatsapp_active, liveStatusState?.isConnected, liveStatusState?.connectionState]);
 
@@ -264,10 +269,18 @@ export default function WhatsAppIntegration({
     };
 
     const getFullPhoneNumber = () => {
-        if (!testMessage.paisId || !testMessage.phoneNumber) return '';
+        if (!testMessage.paisId || !testMessage.phoneNumber) {
+return '';
+}
+
         const selectedPais = paises.find(p => p.id === Number(testMessage.paisId));
-        if (!selectedPais?.codigo_telefonico) return '';
+
+        if (!selectedPais?.codigo_telefonico) {
+return '';
+}
+
         const cleanCode = selectedPais.codigo_telefonico.replace(/^\+/, '');
+
         return `${cleanCode}${testMessage.phoneNumber.replace(/\D/g, '')}`;
     };
 
@@ -281,6 +294,7 @@ export default function WhatsAppIntegration({
                 text: __('Please select a country and enter a valid phone number.'),
                 icon: 'error',
             });
+
             return;
         }
 

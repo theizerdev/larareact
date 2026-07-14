@@ -1,6 +1,6 @@
+const path = require('path');
 const winston = require('winston');
 const DailyRotateFile = require('winston-daily-rotate-file');
-const path = require('path');
 
 // Configuración de formatos
 const logFormat = winston.format.combine(
@@ -18,9 +18,11 @@ const consoleFormat = winston.format.combine(
   }),
   winston.format.printf(({ timestamp, level, message, ...meta }) => {
     let msg = `${timestamp} [${level}]: ${message}`;
+
     if (Object.keys(meta).length > 0) {
       msg += ` ${JSON.stringify(meta)}`;
     }
+
     return msg;
   })
 );

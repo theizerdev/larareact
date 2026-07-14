@@ -1,15 +1,15 @@
-import React, { useEffect, useState } from 'react';
 import { Head, router } from '@inertiajs/react';
 import { Shield, Laptop, Smartphone, Globe, Trash2, Key, HelpCircle, MapPin } from 'lucide-react';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Badge } from '@/components/ui/badge';
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import React, { useEffect, useState } from 'react';
+import Swal from 'sweetalert2';
 import { Breadcrumbs } from '@/components/breadcrumbs';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { useInitials } from '@/hooks/use-initials';
 import { useTranslate } from '@/hooks/use-translate';
-import Swal from 'sweetalert2';
 
 interface SessionItem {
     id: string;

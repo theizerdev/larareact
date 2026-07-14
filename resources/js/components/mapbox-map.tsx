@@ -1,8 +1,8 @@
-import React, { useEffect, useRef, useState } from 'react';
 import { usePage } from '@inertiajs/react';
 import { MapPin, ShieldAlert } from 'lucide-react';
-import { useTranslate } from '@/hooks/use-translate';
 import mapboxgl from 'mapbox-gl';
+import React, { useEffect, useRef, useState } from 'react';
+import { useTranslate } from '@/hooks/use-translate';
 import 'mapbox-gl/dist/mapbox-gl.css';
 
 interface MapboxMapProps {
@@ -37,12 +37,15 @@ export default function MapboxMap({
     useEffect(() => {
         if (!mapboxActive || !mapboxApiKey) {
             setMapError(__('Mapbox integration is not active or token is missing. Please configure it in Settings > Integrations.'));
+
             return;
         }
 
         mapboxgl.accessToken = mapboxApiKey;
 
-        if (!mapContainerRef.current) return;
+        if (!mapContainerRef.current) {
+return;
+}
 
         const isDark = document.documentElement.classList.contains('dark');
         const mapStyle = isDark 
@@ -124,6 +127,7 @@ export default function MapboxMap({
     useEffect(() => {
         if (mapRef.current && markerRef.current && lat !== undefined && lng !== undefined) {
             const currentLngLat = markerRef.current.getLngLat();
+
             // Evitar ciclos de actualización si la diferencia es mínima
             if (Math.abs(currentLngLat.lat - lat) > 0.0001 || Math.abs(currentLngLat.lng - lng) > 0.0001) {
                 markerRef.current.setLngLat([lng, lat]);

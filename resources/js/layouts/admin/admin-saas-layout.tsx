@@ -21,7 +21,10 @@ import {
     Activity,
     Link2,
 } from 'lucide-react';
+import { Building2, GitBranch } from 'lucide-react';
 import * as React from 'react';
+import LanguageToggle from '@/components/language-toggle';
+import TemplateCustomizer from '@/components/template-customizer';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import {
@@ -40,31 +43,29 @@ import {
 } from '@/components/ui/tooltip';
 import { useAppearance } from '@/hooks/use-appearance';
 import { useInitials } from '@/hooks/use-initials';
+import { useTemplateSettings } from '@/hooks/use-template-settings';
+import { useTranslate } from '@/hooks/use-translate';
 import { cn, toUrl } from '@/lib/utils';
 import { dashboard, home, logout } from '@/routes';
+import { index as cargosIndex } from '@/routes/admin/cargos';
+import { index as departamentosIndex } from '@/routes/admin/departamentos';
+import { index as empresasIndex } from '@/routes/admin/empresas';
+import { index as dbMonitoringIndex } from '@/routes/admin/monitoring/database';
+import { index as paisesIndex } from '@/routes/admin/paises';
 import { edit as appearanceEdit } from '@/routes/appearance';
 import { edit as profileEdit } from '@/routes/profile';
 import { edit as securityEdit } from '@/routes/security';
-import { index as paisesIndex } from '@/routes/admin/paises';
-import { index as empresasIndex } from '@/routes/admin/empresas';
 import { index as sucursalesIndex } from '@/routes/admin/sucursales';
-import { index as departamentosIndex } from '@/routes/admin/departamentos';
-import { index as cargosIndex } from '@/routes/admin/cargos';
+import { index as responsablesIndex } from '@/routes/admin/responsables';
 import { index as rolesIndex } from '@/routes/admin/roles';
 import { index as usuariosIndex } from '@/routes/admin/usuarios';
-import { index as dbMonitoringIndex } from '@/routes/admin/monitoring/database';
 import { index as serverMonitoringIndex } from '@/routes/admin/monitoring/server';
 import { index as sessionMonitoringIndex } from '@/routes/admin/monitoring/sessions';
 import { index as logMonitoringIndex } from '@/routes/admin/monitoring/logs';
 import { index as queuesMonitoringIndex } from '@/routes/admin/monitoring/queues';
 import { index as tasksMonitoringIndex } from '@/routes/admin/monitoring/tasks';
 import { index as integrationsIndex } from '@/routes/admin/integrations';
-import { Building2, GitBranch } from 'lucide-react';
 import type { BreadcrumbItem, NavItem } from '@/types';
-import { useTranslate } from '@/hooks/use-translate';
-import LanguageToggle from '@/components/language-toggle';
-import { useTemplateSettings } from '@/hooks/use-template-settings';
-import TemplateCustomizer from '@/components/template-customizer';
 
 type AdminSaasLayoutProps = {
     children: React.ReactNode;
@@ -209,6 +210,7 @@ function CollapsibleNavItem({
                 <div className="pl-9 space-y-1 transition-all duration-300">
                     {items.map((item, idx) => {
                         const active = url.startsWith(item.href);
+
                         return (
                             <Link
                                 key={idx}
@@ -397,6 +399,10 @@ export default function AdminSaasLayout({
                                     {
                                         title: 'Positions',
                                         href: cargosIndex.url(),
+                                    },
+                                    {
+                                        title: 'Responsibles',
+                                        href: responsablesIndex.url(),
                                     },
                                     {
                                         title: 'Countries',

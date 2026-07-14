@@ -1,6 +1,6 @@
-const WhatsAppService = require('./WhatsAppService');
 const Company = require('../models/Company');
 const logger = require('../utils/logger');
+const WhatsAppService = require('./WhatsAppService');
 
 class WhatsAppManager {
   constructor(io) {
@@ -23,6 +23,7 @@ class WhatsAppManager {
       logger.info(`✅ ${this.services.size} empresas conectadas/inicializadas.`);
     } catch (error) {
       logger.error('Error inicializando WhatsAppManager:', error);
+
       throw error;
     }
   }
@@ -31,7 +32,10 @@ class WhatsAppManager {
    * Obtiene el servicio de WhatsApp para una empresa específica
    */
   getService(companyId) {
-    if (!companyId) return null;
+    if (!companyId) {
+return null;
+}
+
     return this.services.get(companyId.toString());
   }
 
@@ -47,9 +51,11 @@ class WhatsAppManager {
       if (this.services.has(companyId)) {
         logger.whatsapp(`Empresa ID ${companyId} ya tiene un servicio instanciado.`);
         const service = this.services.get(companyId);
+
         if (!service.isConnected) {
             await service.connect();
         }
+
         return service;
       }
       
@@ -63,6 +69,7 @@ class WhatsAppManager {
       return service;
     } catch (error) {
       logger.error(`Error al iniciar servicio para empresa ${companyId}:`, error);
+
       throw error;
     }
   }
@@ -73,6 +80,7 @@ class WhatsAppManager {
   async stopCompany(companyId) {
     try {
       companyId = companyId.toString();
+
       if (this.services.has(companyId)) {
         const service = this.services.get(companyId);
         await service.shutdown();
@@ -89,9 +97,11 @@ class WhatsAppManager {
    */
   async shutdownAll() {
     logger.whatsapp('Deteniendo todos los servicios de WhatsApp...');
+
     for (const [companyId, service] of this.services.entries()) {
       await service.shutdown();
     }
+
     this.services.clear();
     logger.whatsapp('Todos los servicios han sido detenidos.');
   }

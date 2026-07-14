@@ -9,11 +9,11 @@ const {
 const QRCode = require('qrcode');
 const fs = require('fs').promises;
 const path = require('path');
-const logger = require('../utils/logger');
-const QueueService = require('./QueueService');
+const Contact = require('../models/Contact');
 const Message = require('../models/Message');
 const Session = require('../models/Session');
-const Contact = require('../models/Contact');
+const logger = require('../utils/logger');
+const QueueService = require('./QueueService');
 
 class WhatsAppService {
   constructor(io, companyId = 'default') {
@@ -49,6 +49,7 @@ class WhatsAppService {
       
     } catch (error) {
       logger.error('Error inicializando WhatsApp service:', error);
+
       throw error;
     }
   }
@@ -65,6 +66,7 @@ class WhatsAppService {
   async connect() {
     if (this.isConnecting) {
       logger.whatsapp('Ya hay una conexión en progreso...');
+
       return;
     }
 
@@ -76,12 +78,14 @@ class WhatsAppService {
       
       // Manejo de sesiones corruptas o error "Bad MAC"
       let state, saveCreds;
+
       try {
         const authResult = await useMultiFileAuthState(this.sessionPath);
         state = authResult.state;
         saveCreds = authResult.saveCreds;
       } catch (authError) {
         logger.error('Error al cargar autenticación, limpiando sesión:', authError.message);
+
         if (authError.message?.includes('Bad MAC') || authError.message?.includes('corrupt')) {
           await this.clearCorruptedSession();
           // Reintentar después de limpiar
@@ -169,6 +173,7 @@ class WhatsAppService {
       logger.error('Error conectando a WhatsApp:', error);
       this.isConnecting = false;
       this.connectionState = 'error';
+
       throw error;
     }
   }
@@ -215,10 +220,14 @@ class WhatsAppService {
     // Manejo de contactos (actualizaciones incrementales)
     this.sock.ev.on('contacts.upsert', async (contacts) => {
       logger.whatsapp(`Contactos actualizados: ${contacts.length}`);
+
       try {
         for (const contact of contacts) {
           const jid = contact.id;
-          if (!jid) continue;
+
+          if (!jid) {
+continue;
+}
           
           const isGroup = jid.endsWith('@g.us');
           const notifyName = contact.notify || contact.verifiedName || contact.name || null;
@@ -240,11 +249,15 @@ class WhatsAppService {
     // Sincronización inicial (History Sync)
     this.sock.ev.on('messaging-history.set', async ({ contacts, chats, messages, isLatest }) => {
       logger.whatsapp(`Historial recibido: ${contacts?.length || 0} contactos`);
+
       if (contacts && contacts.length > 0) {
         try {
           for (const contact of contacts) {
             const jid = contact.id;
-            if (!jid) continue;
+
+            if (!jid) {
+continue;
+}
             
             const isGroup = jid.endsWith('@g.us');
             const notifyName = contact.notify || contact.verifiedName || contact.name || null;
@@ -258,6 +271,7 @@ class WhatsAppService {
               isGroup: isGroup
             });
           }
+
           logger.whatsapp(`Sincronización inicial de contactos completada.`);
         } catch (err) {
           logger.error('Error guardando contactos del historial:', err);
@@ -434,10 +448,14 @@ class WhatsAppService {
     const { messages, type } = messageUpdate;
     
     // Only process real-time new messages, ignore history sync ('append')
-    if (type !== 'notify') return;
+    if (type !== 'notify') {
+return;
+}
     
     for (const message of messages) {
-      if (message.key.fromMe) continue; // Ignorar mensajes propios
+      if (message.key.fromMe) {
+continue;
+} // Ignorar mensajes propios
       
       logger.message('received', {
         from: message.key.remoteJid,
@@ -454,9 +472,14 @@ class WhatsAppService {
     for (const update of messageUpdates) {
       // Baileys status enum: 2 = RECEIVED, 3 = READ, 4 = PLAYED
       let stringStatus = 'delivered';
-      if (update.update?.status === 2) stringStatus = 'delivered';
-      else if (update.update?.status === 3) stringStatus = 'read';
-      else if (update.update?.status) stringStatus = update.update.status.toString();
+
+      if (update.update?.status === 2) {
+stringStatus = 'delivered';
+} else if (update.update?.status === 3) {
+stringStatus = 'read';
+} else if (update.update?.status) {
+stringStatus = update.update.status.toString();
+}
 
       logger.message('updated', {
         messageId: update.key.id,
@@ -490,6 +513,7 @@ class WhatsAppService {
       
       // Validar que el mensaje tenga contenido
       const messageContent = JSON.stringify(messageInfo.message);
+
       if (!messageContent || messageContent === 'null') {
         return;
       }
@@ -498,6 +522,7 @@ class WhatsAppService {
       
       // Auto Opt-in: Registrar que el usuario inició la conversación
       const Consent = require('../models/Consent');
+
       try {
         await Consent.upsert({
           companyId: this.companyId,
@@ -513,6 +538,7 @@ class WhatsAppService {
       try {
         // Intentar obtener el mejor nombre del contacto
         let bestName = messageInfo.pushName;
+
         try {
           const contact = await Contact.findOne({
             where: {
@@ -520,6 +546,7 @@ class WhatsAppService {
               jid: messageInfo.from
             }
           });
+
           if (contact && (contact.name || contact.notify)) {
             bestName = contact.name || contact.notify;
           }
@@ -561,6 +588,7 @@ class WhatsAppService {
       
       // Preparar mensaje
       let messageContent;
+
       if (typeof content === 'string') {
         messageContent = { text: content };
       } else {
@@ -617,12 +645,14 @@ class WhatsAppService {
             // Si es el primer intento con Bad MAC, limpiar sesión y reintentar
             if (attempt === 1) {
               await this.forceDisconnectAndCleanup();
+
               // Reconectar después de limpiar
               try {
                 await this.connect();
               } catch (reconnectError) {
                 logger.error('Error al reconectar después de limpiar sesión:', reconnectError);
               }
+
               // Continuar con el siguiente intento
               continue;
             }
@@ -663,6 +693,7 @@ class WhatsAppService {
       
     } catch (error) {
       logger.error('Error enviando mensaje:', error);
+
       throw error;
     }
   }
@@ -688,6 +719,7 @@ class WhatsAppService {
   isTransientError(err) {
     // Heurística simple: errores de red/transitorios o de autenticación que pueden resolverse
     const msg = (err?.message || '').toLowerCase();
+
     return (
       msg.includes('timeout') ||
       msg.includes('network') ||
@@ -725,7 +757,9 @@ class WhatsAppService {
    */
   async simulateTyping(jid, content) {
     try {
-      if (!this.sock) return;
+      if (!this.sock) {
+return;
+}
 
       // Determinar el estado de presencia (composing o recording)
       let presence = 'composing';
@@ -802,6 +836,7 @@ class WhatsAppService {
       
     } catch (error) {
       logger.error('Error durante forceReconnect:', error);
+
       throw error;
     }
   }

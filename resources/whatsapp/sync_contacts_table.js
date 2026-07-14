@@ -1,5 +1,5 @@
-const Contact = require('./src/models/Contact');
 const { sequelize } = require('./src/config/database');
+const Contact = require('./src/models/Contact');
 
 async function syncContacts() {
   try {

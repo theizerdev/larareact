@@ -6,10 +6,10 @@ import {
     SidebarMenuButton,
     SidebarMenuItem,
 } from '@/components/ui/sidebar';
+import { useTranslate } from '@/hooks/use-translate';
 import { toUrl } from '@/lib/utils';
 import type { NavItem } from '@/types';
 
-import { useTranslate } from '@/hooks/use-translate';
 
 export function NavFooter({
     items,

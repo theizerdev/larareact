@@ -23,6 +23,7 @@ createInertiaApp({
         if (matchingKey) {
             return pages[matchingKey];
         }
+
         return pages[path];
     },
     layout: (name) => {

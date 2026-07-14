@@ -39,6 +39,7 @@ class WhatsAppController {
       if (!whatsappService && whatsappManager) {
         whatsappService = await whatsappManager.startCompany(req.company.id);
       }
+
       if (!whatsappService) {
         return res.status(500).json({ 
           success: false, 
@@ -86,6 +87,7 @@ class WhatsAppController {
       if (!whatsappService && whatsappManager) {
         whatsappService = await whatsappManager.startCompany(req.company.id);
       }
+
       if (!whatsappService) {
         return res.status(500).json({ 
           success: false, 
@@ -161,6 +163,7 @@ class WhatsAppController {
       // Opt-in / 24-hour window validation
       const { isWelcome = false } = req.body;
       const phoneDigits = (to || '').replace(/\D/g, '');
+
       try {
         const consent = await Consent.findOne({
           where: { companyId: req.company.company_id, phone: phoneDigits }
@@ -188,6 +191,7 @@ class WhatsAppController {
         if (!isWelcome) {
           if (lastInboundMessage) {
             const hoursSinceLastMessage = (Date.now() - new Date(lastInboundMessage.createdAt).getTime()) / (1000 * 60 * 60);
+
             if (hoursSinceLastMessage > 24 && type === 'text') {
               return res.status(403).json({
                 success: false,
@@ -230,7 +234,10 @@ class WhatsAppController {
           to,
           reason: protectionError.message
         });
-        try { metrics?.messagesFailed?.inc({ company_id: req.company.company_id, company_name: req.company.name }); } catch (_) {}
+
+        try {
+ metrics?.messagesFailed?.inc({ company_id: req.company.company_id, company_name: req.company.name }); 
+} catch (_) {}
         
         return res.status(429).json({ 
           success: false, 
@@ -248,7 +255,10 @@ class WhatsAppController {
         metrics
       });
 
-      try { metrics?.messagesSent?.inc({ company_id: req.company.company_id, company_name: req.company.name }); } catch (_) {}
+      try {
+ metrics?.messagesSent?.inc({ company_id: req.company.company_id, company_name: req.company.name }); 
+} catch (_) {}
+
       res.json({ 
         success: true, 
         messageId: result.messageId, 
@@ -313,9 +323,17 @@ class WhatsAppController {
       const { page = 1, limit = 50, status, from, to } = req.query;
       const where = { companyId: req.company.company_id };
       
-      if (status) where.status = status;
-      if (from) where.from = from;
-      if (to) where.to = to;
+      if (status) {
+where.status = status;
+}
+
+      if (from) {
+where.from = from;
+}
+
+      if (to) {
+where.to = to;
+}
 
       const messages = await Message.findAndCountAll({
         where,
@@ -450,11 +468,14 @@ class WhatsAppController {
 
       // Como usamos Baileys, simularemos las plantillas usando texto libre estructurado
       let textMessage = `[Plantilla: ${template_name}]\n`;
+
       if (components && components.length > 0) {
         components.forEach(comp => {
           if (comp.parameters) {
             comp.parameters.forEach(param => {
-              if (param.type === 'text') textMessage += `${param.text} `;
+              if (param.type === 'text') {
+textMessage += `${param.text} `;
+}
             });
           }
         });
@@ -478,6 +499,7 @@ class WhatsAppController {
 const storage = multer.diskStorage({
   destination: async (req, file, cb) => {
     const uploadDir = path.join(__dirname, '../../temp');
+
     try {
       await fs.mkdir(uploadDir, { recursive: true });
       cb(null, uploadDir);

@@ -1,24 +1,4 @@
-import React, { useState, Suspense, lazy } from 'react';
 import { Head, useForm, router } from '@inertiajs/react';
-import { Breadcrumbs } from '@/components/breadcrumbs';
-import { Button } from '@/components/ui/button';
-import { FilterBar, FilterField } from '@/components/filter-bar';
-import { Input } from '@/components/ui/input';
-import { ModuleHeader } from '@/components/module-header';
-import type { Auth } from '@/types';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { StatCard } from '@/components/stat-card';
-import { Paginated } from '@/types/app';
-import { DataTable, ColumnDef } from '@/components/data-table';
-import { cn, cleanParams } from '@/lib/utils';
-import { useTranslate } from '@/hooks/use-translate';
-import { notifySuccess, notifyError } from '@/utils/notifications';
-import {
-    DropdownMenu,
-    DropdownMenuContent,
-    DropdownMenuItem,
-    DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu';
 import {
     GitBranch,
     Plus,
@@ -32,14 +12,13 @@ import {
     MapPin,
     Building2,
 } from 'lucide-react';
-import {
-    Dialog,
-    DialogContent,
-    DialogDescription,
-    DialogHeader,
-    DialogTitle,
-    DialogFooter,
-} from '@/components/ui/dialog';
+import React, { useState, Suspense, lazy } from 'react';
+import { Breadcrumbs } from '@/components/breadcrumbs';
+import type { ColumnDef } from '@/components/data-table';
+import { DataTable } from '@/components/data-table';
+import { FilterBar, FilterField } from '@/components/filter-bar';
+import { ModuleHeader } from '@/components/module-header';
+import { StatCard } from '@/components/stat-card';
 import {
     AlertDialog,
     AlertDialogAction,
@@ -50,9 +29,31 @@ import {
     AlertDialogHeader,
     AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
+import { Button } from '@/components/ui/button';
+import {
+    Dialog,
+    DialogContent,
+    DialogDescription,
+    DialogHeader,
+    DialogTitle,
+    DialogFooter,
+} from '@/components/ui/dialog';
+import {
+    DropdownMenu,
+    DropdownMenuContent,
+    DropdownMenuItem,
+    DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { cn, cleanParams } from '@/lib/utils';
+import type { Auth } from '@/types';
+import type { Paginated } from '@/types/app';
+import { useTranslate } from '@/hooks/use-translate';
+import { notifySuccess, notifyError } from '@/utils/notifications';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Switch } from '@/components/ui/switch';
-import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import PhoneInputGroup from '../Empresas/Partials/PhoneInputGroup';
 
@@ -150,7 +151,10 @@ export default function SucursalesIndexPage({
     React.useEffect(() => {
         const unbindStart  = router.on('start',  () => setIsTableLoading(true));
         const unbindFinish = router.on('finish', () => setIsTableLoading(false));
-        return () => { unbindStart(); unbindFinish(); };
+
+        return () => {
+ unbindStart(); unbindFinish(); 
+};
     }, []);
 
     // Debounce de filtros
@@ -167,6 +171,7 @@ export default function SucursalesIndexPage({
                 { preserveState: true, preserveScroll: true }
             );
         }, 300);
+
         return () => clearTimeout(timer);
     }, [searchTerm, statusFilter, empresaFilter, perPageFilter]);
 
@@ -211,6 +216,7 @@ export default function SucursalesIndexPage({
 
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
+
         if (editingSucursal) {
             put(`/admin/sucursales/${editingSucursal.id}`, {
                 onSuccess: () => {
@@ -238,7 +244,10 @@ export default function SucursalesIndexPage({
     };
 
     const handleDeleteConfirm = () => {
-        if (!deletingSucursal) return;
+        if (!deletingSucursal) {
+return;
+}
+
         router.delete(`/admin/sucursales/${deletingSucursal.id}`, {
             onSuccess: () => {
                 setDeletingSucursal(null);

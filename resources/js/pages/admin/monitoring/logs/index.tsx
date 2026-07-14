@@ -1,20 +1,20 @@
-import React, { useState, useMemo } from 'react';
 import { Head, router } from '@inertiajs/react';
 import { 
     Terminal, Download, Trash2, Search, AlertCircle, FileText, ChevronRight, Eye,
     AlertTriangle, Info, CheckCircle2, Copy, Check, Server, HardDrive, Filter, XCircle 
 } from 'lucide-react';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Badge } from '@/components/ui/badge';
-import { Breadcrumbs } from '@/components/breadcrumbs';
-import { useTranslate } from '@/hooks/use-translate';
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
+import React, { useState, useMemo } from 'react';
 import Swal from 'sweetalert2';
+import { Breadcrumbs } from '@/components/breadcrumbs';
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Input } from '@/components/ui/input';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
+import { useTranslate } from '@/hooks/use-translate';
 
 interface LogItem {
     timestamp: string;
@@ -38,7 +38,10 @@ export default function LogMonitoring({ logs, logSizeMb }: PageProps) {
     const [hideVendor, setHideVendor] = useState(true);
 
     const parsedFrames = useMemo(() => {
-        if (!selectedLog?.stack_trace) return [];
+        if (!selectedLog?.stack_trace) {
+return [];
+}
+
         return selectedLog.stack_trace.split('\n').map((line) => {
             const trimmed = line.trim();
             const frameMatch = trimmed.match(/^#(\d+)\s+(.+?)\((\d+)\):\s+(.+)$/);
@@ -55,6 +58,7 @@ export default function LogMonitoring({ logs, logSizeMb }: PageProps) {
                 call = frameMatch[4];
             } else {
                 const altMatch = trimmed.match(/^#(\d+)\s+(.+?):\s+(.+)$/);
+
                 if (altMatch) {
                     frameNumber = altMatch[1];
                     file = altMatch[2];
@@ -67,14 +71,17 @@ export default function LogMonitoring({ logs, logSizeMb }: PageProps) {
             const isVendor = file.includes('vendor') || file.includes('node_modules') || file.includes('symfony') || file.includes('laravel') || file.includes('internal function');
             
             let displayFile = file;
+
             if (file) {
                 const searchStr = 'larareact\\';
                 const baseIdx = file.indexOf(searchStr);
+
                 if (baseIdx !== -1) {
                     displayFile = file.substring(baseIdx + searchStr.length);
                 } else {
                     const searchStrUnix = 'larareact/';
                     const baseIdxUnix = file.indexOf(searchStrUnix);
+
                     if (baseIdxUnix !== -1) {
                         displayFile = file.substring(baseIdxUnix + searchStrUnix.length);
                     }
@@ -117,13 +124,14 @@ export default function LogMonitoring({ logs, logSizeMb }: PageProps) {
 
     // Calcular estadísticas en tiempo real
     const stats = useMemo(() => {
-        let total = logs.length;
+        const total = logs.length;
         let errors = 0;
         let warnings = 0;
         let infos = 0;
 
         logs.forEach((log) => {
             const lvl = log.level.toLowerCase();
+
             if (['error', 'critical', 'emergency', 'alert'].includes(lvl)) {
                 errors++;
             } else if (lvl === 'warning') {
@@ -145,6 +153,7 @@ export default function LogMonitoring({ logs, logSizeMb }: PageProps) {
                                  (levelFilter === 'error' && ['error', 'critical', 'emergency', 'alert'].includes(log.level.toLowerCase())) ||
                                  (levelFilter === 'warning' && log.level.toLowerCase() === 'warning') ||
                                  (levelFilter === 'info' && ['info', 'debug'].includes(log.level.toLowerCase()));
+
             return matchesSearch && matchesLevel;
         });
     }, [logs, search, levelFilter]);
@@ -152,6 +161,7 @@ export default function LogMonitoring({ logs, logSizeMb }: PageProps) {
     // Información del nivel de log para estilos y visuales
     const getLevelInfo = (level: string) => {
         const lvl = level.toLowerCase();
+
         switch (lvl) {
             case 'emergency':
             case 'alert':

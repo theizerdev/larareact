@@ -10,8 +10,8 @@ import { Button } from '@/components/ui/button';
 import { PageHeader } from '@/components/ui/page-header';
 import { SectionCard } from '@/components/ui/section-card';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { dashboard } from '@/routes';
 import { useTranslate } from '@/hooks/use-translate';
+import { dashboard } from '@/routes';
 
 const stats = [
     {

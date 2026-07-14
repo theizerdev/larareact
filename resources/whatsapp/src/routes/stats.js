@@ -1,7 +1,7 @@
 const express = require('express');
-const Message = require('../models/Message');
 const antiBlockProtection = require('../middleware/antiBlockProtection');
 const authMiddleware = require('../middleware/auth');
+const Message = require('../models/Message');
 const router = express.Router();
 
 router.get('/', async (req, res) => {

@@ -7,11 +7,13 @@ const rateLimitByCompany = rateLimit({
   // Valor dinámico de límite por minuto según la compañía
   max: (req) => {
     const perMinute = req?.company?.rateLimitPerMinute;
+
     return typeof perMinute === 'number' && perMinute > 0 ? perMinute : 30;
   },
   // Agrupar por compañía (multi-tenant)
   keyGenerator: (req) => {
     const companyId = req?.company?.id ?? 'global';
+
     return `company_${companyId}`;
   },
   // Mensaje informativo con el límite de la compañía

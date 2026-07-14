@@ -1,7 +1,7 @@
 import { Head, Link, usePage } from '@inertiajs/react';
+import { useTranslate } from '@/hooks/use-translate';
 import { dashboard, login } from '@/routes';
 import { register } from '@/routes';
-import { useTranslate } from '@/hooks/use-translate';
 
 export default function Welcome() {
     const { auth } = usePage().props;

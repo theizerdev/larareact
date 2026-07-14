@@ -1,4 +1,3 @@
-import React, { useState, useEffect, useRef } from 'react';
 import { Head, router } from '@inertiajs/react';
 import {
     Map as MapIcon,
@@ -20,13 +19,14 @@ import {
     Info,
     ArrowLeft
 } from 'lucide-react';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Breadcrumbs } from '@/components/breadcrumbs';
-import { useTranslate } from '@/hooks/use-translate';
-import Swal from 'sweetalert2';
 import mapboxgl from 'mapbox-gl';
+import React, { useState, useEffect, useRef } from 'react';
+import Swal from 'sweetalert2';
+import { Breadcrumbs } from '@/components/breadcrumbs';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
+import { Input } from '@/components/ui/input';
+import { useTranslate } from '@/hooks/use-translate';
 import 'mapbox-gl/dist/mapbox-gl.css';
 
 interface PageProps {
@@ -97,6 +97,7 @@ export default function MapboxIntegration({
         mapboxSessionToken.current = 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, (c) => {
             const r = Math.random() * 16 | 0;
             const v = c === 'x' ? r : (r & 0x3 | 0x8);
+
             return v.toString(16);
         });
     }, []);
@@ -115,16 +116,23 @@ export default function MapboxIntegration({
 
     // Load Google Maps API script if active
     useEffect(() => {
-        if (!google_maps_active || !google_maps_api_key) return;
+        if (!google_maps_active || !google_maps_api_key) {
+return;
+}
 
         const google = (window as any).google;
+
         if (google?.maps?.places) {
             setIsGoogleScriptLoaded(true);
+
             return;
         }
 
         const scriptId = 'google-maps-places-script';
-        if (document.getElementById(scriptId)) return;
+
+        if (document.getElementById(scriptId)) {
+return;
+}
 
         const script = document.createElement('script');
         script.id = scriptId;
@@ -137,7 +145,9 @@ export default function MapboxIntegration({
 
     // Initialize Mapbox centered in Caracas, Venezuela by default
     useEffect(() => {
-        if (!mapbox_api_key || !mapContainer.current || map.current) return;
+        if (!mapbox_api_key || !mapContainer.current || map.current) {
+return;
+}
 
         mapboxgl.accessToken = mapbox_api_key;
 
@@ -173,7 +183,10 @@ export default function MapboxIntegration({
 
     // Handle styling changes for dark mode dynamically
     useEffect(() => {
-        if (!map.current) return;
+        if (!map.current) {
+return;
+}
+
         const handleStyleChange = () => {
             const isDark = document.documentElement.classList.contains('dark');
             const styleUrl = isDark
@@ -191,20 +204,26 @@ export default function MapboxIntegration({
 
         const observer = new MutationObserver(handleStyleChange);
         observer.observe(document.documentElement, { attributes: true, attributeFilter: ['class'] });
+
         return () => observer.disconnect();
     }, [originCoord, destCoord]);
 
     // Autocomplete Search fetch logic
     const fetchSuggestions = async (query: string, type: 'origin' | 'destination') => {
         if (query.trim().length < 3) {
-            if (type === 'origin') setOriginSuggestions([]);
-            else setDestSuggestions([]);
+            if (type === 'origin') {
+setOriginSuggestions([]);
+} else {
+setDestSuggestions([]);
+}
+
             return;
         }
 
         // Use Google Autocomplete if enabled and script is loaded, merged with Nominatim
         if (google_maps_active && isGoogleScriptLoaded) {
             setLoadingSuggestions(true);
+
             try {
                 // Fetch OSM in parallel
                 const nominatimUrl = `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(query)}&format=json&countrycodes=ve&limit=3&accept-language=es`;
@@ -238,20 +257,28 @@ export default function MapboxIntegration({
                 }));
 
                 const merged = [...googleResults, ...formattedOsm];
-                if (type === 'origin') setOriginSuggestions(merged);
-                else setDestSuggestions(merged);
+
+                if (type === 'origin') {
+setOriginSuggestions(merged);
+} else {
+setDestSuggestions(merged);
+}
             } catch (err) {
                 console.error('Google Autocomplete Error:', err);
             } finally {
                 setLoadingSuggestions(false);
             }
+
             return;
         }
 
         // Mapbox Search Box v1 fallback merged with Nominatim
-        if (!mapbox_api_key) return;
+        if (!mapbox_api_key) {
+return;
+}
 
         setLoadingSuggestions(true);
+
         try {
             const nominatimUrl = `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(query)}&format=json&countrycodes=ve&limit=3&accept-language=es`;
             const osmPromise = fetch(nominatimUrl).then(res => res.json()).catch(() => []);
@@ -275,8 +302,11 @@ export default function MapboxIntegration({
 
             const merged = [...mapboxResults, ...formattedOsm];
 
-            if (type === 'origin') setOriginSuggestions(merged);
-            else setDestSuggestions(merged);
+            if (type === 'origin') {
+setOriginSuggestions(merged);
+} else {
+setDestSuggestions(merged);
+}
         } catch (err) {
             console.error('Error fetching Mapbox/OSM suggestions:', err);
         } finally {
@@ -287,21 +317,29 @@ export default function MapboxIntegration({
     // Debounce autocompleting suggestions
     useEffect(() => {
         const timer = setTimeout(() => {
-            if (activeInput === 'origin') fetchSuggestions(originQuery, 'origin');
+            if (activeInput === 'origin') {
+fetchSuggestions(originQuery, 'origin');
+}
         }, 400);
+
         return () => clearTimeout(timer);
     }, [originQuery]);
 
     useEffect(() => {
         const timer = setTimeout(() => {
-            if (activeInput === 'destination') fetchSuggestions(destQuery, 'destination');
+            if (activeInput === 'destination') {
+fetchSuggestions(destQuery, 'destination');
+}
         }, 400);
+
         return () => clearTimeout(timer);
     }, [destQuery]);
 
     // Handle marker positioning on coords changes
     useEffect(() => {
-        if (!map.current) return;
+        if (!map.current) {
+return;
+}
 
         // Origin Marker
         if (originCoord) {
@@ -347,14 +385,18 @@ export default function MapboxIntegration({
 
     // Clear route visual lines from map
     const clearRouteLayer = () => {
-        if (!map.current) return;
+        if (!map.current) {
+return;
+}
 
         if (map.current.getLayer('route')) {
             map.current.removeLayer('route');
         }
+
         if (map.current.getSource('route')) {
             map.current.removeSource('route');
         }
+
         setRouteDistance(null);
         setRouteDuration(null);
         setRouteSteps([]);
@@ -362,16 +404,23 @@ export default function MapboxIntegration({
 
     // Calculate and draw route using selected API
     const calculateRoute = async () => {
-        if (!originCoord || !destCoord || !map.current) return;
+        if (!originCoord || !destCoord || !map.current) {
+return;
+}
 
         // Check Google Directions first if active
         if (google_maps_active && isGoogleScriptLoaded) {
             setLoadingRoute(true);
+
             try {
                 const google = (window as any).google;
                 let travelMode = google.maps.TravelMode.DRIVING;
-                if (profile === 'walking') travelMode = google.maps.TravelMode.WALKING;
-                else if (profile === 'cycling') travelMode = google.maps.TravelMode.BICYCLING;
+
+                if (profile === 'walking') {
+travelMode = google.maps.TravelMode.WALKING;
+} else if (profile === 'cycling') {
+travelMode = google.maps.TravelMode.BICYCLING;
+}
 
                 const directionsService = new google.maps.DirectionsService();
                 directionsService.route({
@@ -381,6 +430,7 @@ export default function MapboxIntegration({
                     provideRouteAlternatives: true
                 }, (response: any, status: any) => {
                     setLoadingRoute(false);
+
                     if (status === google.maps.DirectionsStatus.OK && response && response.routes[0]) {
                         const route = response.routes[0];
                         const leg = route.legs[0];
@@ -418,12 +468,17 @@ export default function MapboxIntegration({
                 console.error('Google Directions service error:', err);
                 setLoadingRoute(false);
             }
+
             return;
         }
 
         // Mapbox routing fallback
-        if (!mapbox_api_key) return;
+        if (!mapbox_api_key) {
+return;
+}
+
         setLoadingRoute(true);
+
         try {
             const mapboxProfile = `mapbox/${profile}`;
             const url = `https://api.mapbox.com/directions/v5/${mapboxProfile}/${originCoord[0]},${originCoord[1]};${destCoord[0]},${destCoord[1]}?geometries=geojson&steps=true&language=es&access_token=${mapbox_api_key}`;
@@ -440,6 +495,7 @@ export default function MapboxIntegration({
                     showConfirmButton: false
                 });
                 clearRouteLayer();
+
                 return;
             }
 
@@ -469,7 +525,9 @@ export default function MapboxIntegration({
 
     // Draw lines inside Mapbox GL Map
     const drawRouteLine = (coordinates: number[][]) => {
-        if (!map.current) return;
+        if (!map.current) {
+return;
+}
 
         const geojson = {
             type: 'Feature',
@@ -519,14 +577,17 @@ export default function MapboxIntegration({
         // Fetch coordinates from Google Geocoder if it's a Google prediction
         if (google_maps_active && isGoogleScriptLoaded && item.center[0] === 0) {
             setLoadingRoute(true);
+
             try {
                 const google = (window as any).google;
                 const geocoder = new google.maps.Geocoder();
                 geocoder.geocode({ placeId: item.id }, (results: any[], status: any) => {
                     setLoadingRoute(false);
+
                     if (status === google.maps.GeocoderStatus.OK && results && results[0]) {
                         const lat = results[0].geometry.location.lat();
                         const lng = results[0].geometry.location.lng();
+
                         if (type === 'origin') {
                             setOriginQuery(item.place_name);
                             setOriginCoord([lng, lat]);
@@ -540,13 +601,16 @@ export default function MapboxIntegration({
                 console.error('Google Geocoding error:', err);
                 setLoadingRoute(false);
             }
+
             setActiveInput(null);
+
             return;
         }
 
         // Fetch coordinates from Mapbox Retrieve if it's a Mapbox prediction without coordinates
         if (!google_maps_active && item.center[0] === 0) {
             setLoadingRoute(true);
+
             try {
                 const url = `https://api.mapbox.com/search/searchbox/v1/retrieve/${item.id}?access_token=${mapbox_api_key}&session_token=${mapboxSessionToken.current}`;
                 const res = await fetch(url);
@@ -554,6 +618,7 @@ export default function MapboxIntegration({
 
                 if (data.features && data.features[0]) {
                     const coords = data.features[0].geometry.coordinates; // [lng, lat]
+
                     if (type === 'origin') {
                         setOriginQuery(item.place_name);
                         setOriginCoord(coords);
@@ -567,6 +632,7 @@ export default function MapboxIntegration({
             } finally {
                 setLoadingRoute(false);
             }
+
             setActiveInput(null);
 
             return;
@@ -580,6 +646,7 @@ export default function MapboxIntegration({
             setDestQuery(item.place_name);
             setDestCoord(item.center);
         }
+
         setActiveInput(null);
     };
 
@@ -625,6 +692,7 @@ export default function MapboxIntegration({
                 timer: 3000,
                 showConfirmButton: false
             });
+
             return;
         }
 
@@ -654,34 +722,59 @@ export default function MapboxIntegration({
 
     // Formatter helpers
     const formatDistance = (meters: number) => {
-        if (meters < 1000) return `${meters.toFixed(0)} m`;
+        if (meters < 1000) {
+return `${meters.toFixed(0)} m`;
+}
+
         return `${(meters / 1000).toFixed(1)} km`;
     };
 
     const formatDuration = (seconds: number) => {
         const mins = Math.round(seconds / 60);
-        if (mins < 60) return `${mins} min`;
+
+        if (mins < 60) {
+return `${mins} min`;
+}
+
         const hrs = Math.floor(mins / 60);
         const remMins = mins % 60;
+
         return `${hrs} h ${remMins} min`;
     };
 
     // Get Lucide icon based on turn instruction keywords
     const getStepIcon = (type: string) => {
         const lowerType = type.toLowerCase();
-        if (lowerType.includes('arrive')) return <MapPin className="h-4 w-4 text-rose-500 fill-rose-100 dark:fill-rose-950" />;
-        if (lowerType.includes('depart')) return <MapPin className="h-4 w-4 text-emerald-500 fill-emerald-100 dark:fill-emerald-950" />;
-        if (lowerType.includes('left')) return <Navigation className="h-4 w-4 text-indigo-500 -rotate-90" />;
-        if (lowerType.includes('right')) return <Navigation className="h-4 w-4 text-indigo-500 rotate-90" />;
+
+        if (lowerType.includes('arrive')) {
+return <MapPin className="h-4 w-4 text-rose-500 fill-rose-100 dark:fill-rose-950" />;
+}
+
+        if (lowerType.includes('depart')) {
+return <MapPin className="h-4 w-4 text-emerald-500 fill-emerald-100 dark:fill-emerald-950" />;
+}
+
+        if (lowerType.includes('left')) {
+return <Navigation className="h-4 w-4 text-indigo-500 -rotate-90" />;
+}
+
+        if (lowerType.includes('right')) {
+return <Navigation className="h-4 w-4 text-indigo-500 rotate-90" />;
+}
+
         return <ChevronRight className="h-4 w-4 text-slate-400" />;
     };
 
     // Handle map clicks when an input is active
     useEffect(() => {
-        if (!map.current) return;
+        if (!map.current) {
+return;
+}
 
         const handleMapClick = async (e: mapboxgl.MapMouseEvent) => {
-            if (!activeInput) return;
+            if (!activeInput) {
+return;
+}
 
             const { lng, lat } = e.lngLat;
 
@@ -702,10 +795,14 @@ export default function MapboxIntegration({
                     const geocoder = new google.maps.Geocoder();
                     const results = await new Promise<any>((resolve) => {
                         geocoder.geocode({ location: { lat, lng } }, (res: any[] | null, status: any) => {
-                            if (status === 'OK' && res && res[0]) resolve(res[0]);
-                            else resolve(null);
+                            if (status === 'OK' && res && res[0]) {
+resolve(res[0]);
+} else {
+resolve(null);
+}
                         });
                     });
+
                     if (results) {
                         address = results.formatted_address;
                     }
@@ -714,6 +811,7 @@ export default function MapboxIntegration({
                     const url = `https://api.mapbox.com/geocoding/v5/mapbox.places/${lng},${lat}.json?access_token=${mapbox_api_key}&language=es`;
                     const res = await fetch(url);
                     const data = await res.json();
+
                     if (data.features && data.features[0]) {
                         address = data.features[0].place_name;
                     } else {
@@ -723,6 +821,7 @@ export default function MapboxIntegration({
                             headers: { 'User-Agent': 'Larareact-Routing-App/1.0' }
                         });
                         const dataOsm = await resOsm.json();
+
                         if (dataOsm && dataOsm.display_name) {
                             address = dataOsm.display_name;
                         }
@@ -755,6 +854,7 @@ export default function MapboxIntegration({
     useEffect(() => {
         const handleOutsideClick = (e: MouseEvent) => {
             const target = e.target as HTMLElement;
+
             // Prevent closing autocomplete active states when clicking on search boxes, map canvas, or controls
             if (
                 target.closest('.search-box-container') ||
@@ -763,9 +863,11 @@ export default function MapboxIntegration({
             ) {
                 return;
             }
+
             setActiveInput(null);
         };
         document.addEventListener('mousedown', handleOutsideClick);
+
         return () => document.removeEventListener('mousedown', handleOutsideClick);
     }, []);
 
@@ -885,7 +987,10 @@ export default function MapboxIntegration({
                                             value={originQuery}
                                             onChange={(e) => {
                                                 setOriginQuery(e.target.value);
-                                                if (e.target.value === '') setOriginCoord(null);
+
+                                                if (e.target.value === '') {
+setOriginCoord(null);
+}
                                             }}
                                             onFocus={() => setActiveInput('origin')}
                                             className="pl-9 pr-8 py-2 text-sm bg-white dark:bg-slate-950"
@@ -941,7 +1046,10 @@ export default function MapboxIntegration({
                                             value={destQuery}
                                             onChange={(e) => {
                                                 setDestQuery(e.target.value);
-                                                if (e.target.value === '') setDestCoord(null);
+
+                                                if (e.target.value === '') {
+setDestCoord(null);
+}
                                             }}
                                             onFocus={() => setActiveInput('destination')}
                                             className="pl-9 pr-8 py-2 text-sm bg-white dark:bg-slate-950"

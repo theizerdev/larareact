@@ -1,6 +1,7 @@
-import React, { createContext, useContext, useState, useEffect, useRef } from 'react';
-import { useAppearance, Appearance } from './use-appearance';
 import { usePage, router } from '@inertiajs/react';
+import React, { createContext, useContext, useState, useEffect, useRef } from 'react';
+import type { Appearance } from './use-appearance';
+import { useAppearance } from './use-appearance';
 
 export interface TemplateSettings {
     primaryColor: string;
@@ -35,11 +36,16 @@ const TemplateSettingsContext = createContext<TemplateSettingsContextType | unde
 // Helper to determine text contrast (light or dark text) for dynamic hex colors
 function getContrastColor(hex: string): string {
     const cleanHex = hex.replace('#', '');
-    if (cleanHex.length !== 6) return '#ffffff';
+
+    if (cleanHex.length !== 6) {
+return '#ffffff';
+}
+
     const r = parseInt(cleanHex.substring(0, 2), 16);
     const g = parseInt(cleanHex.substring(2, 4), 16);
     const b = parseInt(cleanHex.substring(4, 6), 16);
     const luminance = (0.299 * r + 0.587 * g + 0.114 * b) / 255;
+
     return luminance > 0.6 ? '#0f172a' : '#ffffff';
 }
 
@@ -54,15 +60,21 @@ export function TemplateSettingsProvider({ children }: { children: React.ReactNo
         if (dbSettings) {
             return { ...DEFAULT_SETTINGS, ...dbSettings };
         }
-        if (typeof window === 'undefined') return DEFAULT_SETTINGS;
+
+        if (typeof window === 'undefined') {
+return DEFAULT_SETTINGS;
+}
+
         try {
             const stored = localStorage.getItem('template-settings');
+
             if (stored) {
                 return { ...DEFAULT_SETTINGS, ...JSON.parse(stored) };
             }
         } catch (e) {
             console.error('Error loading template settings', e);
         }
+
         return DEFAULT_SETTINGS;
     });
 
@@ -70,6 +82,7 @@ export function TemplateSettingsProvider({ children }: { children: React.ReactNo
         setSettings((prev) => {
             const updated = { ...prev, [key]: value };
             localStorage.setItem('template-settings', JSON.stringify(updated));
+
             return updated;
         });
     };
@@ -79,6 +92,7 @@ export function TemplateSettingsProvider({ children }: { children: React.ReactNo
     useEffect(() => {
         if (userId !== prevUserId.current) {
             prevUserId.current = userId;
+
             if (dbSettings) {
                 setSettings({ ...DEFAULT_SETTINGS, ...dbSettings });
             } else {
@@ -97,6 +111,7 @@ export function TemplateSettingsProvider({ children }: { children: React.ReactNo
         if (isFirstRun.current) {
             isFirstRun.current = false;
             lastSavedSettings.current = currentStr;
+
             return;
         }
 
@@ -176,8 +191,10 @@ export function TemplateSettingsProvider({ children }: { children: React.ReactNo
 
 export function useTemplateSettings() {
     const context = useContext(TemplateSettingsContext);
+
     if (!context) {
         throw new Error('useTemplateSettings must be used within a TemplateSettingsProvider');
     }
+
     return context;
 }

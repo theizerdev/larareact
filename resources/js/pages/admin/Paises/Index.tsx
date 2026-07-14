@@ -1,25 +1,14 @@
-import React, { useState, Suspense, lazy } from 'react';
 import { Head, useForm, router } from '@inertiajs/react';
-import { Breadcrumbs } from '@/components/breadcrumbs';
-import { Button } from '@/components/ui/button';
-import { FilterBar, FilterField } from '@/components/filter-bar';
-import { Input } from '@/components/ui/input';
-import { ModuleHeader } from '@/components/module-header';
-import type { Auth } from '@/types';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { StatCard } from '@/components/stat-card';
-import { Paginated } from '@/types/app';
-import { DataTable, ColumnDef } from '@/components/data-table';
-import { cn, cleanParams } from '@/lib/utils';
-import { useTranslate } from '@/hooks/use-translate';
-import { bulkDestroy } from '@/routes/admin/paises';
-import {
-    DropdownMenu,
-    DropdownMenuContent,
-    DropdownMenuItem,
-    DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu';
 import { Map, Plus, Globe, CheckCircle, XCircle, Trash2, MoreVertical, Pencil, ToggleRight } from 'lucide-react';
+import React, { useState, Suspense, lazy } from 'react';
+import { Breadcrumbs } from '@/components/breadcrumbs';
+import type { ColumnDef } from '@/components/data-table';
+import { DataTable } from '@/components/data-table';
+import { DeleteConfirmationDialog } from '@/components/delete-confirmation-dialog';
+import { FilterBar, FilterField } from '@/components/filter-bar';
+import { ModuleHeader } from '@/components/module-header';
+import { StatCard } from '@/components/stat-card';
+import { Button } from '@/components/ui/button';
 import {
     Dialog,
     DialogContent,
@@ -28,10 +17,22 @@ import {
     DialogTitle,
     DialogFooter,
 } from '@/components/ui/dialog';
+import {
+    DropdownMenu,
+    DropdownMenuContent,
+    DropdownMenuItem,
+    DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { cn, cleanParams } from '@/lib/utils';
+import type { Auth } from '@/types';
+import type { Paginated } from '@/types/app';
+import { useTranslate } from '@/hooks/use-translate';
+import { bulkDestroy } from '@/routes/admin/paises';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Switch } from '@/components/ui/switch';
-import { DeleteConfirmationDialog } from '@/components/delete-confirmation-dialog';
-import { Label } from '@/components/ui/label';
 
 const MapComponent = lazy(() => {
     // Importamos el componente del mapa
@@ -105,6 +106,7 @@ export default function PaisesIndexPage({ auth, paises, stats, filters }: Paises
     React.useEffect(() => {
         const unbindStart = router.on('start', () => setIsTableLoading(true));
         const unbindFinish = router.on('finish', () => setIsTableLoading(false));
+
         return () => {
             unbindStart();
             unbindFinish();
@@ -178,6 +180,7 @@ export default function PaisesIndexPage({ auth, paises, stats, filters }: Paises
 
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
+
         if (editingPais) {
             put(`/admin/paises/${editingPais.id}`, {
                 onSuccess: () => {

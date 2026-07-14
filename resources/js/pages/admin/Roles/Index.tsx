@@ -1,29 +1,10 @@
-import React, { useState } from 'react';
 import { Head, useForm, router } from '@inertiajs/react';
-import { Breadcrumbs } from '@/components/breadcrumbs';
-import { Button } from '@/components/ui/button';
-import { FilterBar, FilterField } from '@/components/filter-bar';
-import { Input } from '@/components/ui/input';
-import { ModuleHeader } from '@/components/module-header';
-import type { Auth } from '@/types';
-import { StatCard } from '@/components/stat-card';
-import { useTranslate } from '@/hooks/use-translate';
-import { notifySuccess, notifyError } from '@/utils/notifications';
-import {
-    DropdownMenu,
-    DropdownMenuContent,
-    DropdownMenuItem,
-    DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu';
 import { Shield, Plus, Key, MoreVertical, Pencil, Trash2 } from 'lucide-react';
-import {
-    Dialog,
-    DialogContent,
-    DialogDescription,
-    DialogHeader,
-    DialogTitle,
-    DialogFooter,
-} from '@/components/ui/dialog';
+import React, { useState } from 'react';
+import { Breadcrumbs } from '@/components/breadcrumbs';
+import { FilterBar, FilterField } from '@/components/filter-bar';
+import { ModuleHeader } from '@/components/module-header';
+import { StatCard } from '@/components/stat-card';
 import {
     AlertDialog,
     AlertDialogAction,
@@ -34,9 +15,28 @@ import {
     AlertDialogHeader,
     AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
-import { Label } from '@/components/ui/label';
+import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
+import {
+    Dialog,
+    DialogContent,
+    DialogDescription,
+    DialogHeader,
+    DialogTitle,
+    DialogFooter,
+} from '@/components/ui/dialog';
+import {
+    DropdownMenu,
+    DropdownMenuContent,
+    DropdownMenuItem,
+    DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
+import { useTranslate } from '@/hooks/use-translate';
+import type { Auth } from '@/types';
+import { notifySuccess, notifyError } from '@/utils/notifications';
 import { Switch } from '@/components/ui/switch';
 
 interface User {
@@ -111,6 +111,7 @@ export default function RolesIndexPage({ auth, roles, stats, groupedPermissions,
                 { preserveState: true, preserveScroll: true }
             );
         }, 300);
+
         return () => clearTimeout(timer);
     }, [searchTerm]);
 
@@ -131,6 +132,7 @@ export default function RolesIndexPage({ auth, roles, stats, groupedPermissions,
 
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
+
         if (editingRole) {
             put(`/admin/roles/${editingRole.id}`, {
                 onSuccess: () => {
@@ -154,7 +156,10 @@ export default function RolesIndexPage({ auth, roles, stats, groupedPermissions,
     };
 
     const handleDeleteConfirm = () => {
-        if (!deletingRole) return;
+        if (!deletingRole) {
+return;
+}
+
         router.delete(`/admin/roles/${deletingRole.id}`, {
             onSuccess: () => {
                 setDeletingRole(null);
@@ -176,11 +181,15 @@ export default function RolesIndexPage({ auth, roles, stats, groupedPermissions,
                 });
             });
         });
+
         return names;
     }, [groupedPermissions]);
 
     const isAllSystemPermissionsSelected = React.useMemo(() => {
-        if (allSystemPermissionNames.length === 0) return false;
+        if (allSystemPermissionNames.length === 0) {
+return false;
+}
+
         return allSystemPermissionNames.every(name => data.permissions.includes(name));
     }, [allSystemPermissionNames, data.permissions]);
 
@@ -206,6 +215,7 @@ export default function RolesIndexPage({ auth, roles, stats, groupedPermissions,
 
     const handleModuleToggle = (modulePermissions: Permission[], checked: boolean) => {
         const permissionNames = modulePermissions.map(p => p.name);
+
         if (checked) {
             // Añadir los que no estén
             const newPermissions = [...data.permissions];
@@ -417,6 +427,7 @@ export default function RolesIndexPage({ auth, roles, stats, groupedPermissions,
                                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                                     {Object.entries(modules).map(([module, permissions]) => {
                                                         const isAllSelected = isAllModulePermissionsSelected(permissions);
+
                                                         return (
                                                             <div key={module} className="border rounded-lg p-3 bg-muted/40 space-y-2.5">
                                                                 {/* Cabecera del Módulo con Checkbox maestro */}

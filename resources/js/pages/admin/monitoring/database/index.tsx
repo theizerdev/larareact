@@ -1,15 +1,15 @@
-import React, { useEffect, useState } from 'react';
 import { Head } from '@inertiajs/react';
 import { Database, Activity, HardDrive, Hash, ShieldAlert, Cpu, RefreshCw, Layers } from 'lucide-react';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Progress } from '@/components/ui/progress';
-import { Button } from '@/components/ui/button';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Badge } from '@/components/ui/badge';
-import { Breadcrumbs } from '@/components/breadcrumbs';
-import { useTranslate } from '@/hooks/use-translate';
+import React, { useEffect, useState } from 'react';
 import Chart from 'react-apexcharts';
+import { Breadcrumbs } from '@/components/breadcrumbs';
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Progress } from '@/components/ui/progress';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { useTranslate } from '@/hooks/use-translate';
 
 interface TableInfo {
     name: string;
@@ -69,6 +69,7 @@ export default function DatabaseMonitoring({ dbInfo }: PageProps) {
     const fetchMetrics = async () => {
         try {
             const res = await fetch('/admin/monitoring/database/metrics');
+
             if (res.ok) {
                 const data: LiveMetrics = await res.json();
                 setMetrics(data);
@@ -76,11 +77,13 @@ export default function DatabaseMonitoring({ dbInfo }: PageProps) {
                 // Actualizar historial de Consultas por Segundo (QPS)
                 setQpsHistory((prev) => {
                     const next = [...prev.slice(1), data.queries_per_second];
+
                     return next;
                 });
 
                 setTimeLabels((prev) => {
                     const next = [...prev.slice(1), new Date().toLocaleTimeString()];
+
                     return next;
                 });
             }
@@ -93,6 +96,7 @@ export default function DatabaseMonitoring({ dbInfo }: PageProps) {
     useEffect(() => {
         fetchMetrics();
         const interval = setInterval(fetchMetrics, 3000);
+
         return () => clearInterval(interval);
     }, []);
 
@@ -161,8 +165,12 @@ export default function DatabaseMonitoring({ dbInfo }: PageProps) {
                             label: __('Total Queries'),
                             color: '#94a3b8',
                             formatter: () => {
-                                if (!metrics) return '0';
+                                if (!metrics) {
+return '0';
+}
+
                                 const qt = metrics.query_types;
+
                                 return String(qt.select + qt.insert + qt.update + qt.delete);
                             }
                         }

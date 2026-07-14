@@ -28,6 +28,7 @@ const EmpresaMapComponent: React.FC<MapComponentProps> = ({
                 `https://nominatim.openstreetmap.org/reverse?format=json&lat=${newLat}&lon=${newLng}&accept-language=es`,
                 { headers: { 'Accept-Language': 'es' } }
             );
+
             if (res.ok) {
                 const data = await res.json();
                 const address = data.display_name ?? '';

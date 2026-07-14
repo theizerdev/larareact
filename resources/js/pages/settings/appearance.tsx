@@ -1,15 +1,15 @@
 import { Head } from '@inertiajs/react';
+import { Check } from 'lucide-react';
 import AppearanceTabs from '@/components/appearance-tabs';
 import LanguageTabs from '@/components/language-tabs';
 import { PageHeader } from '@/components/ui/page-header';
 import { SectionCard } from '@/components/ui/section-card';
-import { edit as editAppearance } from '@/routes/appearance';
-import { useTranslate } from '@/hooks/use-translate';
-import { useTemplateSettings } from '@/hooks/use-template-settings';
-import { Switch } from '@/components/ui/switch';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Check } from 'lucide-react';
+import { Switch } from '@/components/ui/switch';
+import { useTemplateSettings } from '@/hooks/use-template-settings';
+import { useTranslate } from '@/hooks/use-translate';
 import { cn } from '@/lib/utils';
+import { edit as editAppearance } from '@/routes/appearance';
 
 export default function Appearance() {
     const { __ } = useTranslate();

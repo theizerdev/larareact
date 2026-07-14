@@ -18,14 +18,18 @@ export function cleanParams(params: Record<string, any>): Record<string, any> {
         if (val === '' || val === null || val === undefined) {
             return;
         }
+
         // Excluir valores por defecto para mantener limpia la URL
         if (key === 'page' && (val === 1 || val === '1')) {
             return;
         }
+
         if (key === 'perPage' && (val === 10 || val === '10')) {
             return;
         }
+
         cleaned[key] = val;
     });
+
     return cleaned;
 }

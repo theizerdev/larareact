@@ -53,12 +53,14 @@ class AntiBlockProtection {
     
     // Límite por hora
     const hourlyEntry = this.userLimits.get(hourKey) || { count: 0, lastUpdated: Date.now() };
+
     if (hourlyEntry.count >= this.MAX_MESSAGES_PER_HOUR_PER_USER) {
       throw new Error(`Límite de ${this.MAX_MESSAGES_PER_HOUR_PER_USER} mensajes por hora excedido para ${to}`);
     }
     
     // Límite por día
     const dailyEntry = this.userLimits.get(dayKey) || { count: 0, lastUpdated: Date.now() };
+
     if (dailyEntry.count >= this.MAX_MESSAGES_PER_DAY_PER_USER) {
       throw new Error(`Límite de ${this.MAX_MESSAGES_PER_DAY_PER_USER} mensajes por día excedido para ${to}`);
     }
@@ -184,6 +186,7 @@ class AntiBlockProtection {
         to,
         error: error.message
       });
+
       throw error;
     }
   }
@@ -218,13 +221,18 @@ class AntiBlockProtection {
    * Valida límite diario por compañía
    */
   checkCompanyDailyLimit(companyId, dailyLimit) {
-    if (!dailyLimit || dailyLimit <= 0) return;
+    if (!dailyLimit || dailyLimit <= 0) {
+return;
+}
+
     const now = new Date();
     const dayKey = `${companyId}:${now.getDate()}:${now.getMonth()}:${now.getFullYear()}`;
     const entry = this.companyDailyLimits.get(dayKey) || { count: 0, lastUpdated: Date.now() };
+
     if (entry.count >= dailyLimit) {
       throw new Error(`Límite diario de la compañía (${dailyLimit}) excedido`);
     }
+
     this.companyDailyLimits.set(dayKey, { count: entry.count + 1, lastUpdated: Date.now() });
   }
 

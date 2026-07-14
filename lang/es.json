@@ -762,5 +762,19 @@
   "Position created successfully.": "Cargo creado exitosamente.",
   "Position updated successfully.": "Cargo actualizado exitosamente.",
   "Position deleted successfully.": "Cargo eliminado exitosamente.",
-  "Are you sure you want to delete this position?": "¿Estás seguro de que deseas eliminar este cargo?"
+  "Are you sure you want to delete this position?": "¿Estás seguro de que deseas eliminar este cargo?",
+  "Responsibles": "Responsables",
+  "New Responsible": "Nuevo Responsable",
+  "Edit Responsible": "Editar Responsable",
+  "Delete Responsible": "Eliminar Responsable",
+  "Are you sure you want to delete this responsible?": "¿Estás seguro de que deseas eliminar este responsable?",
+  "First Name": "Nombres",
+  "Last Name": "Apellidos",
+  "TOTAL RESPONSIBLES": "TOTAL RESPONSABLES",
+  "Responsible created successfully.": "Responsable creado exitosamente.",
+  "Responsible updated successfully.": "Responsable actualizado exitosamente.",
+  "Responsible deleted successfully.": "Responsable eliminado exitosamente.",
+  "Manage responsibles, their departments, positions, contact info and system user.": "Gestiona los responsables, sus departamentos, cargos, información de contacto y usuario del sistema.",
+  "No responsibles found": "No se encontraron responsables",
+  "You have not registered any responsibles yet.": "Aún no has registrado ningún responsable."
 }

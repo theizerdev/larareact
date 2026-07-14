@@ -1,8 +1,8 @@
+import { router } from '@inertiajs/react';
 import React from 'react';
 import { Button } from '@/components/ui/button';
-import { router } from '@inertiajs/react';
-import { cleanParams } from '@/lib/utils';
 import { useTranslate } from '@/hooks/use-translate';
+import { cleanParams } from '@/lib/utils';
 
 /**
  * Interfaz para los datos de paginación de Laravel
@@ -48,7 +48,9 @@ const Pagination: React.FC<PaginationProps> = ({ paginatedData, filters = {} }) 
      * @param {string | null} url - URL de la página a navegar
      */
     const handlePageChange = (url: string | null) => {
-        if (!url) return;
+        if (!url) {
+return;
+}
 
         // Extraemos los parámetros de la URL para preservar filtros
         const urlObj = new URL(url);
@@ -72,7 +74,9 @@ const Pagination: React.FC<PaginationProps> = ({ paginatedData, filters = {} }) 
     };
 
     // Si solo hay una página, no mostramos la paginación
-    if (last_page <= 1) return null;
+    if (last_page <= 1) {
+return null;
+}
 
     return (
         <div className="flex flex-col md:flex-row items-center justify-between gap-4 mt-6 px-4 py-4 bg-white dark:bg-slate-900 rounded-lg border">

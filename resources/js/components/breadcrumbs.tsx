@@ -8,9 +8,9 @@ import {
     BreadcrumbPage,
     BreadcrumbSeparator,
 } from '@/components/ui/breadcrumb';
+import { useTranslate } from '@/hooks/use-translate';
 import type { BreadcrumbItem as BreadcrumbItemType } from '@/types';
 
-import { useTranslate } from '@/hooks/use-translate';
 
 export function Breadcrumbs({
     breadcrumbs,

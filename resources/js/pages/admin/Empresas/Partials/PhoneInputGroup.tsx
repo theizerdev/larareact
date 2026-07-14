@@ -1,5 +1,5 @@
-import React, { useState, useMemo, useRef, useEffect } from 'react';
 import { ChevronDown, Search } from 'lucide-react';
+import React, { useState, useMemo, useRef, useEffect } from 'react';
 import { Input } from '@/components/ui/input';
 import { cn } from '@/lib/utils';
 
@@ -10,7 +10,10 @@ import { cn } from '@/lib/utils';
  * Funciona combinando los Regional Indicator Symbols de cada letra.
  */
 function getFlagEmoji(iso2?: string | null): string {
-    if (!iso2 || iso2.length !== 2) return '🌐';
+    if (!iso2 || iso2.length !== 2) {
+return '🌐';
+}
+
     return iso2
         .toUpperCase()
         .split('')
@@ -22,8 +25,12 @@ function getFlagEmoji(iso2?: string | null): string {
  * Normaliza el código telefónico: quita cualquier '+' inicial y devuelve '+XX'.
  */
 function formatCode(codigoTelefonico?: string | null): string {
-    if (!codigoTelefonico) return '';
+    if (!codigoTelefonico) {
+return '';
+}
+
     const clean = codigoTelefonico.replace(/^\+/, '');
+
     return `+${clean}`;
 }
 
@@ -73,7 +80,11 @@ export default function PhoneInputGroup({
     // Filtra países por nombre, código ISO2 o código telefónico
     const filtered = useMemo(() => {
         const q = search.toLowerCase().replace(/^\+/, '');
-        if (!q) return paises;
+
+        if (!q) {
+return paises;
+}
+
         return paises.filter(
             (p) =>
                 p.nombre.toLowerCase().includes(q) ||
@@ -90,6 +101,7 @@ export default function PhoneInputGroup({
             }
         };
         document.addEventListener('mousedown', handler);
+
         return () => document.removeEventListener('mousedown', handler);
     }, []);
 
@@ -206,6 +218,7 @@ export default function PhoneInputGroup({
 
                         {filtered.map((pais) => {
                             const isSelected = Number(selectedPaisId) === pais.id;
+
                             return (
                                 <button
                                     type="button"

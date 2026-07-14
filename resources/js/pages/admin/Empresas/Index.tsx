@@ -1,24 +1,4 @@
-import React, { useState, Suspense, lazy, useRef } from 'react';
 import { Head, useForm, router } from '@inertiajs/react';
-import { Breadcrumbs } from '@/components/breadcrumbs';
-import { Button } from '@/components/ui/button';
-import { FilterBar, FilterField } from '@/components/filter-bar';
-import { Input } from '@/components/ui/input';
-import { ModuleHeader } from '@/components/module-header';
-import type { Auth } from '@/types';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { StatCard } from '@/components/stat-card';
-import { Paginated } from '@/types/app';
-import { DataTable, ColumnDef } from '@/components/data-table';
-import { cn, cleanParams } from '@/lib/utils';
-import { useTranslate } from '@/hooks/use-translate';
-import { notifySuccess, notifyError } from '@/utils/notifications';
-import {
-    DropdownMenu,
-    DropdownMenuContent,
-    DropdownMenuItem,
-    DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu';
 import {
     Building2,
     Plus,
@@ -34,6 +14,14 @@ import {
     Upload,
     X,
 } from 'lucide-react';
+import React, { useState, Suspense, lazy, useRef } from 'react';
+import { Breadcrumbs } from '@/components/breadcrumbs';
+import type { ColumnDef } from '@/components/data-table';
+import { DataTable } from '@/components/data-table';
+import { FilterBar, FilterField } from '@/components/filter-bar';
+import { ModuleHeader } from '@/components/module-header';
+import { StatCard } from '@/components/stat-card';
+import { Button } from '@/components/ui/button';
 import {
     Dialog,
     DialogContent,
@@ -42,9 +30,22 @@ import {
     DialogTitle,
     DialogFooter,
 } from '@/components/ui/dialog';
+import {
+    DropdownMenu,
+    DropdownMenuContent,
+    DropdownMenuItem,
+    DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { useTranslate } from '@/hooks/use-translate';
+import { cn, cleanParams } from '@/lib/utils';
+import type { Auth } from '@/types';
+import type { Paginated } from '@/types/app';
+import { notifySuccess, notifyError } from '@/utils/notifications';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Switch } from '@/components/ui/switch';
-import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import PhoneInputGroup from './Partials/PhoneInputGroup';
 
@@ -148,7 +149,10 @@ export default function EmpresasIndexPage({ auth, empresas, stats, paises, filte
     React.useEffect(() => {
         const unbindStart  = router.on('start',  () => setIsTableLoading(true));
         const unbindFinish = router.on('finish', () => setIsTableLoading(false));
-        return () => { unbindStart(); unbindFinish(); };
+
+        return () => {
+ unbindStart(); unbindFinish(); 
+};
     }, []);
 
     // Debounce de filtros
@@ -160,6 +164,7 @@ export default function EmpresasIndexPage({ auth, empresas, stats, paises, filte
                 { preserveState: true, preserveScroll: true }
             );
         }, 300);
+
         return () => clearTimeout(timer);
     }, [searchTerm, statusFilter, perPageFilter]);
 
@@ -214,7 +219,10 @@ export default function EmpresasIndexPage({ auth, empresas, stats, paises, filte
     };
 
     const handleLogoFileChange = (file: File | null, type: 'logo' | 'logo_mini') => {
-        if (!file) return;
+        if (!file) {
+return;
+}
+
         const reader = new FileReader();
         reader.onloadend = () => {
             if (type === 'logo') {
@@ -229,12 +237,23 @@ export default function EmpresasIndexPage({ auth, empresas, stats, paises, filte
     };
 
     const handleUploadLogos = () => {
-        if (!editingEmpresa) return;
-        if (!logoFile && !logoMiniFile) return;
+        if (!editingEmpresa) {
+return;
+}
+
+        if (!logoFile && !logoMiniFile) {
+return;
+}
 
         const formData = new FormData();
-        if (logoFile)     formData.append('logo',      logoFile);
-        if (logoMiniFile) formData.append('logo_mini', logoMiniFile);
+
+        if (logoFile)     {
+formData.append('logo',      logoFile);
+}
+
+        if (logoMiniFile) {
+formData.append('logo_mini', logoMiniFile);
+}
 
         setUploadingLogos(true);
         router.post(`/admin/empresas/${editingEmpresa.id}/logos`, formData, {
@@ -256,6 +275,7 @@ export default function EmpresasIndexPage({ auth, empresas, stats, paises, filte
 
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
+
         if (editingEmpresa) {
             put(`/admin/empresas/${editingEmpresa.id}`, {
                 onSuccess: () => {
@@ -758,7 +778,10 @@ export default function EmpresasIndexPage({ auth, empresas, stats, paises, filte
                                                 onDrop={(e) => {
                                                     e.preventDefault();
                                                     const file = e.dataTransfer.files[0];
-                                                    if (file) handleLogoFileChange(file, 'logo');
+
+                                                    if (file) {
+handleLogoFileChange(file, 'logo');
+}
                                                 }}
                                                 className="relative group cursor-pointer rounded-xl border-2 border-dashed border-slate-200 dark:border-slate-700 hover:border-indigo-400 dark:hover:border-indigo-500 transition-all duration-200 overflow-hidden bg-slate-50 dark:bg-slate-900/40 hover:bg-indigo-50/40 dark:hover:bg-indigo-950/20"
                                                 style={{ minHeight: '180px' }}
@@ -779,7 +802,9 @@ export default function EmpresasIndexPage({ auth, empresas, stats, paises, filte
                                                         {logoFile && (
                                                             <button
                                                                 type="button"
-                                                                onClick={(e) => { e.stopPropagation(); setLogoFile(null); setLogoPreview(editingEmpresa?.logo || null); }}
+                                                                onClick={(e) => {
+ e.stopPropagation(); setLogoFile(null); setLogoPreview(editingEmpresa?.logo || null); 
+}}
                                                                 className="absolute top-2 right-2 bg-white dark:bg-slate-800 rounded-full p-1 shadow hover:bg-red-50 dark:hover:bg-red-900/30 text-slate-500 hover:text-red-500 transition-colors"
                                                             >
                                                                 <X className="h-3.5 w-3.5" />
@@ -827,7 +852,10 @@ export default function EmpresasIndexPage({ auth, empresas, stats, paises, filte
                                                 onDrop={(e) => {
                                                     e.preventDefault();
                                                     const file = e.dataTransfer.files[0];
-                                                    if (file) handleLogoFileChange(file, 'logo_mini');
+
+                                                    if (file) {
+handleLogoFileChange(file, 'logo_mini');
+}
                                                 }}
                                                 className="relative group cursor-pointer rounded-xl border-2 border-dashed border-slate-200 dark:border-slate-700 hover:border-purple-400 dark:hover:border-purple-500 transition-all duration-200 overflow-hidden bg-slate-50 dark:bg-slate-900/40 hover:bg-purple-50/40 dark:hover:bg-purple-950/20"
                                                 style={{ minHeight: '180px' }}
@@ -848,7 +876,9 @@ export default function EmpresasIndexPage({ auth, empresas, stats, paises, filte
                                                         {logoMiniFile && (
                                                             <button
                                                                 type="button"
-                                                                onClick={(e) => { e.stopPropagation(); setLogoMiniFile(null); setLogoMiniPreview(editingEmpresa?.logo_mini || null); }}
+                                                                onClick={(e) => {
+ e.stopPropagation(); setLogoMiniFile(null); setLogoMiniPreview(editingEmpresa?.logo_mini || null); 
+}}
                                                                 className="absolute top-2 right-2 bg-white dark:bg-slate-800 rounded-full p-1 shadow hover:bg-red-50 dark:hover:bg-red-900/30 text-slate-500 hover:text-red-500 transition-colors"
                                                             >
                                                                 <X className="h-3.5 w-3.5" />

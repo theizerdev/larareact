@@ -1,6 +1,6 @@
+const path = require('path');
 const { Sequelize } = require('sequelize');
 const logger = require('../utils/logger');
-const path = require('path');
 
 // Cargar el .env de la raíz del proyecto Laravel
 require('dotenv').config({ path: path.resolve(__dirname, '../../../../.env') });

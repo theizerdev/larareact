@@ -7,6 +7,7 @@ async function fix() {
     // Group indexes by Key_name
     const keys = results.reduce((acc, row) => {
       acc[row.Key_name] = true;
+
       return acc;
     }, {});
     
@@ -17,6 +18,7 @@ async function fix() {
         await sequelize.query(`ALTER TABLE companies DROP INDEX \`${key}\``);
       }
     }
+
     console.log('Done cleaning indexes');
   } catch (err) {
     console.error(err);
