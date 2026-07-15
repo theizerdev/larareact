@@ -279,9 +279,18 @@ trait HasSpanishActivityLog
                     $oldValue = $extra['old'][$key] ?? null;
                     $label = static::$fieldLabelsMap[$key] ?? ucfirst(str_replace('_', ' ', $key));
 
-                    // Formatear booleanos
-                    $oldValStr = is_bool($oldValue) ? ($oldValue ? 'Sí' : 'No') : (string) $oldValue;
-                    $newValStr = is_bool($newValue) ? ($newValue ? 'Sí' : 'No') : (string) $newValue;
+                    // Formatear booleanos u objetos/arrays
+                    if (is_array($oldValue) || is_object($oldValue)) {
+                        $oldValStr = json_encode($oldValue, JSON_UNESCAPED_UNICODE);
+                    } else {
+                        $oldValStr = is_bool($oldValue) ? ($oldValue ? 'Sí' : 'No') : (string) $oldValue;
+                    }
+
+                    if (is_array($newValue) || is_object($newValue)) {
+                        $newValStr = json_encode($newValue, JSON_UNESCAPED_UNICODE);
+                    } else {
+                        $newValStr = is_bool($newValue) ? ($newValue ? 'Sí' : 'No') : (string) $newValue;
+                    }
 
                     $detailedChanges[] = "{$label}: de '{$oldValStr}' a '{$newValStr}'";
                 }

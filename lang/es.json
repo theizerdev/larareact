@@ -1079,5 +1079,21 @@
   "Submit Registration": "Enviar Registro",
   "Take Photo": "Tomar Foto",
   "Place the item in front of the camera and click capture.": "Coloque el elemento frente a la cámara y haga clic en capturar.",
-  "Capture Photo": "Capturar Foto"
+  "Capture Photo": "Capturar Foto",
+  "Working Days & Hours": "Días y Horas de Jornada Laboral",
+  "Select working days and configure check-in / check-out times for the employee.": "Seleccione los días laborales y configure las horas de ingreso y salida del empleado.",
+  "In:": "Entrada:",
+  "Out:": "Salida:",
+  "ID Document Photo (Reverse)": "Foto del Documento de Identidad (Reverso)",
+  "Lunes": "Lunes",
+  "Martes": "Martes",
+  "Miércoles": "Miércoles",
+  "Jueves": "Jueves",
+  "Viernes": "Viernes",
+  "Sábado": "Sábado",
+  "Domingo": "Domingo",
+  "Employee Photo 2": "Segunda Foto tipo Carnet",
+  "Front Photo": "Foto Frontal",
+  "Rear Photo": "Foto Trasera",
+  "No photo": "Sin foto"
 }

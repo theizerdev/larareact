@@ -25,9 +25,11 @@ class Empleado extends Model
                 'genero',
                 'departamento_id',
                 'responsable_id',
-                'cargo_id',
+                'jornada_laboral',
                 'foto_empleado',
+                'foto_empleado_2',
                 'foto_documento',
+                'foto_documento_reverso',
                 'status'
             ])
             ->logOnlyDirty()
@@ -45,8 +47,11 @@ class Empleado extends Model
         'departamento_id',
         'responsable_id',
         'cargo_id',
+        'jornada_laboral',
         'foto_empleado',
+        'foto_empleado_2',
         'foto_documento',
+        'foto_documento_reverso',
         'empresa_id',
         'sucursal_id',
         'user_id',
@@ -57,6 +62,7 @@ class Empleado extends Model
     {
         return [
             'status' => 'boolean',
+            'jornada_laboral' => 'array',
         ];
     }
 
@@ -93,6 +99,11 @@ class Empleado extends Model
     public function user(): BelongsTo
     {
         return $this->belongsTo(User::class);
+    }
+
+    public function vehiculos()
+    {
+        return $this->hasMany(EmpleadoVehiculo::class, 'empleado_id');
     }
 
     /**

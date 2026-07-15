@@ -21,7 +21,7 @@ class EmpleadoController extends Controller
 {
     public function index(Request $request)
     {
-        $query = Empleado::with(['paisTelefono', 'departamento', 'responsable', 'cargo', 'empresa', 'sucursal', 'user'])
+        $query = Empleado::with(['paisTelefono', 'departamento', 'responsable', 'cargo', 'empresa', 'sucursal', 'user', 'vehiculos'])
             ->when($request->search, function ($q, $search) {
                 $q->where(function ($sub) use ($search) {
                     $sub->where('nombres', 'like', "%{$search}%")
@@ -88,9 +88,31 @@ class EmpleadoController extends Controller
         $data = $request->validated();
 
         $data['foto_empleado'] = $this->handleImageUpload($request->input('foto_empleado'), 'foto_empleado');
+        $data['foto_empleado_2'] = $this->handleImageUpload($request->input('foto_empleado_2'), 'foto_empleado_2');
         $data['foto_documento'] = $this->handleImageUpload($request->input('foto_documento'), 'foto_documento');
+        $data['foto_documento_reverso'] = $this->handleImageUpload($request->input('foto_documento_reverso'), 'foto_documento_reverso');
 
-        Empleado::create($data);
+        $empleado = Empleado::create($data);
+
+        // Guardar vehículos
+        if ($request->has('vehiculos') && is_array($request->input('vehiculos'))) {
+            foreach ($request->input('vehiculos') as $veh) {
+                $fotoFrontal = isset($veh['foto_frontal']) ? $this->handleImageUpload($veh['foto_frontal'], null) : null;
+                $fotoTrasera = isset($veh['foto_trasera']) ? $this->handleImageUpload($veh['foto_trasera'], null) : null;
+
+                $empleado->vehiculos()->create([
+                    'tipo_vehiculo' => $veh['tipo_vehiculo'],
+                    'marca' => $veh['marca'],
+                    'modelo' => $veh['modelo'],
+                    'year' => $veh['year'],
+                    'placa' => $veh['placa'],
+                    'foto_frontal' => $fotoFrontal,
+                    'foto_trasera' => $fotoTrasera,
+                    'empresa_id' => $empleado->empresa_id,
+                    'sucursal_id' => $empleado->sucursal_id,
+                ]);
+            }
+        }
 
         return back()->with('notification', [
             'type' => 'success',
@@ -123,6 +145,27 @@ class EmpleadoController extends Controller
             }
         }
 
+        // Manejar Foto del Empleado 2
+        if ($request->exists('foto_empleado_2')) {
+            $input = $request->input('foto_empleado_2');
+            if (empty($input)) {
+                $this->deleteOldImage($empleado->foto_empleado_2);
+                $data['foto_empleado_2'] = null;
+            } else {
+                $newPath = $this->handleImageUpload($input, 'foto_empleado_2');
+                if ($newPath && $newPath !== $empleado->foto_empleado_2) {
+                    $this->deleteOldImage($empleado->foto_empleado_2);
+                    $data['foto_empleado_2'] = $newPath;
+                }
+            }
+        } elseif ($request->hasFile('foto_empleado_2')) {
+            $newPath = $this->handleImageUpload(null, 'foto_empleado_2');
+            if ($newPath) {
+                $this->deleteOldImage($empleado->foto_empleado_2);
+                $data['foto_empleado_2'] = $newPath;
+            }
+        }
+
         // Manejar Foto del Documento
         if ($request->exists('foto_documento')) {
             $input = $request->input('foto_documento');
@@ -144,7 +187,56 @@ class EmpleadoController extends Controller
             }
         }
 
+        // Manejar Foto del Documento (Reverso)
+        if ($request->exists('foto_documento_reverso')) {
+            $input = $request->input('foto_documento_reverso');
+            if (empty($input)) {
+                $this->deleteOldImage($empleado->foto_documento_reverso);
+                $data['foto_documento_reverso'] = null;
+            } else {
+                $newPath = $this->handleImageUpload($input, 'foto_documento_reverso');
+                if ($newPath && $newPath !== $empleado->foto_documento_reverso) {
+                    $this->deleteOldImage($empleado->foto_documento_reverso);
+                    $data['foto_documento_reverso'] = $newPath;
+                }
+            }
+        } elseif ($request->hasFile('foto_documento_reverso')) {
+            $newPath = $this->handleImageUpload(null, 'foto_documento_reverso');
+            if ($newPath) {
+                $this->deleteOldImage($empleado->foto_documento_reverso);
+                $data['foto_documento_reverso'] = $newPath;
+            }
+        }
+
         $empleado->update($data);
+
+        // Sincronizar vehículos
+        if ($request->has('vehiculos')) {
+            foreach ($empleado->vehiculos as $oldVeh) {
+                $this->deleteOldImage($oldVeh->foto_frontal);
+                $this->deleteOldImage($oldVeh->foto_trasera);
+            }
+            $empleado->vehiculos()->delete();
+
+            if (is_array($request->input('vehiculos'))) {
+                foreach ($request->input('vehiculos') as $veh) {
+                    $fotoFrontal = isset($veh['foto_frontal']) ? $this->handleImageUpload($veh['foto_frontal'], null) : null;
+                    $fotoTrasera = isset($veh['foto_trasera']) ? $this->handleImageUpload($veh['foto_trasera'], null) : null;
+
+                    $empleado->vehiculos()->create([
+                        'tipo_vehiculo' => $veh['tipo_vehiculo'],
+                        'marca' => $veh['marca'],
+                        'modelo' => $veh['modelo'],
+                        'year' => $veh['year'],
+                        'placa' => $veh['placa'],
+                        'foto_frontal' => $fotoFrontal,
+                        'foto_trasera' => $fotoTrasera,
+                        'empresa_id' => $empleado->empresa_id,
+                        'sucursal_id' => $empleado->sucursal_id,
+                    ]);
+                }
+            }
+        }
 
         return back()->with('notification', [
             'type' => 'success',
@@ -165,7 +257,15 @@ class EmpleadoController extends Controller
     public function destroy(Empleado $empleado)
     {
         $this->deleteOldImage($empleado->foto_empleado);
+        $this->deleteOldImage($empleado->foto_empleado_2);
         $this->deleteOldImage($empleado->foto_documento);
+        $this->deleteOldImage($empleado->foto_documento_reverso);
+
+        foreach ($empleado->vehiculos as $oldVeh) {
+            $this->deleteOldImage($oldVeh->foto_frontal);
+            $this->deleteOldImage($oldVeh->foto_trasera);
+        }
+
         $empleado->delete();
 
         return back()->with('notification', [

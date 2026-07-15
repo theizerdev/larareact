@@ -35,7 +35,11 @@ class EmpleadoRequest extends FormRequest
             'responsable_id' => 'nullable|exists:responsables,id',
             'cargo_id' => 'nullable|exists:cargos,id',
             'foto_empleado' => 'nullable', // Puede ser archivo (Subida normal) o base64 (Cámara)
+            'foto_empleado_2' => 'nullable', // Puede ser archivo (Subida normal) o base64 (Cámara)
             'foto_documento' => 'nullable', // Puede ser archivo (Subida normal) o base64 (Cámara)
+            'foto_documento_reverso' => 'nullable', // Puede ser archivo (Subida normal) o base64 (Cámara)
+            'jornada_laboral' => 'nullable|array',
+            'vehiculos' => 'nullable|array',
             'empresa_id' => 'required|exists:empresas,id',
             'sucursal_id' => 'required|exists:sucursales,id',
             'user_id' => 'required|exists:users,id',

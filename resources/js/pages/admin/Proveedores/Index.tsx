@@ -486,7 +486,7 @@ export default function ProveedoresIndexPage({
             cell: (prov) => {
                 if (!prov.telefono) return <span className="text-muted-foreground">—</span>;
                 const prefix = prov.pais_telefono?.codigo_telefonico
-                    ? `+${prov.pais_telefono.codigo_telefonico} `
+                    ? `${prov.pais_telefono.codigo_telefonico} `
                     : '';
                 return (
                     <div className="flex items-center gap-1 text-sm font-mono">
@@ -746,247 +746,247 @@ export default function ProveedoresIndexPage({
                                 </TabsTrigger>
                             </TabsList>
 
-                                {/* ── Pestaña 1: Datos Generales ── */}
-                                <TabsContent value="general" className="space-y-4">
-                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                        
-                                        {/* Razón Social */}
-                                        <div className="space-y-1.5">
-                                            <Label htmlFor="razon_social">{__('Business Name')}</Label>
-                                            <Input
-                                                id="razon_social"
-                                                value={data.razon_social}
-                                                onChange={(e) => setData('razon_social', e.target.value)}
-                                                className={cn(errors.razon_social && 'border-rose-500')}
-                                            />
-                                            {errors.razon_social && (
-                                                <p className="text-xs text-rose-500 flex items-center gap-1 mt-1">
-                                                    <ShieldAlert className="w-3 h-3" />
-                                                    {errors.razon_social}
-                                                </p>
-                                            )}
-                                        </div>
+                            {/* ── Pestaña 1: Datos Generales ── */}
+                            <TabsContent value="general" className="space-y-4">
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
 
-                                        {/* Nombre Comercial */}
-                                        <div className="space-y-1.5">
-                                            <Label htmlFor="nombre_comercial">{__('Commercial Name')}</Label>
-                                            <Input
-                                                id="nombre_comercial"
-                                                value={data.nombre_comercial}
-                                                onChange={(e) => setData('nombre_comercial', e.target.value)}
-                                                className={cn(errors.nombre_comercial && 'border-rose-500')}
-                                            />
-                                            {errors.nombre_comercial && (
-                                                <p className="text-xs text-rose-500 flex items-center gap-1 mt-1">
-                                                    <ShieldAlert className="w-3 h-3" />
-                                                    {errors.nombre_comercial}
-                                                </p>
-                                            )}
-                                        </div>
-
-                                        {/* Documento de Identidad */}
-                                        <div className="space-y-1.5">
-                                            <Label htmlFor="documento_identidad">{__('Identity Document')}</Label>
-                                            <Input
-                                                id="documento_identidad"
-                                                value={data.documento_identidad}
-                                                onChange={(e) => setData('documento_identidad', e.target.value)}
-                                                className={cn(errors.documento_identidad && 'border-rose-500')}
-                                            />
-                                            {errors.documento_identidad && (
-                                                <p className="text-xs text-rose-500 flex items-center gap-1 mt-1">
-                                                    <ShieldAlert className="w-3 h-3" />
-                                                    {errors.documento_identidad}
-                                                </p>
-                                            )}
-                                        </div>
-
-                                        {/* Responsable */}
-                                        <div className="space-y-1.5">
-                                            <Label htmlFor="responsable">{__('Responsable')}</Label>
-                                            <Input
-                                                id="responsable"
-                                                value={data.responsable}
-                                                onChange={(e) => setData('responsable', e.target.value)}
-                                                className={cn(errors.responsable && 'border-rose-500')}
-                                            />
-                                            {errors.responsable && (
-                                                <p className="text-xs text-rose-500 flex items-center gap-1 mt-1">
-                                                    <ShieldAlert className="w-3 h-3" />
-                                                    {errors.responsable}
-                                                </p>
-                                            )}
-                                        </div>
-
-                                        {/* Teléfono */}
-                                        <div className="space-y-1.5 md:col-span-2">
-                                            <Label htmlFor="telefono">{__('Phone')}</Label>
-                                            <PhoneInputGroup
-                                                paises={paises}
-                                                selectedPaisId={data.pais_telefono_id ? Number(data.pais_telefono_id) : '' as any}
-                                                phoneValue={data.telefono}
-                                                onPaisChange={(v) => setData('pais_telefono_id', String(v))}
-                                                onPhoneChange={(v) => setData('telefono', v)}
-                                                placeholder="000-0000000"
-                                                error={errors.telefono}
-                                            />
-                                        </div>
-
-                                        {/* Estado (Status) */}
-                                        <div className="space-y-1.5 md:col-span-2">
-                                            <Label htmlFor="status">{__('Status')}</Label>
-                                            <Select
-                                                value={data.status}
-                                                onValueChange={(val) => setData('status', val as any)}
-                                            >
-                                                <SelectTrigger id="status" className="w-full">
-                                                    <SelectValue placeholder={__('Select Status')} />
-                                                </SelectTrigger>
-                                                <SelectContent>
-                                                    <SelectItem value="activo">{__('Active')}</SelectItem>
-                                                    <SelectItem value="suspendido">{__('Suspended')}</SelectItem>
-                                                    <SelectItem value="en_revision">{__('Under review')}</SelectItem>
-                                                </SelectContent>
-                                            </Select>
-                                            {errors.status && (
-                                                <p className="text-xs text-rose-500 flex items-center gap-1 mt-1">
-                                                    <ShieldAlert className="w-3 h-3" />
-                                                    {errors.status}
-                                                </p>
-                                            )}
-                                        </div>
-
-                                    </div>
-                                </TabsContent>
-
-                                {/* ── Pestaña 2: Ubicación con Mapbox ── */}
-                                <TabsContent value="ubicacion" className="space-y-4 mt-4">
-                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                        
-                                        {/* País */}
-                                        <div className="space-y-1.5">
-                                            <Label htmlFor="pais_id">{__('Country')}</Label>
-                                            <Select
-                                                value={data.pais_id}
-                                                onValueChange={(val) => setData('pais_id', val)}
-                                            >
-                                                <SelectTrigger id="pais_id" className="w-full">
-                                                    <SelectValue placeholder={__('Select Country')} />
-                                                </SelectTrigger>
-                                                <SelectContent>
-                                                    {paises.map((p) => (
-                                                        <SelectItem key={p.id} value={String(p.id)}>
-                                                            {p.nombre}
-                                                        </SelectItem>
-                                                    ))}
-                                                </SelectContent>
-                                            </Select>
-                                            {errors.pais_id && (
-                                                <p className="text-xs text-rose-500 flex items-center gap-1 mt-1">
-                                                    <ShieldAlert className="w-3 h-3" />
-                                                    {errors.pais_id}
-                                                </p>
-                                            )}
-                                        </div>
-
-                                        {/* Latitud y Longitud */}
-                                        <div className="space-y-1.5">
-                                            <div className="flex items-center justify-between">
-                                                <Label>{__('Coordinates')}</Label>
-                                                <Button
-                                                    type="button"
-                                                    variant="link"
-                                                    size="sm"
-                                                    className="h-auto p-0 flex items-center gap-1 text-xs text-[#104a29] font-medium hover:text-[#0c371e]"
-                                                    onClick={handleGetCurrentLocation}
-                                                >
-                                                    <Navigation className="w-3 h-3" />
-                                                    {__('Use current location')}
-                                                </Button>
-                                            </div>
-                                            <div className="grid grid-cols-2 gap-2">
-                                                <Input
-                                                    placeholder={__('Latitude')}
-                                                    value={data.latitud !== null ? String(data.latitud) : ''}
-                                                    readOnly
-                                                    className="bg-muted text-muted-foreground text-xs"
-                                                />
-                                                <Input
-                                                    placeholder={__('Longitude')}
-                                                    value={data.longitud !== null ? String(data.longitud) : ''}
-                                                    readOnly
-                                                    className="bg-muted text-muted-foreground text-xs"
-                                                />
-                                            </div>
-                                        </div>
-
-                                        {/* Dirección */}
-                                        <div className="space-y-1.5 md:col-span-2">
-                                            <Label htmlFor="direccion">{__('Address')}</Label>
-                                            <Textarea
-                                                id="direccion"
-                                                value={data.direccion}
-                                                onChange={(e) => setData('direccion', e.target.value)}
-                                                rows={2}
-                                                className={cn(errors.direccion && 'border-rose-500')}
-                                            />
-                                            {errors.direccion && (
-                                                <p className="text-xs text-rose-500 flex items-center gap-1 mt-1">
-                                                    <ShieldAlert className="w-3 h-3" />
-                                                    {errors.direccion}
-                                                </p>
-                                            )}
-                                        </div>
-
+                                    {/* Razón Social */}
+                                    <div className="space-y-1.5">
+                                        <Label htmlFor="razon_social">{__('Business Name')}</Label>
+                                        <Input
+                                            id="razon_social"
+                                            value={data.razon_social}
+                                            onChange={(e) => setData('razon_social', e.target.value)}
+                                            className={cn(errors.razon_social && 'border-rose-500')}
+                                        />
+                                        {errors.razon_social && (
+                                            <p className="text-xs text-rose-500 flex items-center gap-1 mt-1">
+                                                <ShieldAlert className="w-3 h-3" />
+                                                {errors.razon_social}
+                                            </p>
+                                        )}
                                     </div>
 
-                                    {/* Mapa de Mapbox */}
-                                    <div className="h-[300px] w-full rounded-lg border overflow-hidden relative bg-slate-50 flex items-center justify-center">
-                                        <Suspense
-                                            fallback={
-                                                <p className="text-sm text-muted-foreground">{__('Loading map...')}</p>
-                                            }
+                                    {/* Nombre Comercial */}
+                                    <div className="space-y-1.5">
+                                        <Label htmlFor="nombre_comercial">{__('Commercial Name')}</Label>
+                                        <Input
+                                            id="nombre_comercial"
+                                            value={data.nombre_comercial}
+                                            onChange={(e) => setData('nombre_comercial', e.target.value)}
+                                            className={cn(errors.nombre_comercial && 'border-rose-500')}
+                                        />
+                                        {errors.nombre_comercial && (
+                                            <p className="text-xs text-rose-500 flex items-center gap-1 mt-1">
+                                                <ShieldAlert className="w-3 h-3" />
+                                                {errors.nombre_comercial}
+                                            </p>
+                                        )}
+                                    </div>
+
+                                    {/* Documento de Identidad */}
+                                    <div className="space-y-1.5">
+                                        <Label htmlFor="documento_identidad">{__('Identity Document')}</Label>
+                                        <Input
+                                            id="documento_identidad"
+                                            value={data.documento_identidad}
+                                            onChange={(e) => setData('documento_identidad', e.target.value)}
+                                            className={cn(errors.documento_identidad && 'border-rose-500')}
+                                        />
+                                        {errors.documento_identidad && (
+                                            <p className="text-xs text-rose-500 flex items-center gap-1 mt-1">
+                                                <ShieldAlert className="w-3 h-3" />
+                                                {errors.documento_identidad}
+                                            </p>
+                                        )}
+                                    </div>
+
+                                    {/* Responsable */}
+                                    <div className="space-y-1.5">
+                                        <Label htmlFor="responsable">{__('Responsable')}</Label>
+                                        <Input
+                                            id="responsable"
+                                            value={data.responsable}
+                                            onChange={(e) => setData('responsable', e.target.value)}
+                                            className={cn(errors.responsable && 'border-rose-500')}
+                                        />
+                                        {errors.responsable && (
+                                            <p className="text-xs text-rose-500 flex items-center gap-1 mt-1">
+                                                <ShieldAlert className="w-3 h-3" />
+                                                {errors.responsable}
+                                            </p>
+                                        )}
+                                    </div>
+
+                                    {/* Teléfono */}
+                                    <div className="space-y-1.5 md:col-span-2">
+                                        <Label htmlFor="telefono">{__('Phone')}</Label>
+                                        <PhoneInputGroup
+                                            paises={paises}
+                                            selectedPaisId={data.pais_telefono_id ? Number(data.pais_telefono_id) : '' as any}
+                                            phoneValue={data.telefono}
+                                            onPaisChange={(v) => setData('pais_telefono_id', String(v))}
+                                            onPhoneChange={(v) => setData('telefono', v)}
+                                            placeholder="000-0000000"
+                                            error={errors.telefono}
+                                        />
+                                    </div>
+
+                                    {/* Estado (Status) */}
+                                    <div className="space-y-1.5 md:col-span-2">
+                                        <Label htmlFor="status">{__('Status')}</Label>
+                                        <Select
+                                            value={data.status}
+                                            onValueChange={(val) => setData('status', val as any)}
                                         >
-                                            {isModalOpen && activeTab === 'ubicacion' && (
-                                                <ProveedorMapComponent
-                                                    center={mapCenter}
-                                                    zoom={mapZoom}
-                                                    style={{ height: '100%', width: '100%' }}
-                                                    markerPosition={
-                                                        data.latitud && data.longitud
-                                                            ? [Number(data.latitud), Number(data.longitud)]
-                                                            : null
-                                                    }
-                                                    onLocationSelected={handleLocationSelected}
-                                                />
-                                            )}
-                                        </Suspense>
+                                            <SelectTrigger id="status" className="w-full">
+                                                <SelectValue placeholder={__('Select Status')} />
+                                            </SelectTrigger>
+                                            <SelectContent>
+                                                <SelectItem value="activo">{__('Active')}</SelectItem>
+                                                <SelectItem value="suspendido">{__('Suspended')}</SelectItem>
+                                                <SelectItem value="en_revision">{__('Under review')}</SelectItem>
+                                            </SelectContent>
+                                        </Select>
+                                        {errors.status && (
+                                            <p className="text-xs text-rose-500 flex items-center gap-1 mt-1">
+                                                <ShieldAlert className="w-3 h-3" />
+                                                {errors.status}
+                                            </p>
+                                        )}
                                     </div>
-                                    <p className="text-[10px] text-muted-foreground leading-normal">
-                                        {__('Click on the map to set the exact location. The address will be obtained automatically.')}
-                                    </p>
-                                </TabsContent>
-                            </Tabs>
 
-                            <DialogFooter className="mt-6 gap-2">
-                                <Button
-                                    type="button"
-                                    variant="outline"
-                                    onClick={() => setIsModalOpen(false)}
-                                >
-                                    {__('Cancel')}
-                                </Button>
-                                <Button
-                                    type="submit"
-                                    disabled={processing}
-                                    className="bg-[#104a29] hover:bg-[#0c371e] text-white"
-                                >
-                                    {__('Save')}
-                                </Button>
-                            </DialogFooter>
-                        </form>
-                    </DialogContent>
-                </Dialog>
+                                </div>
+                            </TabsContent>
+
+                            {/* ── Pestaña 2: Ubicación con Mapbox ── */}
+                            <TabsContent value="ubicacion" className="space-y-4 mt-4">
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+
+                                    {/* País */}
+                                    <div className="space-y-1.5">
+                                        <Label htmlFor="pais_id">{__('Country')}</Label>
+                                        <Select
+                                            value={data.pais_id}
+                                            onValueChange={(val) => setData('pais_id', val)}
+                                        >
+                                            <SelectTrigger id="pais_id" className="w-full">
+                                                <SelectValue placeholder={__('Select Country')} />
+                                            </SelectTrigger>
+                                            <SelectContent>
+                                                {paises.map((p) => (
+                                                    <SelectItem key={p.id} value={String(p.id)}>
+                                                        {p.nombre}
+                                                    </SelectItem>
+                                                ))}
+                                            </SelectContent>
+                                        </Select>
+                                        {errors.pais_id && (
+                                            <p className="text-xs text-rose-500 flex items-center gap-1 mt-1">
+                                                <ShieldAlert className="w-3 h-3" />
+                                                {errors.pais_id}
+                                            </p>
+                                        )}
+                                    </div>
+
+                                    {/* Latitud y Longitud */}
+                                    <div className="space-y-1.5">
+                                        <div className="flex items-center justify-between">
+                                            <Label>{__('Coordinates')}</Label>
+                                            <Button
+                                                type="button"
+                                                variant="link"
+                                                size="sm"
+                                                className="h-auto p-0 flex items-center gap-1 text-xs text-[#104a29] font-medium hover:text-[#0c371e]"
+                                                onClick={handleGetCurrentLocation}
+                                            >
+                                                <Navigation className="w-3 h-3" />
+                                                {__('Use current location')}
+                                            </Button>
+                                        </div>
+                                        <div className="grid grid-cols-2 gap-2">
+                                            <Input
+                                                placeholder={__('Latitude')}
+                                                value={data.latitud !== null ? String(data.latitud) : ''}
+                                                readOnly
+                                                className="bg-muted text-muted-foreground text-xs"
+                                            />
+                                            <Input
+                                                placeholder={__('Longitude')}
+                                                value={data.longitud !== null ? String(data.longitud) : ''}
+                                                readOnly
+                                                className="bg-muted text-muted-foreground text-xs"
+                                            />
+                                        </div>
+                                    </div>
+
+                                    {/* Dirección */}
+                                    <div className="space-y-1.5 md:col-span-2">
+                                        <Label htmlFor="direccion">{__('Address')}</Label>
+                                        <Textarea
+                                            id="direccion"
+                                            value={data.direccion}
+                                            onChange={(e) => setData('direccion', e.target.value)}
+                                            rows={2}
+                                            className={cn(errors.direccion && 'border-rose-500')}
+                                        />
+                                        {errors.direccion && (
+                                            <p className="text-xs text-rose-500 flex items-center gap-1 mt-1">
+                                                <ShieldAlert className="w-3 h-3" />
+                                                {errors.direccion}
+                                            </p>
+                                        )}
+                                    </div>
+
+                                </div>
+
+                                {/* Mapa de Mapbox */}
+                                <div className="h-[300px] w-full rounded-lg border overflow-hidden relative bg-slate-50 flex items-center justify-center">
+                                    <Suspense
+                                        fallback={
+                                            <p className="text-sm text-muted-foreground">{__('Loading map...')}</p>
+                                        }
+                                    >
+                                        {isModalOpen && activeTab === 'ubicacion' && (
+                                            <ProveedorMapComponent
+                                                center={mapCenter}
+                                                zoom={mapZoom}
+                                                style={{ height: '100%', width: '100%' }}
+                                                markerPosition={
+                                                    data.latitud && data.longitud
+                                                        ? [Number(data.latitud), Number(data.longitud)]
+                                                        : null
+                                                }
+                                                onLocationSelected={handleLocationSelected}
+                                            />
+                                        )}
+                                    </Suspense>
+                                </div>
+                                <p className="text-[10px] text-muted-foreground leading-normal">
+                                    {__('Click on the map to set the exact location. The address will be obtained automatically.')}
+                                </p>
+                            </TabsContent>
+                        </Tabs>
+
+                        <DialogFooter className="mt-6 gap-2">
+                            <Button
+                                type="button"
+                                variant="outline"
+                                onClick={() => setIsModalOpen(false)}
+                            >
+                                {__('Cancel')}
+                            </Button>
+                            <Button
+                                type="submit"
+                                disabled={processing}
+                                className="bg-[#104a29] hover:bg-[#0c371e] text-white"
+                            >
+                                {__('Save')}
+                            </Button>
+                        </DialogFooter>
+                    </form>
+                </DialogContent>
+            </Dialog>
 
             {/* ══ Modal de Pre-registro ════════════════════════════ */}
             <Dialog open={isPreRegistroModalOpen} onOpenChange={(open) => {

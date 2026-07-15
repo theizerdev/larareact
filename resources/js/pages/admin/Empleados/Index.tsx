@@ -21,6 +21,7 @@ import {
     ShieldAlert,
     Eye,
     Upload,
+    Car,
 } from 'lucide-react';
 import React, { useState, useRef, useEffect } from 'react';
 import { Breadcrumbs } from '@/components/breadcrumbs';
@@ -174,6 +175,16 @@ interface EmpleadosPageProps {
     } | null;
 }
 
+const defaultJornada = [
+    { dia: 'Lunes', activo: false, hora_ingreso: '08:00', hora_salida: '17:00' },
+    { dia: 'Martes', activo: false, hora_ingreso: '08:00', hora_salida: '17:00' },
+    { dia: 'Miércoles', activo: false, hora_ingreso: '08:00', hora_salida: '17:00' },
+    { dia: 'Jueves', activo: false, hora_ingreso: '08:00', hora_salida: '17:00' },
+    { dia: 'Viernes', activo: false, hora_ingreso: '08:00', hora_salida: '17:00' },
+    { dia: 'Sábado', activo: false, hora_ingreso: '08:00', hora_salida: '17:00' },
+    { dia: 'Domingo', activo: false, hora_ingreso: '08:00', hora_salida: '17:00' }
+];
+
 // ─── Formulario inicial vacío ─────────────────────────────────────────────────
 
 const initialForm = {
@@ -187,8 +198,12 @@ const initialForm = {
     departamento_id: '' as string | number,
     responsable_id: '' as string | number,
     cargo_id: '' as string | number,
+    jornada_laboral: defaultJornada as any,
     foto_empleado: null as any,
+    foto_empleado_2: null as any,
     foto_documento: null as any,
+    foto_documento_reverso: null as any,
+    vehiculos: [] as any[],
     empresa_id: '' as string | number,
     sucursal_id: '' as string | number,
     user_id: '' as string | number,
@@ -351,7 +366,17 @@ export default function EmpleadosIndexPage({
     const [deletingEmpleado, setDeletingEmpleado] = useState<Empleado | null>(null);
     const [activeTab, setActiveTab] = useState('general');
     const [isTableLoading, setIsTableLoading] = useState(false);
-    const [activeCameraField, setActiveCameraField] = useState<'foto_empleado' | 'foto_documento' | null>(null);
+    const [activeCameraField, setActiveCameraField] = useState<'foto_empleado' | 'foto_empleado_2' | 'foto_documento' | 'foto_documento_reverso' | 'foto_frontal' | 'foto_trasera' | null>(null);
+    const [showVehicleForm, setShowVehicleForm] = useState(false);
+    const [newVehicle, setNewVehicle] = useState({
+        tipo_vehiculo: '',
+        marca: '',
+        modelo: '',
+        year: '',
+        placa: '',
+        foto_frontal: '',
+        foto_trasera: '',
+    });
 
     // Filtros
     const [searchTerm, setSearchTerm] = useState(filters.search || '');
@@ -360,7 +385,11 @@ export default function EmpleadosIndexPage({
     const [perPageFilter, setPerPageFilter] = useState(filters.perPage || '10');
 
     const fileInputEmpleadoRef = useRef<HTMLInputElement>(null);
+    const fileInputEmpleado2Ref = useRef<HTMLInputElement>(null);
     const fileInputDocumentoRef = useRef<HTMLInputElement>(null);
+    const fileInputDocumentoReversoRef = useRef<HTMLInputElement>(null);
+    const fileInputVehiculoFrontalRef = useRef<HTMLInputElement>(null);
+    const fileInputVehiculoTraseraRef = useRef<HTMLInputElement>(null);
 
     // ── Hooks de navegación ────────────────────────────────────────────────────
     useEffect(() => {
@@ -419,6 +448,10 @@ export default function EmpleadosIndexPage({
             sucursal_id: branchId,
             user_id: auth.user?.id || '',
             pais_telefono_id: auth.user?.pais_telefono_id || paises[0]?.id || '',
+            jornada_laboral: defaultJornada,
+            foto_empleado_2: null,
+            foto_documento_reverso: null,
+            vehiculos: [],
         }));
 
         setActiveTab('general');
@@ -426,7 +459,7 @@ export default function EmpleadosIndexPage({
         setIsModalOpen(true);
     };
 
-    const handleEditClick = (emp: Empleado) => {
+    const handleEditClick = (emp: any) => {
         setEditingEmpleado(emp);
         setData({
             nombres: emp.nombres || '',
@@ -439,8 +472,12 @@ export default function EmpleadosIndexPage({
             departamento_id: emp.departamento_id || '',
             responsable_id: emp.responsable_id || '',
             cargo_id: emp.cargo_id || '',
+            jornada_laboral: emp.jornada_laboral || defaultJornada,
             foto_empleado: emp.foto_empleado || null,
+            foto_empleado_2: emp.foto_empleado_2 || null,
             foto_documento: emp.foto_documento || null,
+            foto_documento_reverso: emp.foto_documento_reverso || null,
+            vehiculos: emp.vehiculos || [],
             empresa_id: emp.empresa_id || '',
             sucursal_id: emp.sucursal_id || '',
             user_id: emp.user_id || '',
@@ -500,14 +537,14 @@ export default function EmpleadosIndexPage({
     };
 
     // Subida manual de archivos
-    const handleFileChange = (field: 'foto_empleado' | 'foto_documento', file: File | null) => {
+    const handleFileChange = (field: 'foto_empleado' | 'foto_documento' | 'foto_documento_reverso', file: File | null) => {
         if (file) {
             setData(field, file);
         }
     };
 
     // Captura desde cámara
-    const handleCameraCapture = (field: 'foto_empleado' | 'foto_documento', base64Data: string) => {
+    const handleCameraCapture = (field: 'foto_empleado' | 'foto_documento' | 'foto_documento_reverso', base64Data: string) => {
         setData(field, base64Data);
         setActiveCameraField(null);
     };
@@ -793,7 +830,7 @@ export default function EmpleadosIndexPage({
                         </DialogHeader>
 
                         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full mt-2">
-                            <TabsList className="grid grid-cols-3 w-full mb-6">
+                            <TabsList className="grid grid-cols-4 w-full mb-6">
                                 <TabsTrigger value="general" className="flex items-center gap-2">
                                     <UserIcon className="h-4 w-4" />
                                     {__('General')}
@@ -805,6 +842,10 @@ export default function EmpleadosIndexPage({
                                 <TabsTrigger value="fotos" className="flex items-center gap-2">
                                     <Camera className="h-4 w-4" />
                                     {__('Photographs')}
+                                </TabsTrigger>
+                                <TabsTrigger value="vehiculos" className="flex items-center gap-2">
+                                    <Car className="h-4 w-4" />
+                                    {__('Vehicles')}
                                 </TabsTrigger>
                             </TabsList>
 
@@ -1080,6 +1121,67 @@ export default function EmpleadosIndexPage({
                                             )}
                                         </div>
                                     </div>
+
+                                    {/* Jornada Laboral */}
+                                    <div className="md:col-span-2 border-t pt-6 mt-4 space-y-4">
+                                        <div className="flex items-center gap-2">
+                                            <Building2 className="w-5 h-5 text-indigo-500" />
+                                            <h3 className="text-sm font-semibold">{__('Working Days & Hours')}</h3>
+                                        </div>
+                                        <p className="text-xs text-muted-foreground">
+                                            {__('Select working days and configure check-in / check-out times for the employee.')}
+                                        </p>
+
+                                        <div className="space-y-3 bg-slate-50 dark:bg-slate-900/50 p-4 rounded-xl border border-slate-100 dark:border-slate-800">
+                                            {((data.jornada_laboral as any[]) || []).map((jornada, idx) => (
+                                                <div key={jornada.dia} className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 py-2 border-b last:border-0 border-slate-100 dark:border-slate-800/50">
+                                                    <div className="flex items-center gap-3 w-36">
+                                                        <Switch
+                                                            checked={!!jornada.activo}
+                                                            onCheckedChange={(checked) => {
+                                                                const updated = [...(data.jornada_laboral as any[])];
+                                                                updated[idx].activo = checked;
+                                                                setData('jornada_laboral', updated);
+                                                            }}
+                                                        />
+                                                        <Label className="font-semibold text-sm cursor-pointer">{__(jornada.dia)}</Label>
+                                                    </div>
+
+                                                    <div className="flex items-center gap-4 flex-1 max-w-md">
+                                                        <div className="flex items-center gap-2 flex-1">
+                                                            <span className="text-xs text-slate-400">{__('In:')}</span>
+                                                            <Input
+                                                                type="time"
+                                                                value={jornada.hora_ingreso || '08:00'}
+                                                                disabled={!jornada.activo}
+                                                                onChange={(e) => {
+                                                                    const updated = [...(data.jornada_laboral as any[])];
+                                                                    updated[idx].hora_ingreso = e.target.value;
+                                                                    setData('jornada_laboral', updated);
+                                                                }}
+                                                                className="h-8 py-1 px-2 text-xs"
+                                                            />
+                                                        </div>
+
+                                                        <div className="flex items-center gap-2 flex-1">
+                                                            <span className="text-xs text-slate-400">{__('Out:')}</span>
+                                                            <Input
+                                                                type="time"
+                                                                value={jornada.hora_salida || '17:00'}
+                                                                disabled={!jornada.activo}
+                                                                onChange={(e) => {
+                                                                    const updated = [...(data.jornada_laboral as any[])];
+                                                                    updated[idx].hora_salida = e.target.value;
+                                                                    setData('jornada_laboral', updated);
+                                                                }}
+                                                                className="h-8 py-1 px-2 text-xs"
+                                                            />
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    </div>
                                 </div>
                             </TabsContent>
 
@@ -1161,6 +1263,80 @@ export default function EmpleadosIndexPage({
                                         )}
                                     </div>
 
+                                    {/* Foto del Empleado 2 */}
+                                    <div className="flex flex-col gap-2">
+                                        <Label className="font-semibold">{__('Employee Photo 2')}</Label>
+                                        
+                                        {activeCameraField === 'foto_empleado_2' ? (
+                                            <CameraWidget
+                                                onCapture={(base64) => handleCameraCapture('foto_empleado_2', base64)}
+                                                onCancel={() => setActiveCameraField(null)}
+                                            />
+                                        ) : (
+                                            <div className="border border-dashed border-slate-300 dark:border-slate-800 rounded-lg p-4 flex flex-col items-center justify-center gap-3 min-h-[180px] bg-slate-50/50 dark:bg-slate-900/10">
+                                                {getImageSrc(data.foto_empleado_2) ? (
+                                                    <div className="relative w-28 h-28 rounded-full overflow-hidden border border-slate-200 shadow-sm group">
+                                                        <img
+                                                            src={getImageSrc(data.foto_empleado_2)!}
+                                                            alt="Employee Photo 2 Preview"
+                                                            className="w-full h-full object-cover"
+                                                        />
+                                                        <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity">
+                                                            <Button
+                                                                type="button"
+                                                                size="xs"
+                                                                variant="destructive"
+                                                                onClick={() => setData('foto_empleado_2', '')}
+                                                            >
+                                                                {__('Delete')}
+                                                            </Button>
+                                                        </div>
+                                                    </div>
+                                                ) : (
+                                                    <div className="flex flex-col items-center gap-2 text-center">
+                                                        <UserIcon className="w-10 h-10 text-slate-300" />
+                                                        <span className="text-xs text-muted-foreground max-w-[200px]">
+                                                            {__('Upload a photo or capture one using your camera')}
+                                                        </span>
+                                                    </div>
+                                                )}
+
+                                                <div className="flex gap-2">
+                                                    <input
+                                                        type="file"
+                                                        accept="image/*"
+                                                        ref={fileInputEmpleado2Ref}
+                                                        className="hidden"
+                                                        onChange={(e) => handleFileChange('foto_empleado_2', e.target.files?.[0] || null)}
+                                                    />
+                                                    <Button
+                                                        type="button"
+                                                        variant="outline"
+                                                        size="xs"
+                                                        onClick={() => fileInputEmpleado2Ref.current?.click()}
+                                                        className="flex items-center gap-1"
+                                                    >
+                                                        <Upload className="w-3 h-3" />
+                                                        {__('Upload')}
+                                                    </Button>
+                                                    <Button
+                                                        type="button"
+                                                        variant="outline"
+                                                        size="xs"
+                                                        onClick={() => setActiveCameraField('foto_empleado_2')}
+                                                        className="flex items-center gap-1"
+                                                    >
+                                                        <Camera className="w-3 h-3" />
+                                                        {__('Take Photo')}
+                                                    </Button>
+                                                </div>
+                                            </div>
+                                        )}
+                                        {errors.foto_empleado_2 && (
+                                            <p className="text-red-500 text-xs">{errors.foto_empleado_2}</p>
+                                        )}
+                                    </div>
+
                                     {/* Foto del Documento de Identidad */}
                                     <div className="flex flex-col gap-2">
                                         <Label className="font-semibold">{__('ID Document Photo')}</Label>
@@ -1235,6 +1411,262 @@ export default function EmpleadosIndexPage({
                                         )}
                                     </div>
 
+                                    {/* Foto del Documento de Identidad (Reverso) */}
+                                    <div className="flex flex-col gap-2">
+                                        <Label className="font-semibold">{__('ID Document Photo (Reverse)')}</Label>
+                                        
+                                        {activeCameraField === 'foto_documento_reverso' ? (
+                                            <CameraWidget
+                                                onCapture={(base64) => handleCameraCapture('foto_documento_reverso', base64)}
+                                                onCancel={() => setActiveCameraField(null)}
+                                            />
+                                        ) : (
+                                            <div className="border border-dashed border-slate-300 dark:border-slate-800 rounded-lg p-4 flex flex-col items-center justify-center gap-3 min-h-[180px] bg-slate-50/50 dark:bg-slate-900/10">
+                                                {getImageSrc(data.foto_documento_reverso) ? (
+                                                    <div className="relative w-44 aspect-[3/2] rounded-md overflow-hidden border border-slate-200 shadow-sm group">
+                                                        <img
+                                                            src={getImageSrc(data.foto_documento_reverso)!}
+                                                            alt="Document Reverse Preview"
+                                                            className="w-full h-full object-cover"
+                                                        />
+                                                        <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity">
+                                                            <Button
+                                                                type="button"
+                                                                size="xs"
+                                                                variant="destructive"
+                                                                onClick={() => setData('foto_documento_reverso', '')}
+                                                            >
+                                                                {__('Delete')}
+                                                            </Button>
+                                                        </div>
+                                                    </div>
+                                                ) : (
+                                                    <div className="flex flex-col items-center gap-2 text-center">
+                                                        <FileText className="w-10 h-10 text-slate-300" />
+                                                        <span className="text-xs text-muted-foreground max-w-[200px]">
+                                                            {__('Upload a photo or capture one using your camera')}
+                                                        </span>
+                                                    </div>
+                                                )}
+
+                                                <div className="flex gap-2">
+                                                    <input
+                                                        type="file"
+                                                        accept="image/*"
+                                                        ref={fileInputDocumentoReversoRef}
+                                                        className="hidden"
+                                                        onChange={(e) => handleFileChange('foto_documento_reverso', e.target.files?.[0] || null)}
+                                                    />
+                                                    <Button
+                                                        type="button"
+                                                        variant="outline"
+                                                        size="xs"
+                                                        onClick={() => fileInputDocumentoReversoRef.current?.click()}
+                                                        className="flex items-center gap-1"
+                                                    >
+                                                        <Upload className="w-3 h-3" />
+                                                        {__('Upload')}
+                                                    </Button>
+                                                    <Button
+                                                        type="button"
+                                                        variant="outline"
+                                                        size="xs"
+                                                        onClick={() => setActiveCameraField('foto_documento_reverso')}
+                                                        className="flex items-center gap-1"
+                                                    >
+                                                        <Camera className="w-3 h-3" />
+                                                        {__('Take Photo')}
+                                                    </Button>
+                                                </div>
+                                            </div>
+                                        )}
+                                        {errors.foto_documento_reverso && (
+                                            <p className="text-red-500 text-xs">{errors.foto_documento_reverso}</p>
+                                        )}
+                                    </div>
+
+                                </div>
+                            </TabsContent>
+
+                            {/* ══ Tab 4: Vehículos ══════════════════════════════════════════════════ */}
+                            <TabsContent value="vehiculos" className="space-y-6">
+                                <div className="border-b pb-4 flex justify-between items-center">
+                                    <h2 className="text-lg font-bold">{__('Vehicles')}</h2>
+                                    {!showVehicleForm && (
+                                        <Button type="button" size="sm" onClick={() => setShowVehicleForm(true)}>
+                                            <Plus className="w-4 h-4 mr-1" /> {__('Add Vehicle')}
+                                        </Button>
+                                    )}
+                                </div>
+
+                                {showVehicleForm && (
+                                    <div className="p-5 border bg-slate-50/50 dark:bg-slate-900/55 rounded-2xl space-y-4">
+                                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                            <div className="space-y-1.5">
+                                                <Label>{__('Vehicle Type *')}</Label>
+                                                <Select
+                                                    value={newVehicle.tipo_vehiculo}
+                                                    onValueChange={(val) => setNewVehicle(prev => ({ ...prev, tipo_vehiculo: val }))}
+                                                >
+                                                    <SelectTrigger className="w-full">
+                                                        <SelectValue placeholder={__('Select')} />
+                                                    </SelectTrigger>
+                                                    <SelectContent>
+                                                        <SelectItem value="Automóvil">{__('Car')}</SelectItem>
+                                                        <SelectItem value="Camioneta">{__('Pickup')}</SelectItem>
+                                                        <SelectItem value="Camión">{__('Truck')}</SelectItem>
+                                                        <SelectItem value="Motocicleta">{__('Motorcycle')}</SelectItem>
+                                                        <SelectItem value="Otro">{__('Other')}</SelectItem>
+                                                    </SelectContent>
+                                                </Select>
+                                            </div>
+                                            <div className="space-y-1.5">
+                                                <Label>{__('Make *')}</Label>
+                                                <Input
+                                                    value={newVehicle.marca}
+                                                    onChange={(e) => setNewVehicle(prev => ({ ...prev, marca: e.target.value }))}
+                                                    placeholder="Ej: Chevrolet, Toyota"
+                                                />
+                                            </div>
+                                            <div className="space-y-1.5">
+                                                <Label>{__('Model *')}</Label>
+                                                <Input
+                                                    value={newVehicle.modelo}
+                                                    onChange={(e) => setNewVehicle(prev => ({ ...prev, modelo: e.target.value }))}
+                                                    placeholder="Ej: Hilux, Aveo"
+                                                />
+                                            </div>
+                                            <div className="space-y-1.5">
+                                                <Label>{__('Year *')}</Label>
+                                                <Input
+                                                    type="number"
+                                                    value={newVehicle.year}
+                                                    onChange={(e) => setNewVehicle(prev => ({ ...prev, year: e.target.value }))}
+                                                    placeholder="Ej: 2020"
+                                                />
+                                            </div>
+                                            <div className="space-y-1.5 sm:col-span-2">
+                                                <Label>{__('License Plate *')}</Label>
+                                                <Input
+                                                    value={newVehicle.placa}
+                                                    onChange={(e) => setNewVehicle(prev => ({ ...prev, placa: e.target.value }))}
+                                                    placeholder="Ej: ABC-1234"
+                                                />
+                                            </div>
+
+                                            {/* Foto frontal */}
+                                            <div className="flex flex-col gap-2">
+                                                <Label className="text-xs font-semibold">{__('Front Photo')}</Label>
+                                                {activeCameraField === 'foto_frontal' ? (
+                                                    <CameraWidget
+                                                        onCapture={(base64) => {
+                                                            setNewVehicle(prev => ({ ...prev, foto_frontal: base64 }));
+                                                            setActiveCameraField(null);
+                                                        }}
+                                                        onCancel={() => setActiveCameraField(null)}
+                                                    />
+                                                ) : (
+                                                    <div className="border border-dashed rounded-lg p-2 flex flex-col items-center justify-center gap-2 min-h-[120px] bg-white dark:bg-slate-900/10">
+                                                        {newVehicle.foto_frontal ? (
+                                                            <div className="relative w-24 h-16 rounded overflow-hidden border">
+                                                                <img src={newVehicle.foto_frontal} className="w-full h-full object-cover" />
+                                                                <Button type="button" size="xs" variant="destructive" className="absolute top-0 right-0 h-4 w-4 p-0 rounded-none animate-none" onClick={() => setNewVehicle(prev => ({ ...prev, foto_frontal: '' }))}>X</Button>
+                                                            </div>
+                                                        ) : <span className="text-xs text-muted-foreground">{__('No photo')}</span>}
+                                                        <div className="flex gap-1.5">
+                                                            <Button type="button" variant="outline" size="xs" onClick={() => fileInputVehiculoFrontalRef.current?.click()}>{__('Upload')}</Button>
+                                                            <Button type="button" variant="outline" size="xs" onClick={() => setActiveCameraField('foto_frontal')}>{__('Camera')}</Button>
+                                                        </div>
+                                                    </div>
+                                                )}
+                                                <input type="file" accept="image/*" ref={fileInputVehiculoFrontalRef} className="hidden" onChange={(e) => {
+                                                    const file = e.target.files?.[0];
+                                                    if (file) {
+                                                        const reader = new FileReader();
+                                                        reader.readAsDataURL(file);
+                                                        reader.onload = () => setNewVehicle(prev => ({ ...prev, foto_frontal: reader.result as string }));
+                                                    }
+                                                }} />
+                                            </div>
+
+                                            {/* Foto trasera */}
+                                            <div className="flex flex-col gap-2">
+                                                <Label className="text-xs font-semibold">{__('Rear Photo')}</Label>
+                                                {activeCameraField === 'foto_trasera' ? (
+                                                    <CameraWidget
+                                                        onCapture={(base64) => {
+                                                            setNewVehicle(prev => ({ ...prev, foto_trasera: base64 }));
+                                                            setActiveCameraField(null);
+                                                        }}
+                                                        onCancel={() => setActiveCameraField(null)}
+                                                    />
+                                                ) : (
+                                                    <div className="border border-dashed rounded-lg p-2 flex flex-col items-center justify-center gap-2 min-h-[120px] bg-white dark:bg-slate-900/10">
+                                                        {newVehicle.foto_trasera ? (
+                                                            <div className="relative w-24 h-16 rounded overflow-hidden border">
+                                                                <img src={newVehicle.foto_trasera} className="w-full h-full object-cover" />
+                                                                <Button type="button" size="xs" variant="destructive" className="absolute top-0 right-0 h-4 w-4 p-0 rounded-none animate-none" onClick={() => setNewVehicle(prev => ({ ...prev, foto_trasera: '' }))}>X</Button>
+                                                            </div>
+                                                        ) : <span className="text-xs text-muted-foreground">{__('No photo')}</span>}
+                                                        <div className="flex gap-1.5">
+                                                            <Button type="button" variant="outline" size="xs" onClick={() => fileInputVehiculoTraseraRef.current?.click()}>{__('Upload')}</Button>
+                                                            <Button type="button" variant="outline" size="xs" onClick={() => setActiveCameraField('foto_trasera')}>{__('Camera')}</Button>
+                                                        </div>
+                                                    </div>
+                                                )}
+                                                <input type="file" accept="image/*" ref={fileInputVehiculoTraseraRef} className="hidden" onChange={(e) => {
+                                                    const file = e.target.files?.[0];
+                                                    if (file) {
+                                                        const reader = new FileReader();
+                                                        reader.readAsDataURL(file);
+                                                        reader.onload = () => setNewVehicle(prev => ({ ...prev, foto_trasera: reader.result as string }));
+                                                    }
+                                                }} />
+                                            </div>
+                                        </div>
+
+                                        <div className="flex justify-end gap-2 pt-2 border-t mt-2">
+                                            <Button type="button" variant="outline" size="sm" onClick={() => setShowVehicleForm(false)}>{__('Cancel')}</Button>
+                                            <Button type="button" size="sm" onClick={() => {
+                                                if (!newVehicle.tipo_vehiculo || !newVehicle.marca || !newVehicle.modelo || !newVehicle.year || !newVehicle.placa) {
+                                                    alert(__('All vehicle fields are required.'));
+                                                    return;
+                                                }
+                                                setData('vehiculos', [...(data.vehiculos || []), newVehicle]);
+                                                setNewVehicle({ tipo_vehiculo: '', marca: '', modelo: '', year: '', placa: '', foto_frontal: '', foto_trasera: '' });
+                                                setShowVehicleForm(false);
+                                            }}>{__('Save Vehicle')}</Button>
+                                        </div>
+                                    </div>
+                                )}
+
+                                <div className="space-y-3">
+                                    {(!data.vehiculos || data.vehiculos.length === 0) ? (
+                                        <div className="text-center py-10 border-2 border-dashed rounded-2xl text-muted-foreground bg-slate-50/20 dark:bg-slate-900/10">
+                                            <Car className="w-10 h-10 mx-auto text-slate-300 mb-2" />
+                                            <p className="text-sm font-medium">{__('No vehicles registered.')}</p>
+                                        </div>
+                                    ) : (
+                                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                            {data.vehiculos.map((veh: any, i: number) => (
+                                                <div key={i} className="p-4 border rounded-2xl flex justify-between items-center bg-white dark:bg-slate-900 shadow-xs">
+                                                    <div className="flex items-center gap-3">
+                                                        <div className="w-10 h-10 border rounded-lg overflow-hidden shrink-0 bg-slate-50 flex items-center justify-center">
+                                                            {veh.foto_frontal ? <img src={veh.foto_frontal} className="w-full h-full object-cover" /> : <Car className="w-6 h-6 text-slate-300" />}
+                                                        </div>
+                                                        <div>
+                                                            <span className="font-semibold text-sm block">{veh.marca} {veh.modelo} ({veh.year})</span>
+                                                            <span className="text-xs text-slate-400 font-mono">{__('License Plate:')} {veh.placa} • {__((veh.tipo_vehiculo || '').toUpperCase()) || veh.tipo_vehiculo}</span>
+                                                        </div>
+                                                    </div>
+                                                    <Button variant="ghost" size="icon" onClick={() => {
+                                                        const updated = (data.vehiculos || []).filter((_: any, idx: number) => idx !== i);
+                                                        setData('vehiculos', updated);
+                                                    }} className="text-rose-600 hover:bg-rose-50"><Trash2 className="w-4 h-4" /></Button>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    )}
                                 </div>
                             </TabsContent>
                         </Tabs>
