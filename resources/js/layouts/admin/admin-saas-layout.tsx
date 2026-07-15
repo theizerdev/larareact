@@ -405,6 +405,10 @@ export default function AdminSaasLayout({
                                         href: responsablesIndex.url(),
                                     },
                                     {
+                                        title: 'Employees',
+                                        href: '/admin/empleados',
+                                    },
+                                    {
                                         title: 'Countries',
                                         href: paisesIndex.url(),
                                     },

@@ -33,6 +33,7 @@ trait HasSpanishActivityLog
         'Invoice' => 'Factura',
         'CreditNote' => 'Nota de Crédito',
         'CashRegister' => 'Caja Registradora',
+        'Empleado' => 'Empleado',
     ];
 
     public static $fieldLabelsMap = [
@@ -206,6 +207,11 @@ trait HasSpanishActivityLog
         'fecha_cierre' => 'Fecha de cierre',
         'total_ingresos' => 'Total ingresos',
         'total_egresos' => 'Total egresos',
+        'genero' => 'Género',
+        'foto_empleado' => 'Foto del empleado',
+        'foto_documento' => 'Foto del documento de identidad',
+        'responsable_id' => 'Responsable',
+        'cargo_id' => 'Cargo',
     ];
 
     protected static function getModelNameInSpanish(): string

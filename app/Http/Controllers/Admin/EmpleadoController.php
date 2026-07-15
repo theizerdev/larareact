@@ -1,0 +1,219 @@
+<?php
+
+namespace App\Http\Controllers\Admin;
+
+use App\Http\Controllers\Controller;
+use App\Http\Requests\EmpleadoRequest;
+use App\Models\Empleado;
+use App\Models\Empresa;
+use App\Models\Sucursal;
+use App\Models\Departamento;
+use App\Models\Responsable;
+use App\Models\Cargo;
+use App\Models\Pais;
+use App\Models\User;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Str;
+use Inertia\Inertia;
+
+class EmpleadoController extends Controller
+{
+    public function index(Request $request)
+    {
+        $query = Empleado::with(['paisTelefono', 'departamento', 'responsable', 'cargo', 'empresa', 'sucursal', 'user'])
+            ->when($request->search, function ($q, $search) {
+                $q->where(function ($sub) use ($search) {
+                    $sub->where('nombres', 'like', "%{$search}%")
+                        ->orWhere('apellidos', 'like', "%{$search}%")
+                        ->orWhere('documento_identidad', 'like', "%{$search}%")
+                        ->orWhere('correo', 'like', "%{$search}%")
+                        ->orWhere('telefono', 'like', "%{$search}%");
+                });
+            });
+
+        if ($request->filled('status')) {
+            $query->where('status', $request->status);
+        }
+
+        if ($request->filled('departamento_id')) {
+            $query->where('departamento_id', $request->departamento_id);
+        }
+
+        $empleados = $query->latest()->paginate($request->perPage ?? 10)->withQueryString();
+
+        $stats = [
+            'total' => Empleado::count(),
+            'activos' => Empleado::where('status', 1)->count(),
+            'inactivos' => Empleado::where('status', 0)->count(),
+        ];
+
+        $user = $request->user();
+        $empresa = Empresa::find($user->empresa_id) ?: Empresa::first();
+        $sucursal = Sucursal::find($user->sucursal_id);
+
+        return Inertia::render('admin/Empleados/Index', [
+            'empleados' => $empleados,
+            'stats' => $stats,
+            'empresas' => Empresa::where('status', true)->orderBy('razon_social', 'asc')->get(['id', 'razon_social']),
+            'sucursales' => Sucursal::where('status', true)->orderBy('nombre', 'asc')->get(['id', 'nombre', 'empresa_id']),
+            'usuarios' => User::orderBy('name', 'asc')->get(['id', 'name', 'email']),
+            'departamentos' => Departamento::where('status', true)->orderBy('nombre', 'asc')->get(['id', 'nombre', 'empresa_id', 'sucursal_id']),
+            'responsables' => Responsable::where('status', true)->with('cargo:id,nombre')->orderBy('nombres', 'asc')->get(['id', 'nombres', 'apellidos', 'departamento_id', 'cargo_id']),
+            'cargos' => Cargo::where('status', true)->orderBy('nombre', 'asc')->get(['id', 'nombre', 'departamento_id']),
+            'paises' => Pais::where('activo', true)->orderBy('nombre', 'asc')->get(['id', 'nombre', 'codigo_iso2', 'codigo_telefonico']),
+            'filters' => $request->only('search', 'status', 'perPage', 'departamento_id'),
+            'empresa' => $empresa ? [
+                'id' => $empresa->id,
+                'razon_social' => $empresa->razon_social,
+            ] : null,
+            'sucursal' => $sucursal ? [
+                'id' => $sucursal->id,
+                'nombre' => $sucursal->nombre,
+            ] : null,
+        ]);
+    }
+
+    public function store(EmpleadoRequest $request)
+    {
+        $data = $request->validated();
+
+        $data['foto_empleado'] = $this->handleImageUpload($request->input('foto_empleado'), 'foto_empleado');
+        $data['foto_documento'] = $this->handleImageUpload($request->input('foto_documento'), 'foto_documento');
+
+        Empleado::create($data);
+
+        return back()->with('notification', [
+            'type' => 'success',
+            'message' => __('Employee created successfully.'),
+        ]);
+    }
+
+    public function update(EmpleadoRequest $request, Empleado $empleado)
+    {
+        $data = $request->validated();
+
+        // Manejar Foto del Empleado
+        if ($request->exists('foto_empleado')) {
+            $input = $request->input('foto_empleado');
+            if (empty($input)) {
+                $this->deleteOldImage($empleado->foto_empleado);
+                $data['foto_empleado'] = null;
+            } else {
+                $newPath = $this->handleImageUpload($input, 'foto_empleado');
+                if ($newPath && $newPath !== $empleado->foto_empleado) {
+                    $this->deleteOldImage($empleado->foto_empleado);
+                    $data['foto_empleado'] = $newPath;
+                }
+            }
+        } elseif ($request->hasFile('foto_empleado')) {
+            $newPath = $this->handleImageUpload(null, 'foto_empleado');
+            if ($newPath) {
+                $this->deleteOldImage($empleado->foto_empleado);
+                $data['foto_empleado'] = $newPath;
+            }
+        }
+
+        // Manejar Foto del Documento
+        if ($request->exists('foto_documento')) {
+            $input = $request->input('foto_documento');
+            if (empty($input)) {
+                $this->deleteOldImage($empleado->foto_documento);
+                $data['foto_documento'] = null;
+            } else {
+                $newPath = $this->handleImageUpload($input, 'foto_documento');
+                if ($newPath && $newPath !== $empleado->foto_documento) {
+                    $this->deleteOldImage($empleado->foto_documento);
+                    $data['foto_documento'] = $newPath;
+                }
+            }
+        } elseif ($request->hasFile('foto_documento')) {
+            $newPath = $this->handleImageUpload(null, 'foto_documento');
+            if ($newPath) {
+                $this->deleteOldImage($empleado->foto_documento);
+                $data['foto_documento'] = $newPath;
+            }
+        }
+
+        $empleado->update($data);
+
+        return back()->with('notification', [
+            'type' => 'success',
+            'message' => __('Employee updated successfully.'),
+        ]);
+    }
+
+    public function toggleStatus(Empleado $empleado)
+    {
+        $empleado->update(['status' => !$empleado->status]);
+
+        return back()->with('notification', [
+            'type' => 'success',
+            'message' => __('Status updated successfully.'),
+        ]);
+    }
+
+    public function destroy(Empleado $empleado)
+    {
+        $this->deleteOldImage($empleado->foto_empleado);
+        $this->deleteOldImage($empleado->foto_documento);
+        $empleado->delete();
+
+        return back()->with('notification', [
+            'type' => 'success',
+            'message' => __('Employee deleted successfully.'),
+        ]);
+    }
+
+    private function handleImageUpload($input, $fieldName)
+    {
+        if (!$input) {
+            return null;
+        }
+
+        // Si es un archivo subido directamente
+        if (request()->hasFile($fieldName) && request()->file($fieldName)->isValid()) {
+            $path = request()->file($fieldName)->store('empleados', 'public');
+            return '/storage/' . $path;
+        }
+
+        // Si es una cadena Base64 de la webcam
+        if (is_string($input) && preg_match('/^data:image\/(\w+);base64,/', $input, $type)) {
+            $data = substr($input, strpos($input, ',') + 1);
+            $type = strtolower($type[1]); // png, jpg, jpeg, webp
+
+            if (!in_array($type, ['jpg', 'jpeg', 'gif', 'png', 'webp'])) {
+                return null;
+            }
+
+            $data = str_replace(' ', '+', $data);
+            $data = base64_decode($data);
+
+            if ($data === false) {
+                return null;
+            }
+
+            $fileName = Str::random(40) . '.' . $type;
+            $filePath = 'empleados/' . $fileName;
+            Storage::disk('public')->put($filePath, $data);
+            return '/storage/' . $filePath;
+        }
+
+        // Si es una ruta ya guardada anteriormente
+        if (is_string($input) && str_starts_with($input, '/storage/')) {
+            return $input;
+        }
+
+        return null;
+    }
+
+    private function deleteOldImage($path)
+    {
+        if ($path && str_starts_with($path, '/storage/')) {
+            $relativeDiskPath = str_replace('/storage/', '', $path);
+            if (Storage::disk('public')->exists($relativeDiskPath)) {
+                Storage::disk('public')->delete($relativeDiskPath);
+            }
+        }
+    }
+}

@@ -70,6 +70,12 @@ class PermissionSeeder extends Seeder
                 'responsables.edit' => 'Editar Responsable',
                 'responsables.delete' => 'Eliminar Responsable',
 
+                // Módulo: Empleados
+                'empleados.view' => 'Ver Empleados',
+                'empleados.create' => 'Crear Empleado',
+                'empleados.edit' => 'Editar Empleado',
+                'empleados.delete' => 'Eliminar Empleado',
+
                 // Módulo: Integraciones
                 'integrations.view' => 'Ver Integraciones',
                 'integrations.edit' => 'Editar Integraciones',
@@ -101,6 +107,7 @@ class PermissionSeeder extends Seeder
                     str_starts_with($permission, 'departamentos.') => 'departamentos',
                     str_starts_with($permission, 'cargos.') => 'cargos',
                     str_starts_with($permission, 'responsables.') => 'responsables',
+                    str_starts_with($permission, 'empleados.') => 'empleados',
                     str_starts_with($permission, 'integrations.') => 'integraciones',
                     str_starts_with($permission, 'monitoreo.') => 'monitoreo',
 
