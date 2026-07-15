@@ -50,6 +50,7 @@ class HandleInertiaRequests extends Middleware
                         'google_maps_api_key' => $request->user()->empresa->google_maps_api_key,
                         'google_maps_active' => (bool) $request->user()->empresa->google_maps_active,
                     ] : null,
+                    'permissions' => $request->user()->getAllPermissions()->pluck('name')->toArray(),
                 ]) : null,
             ],
             'sidebarOpen' => ! $request->hasCookie('sidebar_state') || $request->cookie('sidebar_state') === 'true',

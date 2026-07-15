@@ -251,6 +251,11 @@ export default function AdminSaasLayout({
     const [mobileMenuOpen, setMobileMenuOpen] = React.useState(false);
     const { __ } = useTranslate();
 
+    const userPermissions = (auth as any)?.user?.permissions || [];
+    const hasPermission = (permission: string) => {
+        return userPermissions.includes(permission);
+    };
+
     const [notifications, setNotifications] = React.useState([
         {
             id: '1',
@@ -370,136 +375,207 @@ export default function AdminSaasLayout({
                         >
                             {__('Platform')}
                         </p>
-                        {mainNavItems.map((item) => (
-                            <NavItem
-                                key={item.title}
-                                item={item}
-                                collapsed={collapsed}
-                            />
-                        ))}
+                        {mainNavItems
+                            .filter(item => {
+                                if (item.title === 'Dashboard') {
+                                    return hasPermission('dashboard.view');
+                                }
+                                return true;
+                            })
+                            .map((item) => (
+                                <NavItem
+                                    key={item.title}
+                                    item={item}
+                                    collapsed={collapsed}
+                                />
+                            ))
+                        }
 
-                        <div className="pt-4">
-                            <CollapsibleNavItem
-                                title="Organization"
-                                icon={Briefcase}
-                                collapsed={collapsed}
-                                items={[
-                                    {
-                                        title: 'Departments',
-                                        href: departamentosIndex.url(),
-                                    },
-                                    {
-                                        title: 'Positions',
-                                        href: cargosIndex.url(),
-                                    },
-                                    {
-                                        title: 'Responsibles',
-                                        href: responsablesIndex.url(),
-                                    },
-                                    {
-                                        title: 'Employees',
-                                        href: '/admin/empleados',
-                                    },
-                                    {
-                                        title: 'Suppliers',
-                                        href: '/admin/proveedores',
-                                    },
-                                ]}
-                            />
-                        </div>
+                        {/* Organization Group */}
+                        {(() => {
+                            const orgItems = [
+                                {
+                                    title: 'Departments',
+                                    href: departamentosIndex.url(),
+                                    permission: 'departamentos.view',
+                                },
+                                {
+                                    title: 'Positions',
+                                    href: cargosIndex.url(),
+                                    permission: 'cargos.view',
+                                },
+                                {
+                                    title: 'Responsibles',
+                                    href: responsablesIndex.url(),
+                                    permission: 'responsables.view',
+                                },
+                                {
+                                    title: 'Employees',
+                                    href: '/admin/empleados',
+                                    permission: 'empleados.view',
+                                },
+                                {
+                                    title: 'Suppliers',
+                                    href: '/admin/proveedores',
+                                    permission: 'proveedores.view',
+                                },
+                            ].filter(item => hasPermission(item.permission));
 
-                        <div className="pt-2">
-                            <CollapsibleNavItem
-                                title="Settings"
-                                icon={Settings}
-                                collapsed={collapsed}
-                                items={[
-                                    {
-                                        title: 'Companies',
-                                        href: empresasIndex.url(),
-                                    },
-                                    {
-                                        title: 'Branches',
-                                        href: sucursalesIndex.url(),
-                                    },
-                                    {
-                                        title: 'Countries',
-                                        href: paisesIndex.url(),
-                                    },
+                            if (orgItems.length === 0) return null;
 
-                                    {
-                                        title: 'Appearance',
-                                        href: appearanceEdit().url,
-                                    },
-                                ]}
-                            />
-                        </div>
+                            return (
+                                <div className="pt-4">
+                                    <CollapsibleNavItem
+                                        title="Organization"
+                                        icon={Briefcase}
+                                        collapsed={collapsed}
+                                        items={orgItems}
+                                    />
+                                </div>
+                            );
+                        })()}
 
-                        <div className="pt-2">
-                            <CollapsibleNavItem
-                                title="Integrations"
-                                icon={Link2}
-                                collapsed={collapsed}
-                                items={[
-                                    {
-                                        title: 'Catalog',
-                                        href: integrationsIndex.url(),
-                                    },
-                                ]}
-                            />
-                        </div>
+                        {/* Settings Group */}
+                        {(() => {
+                            const settingsItems = [
+                                {
+                                    title: 'Companies',
+                                    href: empresasIndex.url(),
+                                    permission: 'empresas.view',
+                                },
+                                {
+                                    title: 'Branches',
+                                    href: sucursalesIndex.url(),
+                                    permission: 'sucursales.view',
+                                },
+                                {
+                                    title: 'Countries',
+                                    href: paisesIndex.url(),
+                                    permission: 'paises.view',
+                                },
 
-                        <div className="pt-2">
-                            <CollapsibleNavItem
-                                title="Security"
-                                icon={Shield}
-                                collapsed={collapsed}
-                                items={[
-                                    {
-                                        title: 'Users',
-                                        href: usuariosIndex.url(),
-                                    },
-                                    {
-                                        title: 'Roles',
-                                        href: rolesIndex.url(),
-                                    },
-                                ]}
-                            />
-                        </div>
+                                {
+                                    title: 'Appearance',
+                                    href: appearanceEdit().url,
+                                    permission: 'empresas.view',
+                                },
+                            ].filter(item => hasPermission(item.permission));
 
-                        <div className="pt-2">
-                            <CollapsibleNavItem
-                                title="Monitoring"
-                                icon={Activity}
-                                collapsed={collapsed}
-                                items={[
-                                    {
-                                        title: 'Database',
-                                        href: dbMonitoringIndex.url(),
-                                    },
-                                    {
-                                        title: 'Server',
-                                        href: serverMonitoringIndex.url(),
-                                    },
-                                    {
-                                        title: 'User Sessions',
-                                        href: sessionMonitoringIndex.url(),
-                                    },
-                                    {
-                                        title: 'System Logs',
-                                        href: logMonitoringIndex.url(),
-                                    },
-                                    {
-                                        title: 'Queue Monitor',
-                                        href: queuesMonitoringIndex.url(),
-                                    },
-                                    {
-                                        title: 'Scheduled Tasks',
-                                        href: tasksMonitoringIndex.url(),
-                                    },
-                                ]}
-                            />
-                        </div>
+                            if (settingsItems.length === 0) return null;
+
+                            return (
+                                <div className="pt-2">
+                                    <CollapsibleNavItem
+                                        title="Settings"
+                                        icon={Settings}
+                                        collapsed={collapsed}
+                                        items={settingsItems}
+                                    />
+                                </div>
+                            );
+                        })()}
+
+                        {/* Integrations Group */}
+                        {(() => {
+                            const integrationsItems = [
+                                {
+                                    title: 'Catalog',
+                                    href: integrationsIndex.url(),
+                                    permission: 'integrations.view',
+                                },
+                            ].filter(item => hasPermission(item.permission));
+
+                            if (integrationsItems.length === 0) return null;
+
+                            return (
+                                <div className="pt-2">
+                                    <CollapsibleNavItem
+                                        title="Integrations"
+                                        icon={Link2}
+                                        collapsed={collapsed}
+                                        items={integrationsItems}
+                                    />
+                                </div>
+                            );
+                        })()}
+
+                        {/* Security Group */}
+                        {(() => {
+                            const securityItems = [
+                                {
+                                    title: 'Users',
+                                    href: usuariosIndex.url(),
+                                    permission: 'users.view',
+                                },
+                                {
+                                    title: 'Roles',
+                                    href: rolesIndex.url(),
+                                    permission: 'roles.view',
+                                },
+                            ].filter(item => hasPermission(item.permission));
+
+                            if (securityItems.length === 0) return null;
+
+                            return (
+                                <div className="pt-2">
+                                    <CollapsibleNavItem
+                                        title="Security"
+                                        icon={Shield}
+                                        collapsed={collapsed}
+                                        items={securityItems}
+                                    />
+                                </div>
+                            );
+                        })()}
+
+                        {/* Monitoring Group */}
+                        {(() => {
+                            const monitoringItems = [
+                                {
+                                    title: 'Database',
+                                    href: dbMonitoringIndex.url(),
+                                    permission: 'monitoreo.database',
+                                },
+                                {
+                                    title: 'Server',
+                                    href: serverMonitoringIndex.url(),
+                                    permission: 'monitoreo.server',
+                                },
+                                {
+                                    title: 'User Sessions',
+                                    href: sessionMonitoringIndex.url(),
+                                    permission: 'monitoreo.logins',
+                                },
+                                {
+                                    title: 'System Logs',
+                                    href: logMonitoringIndex.url(),
+                                    permission: 'monitoreo.view',
+                                },
+                                {
+                                    title: 'Queue Monitor',
+                                    href: queuesMonitoringIndex.url(),
+                                    permission: 'monitoreo.view',
+                                },
+                                {
+                                    title: 'Scheduled Tasks',
+                                    href: tasksMonitoringIndex.url(),
+                                    permission: 'monitoreo.view',
+                                },
+                            ].filter(item => hasPermission(item.permission));
+
+                            if (monitoringItems.length === 0) return null;
+
+                            return (
+                                <div className="pt-2">
+                                    <CollapsibleNavItem
+                                        title="Monitoring"
+                                        icon={Activity}
+                                        collapsed={collapsed}
+                                        items={monitoringItems}
+                                    />
+                                </div>
+                            );
+                        })()}
                     </nav>
 
                     {/* Bottom section */}

@@ -887,5 +887,16 @@
   "Unexpected Error": "Error Inesperado",
   "An unexpected error has occurred.": "Ocurrió un error inesperado.",
   "Go to Dashboard": "Ir al Panel de Control",
-  "Go Back": "Regresar"
+  "Go Back": "Regresar",
+  "Use current location": "Usar ubicación actual",
+  "Geolocation is not supported by your browser.": "La geolocalización no está soportada por tu navegador.",
+  "Obtaining current location...": "Obteniendo ubicación actual...",
+  "Location obtained successfully.": "Ubicación obtenida exitosamente.",
+  "Failed to obtain location. Please grant permission.": "Error al obtener ubicación. Por favor concede permisos.",
+  "Take Photo": "Tomar foto",
+  "Capture": "Capturar",
+  "Profile Photo": "Foto de perfil",
+  "Document Front": "Frente del documento",
+  "Document Back": "Reverso del documento",
+  "Failed to access camera. Please grant permission.": "No se pudo acceder a la cámara. Por favor concede permisos."
 }

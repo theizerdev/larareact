@@ -538,5 +538,16 @@
   "Unexpected Error": "Unexpected Error",
   "An unexpected error has occurred.": "An unexpected error has occurred.",
   "Go to Dashboard": "Go to Dashboard",
-  "Go Back": "Go Back"
+  "Go Back": "Go Back",
+  "Use current location": "Use current location",
+  "Geolocation is not supported by your browser.": "Geolocation is not supported by your browser.",
+  "Obtaining current location...": "Obtaining current location...",
+  "Location obtained successfully.": "Location obtained successfully.",
+  "Failed to obtain location. Please grant permission.": "Failed to obtain location. Please grant permission.",
+  "Take Photo": "Take Photo",
+  "Capture": "Capture",
+  "Profile Photo": "Profile Photo",
+  "Document Front": "Document Front",
+  "Document Back": "Document Back",
+  "Failed to access camera. Please grant permission.": "Failed to access camera. Please grant permission."
 }

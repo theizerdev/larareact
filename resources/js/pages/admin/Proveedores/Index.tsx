@@ -17,6 +17,7 @@ import {
     Activity,
     Globe,
     FileText,
+    Navigation,
 } from 'lucide-react';
 import React, { useState, useEffect, useRef, lazy, Suspense } from 'react';
 import { toast } from 'sonner';
@@ -35,9 +36,10 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Switch } from '@/components/ui/switch';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Textarea } from '@/components/ui/textarea';
-import AdminSaasLayout from '@/layouts/admin/admin-saas-layout';
 import { useTranslate } from '@/hooks/use-translate';
 import { cn } from '@/lib/utils';
+import PhoneInputGroup from '../Empresas/Partials/PhoneInputGroup';
+import ProveedorEmpleadosModal from './Partials/ProveedorEmpleadosModal';
 
 // Cargar perezosamente el componente del mapa
 const ProveedorMapComponent = lazy(() => {
@@ -167,6 +169,9 @@ export default function ProveedoresIndexPage({
     const [deletingProveedor, setDeletingProveedor] = useState<Proveedor | null>(null);
     const [activeTab, setActiveTab] = useState('general');
     const [isTableLoading, setIsTableLoading] = useState(false);
+
+    const [isEmployeesModalOpen, setIsEmployeesModalOpen] = useState(false);
+    const [selectedProveedorForEmployees, setSelectedProveedorForEmployees] = useState<Proveedor | null>(null);
 
     // Filtros
     const [searchTerm, setSearchTerm] = useState(filters.search || '');
@@ -347,13 +352,69 @@ export default function ProveedoresIndexPage({
         });
     };
 
-    const handleLocationSelected = (lat: number, lng: number, address?: string) => {
+    const handleManageEmployeesClick = (prov: Proveedor) => {
+        setSelectedProveedorForEmployees(prov);
+        setIsEmployeesModalOpen(true);
+    };
+
+    const handleLocationSelected = async (lat: number, lng: number, address?: string) => {
         setData((prev) => ({
             ...prev,
             latitud: lat,
             longitud: lng,
             ...(address ? { direccion: address } : {}),
         }));
+
+        try {
+            const res = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&accept-language=en`);
+            if (res.ok) {
+                const result = await res.json();
+                const countryCode = result.address?.country_code?.toUpperCase();
+                if (countryCode) {
+                    const matchedPais = paises.find(p => p.codigo_iso2.toUpperCase() === countryCode);
+                    if (matchedPais) {
+                        setData(prev => ({
+                            ...prev,
+                            latitud: lat,
+                            longitud: lng,
+                            pais_id: String(matchedPais.id),
+                            ...(address ? {} : { direccion: result.display_name ?? '' })
+                        }));
+                    }
+                }
+            }
+        } catch (err) {
+            console.error("Error reverse geocoding for country:", err);
+        }
+    };
+
+    const handleGetCurrentLocation = () => {
+        if (!navigator.geolocation) {
+            notifyError(__('Geolocation is not supported by your browser.'));
+            return;
+        }
+
+        toast.promise(
+            new Promise<{ latitude: number; longitude: number }>((resolve, reject) => {
+                navigator.geolocation.getCurrentPosition(
+                    (position) => {
+                        const { latitude, longitude } = position.coords;
+                        setMapCenter([latitude, longitude]);
+                        setMapZoom(15);
+                        handleLocationSelected(latitude, longitude);
+                        resolve({ latitude, longitude });
+                    },
+                    (error) => {
+                        reject(error);
+                    }
+                );
+            }),
+            {
+                loading: __('Obtaining current location...'),
+                success: () => __('Location obtained successfully.'),
+                error: () => __('Failed to obtain location. Please grant permission.'),
+            }
+        );
     };
 
     // ── Columnas de la tabla ──────────────────────────────────────────────────
@@ -468,6 +529,10 @@ export default function ProveedoresIndexPage({
                             <Pencil className="mr-2 h-4 w-4" />
                             {__('Edit')}
                         </DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => handleManageEmployeesClick(prov)}>
+                            <UserIcon className="mr-2 h-4 w-4 text-[#104a29]" />
+                            {__('Employees')}
+                        </DropdownMenuItem>
                         <DropdownMenuItem
                             onClick={() => setDeletingProveedor(prov)}
                             className="text-rose-600 focus:text-rose-600 dark:text-rose-400"
@@ -482,7 +547,7 @@ export default function ProveedoresIndexPage({
     ];
 
     return (
-        <AdminSaasLayout>
+        <>
             <Head title={__('Suppliers')} />
 
             <div className="space-y-6">
@@ -597,10 +662,9 @@ export default function ProveedoresIndexPage({
                 {/* ── Tabla de Datos ── */}
                 <div className="w-full">
                     <DataTable
-                        data={proveedores.data}
+                        data={proveedores as any}
                         columns={columns}
                         isLoading={isTableLoading}
-                        pagination={proveedores}
                         onRowClick={(prov) => handleEditClick(prov)}
                         emptyState={{
                             title: __('No suppliers found'),
@@ -616,8 +680,8 @@ export default function ProveedoresIndexPage({
 
             {/* ══ Ventana Modal de Creación / Edición ════════════════════════════ */}
             <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
-                <DialogContent className="max-w-3xl h-[90vh] flex flex-col p-0 overflow-hidden">
-                    <DialogHeader className="px-6 pt-6">
+                <DialogContent className="sm:max-w-[720px] lg:max-w-[850px] max-h-[90vh] overflow-y-auto">
+                    <DialogHeader>
                         <DialogTitle>
                             {editingProveedor ? __('Edit Supplier') : __('New Supplier')}
                         </DialogTitle>
@@ -626,16 +690,21 @@ export default function ProveedoresIndexPage({
                         </DialogDescription>
                     </DialogHeader>
 
-                    <form onSubmit={handleSubmit} className="flex-1 flex flex-col overflow-hidden">
-                        <div className="flex-1 overflow-y-auto px-6 py-2">
-                            <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full h-full flex flex-col">
-                                <TabsList className="grid w-full grid-cols-2 mb-6">
-                                    <TabsTrigger value="general">{__('General')}</TabsTrigger>
-                                    <TabsTrigger value="ubicacion">{__('Location')}</TabsTrigger>
-                                </TabsList>
+                    <form onSubmit={handleSubmit} className="space-y-6">
+                        <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full mt-4">
+                            <TabsList className="grid w-full grid-cols-2 mb-6">
+                                <TabsTrigger value="general" className="flex items-center gap-2">
+                                    <Building2 className="h-4 w-4" />
+                                    {__('General')}
+                                </TabsTrigger>
+                                <TabsTrigger value="ubicacion" className="flex items-center gap-2">
+                                    <MapPin className="h-4 w-4" />
+                                    {__('Location')}
+                                </TabsTrigger>
+                            </TabsList>
 
                                 {/* ── Pestaña 1: Datos Generales ── */}
-                                <TabsContent value="general" className="space-y-4 flex-1">
+                                <TabsContent value="general" className="space-y-4">
                                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                         
                                         {/* Razón Social */}
@@ -706,35 +775,18 @@ export default function ProveedoresIndexPage({
                                             )}
                                         </div>
 
-                                        {/* Teléfono (Prefix select + number agrupados) */}
+                                        {/* Teléfono */}
                                         <div className="space-y-1.5 md:col-span-2">
                                             <Label htmlFor="telefono">{__('Phone')}</Label>
-                                            <div className="flex rounded-md shadow-sm border border-input focus-within:ring-1 focus-within:ring-ring focus-within:border-ring overflow-hidden">
-                                                <select
-                                                    value={data.pais_telefono_id}
-                                                    onChange={(e) => setData('pais_telefono_id', e.target.value)}
-                                                    className="bg-muted text-muted-foreground border-0 px-3 py-2 text-sm focus:outline-none cursor-pointer w-28 shrink-0 select-none border-r"
-                                                >
-                                                    {paises.map((p) => (
-                                                        <option key={p.id} value={p.id}>
-                                                            {p.codigo_iso2} (+{p.codigo_telefonico})
-                                                        </option>
-                                                    ))}
-                                                </select>
-                                                <Input
-                                                    id="telefono"
-                                                    type="tel"
-                                                    value={data.telefono}
-                                                    onChange={(e) => setData('telefono', e.target.value)}
-                                                    className="border-0 focus-visible:ring-0 focus-visible:ring-offset-0 rounded-none w-full"
-                                                />
-                                            </div>
-                                            {errors.telefono && (
-                                                <p className="text-xs text-rose-500 flex items-center gap-1 mt-1">
-                                                    <ShieldAlert className="w-3 h-3" />
-                                                    {errors.telefono}
-                                                </p>
-                                            )}
+                                            <PhoneInputGroup
+                                                paises={paises}
+                                                selectedPaisId={data.pais_telefono_id ? Number(data.pais_telefono_id) : '' as any}
+                                                phoneValue={data.telefono}
+                                                onPaisChange={(v) => setData('pais_telefono_id', String(v))}
+                                                onPhoneChange={(v) => setData('telefono', v)}
+                                                placeholder="000-0000000"
+                                                error={errors.telefono}
+                                            />
                                         </div>
 
                                         {/* Estado (Status) */}
@@ -744,7 +796,7 @@ export default function ProveedoresIndexPage({
                                                 value={data.status}
                                                 onValueChange={(val) => setData('status', val as any)}
                                             >
-                                                <SelectTrigger id="status">
+                                                <SelectTrigger id="status" className="w-full">
                                                     <SelectValue placeholder={__('Select Status')} />
                                                 </SelectTrigger>
                                                 <SelectContent>
@@ -765,7 +817,7 @@ export default function ProveedoresIndexPage({
                                 </TabsContent>
 
                                 {/* ── Pestaña 2: Ubicación con Mapbox ── */}
-                                <TabsContent value="ubicacion" className="space-y-4 flex-1 flex flex-col min-h-0">
+                                <TabsContent value="ubicacion" className="space-y-4 mt-4">
                                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                         
                                         {/* País */}
@@ -775,7 +827,7 @@ export default function ProveedoresIndexPage({
                                                 value={data.pais_id}
                                                 onValueChange={(val) => setData('pais_id', val)}
                                             >
-                                                <SelectTrigger id="pais_id">
+                                                <SelectTrigger id="pais_id" className="w-full">
                                                     <SelectValue placeholder={__('Select Country')} />
                                                 </SelectTrigger>
                                                 <SelectContent>
@@ -796,7 +848,19 @@ export default function ProveedoresIndexPage({
 
                                         {/* Latitud y Longitud */}
                                         <div className="space-y-1.5">
-                                            <Label>{__('Coordinates')}</Label>
+                                            <div className="flex items-center justify-between">
+                                                <Label>{__('Coordinates')}</Label>
+                                                <Button
+                                                    type="button"
+                                                    variant="link"
+                                                    size="sm"
+                                                    className="h-auto p-0 flex items-center gap-1 text-xs text-[#104a29] font-medium hover:text-[#0c371e]"
+                                                    onClick={handleGetCurrentLocation}
+                                                >
+                                                    <Navigation className="w-3 h-3" />
+                                                    {__('Use current location')}
+                                                </Button>
+                                            </div>
                                             <div className="grid grid-cols-2 gap-2">
                                                 <Input
                                                     placeholder={__('Latitude')}
@@ -834,7 +898,7 @@ export default function ProveedoresIndexPage({
                                     </div>
 
                                     {/* Mapa de Mapbox */}
-                                    <div className="flex-1 min-h-[220px] rounded-lg border overflow-hidden relative bg-slate-50 flex items-center justify-center">
+                                    <div className="h-[300px] w-full rounded-lg border overflow-hidden relative bg-slate-50 flex items-center justify-center">
                                         <Suspense
                                             fallback={
                                                 <p className="text-sm text-muted-foreground">{__('Loading map...')}</p>
@@ -860,27 +924,26 @@ export default function ProveedoresIndexPage({
                                     </p>
                                 </TabsContent>
                             </Tabs>
-                        </div>
 
-                        <DialogFooter className="px-6 py-4 border-t bg-slate-50/50">
-                            <Button
-                                type="button"
-                                variant="outline"
-                                onClick={() => setIsModalOpen(false)}
-                            >
-                                {__('Cancel')}
-                            </Button>
-                            <Button
-                                type="submit"
-                                disabled={processing}
-                                className="bg-[#104a29] hover:bg-[#0c371e] text-white"
-                            >
-                                {__('Save')}
-                            </Button>
-                        </DialogFooter>
-                    </form>
-                </DialogContent>
-            </Dialog>
+                            <DialogFooter className="mt-6 gap-2">
+                                <Button
+                                    type="button"
+                                    variant="outline"
+                                    onClick={() => setIsModalOpen(false)}
+                                >
+                                    {__('Cancel')}
+                                </Button>
+                                <Button
+                                    type="submit"
+                                    disabled={processing}
+                                    className="bg-[#104a29] hover:bg-[#0c371e] text-white"
+                                >
+                                    {__('Save')}
+                                </Button>
+                            </DialogFooter>
+                        </form>
+                    </DialogContent>
+                </Dialog>
 
             {/* ══ Confirmación de Eliminación ════════════════════════════════════ */}
             <Dialog open={deletingProveedor !== null} onOpenChange={(open) => !open && setDeletingProveedor(null)}>
@@ -907,6 +970,17 @@ export default function ProveedoresIndexPage({
                     </DialogFooter>
                 </DialogContent>
             </Dialog>
-        </AdminSaasLayout>
+
+            {/* ══ Modal de Empleados de Proveedores ════════════════════════════ */}
+            <ProveedorEmpleadosModal
+                isOpen={isEmployeesModalOpen}
+                onClose={() => {
+                    setIsEmployeesModalOpen(false);
+                    setSelectedProveedorForEmployees(null);
+                }}
+                proveedor={selectedProveedorForEmployees}
+                paises={paises}
+            />
+        </>
     );
 }
