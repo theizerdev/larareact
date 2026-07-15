@@ -30,8 +30,28 @@
             }
         </style>
 
-        <link rel="icon" href="/image/logo/larareact_icon.png" type="image/png">
-        <link rel="apple-touch-icon" href="/image/logo/larareact_icon.png">
+        @php
+            $favicon = null;
+            if (auth()->check() && auth()->user()->empresa && auth()->user()->empresa->logo_mini) {
+                $favicon = auth()->user()->empresa->logo_mini;
+            } else {
+                $route = request()->route();
+                if ($route && ($route->getName() === 'preregistro.wizard' || $route->getName() === 'preregistro.submit' || request()->is('preregistro/*'))) {
+                    $token = $route->parameter('token') ?? request()->segment(2);
+                    if ($token) {
+                        $preRegistro = \App\Models\ProveedorPreRegistro::where('token', $token)->first();
+                        if ($preRegistro && $preRegistro->empresa && $preRegistro->empresa->logo_mini) {
+                            $favicon = $preRegistro->empresa->logo_mini;
+                        }
+                    }
+                }
+            }
+            if (!$favicon) {
+                $favicon = '/image/logo/larareact_icon.png';
+            }
+        @endphp
+        <link rel="icon" href="{{ $favicon }}" type="image/png">
+        <link rel="apple-touch-icon" href="{{ $favicon }}">
 
         @fonts
 

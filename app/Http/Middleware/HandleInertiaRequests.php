@@ -45,6 +45,8 @@ class HandleInertiaRequests extends Middleware
                 'user' => $request->user() ? array_merge($request->user()->toArray(), [
                     'empresa' => $request->user()->empresa ? [
                         'id' => $request->user()->empresa->id,
+                        'logo' => $request->user()->empresa->logo,
+                        'logo_mini' => $request->user()->empresa->logo_mini,
                         'mapbox_api_key' => $request->user()->empresa->mapbox_api_key,
                         'mapbox_active' => (bool) $request->user()->empresa->mapbox_active,
                         'google_maps_api_key' => $request->user()->empresa->google_maps_api_key,

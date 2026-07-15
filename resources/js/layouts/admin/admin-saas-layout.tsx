@@ -326,8 +326,8 @@ export default function AdminSaasLayout({
                         >
                             <div className="flex shrink-0 items-center justify-center bg-transparent">
                                 <img
-                                    src="/image/logo/larareact_icon.png"
-                                    alt="LaraReact Icon"
+                                    src={(auth as any)?.user?.empresa?.logo_mini || (auth as any)?.user?.empresa?.logo || "/image/logo/larareact_icon.png"}
+                                    alt={(auth as any)?.user?.empresa?.razon_social || "LaraReact Icon"}
                                     className="h-9 w-auto object-contain"
                                 />
                             </div>
@@ -337,7 +337,7 @@ export default function AdminSaasLayout({
                                     collapsed && 'opacity-0',
                                 )}
                             >
-                                {name}
+                                {(auth as any)?.user?.empresa?.razon_social || name}
                             </span>
                         </Link>
                         <Button
