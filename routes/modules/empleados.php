@@ -10,6 +10,7 @@ Route::middleware(['permission:empleados.view'])->group(function () {
 
 Route::middleware(['permission:empleados.create'])->group(function () {
     Route::post('/empleados', [EmpleadoController::class, 'store'])->name('empleados.store');
+    Route::post('/empleados/pre-registro', [EmpleadoController::class, 'generatePreRegistro'])->name('empleados.pre-registro');
 });
 
 Route::middleware(['permission:empleados.edit'])->group(function () {

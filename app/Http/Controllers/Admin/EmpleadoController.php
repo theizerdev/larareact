@@ -274,6 +274,67 @@ class EmpleadoController extends Controller
         ]);
     }
 
+    public function generatePreRegistro(Request $request)
+    {
+        $request->validate([
+            'nombres' => 'required|string|max:255',
+            'apellidos' => 'required|string|max:255',
+            'pais_telefono_id' => 'required|exists:pais,id',
+            'telefono' => 'required|string|max:20',
+            'motivo_registro' => 'required|string',
+            'responsable_id' => 'required|exists:responsables,id',
+        ]);
+
+        $user = auth()->user();
+        $token = bin2hex(random_bytes(16));
+
+        $responsable = \App\Models\Responsable::findOrFail($request->responsable_id);
+
+        \App\Models\EmpleadoPreRegistro::create([
+            'nombres' => $request->nombres,
+            'apellidos' => $request->apellidos,
+            'pais_telefono_id' => $request->pais_telefono_id,
+            'telefono' => $request->telefono,
+            'motivo_registro' => $request->motivo_registro,
+            'responsable_id' => $request->responsable_id,
+            'departamento_id' => $responsable->departamento_id,
+            'cargo_id' => $responsable->cargo_id,
+            'token' => $token,
+            'expires_at' => now()->addHours(12),
+            'empresa_id' => $user->empresa_id,
+            'sucursal_id' => $user->sucursal_id,
+            'status' => 'pendiente',
+        ]);
+
+        try {
+            $pais = \App\Models\Pais::findOrFail($request->pais_telefono_id);
+            $prefix = preg_replace('/[^0-9]/', '', $pais->codigo_telefonico);
+            $cleanPhone = preg_replace('/[^0-9]/', '', $request->telefono);
+            $to = $prefix . $cleanPhone;
+
+            $empresa = $user->empresa ?? \App\Models\Empresa::first();
+            $whatsappService = new \App\Services\WhatsAppService($empresa);
+
+            $link = url("/preregistro-empleado/{$token}");
+
+            $message = "Estimado Colaborador *{$request->nombres} {$request->apellidos}*, le invitamos a completar su pre-registro de datos para su alta en nuestras oficinas:\n\n"
+                . "Ubicación: " . ($user->sucursal->nombre ?? $empresa->nombre) . "\n"
+                . "Motivo: {$request->motivo_registro}\n"
+                . "Autorizado por: {$responsable->nombres} {$responsable->apellidos}\n\n"
+                . "Por favor, ingrese al siguiente enlace para completar su jornada laboral, fotografías y vehículos:\n"
+                . $link;
+
+            $whatsappService->sendMessage($to, $message, true);
+        } catch (\Exception $e) {
+            \Illuminate\Support\Facades\Log::error('Error al enviar WhatsApp de invitación a empleado: ' . $e->getMessage());
+        }
+
+        return back()->with('notification', [
+            'type' => 'success',
+            'message' => __('Pre-registration invitation sent successfully.'),
+        ]);
+    }
+
     private function handleImageUpload($input, $fieldName)
     {
         if (!$input) {

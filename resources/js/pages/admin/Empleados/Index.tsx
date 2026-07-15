@@ -25,6 +25,7 @@ import {
 } from 'lucide-react';
 import React, { useState, useRef, useEffect } from 'react';
 import { Breadcrumbs } from '@/components/breadcrumbs';
+import PhoneInputGroup from '../Empresas/Partials/PhoneInputGroup';
 import type { ColumnDef } from '@/components/data-table';
 import { DataTable } from '@/components/data-table';
 import { FilterBar, FilterField } from '@/components/filter-bar';
@@ -47,6 +48,7 @@ import {
     DialogDescription,
     DialogHeader,
     DialogTitle,
+    DialogFooter,
 } from '@/components/ui/dialog';
 import {
     DropdownMenu,
@@ -63,7 +65,6 @@ import { cn, cleanParams } from '@/lib/utils';
 import type { Auth } from '@/types';
 import type { Paginated } from '@/types/app';
 import { notifySuccess, notifyError } from '@/utils/notifications';
-import PhoneInputGroup from '../Empresas/Partials/PhoneInputGroup';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 
 // ─── Interfaces ───────────────────────────────────────────────────────────────
@@ -377,6 +378,26 @@ export default function EmpleadosIndexPage({
         foto_frontal: '',
         foto_trasera: '',
     });
+
+    const [isPreRegistroModalOpen, setIsPreRegistroModalOpen] = useState(false);
+    const preRegistroForm = useForm({
+        nombres: '',
+        apellidos: '',
+        pais_telefono_id: auth.user?.pais_telefono_id || paises[0]?.id || '',
+        telefono: '',
+        motivo_registro: '',
+        responsable_id: '',
+    });
+
+    const handlePreRegistroSubmit = (e: React.FormEvent) => {
+        e.preventDefault();
+        preRegistroForm.post('/admin/empleados/pre-registro', {
+            onSuccess: () => {
+                setIsPreRegistroModalOpen(false);
+                preRegistroForm.reset();
+            },
+        });
+    };
 
     // Filtros
     const [searchTerm, setSearchTerm] = useState(filters.search || '');
@@ -715,10 +736,21 @@ export default function EmpleadosIndexPage({
                     description={__('Manage employees, their departments, responsibles, contact info and photos.')}
                     colorClassName="bg-indigo-600"
                 >
-                    <Button onClick={handleCreateClick}>
-                        <Plus className="mr-2 h-4 w-4" />
-                        {__('New Employee')}
-                    </Button>
+                    <div className="flex items-center gap-2">
+                        <Button
+                            type="button"
+                            onClick={() => setIsPreRegistroModalOpen(true)}
+                            variant="outline"
+                            className="border-indigo-600 text-indigo-600 hover:bg-indigo-600/10 flex items-center gap-1.5"
+                        >
+                            <Phone className="w-4 h-4" />
+                            {__('Pre-registro')}
+                        </Button>
+                        <Button onClick={handleCreateClick}>
+                            <Plus className="mr-2 h-4 w-4" />
+                            {__('New Employee')}
+                        </Button>
+                    </div>
                 </ModuleHeader>
 
                 {/* Tarjetas Estadísticas */}
@@ -1710,6 +1742,119 @@ export default function EmpleadosIndexPage({
                     </AlertDialogFooter>
                 </AlertDialogContent>
             </AlertDialog>
+
+            {/* ══ Modal de Pre-registro de Empleado ════════════════════ */}
+            <Dialog open={isPreRegistroModalOpen} onOpenChange={(open) => {
+                setIsPreRegistroModalOpen(open);
+                if (!open) preRegistroForm.reset();
+            }}>
+                <DialogContent className="max-w-md">
+                    <DialogHeader>
+                        <DialogTitle>{__('Pre-registro de Empleado')}</DialogTitle>
+                        <DialogDescription>
+                            {__('Ingrese los datos del colaborador, el motivo y quién autoriza para enviar una invitación de registro rápido a su WhatsApp.')}
+                        </DialogDescription>
+                    </DialogHeader>
+                    <form onSubmit={handlePreRegistroSubmit} className="space-y-4">
+                        <div className="grid grid-cols-2 gap-4">
+                            <div className="space-y-1.5">
+                                <Label htmlFor="pre_nombres">{__('First Name')}</Label>
+                                <Input
+                                    id="pre_nombres"
+                                    value={preRegistroForm.data.nombres}
+                                    onChange={(e) => preRegistroForm.setData('nombres', e.target.value)}
+                                    className={cn(preRegistroForm.errors.nombres && 'border-rose-500')}
+                                    required
+                                />
+                                {preRegistroForm.errors.nombres && (
+                                    <p className="text-xs text-rose-500 mt-1">{preRegistroForm.errors.nombres}</p>
+                                )}
+                            </div>
+
+                            <div className="space-y-1.5">
+                                <Label htmlFor="pre_apellidos">{__('Last Name')}</Label>
+                                <Input
+                                    id="pre_apellidos"
+                                    value={preRegistroForm.data.apellidos}
+                                    onChange={(e) => preRegistroForm.setData('apellidos', e.target.value)}
+                                    className={cn(preRegistroForm.errors.apellidos && 'border-rose-500')}
+                                    required
+                                />
+                                {preRegistroForm.errors.apellidos && (
+                                    <p className="text-xs text-rose-500 mt-1">{preRegistroForm.errors.apellidos}</p>
+                                )}
+                            </div>
+                        </div>
+
+                        <div className="space-y-1.5">
+                            <Label htmlFor="pre_telefono">{__('Phone')}</Label>
+                            <PhoneInputGroup
+                                paises={paises}
+                                selectedPaisId={preRegistroForm.data.pais_telefono_id ? Number(preRegistroForm.data.pais_telefono_id) : '' as any}
+                                phoneValue={preRegistroForm.data.telefono}
+                                onPaisChange={(v) => preRegistroForm.setData('pais_telefono_id', String(v))}
+                                onPhoneChange={(v) => preRegistroForm.setData('telefono', v)}
+                                placeholder="000-0000000"
+                                error={preRegistroForm.errors.telefono}
+                            />
+                        </div>
+
+                        <div className="space-y-1.5">
+                            <Label htmlFor="pre_motivo">{__('Reason for registration')}</Label>
+                            <Input
+                                id="pre_motivo"
+                                value={preRegistroForm.data.motivo_registro}
+                                onChange={(e) => preRegistroForm.setData('motivo_registro', e.target.value)}
+                                className={cn(preRegistroForm.errors.motivo_registro && 'border-rose-500')}
+                                placeholder="Ej: Nuevo ingreso, temporal, etc."
+                                required
+                            />
+                            {preRegistroForm.errors.motivo_registro && (
+                                <p className="text-xs text-rose-500 mt-1">{preRegistroForm.errors.motivo_registro}</p>
+                            )}
+                        </div>
+
+                        <div className="space-y-1.5">
+                            <Label htmlFor="pre_responsable">{__('Authorizer (Manager)')}</Label>
+                            <Select
+                                value={preRegistroForm.data.responsable_id}
+                                onValueChange={(val) => preRegistroForm.setData('responsable_id', val)}
+                            >
+                                <SelectTrigger className={cn(preRegistroForm.errors.responsable_id && 'border-rose-500')}>
+                                    <SelectValue placeholder={__('Select manager')} />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    {responsables.map((resp) => (
+                                        <SelectItem key={resp.id} value={String(resp.id)}>
+                                            {resp.nombres} {resp.apellidos}
+                                        </SelectItem>
+                                    ))}
+                                </SelectContent>
+                            </Select>
+                            {preRegistroForm.errors.responsable_id && (
+                                <p className="text-xs text-rose-500 mt-1">{preRegistroForm.errors.responsable_id}</p>
+                            )}
+                        </div>
+
+                        <DialogFooter className="mt-6 gap-2">
+                            <Button
+                                type="button"
+                                variant="outline"
+                                onClick={() => setIsPreRegistroModalOpen(false)}
+                            >
+                                {__('Cancel')}
+                            </Button>
+                            <Button
+                                type="submit"
+                                disabled={preRegistroForm.processing}
+                                className="bg-[#104a29] hover:bg-[#0c371e] text-white flex items-center gap-1.5"
+                            >
+                                {__('Enviar invitación')}
+                            </Button>
+                        </DialogFooter>
+                    </form>
+                </DialogContent>
+            </Dialog>
         </>
     );
 }

@@ -30,6 +30,7 @@ class Empleado extends Model
                 'foto_empleado_2',
                 'foto_documento',
                 'foto_documento_reverso',
+                'motivo_registro',
                 'status'
             ])
             ->logOnlyDirty()
@@ -47,6 +48,7 @@ class Empleado extends Model
         'departamento_id',
         'responsable_id',
         'cargo_id',
+        'motivo_registro',
         'jornada_laboral',
         'foto_empleado',
         'foto_empleado_2',
