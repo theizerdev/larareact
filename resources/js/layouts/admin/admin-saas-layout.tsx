@@ -21,7 +21,7 @@ import {
     Activity,
     Link2,
 } from 'lucide-react';
-import { Building2, GitBranch } from 'lucide-react';
+import { Building2, GitBranch, Briefcase } from 'lucide-react';
 import * as React from 'react';
 import LanguageToggle from '@/components/language-toggle';
 import TemplateCustomizer from '@/components/template-customizer';
@@ -380,18 +380,10 @@ export default function AdminSaasLayout({
 
                         <div className="pt-4">
                             <CollapsibleNavItem
-                                title="Settings"
-                                icon={Settings}
+                                title="Organization"
+                                icon={Briefcase}
                                 collapsed={collapsed}
                                 items={[
-                                    {
-                                        title: 'Companies',
-                                        href: empresasIndex.url(),
-                                    },
-                                    {
-                                        title: 'Branches',
-                                        href: sucursalesIndex.url(),
-                                    },
                                     {
                                         title: 'Departments',
                                         href: departamentosIndex.url(),
@@ -409,9 +401,32 @@ export default function AdminSaasLayout({
                                         href: '/admin/empleados',
                                     },
                                     {
+                                        title: 'Suppliers',
+                                        href: '/admin/proveedores',
+                                    },
+                                ]}
+                            />
+                        </div>
+
+                        <div className="pt-2">
+                            <CollapsibleNavItem
+                                title="Settings"
+                                icon={Settings}
+                                collapsed={collapsed}
+                                items={[
+                                    {
+                                        title: 'Companies',
+                                        href: empresasIndex.url(),
+                                    },
+                                    {
+                                        title: 'Branches',
+                                        href: sucursalesIndex.url(),
+                                    },
+                                    {
                                         title: 'Countries',
                                         href: paisesIndex.url(),
                                     },
+
                                     {
                                         title: 'Appearance',
                                         href: appearanceEdit().url,

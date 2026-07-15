@@ -29,6 +29,7 @@ createInertiaApp({
     layout: (name) => {
         switch (true) {
             case name === 'welcome':
+            case name === 'Error':
             case name === 'admin/integrations/navigation':
             case name === 'admin/integrations/map':
                 return null;

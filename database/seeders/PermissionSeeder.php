@@ -52,6 +52,15 @@ class PermissionSeeder extends Seeder
                 'sucursales.edit' => 'Editar Sucursal',
                 'sucursales.delete' => 'Eliminar Sucursal',
 
+                // Módulo: Integraciones
+                'integrations.view' => 'Ver Integraciones',
+                'integrations.edit' => 'Editar Integraciones',
+
+                
+            ],
+
+            // Sector: Organización
+            'organizacion' => [
                 // Módulo: Departamentos
                 'departamentos.view' => 'Ver Departamentos',
                 'departamentos.create' => 'Crear Departamento',
@@ -75,10 +84,12 @@ class PermissionSeeder extends Seeder
                 'empleados.create' => 'Crear Empleado',
                 'empleados.edit' => 'Editar Empleado',
                 'empleados.delete' => 'Eliminar Empleado',
-
-                // Módulo: Integraciones
-                'integrations.view' => 'Ver Integraciones',
-                'integrations.edit' => 'Editar Integraciones',
+                
+                // Módulo: Proveedores
+                'proveedores.view' => 'Ver Proveedores',
+                'proveedores.create' => 'Crear Proveedor',
+                'proveedores.edit' => 'Editar Proveedor',
+                'proveedores.delete' => 'Eliminar Proveedor',
             ],
             // Sector: Monitoreo
             'monitoreo' => [
@@ -109,6 +120,7 @@ class PermissionSeeder extends Seeder
                     str_starts_with($permission, 'responsables.') => 'responsables',
                     str_starts_with($permission, 'empleados.') => 'empleados',
                     str_starts_with($permission, 'integrations.') => 'integraciones',
+                    str_starts_with($permission, 'proveedores.') => 'proveedores',
                     str_starts_with($permission, 'monitoreo.') => 'monitoreo',
 
                     default => 'general',

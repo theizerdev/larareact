@@ -416,7 +416,7 @@ return false;
                                     <TabsList className="grid w-full grid-flow-col bg-muted/60 p-1 mb-4">
                                         {Object.keys(groupedPermissions).map((sector) => (
                                             <TabsTrigger key={sector} value={sector} className="capitalize text-xs py-1.5">
-                                                {sector}
+                                                {__(sector)}
                                             </TabsTrigger>
                                         ))}
                                     </TabsList>
@@ -433,7 +433,7 @@ return false;
                                                                 {/* Cabecera del Módulo con Checkbox maestro */}
                                                                 <div className="flex items-center justify-between border-b pb-1">
                                                                     <span className="text-xs font-semibold capitalize text-foreground/80">
-                                                                        {module}
+                                                                        {__(module)}
                                                                     </span>
                                                                     <div className="flex items-center space-x-1">
                                                                         <Checkbox

@@ -34,6 +34,7 @@ trait HasSpanishActivityLog
         'CreditNote' => 'Nota de Crédito',
         'CashRegister' => 'Caja Registradora',
         'Empleado' => 'Empleado',
+        'Proveedor' => 'Proveedor',
     ];
 
     public static $fieldLabelsMap = [
@@ -48,6 +49,11 @@ trait HasSpanishActivityLog
         'sucursal_id' => 'Sucursal',
         'failed_login_attempts' => 'Intentos fallidos de acceso',
         'documento_identidad' => 'Documento de identidad',
+        'responsable' => 'Responsable',
+        'pais_id' => 'País',
+        'pais_telefono_id' => 'País del prefijo telefónico',
+        'latitud' => 'Latitud',
+        'longitud' => 'Longitud',
         'tipo_documento' => 'Tipo de documento',
         'numero_documento' => 'Número de documento',
         'razon_social' => 'Razón social',
