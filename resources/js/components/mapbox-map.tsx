@@ -4,6 +4,7 @@ import mapboxgl from 'mapbox-gl';
 import React, { useEffect, useRef, useState } from 'react';
 import { useTranslate } from '@/hooks/use-translate';
 import 'mapbox-gl/dist/mapbox-gl.css';
+import { cn } from '@/lib/utils';
 
 interface MapboxMapProps {
     lat: number;
@@ -12,6 +13,7 @@ interface MapboxMapProps {
     onChange?: (lat: number, lng: number) => void;
     markers?: Array<{ lat: number; lng: number; label?: string }>;
     interactive?: boolean;
+    className?: string;
 }
 
 export default function MapboxMap({
@@ -20,7 +22,8 @@ export default function MapboxMap({
     zoom = 9,
     onChange,
     markers = [],
-    interactive = true
+    interactive = true,
+    className
 }: MapboxMapProps) {
     const { __ } = useTranslate();
     const mapContainerRef = useRef<HTMLDivElement>(null);
@@ -28,10 +31,10 @@ export default function MapboxMap({
     const markerRef = useRef<mapboxgl.Marker | null>(null);
     const [mapError, setMapError] = useState<string | null>(null);
 
-    // Obtener la clave de Mapbox desde las props globales de Inertia
-    const { auth } = usePage().props as any;
-    const mapboxApiKey = auth?.user?.empresa?.mapbox_api_key;
-    const mapboxActive = auth?.user?.empresa?.mapbox_active;
+    // Obtener la clave de Mapbox desde las props globales de Inertia o directas de la página
+    const props = usePage().props as any;
+    const mapboxApiKey = props.mapbox_api_key || props.auth?.user?.empresa?.mapbox_api_key;
+    const mapboxActive = props.mapbox_active !== undefined ? props.mapbox_active : props.auth?.user?.empresa?.mapbox_active;
 
     // Efecto 1: Inicializar el mapa una sola vez
     useEffect(() => {
@@ -150,7 +153,7 @@ return;
     }
 
     return (
-        <div className="relative w-full h-80 min-h-[320px] rounded-lg overflow-hidden border border-slate-200 dark:border-slate-800">
+        <div className={cn("relative w-full h-80 min-h-[320px] rounded-lg overflow-hidden border border-slate-200 dark:border-slate-800", className)}>
             <div ref={mapContainerRef} className="absolute inset-0 w-full h-full" />
         </div>
     );

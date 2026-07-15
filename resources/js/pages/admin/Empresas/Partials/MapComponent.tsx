@@ -49,6 +49,7 @@ const EmpresaMapComponent: React.FC<MapComponentProps> = ({
                 zoom={zoom}
                 onChange={handleLocationChange}
                 interactive={true}
+                className="h-full w-full border-none rounded-none"
             />
             {isGeocodingLoading && (
                 <div

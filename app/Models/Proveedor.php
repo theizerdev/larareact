@@ -13,6 +13,35 @@ class Proveedor extends Model
 {
     use HasFactory, HasSpanishActivityLog, LogsActivity;
 
+    protected static function booted()
+    {
+        static::updated(function ($proveedor) {
+            if ($proveedor->isDirty('status') && $proveedor->status === 'activo') {
+                try {
+                    $pais = $proveedor->paisTelefono;
+                    if ($pais && $proveedor->telefono) {
+                        $prefix = preg_replace('/[^0-9]/', '', $pais->codigo_telefonico);
+                        $cleanPhone = preg_replace('/[^0-9]/', '', $proveedor->telefono);
+                        $to = $prefix . $cleanPhone;
+
+                        $empresa = $proveedor->empresa;
+                        $sucursal = $proveedor->sucursal;
+
+                        $empresaName = $empresa ? $empresa->razon_social : 'Nuestra Empresa';
+                        $sucursalName = $sucursal ? $sucursal->nombre : 'Nuestra Sucursal';
+
+                        $message = "Estimado Proveedor *{$proveedor->nombre_comercial}*, le notificamos que ha pasado el periodo de revisión y que su suscripción en: {$empresaName}, {$sucursalName}, ha sido satisfactorio.";
+
+                        $whatsappService = new \App\Services\WhatsAppService($empresa);
+                        $whatsappService->sendMessage($to, $message, true);
+                    }
+                } catch (\Exception $e) {
+                    \Illuminate\Support\Facades\Log::error('Error al enviar WhatsApp de activación de proveedor: ' . $e->getMessage());
+                }
+            }
+        });
+    }
+
     protected $table = 'proveedores';
 
     public function getActivitylogOptions(): LogOptions

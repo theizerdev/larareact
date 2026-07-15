@@ -13,6 +13,7 @@ Route::middleware(['permission:proveedores.view'])->group(function () {
 
 Route::middleware(['permission:proveedores.create'])->group(function () {
     Route::post('/proveedores', [ProveedorController::class, 'store'])->name('proveedores.store');
+    Route::post('/proveedores/pre-registro', [ProveedorController::class, 'generatePreRegistro'])->name('proveedores.pre-registro');
     Route::post('/proveedores/{proveedor}/empleados', [ProveedorEmpleadoController::class, 'store']);
     Route::post('/proveedores/{proveedor}/vehiculos', [ProveedorVehiculoController::class, 'store']);
 });

@@ -32,6 +32,11 @@ Route::middleware(['auth', 'verified'])->group(function () {
     });
 });
 
+use App\Http\Controllers\ProveedorPreRegistroController;
+
+Route::get('/preregistro/{token}', [ProveedorPreRegistroController::class, 'showWizard'])->name('preregistro.wizard');
+Route::post('/preregistro/{token}', [ProveedorPreRegistroController::class, 'submitWizard'])->name('preregistro.submit');
+
 if (file_exists(__DIR__.'/larareact-settings.php')) {
     require __DIR__.'/larareact-settings.php';
 }

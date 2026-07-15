@@ -177,6 +177,27 @@ export default function ProveedoresIndexPage({
     const [isVehiclesModalOpen, setIsVehiclesModalOpen] = useState(false);
     const [selectedProveedorForVehicles, setSelectedProveedorForVehicles] = useState<Proveedor | null>(null);
 
+    const [isPreRegistroModalOpen, setIsPreRegistroModalOpen] = useState(false);
+    const preRegistroForm = useForm({
+        nombre_comercial: '',
+        pais_telefono_id: String(auth.user?.pais_telefono_id || paises[0]?.id || ''),
+        telefono: '',
+    });
+
+    const handlePreRegistroSubmit = (e: React.FormEvent) => {
+        e.preventDefault();
+        preRegistroForm.post('/admin/proveedores/pre-registro', {
+            onSuccess: () => {
+                setIsPreRegistroModalOpen(false);
+                preRegistroForm.reset();
+                notifySuccess(__('Pre-registro invitation sent successfully by WhatsApp.'));
+            },
+            onError: () => {
+                notifyError(__('Please review the highlighted fields.'));
+            },
+        });
+    };
+
     // Filtros
     const [searchTerm, setSearchTerm] = useState(filters.search || '');
     const [statusFilter, setStatusFilter] = useState(filters.status || '');
@@ -575,15 +596,24 @@ export default function ProveedoresIndexPage({
                         <p className="text-sm text-muted-foreground mt-0.5">
                             {__('Manage suppliers, their contact, tax info and physical location.')}
                         </p>
+                    </div>                    <div className="flex items-center gap-2 self-start md:self-auto">
+                        <Button
+                            type="button"
+                            onClick={() => setIsPreRegistroModalOpen(true)}
+                            variant="outline"
+                            className="border-[#104a29] text-[#104a29] hover:bg-[#104a29]/10 flex items-center gap-1.5"
+                        >
+                            <Phone className="w-4 h-4" />
+                            {__('Pre-registro')}
+                        </Button>
+                        <Button
+                            onClick={handleCreateClick}
+                            className="bg-[#104a29] hover:bg-[#0c371e] text-white flex items-center gap-1.5"
+                        >
+                            <Plus className="w-4.5 h-4.5" />
+                            {__('New Supplier')}
+                        </Button>
                     </div>
-
-                    <Button
-                        onClick={handleCreateClick}
-                        className="bg-[#104a29] hover:bg-[#0c371e] text-white flex items-center gap-1.5 self-start md:self-auto"
-                    >
-                        <Plus className="w-4.5 h-4.5" />
-                        {__('New Supplier')}
-                    </Button>
                 </div>
 
                 {/* ── Tarjetas Estadísticas ── */}
@@ -957,6 +987,69 @@ export default function ProveedoresIndexPage({
                         </form>
                     </DialogContent>
                 </Dialog>
+
+            {/* ══ Modal de Pre-registro ════════════════════════════ */}
+            <Dialog open={isPreRegistroModalOpen} onOpenChange={(open) => {
+                setIsPreRegistroModalOpen(open);
+                if (!open) preRegistroForm.reset();
+            }}>
+                <DialogContent className="max-w-md">
+                    <DialogHeader>
+                        <DialogTitle>{__('Pre-registro de Proveedor')}</DialogTitle>
+                        <DialogDescription>
+                            {__('Ingrese el nombre comercial y el teléfono del proveedor para enviar una invitación de registro rápido a su WhatsApp.')}
+                        </DialogDescription>
+                    </DialogHeader>
+                    <form onSubmit={handlePreRegistroSubmit} className="space-y-4">
+                        <div className="space-y-1.5">
+                            <Label htmlFor="pre_nombre_comercial">{__('Commercial Name')}</Label>
+                            <Input
+                                id="pre_nombre_comercial"
+                                value={preRegistroForm.data.nombre_comercial}
+                                onChange={(e) => preRegistroForm.setData('nombre_comercial', e.target.value)}
+                                className={cn(preRegistroForm.errors.nombre_comercial && 'border-rose-500')}
+                                required
+                            />
+                            {preRegistroForm.errors.nombre_comercial && (
+                                <p className="text-xs text-rose-500 flex items-center gap-1 mt-1">
+                                    <ShieldAlert className="w-3 h-3" />
+                                    {preRegistroForm.errors.nombre_comercial}
+                                </p>
+                            )}
+                        </div>
+
+                        <div className="space-y-1.5">
+                            <Label htmlFor="pre_telefono">{__('Phone')}</Label>
+                            <PhoneInputGroup
+                                paises={paises}
+                                selectedPaisId={preRegistroForm.data.pais_telefono_id ? Number(preRegistroForm.data.pais_telefono_id) : '' as any}
+                                phoneValue={preRegistroForm.data.telefono}
+                                onPaisChange={(v) => preRegistroForm.setData('pais_telefono_id', String(v))}
+                                onPhoneChange={(v) => preRegistroForm.setData('telefono', v)}
+                                placeholder="000-0000000"
+                                error={preRegistroForm.errors.telefono}
+                            />
+                        </div>
+
+                        <DialogFooter className="mt-6 gap-2">
+                            <Button
+                                type="button"
+                                variant="outline"
+                                onClick={() => setIsPreRegistroModalOpen(false)}
+                            >
+                                {__('Cancel')}
+                            </Button>
+                            <Button
+                                type="submit"
+                                disabled={preRegistroForm.processing}
+                                className="bg-[#104a29] hover:bg-[#0c371e] text-white flex items-center gap-1.5"
+                            >
+                                {__('Enviar invitación')}
+                            </Button>
+                        </DialogFooter>
+                    </form>
+                </DialogContent>
+            </Dialog>
 
             {/* ══ Confirmación de Eliminación ════════════════════════════════════ */}
             <Dialog open={deletingProveedor !== null} onOpenChange={(open) => !open && setDeletingProveedor(null)}>

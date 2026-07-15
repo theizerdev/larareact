@@ -32,6 +32,7 @@ createInertiaApp({
             case name === 'Error':
             case name === 'admin/integrations/navigation':
             case name === 'admin/integrations/map':
+            case name.startsWith('preregistro/'):
                 return null;
             case name.startsWith('auth/'):
                 return AuthLayout;
