@@ -74,6 +74,15 @@ class EmpleadoController extends Controller
         ]);
     }
 
+    public function carnet(Empleado $empleado)
+    {
+        $empleado->load(['paisTelefono', 'departamento', 'cargo', 'empresa', 'sucursal']);
+
+        return Inertia::render('admin/Empleados/Carnet', [
+            'empleado' => $empleado,
+        ]);
+    }
+
     public function store(EmpleadoRequest $request)
     {
         $data = $request->validated();

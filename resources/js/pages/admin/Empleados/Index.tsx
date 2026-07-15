@@ -644,6 +644,10 @@ export default function EmpleadosIndexPage({
                             <Pencil className="mr-2 h-4 w-4" />
                             {__('Edit')}
                         </DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => router.get(`/admin/empleados/${emp.id}/carnet`)}>
+                            <Eye className="mr-2 h-4 w-4" />
+                            {__('Ver Carnet')}
+                        </DropdownMenuItem>
                         <DropdownMenuItem onClick={() => handleToggleStatus(emp)}>
                             <ToggleRight className="mr-2 h-4 w-4" />
                             {emp.status ? __('Deactivate') : __('Activate')}
