@@ -16,8 +16,8 @@ import {
     Building2,
     Activity,
     Globe,
-    FileText,
     Navigation,
+    Car,
 } from 'lucide-react';
 import React, { useState, useEffect, useRef, lazy, Suspense } from 'react';
 import { toast } from 'sonner';
@@ -40,6 +40,7 @@ import { useTranslate } from '@/hooks/use-translate';
 import { cn } from '@/lib/utils';
 import PhoneInputGroup from '../Empresas/Partials/PhoneInputGroup';
 import ProveedorEmpleadosModal from './Partials/ProveedorEmpleadosModal';
+import ProveedorVehiculosModal from './Partials/ProveedorVehiculosModal';
 
 // Cargar perezosamente el componente del mapa
 const ProveedorMapComponent = lazy(() => {
@@ -172,6 +173,9 @@ export default function ProveedoresIndexPage({
 
     const [isEmployeesModalOpen, setIsEmployeesModalOpen] = useState(false);
     const [selectedProveedorForEmployees, setSelectedProveedorForEmployees] = useState<Proveedor | null>(null);
+
+    const [isVehiclesModalOpen, setIsVehiclesModalOpen] = useState(false);
+    const [selectedProveedorForVehicles, setSelectedProveedorForVehicles] = useState<Proveedor | null>(null);
 
     // Filtros
     const [searchTerm, setSearchTerm] = useState(filters.search || '');
@@ -357,6 +361,11 @@ export default function ProveedoresIndexPage({
         setIsEmployeesModalOpen(true);
     };
 
+    const handleManageVehiclesClick = (prov: Proveedor) => {
+        setSelectedProveedorForVehicles(prov);
+        setIsVehiclesModalOpen(true);
+    };
+
     const handleLocationSelected = async (lat: number, lng: number, address?: string) => {
         setData((prev) => ({
             ...prev,
@@ -532,6 +541,10 @@ export default function ProveedoresIndexPage({
                         <DropdownMenuItem onClick={() => handleManageEmployeesClick(prov)}>
                             <UserIcon className="mr-2 h-4 w-4 text-[#104a29]" />
                             {__('Employees')}
+                        </DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => handleManageVehiclesClick(prov)}>
+                            <Car className="mr-2 h-4 w-4 text-[#104a29]" />
+                            {__('Vehicles')}
                         </DropdownMenuItem>
                         <DropdownMenuItem
                             onClick={() => setDeletingProveedor(prov)}
@@ -980,6 +993,16 @@ export default function ProveedoresIndexPage({
                 }}
                 proveedor={selectedProveedorForEmployees}
                 paises={paises}
+            />
+
+            {/* ══ Modal de Vehículos de Proveedores ════════════════════════════ */}
+            <ProveedorVehiculosModal
+                isOpen={isVehiclesModalOpen}
+                onClose={() => {
+                    setIsVehiclesModalOpen(false);
+                    setSelectedProveedorForVehicles(null);
+                }}
+                proveedor={selectedProveedorForVehicles}
             />
         </>
     );
