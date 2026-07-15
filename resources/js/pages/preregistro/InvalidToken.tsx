@@ -1,15 +1,18 @@
 import React from 'react';
 import { Head } from '@inertiajs/react';
 import { ShieldAlert } from 'lucide-react';
+import { useTranslate } from '@/hooks/use-translate';
 
 interface InvalidTokenProps {
     error: string;
 }
 
 export default function InvalidToken({ error }: InvalidTokenProps) {
+    const { __ } = useTranslate();
+
     return (
         <>
-            <Head title="Enlace no válido - Pre-registro" />
+            <Head title={__('Invalid Link - Pre-registration')} />
             <div className="min-h-screen bg-slate-50 dark:bg-slate-950 flex flex-col justify-center py-12 sm:px-6 lg:px-8">
                 <div className="sm:mx-auto sm:w-full sm:max-w-md">
                     <div className="bg-white dark:bg-slate-900 py-8 px-6 shadow-xl border border-slate-100 dark:border-slate-800 rounded-2xl px-10">
@@ -18,13 +21,13 @@ export default function InvalidToken({ error }: InvalidTokenProps) {
                                 <ShieldAlert className="w-8 h-8 text-rose-600 dark:text-rose-400" />
                             </div>
                             <h2 className="text-xl font-bold tracking-tight text-slate-800 dark:text-slate-100 mb-2">
-                                Enlace de registro inválido
+                                {__('Invalid registration link')}
                             </h2>
                             <p className="text-sm text-slate-500 dark:text-slate-400 max-w-sm mb-6 leading-relaxed">
-                                {error}
+                                {__(error)}
                             </p>
                             <div className="text-xs text-slate-400 dark:text-slate-500">
-                                Si necesitas un nuevo enlace, por favor ponte en contacto con la administración de la empresa.
+                                {__('If you need a new link, please contact company administration.')}
                             </div>
                         </div>
                     </div>

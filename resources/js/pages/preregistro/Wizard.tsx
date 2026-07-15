@@ -1,16 +1,16 @@
-import React, { useState, lazy, Suspense } from 'react';
+import React, { useState, lazy, Suspense, useEffect, useRef } from 'react';
 import { Head } from '@inertiajs/react';
-import {
-    Building2,
-    Users,
-    Car,
-    CheckCircle,
-    ChevronLeft,
-    ChevronRight,
-    Plus,
-    Trash2,
-    Image as ImageIcon,
-    ShieldAlert,
+import { 
+    Building2, 
+    Users, 
+    Car, 
+    CheckCircle, 
+    ChevronLeft, 
+    ChevronRight, 
+    Plus, 
+    Trash2, 
+    Image as ImageIcon, 
+    ShieldAlert, 
     Navigation,
     User as UserIcon,
     AlertTriangle,
@@ -28,6 +28,8 @@ import { Textarea } from '@/components/ui/textarea';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import PhoneInputGroup from '../admin/Empresas/Partials/PhoneInputGroup';
 import { cn } from '@/lib/utils';
+import { useTranslate } from '@/hooks/use-translate';
+import LanguageToggle from '@/components/language-toggle';
 
 // Lazy load MapComponent
 const ProveedorMapComponent = lazy(() => {
@@ -51,7 +53,6 @@ interface PreRegistroProps {
         telefono: string;
         token: string;
         empresa_id: number;
-        sucursal_id: number;
     };
     paises: Pais[];
     mapbox_api_key?: string | null;
@@ -82,6 +83,7 @@ interface VehiculoForm {
 }
 
 export default function Wizard({ preRegistro, paises, mapbox_api_key, mapbox_active }: PreRegistroProps) {
+    const { __ } = useTranslate();
     const [step, setStep] = useState(1);
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [isSuccess, setIsSuccess] = useState(false);
@@ -140,8 +142,8 @@ export default function Wizard({ preRegistro, paises, mapbox_api_key, mapbox_act
     // Camera States
     const [isCameraOpen, setIsCameraOpen] = useState(false);
     const [activeCameraField, setActiveCameraField] = useState<{ type: 'employee' | 'vehicle', fieldName: string } | null>(null);
-    const videoRef = React.useRef<HTMLVideoElement | null>(null);
-    const canvasRef = React.useRef<HTMLCanvasElement | null>(null);
+    const videoRef = useRef<HTMLVideoElement | null>(null);
+    const canvasRef = useRef<HTMLCanvasElement | null>(null);
     const [cameraStream, setCameraStream] = useState<MediaStream | null>(null);
 
     const startCamera = async () => {
@@ -154,7 +156,7 @@ export default function Wizard({ preRegistro, paises, mapbox_api_key, mapbox_act
                 videoRef.current.srcObject = stream;
             }
         } catch (err) {
-            alert('No se pudo acceder a la cámara. Verifique los permisos de cámara.');
+            alert(__('Unable to access camera. Please check camera permissions.'));
             setIsCameraOpen(false);
         }
     };
@@ -196,7 +198,7 @@ export default function Wizard({ preRegistro, paises, mapbox_api_key, mapbox_act
         }
     };
 
-    React.useEffect(() => {
+    useEffect(() => {
         if (isCameraOpen) {
             startCamera();
         } else {
@@ -222,11 +224,13 @@ export default function Wizard({ preRegistro, paises, mapbox_api_key, mapbox_act
         }
     };
 
+    // Helper to convert File to base64
     const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>, fieldName: string, type: 'employee' | 'vehicle') => {
         const file = e.target.files?.[0];
         if (!file) return;
+
         if (file.size > 2 * 1024 * 1024) {
-            alert('La imagen no debe superar los 2MB.');
+            alert(__('The image must not exceed 2MB.'));
             return;
         }
 
@@ -273,7 +277,7 @@ export default function Wizard({ preRegistro, paises, mapbox_api_key, mapbox_act
 
     const handleGetCurrentLocation = () => {
         if (!navigator.geolocation) {
-            alert('Geolocalización no soportada por su navegador.');
+            alert(__('Geolocation is not supported by your browser.'));
             return;
         }
         navigator.geolocation.getCurrentPosition(
@@ -284,32 +288,35 @@ export default function Wizard({ preRegistro, paises, mapbox_api_key, mapbox_act
                 handleLocationSelected(latitude, longitude);
             },
             (error) => {
-                alert('No se pudo obtener la ubicación actual. Por favor otorgue los permisos.');
+                alert(__('Could not obtain current location. Please grant permissions.'));
             }
         );
     };
 
+    // Step 1 Validation
     const validateStep1 = (): boolean => {
         const newErrors: Record<string, string> = {};
-        if (!providerData.razon_social.trim()) newErrors.razon_social = 'La razón social es obligatoria.';
-        if (!providerData.documento_identidad.trim()) newErrors.documento_identidad = 'El documento de identidad es obligatorio.';
-        if (!providerData.responsable.trim()) newErrors.responsable = 'El responsable es obligatorio.';
-        if (!providerData.pais_id) newErrors.pais_id = 'El país de ubicación es obligatorio.';
-        if (!providerData.direccion.trim()) newErrors.direccion = 'La dirección es obligatoria.';
-        if (!providerData.latitud || !providerData.longitud) newErrors.location = 'Debe seleccionar una ubicación en el mapa.';
+        if (!providerData.razon_social.trim()) newErrors.razon_social = __('Business name is required.');
+        if (!providerData.documento_identidad.trim()) newErrors.documento_identidad = __('ID document is required.');
+        if (!providerData.responsable.trim()) newErrors.responsable = __('Representative is required.');
+        if (!providerData.pais_id) newErrors.pais_id = __('Country is required.');
+        if (!providerData.direccion.trim()) newErrors.direccion = __('Address is required.');
+        if (!providerData.latitud || !providerData.longitud) newErrors.location = __('You must select a location on the map.');
 
         setErrors(newErrors);
         return Object.keys(newErrors).length === 0;
     };
 
+    // Step 2 Validation: Must have at least 1 employee
     const validateStep2 = (): boolean => {
         if (employees.length === 0) {
-            alert('Debe registrar al menos un colaborador (empleado) para el acceso.');
+            alert(__('You must register at least one collaborator (employee) for access.'));
             return false;
         }
         return true;
     };
 
+    // Navigation handles
     const handleNext = () => {
         if (step === 1 && !validateStep1()) return;
         if (step === 2 && !validateStep2()) return;
@@ -322,9 +329,10 @@ export default function Wizard({ preRegistro, paises, mapbox_api_key, mapbox_act
         window.scrollTo({ top: 0, behavior: 'smooth' });
     };
 
+    // Add employee to array
     const handleAddEmployee = () => {
         if (!newEmployee.nombres.trim() || !newEmployee.apellidos.trim() || !newEmployee.documento_identidad.trim()) {
-            alert('Nombres, Apellidos y Documento de identidad son obligatorios.');
+            alert(__('First name, last name and ID are required.'));
             return;
         }
 
@@ -348,9 +356,10 @@ export default function Wizard({ preRegistro, paises, mapbox_api_key, mapbox_act
         setEmployees(prev => prev.filter((_, i) => i !== index));
     };
 
+    // Add vehicle to array
     const handleAddVehicle = () => {
         if (!newVehicle.tipo_vehiculo.trim() || !newVehicle.marca.trim() || !newVehicle.modelo.trim() || !newVehicle.year || !newVehicle.placa.trim()) {
-            alert('Todos los campos del vehículo son obligatorios.');
+            alert(__('All vehicle fields are required.'));
             return;
         }
 
@@ -371,6 +380,7 @@ export default function Wizard({ preRegistro, paises, mapbox_api_key, mapbox_act
         setVehicles(prev => prev.filter((_, i) => i !== index));
     };
 
+    // Form final Submit
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         setIsSubmitting(true);
@@ -397,13 +407,13 @@ export default function Wizard({ preRegistro, paises, mapbox_api_key, mapbox_act
             try {
                 data = await response.json();
             } catch (jsonErr) {
-                throw new Error(`El servidor respondió con código ${response.status}: ${response.statusText}`);
+                throw new Error(__('El servidor respondió con código :status: :statusText', { status: String(response.status), statusText: response.statusText }));
             }
 
             if (response.ok && data.success) {
                 setIsSuccess(true);
             } else {
-                setErrorMsg(data.message || 'Ocurrió un error al procesar el pre-registro.');
+                setErrorMsg(data.message || __('Ocurrió un error al procesar el pre-registro.'));
                 if (data.errors) {
                     const validationErrors = Object.entries(data.errors)
                         .map(([key, value]) => `${key}: ${(value as string[]).join(', ')}`)
@@ -413,7 +423,7 @@ export default function Wizard({ preRegistro, paises, mapbox_api_key, mapbox_act
             }
         } catch (err: any) {
             console.error("Submission error details:", err);
-            setErrorMsg(err.message || 'Error de red. No se pudo conectar con el servidor.');
+            setErrorMsg(err.message || __('Error de red. No se pudo conectar con el servidor.'));
         } finally {
             setIsSubmitting(false);
         }
@@ -428,21 +438,21 @@ export default function Wizard({ preRegistro, paises, mapbox_api_key, mapbox_act
                             <Check className="w-10 h-10 text-emerald-600 dark:text-emerald-400" />
                         </div>
                         <h2 className="text-2xl font-bold tracking-tight text-slate-800 dark:text-slate-100 mb-3">
-                            ¡Pre-registro enviado con éxito!
+                            {__('Pre-registration submitted successfully!')}
                         </h2>
                         <p className="text-sm text-slate-600 dark:text-slate-300 leading-relaxed mb-6">
-                            Hemos recibido correctamente los datos del proveedor, colaboradores y vehículos. El registro se encuentra en estado <span className="font-semibold text-amber-600 dark:text-amber-400">En Revisión</span>.
+                            {__('We have successfully received the provider, collaborators and vehicles details. The registration status is now')} <span className="font-semibold text-amber-600 dark:text-amber-400">{__('Under Review')}</span>.
                         </p>
                         <div className="p-4 bg-emerald-50/50 dark:bg-emerald-950/10 rounded-2xl border border-emerald-100/30 text-xs text-slate-500 dark:text-slate-400 text-left mb-6 space-y-2">
-                            <p className="font-medium text-emerald-800 dark:text-emerald-300">¿Qué sucede ahora?</p>
+                            <p className="font-medium text-emerald-800 dark:text-emerald-300">{__('What happens now?')}</p>
                             <ul className="list-disc pl-4 space-y-1">
-                                <li>Se ha enviado un mensaje de confirmación a su WhatsApp.</li>
-                                <li>El personal administrativo de la oficina validará toda la documentación.</li>
-                                <li>Una vez aprobados los datos, recibirá una notificación en su WhatsApp indicando que su estado es Activo y se le brindará el acceso a nuestras instalaciones.</li>
+                                <li>{__('A confirmation message has been sent to your WhatsApp.')}</li>
+                                <li>{__('Office administrative staff will validate all documentation.')}</li>
+                                <li>{__('Once the details are approved, you will receive a notification on WhatsApp and be granted access to the facilities.')}</li>
                             </ul>
                         </div>
                         <p className="text-xs text-slate-400 dark:text-slate-500">
-                            Ya puede cerrar esta pestaña.
+                            {__('You can now close this tab.')}
                         </p>
                     </div>
                 </div>
@@ -452,18 +462,27 @@ export default function Wizard({ preRegistro, paises, mapbox_api_key, mapbox_act
 
     return (
         <>
-            <Head title="Asistente de Pre-registro de Proveedor" />
+            <Head title={__('Supplier Pre-Registration Assistant')} />
 
             <div className="min-h-screen bg-slate-50 dark:bg-slate-950 text-slate-800 dark:text-slate-100 py-10 px-4 sm:px-6 lg:px-8">
                 <div className="max-w-7xl mx-auto">
+                    {/* Header language switcher & Title */}
+                    <div className="flex justify-between items-center mb-6">
+                        <div />
+                        <LanguageToggle />
+                    </div>
+
                     <div className="text-center mb-10">
                         <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-[#104a29]/10 text-[#104a29] dark:text-[#2d8d53] text-xs font-semibold mb-3">
                             <Building2 className="w-3.5 h-3.5" />
-                            Pre-registro de Acceso
+                            {__('Access Pre-Registration')}
                         </div>
                         <h1 className="text-3xl font-extrabold tracking-tight text-slate-900 dark:text-slate-50">
-                            Asistente de Registro
+                            {__('Registration Assistant')}
                         </h1>
+                        <p className="text-sm text-muted-foreground mt-2 max-w-lg mx-auto">
+                            {__('Complete the form in 4 simple steps to request access. All information will be audited.')}
+                        </p>
                     </div>
 
                     {/* Step indicators */}
@@ -479,10 +498,10 @@ export default function Wizard({ preRegistro, paises, mapbox_api_key, mapbox_act
                                 let label = '';
                                 let icon = null;
                                 switch (s) {
-                                    case 1: label = 'Datos'; icon = <Building2 className="w-4 h-4" />; break;
-                                    case 2: label = 'Personal'; icon = <Users className="w-4 h-4" />; break;
-                                    case 3: label = 'Vehículos'; icon = <Car className="w-4 h-4" />; break;
-                                    case 4: label = 'Confirmar'; icon = <CheckCircle className="w-4 h-4" />; break;
+                                    case 1: label = __('General'); icon = <Building2 className="w-4 h-4" />; break;
+                                    case 2: label = __('Employees'); icon = <Users className="w-4 h-4" />; break;
+                                    case 3: label = __('Vehicles'); icon = <Car className="w-4 h-4" />; break;
+                                    case 4: label = __('Validation'); icon = <CheckCircle className="w-4 h-4" />; break;
                                 }
                                 return (
                                     <div key={s} className="flex flex-col items-center relative z-10">
@@ -517,22 +536,23 @@ export default function Wizard({ preRegistro, paises, mapbox_api_key, mapbox_act
                         {step === 1 && (
                             <div className="space-y-6">
                                 <div className="border-b pb-4 mb-4 border-slate-100 dark:border-slate-800">
-                                    <h2 className="text-xl font-bold">Datos Generales del Proveedor</h2>
+                                    <h2 className="text-xl font-bold">{__('General Supplier Info')}</h2>
                                 </div>
 
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                     <div className="space-y-1.5">
-                                        <Label htmlFor="razon_social">Razón Social *</Label>
+                                        <Label htmlFor="razon_social">{__('Razón Social *')}</Label>
                                         <Input
                                             id="razon_social"
                                             value={providerData.razon_social}
                                             onChange={(e) => setProviderData(prev => ({ ...prev, razon_social: e.target.value }))}
                                             className={errors.razon_social ? 'border-rose-500' : ''}
                                         />
+                                        {errors.razon_social && <p className="text-xs text-rose-500">{errors.razon_social}</p>}
                                     </div>
 
                                     <div className="space-y-1.5">
-                                        <Label htmlFor="nombre_comercial">Nombre Comercial</Label>
+                                        <Label htmlFor="nombre_comercial">{__('Trade Name')}</Label>
                                         <Input
                                             id="nombre_comercial"
                                             value={providerData.nombre_comercial}
@@ -542,27 +562,28 @@ export default function Wizard({ preRegistro, paises, mapbox_api_key, mapbox_act
                                     </div>
 
                                     <div className="space-y-1.5">
-                                        <Label htmlFor="documento_identidad">Documento de Identidad *</Label>
+                                        <Label htmlFor="documento_identidad">{__('Documento de Identidad *')}</Label>
                                         <Input
                                             id="documento_identidad"
                                             value={providerData.documento_identidad}
                                             onChange={(e) => setProviderData(prev => ({ ...prev, documento_identidad: e.target.value }))}
                                             className={errors.documento_identidad ? 'border-rose-500' : ''}
                                         />
+                                        {errors.documento_identidad && <p className="text-xs text-rose-500">{errors.documento_identidad}</p>}
                                     </div>
 
                                     <div className="space-y-1.5">
-                                        <Label htmlFor="responsable">Responsable de Contacto *</Label>
+                                        <Label htmlFor="responsable">{__('Responsable *')}</Label>
                                         <Input
                                             id="responsable"
                                             value={providerData.responsable}
                                             onChange={(e) => setProviderData(prev => ({ ...prev, responsable: e.target.value }))}
                                             className={errors.responsable ? 'border-rose-500' : ''}
                                         />
+                                        {errors.responsable && <p className="text-xs text-rose-500">{errors.responsable}</p>}
                                     </div>
 
                                     <div className="space-y-1.5 md:col-span-2">
-                                        <Label>Teléfono de Contacto (Registrado)</Label>
                                         <PhoneInputGroup
                                             paises={paises}
                                             selectedPaisId={providerData.pais_telefono_id}
@@ -573,14 +594,14 @@ export default function Wizard({ preRegistro, paises, mapbox_api_key, mapbox_act
                                         />
                                     </div>
 
-                                    <div className="space-y-4">
-                                        <Label htmlFor="pais_id">País *</Label>
+                                    <div className="space-y-1.5">
+                                        <Label htmlFor="pais_id">{__('Country *')}</Label>
                                         <Select
                                             value={providerData.pais_id}
                                             onValueChange={handlePaisChange}
                                         >
                                             <SelectTrigger id="pais_id" className={cn("w-full", errors.pais_id && 'border-rose-500')}>
-                                                <SelectValue placeholder="Seleccione País" />
+                                                <SelectValue placeholder={__('Select Country')} />
                                             </SelectTrigger>
                                             <SelectContent>
                                                 {paises.map(p => (
@@ -593,7 +614,7 @@ export default function Wizard({ preRegistro, paises, mapbox_api_key, mapbox_act
 
                                     <div className="space-y-1.5">
                                         <div className="flex items-center justify-between">
-                                            <Label>Ubicación Geográfica *</Label>
+                                            <Label>{__('Geographical Location *')}</Label>
                                             <Button
                                                 type="button"
                                                 variant="link"
@@ -602,38 +623,41 @@ export default function Wizard({ preRegistro, paises, mapbox_api_key, mapbox_act
                                                 onClick={handleGetCurrentLocation}
                                             >
                                                 <Navigation className="w-3 h-3 mr-1" />
-                                                Mi Ubicación
+                                                {__('My Location')}
                                             </Button>
                                         </div>
                                         <div className="grid grid-cols-2 gap-2">
                                             <Input
-                                                placeholder="Latitud"
+                                                placeholder={__('Latitude')}
                                                 value={providerData.latitud !== null ? String(providerData.latitud) : ''}
                                                 readOnly
                                                 className="bg-muted text-muted-foreground text-xs"
                                             />
                                             <Input
-                                                placeholder="Longitud"
+                                                placeholder={__('Longitude')}
                                                 value={providerData.longitud !== null ? String(providerData.longitud) : ''}
                                                 readOnly
                                                 className="bg-muted text-muted-foreground text-xs"
                                             />
                                         </div>
+                                        {errors.location && <p className="text-xs text-rose-500">{errors.location}</p>}
                                     </div>
 
                                     <div className="space-y-1.5 md:col-span-2">
-                                        <Label htmlFor="direccion">Dirección Física *</Label>
+                                        <Label htmlFor="direccion">{__('Physical Address *')}</Label>
                                         <Textarea
                                             id="direccion"
                                             value={providerData.direccion}
                                             onChange={(e) => setProviderData(prev => ({ ...prev, direccion: e.target.value }))}
+                                            className={errors.direccion ? 'border-rose-500' : ''}
                                             rows={2}
                                         />
+                                        {errors.direccion && <p className="text-xs text-rose-500">{errors.direccion}</p>}
                                     </div>
                                 </div>
 
                                 <div className="h-[450px] w-full rounded-2xl border overflow-hidden relative bg-slate-50">
-                                    <Suspense fallback={<p>Cargando mapa...</p>}>
+                                    <Suspense fallback={<p>{__('Loading map...')}</p>}>
                                         <ProveedorMapComponent
                                             center={mapCenter}
                                             zoom={mapZoom}
@@ -655,7 +679,7 @@ export default function Wizard({ preRegistro, paises, mapbox_api_key, mapbox_act
                             <div className="space-y-6">
                                 <div className="border-b pb-4 mb-4 flex justify-between items-center">
                                     <div>
-                                        <h2 className="text-xl font-bold">Colaboradores</h2>
+                                        <h2 className="text-xl font-bold">{__('Collaborators')}</h2>
                                     </div>
                                     {!showEmployeeForm && (
                                         <Button
@@ -664,38 +688,38 @@ export default function Wizard({ preRegistro, paises, mapbox_api_key, mapbox_act
                                             className="bg-[#104a29] text-white"
                                         >
                                             <Plus className="w-4 h-4 mr-1" />
-                                            Agregar Colaborador
+                                            {__('Add Collaborator')}
                                         </Button>
                                     )}
                                 </div>
 
                                 {showEmployeeForm && (
                                     <div className="p-5 border bg-slate-50/50 rounded-2xl space-y-4">
-                                        <h3 className="font-semibold text-sm">Nuevo Colaborador</h3>
+                                        <h3 className="font-semibold text-sm">{__('New Collaborator')}</h3>
                                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                                            <Input placeholder="Nombres *" value={newEmployee.nombres} onChange={(e) => setNewEmployee(prev => ({ ...prev, nombres: e.target.value }))} />
-                                            <Input placeholder="Apellidos *" value={newEmployee.apellidos} onChange={(e) => setNewEmployee(prev => ({ ...prev, apellidos: e.target.value }))} />
-                                            <Input placeholder="DNI *" value={newEmployee.documento_identidad} onChange={(e) => setNewEmployee(prev => ({ ...prev, documento_identidad: e.target.value }))} />
-                                            <Input placeholder="Cargo" value={newEmployee.cargo} onChange={(e) => setNewEmployee(prev => ({ ...prev, cargo: e.target.value }))} />
+                                            <Input placeholder={__('First Names *')} value={newEmployee.nombres} onChange={(e) => setNewEmployee(prev => ({ ...prev, nombres: e.target.value }))} />
+                                            <Input placeholder={__('Last Names *')} value={newEmployee.apellidos} onChange={(e) => setNewEmployee(prev => ({ ...prev, apellidos: e.target.value }))} />
+                                            <Input placeholder={__('ID Document *')} value={newEmployee.documento_identidad} onChange={(e) => setNewEmployee(prev => ({ ...prev, documento_identidad: e.target.value }))} />
+                                            <Input placeholder={__('Role / Position')} value={newEmployee.cargo} onChange={(e) => setNewEmployee(prev => ({ ...prev, cargo: e.target.value }))} />
                                             
                                             <div className="space-y-2 sm:col-span-2 border-t pt-4 mt-2">
-                                                <h4 className="text-xs font-semibold text-slate-500">Documentación</h4>
+                                                <h4 className="text-xs font-semibold text-slate-500">{__('Documentation')}</h4>
                                                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-6 mt-2">
                                                     {['foto_carnet', 'documento_frontal', 'documento_reverso'].map((field) => (
                                                         <div key={field} className="space-y-2">
-                                                            <Label className="text-xs">{field.replace('_', ' ').toUpperCase()}</Label>
+                                                            <Label className="text-xs">{__(field.replace('_', ' ').toUpperCase())}</Label>
                                                             <div className="relative flex items-center justify-center border rounded-xl h-28 bg-white shadow-sm overflow-hidden">
                                                                 {newEmployee[field as keyof EmpleadoForm] ? (
                                                                     <img src={newEmployee[field as keyof EmpleadoForm]} className="w-full h-full object-cover" />
-                                                                ) : <span className="text-xs italic text-slate-400">Sin archivo</span>}
+                                                                ) : <span className="text-xs italic text-slate-400">{__('No file')}</span>}
                                                             </div>
                                                             <div className="grid grid-cols-2 gap-1.5">
                                                                 <Button type="button" variant="outline" size="sm" className="relative text-[11px] h-8">
-                                                                    <ImageIcon className="w-3 h-3 mr-1" /> Subir
+                                                                    <ImageIcon className="w-3 h-3 mr-1" /> {__('Upload')}
                                                                     <input type="file" accept="image/*" onChange={(e) => handleFileChange(e, field, 'employee')} className="absolute inset-0 opacity-0" />
                                                                 </Button>
                                                                 <Button type="button" variant="outline" size="sm" className="text-[11px] h-8 text-[#104a29]" onClick={() => handleOpenCamera('employee', field)}>
-                                                                    <CameraIcon className="w-3 h-3 mr-1" /> Cámara
+                                                                    <CameraIcon className="w-3 h-3 mr-1" /> {__('Camera')}
                                                                 </Button>
                                                             </div>
                                                         </div>
@@ -704,19 +728,37 @@ export default function Wizard({ preRegistro, paises, mapbox_api_key, mapbox_act
                                             </div>
                                         </div>
                                         <div className="flex justify-end gap-2 pt-2 border-t">
-                                            <Button variant="outline" size="sm" onClick={() => setShowEmployeeForm(false)}>Cancelar</Button>
-                                            <Button size="sm" onClick={handleAddEmployee} className="bg-[#104a29]">Guardar</Button>
+                                            <Button variant="outline" size="sm" onClick={() => setShowEmployeeForm(false)}>{__('Cancel')}</Button>
+                                            <Button size="sm" onClick={handleAddEmployee} className="bg-[#104a29]">{__('Save')}</Button>
                                         </div>
                                     </div>
                                 )}
 
                                 <div className="space-y-3">
-                                    {employees.map((emp, i) => (
-                                        <div key={i} className="p-4 border rounded-2xl flex justify-between items-center">
-                                            <span className="font-medium text-sm">{emp.nombres} {emp.apellidos}</span>
-                                            <Button variant="ghost" size="sm" onClick={() => handleRemoveEmployee(i)} className="text-rose-600"><Trash2 className="w-4 h-4" /></Button>
+                                    {employees.length === 0 ? (
+                                        <div className="text-center py-10 border-2 border-dashed rounded-2xl text-muted-foreground bg-slate-50/20 dark:bg-slate-900/10">
+                                            <UserIcon className="w-10 h-10 mx-auto text-slate-300 mb-2" />
+                                            <p className="text-sm font-medium">{__('No collaborators registered yet.')}</p>
+                                            <p className="text-xs text-slate-400 mt-0.5">{__('Click \'Add Collaborator\' to register your staff.')}</p>
                                         </div>
-                                    ))}
+                                    ) : (
+                                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                            {employees.map((emp, i) => (
+                                                <div key={i} className="p-4 border rounded-2xl flex justify-between items-center bg-white dark:bg-slate-900 shadow-xs">
+                                                    <div className="flex items-center gap-3">
+                                                        <div className="w-10 h-10 rounded-lg overflow-hidden border bg-slate-50 shrink-0">
+                                                            {emp.foto_carnet ? <img src={emp.foto_carnet} className="w-full h-full object-cover" /> : <UserIcon className="w-full h-full p-2 text-slate-300" />}
+                                                        </div>
+                                                        <div>
+                                                            <span className="font-medium text-sm block">{emp.nombres} {emp.apellidos}</span>
+                                                            <span className="text-xs text-slate-400 font-mono">{emp.documento_identidad} {emp.cargo ? `• ${emp.cargo}` : ''}</span>
+                                                        </div>
+                                                    </div>
+                                                    <Button variant="ghost" size="icon" onClick={() => handleRemoveEmployee(i)} className="text-rose-600 hover:bg-rose-50"><Trash2 className="w-4 h-4" /></Button>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    )}
                                 </div>
                             </div>
                         )}
@@ -725,10 +767,10 @@ export default function Wizard({ preRegistro, paises, mapbox_api_key, mapbox_act
                         {step === 3 && (
                             <div className="space-y-6">
                                 <div className="border-b pb-4 mb-4 flex justify-between items-center">
-                                    <h2 className="text-xl font-bold">Vehículos</h2>
+                                    <h2 className="text-xl font-bold">{__('Vehicles')}</h2>
                                     {!showVehicleForm && (
                                         <Button type="button" onClick={() => setShowVehicleForm(true)} className="bg-[#104a29] text-white">
-                                            <Plus className="w-4 h-4 mr-1" /> Agregar Vehículo
+                                            <Plus className="w-4 h-4 mr-1" /> {__('Add Vehicle')}
                                         </Button>
                                     )}
                                 </div>
@@ -737,25 +779,25 @@ export default function Wizard({ preRegistro, paises, mapbox_api_key, mapbox_act
                                     <div className="p-5 border bg-slate-50/50 rounded-2xl space-y-4">
                                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                                             <div className="space-y-1.5">
-                                                <Label>Tipo de Vehículo *</Label>
+                                                <Label>{__('Vehicle Type *')}</Label>
                                                 <Select
                                                     value={newVehicle.tipo_vehiculo}
                                                     onValueChange={(val) => setNewVehicle(prev => ({ ...prev, tipo_vehiculo: val }))}
                                                 >
                                                     <SelectTrigger className="w-full">
-                                                        <SelectValue placeholder="Seleccione" />
+                                                        <SelectValue placeholder={__('Select')} />
                                                     </SelectTrigger>
                                                     <SelectContent>
-                                                        <SelectItem value="Automóvil">Automóvil</SelectItem>
-                                                        <SelectItem value="Camioneta">Camioneta</SelectItem>
-                                                        <SelectItem value="Camión">Camión</SelectItem>
-                                                        <SelectItem value="Motocicleta">Motocicleta</SelectItem>
-                                                        <SelectItem value="Otro">Otro</SelectItem>
+                                                        <SelectItem value="Automóvil">{__('Car')}</SelectItem>
+                                                        <SelectItem value="Camioneta">{__('Pickup')}</SelectItem>
+                                                        <SelectItem value="Camión">{__('Truck')}</SelectItem>
+                                                        <SelectItem value="Motocicleta">{__('Motorcycle')}</SelectItem>
+                                                        <SelectItem value="Otro">{__('Other')}</SelectItem>
                                                     </SelectContent>
                                                 </Select>
                                             </div>
                                             <div className="space-y-1.5">
-                                                <Label>Marca *</Label>
+                                                <Label>{__('Make *')}</Label>
                                                 <Input
                                                     value={newVehicle.marca}
                                                     onChange={(e) => setNewVehicle(prev => ({ ...prev, marca: e.target.value }))}
@@ -763,7 +805,7 @@ export default function Wizard({ preRegistro, paises, mapbox_api_key, mapbox_act
                                                 />
                                             </div>
                                             <div className="space-y-1.5">
-                                                <Label>Modelo *</Label>
+                                                <Label>{__('Model *')}</Label>
                                                 <Input
                                                     value={newVehicle.modelo}
                                                     onChange={(e) => setNewVehicle(prev => ({ ...prev, modelo: e.target.value }))}
@@ -771,7 +813,7 @@ export default function Wizard({ preRegistro, paises, mapbox_api_key, mapbox_act
                                                 />
                                             </div>
                                             <div className="space-y-1.5">
-                                                <Label>Año *</Label>
+                                                <Label>{__('Year *')}</Label>
                                                 <Input
                                                     type="number"
                                                     value={newVehicle.year}
@@ -780,7 +822,7 @@ export default function Wizard({ preRegistro, paises, mapbox_api_key, mapbox_act
                                                 />
                                             </div>
                                             <div className="space-y-1.5 sm:col-span-2">
-                                                <Label>Placa / Matrícula *</Label>
+                                                <Label>{__('License Plate *')}</Label>
                                                 <Input
                                                     value={newVehicle.placa}
                                                     onChange={(e) => setNewVehicle(prev => ({ ...prev, placa: e.target.value }))}
@@ -790,17 +832,17 @@ export default function Wizard({ preRegistro, paises, mapbox_api_key, mapbox_act
 
                                             {/* Photo uploads */}
                                             <div className="space-y-2 sm:col-span-2 border-t pt-4 mt-2">
-                                                <h4 className="text-xs font-semibold text-slate-500">Fotografías del Vehículo</h4>
+                                                <h4 className="text-xs font-semibold text-slate-500">{__('Vehicle Photos')}</h4>
                                                 
                                                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 mt-2">
                                                     {/* Foto frontal */}
                                                     <div className="space-y-2">
-                                                        <Label className="text-xs font-medium">Foto Frontal</Label>
+                                                        <Label className="text-xs font-medium">{__('Foto Frontal')}</Label>
                                                         <div className="relative flex items-center justify-center border rounded-xl h-28 bg-white overflow-hidden shadow-sm">
                                                             {newVehicle.foto_frontal ? (
                                                                 <img src={newVehicle.foto_frontal} className="w-full h-full object-cover" />
                                                             ) : (
-                                                                <span className="text-xs text-muted-foreground italic">Sin foto frontal</span>
+                                                                <span className="text-xs italic text-slate-400">{__('No front photo')}</span>
                                                             )}
                                                         </div>
                                                         <div className="grid grid-cols-2 gap-1.5">
@@ -811,7 +853,7 @@ export default function Wizard({ preRegistro, paises, mapbox_api_key, mapbox_act
                                                                 className="text-[11px] h-8 px-1 flex items-center justify-center gap-1 relative"
                                                             >
                                                                 <ImageIcon className="w-3.5 h-3.5" />
-                                                                Subir
+                                                                {__('Upload')}
                                                                 <input 
                                                                     type="file" 
                                                                     accept="image/*" 
@@ -827,19 +869,19 @@ export default function Wizard({ preRegistro, paises, mapbox_api_key, mapbox_act
                                                                 onClick={() => handleOpenCamera('vehicle', 'foto_frontal')}
                                                             >
                                                                 <CameraIcon className="w-3.5 h-3.5" />
-                                                                Cámara
+                                                                {__('Camera')}
                                                             </Button>
                                                         </div>
                                                     </div>
 
                                                     {/* Foto trasera */}
                                                     <div className="space-y-2">
-                                                        <Label className="text-xs font-medium">Foto Trasera</Label>
+                                                        <Label className="text-xs font-medium">{__('Foto Trasera')}</Label>
                                                         <div className="relative flex items-center justify-center border rounded-xl h-28 bg-white overflow-hidden shadow-sm">
                                                             {newVehicle.foto_trasera ? (
                                                                 <img src={newVehicle.foto_trasera} className="w-full h-full object-cover" />
                                                             ) : (
-                                                                <span className="text-xs text-muted-foreground italic">Sin foto trasera</span>
+                                                                <span className="text-xs italic text-slate-400">{__('No rear photo')}</span>
                                                             )}
                                                         </div>
                                                         <div className="grid grid-cols-2 gap-1.5">
@@ -850,7 +892,7 @@ export default function Wizard({ preRegistro, paises, mapbox_api_key, mapbox_act
                                                                 className="text-[11px] h-8 px-1 flex items-center justify-center gap-1 relative"
                                                             >
                                                                 <ImageIcon className="w-3.5 h-3.5" />
-                                                                Subir
+                                                                {__('Upload')}
                                                                 <input 
                                                                     type="file" 
                                                                     accept="image/*" 
@@ -866,7 +908,7 @@ export default function Wizard({ preRegistro, paises, mapbox_api_key, mapbox_act
                                                                 onClick={() => handleOpenCamera('vehicle', 'foto_trasera')}
                                                             >
                                                                 <CameraIcon className="w-3.5 h-3.5" />
-                                                                Cámara
+                                                                {__('Camera')}
                                                             </Button>
                                                         </div>
                                                     </div>
@@ -881,7 +923,7 @@ export default function Wizard({ preRegistro, paises, mapbox_api_key, mapbox_act
                                                 size="sm"
                                                 onClick={() => setShowVehicleForm(false)}
                                             >
-                                                Cancelar
+                                                {__('Cancel')}
                                             </Button>
                                             <Button 
                                                 type="button" 
@@ -889,7 +931,7 @@ export default function Wizard({ preRegistro, paises, mapbox_api_key, mapbox_act
                                                 onClick={handleAddVehicle}
                                                 className="bg-[#104a29] hover:bg-[#0c371e] text-white"
                                             >
-                                                Guardar Vehículo
+                                                {__('Save Vehicle')}
                                             </Button>
                                         </div>
                                     </div>
@@ -900,37 +942,23 @@ export default function Wizard({ preRegistro, paises, mapbox_api_key, mapbox_act
                                     {vehicles.length === 0 ? (
                                         <div className="text-center py-10 border-2 border-dashed rounded-2xl text-muted-foreground bg-slate-50/20 dark:bg-slate-900/10">
                                             <Car className="w-10 h-10 mx-auto text-slate-300 mb-2" />
-                                            <p className="text-sm font-medium">No se han registrado vehículos.</p>
-                                            <p className="text-xs text-slate-400 mt-0.5">Si los colaboradores acudirán en vehículo, agréguelo aquí.</p>
+                                            <p className="text-sm font-medium">{__('No vehicles registered.')}</p>
+                                            <p className="text-xs text-slate-400 mt-0.5">{__('If collaborators will arrive by vehicle, add it here.')}</p>
                                         </div>
                                     ) : (
                                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                                             {vehicles.map((veh, i) => (
-                                                <div key={i} className="p-4 border border-slate-150 dark:border-slate-800 rounded-2xl bg-white dark:bg-slate-900 flex justify-between items-start hover:shadow-md transition-shadow relative overflow-hidden group">
+                                                <div key={i} className="p-4 border rounded-2xl flex justify-between items-center bg-white dark:bg-slate-900 shadow-xs">
                                                     <div className="flex items-center gap-3">
-                                                        <div className="w-12 h-12 rounded-xl bg-slate-100 dark:bg-slate-800 overflow-hidden shrink-0 border border-slate-200">
-                                                            {veh.foto_frontal ? (
-                                                                <img src={veh.foto_frontal} className="w-full h-full object-cover" />
-                                                            ) : (
-                                                                <div className="w-full h-full flex items-center justify-center text-slate-400"><Car className="w-5 h-5" /></div>
-                                                            )}
+                                                        <div className="w-10 h-10 border rounded-lg overflow-hidden shrink-0 bg-slate-50 flex items-center justify-center">
+                                                            {veh.foto_frontal ? <img src={veh.foto_frontal} className="w-full h-full object-cover" /> : <Car className="w-6 h-6 text-slate-300" />}
                                                         </div>
                                                         <div>
-                                                            <h4 className="font-semibold text-sm text-slate-800 dark:text-slate-100">{veh.marca} {veh.modelo} ({veh.year})</h4>
-                                                            <p className="text-xs font-mono text-slate-500">Placa: {veh.placa}</p>
-                                                            <p className="text-[10px] text-[#104a29] font-medium mt-0.5">{veh.tipo_vehiculo}</p>
+                                                            <span className="font-semibold text-sm block">{veh.marca} {veh.modelo} ({veh.year})</span>
+                                                            <span className="text-xs text-slate-400 font-mono">{__('License Plate:')} {veh.placa} • {veh.tipo_vehiculo}</span>
                                                         </div>
                                                     </div>
-
-                                                    <Button
-                                                        type="button"
-                                                        variant="ghost"
-                                                        size="icon"
-                                                        onClick={() => handleRemoveVehicle(i)}
-                                                        className="text-rose-600 hover:text-rose-700 hover:bg-rose-50"
-                                                    >
-                                                        <Trash2 className="w-4 h-4" />
-                                                    </Button>
+                                                    <Button variant="ghost" size="icon" onClick={() => handleRemoveVehicle(i)} className="text-rose-600 hover:bg-rose-50"><Trash2 className="w-4 h-4" /></Button>
                                                 </div>
                                             ))}
                                         </div>
@@ -943,39 +971,39 @@ export default function Wizard({ preRegistro, paises, mapbox_api_key, mapbox_act
                         {step === 4 && (
                             <form onSubmit={handleSubmit} className="space-y-6">
                                 <div className="border-b pb-4 mb-4 border-slate-100 dark:border-slate-800">
-                                    <h2 className="text-xl font-bold">Validación de Datos Registrados</h2>
-                                    <p className="text-xs text-muted-foreground mt-0.5">Revise meticulosamente la información antes de enviar.</p>
+                                    <h2 className="text-xl font-bold">{__('Data Validation')}</h2>
+                                    <p className="text-xs text-muted-foreground mt-0.5">{__('Review the information carefully before submitting.')}</p>
                                 </div>
 
                                 <div className="space-y-4">
                                     {/* Provider Summary */}
                                     <div className="p-5 border rounded-2xl space-y-3 bg-slate-50/50 dark:bg-slate-900/50">
                                         <h3 className="font-bold text-sm text-[#104a29] flex items-center gap-1.5">
-                                            <Building2 className="w-4 h-4" /> Datos de la Empresa
+                                            <Building2 className="w-4 h-4" /> {__('Company Details')}
                                         </h3>
                                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
                                             <div>
-                                                <span className="text-slate-400 font-medium">Razón Social:</span>
+                                                <span className="text-slate-400 font-medium">{__('Business Name:')}</span>
                                                 <p className="font-semibold text-slate-800 dark:text-slate-200">{providerData.razon_social}</p>
                                             </div>
                                             <div>
-                                                <span className="text-slate-400 font-medium">Nombre Comercial:</span>
+                                                <span className="text-slate-400 font-medium">{__('Trade Name:')}</span>
                                                 <p className="font-semibold text-slate-800 dark:text-slate-200">{providerData.nombre_comercial}</p>
                                             </div>
                                             <div>
-                                                <span className="text-slate-400 font-medium">Identificación Fiscal:</span>
+                                                <span className="text-slate-400 font-medium">{__('Tax ID:')}</span>
                                                 <p className="font-semibold text-slate-800 dark:text-slate-200">{providerData.documento_identidad}</p>
                                             </div>
                                             <div>
-                                                <span className="text-slate-400 font-medium">Responsable:</span>
+                                                <span className="text-slate-400 font-medium">{__('Representative:')}</span>
                                                 <p className="font-semibold text-slate-800 dark:text-slate-200">{providerData.responsable}</p>
                                             </div>
                                             <div>
-                                                <span className="text-slate-400 font-medium">Teléfono:</span>
+                                                <span className="text-slate-400 font-medium">{__('Phone:')}</span>
                                                 <p className="font-semibold text-slate-800 dark:text-slate-200">{providerData.telefono}</p>
                                             </div>
                                             <div className="sm:col-span-2">
-                                                <span className="text-slate-400 font-medium">Dirección Física:</span>
+                                                <span className="text-slate-400 font-medium">{__('Physical Address:')}</span>
                                                 <p className="font-semibold text-slate-800 dark:text-slate-200">{providerData.direccion}</p>
                                             </div>
                                         </div>
@@ -984,7 +1012,7 @@ export default function Wizard({ preRegistro, paises, mapbox_api_key, mapbox_act
                                     {/* Employees Summary */}
                                     <div className="p-5 border rounded-2xl space-y-3 bg-slate-50/50 dark:bg-slate-900/50">
                                         <h3 className="font-bold text-sm text-[#104a29] flex items-center gap-1.5">
-                                            <Users className="w-4 h-4" /> Colaboradores ({employees.length})
+                                            <Users className="w-4 h-4" /> {__('Collaborators')} ({employees.length})
                                         </h3>
                                         <div className="divide-y divide-slate-100 dark:divide-slate-800">
                                             {employees.map((emp, i) => (
@@ -994,7 +1022,7 @@ export default function Wizard({ preRegistro, paises, mapbox_api_key, mapbox_act
                                                         <span className="text-slate-400 font-mono">DNI: {emp.documento_identidad}</span>
                                                     </div>
                                                     <span className="text-[#104a29] font-medium bg-slate-100 dark:bg-slate-800 px-2 py-0.5 rounded-full text-[10px]">
-                                                        {emp.cargo || 'Colaborador'}
+                                                        {emp.cargo || __('Colaborador')}
                                                     </span>
                                                 </div>
                                             ))}
@@ -1004,17 +1032,17 @@ export default function Wizard({ preRegistro, paises, mapbox_api_key, mapbox_act
                                     {/* Vehicles Summary */}
                                     <div className="p-5 border rounded-2xl space-y-3 bg-slate-50/50 dark:bg-slate-900/50">
                                         <h3 className="font-bold text-sm text-[#104a29] flex items-center gap-1.5">
-                                            <Car className="w-4 h-4" /> Vehículos ({vehicles.length})
+                                            <Car className="w-4 h-4" /> {__('Vehicles')} ({vehicles.length})
                                         </h3>
                                         {vehicles.length === 0 ? (
-                                            <p className="text-xs text-muted-foreground">No se registraron vehículos.</p>
+                                            <p className="text-xs text-muted-foreground">{__('No vehicles registered.')}</p>
                                         ) : (
                                             <div className="divide-y divide-slate-100 dark:divide-slate-800">
                                                 {vehicles.map((veh, i) => (
                                                     <div key={i} className="flex justify-between items-center py-2 text-xs">
                                                         <div>
                                                             <p className="font-semibold text-slate-800 dark:text-slate-200">{veh.marca} {veh.modelo} ({veh.year})</p>
-                                                            <span className="text-slate-400 font-mono">Placa: {veh.placa}</span>
+                                                            <span className="text-slate-400 font-mono">{__('License Plate:')} {veh.placa}</span>
                                                         </div>
                                                         <span className="text-slate-500 font-medium">{veh.tipo_vehiculo}</span>
                                                     </div>
@@ -1025,8 +1053,8 @@ export default function Wizard({ preRegistro, paises, mapbox_api_key, mapbox_act
                                 </div>
 
                                 <div className="p-4 bg-slate-50/80 dark:bg-slate-900/30 rounded-2xl border text-xs text-slate-500 space-y-2 leading-relaxed">
-                                    <p className="font-bold text-slate-800 dark:text-slate-200">Declaración de Responsabilidad</p>
-                                    <p>Al hacer clic en "Enviar Registro", el proveedor declara bajo juramento que toda la información aportada en este asistente, incluyendo la documentación adjunta de seguridad (INE vigente, Chaleco de seguridad y fotos correspondientes) es verídica y vigente, asumiendo cualquier responsabilidad legal que corresponda.</p>
+                                    <p className="font-bold text-slate-800 dark:text-slate-200">{__('Declaration of Responsibility')}</p>
+                                    <p>{__('By clicking "Submit Registration", the provider declares under oath that all information provided in this wizard, including attached safety documentation (valid ID, safety vest, and photos) is true and current, assuming any corresponding legal responsibility.')}</p>
                                 </div>
                             </form>
                         )}
@@ -1042,7 +1070,7 @@ export default function Wizard({ preRegistro, paises, mapbox_api_key, mapbox_act
                                     disabled={isSubmitting}
                                 >
                                     <ChevronLeft className="w-4 h-4" />
-                                    Atrás
+                                    {__('Back')}
                                 </Button>
                             ) : (
                                 <div />
@@ -1054,7 +1082,7 @@ export default function Wizard({ preRegistro, paises, mapbox_api_key, mapbox_act
                                     onClick={handleNext}
                                     className="bg-[#104a29] hover:bg-[#0c371e] text-white flex items-center gap-1 animate-pulse"
                                 >
-                                    Siguiente
+                                    {__('Next')}
                                     <ChevronRight className="w-4 h-4" />
                                 </Button>
                             ) : (
@@ -1064,7 +1092,7 @@ export default function Wizard({ preRegistro, paises, mapbox_api_key, mapbox_act
                                     disabled={isSubmitting}
                                     className="bg-emerald-600 hover:bg-emerald-700 text-white flex items-center gap-1.5"
                                 >
-                                    {isSubmitting ? 'Procesando...' : 'Enviar Registro'}
+                                    {isSubmitting ? __('Processing...') : __('Submit Registration')}
                                 </Button>
                             )}
                         </div>
@@ -1078,9 +1106,9 @@ export default function Wizard({ preRegistro, paises, mapbox_api_key, mapbox_act
             }}>
                 <DialogContent className="max-w-md p-6">
                     <DialogHeader>
-                        <DialogTitle>Tomar Foto</DialogTitle>
+                        <DialogTitle>{__('Take Photo')}</DialogTitle>
                         <DialogDescription>
-                            Coloque el elemento frente a la cámara y haga clic en capturar.
+                            {__('Place the item in front of the camera and click capture.')}
                         </DialogDescription>
                     </DialogHeader>
                     
@@ -1104,7 +1132,7 @@ export default function Wizard({ preRegistro, paises, mapbox_api_key, mapbox_act
                                 setIsCameraOpen(false);
                             }}
                         >
-                            Cancelar
+                            {__('Cancel')}
                         </Button>
                         <Button
                             type="button"
@@ -1112,7 +1140,7 @@ export default function Wizard({ preRegistro, paises, mapbox_api_key, mapbox_act
                             className="bg-[#104a29] hover:bg-[#0c371e] text-white flex items-center gap-1.5"
                         >
                             <CameraIcon className="w-4 h-4" />
-                            Capturar Foto
+                            {__('Capture Photo')}
                         </Button>
                     </DialogFooter>
                 </DialogContent>

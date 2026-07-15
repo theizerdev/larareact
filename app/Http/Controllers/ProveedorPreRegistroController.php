@@ -25,7 +25,7 @@ class ProveedorPreRegistroController extends Controller
 
         if (!$preRegistro) {
             return Inertia::render('preregistro/InvalidToken', [
-                'error' => 'El enlace de pre-registro no es válido, ya ha sido utilizado o ha expirado (validez de 12 horas).'
+                'error' => __('The pre-registration link is invalid, has already been used, or has expired (12-hour validity).')
             ]);
         }
 
