@@ -25,6 +25,7 @@ class DatabaseSeeder extends Seeder
             RoleSeeder::class,
             UsersSeeder::class,
             MarcaSeeder::class,
+            CategoriaSeeder::class,
         ]);
     }
 }

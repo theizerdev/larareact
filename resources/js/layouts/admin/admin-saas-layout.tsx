@@ -393,6 +393,10 @@ export default function AdminSaasLayout({
                                         href: paisesIndex.url(),
                                     },
                                     {
+                                        title: 'Categories',
+                                        href: '/admin/categorias',
+                                    },
+                                    {
                                         title: 'Brands',
                                         href: '/admin/marcas',
                                     },

@@ -18,6 +18,7 @@ trait HasSpanishActivityLog
         'Cargo' => 'Cargo',
         'Contacto' => 'Contacto',
         'Category' => 'Categoría',
+        'Categoria' => 'Categoría',
         'Brand' => 'Marca',
         'Marca' => 'Marca',
         'Product' => 'Producto',
