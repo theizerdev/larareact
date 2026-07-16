@@ -19,6 +19,7 @@ trait HasSpanishActivityLog
         'Contacto' => 'Contacto',
         'Category' => 'Categoría',
         'Brand' => 'Marca',
+        'Marca' => 'Marca',
         'Product' => 'Producto',
         'Attribute' => 'Atributo',
         'Customer' => 'Cliente',
@@ -36,6 +37,8 @@ trait HasSpanishActivityLog
     ];
 
     public static $fieldLabelsMap = [
+        'slug' => 'Enlace amigable (Slug)',
+        'sitio_web' => 'Sitio web',
         'name' => 'Nombre',
         'nombres' => 'Nombres',
         'apellidos' => 'Apellidos',

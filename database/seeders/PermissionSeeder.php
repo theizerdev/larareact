@@ -55,6 +55,12 @@ class PermissionSeeder extends Seeder
                 // Módulo: Integraciones
                 'integrations.view' => 'Ver Integraciones',
                 'integrations.edit' => 'Editar Integraciones',
+
+                // Módulo: Marcas
+                'marcas.view' => 'Ver Marcas',
+                'marcas.create' => 'Crear Marca',
+                'marcas.edit' => 'Editar Marca',
+                'marcas.delete' => 'Eliminar Marca',
             ],
             // Sector: Monitoreo
             'monitoreo' => [
@@ -81,6 +87,7 @@ class PermissionSeeder extends Seeder
                     str_starts_with($permission, 'empresas.') => 'empresas',
                     str_starts_with($permission, 'sucursales.') => 'sucursales',
                     str_starts_with($permission, 'integrations.') => 'integraciones',
+                    str_starts_with($permission, 'marcas.') => 'marcas',
                     str_starts_with($permission, 'monitoreo.') => 'monitoreo',
 
                     default => 'general',
