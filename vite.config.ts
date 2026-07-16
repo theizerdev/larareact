@@ -36,6 +36,7 @@ export default defineConfig({
         watch: {
             usePolling: true,
             interval: 100, // Revisa cambios cada 100ms (más sensible para Windows)
+            ignored: ['**/storage/**', '**/public/storage/**'],
         },
     },
 });
