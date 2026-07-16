@@ -21,7 +21,7 @@ import {
     Activity,
     Link2,
 } from 'lucide-react';
-import { Building2, GitBranch, Briefcase } from 'lucide-react';
+import { Building2, GitBranch, Briefcase, Calendar } from 'lucide-react';
 import * as React from 'react';
 import LanguageToggle from '@/components/language-toggle';
 import TemplateCustomizer from '@/components/template-customizer';
@@ -430,6 +430,30 @@ export default function AdminSaasLayout({
                                         icon={Briefcase}
                                         collapsed={collapsed}
                                         items={orgItems}
+                                    />
+                                </div>
+                            );
+                        })()}
+
+                        {/* Visits Group */}
+                        {(() => {
+                            const visitsItems = [
+                                {
+                                    title: 'Temporary Visits',
+                                    href: '/admin/visitas-temporales',
+                                    permission: 'visitas_temporales.view',
+                                },
+                            ].filter(item => hasPermission(item.permission));
+
+                            if (visitsItems.length === 0) return null;
+
+                            return (
+                                <div className="pt-2">
+                                    <CollapsibleNavItem
+                                        title="Visits"
+                                        icon={Calendar}
+                                        collapsed={collapsed}
+                                        items={visitsItems}
                                     />
                                 </div>
                             );

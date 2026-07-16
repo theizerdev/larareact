@@ -103,6 +103,15 @@ class PermissionSeeder extends Seeder
                 'monitoreo.import' => 'Importar Base de Datos',
             ],
 
+            // Sector: Visitas
+            'visitas' => [
+                // Módulo: Visitas Temporales
+                'visitas_temporales.view' => 'Ver Visitas Temporales',
+                'visitas_temporales.create' => 'Crear Visita Temporal',
+                'visitas_temporales.edit' => 'Editar Visita Temporal',
+                'visitas_temporales.delete' => 'Eliminar Visita Temporal',
+            ],
+
         ];
 
         foreach ($permissions as $sector => $sectorPermissions) {
@@ -122,6 +131,7 @@ class PermissionSeeder extends Seeder
                     str_starts_with($permission, 'integrations.') => 'integraciones',
                     str_starts_with($permission, 'proveedores.') => 'proveedores',
                     str_starts_with($permission, 'monitoreo.') => 'monitoreo',
+                    str_starts_with($permission, 'visitas_temporales.') => 'visitas_temporales',
 
                     default => 'general',
                 };

@@ -35,6 +35,7 @@ trait HasSpanishActivityLog
         'CashRegister' => 'Caja Registradora',
         'Empleado' => 'Empleado',
         'Proveedor' => 'Proveedor',
+        'VisitaTemporal' => 'Visita Temporal',
     ];
 
     public static $fieldLabelsMap = [
@@ -45,6 +46,13 @@ trait HasSpanishActivityLog
         'phone' => 'Teléfono',
         'telefono' => 'Teléfono',
         'status' => 'Estado',
+        'empleado_id' => 'Empleado a visitar',
+        'responsable_id' => 'Responsable que autoriza',
+        'motivo_visita' => 'Motivo de visita',
+        'fecha_ingreso' => 'Fecha de ingreso',
+        'hora_ingreso' => 'Hora de ingreso',
+        'fecha_salida' => 'Fecha de salida',
+        'hora_salida' => 'Hora de salida',
         'empresa_id' => 'Empresa',
         'sucursal_id' => 'Sucursal',
         'failed_login_attempts' => 'Intentos fallidos de acceso',
