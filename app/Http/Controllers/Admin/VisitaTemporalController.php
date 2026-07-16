@@ -10,6 +10,7 @@ use App\Models\Empresa;
 use App\Models\Sucursal;
 use App\Models\Empleado;
 use App\Models\TipoServicio;
+use App\Models\VisitaTemporalPreRegistro;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
@@ -274,6 +275,71 @@ class VisitaTemporalController extends Controller
         return response()->json([
             'success' => true,
             'tipo_servicio' => $tipoServicio,
+        ]);
+    }
+
+    public function generatePreRegistro(Request $request)
+    {
+        $request->validate([
+            'nombres' => 'required|string|max:255',
+            'apellidos' => 'required|string|max:255',
+            'pais_telefono_id' => 'required|exists:pais,id',
+            'telefono' => 'required|string|max:20',
+            'motivo_registro' => 'required|string',
+            'responsable_id' => 'required|exists:responsables,id',
+            'empleado_id' => 'required|exists:empleados,id',
+        ]);
+
+        $user = auth()->user();
+        $token = bin2hex(random_bytes(16));
+
+        $responsable = Responsable::findOrFail($request->responsable_id);
+        $empleado = Empleado::findOrFail($request->empleado_id);
+
+        VisitaTemporalPreRegistro::create([
+            'nombres' => $request->nombres,
+            'apellidos' => $request->apellidos,
+            'pais_telefono_id' => $request->pais_telefono_id,
+            'telefono' => $request->telefono,
+            'motivo_registro' => $request->motivo_registro,
+            'responsable_id' => $request->responsable_id,
+            'departamento_id' => $responsable->departamento_id,
+            'empleado_id' => $request->empleado_id,
+            'cargo_id' => $responsable->cargo_id,
+            'token' => $token,
+            'expires_at' => now()->addHours(12),
+            'empresa_id' => $user->empresa_id,
+            'sucursal_id' => $user->sucursal_id,
+            'status' => 'pendiente',
+        ]);
+
+        try {
+            $pais = Pais::findOrFail($request->pais_telefono_id);
+            $prefix = preg_replace('/[^0-9]/', '', $pais->codigo_telefonico);
+            $cleanPhone = preg_replace('/[^0-9]/', '', $request->telefono);
+            $to = $prefix . $cleanPhone;
+
+            $empresa = $user->empresa ?? Empresa::first();
+            $whatsappService = new \App\Services\WhatsAppService($empresa);
+
+            $link = url("/preregistro-visita/{$token}");
+
+            $message = "Estimado Visitante *{$request->nombres} {$request->apellidos}*, le invitamos a completar su pre-registro de datos para su acceso temporal a nuestras oficinas:\n\n"
+                . "Ubicación: " . ($user->sucursal->nombre ?? $empresa->nombre) . "\n"
+                . "Motivo: {$request->motivo_registro}\n"
+                . "Visita a: {$empleado->nombres} {$empleado->apellidos}\n"
+                . "Autorizado por: {$responsable->nombres} {$responsable->apellidos}\n\n"
+                . "Por favor, ingrese al siguiente enlace para completar sus datos, capturar sus fotografías y programar su horario:\n"
+                . $link;
+
+            $whatsappService->sendMessage($to, $message, true);
+        } catch (\Exception $e) {
+            \Illuminate\Support\Facades\Log::error('Error al enviar WhatsApp de invitación a visitante: ' . $e->getMessage());
+        }
+
+        return back()->with('notification', [
+            'type' => 'success',
+            'message' => __('Pre-registration invitation sent successfully.'),
         ]);
     }
 }

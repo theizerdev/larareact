@@ -329,6 +329,37 @@ export default function Index({
         status: 'activo',
     });
 
+    const { auth } = usePage<any>().props;
+    const [isPreRegistroModalOpen, setIsPreRegistroModalOpen] = useState(false);
+    const [preRegistroResponsibleSearch, setPreRegistroResponsibleSearch] = useState('');
+    const [showPreRegistroSuggestions, setShowPreRegistroSuggestions] = useState(false);
+    const preRegistroSuggestRef = useRef<HTMLDivElement>(null);
+
+    const preRegistroForm = useForm({
+        nombres: '',
+        apellidos: '',
+        pais_telefono_id: auth?.user?.pais_telefono_id || paises[0]?.id || '',
+        telefono: '',
+        motivo_registro: '',
+        responsable_id: '',
+        empleado_id: '',
+    });
+
+    const handlePreRegistroSubmit = (e: React.FormEvent) => {
+        e.preventDefault();
+        preRegistroForm.post('/admin/visitas-temporales/pre-registro', {
+            onSuccess: () => {
+                setIsPreRegistroModalOpen(false);
+                preRegistroForm.reset();
+                setPreRegistroResponsibleSearch('');
+                notifySuccess(__('Pre-registration invitation sent successfully.'));
+            },
+            onError: () => {
+                notifyError(__('Please verify the fields and try again.'));
+            }
+        });
+    };
+
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [activeTab, setActiveTab] = useState<string>('general');
     const [editingVisit, setEditingVisit] = useState<VisitaTemporal | null>(null);
@@ -408,6 +439,9 @@ export default function Index({
         function handleClickOutside(event: MouseEvent) {
             if (suggestRef.current && !suggestRef.current.contains(event.target as Node)) {
                 setShowResponsibleSuggestions(false);
+            }
+            if (preRegistroSuggestRef.current && !preRegistroSuggestRef.current.contains(event.target as Node)) {
+                setShowPreRegistroSuggestions(false);
             }
         }
         document.addEventListener("mousedown", handleClickOutside);
@@ -767,6 +801,11 @@ export default function Index({
         return fullName.includes((responsibleSearch || '').toLowerCase());
     });
 
+    const filteredPreRegistroResponsibles = (empleados || []).filter(e => {
+        const fullName = `${e.nombres || ''} ${e.apellidos || ''}`.toLowerCase();
+        return fullName.includes((preRegistroResponsibleSearch || '').toLowerCase());
+    });
+
 
     return (
         <>
@@ -781,10 +820,20 @@ export default function Index({
                     description={__('Manage, register and audit temporary visitor entries and check-outs.')}
                     colorClassName="bg-[#2729c4]"
                 >
-                    <Button onClick={handleCreateClick} className="bg-[#104a29] hover:bg-[#0c371e] text-white">
-                        <Plus className="mr-2 h-4 w-4" />
-                        {__('New Visit')}
-                    </Button>
+                    <div className="flex gap-2">
+                        <Button 
+                            onClick={() => setIsPreRegistroModalOpen(true)} 
+                            variant="outline" 
+                            className="border-[#2729c4] text-[#2729c4] hover:bg-[#2729c4]/10 dark:border-indigo-400 dark:text-indigo-400"
+                        >
+                            <Link className="mr-2 h-4 w-4" />
+                            {__('Pre-registro')}
+                        </Button>
+                        <Button onClick={handleCreateClick} className="bg-[#104a29] hover:bg-[#0c371e] text-white">
+                            <Plus className="mr-2 h-4 w-4" />
+                            {__('New Visit')}
+                        </Button>
+                    </div>
                 </ModuleHeader>
 
                 {/* Stat Cards */}
@@ -1429,20 +1478,173 @@ export default function Index({
                     <AlertDialogHeader>
                         <AlertDialogTitle>{__('Are you sure?')}</AlertDialogTitle>
                         <AlertDialogDescription>
-                            {__('This action cannot be undone. This will permanently delete the temporary visit log and its attached photographs.')}
+                            {__('This action cannot be undone. This will permanently delete the temporary visit entry from the database.')}
                         </AlertDialogDescription>
                     </AlertDialogHeader>
                     <AlertDialogFooter>
                         <AlertDialogCancel>{__('Cancel')}</AlertDialogCancel>
-                        <AlertDialogAction
-                            onClick={handleDeleteConfirm}
-                            className="bg-red-600 hover:bg-red-700 text-white"
-                        >
+                        <AlertDialogAction onClick={handleDeleteConfirm} className="bg-red-600 hover:bg-red-700 text-white">
                             {__('Delete')}
                         </AlertDialogAction>
                     </AlertDialogFooter>
                 </AlertDialogContent>
             </AlertDialog>
+
+            {/* ══ Modal de Pre-registro de Visita ════════════════════ */}
+            <Dialog open={isPreRegistroModalOpen} onOpenChange={(open) => {
+                setIsPreRegistroModalOpen(open);
+                if (!open) {
+                    preRegistroForm.reset();
+                    setPreRegistroResponsibleSearch('');
+                }
+            }}>
+                <DialogContent className="max-w-md">
+                    <DialogHeader>
+                        <DialogTitle>{__('Pre-registro de Visita')}</DialogTitle>
+                        <DialogDescription>
+                            {__('Ingrese los datos del visitante, el motivo, y a quién visita para enviar una invitación de registro rápido a su WhatsApp.')}
+                        </DialogDescription>
+                    </DialogHeader>
+                    <form onSubmit={handlePreRegistroSubmit} className="space-y-4">
+                        <div className="grid grid-cols-2 gap-4">
+                            <div className="space-y-1.5">
+                                <Label htmlFor="pre_nombres">{__('First Name')}</Label>
+                                <Input
+                                    id="pre_nombres"
+                                    value={preRegistroForm.data.nombres}
+                                    onChange={(e) => preRegistroForm.setData('nombres', e.target.value)}
+                                    className={cn(preRegistroForm.errors.nombres && 'border-rose-500')}
+                                    required
+                                />
+                                {preRegistroForm.errors.nombres && (
+                                    <p className="text-xs text-rose-500 mt-1">{preRegistroForm.errors.nombres}</p>
+                                )}
+                            </div>
+
+                            <div className="space-y-1.5">
+                                <Label htmlFor="pre_apellidos">{__('Last Name')}</Label>
+                                <Input
+                                    id="pre_apellidos"
+                                    value={preRegistroForm.data.apellidos}
+                                    onChange={(e) => preRegistroForm.setData('apellidos', e.target.value)}
+                                    className={cn(preRegistroForm.errors.apellidos && 'border-rose-500')}
+                                    required
+                                />
+                                {preRegistroForm.errors.apellidos && (
+                                    <p className="text-xs text-rose-500 mt-1">{preRegistroForm.errors.apellidos}</p>
+                                )}
+                            </div>
+                        </div>
+
+                        <div className="space-y-1.5">
+                            <Label htmlFor="pre_telefono">{__('Phone')}</Label>
+                            <PhoneInputGroup
+                                paises={paises}
+                                selectedPaisId={preRegistroForm.data.pais_telefono_id ? Number(preRegistroForm.data.pais_telefono_id) : '' as any}
+                                phoneValue={preRegistroForm.data.telefono}
+                                onPaisChange={(v) => preRegistroForm.setData('pais_telefono_id', String(v))}
+                                onPhoneChange={(v) => preRegistroForm.setData('telefono', v)}
+                                placeholder="000-000000"
+                                error={preRegistroForm.errors.telefono}
+                            />
+                        </div>
+
+                        <div className="space-y-1.5">
+                            <Label htmlFor="pre_motivo">{__('Reason for registration')}</Label>
+                            <Input
+                                id="pre_motivo"
+                                value={preRegistroForm.data.motivo_registro}
+                                onChange={(e) => preRegistroForm.setData('motivo_registro', e.target.value)}
+                                className={cn(preRegistroForm.errors.motivo_registro && 'border-rose-500')}
+                                placeholder="Ej: Visita técnica, entrevista..."
+                                required
+                            />
+                            {preRegistroForm.errors.motivo_registro && (
+                                <p className="text-xs text-rose-500 mt-1">{preRegistroForm.errors.motivo_registro}</p>
+                            )}
+                        </div>
+
+                        <div className="relative space-y-1.5" ref={preRegistroSuggestRef}>
+                            <Label htmlFor="pre_empleado_search">{__('Search Employee to Visit')} *</Label>
+                            <div className="relative">
+                                <Input
+                                    id="pre_empleado_search"
+                                    value={preRegistroResponsibleSearch}
+                                    onChange={(e) => {
+                                        setPreRegistroResponsibleSearch(e.target.value);
+                                        setShowPreRegistroSuggestions(true);
+                                        if (!e.target.value) {
+                                            preRegistroForm.setData(prev => ({
+                                                ...prev,
+                                                empleado_id: '',
+                                                responsable_id: '',
+                                            }));
+                                        }
+                                    }}
+                                    onFocus={() => setShowPreRegistroSuggestions(true)}
+                                    placeholder={__('Type a name to search...')}
+                                    className={cn((preRegistroForm.errors.empleado_id || preRegistroForm.errors.responsable_id) && 'border-rose-500')}
+                                    required
+                                />
+                                {preRegistroForm.data.empleado_id && (
+                                    <div className="absolute right-3 top-1/2 -translate-y-1/2 bg-emerald-500/10 text-emerald-600 rounded-full p-0.5 border border-emerald-500/20">
+                                        <Check className="w-3.5 h-3.5" />
+                                    </div>
+                                )}
+                            </div>
+
+                            {showPreRegistroSuggestions && (
+                                <div className="absolute z-[60] w-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl mt-1 shadow-2xl max-h-48 overflow-y-auto">
+                                    {filteredPreRegistroResponsibles.length === 0 ? (
+                                        <div className="p-3 text-xs text-slate-500 text-center">{__('No matches found')}</div>
+                                    ) : (
+                                        filteredPreRegistroResponsibles.map((r) => (
+                                            <button
+                                                key={r.id}
+                                                type="button"
+                                                onClick={() => {
+                                                    preRegistroForm.setData(prev => ({
+                                                        ...prev,
+                                                        empleado_id: String(r.id),
+                                                        responsable_id: String(r.responsable_id || ''),
+                                                    }));
+                                                    setPreRegistroResponsibleSearch(`${r.nombres} ${r.apellidos}`);
+                                                    setShowPreRegistroSuggestions(false);
+                                                }}
+                                                className="w-full text-left px-4 py-2 text-sm hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors flex flex-col border-b last:border-0 border-slate-100 dark:border-slate-800/40"
+                                            >
+                                                <span className="font-semibold text-slate-800 dark:text-slate-200">{r.nombres} {r.apellidos}</span>
+                                                <span className="text-xs text-slate-500 dark:text-slate-400">
+                                                    {r.departamento?.nombre || __('No Department')} • {r.cargo?.nombre || __('No Position')}
+                                                </span>
+                                            </button>
+                                        ))
+                                    )}
+                                </div>
+                            )}
+                            {preRegistroForm.errors.empleado_id && <p className="text-xs text-rose-500">{preRegistroForm.errors.empleado_id}</p>}
+                            {preRegistroForm.errors.responsable_id && <p className="text-xs text-rose-500">{preRegistroForm.errors.responsable_id}</p>}
+                        </div>
+
+                        <DialogFooter className="mt-6 gap-2">
+                            <Button
+                                type="button"
+                                variant="outline"
+                                onClick={() => setIsPreRegistroModalOpen(false)}
+                            >
+                                {__('Cancel')}
+                            </Button>
+                            <Button
+                                type="submit"
+                                disabled={preRegistroForm.processing}
+                                className="bg-[#104a29] hover:bg-[#0c371e] text-white flex items-center gap-1.5"
+                            >
+                                {__('Enviar invitación')}
+                            </Button>
+                        </DialogFooter>
+                    </form>
+                </DialogContent>
+            </Dialog>
         </>
     );
 }
