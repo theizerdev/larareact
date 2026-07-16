@@ -9,6 +9,7 @@ Route::middleware(['permission:visitas_temporales.view'])->group(function () {
 
 Route::middleware(['permission:visitas_temporales.create'])->group(function () {
     Route::post('/visitas-temporales', [VisitaTemporalController::class, 'store'])->name('visitas-temporales.store');
+    Route::post('/tipo-servicios', [VisitaTemporalController::class, 'storeTipoServicio'])->name('tipo-servicios.store');
 });
 
 Route::middleware(['permission:visitas_temporales.edit'])->group(function () {

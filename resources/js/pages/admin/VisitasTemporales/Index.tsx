@@ -36,6 +36,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import {
     Dialog,
     DialogContent,
@@ -101,6 +102,11 @@ interface Empleado {
     responsable?: Responsable | null;
 }
 
+interface TipoServicio {
+    id: number;
+    nombre: string;
+}
+
 interface VisitaTemporal {
     id: number;
     nombres: string;
@@ -110,6 +116,7 @@ interface VisitaTemporal {
     telefono?: string | null;
     empleado_id?: number | null;
     responsable_id?: number | null;
+    tipo_servicio_id?: number | string | null;
     motivo_visita?: string | null;
     fecha_ingreso: string;
     hora_ingreso: string;
@@ -123,6 +130,7 @@ interface VisitaTemporal {
     pais_telefono?: Pais | null;
     empleado?: Empleado | null;
     responsable?: Responsable | null;
+    tipo_servicio?: TipoServicio | null;
 }
 
 interface Paginated<T> {
@@ -145,6 +153,7 @@ interface VisitasPageProps {
     empleados: Empleado[];
     responsables: Responsable[];
     paises: Pais[];
+    tipoServicios: TipoServicio[];
     filters: {
         search?: string;
         status?: string;
@@ -287,6 +296,7 @@ export default function Index({
     empleados = [],
     responsables = [],
     paises = [],
+    tipoServicios = [],
     filters = {},
     empresa = null,
     sucursal = null,
@@ -308,6 +318,7 @@ export default function Index({
         telefono: '',
         empleado_id: '',
         responsable_id: '',
+        tipo_servicio_id: '',
         motivo_visita: '',
         fecha_ingreso: new Date().toISOString().split('T')[0],
         hora_ingreso: new Date().toTimeString().split(' ')[0].substring(0, 5),
@@ -318,11 +329,67 @@ export default function Index({
         status: 'activo',
     });
 
-    // Modals state
     const [isModalOpen, setIsModalOpen] = useState(false);
+    const [activeTab, setActiveTab] = useState<string>('general');
     const [editingVisit, setEditingVisit] = useState<VisitaTemporal | null>(null);
     const [deletingVisit, setDeletingVisit] = useState<VisitaTemporal | null>(null);
     const [activeCameraField, setActiveCameraField] = useState<'foto_carnet' | 'foto_documento' | null>(null);
+
+    // Tipo de Servicio list and creation state
+    const [localTipoServicios, setLocalTipoServicios] = useState<TipoServicio[]>(tipoServicios);
+    const [newServiceType, setNewServiceType] = useState('');
+    const [isCreatingServiceType, setIsCreatingServiceType] = useState(false);
+
+    useEffect(() => {
+        setLocalTipoServicios(tipoServicios);
+    }, [tipoServicios]);
+
+    const handleCreateServiceType = async () => {
+        if (!newServiceType.trim()) return;
+
+        try {
+            const getCookie = (name: string) => {
+                const value = `; ${document.cookie}`;
+                const parts = value.split(`; ${name}=`);
+                if (parts.length === 2) return decodeURIComponent(parts.pop()?.split(';').shift() || '');
+                return '';
+            };
+            const csrfToken = getCookie('XSRF-TOKEN');
+
+            const response = await fetch('/admin/tipo-servicios', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-XSRF-TOKEN': csrfToken,
+                    'Accept': 'application/json',
+                },
+                body: JSON.stringify({ nombre: newServiceType }),
+            });
+
+            if (!response.ok) {
+                throw new Error('Network response was not ok');
+            }
+
+            const resData = await response.json();
+            if (resData && resData.success) {
+                const createdType = resData.tipo_servicio;
+                
+                // Add to local state if not exists
+                if (!localTipoServicios.some(t => t.id === createdType.id)) {
+                    setLocalTipoServicios(prev => [...prev, createdType].sort((a, b) => a.nombre.localeCompare(b.nombre)));
+                }
+
+                // Select the new type
+                setData('tipo_servicio_id', String(createdType.id));
+                setIsCreatingServiceType(false);
+                setNewServiceType('');
+                notifySuccess(__('Service type added successfully.'));
+            }
+        } catch (error) {
+            console.error(error);
+            notifyError(__('Failed to create service type.'));
+        }
+    };
 
     // Search Autocomplete state
     const [responsibleSearch, setResponsibleSearch] = useState('');
@@ -384,12 +451,17 @@ export default function Index({
         clearErrors();
         setEditingVisit(null);
         setResponsibleSearch('');
+        setNewServiceType('');
+        setIsCreatingServiceType(false);
+        setActiveTab('general');
         setIsModalOpen(true);
     };
 
     const handleEditClick = (visit: VisitaTemporal) => {
         clearErrors();
         setEditingVisit(visit);
+        setNewServiceType('');
+        setIsCreatingServiceType(false);
         setData({
             nombres: visit.nombres,
             apellidos: visit.apellidos,
@@ -398,6 +470,7 @@ export default function Index({
             telefono: visit.telefono || '',
             empleado_id: String(visit.empleado_id || ''),
             responsable_id: String(visit.responsable_id || ''),
+            tipo_servicio_id: String(visit.tipo_servicio_id || ''),
             motivo_visita: visit.motivo_visita || '',
             fecha_ingreso: String(visit.fecha_ingreso),
             hora_ingreso: visit.hora_ingreso.substring(0, 5),
@@ -414,6 +487,7 @@ export default function Index({
             setResponsibleSearch('');
         }
 
+        setActiveTab('general');
         setIsModalOpen(true);
     };
 
@@ -582,6 +656,22 @@ export default function Index({
                 ) : (
                     <span className="text-xs text-slate-400">-</span>
                 )
+            )
+        },
+        {
+            id: 'tipo_servicio',
+            header: __('Service Type'),
+            cell: (visit) => (
+                <div className="flex flex-col text-xs">
+                    <span className="font-semibold text-slate-700 dark:text-slate-200">
+                        {visit.tipo_servicio?.nombre || '-'}
+                    </span>
+                    {visit.motivo_visita && (
+                        <span className="text-[10px] text-muted-foreground line-clamp-1 max-w-[150px]" title={visit.motivo_visita}>
+                            {visit.motivo_visita}
+                        </span>
+                    )}
+                </div>
             )
         },
         {
@@ -803,7 +893,7 @@ export default function Index({
                     setActiveCameraField(null);
                 }
             }}>
-                <DialogContent className="sm:max-w-[800px] lg:max-w-[1000px] w-full max-h-[90vh] overflow-y-auto p-8">
+                <DialogContent className="sm:max-w-[720px] lg:max-w-[850px] w-full max-h-[90vh] overflow-y-auto p-8">
                     <DialogHeader>
                         <DialogTitle>{editingVisit ? __('Edit Temporary Visit') : __('Register Temporary Visit')}</DialogTitle>
                         <DialogDescription>
@@ -821,6 +911,20 @@ export default function Index({
                         />
                     ) : (
                         <form onSubmit={handleFormSubmit} className="space-y-6">
+                            <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full mt-4">
+                                <TabsList className="grid w-full grid-cols-2 mb-6">
+                                    <TabsTrigger value="general" className="flex items-center gap-2">
+                                        <User className="h-4 w-4" />
+                                        {__('General Information')}
+                                    </TabsTrigger>
+                                    <TabsTrigger value="acceso" className="flex items-center gap-2">
+                                        <Clock className="h-4 w-4" />
+                                        {__('Access & Photos')}
+                                    </TabsTrigger>
+                                </TabsList>
+
+                                {/* ── Pestaña 1: Información General ── */}
+                                <TabsContent value="general" className="space-y-6 mt-4">
 
                             {/* Visitor Profile Section */}
                             <div className="space-y-4">
@@ -992,7 +1096,7 @@ export default function Index({
                                                 </div>
                                             ) : (
                                                 <div className="text-xs text-rose-500 font-medium border-t pt-2 border-slate-200/60 dark:border-slate-800/60">
-                                                    {__('Warning: Selected employee does not have an assigned manager. An authorizing responsible is .')}
+                                                    {__('Warning: Selected employee does not have an assigned manager. An authorizing responsible is required.')}
                                                 </div>
                                             )}
                                         </div>
@@ -1000,7 +1104,74 @@ export default function Index({
 
                                     <div className="grid grid-cols-1 gap-4">
                                         <div className="space-y-1.5 w-full">
-                                            <Label htmlFor="motivo_visita">{__('Reason for Visit')} *</Label>
+                                            <Label htmlFor="tipo_servicio_id">{__('Type of Service')} *</Label>
+                                            {isCreatingServiceType ? (
+                                                <div className="flex gap-2 items-center animate-fadeIn">
+                                                    <Input
+                                                        value={newServiceType}
+                                                        onChange={(e) => setNewServiceType(e.target.value)}
+                                                        placeholder={__('Enter new service type...')}
+                                                        className="flex-1 bg-white dark:bg-slate-950"
+                                                        autoFocus
+                                                    />
+                                                    <Button
+                                                        type="button"
+                                                        onClick={handleCreateServiceType}
+                                                        className="bg-[#104a29] hover:bg-[#0c371e] text-white shrink-0"
+                                                    >
+                                                        {__('Save')}
+                                                    </Button>
+                                                    <Button
+                                                        type="button"
+                                                        variant="ghost"
+                                                        onClick={() => {
+                                                            setIsCreatingServiceType(false);
+                                                            setNewServiceType('');
+                                                        }}
+                                                        className="shrink-0"
+                                                    >
+                                                        {__('Cancel')}
+                                                    </Button>
+                                                </div>
+                                            ) : (
+                                                <div className="flex gap-2">
+                                                    <div className="flex-1">
+                                                        <Select
+                                                            value={String(data.tipo_servicio_id || '')}
+                                                            onValueChange={(val) => setData('tipo_servicio_id', val)}
+                                                        >
+                                                            <SelectTrigger id="tipo_servicio_id" className="w-full bg-white dark:bg-slate-950">
+                                                                <SelectValue placeholder={__('Select a service type...')} />
+                                                            </SelectTrigger>
+                                                            <SelectContent>
+                                                                {localTipoServicios.map((t) => (
+                                                                    <SelectItem key={t.id} value={String(t.id)}>
+                                                                        {t.nombre}
+                                                                    </SelectItem>
+                                                                ))}
+                                                            </SelectContent>
+                                                        </Select>
+                                                    </div>
+                                                    <Button
+                                                        type="button"
+                                                        variant="outline"
+                                                        onClick={() => setIsCreatingServiceType(true)}
+                                                        className="shrink-0"
+                                                        title={__('Add New Service Type')}
+                                                    >
+                                                        <Plus className="w-4 h-4" />
+                                                    </Button>
+                                                </div>
+                                            )}
+                                            {errors.tipo_servicio_id && <p className="text-xs text-rose-500">{errors.tipo_servicio_id}</p>}
+                                        </div>
+
+                                        <div className="space-y-1.5 w-full">
+                                            <Label htmlFor="motivo_visita">
+                                                {localTipoServicios.find(t => String(t.id) === String(data.tipo_servicio_id))?.nombre.toLowerCase() === 'otros'
+                                                    ? __('Specify Reason for Visit') + ' *'
+                                                    : __('Additional Details')}
+                                            </Label>
                                             <div className={cn(
                                                 "rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-950 overflow-hidden focus-within:ring-2 focus-within:ring-ring focus-within:ring-offset-2 focus-within:outline-none transition-all",
                                                 errors.motivo_visita && 'border-rose-500 focus-within:ring-rose-500'
@@ -1072,7 +1243,7 @@ export default function Index({
                                                     onChange={(e) => setData('motivo_visita', e.target.value)}
                                                     className="w-full min-h-[120px] p-3 bg-transparent resize-y border-0 focus:ring-0 focus:outline-none dark:text-slate-100 placeholder-slate-400 text-sm"
                                                     placeholder={__('e.g., Maintenance, Interview, Meeting...')}
-
+                                                    required={localTipoServicios.find(t => String(t.id) === String(data.tipo_servicio_id))?.nombre.toLowerCase() === 'otros'}
                                                 />
                                             </div>
                                             {errors.motivo_visita && <p className="text-xs text-rose-500">{errors.motivo_visita}</p>}
@@ -1098,13 +1269,16 @@ export default function Index({
                                     </div>
                                 </div>
                             </div>
+                        </TabsContent>
 
-                            {/* Access Schedule Times */}
-                            <div className="space-y-4 border-t pt-4">
-                                <h3 className="text-sm font-bold text-slate-800 dark:text-slate-100 flex items-center gap-1">
-                                    <Clock className="w-4 h-4 text-[#104a29]" />
-                                    {__('Time & Access Period')}
-                                </h3>
+                            {/* ── Pestaña 2: Acceso y Fotos ── */}
+                            <TabsContent value="acceso" className="space-y-6 mt-4">
+                                {/* Access Schedule Times */}
+                                <div className="space-y-4 pt-4">
+                                    <h3 className="text-sm font-bold text-slate-800 dark:text-slate-100 flex items-center gap-1">
+                                        <Clock className="w-4 h-4 text-[#104a29]" />
+                                        {__('Time & Access Period')}
+                                    </h3>
 
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                     <div className="space-y-1.5">
@@ -1225,7 +1399,10 @@ export default function Index({
                                 </div>
                             </div>
 
-                            <DialogFooter className="mt-6 gap-2">
+                            </TabsContent>
+                            </Tabs>
+
+                            <DialogFooter className="mt-6 gap-2 border-t pt-4">
                                 <Button
                                     type="button"
                                     variant="outline"

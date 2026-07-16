@@ -9,6 +9,7 @@ use App\Models\Pais;
 use App\Models\Empresa;
 use App\Models\Sucursal;
 use App\Models\Empleado;
+use App\Models\TipoServicio;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
@@ -19,7 +20,7 @@ class VisitaTemporalController extends Controller
     public function index(Request $request)
     {
         $query = VisitaTemporal::query()
-            ->with(['paisTelefono', 'empleado.departamento', 'empleado.cargo', 'responsable.departamento', 'responsable.cargo', 'empresa', 'sucursal'])
+            ->with(['paisTelefono', 'empleado.departamento', 'empleado.cargo', 'responsable.departamento', 'responsable.cargo', 'empresa', 'sucursal', 'tipoServicio'])
             ->when($request->search, function ($q, $search) {
                 $q->where(function ($sub) use ($search) {
                     $sub->where('nombres', 'like', "%{$search}%")
@@ -63,12 +64,18 @@ class VisitaTemporalController extends Controller
             ->orderBy('nombre', 'asc')
             ->get(['id', 'nombre', 'codigo_iso2', 'codigo_telefonico']);
 
+        $tipoServicios = TipoServicio::where('empresa_id', $user->empresa_id)
+            ->where('status', 1)
+            ->orderBy('nombre', 'asc')
+            ->get(['id', 'nombre']);
+
         return Inertia::render('admin/VisitasTemporales/Index', [
             'visitas' => $visitas,
             'stats' => $stats,
             'empleados' => $empleados,
             'responsables' => $responsables,
             'paises' => $paises,
+            'tipoServicios' => $tipoServicios,
             'filters' => $request->only('search', 'status', 'perPage', 'fecha_ingreso'),
             'empresa' => $empresa ? [
                 'id' => $empresa->id,
@@ -91,6 +98,7 @@ class VisitaTemporalController extends Controller
             'telefono' => 'nullable|string|max:50',
             'empleado_id' => 'required|exists:empleados,id',
             'responsable_id' => 'required|exists:responsables,id',
+            'tipo_servicio_id' => 'nullable|exists:tipo_servicios,id',
             'motivo_visita' => 'nullable|string',
             'fecha_ingreso' => 'required|date',
             'hora_ingreso' => 'required',
@@ -128,6 +136,7 @@ class VisitaTemporalController extends Controller
             'telefono' => 'nullable|string|max:50',
             'empleado_id' => 'required|exists:empleados,id',
             'responsable_id' => 'required|exists:responsables,id',
+            'tipo_servicio_id' => 'nullable|exists:tipo_servicios,id',
             'motivo_visita' => 'nullable|string',
             'fecha_ingreso' => 'required|date',
             'hora_ingreso' => 'required',
@@ -235,5 +244,36 @@ class VisitaTemporalController extends Controller
                 Storage::disk('public')->delete($relativeDiskPath);
             }
         }
+    }
+
+    public function storeTipoServicio(Request $request)
+    {
+        $validated = $request->validate([
+            'nombre' => 'required|string|max:255',
+        ]);
+
+        $user = $request->user();
+        $validated['empresa_id'] = $user->empresa_id;
+        $validated['sucursal_id'] = $user->sucursal_id;
+        $validated['user_id'] = $user->id;
+        $validated['status'] = 1;
+
+        $existing = TipoServicio::where('empresa_id', $user->empresa_id)
+            ->where('nombre', $validated['nombre'])
+            ->first();
+
+        if ($existing) {
+            return response()->json([
+                'success' => true,
+                'tipo_servicio' => $existing,
+            ]);
+        }
+
+        $tipoServicio = TipoServicio::create($validated);
+
+        return response()->json([
+            'success' => true,
+            'tipo_servicio' => $tipoServicio,
+        ]);
     }
 }

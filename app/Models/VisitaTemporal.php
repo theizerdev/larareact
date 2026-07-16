@@ -24,6 +24,7 @@ class VisitaTemporal extends Model
                 'documento_identidad', 
                 'telefono', 
                 'responsable_id', 
+                'tipo_servicio_id', 
                 'motivo_visita', 
                 'fecha_ingreso', 
                 'hora_ingreso', 
@@ -44,6 +45,7 @@ class VisitaTemporal extends Model
         'telefono',
         'empleado_id',
         'responsable_id',
+        'tipo_servicio_id',
         'motivo_visita',
         'fecha_ingreso',
         'hora_ingreso',
@@ -74,6 +76,11 @@ class VisitaTemporal extends Model
     public function responsable(): BelongsTo
     {
         return $this->belongsTo(Responsable::class, 'responsable_id');
+    }
+
+    public function tipoServicio(): BelongsTo
+    {
+        return $this->belongsTo(TipoServicio::class, 'tipo_servicio_id');
     }
 
     public function empresa(): BelongsTo
