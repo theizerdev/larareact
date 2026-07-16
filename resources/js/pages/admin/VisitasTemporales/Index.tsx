@@ -23,7 +23,14 @@ import {
     Eye,
     MoreVertical,
     Pencil,
-    ToggleRight
+    ToggleRight,
+    Bold,
+    Italic,
+    Underline,
+    List,
+    ListOrdered,
+    Link,
+    Image
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -460,6 +467,54 @@ export default function Index({
 
     // File Input refs
     const fotoCarnetRef = useRef<HTMLInputElement>(null);
+    const textareaRef = useRef<HTMLTextAreaElement>(null);
+
+    const insertFormat = (type: 'bold' | 'italic' | 'underline' | 'list' | 'list-ordered' | 'link' | 'image') => {
+        const textarea = textareaRef.current;
+        if (!textarea) return;
+
+        const start = textarea.selectionStart;
+        const end = textarea.selectionEnd;
+        const text = data.motivo_visita || '';
+        const selectedText = text.substring(start, end);
+
+        let replacement = '';
+        switch (type) {
+            case 'bold':
+                replacement = `**${selectedText || 'bold'}**`;
+                break;
+            case 'italic':
+                replacement = `*${selectedText || 'italic'}*`;
+                break;
+            case 'underline':
+                replacement = `<u>${selectedText || 'underline'}</u>`;
+                break;
+            case 'list':
+                replacement = `\n- ${selectedText || 'item'}`;
+                break;
+            case 'list-ordered':
+                replacement = `\n1. ${selectedText || 'item'}`;
+                break;
+            case 'link':
+                replacement = `[${selectedText || 'link text'}](https://)`;
+                break;
+            case 'image':
+                replacement = `![${selectedText || 'alt text'}](https://)`;
+                break;
+            default:
+                return;
+        }
+
+        const newText = text.substring(0, start) + replacement + text.substring(end);
+        setData('motivo_visita', newText);
+
+        // Focus and select the inserted text after state updates
+        setTimeout(() => {
+            textarea.focus();
+            const newCursorPos = start + replacement.length;
+            textarea.setSelectionRange(newCursorPos, newCursorPos);
+        }, 0);
+    };
 
     const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>, fieldName: 'foto_carnet') => {
         const file = e.target.files?.[0];
@@ -550,7 +605,7 @@ export default function Index({
             cell: (visit) => {
                 let badgeClass = '';
                 let label = '';
-                
+
                 if (visit.status === 'activo') {
                     badgeClass = 'bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-950/20 dark:text-emerald-400 dark:border-emerald-900';
                     label = __('Active');
@@ -561,7 +616,7 @@ export default function Index({
                     badgeClass = 'bg-amber-50 text-amber-700 border-amber-200 dark:bg-amber-950/20 dark:text-amber-400 dark:border-amber-900';
                     label = __('Under Review');
                 }
-                
+
                 return (
                     <div className="flex items-center space-x-2">
                         <Switch
@@ -782,7 +837,7 @@ export default function Index({
                                             value={data.nombres}
                                             onChange={(e) => setData('nombres', e.target.value)}
                                             className={cn(errors.nombres && 'border-rose-500')}
-                                            required
+
                                         />
                                         {errors.nombres && <p className="text-xs text-rose-500">{errors.nombres}</p>}
                                     </div>
@@ -794,19 +849,19 @@ export default function Index({
                                             value={data.apellidos}
                                             onChange={(e) => setData('apellidos', e.target.value)}
                                             className={cn(errors.apellidos && 'border-rose-500')}
-                                            required
+
                                         />
                                         {errors.apellidos && <p className="text-xs text-rose-500">{errors.apellidos}</p>}
                                     </div>
 
                                     <div className="space-y-1.5">
-                                        <Label htmlFor="documento_identidad">{__('National ID / Passport')} *</Label>
+                                        <Label htmlFor="documento_identidad">{__('National ID / Passport *')}</Label>
                                         <Input
                                             id="documento_identidad"
                                             value={data.documento_identidad}
                                             onChange={(e) => setData('documento_identidad', e.target.value)}
                                             className={cn(errors.documento_identidad && 'border-rose-500')}
-                                            required
+
                                         />
                                         {errors.documento_identidad && <p className="text-xs text-rose-500">{errors.documento_identidad}</p>}
                                     </div>
@@ -854,7 +909,7 @@ export default function Index({
                                                 onFocus={() => setShowResponsibleSuggestions(true)}
                                                 placeholder={__('Type a name to search...')}
                                                 className={cn((errors.empleado_id || errors.responsable_id) && 'border-rose-500')}
-                                                required
+
                                             />
                                             {data.empleado_id && (
                                                 <div className="absolute right-3 top-1/2 -translate-y-1/2 bg-emerald-500/10 text-emerald-600 rounded-full p-0.5 border border-emerald-500/20">
@@ -937,33 +992,99 @@ export default function Index({
                                                 </div>
                                             ) : (
                                                 <div className="text-xs text-rose-500 font-medium border-t pt-2 border-slate-200/60 dark:border-slate-800/60">
-                                                    {__('Warning: Selected employee does not have an assigned manager. An authorizing responsible is required.')}
+                                                    {__('Warning: Selected employee does not have an assigned manager. An authorizing responsible is .')}
                                                 </div>
                                             )}
                                         </div>
                                     )}
 
-                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                        <div className="space-y-1.5">
+                                    <div className="grid grid-cols-1 gap-4">
+                                        <div className="space-y-1.5 w-full">
                                             <Label htmlFor="motivo_visita">{__('Reason for Visit')} *</Label>
-                                            <Input
-                                                id="motivo_visita"
-                                                value={data.motivo_visita}
-                                                onChange={(e) => setData('motivo_visita', e.target.value)}
-                                                className={cn(errors.motivo_visita && 'border-rose-500')}
-                                                placeholder={__('e.g., Maintenance, Interview, Meeting...')}
-                                                required
-                                            />
+                                            <div className={cn(
+                                                "rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-950 overflow-hidden focus-within:ring-2 focus-within:ring-ring focus-within:ring-offset-2 focus-within:outline-none transition-all",
+                                                errors.motivo_visita && 'border-rose-500 focus-within:ring-rose-500'
+                                            )}>
+                                                <div className="flex flex-wrap items-center gap-1.5 p-2 bg-slate-50 dark:bg-slate-900/40 border-b border-slate-200 dark:border-slate-800">
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => insertFormat('bold')}
+                                                        className="p-1.5 hover:bg-slate-200 dark:hover:bg-slate-800 rounded text-slate-600 dark:text-slate-400 transition-colors"
+                                                        title={__('Bold')}
+                                                    >
+                                                        <Bold className="w-4 h-4" />
+                                                    </button>
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => insertFormat('italic')}
+                                                        className="p-1.5 hover:bg-slate-200 dark:hover:bg-slate-800 rounded text-slate-600 dark:text-slate-400 transition-colors"
+                                                        title={__('Italic')}
+                                                    >
+                                                        <Italic className="w-4 h-4" />
+                                                    </button>
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => insertFormat('underline')}
+                                                        className="p-1.5 hover:bg-slate-200 dark:hover:bg-slate-800 rounded text-slate-600 dark:text-slate-400 transition-colors"
+                                                        title={__('Underline')}
+                                                    >
+                                                        <Underline className="w-4 h-4" />
+                                                    </button>
+                                                    <div className="w-[1px] h-4 bg-slate-200 dark:bg-slate-800 mx-1" />
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => insertFormat('list-ordered')}
+                                                        className="p-1.5 hover:bg-slate-200 dark:hover:bg-slate-800 rounded text-slate-600 dark:text-slate-400 transition-colors"
+                                                        title={__('Numbered List')}
+                                                    >
+                                                        <ListOrdered className="w-4 h-4" />
+                                                    </button>
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => insertFormat('list')}
+                                                        className="p-1.5 hover:bg-slate-200 dark:hover:bg-slate-800 rounded text-slate-600 dark:text-slate-400 transition-colors"
+                                                        title={__('Bulleted List')}
+                                                    >
+                                                        <List className="w-4 h-4" />
+                                                    </button>
+                                                    <div className="w-[1px] h-4 bg-slate-200 dark:bg-slate-800 mx-1" />
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => insertFormat('link')}
+                                                        className="p-1.5 hover:bg-slate-200 dark:hover:bg-slate-800 rounded text-slate-600 dark:text-slate-400 transition-colors"
+                                                        title={__('Link')}
+                                                    >
+                                                        <Link className="w-4 h-4" />
+                                                    </button>
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => insertFormat('image')}
+                                                        className="p-1.5 hover:bg-slate-200 dark:hover:bg-slate-800 rounded text-slate-600 dark:text-slate-400 transition-colors"
+                                                        title={__('Image')}
+                                                    >
+                                                        <Image className="w-4 h-4" />
+                                                    </button>
+                                                </div>
+                                                <textarea
+                                                    id="motivo_visita"
+                                                    ref={textareaRef}
+                                                    value={data.motivo_visita}
+                                                    onChange={(e) => setData('motivo_visita', e.target.value)}
+                                                    className="w-full min-h-[120px] p-3 bg-transparent resize-y border-0 focus:ring-0 focus:outline-none dark:text-slate-100 placeholder-slate-400 text-sm"
+                                                    placeholder={__('e.g., Maintenance, Interview, Meeting...')}
+
+                                                />
+                                            </div>
                                             {errors.motivo_visita && <p className="text-xs text-rose-500">{errors.motivo_visita}</p>}
                                         </div>
 
-                                        <div className="space-y-1.5">
+                                        <div className="space-y-1.5 w-full">
                                             <Label htmlFor="status">{__('Status')} *</Label>
                                             <Select
                                                 value={data.status}
                                                 onValueChange={(val) => setData('status', val)}
                                             >
-                                                <SelectTrigger id="status" className="bg-white">
+                                                <SelectTrigger id="status" className="w-full bg-white dark:bg-slate-950">
                                                     <SelectValue />
                                                 </SelectTrigger>
                                                 <SelectContent>
@@ -994,7 +1115,7 @@ export default function Index({
                                             value={data.fecha_ingreso}
                                             onChange={(e) => setData('fecha_ingreso', e.target.value)}
                                             className={cn(errors.fecha_ingreso && 'border-rose-500')}
-                                            required
+
                                         />
                                         {errors.fecha_ingreso && <p className="text-xs text-rose-500">{errors.fecha_ingreso}</p>}
                                     </div>
@@ -1007,7 +1128,7 @@ export default function Index({
                                             value={data.hora_ingreso}
                                             onChange={(e) => setData('hora_ingreso', e.target.value)}
                                             className={cn(errors.hora_ingreso && 'border-rose-500')}
-                                            required
+
                                         />
                                         {errors.hora_ingreso && <p className="text-xs text-rose-500">{errors.hora_ingreso}</p>}
                                     </div>
@@ -1020,7 +1141,7 @@ export default function Index({
                                             value={data.fecha_salida}
                                             onChange={(e) => setData('fecha_salida', e.target.value)}
                                             className={cn(errors.fecha_salida && 'border-rose-500')}
-                                            required
+
                                         />
                                         {errors.fecha_salida && <p className="text-xs text-rose-500">{errors.fecha_salida}</p>}
                                     </div>
@@ -1033,7 +1154,7 @@ export default function Index({
                                             value={data.hora_salida}
                                             onChange={(e) => setData('hora_salida', e.target.value)}
                                             className={cn(errors.hora_salida && 'border-rose-500')}
-                                            required
+
                                         />
                                         {errors.hora_salida && <p className="text-xs text-rose-500">{errors.hora_salida}</p>}
                                     </div>
