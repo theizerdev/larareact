@@ -20,34 +20,6 @@ return new class extends Migration
             $table->smallInteger('status')->default(1);
             $table->timestamps();
         });
-
-        // Seed initial values for all existing companies and branches
-        $sucursales = \DB::table('sucursales')->get();
-        
-        // Find a fallback user if available
-        $user = \DB::table('users')->first();
-        $userId = $user ? $user->id : null;
-
-        $defaultServices = [
-            'Entrega de Alimentos',
-            'Entrega de Materiales',
-            'Retirar materiales',
-            'Otros'
-        ];
-
-        foreach ($sucursales as $sucursal) {
-            foreach ($defaultServices as $service) {
-                \DB::table('tipo_servicios')->insert([
-                    'nombre' => $service,
-                    'empresa_id' => $sucursal->empresa_id,
-                    'sucursal_id' => $sucursal->id,
-                    'user_id' => $userId,
-                    'status' => 1,
-                    'created_at' => now(),
-                    'updated_at' => now()
-                ]);
-            }
-        }
     }
 
     /**

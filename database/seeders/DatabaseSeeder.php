@@ -24,6 +24,7 @@ class DatabaseSeeder extends Seeder
             UsersSeeder::class,
             DepartamentoDriscollsSeeder::class,
             CargoDriscollsSeeder::class,
+            TipoServicioSeeder::class,
         ]);
     }
 }

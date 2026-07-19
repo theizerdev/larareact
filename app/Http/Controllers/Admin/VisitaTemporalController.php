@@ -65,9 +65,9 @@ class VisitaTemporalController extends Controller
             ->orderBy('nombre', 'asc')
             ->get(['id', 'nombre', 'codigo_iso2', 'codigo_telefonico']);
 
-        $tipoServicios = TipoServicio::where('empresa_id', $user->empresa_id)
+        $tipoServicios = TipoServicio::where('empresa_id', $empresa?->id ?? $user->empresa_id)
             ->where('status', 1)
-            ->orderBy('nombre', 'asc')
+            ->orderBy('id', 'asc')
             ->get(['id', 'nombre']);
 
         return Inertia::render('admin/VisitasTemporales/Index', [
@@ -254,12 +254,15 @@ class VisitaTemporalController extends Controller
         ]);
 
         $user = $request->user();
-        $validated['empresa_id'] = $user->empresa_id;
+        $empresa = Empresa::find($user->empresa_id) ?: Empresa::first();
+        $empresaId = $empresa?->id ?? $user->empresa_id;
+
+        $validated['empresa_id'] = $empresaId;
         $validated['sucursal_id'] = $user->sucursal_id;
         $validated['user_id'] = $user->id;
         $validated['status'] = 1;
 
-        $existing = TipoServicio::where('empresa_id', $user->empresa_id)
+        $existing = TipoServicio::where('empresa_id', $empresaId)
             ->where('nombre', $validated['nombre'])
             ->first();
 
