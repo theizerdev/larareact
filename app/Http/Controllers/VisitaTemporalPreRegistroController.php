@@ -67,15 +67,17 @@ class VisitaTemporalPreRegistroController extends Controller
             ->where('expires_at', '>', now())
             ->firstOrFail();
 
+        $isEntrega = in_array((int) $request->input('tipo_servicio_id'), [1, 6]);
+
         $request->validate([
-            'documento_identidad' => 'required|string|max:100',
+            'documento_identidad' => $isEntrega ? 'nullable|string|max:100' : 'required|string|max:100',
             'tipo_servicio_id' => 'nullable|exists:tipo_servicios,id',
-            'fecha_ingreso' => 'required|date',
-            'hora_ingreso' => 'required',
-            'fecha_salida' => 'required|date',
-            'hora_salida' => 'required',
-            'foto_carnet' => 'required|string',
-            'foto_documento' => 'required|string',
+            'fecha_ingreso' => $isEntrega ? 'nullable|date' : 'required|date',
+            'hora_ingreso' => $isEntrega ? 'nullable' : 'required',
+            'fecha_salida' => $isEntrega ? 'nullable|date' : 'required|date',
+            'hora_salida' => $isEntrega ? 'nullable' : 'required',
+            'foto_carnet' => $isEntrega ? 'nullable|string' : 'required|string',
+            'foto_documento' => $isEntrega ? 'nullable|string' : 'required|string',
         ]);
 
         DB::beginTransaction();

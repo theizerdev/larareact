@@ -229,7 +229,7 @@ class VisitaTemporalController extends Controller
                 return;
             }
 
-            $whatsapp->setTimeout(15)->sendMessage($to, $message);
+            $whatsapp->setTimeout(15)->sendMessage($to, $message, true);
 
             Log::info("Notificacion de llegada enviada al {$rol}.", [
                 'visita_id' => $visita->id,
@@ -312,7 +312,14 @@ class VisitaTemporalController extends Controller
             ? $request->status
             : ($visitaTemporal->status === 'activo' ? 'suspendido' : 'activo');
 
+        $oldStatus = $visitaTemporal->status;
         $visitaTemporal->update(['status' => $newStatus]);
+
+        // Si cambia a activo y es de tipo entrega, enviar notificacion de llegada al empleado y responsable
+        $isEntrega = in_array((int) $visitaTemporal->tipo_servicio_id, self::ENTREGA_IDS);
+        if ($newStatus === 'activo' && $oldStatus !== 'activo' && $isEntrega) {
+            $this->notifyArrival($visitaTemporal->fresh(), $request->user());
+        }
 
         return back()->with('notification', [
             'type'    => 'success',

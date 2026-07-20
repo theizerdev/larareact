@@ -503,17 +503,17 @@ export default function Index({
         setData({
             nombres: visit.nombres,
             apellidos: visit.apellidos,
-            documento_identidad: visit.documento_identidad,
+            documento_identidad: visit.documento_identidad || '',
             pais_telefono_id: visit.pais_telefono_id || paises[0]?.id || '',
             telefono: visit.telefono || '',
             empleado_id: String(visit.empleado_id || ''),
             responsable_id: String(visit.responsable_id || ''),
             tipo_servicio_id: String(visit.tipo_servicio_id || ''),
             motivo_visita: visit.motivo_visita || '',
-            fecha_ingreso: String(visit.fecha_ingreso),
-            hora_ingreso: visit.hora_ingreso.substring(0, 5),
-            fecha_salida: String(visit.fecha_salida),
-            hora_salida: visit.hora_salida.substring(0, 5),
+            fecha_ingreso: visit.fecha_ingreso ? String(visit.fecha_ingreso) : '',
+            hora_ingreso: visit.hora_ingreso ? visit.hora_ingreso.substring(0, 5) : '',
+            fecha_salida: visit.fecha_salida ? String(visit.fecha_salida) : '',
+            hora_salida: visit.hora_salida ? visit.hora_salida.substring(0, 5) : '',
             foto_carnet: visit.foto_carnet || '',
             foto_documento: visit.foto_documento || '',
             status: visit.status || 'activo',
@@ -717,12 +717,18 @@ export default function Index({
             header: __('Access Details'),
             cell: (visit) => (
                 <div className="flex flex-col text-xs">
-                    <span className="flex items-center gap-1 text-emerald-600 dark:text-emerald-400 font-medium">
-                        <Calendar className="w-3.5 h-3.5" /> {visit.fecha_ingreso} {visit.hora_ingreso.substring(0, 5)}
-                    </span>
-                    <span className="flex items-center gap-1 text-rose-600 dark:text-rose-400">
-                        <Clock className="w-3.5 h-3.5" /> {visit.fecha_salida} {visit.hora_salida.substring(0, 5)}
-                    </span>
+                    {visit.fecha_ingreso ? (
+                        <span className="flex items-center gap-1 text-emerald-600 dark:text-emerald-400 font-medium">
+                            <Calendar className="w-3.5 h-3.5" /> {visit.fecha_ingreso} {visit.hora_ingreso ? visit.hora_ingreso.substring(0, 5) : ''}
+                        </span>
+                    ) : (
+                        <span className="text-slate-400 italic">{__('Fast Delivery')}</span>
+                    )}
+                    {visit.fecha_salida && (
+                        <span className="flex items-center gap-1 text-rose-600 dark:text-rose-400 mt-0.5">
+                            <Clock className="w-3.5 h-3.5" /> {visit.fecha_salida} {visit.hora_salida ? visit.hora_salida.substring(0, 5) : ''}
+                        </span>
+                    )}
                 </div>
             )
         },
