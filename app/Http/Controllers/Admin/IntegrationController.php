@@ -19,7 +19,7 @@ class IntegrationController extends Controller
         $empresa = $request->user()->empresa;
 
         if (! $empresa) {
-            return redirect()->route('admin.dashboard')->with('notification', [
+            return redirect()->route('dashboard')->with('notification', [
                 'type' => 'error',
                 'message' => __('No active company associated with your user.'),
             ]);
@@ -51,7 +51,7 @@ class IntegrationController extends Controller
         $empresa = $request->user()->empresa;
 
         if (! $empresa) {
-            return redirect()->route('admin.dashboard')->with('notification', [
+            return redirect()->route('dashboard')->with('notification', [
                 'type' => 'error',
                 'message' => __('No active company associated with your user.'),
             ]);
@@ -73,7 +73,7 @@ class IntegrationController extends Controller
         $empresa = $request->user()->empresa;
 
         if (! $empresa) {
-            return redirect()->route('admin.dashboard')->with('notification', [
+            return redirect()->route('dashboard')->with('notification', [
                 'type' => 'error',
                 'message' => __('No active company associated with your user.'),
             ]);
@@ -155,7 +155,7 @@ class IntegrationController extends Controller
         $empresa = $request->user()->empresa;
 
         if (! $empresa) {
-            return redirect()->route('admin.dashboard')->with('notification', [
+            return redirect()->route('dashboard')->with('notification', [
                 'type' => 'error',
                 'message' => __('No active company associated with your user.'),
             ]);

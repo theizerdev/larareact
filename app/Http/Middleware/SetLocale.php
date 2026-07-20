@@ -17,11 +17,11 @@ class SetLocale
     public function handle(Request $request, Closure $next): Response
     {
         $locale = session('locale', config('app.locale'));
-        \Log::debug("SetLocale: session locale is '{$locale}'");
+        // \Log::debug("SetLocale: session locale is '{$locale}'");
 
         if (in_array($locale, ['en', 'es'])) {
             App::setLocale($locale);
-            \Log::debug("SetLocale: App::setLocale set to '{$locale}'");
+            // \Log::debug("SetLocale: App::setLocale set to '{$locale}'");
         }
 
         return $next($request);
