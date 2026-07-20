@@ -154,6 +154,7 @@ class VisitaTemporalController extends Controller
         return [
             'nombres'             => 'required|string|max:255',
             'apellidos'           => 'required|string|max:255',
+            'nombre_comercial'    => $isEntrega ? 'required|string|max:255' : 'nullable|string|max:255',
             'documento_identidad' => $isEntrega ? 'nullable|string|max:100' : 'required|string|max:100',
             'pais_telefono_id'    => 'nullable|exists:pais,id',
             'telefono'            => 'nullable|string|max:50',
@@ -255,6 +256,10 @@ class VisitaTemporalController extends Controller
         }
 
         $visitante     = trim("{$visita->nombres} {$visita->apellidos}");
+        if (! empty($visita->nombre_comercial)) {
+            $visitante .= " (" . trim($visita->nombre_comercial) . ")";
+        }
+
         $tipoServicio  = $visita->tipoServicio?->nombre ?? 'Entrega';
         $motivo        = trim($visita->motivo_visita ?? '');
         $hora          = now()->format('h:i A');
@@ -284,6 +289,10 @@ class VisitaTemporalController extends Controller
         }
 
         $visitante      = trim("{$visita->nombres} {$visita->apellidos}");
+        if (! empty($visita->nombre_comercial)) {
+            $visitante .= " (" . trim($visita->nombre_comercial) . ")";
+        }
+
         $tipoServicio   = $visita->tipoServicio?->nombre ?? 'Entrega';
         $empleado       = $visita->empleado;
         $empleadoNombre = $empleado ? trim("{$empleado->nombres} {$empleado->apellidos}") : null;

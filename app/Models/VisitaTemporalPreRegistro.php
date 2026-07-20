@@ -15,6 +15,7 @@ class VisitaTemporalPreRegistro extends Model
     protected $fillable = [
         'nombres',
         'apellidos',
+        'nombre_comercial',
         'pais_telefono_id',
         'telefono',
         'motivo_registro',

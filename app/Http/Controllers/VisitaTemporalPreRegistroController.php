@@ -71,6 +71,7 @@ class VisitaTemporalPreRegistroController extends Controller
 
         $request->validate([
             'documento_identidad' => $isEntrega ? 'nullable|string|max:100' : 'required|string|max:100',
+            'nombre_comercial' => $isEntrega ? 'required|string|max:255' : 'nullable|string|max:255',
             'tipo_servicio_id' => 'nullable|exists:tipo_servicios,id',
             'fecha_ingreso' => $isEntrega ? 'nullable|date' : 'required|date',
             'hora_ingreso' => $isEntrega ? 'nullable' : 'required',
@@ -109,6 +110,7 @@ class VisitaTemporalPreRegistroController extends Controller
             $visita = VisitaTemporal::create([
                 'nombres' => $preRegistro->nombres,
                 'apellidos' => $preRegistro->apellidos,
+                'nombre_comercial' => $request->nombre_comercial,
                 'documento_identidad' => $request->documento_identidad,
                 'pais_telefono_id' => $preRegistro->pais_telefono_id,
                 'telefono' => $preRegistro->telefono,
@@ -128,7 +130,10 @@ class VisitaTemporalPreRegistroController extends Controller
             ]);
 
             // 2. Marcar pre-registro como completado
-            $preRegistro->update(['status' => 'completado']);
+            $preRegistro->update([
+                'status' => 'completado',
+                'nombre_comercial' => $request->nombre_comercial
+            ]);
 
             DB::commit();
 

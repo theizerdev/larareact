@@ -110,6 +110,7 @@ export default function Wizard({ preRegistro, paises, tipoServicios }: PreRegist
     // Step 1: Profile & Dates
     const [profileData, setProfileData] = useState({
         documento_identidad: '',
+        nombre_comercial: '',
         tipo_servicio_id: '',
         fecha_ingreso: '',
         hora_ingreso: '',
@@ -217,7 +218,11 @@ export default function Wizard({ preRegistro, paises, tipoServicios }: PreRegist
         const stepErrors: Record<string, string> = {};
 
         if (step === 1) {
-            if (!isEntregaMode) {
+            if (isEntregaMode) {
+                if (!profileData.nombre_comercial.trim()) {
+                    stepErrors.nombre_comercial = __('Trade Name / Company is required.');
+                }
+            } else {
                 if (!profileData.documento_identidad.trim()) {
                     stepErrors.documento_identidad = __('National ID / Passport number is required.');
                 }
@@ -404,7 +409,7 @@ export default function Wizard({ preRegistro, paises, tipoServicios }: PreRegist
                                     <Label>{__('Last Name')}</Label>
                                     <Input value={preRegistro.apellidos} disabled className="bg-slate-50 dark:bg-slate-950 border-slate-200 dark:border-slate-800 text-slate-500 dark:text-slate-400" />
                                 </div>
-                                <div className="space-y-1.5">
+                                <div className={cn("space-y-1.5", isEntregaMode && "md:col-span-2")}>
                                     <Label>{__('Phone')}</Label>
                                     <PhoneInputGroup
                                         paises={paises}
@@ -459,6 +464,20 @@ export default function Wizard({ preRegistro, paises, tipoServicios }: PreRegist
                                         </Button>
                                     </div>
                                     {errors.tipo_servicio_id && <p className="text-xs text-rose-500 mt-1">{errors.tipo_servicio_id}</p>}
+                                </div>
+
+                                <div className="space-y-1.5 md:col-span-2">
+                                    <Label htmlFor="nombre_comercial">
+                                        {__('Trade Name / Company')} {isEntregaMode ? '*' : ''}
+                                    </Label>
+                                    <Input 
+                                        id="nombre_comercial" 
+                                        value={profileData.nombre_comercial} 
+                                        onChange={(e) => setProfileData(p => ({ ...p, nombre_comercial: e.target.value }))}
+                                        placeholder={__('e.g. DHL, PedidosYa, etc.')}
+                                        className={cn("bg-white dark:bg-slate-950 border-slate-200 dark:border-slate-800", errors.nombre_comercial && "border-rose-500")}
+                                    />
+                                    {errors.nombre_comercial && <p className="text-xs text-rose-500 mt-1">{errors.nombre_comercial}</p>}
                                 </div>
                             </div>
 
@@ -659,6 +678,12 @@ export default function Wizard({ preRegistro, paises, tipoServicios }: PreRegist
                                         <span className="text-xs text-slate-400 block font-semibold uppercase">{__('Visitor Name')}</span>
                                         <span className="text-sm font-semibold">{preRegistro.nombres} {preRegistro.apellidos}</span>
                                     </div>
+                                    {profileData.nombre_comercial && (
+                                        <div>
+                                            <span className="text-xs text-slate-400 block font-semibold uppercase">{__('Trade Name / Company')}</span>
+                                            <span className="text-sm font-semibold">{profileData.nombre_comercial}</span>
+                                        </div>
+                                    )}
                                     <div>
                                         <span className="text-xs text-slate-400 block font-semibold uppercase">{__('Phone')}</span>
                                         <span className="text-sm font-semibold">{preRegistro.telefono}</span>

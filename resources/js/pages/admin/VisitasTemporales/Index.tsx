@@ -111,6 +111,7 @@ interface VisitaTemporal {
     id: number;
     nombres: string;
     apellidos: string;
+    nombre_comercial?: string | null;
     documento_identidad: string;
     pais_telefono_id?: number | null;
     telefono?: string | null;
@@ -313,6 +314,7 @@ export default function Index({
     const { data, setData, post, put, delete: destroyRoute, processing, errors, reset, clearErrors } = useForm({
         nombres: '',
         apellidos: '',
+        nombre_comercial: '',
         documento_identidad: '',
         pais_telefono_id: paises[0]?.id || '',
         telefono: '',
@@ -503,6 +505,7 @@ export default function Index({
         setData({
             nombres: visit.nombres,
             apellidos: visit.apellidos,
+            nombre_comercial: visit.nombre_comercial || '',
             documento_identidad: visit.documento_identidad || '',
             pais_telefono_id: visit.pais_telefono_id || paises[0]?.id || '',
             telefono: visit.telefono || '',
@@ -664,8 +667,15 @@ export default function Index({
             header: __('Visitor'),
             cell: (visit) => (
                 <div className="flex flex-col">
-                    <span className="font-semibold text-slate-700 dark:text-slate-200">{visit.nombres} {visit.apellidos}</span>
-                    <span className="text-xs text-muted-foreground font-mono">{visit.documento_identidad}</span>
+                    <span className="font-semibold text-slate-700 dark:text-slate-200">
+                        {visit.nombres} {visit.apellidos}
+                        {visit.nombre_comercial && (
+                            <span className="text-xs text-emerald-600 dark:text-emerald-400 font-normal ml-1">
+                                ({visit.nombre_comercial})
+                            </span>
+                        )}
+                    </span>
+                    <span className="text-xs text-muted-foreground font-mono">{visit.documento_identidad || __('Fast Delivery')}</span>
                 </div>
             )
         },
@@ -1083,6 +1093,20 @@ export default function Index({
                                                     className={cn(errors.apellidos && 'border-rose-500')}
                                                 />
                                                 {errors.apellidos && <p className="text-xs text-rose-500">{errors.apellidos}</p>}
+                                            </div>
+
+                                            <div className={cn("space-y-1.5", isEntregaMode && "md:col-span-2")}>
+                                                <Label htmlFor="nombre_comercial">
+                                                    {__('Trade Name / Company')} {isEntregaMode ? '*' : ''}
+                                                </Label>
+                                                <Input
+                                                    id="nombre_comercial"
+                                                    value={data.nombre_comercial}
+                                                    onChange={(e) => setData('nombre_comercial', e.target.value)}
+                                                    className={cn(errors.nombre_comercial && 'border-rose-500')}
+                                                    placeholder={__('e.g. DHL, PedidosYa, etc.')}
+                                                />
+                                                {errors.nombre_comercial && <p className="text-xs text-rose-500">{errors.nombre_comercial}</p>}
                                             </div>
 
                                             {!isEntregaMode && (

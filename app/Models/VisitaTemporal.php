@@ -21,6 +21,7 @@ class VisitaTemporal extends Model
             ->logOnly([
                 'nombres', 
                 'apellidos', 
+                'nombre_comercial',
                 'documento_identidad', 
                 'telefono', 
                 'responsable_id', 
@@ -40,6 +41,7 @@ class VisitaTemporal extends Model
     protected $fillable = [
         'nombres',
         'apellidos',
+        'nombre_comercial',
         'documento_identidad',
         'pais_telefono_id',
         'telefono',
