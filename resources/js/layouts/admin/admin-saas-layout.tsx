@@ -391,7 +391,73 @@ export default function AdminSaasLayout({
                             ))
                         }
 
+                        {/* Organization Group */}
+                        {(() => {
+                            const orgItems = [
+                                {
+                                    title: 'Departments',
+                                    href: departamentosIndex.url(),
+                                    permission: 'departamentos.view',
+                                },
+                                {
+                                    title: 'Positions',
+                                    href: cargosIndex.url(),
+                                    permission: 'cargos.view',
+                                },
+                                {
+                                    title: 'Responsibles',
+                                    href: responsablesIndex.url(),
+                                    permission: 'responsables.view',
+                                },
+                                {
+                                    title: 'Employees',
+                                    href: '/admin/empleados',
+                                    permission: 'empleados.view',
+                                },
+                                {
+                                    title: 'Suppliers',
+                                    href: '/admin/proveedores',
+                                    permission: 'proveedores.view',
+                                },
+                            ].filter(item => hasPermission(item.permission));
 
+                            if (orgItems.length === 0) return null;
+
+                            return (
+                                <div className="pt-4">
+                                    <CollapsibleNavItem
+                                        title="Organization"
+                                        icon={Briefcase}
+                                        collapsed={collapsed}
+                                        items={orgItems}
+                                    />
+                                </div>
+                            );
+                        })()}
+
+                        {/* Visits Group */}
+                        {(() => {
+                            const visitsItems = [
+                                {
+                                    title: 'Temporary Visits',
+                                    href: '/admin/visitas-temporales',
+                                    permission: 'visitas_temporales.view',
+                                },
+                            ].filter(item => hasPermission(item.permission));
+
+                            if (visitsItems.length === 0) return null;
+
+                            return (
+                                <div className="pt-2">
+                                    <CollapsibleNavItem
+                                        title="Visits"
+                                        icon={Calendar}
+                                        collapsed={collapsed}
+                                        items={visitsItems}
+                                    />
+                                </div>
+                            );
+                        })()}
 
                         {/* Settings Group */}
                         {(() => {
