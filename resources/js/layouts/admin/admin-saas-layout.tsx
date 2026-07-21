@@ -366,7 +366,7 @@ export default function AdminSaasLayout({
                     </div>
 
                     {/* Navigation */}
-                    <nav className="flex-1 space-y-1 px-3 py-2">
+                    <nav className="flex-1 min-h-0 overflow-y-auto overflow-x-hidden custom-scrollbar space-y-1 px-3 py-2">
                         <p
                             className={cn(
                                 'px-3 pb-2 text-xs font-semibold tracking-wider text-slate-500 uppercase transition-opacity duration-300',

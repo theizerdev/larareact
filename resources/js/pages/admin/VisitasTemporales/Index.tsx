@@ -363,7 +363,6 @@ export default function Index({
     };
 
     const [isModalOpen, setIsModalOpen] = useState(false);
-    const [activeTab, setActiveTab] = useState<string>('general');
     const [editingVisit, setEditingVisit] = useState<VisitaTemporal | null>(null);
     const [deletingVisit, setDeletingVisit] = useState<VisitaTemporal | null>(null);
     const [activeCameraField, setActiveCameraField] = useState<'foto_carnet' | 'foto_documento' | null>(null);
@@ -450,13 +449,6 @@ export default function Index({
         return () => document.removeEventListener("mousedown", handleClickOutside);
     }, []);
 
-    const selectedEmp = empleados.find(e => e.id === Number(data.empleado_id));
-    const selectedResp = selectedEmp ? selectedEmp.responsable : responsables.find(r => r.id === Number(data.responsable_id));
-
-    // IDs 1 = Entrega de pedidos, 6 = Entrega de materiales — modo simplificado
-    const ENTREGA_IDS = [1, 6];
-    const isEntregaMode = ENTREGA_IDS.includes(Number(data.tipo_servicio_id));
-
     // navigation loading spinner bindings
     useEffect(() => {
         const unbindStart = router.on('start', () => setIsTableLoading(true));
@@ -493,7 +485,6 @@ export default function Index({
         setResponsibleSearch('');
         setNewServiceType('');
         setIsCreatingServiceType(false);
-        setActiveTab('general');
         setIsModalOpen(true);
     };
 
@@ -528,7 +519,6 @@ export default function Index({
             setResponsibleSearch('');
         }
 
-        setActiveTab('general');
         setIsModalOpen(true);
     };
 
@@ -816,15 +806,19 @@ export default function Index({
         }
     ];
 
-    const filteredResponsibles = (empleados || []).filter(e => {
-        const fullName = `${e.nombres || ''} ${e.apellidos || ''}`.toLowerCase();
-        return fullName.includes((responsibleSearch || '').toLowerCase());
-    });
+    const filteredResponsibles = (responsibleSearch || '').trim() === ''
+        ? []
+        : (empleados || []).filter(e => {
+            const fullName = `${e.nombres || ''} ${e.apellidos || ''}`.toLowerCase();
+            return fullName.includes((responsibleSearch || '').trim().toLowerCase());
+        });
 
-    const filteredPreRegistroResponsibles = (empleados || []).filter(e => {
-        const fullName = `${e.nombres || ''} ${e.apellidos || ''}`.toLowerCase();
-        return fullName.includes((preRegistroResponsibleSearch || '').toLowerCase());
-    });
+    const filteredPreRegistroResponsibles = (preRegistroResponsibleSearch || '').trim() === ''
+        ? []
+        : (empleados || []).filter(e => {
+            const fullName = `${e.nombres || ''} ${e.apellidos || ''}`.toLowerCase();
+            return fullName.includes((preRegistroResponsibleSearch || '').trim().toLowerCase());
+        });
 
 
     return (
@@ -841,14 +835,14 @@ export default function Index({
                     colorClassName="bg-[#2729c4]"
                 >
                     <div className="flex gap-2">
-                        <Button
+                        {/* <Button
                             onClick={() => setIsPreRegistroModalOpen(true)}
                             variant="outline"
                             className="border-[#2729c4] text-[#2729c4] hover:bg-[#2729c4]/10 dark:border-indigo-400 dark:text-indigo-400"
                         >
                             <Link className="mr-2 h-4 w-4" />
                             {__('Pre-registro')}
-                        </Button>
+                        </Button> */}
                         <Button onClick={handleCreateClick} className="bg-[#104a29] hover:bg-[#0c371e] text-white">
                             <Plus className="mr-2 h-4 w-4" />
                             {__('New Visit')}
@@ -979,519 +973,290 @@ export default function Index({
                             onCancel={() => setActiveCameraField(null)}
                         />
                     ) : (
-                        <form onSubmit={handleFormSubmit} className="space-y-6">
-                            <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full mt-4">
-                                <TabsList className={`grid w-full mb-6 ${isEntregaMode ? 'grid-cols-1' : 'grid-cols-2'}`}>
-                                    <TabsTrigger value="general" className="flex items-center gap-2">
-                                        <User className="h-4 w-4" />
-                                        {__('General Information')}
-                                    </TabsTrigger>
-                                    {!isEntregaMode && (
-                                        <TabsTrigger value="acceso" className="flex items-center gap-2">
-                                            <Clock className="h-4 w-4" />
-                                            {__('Access & Photos')}
-                                        </TabsTrigger>
-                                    )}
-                                </TabsList>
+                        <form onSubmit={handleFormSubmit} className="space-y-6 mt-4">
+                            {/* Visitor Profile Section */}
+                            <div className="space-y-4">
+                                <h3 className="text-sm font-bold text-slate-800 dark:text-slate-100 flex items-center gap-1">
+                                    <User className="w-4 h-4 text-[#104a29]" />
+                                    {__('Visitor Information')}
+                                </h3>
 
-                                {/* ── Pestaña 1: Información General ── */}
-                                <TabsContent value="general" className="space-y-6 mt-4">
-
-                                    {/* Visitor Profile Section */}
-                                    <div className="space-y-4">
-                                        <div className="space-y-1.5 w-full">
-                                            <Label htmlFor="tipo_servicio_id">{__('Type of Service')} *</Label>
-                                            {isCreatingServiceType ? (
-                                                <div className="flex gap-2 items-center animate-fadeIn">
-                                                    <Input
-                                                        value={newServiceType}
-                                                        onChange={(e) => setNewServiceType(e.target.value)}
-                                                        placeholder={__('Enter new service type...')}
-                                                        className="flex-1 bg-white dark:bg-slate-950"
-                                                        autoFocus
-                                                    />
-                                                    <Button
-                                                        type="button"
-                                                        onClick={handleCreateServiceType}
-                                                        className="bg-[#104a29] hover:bg-[#0c371e] text-white shrink-0"
-                                                    >
-                                                        {__('Save')}
-                                                    </Button>
-                                                    <Button
-                                                        type="button"
-                                                        variant="ghost"
-                                                        onClick={() => {
-                                                            setIsCreatingServiceType(false);
-                                                            setNewServiceType('');
-                                                        }}
-                                                        className="shrink-0"
-                                                    >
-                                                        {__('Cancel')}
-                                                    </Button>
-                                                </div>
-                                            ) : (
-                                                <div className="flex gap-2">
-                                                    <div className="flex-1">
-                                                        <Select
-                                                            value={String(data.tipo_servicio_id || '')}
-                                                            onValueChange={(val) => {
-                                                                setData('tipo_servicio_id', val);
-                                                                if (ENTREGA_IDS.includes(Number(val))) {
-                                                                    setActiveTab('general');
-                                                                }
-                                                            }}
-                                                        >
-                                                            <SelectTrigger id="tipo_servicio_id" className="w-full bg-white dark:bg-slate-950">
-                                                                <SelectValue placeholder={__('Select a service type...')} />
-                                                            </SelectTrigger>
-                                                            <SelectContent>
-                                                                {localTipoServicios.map((t) => (
-                                                                    <SelectItem key={t.id} value={String(t.id)}>
-                                                                        {t.nombre}
-                                                                    </SelectItem>
-                                                                ))}
-                                                            </SelectContent>
-                                                        </Select>
-                                                    </div>
-                                                    <Button
-                                                        type="button"
-                                                        variant="outline"
-                                                        onClick={() => setIsCreatingServiceType(true)}
-                                                        className="shrink-0"
-                                                        title={__('Add New Service Type')}
-                                                    >
-                                                        <Plus className="w-4 h-4" />
-                                                    </Button>
-                                                </div>
-                                            )}
-                                            {errors.tipo_servicio_id && <p className="text-xs text-rose-500">{errors.tipo_servicio_id}</p>}
-                                        </div>
-
-                                        <h3 className="text-sm font-bold text-slate-800 dark:text-slate-100 flex items-center gap-1">
-                                            <User className="w-4 h-4 text-[#104a29]" />
-                                            {__('Visitor Information')}
-                                        </h3>
-
-                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                            <div className="space-y-1.5">
-                                                <Label htmlFor="nombres">{__('First Name')} *</Label>
-                                                <Input
-                                                    id="nombres"
-                                                    value={data.nombres}
-                                                    onChange={(e) => setData('nombres', e.target.value)}
-                                                    className={cn(errors.nombres && 'border-rose-500')}
-                                                />
-                                                {errors.nombres && <p className="text-xs text-rose-500">{errors.nombres}</p>}
-                                            </div>
-
-                                            <div className="space-y-1.5">
-                                                <Label htmlFor="apellidos">{__('Last Name')} *</Label>
-                                                <Input
-                                                    id="apellidos"
-                                                    value={data.apellidos}
-                                                    onChange={(e) => setData('apellidos', e.target.value)}
-                                                    className={cn(errors.apellidos && 'border-rose-500')}
-                                                />
-                                                {errors.apellidos && <p className="text-xs text-rose-500">{errors.apellidos}</p>}
-                                            </div>
-
-                                            <div className={cn("space-y-1.5", isEntregaMode && "md:col-span-2")}>
-                                                <Label htmlFor="nombre_comercial">
-                                                    {__('Trade Name / Company')} {isEntregaMode ? '*' : ''}
-                                                </Label>
-                                                <Input
-                                                    id="nombre_comercial"
-                                                    value={data.nombre_comercial}
-                                                    onChange={(e) => setData('nombre_comercial', e.target.value)}
-                                                    className={cn(errors.nombre_comercial && 'border-rose-500')}
-                                                    placeholder={__('e.g. DHL, PedidosYa, etc.')}
-                                                />
-                                                {errors.nombre_comercial && <p className="text-xs text-rose-500">{errors.nombre_comercial}</p>}
-                                            </div>
-
-                                            {!isEntregaMode && (
-                                                <div className="space-y-1.5">
-                                                    <Label htmlFor="documento_identidad">{__('National ID / Passport *')}</Label>
-                                                    <Input
-                                                        id="documento_identidad"
-                                                        value={data.documento_identidad}
-                                                        onChange={(e) => setData('documento_identidad', e.target.value)}
-                                                        className={cn(errors.documento_identidad && 'border-rose-500')}
-                                                    />
-                                                    {errors.documento_identidad && <p className="text-xs text-rose-500">{errors.documento_identidad}</p>}
-                                                </div>
-                                            )}
-
-                                            {!isEntregaMode && (
-                                                <div className="space-y-1.5">
-                                                    <Label htmlFor="telefono">{__('Phone Number')}</Label>
-                                                    <PhoneInputGroup
-                                                        paises={paises}
-                                                        selectedPaisId={data.pais_telefono_id}
-                                                        phoneValue={data.telefono}
-                                                        onPaisChange={(v) => setData('pais_telefono_id', v)}
-                                                        onPhoneChange={(v) => setData('telefono', v)}
-                                                        placeholder="000-000000"
-                                                        error={errors.telefono}
-                                                    />
-                                                </div>
-                                            )}
-                                        </div>
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                    {/* 1. Trade Name / Company */}
+                                    <div className="space-y-1.5">
+                                        <Label htmlFor="nombre_comercial">
+                                            {__('Trade Name / Company')}
+                                        </Label>
+                                        <Input
+                                            id="nombre_comercial"
+                                            value={data.nombre_comercial}
+                                            onChange={(e) => setData('nombre_comercial', e.target.value)}
+                                            className={cn(errors.nombre_comercial && 'border-rose-500')}
+                                            placeholder={__('e.g. DHL, PedidosYa, etc.')}
+                                        />
+                                        {errors.nombre_comercial && <p className="text-xs text-rose-500">{errors.nombre_comercial}</p>}
                                     </div>
 
-                                    {/* Authorizing Manager Auto-suggest Autocomplete */}
-                                    <div className="space-y-4 border-t pt-4">
-                                        <h3 className="text-sm font-bold text-slate-800 dark:text-slate-100 flex items-center gap-1">
-                                            <Briefcase className="w-4 h-4 text-[#104a29]" />
-                                            {__('Authorization & Motive')}
-                                        </h3>
-
-                                        <div className="grid grid-cols-1 gap-4">
-                                            <div className="relative space-y-1.5" ref={suggestRef}>
-                                                <Label htmlFor="responsable_search">{__('Search Employee to Visit')} *</Label>
-                                                <div className="relative">
-                                                    <Input
-                                                        id="responsable_search"
-                                                        value={responsibleSearch}
-                                                        onChange={(e) => {
-                                                            setResponsibleSearch(e.target.value);
-                                                            setShowResponsibleSuggestions(true);
-                                                            if (!e.target.value) {
-                                                                setData(prev => ({
-                                                                    ...prev,
-                                                                    empleado_id: '',
-                                                                    responsable_id: '',
-                                                                }));
-                                                            }
-                                                        }}
-                                                        onFocus={() => setShowResponsibleSuggestions(true)}
-                                                        placeholder={__('Type a name to search...')}
-                                                        className={cn((errors.empleado_id || errors.responsable_id) && 'border-rose-500')}
-
-                                                    />
-                                                    {data.empleado_id && (
-                                                        <div className="absolute right-3 top-1/2 -translate-y-1/2 bg-emerald-500/10 text-emerald-600 rounded-full p-0.5 border border-emerald-500/20">
-                                                            <Check className="w-3.5 h-3.5" />
-                                                        </div>
-                                                    )}
-                                                </div>
-
-                                                {showResponsibleSuggestions && (
-                                                    <div className="absolute z-[60] w-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl mt-1 shadow-2xl max-h-60 overflow-y-auto">
-                                                        {filteredResponsibles.length === 0 ? (
-                                                            <div className="p-3 text-xs text-slate-500 text-center">{__('No matches found')}</div>
-                                                        ) : (
-                                                            filteredResponsibles.map((r) => (
-                                                                <button
-                                                                    key={r.id}
-                                                                    type="button"
-                                                                    onClick={() => {
-                                                                        setData(prev => ({
-                                                                            ...prev,
-                                                                            empleado_id: String(r.id),
-                                                                            responsable_id: String(r.responsable_id || ''),
-                                                                        }));
-                                                                        setResponsibleSearch(`${r.nombres} ${r.apellidos}`);
-                                                                        setShowResponsibleSuggestions(false);
-                                                                    }}
-                                                                    className="w-full text-left px-4 py-2 text-sm hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors flex flex-col border-b last:border-0 border-slate-100 dark:border-slate-800/40"
-                                                                >
-                                                                    <span className="font-semibold text-slate-800 dark:text-slate-200">{r.nombres} {r.apellidos}</span>
-                                                                    <span className="text-xs text-slate-500 dark:text-slate-400">
-                                                                        {r.departamento?.nombre || __('No Department')} • {r.cargo?.nombre || __('No Position')}
-                                                                    </span>
-                                                                </button>
-                                                            ))
-                                                        )}
-                                                    </div>
-                                                )}
-                                                {errors.empleado_id && <p className="text-xs text-rose-500">{errors.empleado_id}</p>}
-                                                {errors.responsable_id && <p className="text-xs text-rose-500">{errors.responsable_id}</p>}
+                                    {/* 2. Type of Service */}
+                                    <div className="space-y-1.5">
+                                        <Label htmlFor="tipo_servicio_id">{__('Type of Service')} *</Label>
+                                        {isCreatingServiceType ? (
+                                            <div className="flex gap-2 items-center animate-fadeIn">
+                                                <Input
+                                                    value={newServiceType}
+                                                    onChange={(e) => setNewServiceType(e.target.value)}
+                                                    placeholder={__('Enter new service type...')}
+                                                    className="flex-1 bg-white dark:bg-slate-950"
+                                                    autoFocus
+                                                />
+                                                <Button
+                                                    type="button"
+                                                    onClick={handleCreateServiceType}
+                                                    className="bg-[#104a29] hover:bg-[#0c371e] text-white shrink-0"
+                                                >
+                                                    {__('Save')}
+                                                </Button>
+                                                <Button
+                                                    type="button"
+                                                    variant="ghost"
+                                                    onClick={() => {
+                                                        setIsCreatingServiceType(false);
+                                                        setNewServiceType('');
+                                                    }}
+                                                    className="shrink-0"
+                                                >
+                                                    {__('Cancel')}
+                                                </Button>
                                             </div>
-
-                                            {/* Selected Employee & Responsible Card */}
-                                            {selectedEmp && (
-                                                <div className="bg-slate-50 dark:bg-slate-900/50 p-4 rounded-2xl border border-slate-100 dark:border-slate-800/60 space-y-3">
-                                                    <div>
-                                                        <span className="text-xs font-bold text-indigo-600 dark:text-indigo-400 block mb-1">{__('Selected Employee Details')}</span>
-                                                        <div className="grid grid-cols-3 gap-2 text-xs">
-                                                            <div>
-                                                                <span className="text-slate-400 block">{__('Employee')}</span>
-                                                                <span className="font-semibold text-slate-800 dark:text-slate-200">{selectedEmp.nombres} {selectedEmp.apellidos}</span>
-                                                            </div>
-                                                            <div>
-                                                                <span className="text-slate-400 block">{__('Department')}</span>
-                                                                <span className="font-semibold text-slate-800 dark:text-slate-200">{selectedEmp.departamento?.nombre || '-'}</span>
-                                                            </div>
-                                                            <div>
-                                                                <span className="text-slate-400 block">{__('Position')}</span>
-                                                                <span className="font-semibold text-slate-800 dark:text-slate-200">{selectedEmp.cargo?.nombre || '-'}</span>
-                                                            </div>
-                                                        </div>
-                                                    </div>
-
-                                                    {selectedResp ? (
-                                                        <div className="border-t pt-2 border-slate-200/60 dark:border-slate-800/60">
-                                                            <span className="text-xs font-bold text-emerald-600 dark:text-emerald-400 block mb-1">{__('Authorizing Manager Details')}</span>
-                                                            <div className="grid grid-cols-3 gap-2 text-xs">
-                                                                <div>
-                                                                    <span className="text-slate-400 block">{__('Manager')}</span>
-                                                                    <span className="font-semibold text-slate-800 dark:text-slate-200">{selectedResp.nombres} {selectedResp.apellidos}</span>
-                                                                </div>
-                                                                <div>
-                                                                    <span className="text-slate-400 block">{__('Department')}</span>
-                                                                    <span className="font-semibold text-slate-800 dark:text-slate-200">{selectedResp.departamento?.nombre || '-'}</span>
-                                                                </div>
-                                                                <div>
-                                                                    <span className="text-slate-400 block">{__('Position')}</span>
-                                                                    <span className="font-semibold text-slate-800 dark:text-slate-200">{selectedResp.cargo?.nombre || '-'}</span>
-                                                                </div>
-                                                            </div>
-                                                        </div>
-                                                    ) : (
-                                                        <div className="text-xs text-rose-500 font-medium border-t pt-2 border-slate-200/60 dark:border-slate-800/60">
-                                                            {__('Warning: Selected employee does not have an assigned manager. An authorizing responsible is required.')}
-                                                        </div>
-                                                    )}
-                                                </div>
-                                            )}
-
-                                            <div className="grid grid-cols-1 gap-4">
-                                                <div className="space-y-1.5 w-full">
-                                                    <Label htmlFor="motivo_visita">
-                                                        {localTipoServicios.find(t => String(t.id) === String(data.tipo_servicio_id))?.nombre.toLowerCase() === 'otros'
-                                                            ? __('Specify Reason for Visit') + ' *'
-                                                            : __('Additional Details')}
-                                                    </Label>
-                                                    <div className={cn(
-                                                        "rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-950 overflow-hidden focus-within:ring-2 focus-within:ring-ring focus-within:ring-offset-2 focus-within:outline-none transition-all",
-                                                        errors.motivo_visita && 'border-rose-500 focus-within:ring-rose-500'
-                                                    )}>
-                                                        <div className="flex flex-wrap items-center gap-1.5 p-2 bg-slate-50 dark:bg-slate-900/40 border-b border-slate-200 dark:border-slate-800">
-                                                            <button
-                                                                type="button"
-                                                                onClick={() => insertFormat('bold')}
-                                                                className="p-1.5 hover:bg-slate-200 dark:hover:bg-slate-800 rounded text-slate-600 dark:text-slate-400 transition-colors"
-                                                                title={__('Bold')}
-                                                            >
-                                                                <Bold className="w-4 h-4" />
-                                                            </button>
-                                                            <button
-                                                                type="button"
-                                                                onClick={() => insertFormat('italic')}
-                                                                className="p-1.5 hover:bg-slate-200 dark:hover:bg-slate-800 rounded text-slate-600 dark:text-slate-400 transition-colors"
-                                                                title={__('Italic')}
-                                                            >
-                                                                <Italic className="w-4 h-4" />
-                                                            </button>
-                                                            <button
-                                                                type="button"
-                                                                onClick={() => insertFormat('underline')}
-                                                                className="p-1.5 hover:bg-slate-200 dark:hover:bg-slate-800 rounded text-slate-600 dark:text-slate-400 transition-colors"
-                                                                title={__('Underline')}
-                                                            >
-                                                                <Underline className="w-4 h-4" />
-                                                            </button>
-                                                            <div className="w-[1px] h-4 bg-slate-200 dark:bg-slate-800 mx-1" />
-                                                            <button
-                                                                type="button"
-                                                                onClick={() => insertFormat('list-ordered')}
-                                                                className="p-1.5 hover:bg-slate-200 dark:hover:bg-slate-800 rounded text-slate-600 dark:text-slate-400 transition-colors"
-                                                                title={__('Numbered List')}
-                                                            >
-                                                                <ListOrdered className="w-4 h-4" />
-                                                            </button>
-                                                            <button
-                                                                type="button"
-                                                                onClick={() => insertFormat('list')}
-                                                                className="p-1.5 hover:bg-slate-200 dark:hover:bg-slate-800 rounded text-slate-600 dark:text-slate-400 transition-colors"
-                                                                title={__('Bulleted List')}
-                                                            >
-                                                                <List className="w-4 h-4" />
-                                                            </button>
-                                                            <div className="w-[1px] h-4 bg-slate-200 dark:bg-slate-800 mx-1" />
-                                                            <button
-                                                                type="button"
-                                                                onClick={() => insertFormat('link')}
-                                                                className="p-1.5 hover:bg-slate-200 dark:hover:bg-slate-800 rounded text-slate-600 dark:text-slate-400 transition-colors"
-                                                                title={__('Link')}
-                                                            >
-                                                                <Link className="w-4 h-4" />
-                                                            </button>
-                                                            <button
-                                                                type="button"
-                                                                onClick={() => insertFormat('image')}
-                                                                className="p-1.5 hover:bg-slate-200 dark:hover:bg-slate-800 rounded text-slate-600 dark:text-slate-400 transition-colors"
-                                                                title={__('Image')}
-                                                            >
-                                                                <Image className="w-4 h-4" />
-                                                            </button>
-                                                        </div>
-                                                        <textarea
-                                                            id="motivo_visita"
-                                                            ref={textareaRef}
-                                                            value={data.motivo_visita}
-                                                            onChange={(e) => setData('motivo_visita', e.target.value)}
-                                                            className="w-full min-h-[120px] p-3 bg-transparent resize-y border-0 focus:ring-0 focus:outline-none dark:text-slate-100 placeholder-slate-400 text-sm"
-                                                            placeholder={__('e.g., Maintenance, Interview, Meeting...')}
-                                                            required={localTipoServicios.find(t => String(t.id) === String(data.tipo_servicio_id))?.nombre.toLowerCase() === 'otros'}
-                                                        />
-                                                    </div>
-                                                    {errors.motivo_visita && <p className="text-xs text-rose-500">{errors.motivo_visita}</p>}
-                                                </div>
-
-                                                <div className="space-y-1.5 w-full">
-                                                    <Label htmlFor="status">{__('Status')} *</Label>
+                                        ) : (
+                                            <div className="flex gap-2">
+                                                <div className="flex-1">
                                                     <Select
-                                                        value={data.status}
-                                                        onValueChange={(val) => setData('status', val)}
+                                                        value={String(data.tipo_servicio_id || '')}
+                                                        onValueChange={(val) => setData('tipo_servicio_id', val)}
                                                     >
-                                                        <SelectTrigger id="status" className="w-full bg-white dark:bg-slate-950">
-                                                            <SelectValue />
+                                                        <SelectTrigger id="tipo_servicio_id" className="w-full bg-white dark:bg-slate-950">
+                                                            <SelectValue placeholder={__('Select a service type...')} />
                                                         </SelectTrigger>
                                                         <SelectContent>
-                                                            <SelectItem value="activo">{__('Active')}</SelectItem>
-                                                            <SelectItem value="suspendido">{__('Suspended')}</SelectItem>
-                                                            <SelectItem value="en_revision">{__('Under Review')}</SelectItem>
+                                                            {localTipoServicios.map((t) => (
+                                                                <SelectItem key={t.id} value={String(t.id)}>
+                                                                    {t.nombre}
+                                                                </SelectItem>
+                                                            ))}
                                                         </SelectContent>
                                                     </Select>
-                                                    {errors.status && <p className="text-xs text-rose-500">{errors.status}</p>}
                                                 </div>
+                                                <Button
+                                                    type="button"
+                                                    variant="outline"
+                                                    onClick={() => setIsCreatingServiceType(true)}
+                                                    className="shrink-0"
+                                                    title={__('Add New Service Type')}
+                                                >
+                                                    <Plus className="w-4 h-4" />
+                                                </Button>
                                             </div>
-                                        </div>
-                                    </div>
-                                </TabsContent>
-
-                                {/* ── Pestaña 2: Acceso y Fotos (oculta en modo Entrega) ── */}
-                                {!isEntregaMode && <TabsContent value="acceso" className="space-y-6 mt-4">
-                                    {/* Access Schedule Times */}
-                                    <div className="space-y-4 pt-4">
-                                        <h3 className="text-sm font-bold text-slate-800 dark:text-slate-100 flex items-center gap-1">
-                                            <Clock className="w-4 h-4 text-[#104a29]" />
-                                            {__('Time & Access Period')}
-                                        </h3>
-
-                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                            <div className="space-y-1.5">
-                                                <Label htmlFor="fecha_ingreso">{__('Check-In Date')} *</Label>
-                                                <Input
-                                                    id="fecha_ingreso"
-                                                    type="date"
-                                                    value={data.fecha_ingreso}
-                                                    onChange={(e) => setData('fecha_ingreso', e.target.value)}
-                                                    className={cn(errors.fecha_ingreso && 'border-rose-500')}
-
-                                                />
-                                                {errors.fecha_ingreso && <p className="text-xs text-rose-500">{errors.fecha_ingreso}</p>}
-                                            </div>
-
-                                            <div className="space-y-1.5">
-                                                <Label htmlFor="hora_ingreso">{__('Check-In Time')} *</Label>
-                                                <Input
-                                                    id="hora_ingreso"
-                                                    type="time"
-                                                    value={data.hora_ingreso}
-                                                    onChange={(e) => setData('hora_ingreso', e.target.value)}
-                                                    className={cn(errors.hora_ingreso && 'border-rose-500')}
-
-                                                />
-                                                {errors.hora_ingreso && <p className="text-xs text-rose-500">{errors.hora_ingreso}</p>}
-                                            </div>
-
-                                            <div className="space-y-1.5">
-                                                <Label htmlFor="fecha_salida">{__('Check-Out Date')} *</Label>
-                                                <Input
-                                                    id="fecha_salida"
-                                                    type="date"
-                                                    value={data.fecha_salida}
-                                                    onChange={(e) => setData('fecha_salida', e.target.value)}
-                                                    className={cn(errors.fecha_salida && 'border-rose-500')}
-
-                                                />
-                                                {errors.fecha_salida && <p className="text-xs text-rose-500">{errors.fecha_salida}</p>}
-                                            </div>
-
-                                            <div className="space-y-1.5">
-                                                <Label htmlFor="hora_salida">{__('Check-Out Time')} *</Label>
-                                                <Input
-                                                    id="hora_salida"
-                                                    type="time"
-                                                    value={data.hora_salida}
-                                                    onChange={(e) => setData('hora_salida', e.target.value)}
-                                                    className={cn(errors.hora_salida && 'border-rose-500')}
-
-                                                />
-                                                {errors.hora_salida && <p className="text-xs text-rose-500">{errors.hora_salida}</p>}
-                                            </div>
-                                        </div>
+                                        )}
+                                        {errors.tipo_servicio_id && <p className="text-xs text-rose-500">{errors.tipo_servicio_id}</p>}
                                     </div>
 
-                                    {/* Photographs */}
-                                    <div className="space-y-4 border-t pt-4">
-                                        <h3 className="text-sm font-bold text-slate-800 dark:text-slate-100 flex items-center gap-1">
-                                            <Camera className="w-4 h-4 text-[#104a29]" />
-                                            {__('Photographs')}
-                                        </h3>
-
-                                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
-                                            {/* Visitor Profile Photo */}
-                                            <div className="flex flex-col gap-2">
-                                                <Label className="font-semibold">{__('Visitor Photo')} *</Label>
-                                                <div className="border border-dashed border-slate-200 dark:border-slate-800 rounded-2xl p-4 flex flex-col items-center justify-center gap-3 min-h-[150px] bg-slate-50/50 dark:bg-slate-900/10">
-                                                    {data.foto_carnet ? (
-                                                        <div className="relative w-28 h-28 rounded-full overflow-hidden border border-slate-200 dark:border-slate-700 shadow-lg group">
-                                                            <img src={data.foto_carnet} className="w-full h-full object-cover" />
-                                                            <Button
-                                                                type="button"
-                                                                size="xs"
-                                                                variant="destructive"
-                                                                className="absolute inset-0 bg-red-600/80 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity"
-                                                                onClick={() => setData('foto_carnet', '')}
-                                                            >
-                                                                {__('Delete')}
-                                                            </Button>
-                                                        </div>
-                                                    ) : (
-                                                        <User className="w-10 h-10 text-slate-400" />
-                                                    )}
-                                                    <div className="flex gap-2">
-                                                        <Button type="button" variant="outline" size="xs" onClick={() => fotoCarnetRef.current?.click()}><Upload className="w-3.5 h-3.5 mr-1" />{__('Upload')}</Button>
-                                                        <Button type="button" variant="outline" size="xs" onClick={() => setActiveCameraField('foto_carnet')}><Camera className="w-3.5 h-3.5 mr-1" />{__('Camera')}</Button>
-                                                    </div>
-                                                    <input type="file" accept="image/*" ref={fotoCarnetRef} className="hidden" onChange={(e) => handleFileChange(e, 'foto_carnet')} />
-                                                </div>
-                                                {errors.foto_carnet && <span className="text-xs text-rose-500">{errors.foto_carnet}</span>}
-                                            </div>
-
-                                            {/* Visitor ID Photo */}
-                                            <div className="flex flex-col gap-2">
-                                                <Label className="font-semibold">{__('ID Document Photo')} *</Label>
-                                                <div className="border border-dashed border-slate-200 dark:border-slate-800 rounded-2xl p-4 flex flex-col items-center justify-center gap-3 min-h-[150px] bg-slate-50/50 dark:bg-slate-900/10">
-                                                    {data.foto_documento ? (
-                                                        <div className="relative w-40 aspect-[3/2] rounded-xl overflow-hidden border border-slate-200 dark:border-slate-700 shadow-md group">
-                                                            <img src={data.foto_documento} className="w-full h-full object-cover" />
-                                                            <Button
-                                                                type="button"
-                                                                size="xs"
-                                                                variant="destructive"
-                                                                className="absolute inset-0 bg-red-650/80 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity"
-                                                                onClick={() => setData('foto_documento', '')}
-                                                            >
-                                                                {__('Delete')}
-                                                            </Button>
-                                                        </div>
-                                                    ) : (
-                                                        <FileText className="w-10 h-10 text-slate-400" />
-                                                    )}
-                                                    <Button type="button" variant="outline" size="xs" onClick={() => setActiveCameraField('foto_documento')}><Camera className="w-3.5 h-3.5 mr-1" />{__('Camera')}</Button>
-                                                </div>
-                                                {errors.foto_documento && <span className="text-xs text-rose-500">{errors.foto_documento}</span>}
-                                            </div>
-                                        </div>
+                                    {/* 3. First Name */}
+                                    <div className="space-y-1.5">
+                                        <Label htmlFor="nombres">{__('First Name')} *</Label>
+                                        <Input
+                                            id="nombres"
+                                            value={data.nombres}
+                                            onChange={(e) => setData('nombres', e.target.value)}
+                                            className={cn(errors.nombres && 'border-rose-500')}
+                                        />
+                                        {errors.nombres && <p className="text-xs text-rose-500">{errors.nombres}</p>}
                                     </div>
 
-                                </TabsContent>}
-                            </Tabs>
+                                    {/* 4. Last Name */}
+                                    <div className="space-y-1.5">
+                                        <Label htmlFor="apellidos">{__('Last Name')} *</Label>
+                                        <Input
+                                            id="apellidos"
+                                            value={data.apellidos}
+                                            onChange={(e) => setData('apellidos', e.target.value)}
+                                            className={cn(errors.apellidos && 'border-rose-500')}
+                                        />
+                                        {errors.apellidos && <p className="text-xs text-rose-500">{errors.apellidos}</p>}
+                                    </div>
+
+                                    {/* 5. Phone Number (Full Width) */}
+                                    <div className="space-y-1.5 md:col-span-2">
+                                        <Label htmlFor="telefono">{__('Phone Number')}</Label>
+                                        <PhoneInputGroup
+                                            paises={paises}
+                                            selectedPaisId={data.pais_telefono_id}
+                                            phoneValue={data.telefono}
+                                            onPaisChange={(v) => setData('pais_telefono_id', v)}
+                                            onPhoneChange={(v) => setData('telefono', v)}
+                                            placeholder="000-000000"
+                                            error={errors.telefono}
+                                        />
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* Authorizing Manager Auto-suggest Autocomplete */}
+                            <div className="space-y-4 border-t pt-4">
+                                <h3 className="text-sm font-bold text-slate-800 dark:text-slate-100 flex items-center gap-1">
+                                    <Briefcase className="w-4 h-4 text-[#104a29]" />
+                                    {__('Authorization & Motive')}
+                                </h3>
+
+                                <div className="grid grid-cols-1 gap-4">
+                                    <div className="relative space-y-1.5" ref={suggestRef}>
+                                        <Label htmlFor="responsable_search">{__('Search Employee to Visit')} *</Label>
+                                        <div className="relative">
+                                            <Input
+                                                id="responsable_search"
+                                                value={responsibleSearch}
+                                                onChange={(e) => {
+                                                    setResponsibleSearch(e.target.value);
+                                                    setShowResponsibleSuggestions(true);
+                                                    if (!e.target.value) {
+                                                        setData(prev => ({
+                                                            ...prev,
+                                                            empleado_id: '',
+                                                            responsable_id: '',
+                                                        }));
+                                                    }
+                                                }}
+                                                onFocus={() => setShowResponsibleSuggestions(true)}
+                                                placeholder={__('Type a name to search...')}
+                                                className={cn((errors.empleado_id || errors.responsable_id) && 'border-rose-500')}
+
+                                            />
+                                            {data.empleado_id && (
+                                                <div className="absolute right-3 top-1/2 -translate-y-1/2 bg-emerald-500/10 text-emerald-600 rounded-full p-0.5 border border-emerald-500/20">
+                                                    <Check className="w-3.5 h-3.5" />
+                                                </div>
+                                            )}
+                                        </div>
+
+                                        {showResponsibleSuggestions && responsibleSearch.trim() !== '' && (
+                                            <div className="absolute z-[60] w-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl mt-1 shadow-2xl max-h-60 overflow-y-auto">
+                                                {filteredResponsibles.length === 0 ? (
+                                                    <div className="p-3 text-xs text-slate-500 text-center">{__('No matches found')}</div>
+                                                ) : (
+                                                    filteredResponsibles.map((r) => (
+                                                        <button
+                                                            key={r.id}
+                                                            type="button"
+                                                            onClick={() => {
+                                                                setData(prev => ({
+                                                                    ...prev,
+                                                                    empleado_id: String(r.id),
+                                                                    responsable_id: String(r.responsable_id || ''),
+                                                                }));
+                                                                setResponsibleSearch(`${r.nombres} ${r.apellidos}`);
+                                                                setShowResponsibleSuggestions(false);
+                                                            }}
+                                                            className="w-full text-left px-4 py-2 text-sm hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors flex flex-col border-b last:border-0 border-slate-100 dark:border-slate-800/40"
+                                                        >
+                                                            <span className="font-semibold text-slate-800 dark:text-slate-200">{r.nombres} {r.apellidos}</span>
+                                                            <span className="text-xs text-slate-500 dark:text-slate-400">
+                                                                {r.departamento?.nombre || __('No Department')} • {r.cargo?.nombre || __('No Position')}
+                                                            </span>
+                                                        </button>
+                                                    ))
+                                                )}
+                                            </div>
+                                        )}
+                                        {errors.empleado_id && <p className="text-xs text-rose-500">{errors.empleado_id}</p>}
+                                        {errors.responsable_id && <p className="text-xs text-rose-500">{errors.responsable_id}</p>}
+                                    </div>
+
+                                    <div className="grid grid-cols-1 gap-4">
+                                        <div className="space-y-1.5 w-full">
+                                            <Label htmlFor="motivo_visita">
+                                                {localTipoServicios.find(t => String(t.id) === String(data.tipo_servicio_id))?.nombre.toLowerCase() === 'otros'
+                                                    ? __('Specify Reason for Visit') + ' *'
+                                                    : __('Additional Details')}
+                                            </Label>
+                                            <div className={cn(
+                                                "rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-950 overflow-hidden focus-within:ring-2 focus-within:ring-ring focus-within:ring-offset-2 focus-within:outline-none transition-all",
+                                                errors.motivo_visita && 'border-rose-500 focus-within:ring-rose-500'
+                                            )}>
+                                                <div className="flex flex-wrap items-center gap-1.5 p-2 bg-slate-50 dark:bg-slate-900/40 border-b border-slate-200 dark:border-slate-800">
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => insertFormat('bold')}
+                                                        className="p-1.5 hover:bg-slate-200 dark:hover:bg-slate-800 rounded text-slate-600 dark:text-slate-400 transition-colors"
+                                                        title={__('Bold')}
+                                                    >
+                                                        <Bold className="w-4 h-4" />
+                                                    </button>
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => insertFormat('italic')}
+                                                        className="p-1.5 hover:bg-slate-200 dark:hover:bg-slate-800 rounded text-slate-600 dark:text-slate-400 transition-colors"
+                                                        title={__('Italic')}
+                                                    >
+                                                        <Italic className="w-4 h-4" />
+                                                    </button>
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => insertFormat('underline')}
+                                                        className="p-1.5 hover:bg-slate-200 dark:hover:bg-slate-800 rounded text-slate-600 dark:text-slate-400 transition-colors"
+                                                        title={__('Underline')}
+                                                    >
+                                                        <Underline className="w-4 h-4" />
+                                                    </button>
+                                                    <div className="w-[1px] h-4 bg-slate-200 dark:bg-slate-800 mx-1" />
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => insertFormat('list-ordered')}
+                                                        className="p-1.5 hover:bg-slate-200 dark:hover:bg-slate-800 rounded text-slate-600 dark:text-slate-400 transition-colors"
+                                                        title={__('Numbered List')}
+                                                    >
+                                                        <ListOrdered className="w-4 h-4" />
+                                                    </button>
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => insertFormat('list')}
+                                                        className="p-1.5 hover:bg-slate-200 dark:hover:bg-slate-800 rounded text-slate-600 dark:text-slate-400 transition-colors"
+                                                        title={__('Bulleted List')}
+                                                    >
+                                                        <List className="w-4 h-4" />
+                                                    </button>
+                                                    <div className="w-[1px] h-4 bg-slate-200 dark:bg-slate-800 mx-1" />
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => insertFormat('link')}
+                                                        className="p-1.5 hover:bg-slate-200 dark:hover:bg-slate-800 rounded text-slate-600 dark:text-slate-400 transition-colors"
+                                                        title={__('Link')}
+                                                    >
+                                                        <Link className="w-4 h-4" />
+                                                    </button>
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => insertFormat('image')}
+                                                        className="p-1.5 hover:bg-slate-200 dark:hover:bg-slate-800 rounded text-slate-600 dark:text-slate-400 transition-colors"
+                                                        title={__('Image')}
+                                                    >
+                                                        <Image className="w-4 h-4" />
+                                                    </button>
+                                                </div>
+                                                <textarea
+                                                    id="motivo_visita"
+                                                    ref={textareaRef}
+                                                    value={data.motivo_visita}
+                                                    onChange={(e) => setData('motivo_visita', e.target.value)}
+                                                    className="w-full min-h-[120px] p-3 bg-transparent resize-y border-0 focus:ring-0 focus:outline-none dark:text-slate-100 placeholder-slate-400 text-sm"
+                                                    placeholder={__('e.g., Maintenance, Interview, Meeting...')}
+                                                    required={localTipoServicios.find(t => String(t.id) === String(data.tipo_servicio_id))?.nombre.toLowerCase() === 'otros'}
+                                                />
+                                            </div>
+                                            {errors.motivo_visita && <p className="text-xs text-rose-500">{errors.motivo_visita}</p>}
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
 
                             <DialogFooter className="mt-6 gap-2 border-t pt-4">
                                 <Button
@@ -1532,7 +1297,7 @@ export default function Index({
                 </AlertDialogContent>
             </AlertDialog>
 
-            {/* ══ Modal de Pre-registro de Visita ════════════════════ */}
+            {/* ══ Modal de Pre-registro de Visita (Comentado temporalmente) ════════════════════
             <Dialog open={isPreRegistroModalOpen} onOpenChange={(open) => {
                 setIsPreRegistroModalOpen(open);
                 if (!open) {
@@ -1635,7 +1400,7 @@ export default function Index({
                                 )}
                             </div>
 
-                            {showPreRegistroSuggestions && (
+                            {showPreRegistroSuggestions && preRegistroResponsibleSearch.trim() !== '' && (
                                 <div className="absolute z-[60] w-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl mt-1 shadow-2xl max-h-48 overflow-y-auto">
                                     {filteredPreRegistroResponsibles.length === 0 ? (
                                         <div className="p-3 text-xs text-slate-500 text-center">{__('No matches found')}</div>
@@ -1687,6 +1452,7 @@ export default function Index({
                     </form>
                 </DialogContent>
             </Dialog>
+            ═══════════════════════════════════════════════════════════════════ */}
         </>
     );
 }

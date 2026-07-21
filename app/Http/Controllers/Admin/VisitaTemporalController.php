@@ -98,12 +98,23 @@ class VisitaTemporalController extends Controller
         $validated['foto_carnet']    = $this->handleImageUpload($request->input('foto_carnet'), 'foto_carnet');
         $validated['foto_documento'] = $this->handleImageUpload($request->input('foto_documento'), 'foto_documento');
 
+        if (empty($validated['fecha_ingreso'])) {
+            $validated['fecha_ingreso'] = now()->toDateString();
+        }
+        if (empty($validated['hora_ingreso'])) {
+            $validated['hora_ingreso'] = now()->toTimeString();
+        }
+        if (empty($validated['fecha_salida'])) {
+            $validated['fecha_salida'] = now()->toDateString();
+        }
+        if (empty($validated['hora_salida'])) {
+            $validated['hora_salida'] = now()->toTimeString();
+        }
+
         $visita = VisitaTemporal::create($validated);
 
-        // En modo entrega: notificar al empleado visitado Y al responsable
-        if ($isEntrega) {
-            $this->notifyArrival($visita, $user);
-        }
+        // Notificar al empleado visitado Y al responsable por WhatsApp
+        $this->notifyArrival($visita, $user);
 
         return back()->with('notification', [
             'type'    => 'success',
@@ -131,8 +142,8 @@ class VisitaTemporalController extends Controller
 
         $visitaTemporal->update($validated);
 
-        // Re-notificar si es entrega y cambio el destinatario
-        if ($isEntrega && ($responsableCambio || $empleadoCambio)) {
+        // Re-notificar si cambio el destinatario o responsable
+        if ($responsableCambio || $empleadoCambio) {
             $this->notifyArrival($visitaTemporal->fresh(), $request->user());
         }
 
@@ -154,18 +165,18 @@ class VisitaTemporalController extends Controller
         return [
             'nombres'             => 'required|string|max:255',
             'apellidos'           => 'required|string|max:255',
-            'nombre_comercial'    => $isEntrega ? 'required|string|max:255' : 'nullable|string|max:255',
-            'documento_identidad' => $isEntrega ? 'nullable|string|max:100' : 'required|string|max:100',
+            'nombre_comercial'    => 'nullable|string|max:255',
+            'documento_identidad' => 'nullable|string|max:100',
             'pais_telefono_id'    => 'nullable|exists:pais,id',
             'telefono'            => 'nullable|string|max:50',
             'empleado_id'         => 'required|exists:empleados,id',
             'responsable_id'      => 'required|exists:responsables,id',
             'tipo_servicio_id'    => 'nullable|exists:tipo_servicios,id',
             'motivo_visita'       => 'nullable|string',
-            'fecha_ingreso'       => $isEntrega ? 'nullable|date' : 'required|date',
-            'hora_ingreso'        => $isEntrega ? 'nullable' : 'required',
-            'fecha_salida'        => $isEntrega ? 'nullable|date' : 'required|date',
-            'hora_salida'         => $isEntrega ? 'nullable' : 'required',
+            'fecha_ingreso'       => 'nullable|date',
+            'hora_ingreso'        => 'nullable',
+            'fecha_salida'        => 'nullable|date',
+            'hora_salida'         => 'nullable',
             'foto_carnet'         => 'nullable|string',
             'foto_documento'      => 'nullable|string',
             'status'              => 'required|string|in:activo,suspendido,en_revision',
