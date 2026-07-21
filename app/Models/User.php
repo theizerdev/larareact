@@ -3,6 +3,8 @@
 namespace App\Models;
 
 // use Illuminate\Contracts\Auth\MustVerifyEmail;
+use App\Traits\HasGroupRoles;
+use App\Traits\Multitenantable;
 use Database\Factories\UserFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Attributes\Hidden;
@@ -41,7 +43,15 @@ use Spatie\Permission\Traits\HasRoles;
 class User extends Authenticatable implements PasskeyUser
 {
     /** @use HasFactory<UserFactory> */
-    use HasFactory, HasRoles, Notifiable, PasskeyAuthenticatable, TwoFactorAuthenticatable;
+    use HasFactory, HasRoles, HasGroupRoles, Notifiable, PasskeyAuthenticatable, TwoFactorAuthenticatable {
+        HasRoles::hasRole insteadof HasGroupRoles;
+        HasRoles::hasAnyRole insteadof HasGroupRoles;
+        HasRoles::hasAllRoles insteadof HasGroupRoles;
+        HasRoles::hasPermissionTo as spatieHasPermissionTo;
+        HasGroupRoles::hasPermissionTo insteadof HasRoles;
+        HasGroupRoles::hasAnyPermission insteadof HasRoles;
+        HasGroupRoles::hasAllPermissions insteadof HasRoles;
+    }
 
     /**
      * Get the attributes that should be cast.

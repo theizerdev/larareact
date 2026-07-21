@@ -21,8 +21,8 @@ class UsersSeeder extends Seeder
         $sucursal = Sucursal::first();
 
         foreach ($roles as $role) {
-            $name = ucwords(str_replace('-', ' ', $role->name));
-            $username = strtolower(str_replace('-', '', $role->name));
+            $name = ucwords(str_replace(['-', '_'], ' ', $role->name));
+            $username = strtolower(preg_replace('/[^a-zA-Z0-9]/', '', $role->name));
 
             $user = User::firstOrCreate([
                 'email' => "{$username}@example.com",
@@ -37,7 +37,6 @@ class UsersSeeder extends Seeder
             ]);
 
             $user->assignRole($role->name);
-
         }
     }
 }

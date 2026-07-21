@@ -25,6 +25,16 @@ class UserController extends Controller
 
         $query = User::with(['empresa', 'sucursal', 'roles', 'paisTelefono']);
 
+        $currentUser = auth()->user();
+        if ($currentUser && ! $currentUser->hasRole('Super Administrador') && ! $currentUser->hasRole('super-admin')) {
+            if ($currentUser->empresa_id) {
+                $query->where('empresa_id', $currentUser->empresa_id);
+            }
+            if ($currentUser->sucursal_id) {
+                $query->where('sucursal_id', $currentUser->sucursal_id);
+            }
+        }
+
         if ($search) {
             $query->where(function ($q) use ($search) {
                 $q->where('name', 'like', "%{$search}%")
@@ -83,6 +93,16 @@ class UserController extends Controller
         ]);
 
         try {
+            $currentUser = auth()->user();
+            if ($currentUser && ! $currentUser->hasRole('Super Administrador') && ! $currentUser->hasRole('super-admin')) {
+                if (empty($validated['empresa_id'])) {
+                    $validated['empresa_id'] = $currentUser->empresa_id;
+                }
+                if (empty($validated['sucursal_id'])) {
+                    $validated['sucursal_id'] = $currentUser->sucursal_id;
+                }
+            }
+
             $validated['password'] = Hash::make($validated['password']);
             $user = User::create($validated);
 

@@ -28,20 +28,29 @@ trait Multitenantable
                 return;
             }
 
+            // Evitar loop si el modelo que se está consultando es el propio User autenticado o se está autenticando
             $user = auth()->user();
 
-            if ($user->hasRole('Super Administrador')) {
+            if (! $user) {
+                return;
+            }
+
+            if ($user->hasRole('Super Administrador') || $user->hasRole('super-admin')) {
                 return;
             }
 
             $table = $builder->getModel()->getTable();
+
+            // Si se consulta la propia tabla users, evitar que un usuario no pueda loguearse o auto-consultarse
+            if ($table === 'users') {
+                return;
+            }
 
             if ($user->empresa_id) {
                 $builder->where("{$table}.empresa_id", $user->empresa_id);
             }
 
             // Solo filtrar por sucursal si el usuario tiene una asignada
-            // Si sucursal_id es null, el usuario ve toda su empresa
             if ($user->sucursal_id) {
                 $builder->where("{$table}.sucursal_id", $user->sucursal_id);
             }
