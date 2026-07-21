@@ -49,9 +49,9 @@ class ModeloController extends Controller
 
         return inertia('admin/Equipos/Modelos/Index', [
             'modelos' => $modelos,
-            'marcas' => Marca::where('estado', true)->orderBy('nombre')->get(['id', 'nombre']),
-            'familias' => Familia::where('estado', true)->orderBy('nombre')->get(['id', 'nombre', 'marca_id']),
-            'categorias' => Categoria::where('estado', true)->orderBy('nombre')->get(['id', 'nombre']),
+            'marcas' => Marca::where('estado', true)->orderBy('nombre')->get(['id', 'nombre'])->unique('id')->values(),
+            'familias' => Familia::where('estado', true)->orderBy('nombre')->get(['id', 'nombre', 'marca_id'])->unique('id')->values(),
+            'categorias' => Categoria::where('estado', true)->orderBy('nombre')->get(['id', 'nombre'])->unique('id')->values(),
             'filters' => $request->only(['search', 'marca_id', 'familia_id', 'categoria_id', 'status', 'perPage']),
         ]);
     }

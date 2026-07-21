@@ -66,10 +66,43 @@ interface Props {
     };
 }
 
-export default function Index({ modelos, marcas, familias, categorias, filters }: Props) {
+export default function Index({ modelos, marcas: marcasProp, familias: familiasProp, categorias: categoriasProp, filters }: Props) {
     const { __ } = useTranslate();
     const [isCreateOpen, setIsCreateOpen] = useState(false);
     const [editingModelo, setEditingModelo] = useState<Modelo | null>(null);
+
+    // Estados dinámicos para Marcas, Categorías y Familias en caliente
+    const [marcas, setMarcas] = useState<Option[]>(marcasProp);
+    const [familias, setFamilias] = useState<Option[]>(familiasProp);
+    const [categorias, setCategorias] = useState<Option[]>(categoriasProp);
+
+    React.useEffect(() => {
+        const unique = Array.from(new Map(marcasProp.map(item => [item.id, item])).values());
+        setMarcas(unique);
+    }, [marcasProp]);
+
+    React.useEffect(() => {
+        const unique = Array.from(new Map(familiasProp.map(item => [item.id, item])).values());
+        setFamilias(unique);
+    }, [familiasProp]);
+
+    React.useEffect(() => {
+        const unique = Array.from(new Map(categoriasProp.map(item => [item.id, item])).values());
+        setCategorias(unique);
+    }, [categoriasProp]);
+
+    // Sub-creaciones rápidas inline
+    const [isNewMarcaOpen, setIsNewMarcaOpen] = useState(false);
+    const [newMarcaNombre, setNewMarcaNombre] = useState('');
+    const [isSavingMarca, setIsSavingMarca] = useState(false);
+
+    const [isNewCategoriaOpen, setIsNewCategoriaOpen] = useState(false);
+    const [newCategoriaNombre, setNewCategoriaNombre] = useState('');
+    const [isSavingCategoria, setIsSavingCategoria] = useState(false);
+
+    const [isNewFamiliaOpen, setIsNewFamiliaOpen] = useState(false);
+    const [newFamiliaNombre, setNewFamiliaNombre] = useState('');
+    const [isSavingFamilia, setIsSavingFamilia] = useState(false);
 
     // Filtros
     const [searchTerm, setSearchTerm] = useState(filters.search || '');
@@ -138,6 +171,101 @@ export default function Index({ modelos, marcas, familias, categorias, filters }
             estado: modelo.estado,
         });
         setIsCreateOpen(true);
+    };
+
+    const handleQuickCreateMarca = (e: React.FormEvent) => {
+        e.preventDefault();
+        const nombreTarget = newMarcaNombre.trim();
+        if (!nombreTarget) return;
+
+        setIsSavingMarca(true);
+        router.post(
+            '/admin/marcas',
+            { nombre: nombreTarget, estado: true },
+            {
+                preserveScroll: true,
+                preserveState: true,
+                onSuccess: (page) => {
+                    notifySuccess(__('Marca creada correctamente.'));
+                    setIsNewMarcaOpen(false);
+                    setNewMarcaNombre('');
+
+                    const marcasUpdated = (page.props as any)?.marcas as Option[] || [];
+                    const creada = marcasUpdated.find((m) => m.nombre.toLowerCase() === nombreTarget.toLowerCase())
+                        || marcasUpdated[marcasUpdated.length - 1];
+                    if (creada) {
+                        setData('marca_id', String(creada.id));
+                    }
+                },
+                onError: () => notifyError(__('Error al crear la marca.')),
+                onFinish: () => setIsSavingMarca(false),
+            }
+        );
+    };
+
+    const handleQuickCreateCategoria = (e: React.FormEvent) => {
+        e.preventDefault();
+        const nombreTarget = newCategoriaNombre.trim();
+        if (!nombreTarget) return;
+
+        setIsSavingCategoria(true);
+        router.post(
+            '/admin/categorias',
+            { nombre: nombreTarget, estado: true },
+            {
+                preserveScroll: true,
+                preserveState: true,
+                onSuccess: (page) => {
+                    notifySuccess(__('Categoría creada correctamente.'));
+                    setIsNewCategoriaOpen(false);
+                    setNewCategoriaNombre('');
+
+                    const categoriasUpdated = (page.props as any)?.categorias as Option[] || [];
+                    const creada = categoriasUpdated.find((c) => c.nombre.toLowerCase() === nombreTarget.toLowerCase())
+                        || categoriasUpdated[categoriasUpdated.length - 1];
+                    if (creada) {
+                        setData('categoria_id', String(creada.id));
+                    }
+                },
+                onError: () => notifyError(__('Error al crear la categoría.')),
+                onFinish: () => setIsSavingCategoria(false),
+            }
+        );
+    };
+
+    const handleQuickCreateFamilia = (e: React.FormEvent) => {
+        e.preventDefault();
+        const nombreTarget = newFamiliaNombre.trim();
+        if (!nombreTarget || !data.marca_id) return;
+
+        setIsSavingFamilia(true);
+        router.post(
+            '/admin/familias',
+            {
+                nombre: nombreTarget,
+                marca_id: data.marca_id,
+                categoria_id: data.categoria_id || null,
+                estado: true,
+            },
+            {
+                preserveScroll: true,
+                preserveState: true,
+                onSuccess: (page) => {
+                    notifySuccess(__('Familia creada correctamente.'));
+                    setIsNewFamiliaOpen(false);
+                    setNewFamiliaNombre('');
+
+                    const familiasUpdated = (page.props as any)?.familias as Option[] || [];
+                    const creada = familiasUpdated.find((f) => f.nombre.toLowerCase() === nombreTarget.toLowerCase())
+                        || familiasUpdated[familiasUpdated.length - 1];
+                    if (creada) {
+                        setData('familia_id', String(creada.id));
+                    }
+                },
+                onError: () => notifyError(__('Error al crear la familia.')),
+                onFinish: () => setIsSavingFamilia(false),
+            }
+        );
     };
 
     const handleSubmit = (e: React.FormEvent) => {
@@ -377,66 +505,183 @@ export default function Index({ modelos, marcas, familias, categorias, filters }
 
                         <form onSubmit={handleSubmit} className="space-y-4 py-2">
                             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                {/* Sección Marca */}
                                 <div className="space-y-2">
-                                    <Label htmlFor="marca_id">{__('Marca')}</Label>
-                                    <Select
-                                        value={data.marca_id}
-                                        onValueChange={(val) => {
-                                            setData('marca_id', val);
-                                            const firstFam = familias.find((f) => String(f.marca_id) === val);
-                                            if (firstFam) setData('familia_id', String(firstFam.id));
-                                        }}
-                                    >
-                                        <SelectTrigger className="w-full">
-                                            <SelectValue placeholder={__('Seleccione marca')} />
-                                        </SelectTrigger>
-                                        <SelectContent>
-                                            {marcas.map((m) => (
-                                                <SelectItem key={m.id} value={String(m.id)}>
-                                                    {m.nombre}
-                                                </SelectItem>
-                                            ))}
-                                        </SelectContent>
-                                    </Select>
+                                    <div className="flex items-center justify-between">
+                                        <Label htmlFor="marca_id">{__('Marca')}</Label>
+                                        <Button
+                                            type="button"
+                                            variant="ghost"
+                                            size="sm"
+                                            className="h-6 px-1.5 text-xs text-purple-600 hover:text-purple-700 font-normal"
+                                            onClick={() => {
+                                                setIsNewMarcaOpen(!isNewMarcaOpen);
+                                                setIsNewCategoriaOpen(false);
+                                                setIsNewFamiliaOpen(false);
+                                            }}
+                                        >
+                                            <Plus className="mr-1 h-3 w-3" />
+                                            {isNewMarcaOpen ? __('Cancelar') : __('Nueva')}
+                                        </Button>
+                                    </div>
+
+                                    {!isNewMarcaOpen ? (
+                                        <Select
+                                            value={data.marca_id}
+                                            onValueChange={(val) => {
+                                                setData('marca_id', val);
+                                                const firstFam = familias.find((f) => String(f.marca_id) === val);
+                                                if (firstFam) setData('familia_id', String(firstFam.id));
+                                            }}
+                                        >
+                                            <SelectTrigger className="w-full">
+                                                <SelectValue placeholder={__('Seleccione marca')} />
+                                            </SelectTrigger>
+                                            <SelectContent>
+                                                {marcas.map((m) => (
+                                                    <SelectItem key={m.id} value={String(m.id)}>
+                                                        {m.nombre}
+                                                    </SelectItem>
+                                                ))}
+                                            </SelectContent>
+                                        </Select>
+                                    ) : (
+                                        <div className="flex gap-2">
+                                            <Input
+                                                value={newMarcaNombre}
+                                                onChange={(e) => setNewMarcaNombre(e.target.value)}
+                                                placeholder={__('Nombre marca...')}
+                                                className="h-9 text-xs"
+                                                autoFocus
+                                            />
+                                            <Button
+                                                type="button"
+                                                size="sm"
+                                                className="h-9 px-2 bg-purple-600 hover:bg-purple-700 text-white text-xs"
+                                                disabled={isSavingMarca || !newMarcaNombre.trim()}
+                                                onClick={handleQuickCreateMarca}
+                                            >
+                                                {__('Guardar')}
+                                            </Button>
+                                        </div>
+                                    )}
                                 </div>
 
+                                {/* Sección Categoría */}
                                 <div className="space-y-2">
-                                    <Label htmlFor="categoria_id">{__('Categoría')}</Label>
-                                    <Select
-                                        value={data.categoria_id}
-                                        onValueChange={(val) => setData('categoria_id', val)}
-                                    >
-                                        <SelectTrigger className="w-full">
-                                            <SelectValue placeholder={__('Seleccione categoría')} />
-                                        </SelectTrigger>
-                                        <SelectContent>
-                                            {categorias.map((c) => (
-                                                <SelectItem key={c.id} value={String(c.id)}>
-                                                    {c.nombre}
-                                                </SelectItem>
-                                            ))}
-                                        </SelectContent>
-                                    </Select>
+                                    <div className="flex items-center justify-between">
+                                        <Label htmlFor="categoria_id">{__('Categoría')}</Label>
+                                        <Button
+                                            type="button"
+                                            variant="ghost"
+                                            size="sm"
+                                            className="h-6 px-1.5 text-xs text-emerald-600 hover:text-emerald-700 font-normal"
+                                            onClick={() => {
+                                                setIsNewCategoriaOpen(!isNewCategoriaOpen);
+                                                setIsNewMarcaOpen(false);
+                                                setIsNewFamiliaOpen(false);
+                                            }}
+                                        >
+                                            <Plus className="mr-1 h-3 w-3" />
+                                            {isNewCategoriaOpen ? __('Cancelar') : __('Nueva')}
+                                        </Button>
+                                    </div>
+
+                                    {!isNewCategoriaOpen ? (
+                                        <Select
+                                            value={data.categoria_id}
+                                            onValueChange={(val) => setData('categoria_id', val)}
+                                        >
+                                            <SelectTrigger className="w-full">
+                                                <SelectValue placeholder={__('Seleccione categoría')} />
+                                            </SelectTrigger>
+                                            <SelectContent>
+                                                {categorias.map((c) => (
+                                                    <SelectItem key={c.id} value={String(c.id)}>
+                                                        {c.nombre}
+                                                    </SelectItem>
+                                                ))}
+                                            </SelectContent>
+                                        </Select>
+                                    ) : (
+                                        <div className="flex gap-2">
+                                            <Input
+                                                value={newCategoriaNombre}
+                                                onChange={(e) => setNewCategoriaNombre(e.target.value)}
+                                                placeholder={__('Nombre categoría...')}
+                                                className="h-9 text-xs"
+                                                autoFocus
+                                            />
+                                            <Button
+                                                type="button"
+                                                size="sm"
+                                                className="h-9 px-2 bg-emerald-600 hover:bg-emerald-700 text-white text-xs"
+                                                disabled={isSavingCategoria || !newCategoriaNombre.trim()}
+                                                onClick={handleQuickCreateCategoria}
+                                            >
+                                                {__('Guardar')}
+                                            </Button>
+                                        </div>
+                                    )}
                                 </div>
                             </div>
 
+                            {/* Sección Familia */}
                             <div className="space-y-2">
-                                <Label htmlFor="familia_id">{__('Familia / Línea')}</Label>
-                                <Select
-                                    value={data.familia_id}
-                                    onValueChange={(val) => setData('familia_id', val)}
-                                >
-                                    <SelectTrigger className="w-full">
-                                        <SelectValue placeholder={__('Seleccione familia')} />
-                                    </SelectTrigger>
-                                    <SelectContent>
-                                        {filteredFamilias.map((f) => (
-                                            <SelectItem key={f.id} value={String(f.id)}>
-                                                {f.nombre}
-                                            </SelectItem>
-                                        ))}
-                                    </SelectContent>
-                                </Select>
+                                <div className="flex items-center justify-between">
+                                    <Label htmlFor="familia_id">{__('Familia / Línea')}</Label>
+                                    <Button
+                                        type="button"
+                                        variant="ghost"
+                                        size="sm"
+                                        className="h-6 px-1.5 text-xs text-blue-600 hover:text-blue-700 font-normal"
+                                        onClick={() => {
+                                            setIsNewFamiliaOpen(!isNewFamiliaOpen);
+                                            setIsNewMarcaOpen(false);
+                                            setIsNewCategoriaOpen(false);
+                                        }}
+                                    >
+                                        <Plus className="mr-1 h-3 w-3" />
+                                        {isNewFamiliaOpen ? __('Cancelar') : __('Nueva')}
+                                    </Button>
+                                </div>
+
+                                {!isNewFamiliaOpen ? (
+                                    <Select
+                                        value={data.familia_id}
+                                        onValueChange={(val) => setData('familia_id', val)}
+                                    >
+                                        <SelectTrigger className="w-full">
+                                            <SelectValue placeholder={__('Seleccione familia')} />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                            {filteredFamilias.map((f) => (
+                                                <SelectItem key={f.id} value={String(f.id)}>
+                                                    {f.nombre}
+                                                </SelectItem>
+                                            ))}
+                                        </SelectContent>
+                                    </Select>
+                                ) : (
+                                    <div className="flex gap-2">
+                                        <Input
+                                            value={newFamiliaNombre}
+                                            onChange={(e) => setNewFamiliaNombre(e.target.value)}
+                                            placeholder={__('Nombre de familia/línea...')}
+                                            className="h-9 text-xs"
+                                            autoFocus
+                                        />
+                                        <Button
+                                            type="button"
+                                            size="sm"
+                                            className="h-9 px-2 bg-blue-600 hover:bg-blue-700 text-white text-xs"
+                                            disabled={isSavingFamilia || !newFamiliaNombre.trim()}
+                                            onClick={handleQuickCreateFamilia}
+                                        >
+                                            {__('Guardar')}
+                                        </Button>
+                                    </div>
+                                )}
                             </div>
 
                             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -493,3 +738,4 @@ export default function Index({ modelos, marcas, familias, categorias, filters }
         </>
     );
 }
+

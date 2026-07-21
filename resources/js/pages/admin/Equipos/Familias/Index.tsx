@@ -76,8 +76,15 @@ export default function Index({ familias, marcas: marcasProp, categorias: catego
     const [marcas, setMarcas] = useState<MarcaOption[]>(marcasProp);
     const [categorias, setCategorias] = useState<CategoriaOption[]>(categoriasProp);
 
-    React.useEffect(() => { setMarcas(marcasProp); }, [marcasProp]);
-    React.useEffect(() => { setCategorias(categoriasProp); }, [categoriasProp]);
+    React.useEffect(() => {
+        const unique = Array.from(new Map(marcasProp.map(item => [item.id, item])).values());
+        setMarcas(unique);
+    }, [marcasProp]);
+
+    React.useEffect(() => {
+        const unique = Array.from(new Map(categoriasProp.map(item => [item.id, item])).values());
+        setCategorias(unique);
+    }, [categoriasProp]);
 
     // Sub-modales de creación rápida
     const [isNewMarcaOpen, setIsNewMarcaOpen] = useState(false);

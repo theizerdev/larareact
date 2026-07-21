@@ -40,8 +40,8 @@ class FamiliaController extends Controller
 
         return inertia('admin/Equipos/Familias/Index', [
             'familias' => $familias,
-            'marcas' => Marca::where('estado', true)->orderBy('nombre')->get(['id', 'nombre']),
-            'categorias' => Categoria::where('estado', true)->orderBy('nombre')->get(['id', 'nombre']),
+            'marcas' => Marca::where('estado', true)->orderBy('nombre')->get(['id', 'nombre'])->unique('id')->values(),
+            'categorias' => Categoria::where('estado', true)->orderBy('nombre')->get(['id', 'nombre'])->unique('id')->values(),
             'filters' => $request->only(['search', 'marca_id', 'categoria_id', 'status', 'perPage']),
         ]);
     }
