@@ -31,8 +31,8 @@ class UsersSeeder extends Seeder
                 'username' => $username,
                 'password' => Hash::make('password'),
                 'status' => 'activo',
-                'empresa_id' => $empresa ? $empresa->id : null,
-                'sucursal_id' => $sucursal ? $sucursal->id : null,
+                'empresa_id' => $empresa?->id,
+                'sucursal_id' => $sucursal?->id,
                 'email_verified_at' => now(),
             ]);
 

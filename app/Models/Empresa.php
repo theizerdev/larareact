@@ -71,4 +71,12 @@ class Empresa extends Model
     {
         return $this->belongsTo(Pais::class);
     }
+
+    /**
+     * Generar un API key seguro.
+     */
+    public static function generateApiKey(): string
+    {
+        return bin2hex(random_bytes(32));
+    }
 }
