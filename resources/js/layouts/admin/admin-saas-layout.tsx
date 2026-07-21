@@ -21,7 +21,7 @@ import {
     Activity,
     Link2,
 } from 'lucide-react';
-import { Building2, GitBranch, Briefcase, Calendar } from 'lucide-react';
+import { Building2, GitBranch, Briefcase, Calendar, Smartphone } from 'lucide-react';
 import * as React from 'react';
 import LanguageToggle from '@/components/language-toggle';
 import TemplateCustomizer from '@/components/template-customizer';
@@ -392,8 +392,44 @@ export default function AdminSaasLayout({
                         }
 
 
+                        {/* Equipos Group */}
+                        {(() => {
+                            const equiposItems = [
+                                {
+                                    title: 'Categorías',
+                                    href: '/admin/categorias',
+                                    permission: 'categorias.view',
+                                },
+                                {
+                                    title: 'Marcas',
+                                    href: '/admin/marcas',
+                                    permission: 'marcas.view',
+                                },
+                                {
+                                    title: 'Familias',
+                                    href: '/admin/familias',
+                                    permission: 'familias.view',
+                                },
+                                {
+                                    title: 'Modelos',
+                                    href: '/admin/modelos',
+                                    permission: 'modelos.view',
+                                },
+                            ].filter(item => hasPermission(item.permission));
 
-                        {/* Settings Group */}
+                            if (equiposItems.length === 0) return null;
+
+                            return (
+                                <div className="pt-2">
+                                    <CollapsibleNavItem
+                                        title="Equipos"
+                                        icon={Smartphone}
+                                        collapsed={collapsed}
+                                        items={equiposItems}
+                                    />
+                                </div>
+                            );
+                        })()}
                         {(() => {
                             const settingsItems = [
                                 {

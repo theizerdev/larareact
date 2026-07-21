@@ -13,15 +13,15 @@ import type { BreadcrumbItem as BreadcrumbItemType } from '@/types';
 
 
 export function Breadcrumbs({
-    breadcrumbs,
+    breadcrumbs = [],
 }: {
-    breadcrumbs: BreadcrumbItemType[];
+    breadcrumbs?: BreadcrumbItemType[];
 }) {
     const { __ } = useTranslate();
 
     return (
         <>
-            {breadcrumbs.length > 0 && (
+            {breadcrumbs && breadcrumbs.length > 0 && (
                 <Breadcrumb>
                     <BreadcrumbList>
                         {breadcrumbs.map((item, index) => {

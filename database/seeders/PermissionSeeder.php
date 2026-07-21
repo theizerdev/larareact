@@ -70,6 +70,33 @@ class PermissionSeeder extends Seeder
                 'monitoreo.import' => 'Importar Base de Datos',
             ],
 
+            // Sector: Equipos
+            'equipos' => [
+                // Módulo: Categorías
+                'categorias.view' => 'Ver Categorías',
+                'categorias.create' => 'Crear Categorías',
+                'categorias.edit' => 'Editar Categorías',
+                'categorias.delete' => 'Eliminar Categorías',
+
+                // Módulo: Marcas
+                'marcas.view' => 'Ver Marcas',
+                'marcas.create' => 'Crear Marcas',
+                'marcas.edit' => 'Editar Marcas',
+                'marcas.delete' => 'Eliminar Marcas',
+
+                // Módulo: Familias
+                'familias.view' => 'Ver Familias',
+                'familias.create' => 'Crear Familias',
+                'familias.edit' => 'Editar Familias',
+                'familias.delete' => 'Eliminar Familias',
+
+                // Módulo: Modelos
+                'modelos.view' => 'Ver Modelos',
+                'modelos.create' => 'Crear Modelos',
+                'modelos.edit' => 'Editar Modelos',
+                'modelos.delete' => 'Eliminar Modelos',
+            ],
+
 
         ];
 
@@ -85,6 +112,10 @@ class PermissionSeeder extends Seeder
                     str_starts_with($permission, 'sucursales.') => 'sucursales',
                     str_starts_with($permission, 'integrations.') => 'integraciones',
                     str_starts_with($permission, 'monitoreo.') => 'monitoreo',
+                    str_starts_with($permission, 'categorias.') => 'categorias',
+                    str_starts_with($permission, 'marcas.') => 'marcas',
+                    str_starts_with($permission, 'familias.') => 'familias',
+                    str_starts_with($permission, 'modelos.') => 'modelos',
 
                     default => 'general',
                 };

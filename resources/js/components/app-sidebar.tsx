@@ -1,5 +1,5 @@
 import { Link } from '@inertiajs/react';
-import { BookOpen, FolderGit2, LayoutGrid } from 'lucide-react';
+import { BookOpen, FolderGit2, LayoutGrid, Layers, Tag, FolderTree, Smartphone } from 'lucide-react';
 import AppLogo from '@/components/app-logo';
 import { NavFooter } from '@/components/nav-footer';
 import { NavMain } from '@/components/nav-main';
@@ -21,6 +21,26 @@ const mainNavItems: NavItem[] = [
         title: 'Dashboard',
         href: dashboard(),
         icon: LayoutGrid,
+    },
+    {
+        title: 'Categorías',
+        href: '/admin/categorias',
+        icon: Layers,
+    },
+    {
+        title: 'Marcas',
+        href: '/admin/marcas',
+        icon: Tag,
+    },
+    {
+        title: 'Familias',
+        href: '/admin/familias',
+        icon: FolderTree,
+    },
+    {
+        title: 'Modelos',
+        href: '/admin/modelos',
+        icon: Smartphone,
     },
 ];
 
