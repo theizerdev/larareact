@@ -22,9 +22,6 @@ class DatabaseSeeder extends Seeder
             PermissionSeeder::class,
             RoleSeeder::class,
             UsersSeeder::class,
-            DepartamentoDriscollsSeeder::class,
-            CargoDriscollsSeeder::class,
-            TipoServicioSeeder::class,
         ]);
     }
 }

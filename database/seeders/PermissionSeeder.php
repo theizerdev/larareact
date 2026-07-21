@@ -58,39 +58,6 @@ class PermissionSeeder extends Seeder
 
                 
             ],
-
-            // Sector: Organización
-            'organizacion' => [
-                // Módulo: Departamentos
-                'departamentos.view' => 'Ver Departamentos',
-                'departamentos.create' => 'Crear Departamento',
-                'departamentos.edit' => 'Editar Departamento',
-                'departamentos.delete' => 'Eliminar Departamento',
-
-                // Módulo: Cargos
-                'cargos.view' => 'Ver Cargos',
-                'cargos.create' => 'Crear Cargo',
-                'cargos.edit' => 'Editar Cargo',
-                'cargos.delete' => 'Eliminar Cargo',
-
-                // Módulo: Responsables
-                'responsables.view' => 'Ver Responsables',
-                'responsables.create' => 'Crear Responsable',
-                'responsables.edit' => 'Editar Responsable',
-                'responsables.delete' => 'Eliminar Responsable',
-
-                // Módulo: Empleados
-                'empleados.view' => 'Ver Empleados',
-                'empleados.create' => 'Crear Empleado',
-                'empleados.edit' => 'Editar Empleado',
-                'empleados.delete' => 'Eliminar Empleado',
-                
-                // Módulo: Proveedores
-                'proveedores.view' => 'Ver Proveedores',
-                'proveedores.create' => 'Crear Proveedor',
-                'proveedores.edit' => 'Editar Proveedor',
-                'proveedores.delete' => 'Eliminar Proveedor',
-            ],
             // Sector: Monitoreo
             'monitoreo' => [
                 // Módulo: Monitoreo
@@ -103,14 +70,6 @@ class PermissionSeeder extends Seeder
                 'monitoreo.import' => 'Importar Base de Datos',
             ],
 
-            // Sector: Visitas
-            'visitas' => [
-                // Módulo: Visitas Temporales
-                'visitas_temporales.view' => 'Ver Visitas Temporales',
-                'visitas_temporales.create' => 'Crear Visita Temporal',
-                'visitas_temporales.edit' => 'Editar Visita Temporal',
-                'visitas_temporales.delete' => 'Eliminar Visita Temporal',
-            ],
 
         ];
 
@@ -124,14 +83,8 @@ class PermissionSeeder extends Seeder
                     str_starts_with($permission, 'paises.') => 'paises',
                     str_starts_with($permission, 'empresas.') => 'empresas',
                     str_starts_with($permission, 'sucursales.') => 'sucursales',
-                    str_starts_with($permission, 'departamentos.') => 'departamentos',
-                    str_starts_with($permission, 'cargos.') => 'cargos',
-                    str_starts_with($permission, 'responsables.') => 'responsables',
-                    str_starts_with($permission, 'empleados.') => 'empleados',
                     str_starts_with($permission, 'integrations.') => 'integraciones',
-                    str_starts_with($permission, 'proveedores.') => 'proveedores',
                     str_starts_with($permission, 'monitoreo.') => 'monitoreo',
-                    str_starts_with($permission, 'visitas_temporales.') => 'visitas_temporales',
 
                     default => 'general',
                 };
