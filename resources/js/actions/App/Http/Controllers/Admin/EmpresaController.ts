@@ -1,4 +1,4 @@
-import { queryParams, type RouteQueryOptions, type RouteDefinition, type RouteFormDefinition, applyUrlDefaults } from './../../../wayfinder'
+import { queryParams, type RouteQueryOptions, type RouteDefinition, type RouteFormDefinition, applyUrlDefaults } from './../../../../../wayfinder'
 /**
 * @see \App\Http\Controllers\Admin\EmpresaController::index
  * @see app/Http/Controllers/Admin/EmpresaController.php:15
@@ -311,26 +311,26 @@ toggleStatus.patch = (args: { empresa: number | { id: number } } | [empresa: num
     
     toggleStatus.form = toggleStatusForm
 /**
-* @see \App\Http\Controllers\Admin\EmpresaController::logos
+* @see \App\Http\Controllers\Admin\EmpresaController::updateLogos
  * @see app/Http/Controllers/Admin/EmpresaController.php:143
  * @route '/admin/empresas/{empresa}/logos'
  */
-export const logos = (args: { empresa: number | { id: number } } | [empresa: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteDefinition<'post'> => ({
-    url: logos.url(args, options),
+export const updateLogos = (args: { empresa: number | { id: number } } | [empresa: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteDefinition<'post'> => ({
+    url: updateLogos.url(args, options),
     method: 'post',
 })
 
-logos.definition = {
+updateLogos.definition = {
     methods: ["post"],
     url: '/admin/empresas/{empresa}/logos',
 } satisfies RouteDefinition<["post"]>
 
 /**
-* @see \App\Http\Controllers\Admin\EmpresaController::logos
+* @see \App\Http\Controllers\Admin\EmpresaController::updateLogos
  * @see app/Http/Controllers/Admin/EmpresaController.php:143
  * @route '/admin/empresas/{empresa}/logos'
  */
-logos.url = (args: { empresa: number | { id: number } } | [empresa: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions) => {
+updateLogos.url = (args: { empresa: number | { id: number } } | [empresa: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions) => {
     if (typeof args === 'string' || typeof args === 'number') {
         args = { empresa: args }
     }
@@ -353,48 +353,42 @@ logos.url = (args: { empresa: number | { id: number } } | [empresa: number | { i
                 : args.empresa,
                 }
 
-    return logos.definition.url
+    return updateLogos.definition.url
             .replace('{empresa}', parsedArgs.empresa.toString())
             .replace(/\/+$/, '') + queryParams(options)
 }
 
 /**
-* @see \App\Http\Controllers\Admin\EmpresaController::logos
+* @see \App\Http\Controllers\Admin\EmpresaController::updateLogos
  * @see app/Http/Controllers/Admin/EmpresaController.php:143
  * @route '/admin/empresas/{empresa}/logos'
  */
-logos.post = (args: { empresa: number | { id: number } } | [empresa: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteDefinition<'post'> => ({
-    url: logos.url(args, options),
+updateLogos.post = (args: { empresa: number | { id: number } } | [empresa: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteDefinition<'post'> => ({
+    url: updateLogos.url(args, options),
     method: 'post',
 })
 
     /**
-* @see \App\Http\Controllers\Admin\EmpresaController::logos
+* @see \App\Http\Controllers\Admin\EmpresaController::updateLogos
  * @see app/Http/Controllers/Admin/EmpresaController.php:143
  * @route '/admin/empresas/{empresa}/logos'
  */
-    const logosForm = (args: { empresa: number | { id: number } } | [empresa: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
-        action: logos.url(args, options),
+    const updateLogosForm = (args: { empresa: number | { id: number } } | [empresa: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
+        action: updateLogos.url(args, options),
         method: 'post',
     })
 
             /**
-* @see \App\Http\Controllers\Admin\EmpresaController::logos
+* @see \App\Http\Controllers\Admin\EmpresaController::updateLogos
  * @see app/Http/Controllers/Admin/EmpresaController.php:143
  * @route '/admin/empresas/{empresa}/logos'
  */
-        logosForm.post = (args: { empresa: number | { id: number } } | [empresa: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
-            action: logos.url(args, options),
+        updateLogosForm.post = (args: { empresa: number | { id: number } } | [empresa: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
+            action: updateLogos.url(args, options),
             method: 'post',
         })
     
-    logos.form = logosForm
-const empresas = {
-    index: Object.assign(index, index),
-store: Object.assign(store, store),
-update: Object.assign(update, update),
-toggleStatus: Object.assign(toggleStatus, toggleStatus),
-logos: Object.assign(logos, logos),
-}
+    updateLogos.form = updateLogosForm
+const EmpresaController = { index, store, update, toggleStatus, updateLogos }
 
-export default empresas
+export default EmpresaController
