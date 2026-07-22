@@ -27,12 +27,15 @@ return Application::configure(basePath: dirname(__DIR__))
         },
     )
     ->withMiddleware(function (Middleware $middleware): void {
+        $middleware->web(prepend: [
+            \App\Http\Middleware\RegionalConfiguration::class,
+        ]);
+
         $middleware->web(append: [
             SetLocale::class,
             HandleAppearance::class,
             HandleInertiaRequests::class,
             AddLinkHeadersForPreloadedAssets::class,
-            \App\Http\Middleware\RegionalConfiguration::class,
         ]);
 
         $middleware->validateCsrfTokens(except: [
