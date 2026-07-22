@@ -35,12 +35,14 @@ createInertiaApp({
             case name.startsWith('preregistro/'):
             case name.startsWith('preregistro-empleado/'):
             case name.startsWith('preregistro-visita/'):
+            case name.startsWith('Public/'):
+            case name === 'Public/AutorizarAcceso':
                 return null;
             case name.startsWith('auth/'):
                 return AuthLayout;
-            case name.startsWith('admin/'):
+            case name.toLowerCase().startsWith('admin/'):
             case name === 'dashboard':
-            case name.startsWith('settings/'):
+            case name.toLowerCase().startsWith('settings/'):
                 return AdminLayout;
             default:
                 return AppLayout;

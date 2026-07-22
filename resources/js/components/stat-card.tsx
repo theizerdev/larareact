@@ -29,16 +29,20 @@ interface StatCardProps {
 export function StatCard({ icon, title, value, colorClassName, className }: StatCardProps) {
     return (
         // Contenedor principal de la tarjeta
-        <Card className={cn('p-4', className)}>
-            <div className='flex items-center space-x-4'>
+        <Card className={cn('p-3.5 sm:p-4 transition-all hover:shadow-md', className)}>
+            <div className='flex items-center space-x-3 sm:space-x-4 min-w-0'>
                 {/* Contenedor del ícono con color de fondo personalizable */}
-                <div className={cn('rounded-lg p-3', colorClassName)}>
+                <div className={cn('rounded-xl p-2.5 sm:p-3 shrink-0 flex items-center justify-center', colorClassName)}>
                     {icon}
                 </div>
                 {/* Contenedor para el título y el valor */}
-                <div className='flex flex-col'>
-                    <span className='text-sm font-medium text-gray-500'>{title}</span>
-                    <span className='text-2xl font-bold'>{value}</span>
+                <div className='flex flex-col min-w-0 flex-1 overflow-hidden'>
+                    <span className='text-[10px] sm:text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider truncate' title={title}>
+                        {title}
+                    </span>
+                    <span className='text-lg sm:text-2xl font-extrabold text-slate-900 dark:text-slate-100 truncate'>
+                        {value}
+                    </span>
                 </div>
             </div>
         </Card>

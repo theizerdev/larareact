@@ -443,6 +443,11 @@ export default function AdminSaasLayout({
                                     href: '/admin/visitas-temporales',
                                     permission: 'visitas_temporales.view',
                                 },
+                                {
+                                    title: 'Accesos a Instalaciones',
+                                    href: '/admin/visitas-accesos',
+                                    permission: 'visitas_temporales.view',
+                                },
                             ].filter(item => hasPermission(item.permission));
 
                             if (visitsItems.length === 0) return null;
