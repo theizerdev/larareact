@@ -25,10 +25,20 @@ class RegionalConfigurationService
         }
 
         $pais = $empresa->pais;
-        //dd( $pais);
-        // Configurar zona horaria
-        config(['app.timezone' => $pais->zona_horaria ?? 'UTC']);
-        date_default_timezone_set($pais->zona_horaria ?? 'UTC');
+
+        // Obtener la sucursal del usuario autenticado si existe
+        $user = auth()->check() ? auth()->user() : null;
+        $sucursal = ($user && !empty($user->sucursal_id)) ? \App\Models\Sucursal::find($user->sucursal_id) : null;
+
+        // Determinar zona horaria con prioridad: Sucursal -> Empresa -> País -> 'America/Mexico_City'
+        $timezone = $sucursal?->zona_horaria
+            ?? $empresa->zona_horaria
+            ?? $pais?->zona_horaria
+            ?? 'America/Mexico_City';
+
+        // Configurar zona horaria en el framework y runtime de PHP
+        config(['app.timezone' => $timezone]);
+        date_default_timezone_set($timezone);
 
         // Configurar locale
         app()->setLocale($pais->idioma_principal ?? 'es');
@@ -52,7 +62,8 @@ class RegionalConfigurationService
         // Guardar en caché para uso futuro
         self::$currentConfig = [
             'pais' => $pais,
-            'timezone' => $pais->zona_horaria ?? 'UTC',
+            'sucursal' => $sucursal,
+            'timezone' => $timezone,
             'currency' => $pais->moneda_principal ?? 'USD',
             'currency_symbol' => $pais->simbolo_moneda ?? '$',
             'date_format' => $pais->formato_fecha ?? 'd/m/Y',

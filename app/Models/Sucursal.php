@@ -30,6 +30,7 @@ class Sucursal extends Model
         'direccion',
         'latitud',
         'longitud',
+        'zona_horaria',
         'status',
     ];
 

@@ -13,6 +13,7 @@ import {
     ImageIcon,
     Upload,
     X,
+    Clock,
 } from 'lucide-react';
 import React, { useState, Suspense, lazy, useRef } from 'react';
 import { Breadcrumbs } from '@/components/breadcrumbs';
@@ -113,6 +114,7 @@ const initialForm = {
     direccion: '',
     latitud: null as number | null,
     longitud: null as number | null,
+    zona_horaria: '',
 };
 
 // ─── Página principal ─────────────────────────────────────────────────────────
@@ -209,6 +211,7 @@ export default function EmpresasIndexPage({ auth, empresas, stats, paises, filte
             direccion:           empresa.direccion || '',
             latitud:             empresa.latitud ?? null,
             longitud:            empresa.longitud ?? null,
+            zona_horaria:        (empresa as any).zona_horaria || '',
         });
         setLogoFile(null);
         setLogoMiniFile(null);
@@ -306,12 +309,13 @@ formData.append('logo_mini', logoMiniFile);
         router.patch(`/admin/empresas/${empresa.id}/toggle-status`, {}, { preserveScroll: true });
     };
 
-    const handleLocationSelected = (lat: number, lng: number, address?: string) => {
+    const handleLocationSelected = (lat: number, lng: number, address?: string, timezone?: string) => {
         setData((prev) => ({
             ...prev,
             latitud:  lat,
             longitud: lng,
             ...(address ? { direccion: address } : {}),
+            ...(timezone ? { zona_horaria: timezone } : {}),
         }));
     };
 
@@ -370,6 +374,16 @@ formData.append('logo_mini', logoMiniFile);
                         </div>
                     )}
                     {!empresa.telefono && !empresa.email && <span className="text-xs text-muted-foreground">—</span>}
+                </div>
+            ),
+        },
+        {
+            header: __('Time Zone'),
+            hideOn: 'mobile',
+            cell: (empresa) => (
+                <div className="flex items-center gap-1.5 text-xs font-mono text-slate-600 dark:text-slate-400">
+                    <Clock className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
+                    <span>{(empresa as any).zona_horaria || __('Default')}</span>
                 </div>
             ),
         },
@@ -723,6 +737,21 @@ formData.append('logo_mini', logoMiniFile);
                                         placeholder={__('The address will be auto-filled when you click on the map...')}
                                         rows={2}
                                     />
+                                </div>
+
+                                {/* Zona Horaria */}
+                                <div>
+                                    <Label htmlFor="zona_horaria">{__('Time Zone (Auto-detected from map)')}</Label>
+                                    <Input
+                                        id="zona_horaria"
+                                        value={data.zona_horaria || ''}
+                                        onChange={(e) => setData('zona_horaria', e.target.value)}
+                                        placeholder="Ej: America/Mexico_City, America/Tijuana, America/Mazatlan"
+                                        className="font-mono text-xs"
+                                    />
+                                    {errors.zona_horaria && (
+                                        <p className="text-red-500 text-xs mt-1">{errors.zona_horaria}</p>
+                                    )}
                                 </div>
 
                                 {/* Mapa Leaflet */}

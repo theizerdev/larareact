@@ -6,8 +6,33 @@ interface MapComponentProps {
     zoom: number;
     style: React.CSSProperties;
     markerPosition: [number, number] | null;
-    onLocationSelected: (lat: number, lng: number, address?: string) => void;
+    onLocationSelected: (lat: number, lng: number, address?: string, timezone?: string) => void;
 }
+
+// Función helper para obtener la zona horaria IANA según coordenadas
+export const getTimezoneFromCoords = async (lat: number, lng: number): Promise<string | null> => {
+    try {
+        const res = await fetch(`https://api.bigdatacloud.net/data/reverse-geocode-client?latitude=${lat}&longitude=${lng}&localityLanguage=es`);
+        if (res.ok) {
+            const data = await res.json();
+            if (data.timeZone?.ianaTimeId) {
+                return data.timeZone.ianaTimeId;
+            }
+        }
+    } catch (_) {
+        // Fallback silencioso
+    }
+
+    // Regla de detección precisa para México basada en coordenadas (latitud y longitud)
+    if (lat >= 14 && lat <= 33 && lng >= -118 && lng <= -86) {
+        if (lng < -114) return 'America/Tijuana';             // Baja California (Noroeste UTC-8)
+        if (lng < -104 && lat > 22) return 'America/Mazatlan'; // Sinaloa, Nayarit, BCS (Pacífico UTC-7)
+        if (lng > -88 && lat < 22) return 'America/Cancun';   // Quintana Roo (Sureste UTC-5)
+        return 'America/Mexico_City';                          // Centro (UTC-6)
+    }
+
+    return null;
+};
 
 const EmpresaMapComponent: React.FC<MapComponentProps> = ({
     markerPosition,
@@ -20,7 +45,8 @@ const EmpresaMapComponent: React.FC<MapComponentProps> = ({
     const lng = markerPosition ? markerPosition[1] : 0;
 
     const handleLocationChange = async (newLat: number, newLng: number) => {
-        onLocationSelected(newLat, newLng);
+        const tz = await getTimezoneFromCoords(newLat, newLng);
+        onLocationSelected(newLat, newLng, undefined, tz || undefined);
 
         try {
             setIsGeocodingLoading(true);
@@ -32,7 +58,7 @@ const EmpresaMapComponent: React.FC<MapComponentProps> = ({
             if (res.ok) {
                 const data = await res.json();
                 const address = data.display_name ?? '';
-                onLocationSelected(newLat, newLng, address);
+                onLocationSelected(newLat, newLng, address, tz || undefined);
             }
         } catch (_) {
             // Error silencioso
@@ -67,7 +93,7 @@ const EmpresaMapComponent: React.FC<MapComponentProps> = ({
                         pointerEvents: 'none',
                     }}
                 >
-                    Obteniendo dirección...
+                    Obteniendo ubicación y zona horaria...
                 </div>
             )}
         </div>

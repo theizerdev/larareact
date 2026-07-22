@@ -68,6 +68,7 @@ class SucursalController extends Controller
             'direccion' => 'nullable|string',
             'latitud' => 'nullable|numeric',
             'longitud' => 'nullable|numeric',
+            'zona_horaria' => 'nullable|string|max:100',
             'status' => 'boolean',
         ]);
 
@@ -98,6 +99,7 @@ class SucursalController extends Controller
             'direccion' => 'nullable|string',
             'latitud' => 'nullable|numeric',
             'longitud' => 'nullable|numeric',
+            'zona_horaria' => 'nullable|string|max:100',
             'status' => 'boolean',
         ]);
 

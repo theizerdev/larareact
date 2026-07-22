@@ -11,6 +11,7 @@ import {
     Phone,
     MapPin,
     Building2,
+    Clock,
 } from 'lucide-react';
 import React, { useState, Suspense, lazy } from 'react';
 import { Breadcrumbs } from '@/components/breadcrumbs';
@@ -83,10 +84,12 @@ interface Sucursal {
     id: number;
     empresa_id: number;
     nombre: string;
+    pais_telefono_id?: number | string | null;
     telefono?: string | null;
     direccion?: string | null;
     latitud?: number | null;
     longitud?: number | null;
+    zona_horaria?: string | null;
     status: boolean;
     empresa?: Empresa | null;
 }
@@ -119,6 +122,7 @@ const initialForm = {
     direccion:        '',
     latitud:          null as number | null,
     longitud:         null as number | null,
+    zona_horaria:     '',
     status:           true as boolean,
 };
 
@@ -203,11 +207,12 @@ export default function SucursalesIndexPage({
         setData({
             empresa_id:       sucursal.empresa_id,
             nombre:           sucursal.nombre || '',
-            pais_telefono_id: '',
+            pais_telefono_id: sucursal.pais_telefono_id ?? '',
             telefono:         sucursal.telefono || '',
             direccion:        sucursal.direccion || '',
             latitud:          sucursal.latitud ?? null,
             longitud:         sucursal.longitud ?? null,
+            zona_horaria:     sucursal.zona_horaria || '',
             status:           sucursal.status,
         });
         setActiveTab('general');
@@ -257,12 +262,13 @@ return;
         });
     };
 
-    const handleLocationSelected = (lat: number, lng: number, address?: string) => {
+    const handleLocationSelected = (lat: number, lng: number, address?: string, timezone?: string) => {
         setData((prev) => ({
             ...prev,
             latitud:  lat,
             longitud: lng,
             ...(address ? { direccion: address } : {}),
+            ...(timezone ? { zona_horaria: timezone } : {}),
         }));
     };
 
@@ -330,6 +336,16 @@ return;
                     {!sucursal.telefono && !sucursal.latitud && (
                         <span className="text-xs text-muted-foreground">—</span>
                     )}
+                </div>
+            ),
+        },
+        {
+            header: __('Time Zone'),
+            hideOn: 'mobile',
+            cell: (sucursal) => (
+                <div className="flex items-center gap-1.5 text-xs font-mono text-slate-600 dark:text-slate-400">
+                    <Clock className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
+                    <span>{sucursal.zona_horaria || __('Default')}</span>
                 </div>
             ),
         },
@@ -533,13 +549,13 @@ return;
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
 
                                     {/* Empresa */}
-                                    <div className="md:col-span-2">
+                                    <div>
                                         <Label htmlFor="empresa_id">{__('Company')} *</Label>
                                         <Select
                                             value={String(data.empresa_id)}
                                             onValueChange={(v) => setData('empresa_id', v)}
                                         >
-                                            <SelectTrigger id="empresa_id">
+                                            <SelectTrigger id="empresa_id" className="w-full h-10 text-sm">
                                                 <SelectValue placeholder={__('Select a company')} />
                                             </SelectTrigger>
                                             <SelectContent>
@@ -567,13 +583,14 @@ return;
                                     </div>
 
                                     {/* Nombre */}
-                                    <div className="md:col-span-2">
+                                    <div>
                                         <Label htmlFor="nombre">{__('Branch Name')} *</Label>
                                         <Input
                                             id="nombre"
                                             value={data.nombre}
                                             onChange={(e) => setData('nombre', e.target.value)}
                                             placeholder="Ej: Sucursal Centro"
+                                            className="h-10 text-sm"
                                         />
                                         {errors.nombre && (
                                             <p className="text-red-500 text-xs mt-1">{errors.nombre}</p>
