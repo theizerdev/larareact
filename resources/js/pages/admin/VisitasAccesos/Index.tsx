@@ -677,15 +677,15 @@ export default function Index({
         const autorizadoHoy = autorizadoHabitual || autorizacionRecibida?.status === 'autorizado' || isDetalleModal;
 
         return (
-            <div className="space-y-2">
-                <div className="flex flex-wrap items-center justify-between gap-2">
-                    <div className="flex items-center gap-2">
+            <div className="space-y-2.5">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 p-2 rounded-xl bg-slate-50 dark:bg-slate-800/40 border">
+                    <div className="flex flex-wrap items-center gap-2">
                         <span className="font-semibold text-slate-700 dark:text-slate-200 text-xs">
                             {__('Día de ingreso')} ({hoyNombre}):
                         </span>
                         {autorizadoHoy ? (
-                            <Badge className="bg-emerald-100 text-emerald-800 border-emerald-300 dark:bg-emerald-950/60 dark:text-emerald-300 font-mono text-[11px] px-2 py-0.5 flex items-center gap-1">
-                                <Check className="w-3 h-3" />
+                            <Badge className="bg-emerald-100 text-emerald-800 border-emerald-300 dark:bg-emerald-950/60 dark:text-emerald-300 font-mono text-[11px] px-2.5 py-1 flex items-center gap-1.5 shadow-xs">
+                                <Check className="w-3.5 h-3.5" />
                                 {autorizadoHabitual
                                     ? `${__('Autorizado:')} ${jornadaHoy?.hora_ingreso || '08:00'} a ${jornadaHoy?.hora_salida || '17:00'}`
                                     : isDetalleModal
@@ -693,8 +693,8 @@ export default function Index({
                                     : __('Autorizado por Responsable vía WhatsApp ✓')}
                             </Badge>
                         ) : (
-                            <Badge variant="outline" className="bg-rose-50 text-rose-800 border-rose-300 dark:bg-rose-950/40 dark:text-rose-300 text-[11px] flex items-center gap-1 font-semibold">
-                                <AlertTriangle className="w-3.5 h-3.5 text-rose-600" />
+                            <Badge variant="outline" className="bg-rose-50 text-rose-800 border-rose-300 dark:bg-rose-950/40 dark:text-rose-300 text-[11px] px-2.5 py-1 flex items-center gap-1.5 font-semibold">
+                                <AlertTriangle className="w-3.5 h-3.5 text-rose-600 shrink-0" />
                                 {__('Fuera de Horario / Día No Autorizado')}
                             </Badge>
                         )}
@@ -704,12 +704,25 @@ export default function Index({
                     {!autorizadoHoy && empleadoNombre && (
                         <Button
                             type="button"
-                            size="xs"
+                            size="sm"
                             onClick={() => handleSolicitarWhatsapp(empleadoNombre, empleadoDoc || '', esAcompanante)}
-                            className="bg-emerald-600 hover:bg-emerald-700 text-white text-[11px] h-7 gap-1.5 shadow-sm"
+                            className={`shrink-0 whitespace-nowrap h-9 px-3.5 text-xs font-bold shadow-sm transition-all rounded-xl gap-2 w-full sm:w-auto ${
+                                activeAuthToken
+                                    ? 'bg-amber-500 hover:bg-amber-600 text-white animate-pulse'
+                                    : 'bg-emerald-600 hover:bg-emerald-700 text-white shadow-emerald-600/20'
+                            }`}
                         >
-                            <MessageSquare className="w-3.5 h-3.5" />
-                            {activeAuthToken ? __('Enlace enviado. Esperando respuesta...') : __('Solicitar Autorización vía WhatsApp')}
+                            {activeAuthToken ? (
+                                <>
+                                    <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+                                    <span>{__('Enlace enviado. Esperando respuesta...')}</span>
+                                </>
+                            ) : (
+                                <>
+                                    <MessageSquare className="w-4 h-4 text-emerald-100" />
+                                    <span>{__('Solicitar Autorización vía WhatsApp')}</span>
+                                </>
+                            )}
                         </Button>
                     )}
                 </div>
@@ -752,6 +765,46 @@ export default function Index({
                 </div>
             </div>
         );
+    };
+
+    // Formatear correctamente la URL de imágenes de almacenamiento para evitar enlaces relativos rotos y errores 403 de directorio
+    const formatImageUrl = (path?: string | null) => {
+        if (!path) return null;
+        const cleanPath = String(path).trim();
+        if (
+            !cleanPath ||
+            cleanPath === 'null' ||
+            cleanPath === 'undefined' ||
+            cleanPath === '/storage/' ||
+            cleanPath === 'storage/' ||
+            cleanPath === '/storage' ||
+            cleanPath === 'storage' ||
+            cleanPath.endsWith('/')
+        ) {
+            return null;
+        }
+
+        if (cleanPath.startsWith('data:') || cleanPath.startsWith('http://') || cleanPath.startsWith('https://')) {
+            return cleanPath;
+        }
+
+        // Rechazar directorios o rutas sin extensión de imagen válida (.jpg, .jpeg, .png, .webp, .gif, .svg)
+        const validExtensions = ['.jpg', '.jpeg', '.png', '.webp', '.gif', '.svg'];
+        const hasValidExt = validExtensions.some((ext) => cleanPath.toLowerCase().endsWith(ext));
+        if (!hasValidExt) {
+            return null;
+        }
+
+        if (cleanPath.startsWith('/storage/')) {
+            return cleanPath;
+        }
+        if (cleanPath.startsWith('storage/')) {
+            return `/${cleanPath}`;
+        }
+        if (cleanPath.startsWith('/')) {
+            return cleanPath;
+        }
+        return `/storage/${cleanPath}`;
     };
 
     // Obtener objeto del vehículo pre-registrado seleccionado
@@ -1245,10 +1298,10 @@ export default function Index({
                                                 <div className="w-full aspect-[16/9] rounded-xl overflow-hidden bg-slate-100 dark:bg-slate-800 border flex items-center justify-center">
                                                     {(selectedAccesoDetail.vehiculo_foto_frontal || selectedAccesoDetail.empleado_vehiculo?.foto_frontal || selectedAccesoDetail.proveedor_vehiculo?.foto_frontal) ? (
                                                         <img
-                                                            src={selectedAccesoDetail.vehiculo_foto_frontal || selectedAccesoDetail.empleado_vehiculo?.foto_frontal || selectedAccesoDetail.proveedor_vehiculo?.foto_frontal}
+                                                            src={formatImageUrl(selectedAccesoDetail.vehiculo_foto_frontal || selectedAccesoDetail.empleado_vehiculo?.foto_frontal || selectedAccesoDetail.proveedor_vehiculo?.foto_frontal)}
                                                             alt="Foto Frontal"
                                                             className="w-full h-full object-cover cursor-pointer hover:scale-105 transition-transform"
-                                                            onClick={() => window.open(selectedAccesoDetail.vehiculo_foto_frontal || selectedAccesoDetail.empleado_vehiculo?.foto_frontal || selectedAccesoDetail.proveedor_vehiculo?.foto_frontal, '_blank')}
+                                                            onClick={() => window.open(formatImageUrl(selectedAccesoDetail.vehiculo_foto_frontal || selectedAccesoDetail.empleado_vehiculo?.foto_frontal || selectedAccesoDetail.proveedor_vehiculo?.foto_frontal), '_blank')}
                                                         />
                                                     ) : (
                                                         <span className="text-xs text-slate-400 italic">Sin fotografía frontal registrada</span>
@@ -1263,10 +1316,10 @@ export default function Index({
                                                 <div className="w-full aspect-[16/9] rounded-xl overflow-hidden bg-slate-100 dark:bg-slate-800 border flex items-center justify-center">
                                                     {(selectedAccesoDetail.vehiculo_foto_trasera || selectedAccesoDetail.empleado_vehiculo?.foto_trasera || selectedAccesoDetail.proveedor_vehiculo?.foto_trasera) ? (
                                                         <img
-                                                            src={selectedAccesoDetail.vehiculo_foto_trasera || selectedAccesoDetail.empleado_vehiculo?.foto_trasera || selectedAccesoDetail.proveedor_vehiculo?.foto_trasera}
+                                                            src={formatImageUrl(selectedAccesoDetail.vehiculo_foto_trasera || selectedAccesoDetail.empleado_vehiculo?.foto_trasera || selectedAccesoDetail.proveedor_vehiculo?.foto_trasera)}
                                                             alt="Foto Trasera"
                                                             className="w-full h-full object-cover cursor-pointer hover:scale-105 transition-transform"
-                                                            onClick={() => window.open(selectedAccesoDetail.vehiculo_foto_trasera || selectedAccesoDetail.empleado_vehiculo?.foto_trasera || selectedAccesoDetail.proveedor_vehiculo?.foto_trasera, '_blank')}
+                                                            onClick={() => window.open(formatImageUrl(selectedAccesoDetail.vehiculo_foto_trasera || selectedAccesoDetail.empleado_vehiculo?.foto_trasera || selectedAccesoDetail.proveedor_vehiculo?.foto_trasera), '_blank')}
                                                         />
                                                     ) : (
                                                         <span className="text-xs text-slate-400 italic">Sin fotografía trasera registrada</span>
@@ -1702,131 +1755,138 @@ export default function Index({
                                             )}
 
                                             {/* VISUALIZACIÓN DE FOTOGRAFÍAS */}
-                                            {!activeCameraField && (
-                                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-2 border-t">
-                                                    {/* Foto Frontal */}
-                                                    <div className="p-3 border rounded-xl bg-white dark:bg-slate-900 flex flex-col justify-between gap-3">
-                                                        <div className="flex items-center justify-between">
-                                                            <span className="text-xs font-semibold flex items-center gap-1.5">
-                                                                <Camera className="w-4 h-4 text-emerald-600" />
-                                                                {__('Foto Frontal del Vehículo')}
-                                                            </span>
-                                                            {(vehiculoObj?.foto_frontal || vehiculoNuevo.foto_frontal) ? (
-                                                                <Badge className="bg-emerald-100 text-emerald-800 text-[10px]">Registrada ✓</Badge>
-                                                            ) : (
-                                                                <Badge variant="outline" className="bg-amber-50 text-amber-800 text-[10px]">Pendiente ⚠️</Badge>
-                                                            )}
-                                                        </div>
+                                             {!activeCameraField && (() => {
+                                                 const fotoFrontalUrl = formatImageUrl(vehiculoNuevo.foto_frontal) || formatImageUrl(vehiculoObj?.foto_frontal);
+                                                 const fotoTraseraUrl = formatImageUrl(vehiculoNuevo.foto_trasera) || formatImageUrl(vehiculoObj?.foto_trasera);
 
-                                                        <div className="w-full aspect-[16/9] rounded-lg overflow-hidden bg-slate-100 dark:bg-slate-800 border flex items-center justify-center relative">
-                                                            {(vehiculoNuevo.foto_frontal || vehiculoObj?.foto_frontal) ? (
-                                                                <img
-                                                                    src={vehiculoNuevo.foto_frontal || vehiculoObj?.foto_frontal}
-                                                                    alt="Foto Frontal Vehículo"
-                                                                    className="w-full h-full object-cover"
-                                                                />
-                                                            ) : (
-                                                                <div className="text-center p-3 text-slate-400">
-                                                                    <Car className="w-8 h-8 mx-auto mb-1 opacity-50" />
-                                                                    <span className="text-xs block">Sin fotografía frontal registrada</span>
-                                                                </div>
-                                                            )}
-                                                        </div>
+                                                 return (
+                                                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-2 border-t">
+                                                         {/* Foto Frontal */}
+                                                         <div className="p-3 border rounded-xl bg-white dark:bg-slate-900 flex flex-col justify-between gap-3">
+                                                             <div className="flex items-center justify-between">
+                                                                 <span className="text-xs font-semibold flex items-center gap-1.5">
+                                                                     <Camera className="w-4 h-4 text-emerald-600" />
+                                                                     {__('Foto Frontal del Vehículo')}
+                                                                 </span>
+                                                                 {fotoFrontalUrl ? (
+                                                                     <Badge className="bg-emerald-100 text-emerald-800 text-[10px]">Registrada ✓</Badge>
+                                                                 ) : (
+                                                                     <Badge variant="outline" className="bg-amber-50 text-amber-800 text-[10px]">Pendiente ⚠️</Badge>
+                                                                 )}
+                                                             </div>
 
-                                                        <div className="flex gap-2">
-                                                            <Button
-                                                                type="button"
-                                                                size="sm"
-                                                                variant="outline"
-                                                                onClick={() => setActiveCameraField('foto_frontal')}
-                                                                className="flex-1 text-xs gap-1"
-                                                            >
-                                                                <Camera className="w-3.5 h-3.5 text-emerald-600" />
-                                                                {__('Tomar Foto')}
-                                                            </Button>
-                                                            <label className="flex-1">
-                                                                <input
-                                                                    type="file"
-                                                                    accept="image/*"
-                                                                    onChange={(e) => handleImageUpload(e, 'foto_frontal')}
-                                                                    className="hidden"
-                                                                />
-                                                                <Button
-                                                                    type="button"
-                                                                    size="sm"
-                                                                    variant="outline"
-                                                                    onClick={(e) => (e.currentTarget.previousElementSibling as HTMLInputElement)?.click()}
-                                                                    className="w-full text-xs gap-1"
-                                                                >
-                                                                    <Upload className="w-3.5 h-3.5" />
-                                                                    {__('Subir')}
-                                                                </Button>
-                                                            </label>
-                                                        </div>
-                                                    </div>
+                                                             <div className="w-full aspect-[16/9] rounded-lg overflow-hidden bg-slate-100 dark:bg-slate-800 border flex items-center justify-center relative">
+                                                                 {fotoFrontalUrl ? (
+                                                                     <img
+                                                                         src={fotoFrontalUrl}
+                                                                         alt="Foto Frontal Vehículo"
+                                                                         className="w-full h-full object-cover cursor-pointer hover:scale-105 transition-transform"
+                                                                         onClick={() => window.open(fotoFrontalUrl, '_blank')}
+                                                                     />
+                                                                 ) : (
+                                                                     <div className="text-center p-3 text-slate-400">
+                                                                         <Car className="w-8 h-8 mx-auto mb-1 opacity-50" />
+                                                                         <span className="text-xs block">Sin fotografía frontal registrada</span>
+                                                                     </div>
+                                                                 )}
+                                                             </div>
 
-                                                    {/* Foto Trasera */}
-                                                    <div className="p-3 border rounded-xl bg-white dark:bg-slate-900 flex flex-col justify-between gap-3">
-                                                        <div className="flex items-center justify-between">
-                                                            <span className="text-xs font-semibold flex items-center gap-1.5">
-                                                                <Camera className="w-4 h-4 text-emerald-600" />
-                                                                {__('Foto Trasera del Vehículo')}
-                                                            </span>
-                                                            {(vehiculoObj?.foto_trasera || vehiculoNuevo.foto_trasera) ? (
-                                                                <Badge className="bg-emerald-100 text-emerald-800 text-[10px]">Registrada ✓</Badge>
-                                                            ) : (
-                                                                <Badge variant="outline" className="bg-amber-50 text-amber-800 text-[10px]">Pendiente ⚠️</Badge>
-                                                            )}
-                                                        </div>
+                                                             <div className="flex gap-2">
+                                                                 <Button
+                                                                     type="button"
+                                                                     size="sm"
+                                                                     variant="outline"
+                                                                     onClick={() => setActiveCameraField('foto_frontal')}
+                                                                     className="flex-1 text-xs gap-1"
+                                                                 >
+                                                                     <Camera className="w-3.5 h-3.5 text-emerald-600" />
+                                                                     {__('Tomar Foto')}
+                                                                 </Button>
+                                                                 <label className="flex-1">
+                                                                     <input
+                                                                         type="file"
+                                                                         accept="image/*"
+                                                                         onChange={(e) => handleImageUpload(e, 'foto_frontal')}
+                                                                         className="hidden"
+                                                                     />
+                                                                     <Button
+                                                                         type="button"
+                                                                         size="sm"
+                                                                         variant="outline"
+                                                                         onClick={(e) => (e.currentTarget.previousElementSibling as HTMLInputElement)?.click()}
+                                                                         className="w-full text-xs gap-1"
+                                                                     >
+                                                                         <Upload className="w-3.5 h-3.5" />
+                                                                         {__('Subir')}
+                                                                     </Button>
+                                                                 </label>
+                                                             </div>
+                                                         </div>
 
-                                                        <div className="w-full aspect-[16/9] rounded-lg overflow-hidden bg-slate-100 dark:bg-slate-800 border flex items-center justify-center relative">
-                                                            {(vehiculoNuevo.foto_trasera || vehiculoObj?.foto_trasera) ? (
-                                                                <img
-                                                                    src={vehiculoNuevo.foto_trasera || vehiculoObj?.foto_trasera}
-                                                                    alt="Foto Trasera Vehículo"
-                                                                    className="w-full h-full object-cover"
-                                                                />
-                                                            ) : (
-                                                                <div className="text-center p-3 text-slate-400">
-                                                                    <Car className="w-8 h-8 mx-auto mb-1 opacity-50" />
-                                                                    <span className="text-xs block">Sin fotografía trasera registrada</span>
-                                                                </div>
-                                                            )}
-                                                        </div>
+                                                         {/* Foto Trasera */}
+                                                         <div className="p-3 border rounded-xl bg-white dark:bg-slate-900 flex flex-col justify-between gap-3">
+                                                             <div className="flex items-center justify-between">
+                                                                 <span className="text-xs font-semibold flex items-center gap-1.5">
+                                                                     <Camera className="w-4 h-4 text-emerald-600" />
+                                                                     {__('Foto Trasera del Vehículo')}
+                                                                 </span>
+                                                                 {fotoTraseraUrl ? (
+                                                                     <Badge className="bg-emerald-100 text-emerald-800 text-[10px]">Registrada ✓</Badge>
+                                                                 ) : (
+                                                                     <Badge variant="outline" className="bg-amber-50 text-amber-800 text-[10px]">Pendiente ⚠️</Badge>
+                                                                 )}
+                                                             </div>
 
-                                                        <div className="flex gap-2">
-                                                            <Button
-                                                                type="button"
-                                                                size="sm"
-                                                                variant="outline"
-                                                                onClick={() => setActiveCameraField('foto_trasera')}
-                                                                className="flex-1 text-xs gap-1"
-                                                            >
-                                                                <Camera className="w-3.5 h-3.5 text-emerald-600" />
-                                                                {__('Tomar Foto')}
-                                                            </Button>
-                                                            <label className="flex-1">
-                                                                <input
-                                                                    type="file"
-                                                                    accept="image/*"
-                                                                    onChange={(e) => handleImageUpload(e, 'foto_trasera')}
-                                                                    className="hidden"
-                                                                />
-                                                                <Button
-                                                                    type="button"
-                                                                    size="sm"
-                                                                    variant="outline"
-                                                                    onClick={(e) => (e.currentTarget.previousElementSibling as HTMLInputElement)?.click()}
-                                                                    className="w-full text-xs gap-1"
-                                                                >
-                                                                    <Upload className="w-3.5 h-3.5" />
-                                                                    {__('Subir')}
-                                                                </Button>
-                                                            </label>
-                                                        </div>
-                                                    </div>
-                                                </div>
-                                            )}
+                                                             <div className="w-full aspect-[16/9] rounded-lg overflow-hidden bg-slate-100 dark:bg-slate-800 border flex items-center justify-center relative">
+                                                                 {fotoTraseraUrl ? (
+                                                                     <img
+                                                                         src={fotoTraseraUrl}
+                                                                         alt="Foto Trasera Vehículo"
+                                                                         className="w-full h-full object-cover cursor-pointer hover:scale-105 transition-transform"
+                                                                         onClick={() => window.open(fotoTraseraUrl, '_blank')}
+                                                                     />
+                                                                 ) : (
+                                                                     <div className="text-center p-3 text-slate-400">
+                                                                         <Car className="w-8 h-8 mx-auto mb-1 opacity-50" />
+                                                                         <span className="text-xs block">Sin fotografía trasera registrada</span>
+                                                                     </div>
+                                                                 )}
+                                                             </div>
+
+                                                             <div className="flex gap-2">
+                                                                 <Button
+                                                                     type="button"
+                                                                     size="sm"
+                                                                     variant="outline"
+                                                                     onClick={() => setActiveCameraField('foto_trasera')}
+                                                                     className="flex-1 text-xs gap-1"
+                                                                 >
+                                                                     <Camera className="w-3.5 h-3.5 text-emerald-600" />
+                                                                     {__('Tomar Foto')}
+                                                                 </Button>
+                                                                 <label className="flex-1">
+                                                                     <input
+                                                                         type="file"
+                                                                         accept="image/*"
+                                                                         onChange={(e) => handleImageUpload(e, 'foto_trasera')}
+                                                                         className="hidden"
+                                                                     />
+                                                                     <Button
+                                                                         type="button"
+                                                                         size="sm"
+                                                                         variant="outline"
+                                                                         onClick={(e) => (e.currentTarget.previousElementSibling as HTMLInputElement)?.click()}
+                                                                         className="w-full text-xs gap-1"
+                                                                     >
+                                                                         <Upload className="w-3.5 h-3.5" />
+                                                                         {__('Subir')}
+                                                                     </Button>
+                                                                 </label>
+                                                             </div>
+                                                         </div>
+                                                     </div>
+                                                 );
+                                             })()}
 
                                             {/* SECCIÓN DE EMPLEADOS ACOMPAÑANTES EN EL VEHÍCULO */}
                                             <div className="pt-4 border-t space-y-3">
@@ -1931,35 +1991,39 @@ export default function Index({
                                 </div>
                             )}
 
-                            {/* PASO 4: Responsable & Observaciones */}
+                            {/* PASO 4: Responsable & Observaciones a ancho completo */}
                             {selectedEntity && (
-                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                                    <div className="space-y-1.5">
-                                        <Label className="text-xs font-semibold">{__('Responsable / Anfitrión')}</Label>
+                                <div className="space-y-4 pt-3 border-t">
+                                    <div className="space-y-1.5 w-full">
+                                        <Label className="text-xs font-bold uppercase tracking-wider text-slate-700 dark:text-slate-300">
+                                            4. {__('Responsable / Anfitrión')} <span className="text-rose-500">*</span>
+                                        </Label>
                                         <Select
                                             value={data.responsable_id}
                                             onValueChange={(val) => setData('responsable_id', val)}
                                         >
-                                            <SelectTrigger className="w-full h-11 bg-white dark:bg-slate-900">
-                                                <SelectValue placeholder={__('Seleccione responsable...')} />
+                                            <SelectTrigger className="w-full h-12 bg-white dark:bg-slate-900 text-sm">
+                                                <SelectValue placeholder={__('Seleccione el Responsable / Anfitrión de la instalación...')} />
                                             </SelectTrigger>
                                             <SelectContent>
                                                 {responsables.map((resp) => (
                                                     <SelectItem key={resp.id} value={resp.id.toString()}>
-                                                        {resp.nombres} {resp.apellidos}
+                                                        {resp.nombres} {resp.apellidos} {resp.departamento ? `(${resp.departamento.nombre})` : ''}
                                                     </SelectItem>
                                                 ))}
                                             </SelectContent>
                                         </Select>
                                     </div>
 
-                                    <div className="space-y-1.5">
-                                        <Label className="text-xs font-semibold">{__('Observaciones de Acceso / Motivo Excepcional')}</Label>
+                                    <div className="space-y-1.5 w-full">
+                                        <Label className="text-xs font-bold uppercase tracking-wider text-slate-700 dark:text-slate-300">
+                                            5. {__('Observaciones de Acceso / Motivo Excepcional')}
+                                        </Label>
                                         <Textarea
                                             placeholder={__('Motivo de acceso o explicación otorgada por el Responsable por WhatsApp...')}
                                             value={data.observaciones}
                                             onChange={(e) => setData('observaciones', e.target.value)}
-                                            className="bg-white dark:bg-slate-900 min-h-[44px] h-11"
+                                            className="bg-white dark:bg-slate-900 min-h-[90px] text-sm w-full p-3"
                                         />
                                     </div>
                                 </div>

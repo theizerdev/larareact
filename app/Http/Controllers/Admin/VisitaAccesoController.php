@@ -216,6 +216,12 @@ class VisitaAccesoController extends Controller
         if (str_starts_with($base64Data, 'http://') || str_starts_with($base64Data, 'https://') || str_starts_with($base64Data, '/storage/')) {
             return $base64Data;
         }
+        if (str_starts_with($base64Data, 'storage/')) {
+            return '/' . $base64Data;
+        }
+        if (str_starts_with($base64Data, 'empleados/')) {
+            return '/storage/' . $base64Data;
+        }
 
         if (preg_match('/^data:image\/(\w+);base64,/', $base64Data, $type)) {
             $data = substr($base64Data, strpos($base64Data, ',') + 1);

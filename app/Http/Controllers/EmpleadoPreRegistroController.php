@@ -99,6 +99,18 @@ class EmpleadoPreRegistroController extends Controller
                     Storage::disk('public')->put($fileName, $data);
                     return '/storage/' . $fileName;
                 }
+
+                if (is_string($base64Data)) {
+                    if (str_starts_with($base64Data, '/storage/') || str_starts_with($base64Data, 'http://') || str_starts_with($base64Data, 'https://')) {
+                        return $base64Data;
+                    }
+                    if (str_starts_with($base64Data, 'storage/')) {
+                        return '/' . $base64Data;
+                    }
+                    if (str_starts_with($base64Data, 'empleados/')) {
+                        return '/storage/' . $base64Data;
+                    }
+                }
                 return null;
             };
 

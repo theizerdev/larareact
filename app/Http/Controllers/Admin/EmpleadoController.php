@@ -370,8 +370,16 @@ class EmpleadoController extends Controller
         }
 
         // Si es una ruta ya guardada anteriormente
-        if (is_string($input) && str_starts_with($input, '/storage/')) {
-            return $input;
+        if (is_string($input)) {
+            if (str_starts_with($input, '/storage/') || str_starts_with($input, 'http://') || str_starts_with($input, 'https://')) {
+                return $input;
+            }
+            if (str_starts_with($input, 'storage/')) {
+                return '/' . $input;
+            }
+            if (str_starts_with($input, 'empleados/')) {
+                return '/storage/' . $input;
+            }
         }
 
         return null;
