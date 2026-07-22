@@ -287,6 +287,7 @@ export default function Index({
     const [searchResults, setSearchResults] = useState<any[]>([]);
     const [isSearching, setIsSearching] = useState(false);
     const [selectedEntity, setSelectedEntity] = useState<any>(null);
+    const [selectedProveedorEmpleadoIds, setSelectedProveedorEmpleadoIds] = useState<string[]>([]);
 
     // Modal de Detalle Completo de Acceso
     const [selectedAccesoDetail, setSelectedAccesoDetail] = useState<VisitaAcceso | null>(null);
@@ -443,9 +444,64 @@ export default function Index({
         return () => clearTimeout(timer);
     }, [acompananteSearchTerm, selectedEntity, acompanantesList]);
 
+    const syncProveedorEmpleadosState = (ids: string[], entityParam?: any) => {
+        const ent = entityParam || selectedEntity;
+        if (!ent?.empleados_proveedor || ids.length === 0) {
+            setData('proveedor_empleado_id', '');
+            setAcompanantesList([]);
+            setData('acompanantes', []);
+            return;
+        }
+
+        const mainId = ids[0];
+        setData('proveedor_empleado_id', mainId);
+
+        const extraIds = ids.slice(1);
+        const extraEmps = ent.empleados_proveedor
+            .filter((emp: any) => extraIds.includes(emp.id.toString()))
+            .map((emp: any) => ({
+                id: emp.id,
+                nombres: emp.nombres,
+                apellidos: emp.apellidos,
+                documento_identidad: emp.documento_identidad,
+                foto_empleado: emp.foto_carnet || emp.foto_empleado || null,
+                documento_frontal: emp.documento_frontal || null,
+                departamento: ent.nombre_comercial || ent.razon_social,
+                cargo: emp.cargo || 'Personal Proveedor',
+                is_proveedor_empleado: true,
+            }));
+
+        setAcompanantesList(extraEmps);
+        setData('acompanantes', extraEmps);
+    };
+
+    const toggleProveedorEmpleadoSelection = (empIdStr: string) => {
+        let updated: string[];
+        if (selectedProveedorEmpleadoIds.includes(empIdStr)) {
+            updated = selectedProveedorEmpleadoIds.filter((id) => id !== empIdStr);
+        } else {
+            updated = [...selectedProveedorEmpleadoIds, empIdStr];
+        }
+        setSelectedProveedorEmpleadoIds(updated);
+        syncProveedorEmpleadosState(updated);
+    };
+
+    const selectAllProveedorEmpleados = () => {
+        if (!selectedEntity?.empleados_proveedor) return;
+        const allIds = selectedEntity.empleados_proveedor.map((emp: any) => emp.id.toString());
+        setSelectedProveedorEmpleadoIds(allIds);
+        syncProveedorEmpleadosState(allIds);
+    };
+
+    const deselectAllProveedorEmpleados = () => {
+        setSelectedProveedorEmpleadoIds([]);
+        syncProveedorEmpleadosState([]);
+    };
+
     const handleSelectEntity = (entity: any) => {
         setSelectedEntity(entity);
         if (tipoAcceso === 'empleado') {
+            setSelectedProveedorEmpleadoIds([]);
             setData((prev) => ({
                 ...prev,
                 tipo_acceso: 'empleado',
@@ -467,6 +523,15 @@ export default function Index({
                 proveedor_id: entity.id,
                 empleado_id: '',
             }));
+
+            if (entity.empleados_proveedor && entity.empleados_proveedor.length > 0) {
+                const initialIds = [entity.empleados_proveedor[0].id.toString()];
+                setSelectedProveedorEmpleadoIds(initialIds);
+                syncProveedorEmpleadosState(initialIds, entity);
+            } else {
+                setSelectedProveedorEmpleadoIds([]);
+                syncProveedorEmpleadosState([], entity);
+            }
 
             if (entity.vehiculos_proveedor && entity.vehiculos_proveedor.length > 0) {
                 setVehiculoSeleccionado(entity.vehiculos_proveedor[0].id.toString());
@@ -554,6 +619,7 @@ export default function Index({
         reset();
         clearErrors();
         setSelectedEntity(null);
+        setSelectedProveedorEmpleadoIds([]);
         setAcompanantesList([]);
         setActiveAuthToken(null);
         setAutorizacionRecibida(null);
@@ -603,8 +669,7 @@ export default function Index({
             }
         }
 
-        post('/admin/visitas-accesos', {
-            data: payload,
+        router.post('/admin/visitas-accesos', payload, {
             onSuccess: () => {
                 setIsCreateOpen(false);
                 notifySuccess(__('Acceso a instalaciones registrado correctamente con Código N° ') + siguienteCodigo);
@@ -847,7 +912,10 @@ export default function Index({
                     ? item.empleado?.documento_identidad
                     : item.proveedor_empleado?.documento_identidad || item.proveedor?.documento_identidad;
 
-                const avatar = isEmp ? item.empleado?.foto_empleado : item.proveedor_empleado?.foto_carnet;
+                const rawAvatar = isEmp
+                    ? item.empleado?.foto_empleado
+                    : item.proveedor_empleado?.foto_carnet || (item.proveedor_empleado as any)?.foto_empleado;
+                const avatar = formatImageUrl(rawAvatar);
                 const tieneAcompanantes = item.acompanantes && item.acompanantes.length > 0;
 
                 return (
@@ -1194,70 +1262,141 @@ export default function Index({
                                 <div className="border rounded-2xl p-5 bg-white dark:bg-slate-900 space-y-4 shadow-sm">
                                     <h4 className="text-xs font-bold uppercase tracking-wider text-slate-500 flex items-center gap-2 border-b pb-2">
                                         <User className="w-4 h-4 text-emerald-600" />
-                                        1. {__('Información del Conductor / Visitante Principal')}
+                                        1. {selectedAccesoDetail.tipo_acceso === 'empleado' ? __('Información del Empleado / Conductor') : __('Información de la Empresa Proveedora y Personal')}
                                     </h4>
 
-                                    {(() => {
-                                        const isEmp = selectedAccesoDetail.tipo_acceso === 'empleado';
-                                        const p = isEmp ? selectedAccesoDetail.empleado : (selectedAccesoDetail.proveedor_empleado || selectedAccesoDetail.proveedor);
-                                        const nombre = isEmp
-                                            ? `${p?.nombres || ''} ${p?.apellidos || ''}`
-                                            : selectedAccesoDetail.proveedor_empleado
-                                            ? `${p?.nombres || ''} ${p?.apellidos || ''}`
-                                            : p?.nombre_comercial || p?.razon_social || '-';
-
-                                        const doc = isEmp
-                                            ? p?.documento_identidad
-                                            : selectedAccesoDetail.proveedor_empleado?.documento_identidad || p?.documento_identidad;
-
-                                        const fotoPerfil = isEmp ? p?.foto_empleado : p?.foto_carnet;
-                                        const fotoDoc = isEmp ? p?.foto_documento : p?.documento_frontal;
-
-                                        return (
-                                            <div className="flex flex-col sm:flex-row gap-5 items-start">
-                                                <div className="flex gap-3 shrink-0">
-                                                    <div className="w-20 h-20 rounded-2xl overflow-hidden border bg-slate-100 dark:bg-slate-800 flex items-center justify-center shadow">
-                                                        {fotoPerfil ? (
-                                                            <img src={fotoPerfil} alt="" className="w-full h-full object-cover" />
-                                                        ) : (
-                                                            <User className="w-10 h-10 text-slate-400" />
-                                                        )}
-                                                    </div>
-                                                    {fotoDoc && (
-                                                        <div className="w-20 h-20 rounded-2xl overflow-hidden border bg-slate-100 dark:bg-slate-800 flex items-center justify-center shadow">
-                                                            <img src={fotoDoc} alt="Documento" className="w-full h-full object-cover" />
-                                                        </div>
+                                    {selectedAccesoDetail.tipo_acceso === 'empleado' ? (
+                                        <div className="flex flex-col sm:flex-row gap-5 items-start">
+                                            <div className="flex gap-3 shrink-0">
+                                                <div className="w-20 h-20 rounded-2xl overflow-hidden border bg-slate-100 dark:bg-slate-800 flex items-center justify-center shadow">
+                                                    {formatImageUrl(selectedAccesoDetail.empleado?.foto_empleado) ? (
+                                                        <img src={formatImageUrl(selectedAccesoDetail.empleado?.foto_empleado)!} alt="" className="w-full h-full object-cover" />
+                                                    ) : (
+                                                        <User className="w-10 h-10 text-slate-400" />
                                                     )}
                                                 </div>
+                                                {formatImageUrl(selectedAccesoDetail.empleado?.foto_documento) && (
+                                                    <div className="w-20 h-20 rounded-2xl overflow-hidden border bg-slate-100 dark:bg-slate-800 flex items-center justify-center shadow">
+                                                        <img src={formatImageUrl(selectedAccesoDetail.empleado?.foto_documento)!} alt="Documento" className="w-full h-full object-cover" />
+                                                    </div>
+                                                )}
+                                            </div>
 
-                                                <div className="space-y-1.5 flex-1">
-                                                    <h3 className="text-lg font-extrabold text-slate-900 dark:text-slate-100">
-                                                        {nombre}
-                                                    </h3>
-                                                    <p className="text-xs text-muted-foreground font-mono">
-                                                        Documento de Identidad: <span className="font-bold text-slate-800 dark:text-slate-200">{doc || 'N/A'}</span>
-                                                    </p>
-                                                    {isEmp && (
-                                                        <div className="flex flex-wrap items-center gap-3 pt-1 text-xs text-indigo-600 dark:text-indigo-400 font-semibold">
-                                                            <span className="flex items-center gap-1">
-                                                                <Building className="w-3.5 h-3.5" /> Depto: {p?.departamento?.nombre || 'General'}
-                                                            </span>
-                                                            <span className="flex items-center gap-1">
-                                                                <Briefcase className="w-3.5 h-3.5" /> Cargo: {p?.cargo?.nombre || 'Técnico'}
-                                                            </span>
-                                                        </div>
-                                                    )}
+                                            <div className="space-y-1.5 flex-1">
+                                                <h3 className="text-lg font-extrabold text-slate-900 dark:text-slate-100">
+                                                    {selectedAccesoDetail.empleado?.nombres} {selectedAccesoDetail.empleado?.apellidos}
+                                                </h3>
+                                                <p className="text-xs text-muted-foreground font-mono">
+                                                    Documento de Identidad: <span className="font-bold text-slate-800 dark:text-slate-200">{selectedAccesoDetail.empleado?.documento_identidad || 'N/A'}</span>
+                                                </p>
+                                                <div className="flex flex-wrap items-center gap-3 pt-1 text-xs text-indigo-600 dark:text-indigo-400 font-semibold">
+                                                    <span className="flex items-center gap-1">
+                                                        <Building className="w-3.5 h-3.5" /> Depto: {selectedAccesoDetail.empleado?.departamento?.nombre || 'General'}
+                                                    </span>
+                                                    <span className="flex items-center gap-1">
+                                                        <Briefcase className="w-3.5 h-3.5" /> Cargo: {selectedAccesoDetail.empleado?.cargo?.nombre || 'Técnico'}
+                                                    </span>
+                                                </div>
 
-                                                    {/* Horario estructurado del día */}
-                                                    {isEmp && p?.jornada_laboral && (
-                                                        <div className="pt-2">
-                                                            {renderHorarioJornada(p.jornada_laboral, undefined, undefined, false, true)}
+                                                {selectedAccesoDetail.empleado?.jornada_laboral && (
+                                                    <div className="pt-2">
+                                                        {renderHorarioJornada(selectedAccesoDetail.empleado.jornada_laboral, undefined, undefined, false, true)}
+                                                    </div>
+                                                )}
+                                            </div>
+                                        </div>
+                                    ) : (
+                                        <div className="space-y-4">
+                                            {/* Ficha de la Empresa Proveedora */}
+                                            <div className="p-4 rounded-xl bg-amber-50/70 dark:bg-amber-950/30 border border-amber-200/80 dark:border-amber-900/60 space-y-3">
+                                                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-amber-200/80 dark:border-amber-900/60 pb-2">
+                                                    <div className="flex items-center gap-2.5">
+                                                        <div className="p-2 bg-amber-600 text-white rounded-xl">
+                                                            <Building className="w-5 h-5" />
                                                         </div>
-                                                    )}
+                                                        <div>
+                                                            <h3 className="text-base font-extrabold text-slate-900 dark:text-slate-100">
+                                                                {selectedAccesoDetail.proveedor?.nombre_comercial || selectedAccesoDetail.proveedor?.razon_social || __('Empresa Proveedora Contratista')}
+                                                            </h3>
+                                                            {selectedAccesoDetail.proveedor?.razon_social && selectedAccesoDetail.proveedor?.nombre_comercial && (
+                                                                <p className="text-xs text-slate-600 dark:text-slate-400 font-medium">
+                                                                    Razón Social: {selectedAccesoDetail.proveedor.razon_social}
+                                                                </p>
+                                                            )}
+                                                        </div>
+                                                    </div>
+                                                    <Badge variant="outline" className="bg-amber-100 dark:bg-amber-900/60 text-amber-900 dark:text-amber-200 border-amber-300 font-mono text-xs w-fit">
+                                                        RUC/Doc: {selectedAccesoDetail.proveedor?.documento_identidad || 'N/A'}
+                                                    </Badge>
+                                                </div>
+
+                                                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-xs">
+                                                    <div>
+                                                        <span className="text-slate-500 block font-medium">{__('Teléfono de Contacto')}</span>
+                                                        <span className="font-bold text-slate-800 dark:text-slate-200 font-mono">
+                                                            {selectedAccesoDetail.proveedor?.telefono || 'N/A'}
+                                                        </span>
+                                                    </div>
+                                                    <div>
+                                                        <span className="text-slate-500 block font-medium">{__('Contacto / Representante')}</span>
+                                                        <span className="font-bold text-slate-800 dark:text-slate-200">
+                                                            {selectedAccesoDetail.proveedor?.responsable || 'N/A'}
+                                                        </span>
+                                                    </div>
+                                                    <div>
+                                                        <span className="text-slate-500 block font-medium">{__('Dirección Fiscal')}</span>
+                                                        <span className="font-bold text-slate-800 dark:text-slate-200 truncate block">
+                                                            {selectedAccesoDetail.proveedor?.direccion || 'N/A'}
+                                                        </span>
+                                                    </div>
                                                 </div>
                                             </div>
-                                        );
-                                    })()}
+
+                                            {/* Conductor / Personal Principal del Proveedor */}
+                                            {selectedAccesoDetail.proveedor_empleado && (
+                                                <div className="p-3.5 rounded-xl border bg-slate-50 dark:bg-slate-800/40 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+                                                    <div className="flex items-center gap-3 min-w-0">
+                                                        <div className="flex gap-2 shrink-0">
+                                                            <div className="w-14 h-14 rounded-2xl overflow-hidden border bg-white dark:bg-slate-800 flex items-center justify-center shadow-xs">
+                                                                {formatImageUrl(selectedAccesoDetail.proveedor_empleado.foto_carnet || (selectedAccesoDetail.proveedor_empleado as any).foto_empleado) ? (
+                                                                    <img
+                                                                        src={formatImageUrl(selectedAccesoDetail.proveedor_empleado.foto_carnet || (selectedAccesoDetail.proveedor_empleado as any).foto_empleado)!}
+                                                                        alt=""
+                                                                        className="w-full h-full object-cover"
+                                                                    />
+                                                                ) : (
+                                                                    <User className="w-7 h-7 text-slate-400" />
+                                                                )}
+                                                            </div>
+                                                            {formatImageUrl(selectedAccesoDetail.proveedor_empleado.documento_frontal) && (
+                                                                <div className="w-14 h-14 rounded-2xl overflow-hidden border bg-white dark:bg-slate-800 flex items-center justify-center shadow-xs">
+                                                                    <img
+                                                                        src={formatImageUrl(selectedAccesoDetail.proveedor_empleado.documento_frontal)!}
+                                                                        alt="Documento"
+                                                                        className="w-full h-full object-cover"
+                                                                    />
+                                                                </div>
+                                                            )}
+                                                        </div>
+                                                        <div className="min-w-0">
+                                                            <div className="font-bold text-sm text-slate-800 dark:text-slate-200 flex flex-wrap items-center gap-2">
+                                                                <span>{selectedAccesoDetail.proveedor_empleado.nombres} {selectedAccesoDetail.proveedor_empleado.apellidos}</span>
+                                                                <Badge className="bg-emerald-600 text-white text-[10px]">Conductor / Principal 🚗</Badge>
+                                                            </div>
+                                                            <div className="text-xs text-slate-500 font-mono mt-1">
+                                                                Doc: <span className="font-bold text-slate-700 dark:text-slate-300">{selectedAccesoDetail.proveedor_empleado.documento_identidad}</span>
+                                                                {selectedAccesoDetail.proveedor_empleado.cargo && (
+                                                                    <span className="ml-2 font-sans text-indigo-600 dark:text-indigo-400 font-medium">
+                                                                        • {selectedAccesoDetail.proveedor_empleado.cargo}
+                                                                    </span>
+                                                                )}
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            )}
+                                        </div>
+                                    )}
                                 </div>
 
                                 {/* SECCIÓN 2: FOTOGRAFÍAS Y DATOS DEL VEHÍCULO */}
@@ -1617,28 +1756,108 @@ export default function Index({
                                         </div>
                                     )}
 
-                                    {/* Si es Proveedor: Selecciona Empleado del Proveedor */}
+                                    {/* Si es Proveedor: Selección Múltiple de Empleados del Proveedor */}
                                     {tipoAcceso === 'proveedor' && (
-                                        <div className="space-y-1.5">
-                                            <Label className="text-xs font-semibold">{__('Personal del Proveedor que conduce/accede:')}</Label>
+                                        <div className="space-y-3 bg-white dark:bg-slate-900 p-4 rounded-xl border shadow-sm">
+                                            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b pb-2.5">
+                                                <div>
+                                                    <Label className="text-xs font-bold uppercase tracking-wider text-slate-700 dark:text-slate-200 flex items-center gap-1.5">
+                                                        <Users className="w-4 h-4 text-indigo-600" />
+                                                        {__('Personal del Proveedor que accederá:')}
+                                                    </Label>
+                                                    <p className="text-[11px] text-muted-foreground mt-0.5">
+                                                        {__('Seleccione uno o varios empleados. El primero actuará como Conductor / Principal.')}
+                                                    </p>
+                                                </div>
+
+                                                {selectedEntity.empleados_proveedor && selectedEntity.empleados_proveedor.length > 0 && (
+                                                    <div className="flex items-center gap-2 shrink-0">
+                                                        <Button
+                                                            type="button"
+                                                            size="xs"
+                                                            variant="outline"
+                                                            onClick={selectAllProveedorEmpleados}
+                                                            className="text-[11px] h-7 px-2.5"
+                                                        >
+                                                            {__('Seleccionar Todos')}
+                                                        </Button>
+                                                        <Button
+                                                            type="button"
+                                                            size="xs"
+                                                            variant="ghost"
+                                                            onClick={deselectAllProveedorEmpleados}
+                                                            className="text-[11px] h-7 px-2 text-slate-500 hover:text-slate-700"
+                                                        >
+                                                            {__('Desmarcar')}
+                                                        </Button>
+                                                    </div>
+                                                )}
+                                            </div>
+
                                             {selectedEntity.empleados_proveedor && selectedEntity.empleados_proveedor.length > 0 ? (
-                                                <Select
-                                                    value={data.proveedor_empleado_id}
-                                                    onValueChange={(val) => setData('proveedor_empleado_id', val)}
-                                                >
-                                                    <SelectTrigger className="w-full h-11 bg-white dark:bg-slate-900">
-                                                        <SelectValue placeholder={__('Seleccione el empleado que ingresa...')} />
-                                                    </SelectTrigger>
-                                                    <SelectContent>
-                                                        {selectedEntity.empleados_proveedor.map((emp: any) => (
-                                                            <SelectItem key={emp.id} value={emp.id.toString()}>
-                                                                {emp.nombres} {emp.apellidos} - Doc: {emp.documento_identidad}
-                                                            </SelectItem>
-                                                        ))}
-                                                    </SelectContent>
-                                                </Select>
+                                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 pt-1">
+                                                    {selectedEntity.empleados_proveedor.map((emp: any) => {
+                                                        const empIdStr = emp.id.toString();
+                                                        const isSelected = selectedProveedorEmpleadoIds.includes(empIdStr);
+                                                        const isMain = selectedProveedorEmpleadoIds[0] === empIdStr;
+
+                                                        return (
+                                                            <div
+                                                                key={emp.id}
+                                                                onClick={() => toggleProveedorEmpleadoSelection(empIdStr)}
+                                                                className={`p-3 rounded-xl border cursor-pointer transition-all flex items-center justify-between gap-3 ${
+                                                                    isSelected
+                                                                        ? 'bg-indigo-50/80 dark:bg-indigo-950/40 border-indigo-300 dark:border-indigo-700 ring-1 ring-indigo-400/30 shadow-xs'
+                                                                        : 'bg-slate-50 dark:bg-slate-800/30 border-slate-200 dark:border-slate-800 hover:border-slate-300'
+                                                                }`}
+                                                            >
+                                                                <div className="flex items-center gap-3 min-w-0">
+                                                                    <div className={`w-5 h-5 rounded-md border flex items-center justify-center shrink-0 transition-colors ${
+                                                                        isSelected
+                                                                            ? 'bg-indigo-600 border-indigo-600 text-white'
+                                                                            : 'border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-900'
+                                                                    }`}>
+                                                                        {isSelected && <Check className="w-3.5 h-3.5 stroke-[3]" />}
+                                                                    </div>
+                                                                    <div className="w-9 h-9 rounded-full overflow-hidden border bg-white dark:bg-slate-800 shrink-0 flex items-center justify-center shadow-xs">
+                                                                         {formatImageUrl(emp.foto_carnet || emp.foto_empleado) ? (
+                                                                             <img
+                                                                                 src={formatImageUrl(emp.foto_carnet || emp.foto_empleado)!}
+                                                                                 alt=""
+                                                                                 className="w-full h-full object-cover"
+                                                                             />
+                                                                         ) : (
+                                                                             <User className="w-4 h-4 text-slate-400" />
+                                                                         )}
+                                                                     </div>
+                                                                     <div className="min-w-0">
+                                                                        <div className="font-semibold text-xs text-slate-800 dark:text-slate-200 truncate">
+                                                                            {emp.nombres} {emp.apellidos}
+                                                                        </div>
+                                                                        <div className="text-[11px] text-slate-500 font-mono">
+                                                                            Doc: {emp.documento_identidad}
+                                                                            {emp.cargo && <span className="ml-1.5 text-indigo-600 dark:text-indigo-400 font-sans">({emp.cargo})</span>}
+                                                                        </div>
+                                                                    </div>
+                                                                </div>
+
+                                                                {isSelected && (
+                                                                    <Badge className={`text-[10px] shrink-0 font-medium ${
+                                                                        isMain
+                                                                            ? 'bg-emerald-600 hover:bg-emerald-600 text-white'
+                                                                            : 'bg-indigo-100 dark:bg-indigo-900/60 text-indigo-700 dark:text-indigo-300 border-indigo-200'
+                                                                    }`}>
+                                                                        {isMain ? __('Principal 🚗') : __('Acompañante 👥')}
+                                                                    </Badge>
+                                                                )}
+                                                            </div>
+                                                        );
+                                                    })}
+                                                </div>
                                             ) : (
-                                                <p className="text-xs text-amber-600 italic">{__('Sin empleados de proveedor pre-registrados.')}</p>
+                                                <div className="p-4 rounded-xl bg-amber-50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-900/50 text-amber-800 dark:text-amber-300 text-xs">
+                                                    {__('Este proveedor no tiene empleados pre-registrados en el sistema. Puede registrar el acceso del vehículo y agregar observaciones.')}
+                                                </div>
                                             )}
                                         </div>
                                     )}
@@ -1657,7 +1876,10 @@ export default function Index({
                                             type="button"
                                             size="lg"
                                             variant={medioAcceso === 'peatonal' ? 'default' : 'outline'}
-                                            onClick={() => setMedioAcceso('peatonal')}
+                                            onClick={() => {
+                                                setMedioAcceso('peatonal');
+                                                setData('medio_acceso', 'peatonal');
+                                            }}
                                             className={`h-12 ${medioAcceso === 'peatonal' ? 'bg-emerald-600 hover:bg-emerald-700 text-white font-semibold shadow-md' : ''}`}
                                         >
                                             <Footprints className="mr-2 h-5 w-5" />
@@ -1668,7 +1890,10 @@ export default function Index({
                                             type="button"
                                             size="lg"
                                             variant={medioAcceso === 'vehicular' ? 'default' : 'outline'}
-                                            onClick={() => setMedioAcceso('vehicular')}
+                                            onClick={() => {
+                                                setMedioAcceso('vehicular');
+                                                setData('medio_acceso', 'vehicular');
+                                            }}
                                             className={`h-12 ${medioAcceso === 'vehicular' ? 'bg-amber-600 hover:bg-amber-700 text-white font-semibold shadow-md' : ''}`}
                                         >
                                             <Car className="mr-2 h-5 w-5" />

@@ -27,7 +27,8 @@ class VisitaAccesoController extends Controller
             ->with([
                 'empleado.departamento',
                 'empleado.cargo',
-                'proveedor',
+                'proveedor.paisTelefono',
+                'proveedor.pais',
                 'proveedorEmpleado',
                 'empleadoVehiculo',
                 'proveedorVehiculo',
@@ -183,7 +184,31 @@ class VisitaAccesoController extends Controller
         $validated['sucursal_id']     = $user->sucursal_id ?? 1;
         $validated['status']          = 1; // En Instalaciones
 
-        // Procesar fotos de vehículos si son subidas ad-hoc
+        if ($validated['medio_acceso'] === 'vehicular') {
+            if (!empty($validated['proveedor_vehiculo_id'])) {
+                $pVehiculo = \App\Models\ProveedorVehiculo::find($validated['proveedor_vehiculo_id']);
+                if ($pVehiculo) {
+                    $validated['vehiculo_marca'] = $validated['vehiculo_marca'] ?? $pVehiculo->marca;
+                    $validated['vehiculo_modelo'] = $validated['vehiculo_modelo'] ?? $pVehiculo->modelo;
+                    $validated['vehiculo_placa'] = $validated['vehiculo_placa'] ?? $pVehiculo->placa;
+                    $validated['vehiculo_tipo'] = $validated['vehiculo_tipo'] ?? ($pVehiculo->tipo_vehiculo ?? 'Auto');
+                    $validated['vehiculo_foto_frontal'] = $validated['vehiculo_foto_frontal'] ?? $pVehiculo->foto_frontal;
+                    $validated['vehiculo_foto_trasera'] = $validated['vehiculo_foto_trasera'] ?? $pVehiculo->foto_trasera;
+                }
+            } elseif (!empty($validated['empleado_vehiculo_id'])) {
+                $eVehiculo = \App\Models\EmpleadoVehiculo::find($validated['empleado_vehiculo_id']);
+                if ($eVehiculo) {
+                    $validated['vehiculo_marca'] = $validated['vehiculo_marca'] ?? $eVehiculo->marca;
+                    $validated['vehiculo_modelo'] = $validated['vehiculo_modelo'] ?? $eVehiculo->modelo;
+                    $validated['vehiculo_placa'] = $validated['vehiculo_placa'] ?? $eVehiculo->placa;
+                    $validated['vehiculo_tipo'] = $validated['vehiculo_tipo'] ?? ($eVehiculo->tipo_vehiculo ?? 'Auto');
+                    $validated['vehiculo_foto_frontal'] = $validated['vehiculo_foto_frontal'] ?? $eVehiculo->foto_frontal;
+                    $validated['vehiculo_foto_trasera'] = $validated['vehiculo_foto_trasera'] ?? $eVehiculo->foto_trasera;
+                }
+            }
+        }
+
+        // Procesar fotos de vehículos si son subidas ad-hoc o base64
         if ($request->filled('vehiculo_foto_frontal')) {
             $validated['vehiculo_foto_frontal'] = $this->handleImageUpload($request->input('vehiculo_foto_frontal'), 'foto_vehiculo_frontal');
         }
