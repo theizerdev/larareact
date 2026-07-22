@@ -57,6 +57,7 @@ class HandleInertiaRequests extends Middleware
             ],
             'sidebarOpen' => ! $request->hasCookie('sidebar_state') || $request->cookie('sidebar_state') === 'true',
             'locale' => $currentLocale,
+            'regional_config' => fn () => \App\Services\RegionalConfigurationService::getCurrentConfiguration(),
             'translations' => file_exists($path = base_path('lang/'.$currentLocale.'.json'))
                 ? json_decode(file_get_contents($path) ?: '{}', true)
                 : [],
