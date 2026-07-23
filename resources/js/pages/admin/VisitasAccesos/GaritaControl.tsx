@@ -138,7 +138,59 @@ export default function GaritaControl({
         router.get('/admin/visitas-accesos/garita', { q: clean }, { preserveState: true });
     };
 
-    // Efecto de cámara en vivo
+    // Cargar jsQR dinámicamente si el navegador no tiene BarcodeDetector nativo
+    useEffect(() => {
+        if (typeof window !== 'undefined' && !('BarcodeDetector' in window) && !(window as any).jsQR) {
+            const script = document.createElement('script');
+            script.src = 'https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.js';
+            script.async = true;
+            document.head.appendChild(script);
+        }
+    }, []);
+
+    // Escáner Físico USB/Bluetooth HID Global (Lector de garita tipo pistola/tablet)
+    useEffect(() => {
+        let buffer = '';
+        let lastKeyTime = Date.now();
+
+        const handleKeyDown = (e: KeyboardEvent) => {
+            const activeElem = document.activeElement;
+            const isTypingInOtherInput = activeElem && (activeElem.tagName === 'TEXTAREA' || (activeElem.tagName === 'INPUT' && activeElem !== searchInputRef.current));
+
+            if (isTypingInOtherInput) return;
+            if (['Shift', 'Control', 'Alt', 'Meta', 'CapsLock', 'Tab'].includes(e.key)) return;
+
+            const now = Date.now();
+            const timeDiff = now - lastKeyTime;
+            lastKeyTime = now;
+
+            if (timeDiff > 120 && buffer.length > 0 && e.key !== 'Enter') {
+                buffer = '';
+            }
+
+            if (e.key === 'Enter') {
+                if (buffer.length >= 4) {
+                    e.preventDefault();
+                    let clean = buffer.trim();
+                    if (clean.includes('/pase-digital/')) {
+                        const parts = clean.split('/pase-digital/');
+                        clean = parts[parts.length - 1];
+                    }
+                    playScanBeep();
+                    setQuery(clean);
+                    router.get('/admin/visitas-accesos/garita', { q: clean }, { preserveState: true });
+                    buffer = '';
+                }
+            } else if (e.key.length === 1) {
+                buffer += e.key;
+            }
+        };
+
+        window.addEventListener('keydown', handleKeyDown);
+        return () => window.removeEventListener('keydown', handleKeyDown);
+    }, []);
+
+    // Efecto de cámara en vivo (Escaneo Omnidireccional 360° en 100% de la pantalla sin marco)
     useEffect(() => {
         let animationFrameId: number;
         let active = true;
@@ -171,22 +223,48 @@ export default function GaritaControl({
                     }
                 }
 
+                const canvas = document.createElement('canvas');
+                const ctx = canvas.getContext('2d', { willReadFrequently: true });
+
                 const scanFrame = async () => {
                     if (!active || !videoRef.current) return;
+                    const video = videoRef.current;
 
-                    if (detector && videoRef.current.readyState === videoRef.current.HAVE_ENOUGH_DATA) {
-                        try {
-                            const barcodes = await detector.detect(videoRef.current);
-                            if (barcodes && barcodes.length > 0) {
-                                const detectedRaw = barcodes[0].rawValue;
-                                if (detectedRaw) {
+                    if (video.readyState === video.HAVE_ENOUGH_DATA) {
+                        // 1. Detección por BarcodeDetector (si disponible) en todo el campo visual
+                        if (detector) {
+                            try {
+                                const barcodes = await detector.detect(video);
+                                if (barcodes && barcodes.length > 0) {
+                                    const detectedRaw = barcodes[0].rawValue;
+                                    if (detectedRaw) {
+                                        playScanBeep();
+                                        handleProcessScannedCode(detectedRaw);
+                                        return;
+                                    }
+                                }
+                            } catch (err) {
+                                // Ignorar frame en error
+                            }
+                        }
+
+                        // 2. Detección por jsQR en 100% del cuadro de imagen (Escaneo omnidireccional sin marco)
+                        const jsQR = (window as any).jsQR;
+                        if (jsQR && video.videoWidth > 0 && video.videoHeight > 0) {
+                            canvas.width = video.videoWidth;
+                            canvas.height = video.videoHeight;
+                            if (ctx) {
+                                ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+                                const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+                                const code = jsQR(imageData.data, imageData.width, imageData.height, {
+                                    inversionAttempts: 'dontInvert',
+                                });
+                                if (code && code.data) {
                                     playScanBeep();
-                                    handleProcessScannedCode(detectedRaw);
+                                    handleProcessScannedCode(code.data);
                                     return;
                                 }
                             }
-                        } catch (err) {
-                            // Ignorar frame en error
                         }
                     }
                     animationFrameId = requestAnimationFrame(scanFrame);
@@ -576,12 +654,16 @@ export default function GaritaControl({
 
                                     {record.acompanantes && record.acompanantes.length > 0 ? (
                                         <div className="space-y-1.5 max-h-48 overflow-y-auto pr-1">
-                                            {record.acompanantes.map((ac: Acompanante, idx: number) => (
-                                                <div key={idx} className="p-3 rounded-2xl bg-slate-50 border border-slate-200 text-xs flex items-center justify-between text-slate-800">
-                                                    <span className="font-bold">{ac.nombre}</span>
-                                                    {ac.documento && <span className="font-mono text-slate-500 text-[11px]">Doc: {ac.documento}</span>}
-                                                </div>
-                                            ))}
+                                            {record.acompanantes.map((ac: any, idx: number) => {
+                                                const nombreCompleto = ac.nombre || `${ac.nombres || ''} ${ac.apellidos || ''}`.trim() || `Acompañante #${idx + 1}`;
+                                                const docIdentidad = ac.documento || ac.documento_identidad || null;
+                                                return (
+                                                    <div key={idx} className="p-3 rounded-2xl bg-slate-50 border border-slate-200 text-xs flex items-center justify-between text-slate-800">
+                                                        <span className="font-bold">{nombreCompleto}</span>
+                                                        {docIdentidad && <span className="font-mono text-slate-500 text-[11px]">Doc: {docIdentidad}</span>}
+                                                    </div>
+                                                );
+                                            })}
                                         </div>
                                     ) : (
                                         <div className="p-3 rounded-2xl bg-slate-50 border border-slate-200 text-xs text-slate-400 text-center italic">
@@ -739,7 +821,7 @@ export default function GaritaControl({
                                 </Button>
                             </div>
                         ) : (
-                            <div className="relative aspect-square w-full max-w-md mx-auto bg-black rounded-2xl overflow-hidden border-2 border-emerald-500/50 shadow-inner group">
+                            <div className="relative aspect-[4/3] w-full max-w-xl mx-auto bg-black rounded-2xl overflow-hidden border-2 border-emerald-500/50 shadow-inner group">
                                 <video
                                     ref={videoRef}
                                     className="w-full h-full object-cover"
@@ -747,22 +829,25 @@ export default function GaritaControl({
                                     muted
                                 />
 
-                                {/* Guías del Marco del Visor QR */}
-                                <div className="absolute inset-0 border-[40px] border-black/50 pointer-events-none flex items-center justify-center">
-                                    <div className="w-48 h-48 border-2 border-dashed border-emerald-400 rounded-2xl relative animate-pulse shadow-[0_0_15px_rgba(52,211,153,0.5)]">
-                                        <div className="absolute top-0 left-0 w-6 h-6 border-t-4 border-l-4 border-emerald-400 -mt-1 -ml-1 rounded-tl-lg" />
-                                        <div className="absolute top-0 right-0 w-6 h-6 border-t-4 border-r-4 border-emerald-400 -mt-1 -mr-1 rounded-tr-lg" />
-                                        <div className="absolute bottom-0 left-0 w-6 h-6 border-b-4 border-l-4 border-emerald-400 -mb-1 -ml-1 rounded-bl-lg" />
-                                        <div className="absolute bottom-0 right-0 w-6 h-6 border-b-4 border-r-4 border-emerald-400 -mb-1 -mr-1 rounded-br-lg" />
+                                {/* Escáner Láser Omnidireccional en Toda la Pantalla */}
+                                <div className="absolute inset-0 pointer-events-none flex flex-col justify-between p-4">
+                                    <div className="flex justify-between">
+                                        <div className="w-8 h-8 border-t-4 border-l-4 border-emerald-400 rounded-tl-xl" />
+                                        <div className="w-8 h-8 border-t-4 border-r-4 border-emerald-400 rounded-tr-xl" />
+                                    </div>
 
-                                        {/* Línea Láser Verde Animada */}
-                                        <div className="w-full h-0.5 bg-emerald-400 shadow-[0_0_8px_#34d399] absolute top-1/2 -translate-y-1/2 animate-bounce" />
+                                    {/* Línea Láser Verde Animada en Toda la Pantalla */}
+                                    <div className="w-full h-0.5 bg-emerald-400 shadow-[0_0_12px_#34d399] animate-pulse" />
+
+                                    <div className="flex justify-between">
+                                        <div className="w-8 h-8 border-b-4 border-l-4 border-emerald-400 rounded-bl-xl" />
+                                        <div className="w-8 h-8 border-b-4 border-r-4 border-emerald-400 rounded-br-xl" />
                                     </div>
                                 </div>
 
-                                <div className="absolute bottom-3 left-1/2 -translate-x-1/2 bg-black/70 backdrop-blur-md px-4 py-1.5 rounded-full border border-emerald-500/30 text-[11px] font-bold text-emerald-300 flex items-center gap-2">
-                                    <Sparkles className="w-3.5 h-3.5 text-emerald-400 animate-spin" />
-                                    {__('Enfoque el código QR dentro del recuadro')}
+                                <div className="absolute bottom-3 left-1/2 -translate-x-1/2 bg-black/80 backdrop-blur-md px-4 py-2 rounded-full border border-emerald-500/40 text-xs font-bold text-emerald-300 flex items-center gap-2 shadow-lg w-11/12 justify-center text-center">
+                                    <Sparkles className="w-4 h-4 text-emerald-400 shrink-0 animate-spin" />
+                                    <span>{__('Escaneo 360° Activo: Acerque el QR a cualquier lugar de la pantalla')}</span>
                                 </div>
                             </div>
                         )}

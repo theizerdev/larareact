@@ -74,6 +74,9 @@ class VisitaAccesoController extends Controller
             ->when($request->search, function ($q, $search) {
                 $q->where(function ($sub) use ($search) {
                     $sub->where('codigo_visitante', 'like', "%{$search}%")
+                        ->orWhere('visitante_nombre', 'like', "%{$search}%")
+                        ->orWhere('visitante_documento', 'like', "%{$search}%")
+                        ->orWhere('visitante_empresa', 'like', "%{$search}%")
                         ->orWhereHas('empleado', function ($eQuery) use ($search) {
                             $eQuery->where('nombres', 'like', "%{$search}%")
                                 ->orWhere('apellidos', 'like', "%{$search}%")
@@ -539,12 +542,20 @@ class VisitaAccesoController extends Controller
 
         $user = $request->user();
 
-        // Convertir invitacion en VisitaAcceso
-        $tipoAcceso = $invitacion->tipo_acceso === 'visitante' ? 'proveedor' : $invitacion->tipo_acceso;
+        // Convertir invitacion en VisitaAcceso preservando datos y fotos del visitante particular
+        $tipoAcceso = ($invitacion->tipo_acceso === 'visitante' || !empty($invitacion->visitante_nombre)) ? 'visitante' : $invitacion->tipo_acceso;
 
         $acceso = VisitaAcceso::create([
             'codigo_visitante'      => VisitaAcceso::generarSiguienteCodigoVisitante(),
             'tipo_acceso'           => $tipoAcceso,
+            'invitacion_id'         => $invitacion->id,
+            'visitante_nombre'      => $invitacion->visitante_nombre,
+            'visitante_documento'   => $invitacion->visitante_documento,
+            'foto_carnet'           => $invitacion->foto_carnet,
+            'doc_foto_frontal'      => $invitacion->doc_foto_frontal,
+            'doc_foto_trasera'      => $invitacion->doc_foto_trasera,
+            'visitante_empresa'     => $invitacion->visitante_empresa,
+            'visitante_telefono'    => $invitacion->visitante_telefono,
             'empleado_id'           => $invitacion->empleado_id,
             'proveedor_id'          => $invitacion->proveedor_id,
             'proveedor_empleado_id' => $invitacion->proveedor_empleado_id,

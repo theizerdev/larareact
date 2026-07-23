@@ -34,7 +34,8 @@ import {
     Eye,
     Info,
     Building,
-    Briefcase
+    Briefcase,
+    X
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -74,7 +75,15 @@ import { cleanParams } from '@/lib/utils';
 interface VisitaAcceso {
     id: number;
     codigo_visitante: number;
-    tipo_acceso: 'empleado' | 'proveedor' | 'productor';
+    tipo_acceso: 'empleado' | 'proveedor' | 'productor' | 'visitante';
+    invitacion_id?: number | null;
+    visitante_nombre?: string | null;
+    visitante_documento?: string | null;
+    foto_carnet?: string | null;
+    doc_foto_frontal?: string | null;
+    doc_foto_trasera?: string | null;
+    visitante_empresa?: string | null;
+    visitante_telefono?: string | null;
     empleado_id?: number | null;
     proveedor_id?: number | null;
     proveedor_empleado_id?: number | null;
@@ -120,6 +129,7 @@ interface Paginated<T> {
 
 interface VisitasAccesosProps {
     accesos: Paginated<VisitaAcceso>;
+    visitasEsperadas?: any[];
     stats: {
         total: number;
         en_instalaciones: number;
@@ -270,6 +280,7 @@ function CameraWidget({ onCapture, onCancel }: CameraWidgetProps) {
 
 export default function Index({
     accesos = { data: [], current_page: 1, last_page: 1, per_page: 10, total: 0, links: [] },
+    visitasEsperadas = [],
     stats = { total: 0, en_instalaciones: 0, finalizados: 0, empleados: 0, proveedores: 0, productores: 0 },
     responsables = [],
     paises = [],
@@ -283,6 +294,8 @@ export default function Index({
         { title: __('Dashboard'), href: '/dashboard' },
         { title: __('Accesos a Instalaciones'), href: '/admin/visitas-accesos' },
     ];
+
+    const [activeImageModal, setActiveImageModal] = useState<string | null>(null);
 
     // ─── PRE-ANUNCIAR / MODAL INVITACIÓN ───────────────────────────────────────
     const [isCreateInvitacionOpen, setIsCreateInvitacionOpen] = useState(false);
@@ -1047,9 +1060,13 @@ export default function Index({
             id: 'visitante',
             header: __('Persona / Entidad'),
             cell: (item) => {
+                const isVisitante = item.tipo_acceso === 'visitante' || !!item.visitante_nombre;
                 const isEmp = item.tipo_acceso === 'empleado';
                 const isProd = item.tipo_acceso === 'productor';
-                const nombre = isEmp
+
+                const nombre = isVisitante
+                    ? (item.visitante_nombre || 'Visitante Particular')
+                    : isEmp
                     ? `${item.empleado?.nombres || ''} ${item.empleado?.apellidos || ''}`
                     : isProd
                     ? (item.productor_empleado
@@ -1059,13 +1076,17 @@ export default function Index({
                     ? `${item.proveedor_empleado?.nombres || ''} ${item.proveedor_empleado?.apellidos || ''}`
                     : item.proveedor?.nombre_comercial || item.proveedor?.razon_social || '-';
 
-                const doc = isEmp
+                const doc = isVisitante
+                    ? item.visitante_documento
+                    : isEmp
                     ? item.empleado?.documento_identidad
                     : isProd
                     ? (item.productor_empleado?.documento_identidad || item.productor?.documento_identidad)
                     : (item.proveedor_empleado?.documento_identidad || item.proveedor?.documento_identidad);
 
-                const rawAvatar = isEmp
+                const rawAvatar = isVisitante
+                    ? item.foto_carnet
+                    : isEmp
                     ? item.empleado?.foto_empleado
                     : isProd
                     ? (item.productor_empleado?.foto_carnet || (item.productor_empleado as any)?.foto_empleado)
@@ -1105,10 +1126,13 @@ export default function Index({
                             </div>
                             <span className="text-xs text-muted-foreground font-mono">
                                 Doc: {doc || '-'}
+                                {isVisitante && (
+                                    <span className="ml-1 text-emerald-700 dark:text-emerald-400 font-sans font-medium">({item.visitante_empresa || 'Particular'})</span>
+                                )}
                                 {isProd && item.productor && (
                                     <span className="ml-1 text-purple-600 dark:text-purple-400">({item.productor.nombre_comercial_rancho || item.productor.razon_social_rancho || item.productor.nombre_comercial})</span>
                                 )}
-                                {!isEmp && !isProd && item.proveedor && (
+                                {!isEmp && !isProd && !isVisitante && item.proveedor && (
                                     <span className="ml-1 text-amber-600 dark:text-amber-400">({item.proveedor.nombre_comercial || item.proveedor.razon_social})</span>
                                 )}
                             </span>
@@ -1121,7 +1145,11 @@ export default function Index({
             id: 'tipo_acceso',
             header: __('Tipo Acceso'),
             cell: (item) => (
-                item.tipo_acceso === 'empleado' ? (
+                item.tipo_acceso === 'visitante' || item.visitante_nombre ? (
+                    <Badge className="bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-950/30 dark:text-emerald-400 dark:border-emerald-900 gap-1">
+                        <User className="w-3 h-3" /> {__('Visitante Particular')}
+                    </Badge>
+                ) : item.tipo_acceso === 'empleado' ? (
                     <Badge className="bg-blue-50 text-blue-700 border-blue-200 dark:bg-blue-950/30 dark:text-blue-400 dark:border-blue-900 gap-1">
                         <User className="w-3 h-3" /> {__('Empleado')}
                     </Badge>
@@ -1319,6 +1347,7 @@ export default function Index({
                                     <SelectItem value="empleado">{__('Empleado')}</SelectItem>
                                     <SelectItem value="proveedor">{__('Proveedor')}</SelectItem>
                                     <SelectItem value="productor">{__('Productor')}</SelectItem>
+                                    <SelectItem value="visitante">{__('Visitante Particular')}</SelectItem>
                                 </SelectContent>
                             </Select>
                         </FilterField>
@@ -1451,6 +1480,8 @@ export default function Index({
                                             ? __('Información del Empleado / Conductor')
                                             : selectedAccesoDetail.tipo_acceso === 'productor'
                                             ? __('Información del Rancho / Productor y Personal')
+                                            : selectedAccesoDetail.tipo_acceso === 'visitante' || selectedAccesoDetail.visitante_nombre
+                                            ? __('Información del Visitante Particular')
                                             : __('Información de la Empresa Proveedora y Personal')}
                                     </h4>
 
@@ -1584,6 +1615,95 @@ export default function Index({
                                                     </div>
                                                 </div>
                                             )}
+                                        </div>
+                                    ) : (selectedAccesoDetail.tipo_acceso === 'visitante' || selectedAccesoDetail.visitante_nombre) ? (
+                                        <div className="space-y-4">
+                                            {/* Ficha del Visitante Particular */}
+                                            <div className="p-5 rounded-2xl bg-emerald-50/80 dark:bg-emerald-950/30 border border-emerald-200 dark:border-emerald-800 space-y-4">
+                                                <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 border-b border-emerald-200 dark:border-emerald-800 pb-4">
+                                                    <div className="flex items-center gap-4">
+                                                        {/* Fotografías (Carnet y Documentos) */}
+                                                        <div className="flex gap-2.5 shrink-0">
+                                                            {formatImageUrl(selectedAccesoDetail.foto_carnet) ? (
+                                                                <div className="w-16 h-16 rounded-2xl overflow-hidden border-2 border-emerald-600 bg-white shadow-md cursor-pointer group relative" onClick={() => setActiveImageModal(formatImageUrl(selectedAccesoDetail.foto_carnet)!)}>
+                                                                    <img src={formatImageUrl(selectedAccesoDetail.foto_carnet)!} alt="Rostro" className="w-full h-full object-cover group-hover:scale-105 transition-transform" />
+                                                                </div>
+                                                            ) : (
+                                                                <div className="w-16 h-16 rounded-2xl bg-slate-200 dark:bg-slate-800 border flex items-center justify-center text-slate-400">
+                                                                    <User className="w-8 h-8" />
+                                                                </div>
+                                                            )}
+
+                                                            {formatImageUrl(selectedAccesoDetail.doc_foto_frontal) && (
+                                                                <div className="w-16 h-16 rounded-2xl overflow-hidden border border-slate-300 bg-white shadow-xs cursor-pointer group relative" onClick={() => setActiveImageModal(formatImageUrl(selectedAccesoDetail.doc_foto_frontal)!)}>
+                                                                    <img src={formatImageUrl(selectedAccesoDetail.doc_foto_frontal)!} alt="Doc Frontal" className="w-full h-full object-cover group-hover:scale-105 transition-transform" />
+                                                                </div>
+                                                            )}
+
+                                                            {formatImageUrl(selectedAccesoDetail.doc_foto_trasera) && (
+                                                                <div className="w-16 h-16 rounded-2xl overflow-hidden border border-slate-300 bg-white shadow-xs cursor-pointer group relative" onClick={() => setActiveImageModal(formatImageUrl(selectedAccesoDetail.doc_foto_trasera)!)}>
+                                                                    <img src={formatImageUrl(selectedAccesoDetail.doc_foto_trasera)!} alt="Doc Trasero" className="w-full h-full object-cover group-hover:scale-105 transition-transform" />
+                                                                </div>
+                                                            )}
+                                                        </div>
+
+                                                        <div>
+                                                            <div className="flex items-center gap-2">
+                                                                <h3 className="text-lg font-extrabold text-slate-900 dark:text-slate-100">
+                                                                    {selectedAccesoDetail.visitante_nombre}
+                                                                </h3>
+                                                                <Badge className="bg-emerald-600 text-white text-[10px]">
+                                                                    {__('Visitante Particular')}
+                                                                </Badge>
+                                                            </div>
+                                                            <p className="text-xs text-slate-600 dark:text-slate-400 font-mono mt-0.5">
+                                                                Documento de Identidad: <span className="font-bold text-slate-800 dark:text-slate-200">{selectedAccesoDetail.visitante_documento || 'N/A'}</span>
+                                                            </p>
+                                                            {selectedAccesoDetail.visitante_empresa && (
+                                                                <p className="text-xs text-emerald-700 dark:text-emerald-400 font-medium mt-0.5">
+                                                                    Empresa / Organización: {selectedAccesoDetail.visitante_empresa}
+                                                                </p>
+                                                            )}
+                                                        </div>
+                                                    </div>
+
+                                                    {selectedAccesoDetail.visitante_telefono && (
+                                                        <Badge variant="outline" className="bg-emerald-100 text-emerald-900 border-emerald-300 font-mono text-xs">
+                                                            📱 WhatsApp: {selectedAccesoDetail.visitante_telefono}
+                                                        </Badge>
+                                                    )}
+                                                </div>
+
+                                                {/* Documentos de Identidad en Foto con Ampliador */}
+                                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
+                                                    <div>
+                                                        <span className="text-slate-500 block font-medium mb-1">{__('Documento de Identidad (Frontal)')}</span>
+                                                        {formatImageUrl(selectedAccesoDetail.doc_foto_frontal) ? (
+                                                            <img
+                                                                src={formatImageUrl(selectedAccesoDetail.doc_foto_frontal)!}
+                                                                alt="Documento Frontal"
+                                                                className="w-full h-32 object-cover rounded-xl border border-slate-300 cursor-pointer hover:opacity-90 transition-opacity"
+                                                                onClick={() => setActiveImageModal(formatImageUrl(selectedAccesoDetail.doc_foto_frontal)!)}
+                                                            />
+                                                        ) : (
+                                                            <div className="p-3 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-400 text-center italic">{__('Sin foto de documento frontal')}</div>
+                                                        )}
+                                                    </div>
+                                                    <div>
+                                                        <span className="text-slate-500 block font-medium mb-1">{__('Documento de Identidad (Trasero)')}</span>
+                                                        {formatImageUrl(selectedAccesoDetail.doc_foto_trasera) ? (
+                                                            <img
+                                                                src={formatImageUrl(selectedAccesoDetail.doc_foto_trasera)!}
+                                                                alt="Documento Trasero"
+                                                                className="w-full h-32 object-cover rounded-xl border border-slate-300 cursor-pointer hover:opacity-90 transition-opacity"
+                                                                onClick={() => setActiveImageModal(formatImageUrl(selectedAccesoDetail.doc_foto_trasera)!)}
+                                                            />
+                                                        ) : (
+                                                            <div className="p-3 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-400 text-center italic">{__('Sin foto de documento trasero')}</div>
+                                                        )}
+                                                    </div>
+                                                </div>
+                                            </div>
                                         </div>
                                     ) : (
                                         <div className="space-y-4">
@@ -1786,34 +1906,41 @@ export default function Index({
                                     </div>
                                 )}
 
-                                {/* SECCIÓN 3: EMPLEADOS ACOMPAÑANTES EN EL VEHÍCULO */}
+                                {/* SECCIÓN 3: ACOMPAÑANTES REGISTRADOS */}
                                 {selectedAccesoDetail.acompanantes && selectedAccesoDetail.acompanantes.length > 0 && (
                                     <div className="border rounded-2xl p-5 bg-white dark:bg-slate-900 space-y-4 shadow-sm">
                                         <h4 className="text-xs font-bold uppercase tracking-wider text-slate-500 flex items-center gap-2 border-b pb-2">
-                                            <Users className="w-4 h-4 text-blue-600" />
-                                            3. {__('Empleados Acompañantes en el Vehículo')} ({selectedAccesoDetail.acompanantes.length})
+                                            <Users className="w-4 h-4 text-emerald-600" />
+                                            3. {__('Acompañantes Registrados')} ({selectedAccesoDetail.acompanantes.length})
                                         </h4>
 
                                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                                            {selectedAccesoDetail.acompanantes.map((ac: any, idx: number) => (
-                                                <div key={idx} className="p-3 border rounded-xl bg-slate-50 dark:bg-slate-800/40 flex items-start gap-3">
-                                                    <div className="w-10 h-10 rounded-full border overflow-hidden bg-white dark:bg-slate-800 shrink-0">
-                                                        {ac.foto_empleado ? (
-                                                            <img src={ac.foto_empleado} alt="" className="w-full h-full object-cover" />
-                                                        ) : (
-                                                            <User className="w-5 h-5 m-2 text-slate-400" />
-                                                        )}
-                                                    </div>
-                                                    <div className="space-y-0.5 flex-1">
-                                                        <div className="font-bold text-sm text-slate-800 dark:text-slate-200">
-                                                            {ac.nombres} {ac.apellidos}
+                                            {selectedAccesoDetail.acompanantes.map((ac: any, idx: number) => {
+                                                const nombreCompleto = ac.nombre || `${ac.nombres || ''} ${ac.apellidos || ''}`.trim() || `Acompañante #${idx + 1}`;
+                                                const docIdentidad = ac.documento || ac.documento_identidad || 'N/A';
+                                                const deptoCargo = ac.departamento ? `Depto: ${ac.departamento}` : (ac.cargo ? `Cargo: ${ac.cargo}` : null);
+
+                                                return (
+                                                    <div key={idx} className="p-3 border rounded-xl bg-slate-50 dark:bg-slate-800/40 flex items-center gap-3">
+                                                        <div className="w-10 h-10 rounded-full border border-emerald-300 bg-emerald-100 dark:bg-emerald-950 text-emerald-700 dark:text-emerald-300 font-bold flex items-center justify-center text-xs shrink-0 overflow-hidden">
+                                                            {ac.foto_empleado ? (
+                                                                <img src={ac.foto_empleado} alt="" className="w-full h-full object-cover" />
+                                                            ) : (
+                                                                <User className="w-5 h-5 text-emerald-600 dark:text-emerald-400" />
+                                                            )}
                                                         </div>
-                                                        <div className="text-[11px] text-indigo-600 dark:text-indigo-400 font-medium">
-                                                            Doc: {ac.documento_identidad} | Depto: {ac.departamento || 'General'}
+                                                        <div className="space-y-0.5 flex-1 min-w-0">
+                                                            <div className="font-bold text-sm text-slate-800 dark:text-slate-200 truncate">
+                                                                {nombreCompleto}
+                                                            </div>
+                                                            <div className="text-[11px] text-slate-500 font-mono">
+                                                                Doc: <span className="font-bold text-slate-700 dark:text-slate-300">{docIdentidad}</span>
+                                                                {deptoCargo && <span className="ml-1 text-slate-400 font-sans">| {deptoCargo}</span>}
+                                                            </div>
                                                         </div>
                                                     </div>
-                                                </div>
-                                            ))}
+                                                );
+                                            })}
                                         </div>
                                     </div>
                                 )}
@@ -1878,26 +2005,31 @@ export default function Index({
                                     Vehículo N° <span className="font-mono font-bold text-slate-800 dark:text-slate-200">{selectedItemForAcompanantes.codigo_visitante}</span> ({selectedItemForAcompanantes.vehiculo_placa || 'Sin placa'})
                                 </p>
                                 <div className="divide-y border rounded-xl bg-slate-50 dark:bg-slate-900/50">
-                                    {selectedItemForAcompanantes.acompanantes.map((ac: any, idx: number) => (
-                                        <div key={idx} className="p-3.5 flex items-start gap-3">
-                                            <div className="w-10 h-10 rounded-full border overflow-hidden bg-white dark:bg-slate-800 shrink-0">
-                                                {ac.foto_empleado ? (
-                                                    <img src={ac.foto_empleado} alt="" className="w-full h-full object-cover" />
-                                                ) : (
-                                                    <User className="w-5 h-5 m-2 text-slate-400" />
-                                                )}
-                                            </div>
-                                            <div className="flex-1 space-y-1">
-                                                <div className="font-bold text-sm text-slate-800 dark:text-slate-200">
-                                                    {ac.nombres} {ac.apellidos}
+                                    {selectedItemForAcompanantes.acompanantes.map((ac: any, idx: number) => {
+                                        const nombreCompleto = ac.nombre || `${ac.nombres || ''} ${ac.apellidos || ''}`.trim() || `Acompañante #${idx + 1}`;
+                                        const docIdentidad = ac.documento || ac.documento_identidad || 'N/A';
+                                        return (
+                                            <div key={idx} className="p-3.5 flex items-start gap-3">
+                                                <div className="w-10 h-10 rounded-full border border-emerald-300 bg-emerald-100 dark:bg-emerald-950 text-emerald-700 dark:text-emerald-300 font-bold flex items-center justify-center shrink-0 overflow-hidden text-xs">
+                                                    {ac.foto_empleado ? (
+                                                        <img src={ac.foto_empleado} alt="" className="w-full h-full object-cover" />
+                                                    ) : (
+                                                        <User className="w-5 h-5 text-emerald-600 dark:text-emerald-400" />
+                                                    )}
                                                 </div>
-                                                <div className="text-xs text-indigo-600 dark:text-indigo-400 font-medium">
-                                                    Doc: {ac.documento_identidad} | Depto: {ac.departamento || 'General'} {ac.cargo && `| Cargo: ${ac.cargo}`}
+                                                <div className="flex-1 space-y-1">
+                                                    <div className="font-bold text-sm text-slate-800 dark:text-slate-200">
+                                                        {nombreCompleto}
+                                                    </div>
+                                                    <div className="text-xs text-slate-500 font-mono">
+                                                        Doc: <span className="font-bold text-slate-700 dark:text-slate-300">{docIdentidad}</span>
+                                                        {ac.departamento && <span className="ml-1 font-sans text-slate-400">| Depto: {ac.departamento}</span>}
+                                                    </div>
+                                                    {ac.jornada_laboral && renderHorarioJornada(ac.jornada_laboral, nombreCompleto, docIdentidad, true)}
                                                 </div>
-                                                {ac.jornada_laboral && renderHorarioJornada(ac.jornada_laboral, `${ac.nombres} ${ac.apellidos}`, ac.documento_identidad, true)}
                                             </div>
-                                        </div>
-                                    ))}
+                                        );
+                                    })}
                                 </div>
                             </div>
                         )}
@@ -3004,6 +3136,29 @@ export default function Index({
                         </form>
                     </DialogContent>
                 </Dialog>
+
+                {/* MODAL LIGHTBOX / VISOR DE IMÁGENES COMPLETO */}
+                {activeImageModal && (
+                    <div
+                        className="fixed inset-0 z-50 bg-black/90 backdrop-blur-xs flex items-center justify-center p-4 cursor-pointer"
+                        onClick={() => setActiveImageModal(null)}
+                    >
+                        <div className="relative max-w-4xl w-full max-h-[90vh] overflow-hidden rounded-3xl" onClick={(e) => e.stopPropagation()}>
+                            <button
+                                type="button"
+                                onClick={() => setActiveImageModal(null)}
+                                className="absolute top-4 right-4 bg-black/60 hover:bg-black/80 text-white rounded-full p-2.5 backdrop-blur-md transition-colors z-10 shadow-lg"
+                            >
+                                <X className="w-6 h-6" />
+                            </button>
+                            <img
+                                src={activeImageModal}
+                                alt="Fotografía / Documento"
+                                className="w-full h-full object-contain max-h-[85vh] mx-auto rounded-2xl border border-white/10"
+                            />
+                        </div>
+                    </div>
+                )}
 
             </div>
         </>

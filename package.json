@@ -63,6 +63,7 @@
         "date-fns": "^4.4.0",
         "globals": "^15.14.0",
         "input-otp": "^1.4.2",
+        "jsqr": "^1.4.0",
         "laravel-vite-plugin": "^3.0.0",
         "leaflet": "^1.9.4",
         "lucide-react": "^0.475.0",
