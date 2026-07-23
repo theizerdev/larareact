@@ -513,11 +513,12 @@ class VisitaAccesoController extends Controller
                     $to         = $prefix . $cleanPhone;
                     $paseUrl    = url("/pase-digital/{$invitacion->uuid}");
                     $msg  = "Hola *{$invitacion->visitante_nombre}*,\n\n";
-                    $msg .= "Se ha generado tu *PASE DIGITAL DE INVITACIÓN* para ingresar a las instalaciones de *{$empresa->razon_social}*.\n";
+                    $msg .= "Se ha generado tu pre-anuncio de visita a las instalaciones de *{$empresa->razon_social}*.\n\n";
                     $msg .= "📅 *Fecha:* {$invitacion->fecha_estimada}\n";
-                    $msg .= "⏰ *Hora:* " . ($invitacion->hora_estimada ? substr($invitacion->hora_estimada, 0, 5) : 'Por confirmar') . "\n";
-                    $msg .= "🎫 *Código Invitación:* N° {$invitacion->codigo_invitacion}\n\n";
-                    $msg .= "👉 Muestra el código QR al llegar a garita:\n🔗 {$paseUrl}";
+                    $msg .= "⏰ *Hora:* " . ($invitacion->hora_estimada ? substr($invitacion->hora_estimada, 0, 5) : '09:00 hrs') . "\n";
+                    $msg .= "🎫 *Pre-Anuncio N°:* {$invitacion->codigo_invitacion}\n\n";
+                    $msg .= "📝 *PASO REQUERIDO:* Ingresa al siguiente enlace para completar tus datos de vehículo, identificación y activar tu Pase QR:\n";
+                    $msg .= "🔗 {$paseUrl}";
 
                     $ws = new WhatsAppService($empresa);
                     $ws->sendMessage($to, $msg, true);
@@ -553,6 +554,9 @@ class VisitaAccesoController extends Controller
             'vehiculo_placa'        => $invitacion->vehiculo_placa,
             'vehiculo_marca'        => $invitacion->vehiculo_marca,
             'vehiculo_modelo'       => $invitacion->vehiculo_modelo,
+            'vehiculo_foto_frontal' => $invitacion->vehiculo_foto_frontal,
+            'vehiculo_foto_trasera' => $invitacion->vehiculo_foto_trasera,
+            'acompanantes'          => $invitacion->acompanantes,
             'responsable_id'        => $invitacion->anfitrion_id,
             'observaciones'         => "Pre-Anuncio N° {$invitacion->codigo_invitacion} | Visitante: {$invitacion->visitante_nombre} (" . ($invitacion->visitante_empresa ?: 'Particular') . "). Motivo: " . ($invitacion->motivo_visita ?: 'Reunión'),
             'fecha_ingreso'         => now()->toDateString(),
@@ -621,6 +625,7 @@ class VisitaAccesoController extends Controller
 
         $validated = $request->validate([
             'medio_acceso'         => 'required|in:peatonal,vehicular',
+            'foto_carnet'          => 'nullable|string',
             'doc_foto_frontal'     => 'nullable|string',
             'doc_foto_trasera'     => 'nullable|string',
             // Vehículo
@@ -647,6 +652,7 @@ class VisitaAccesoController extends Controller
         };
 
         $folder = "invitaciones/{$invitacion->uuid}";
+        $validated['foto_carnet']           = $savePhoto($validated['foto_carnet']           ?? null, $folder, 'foto_carnet');
         $validated['doc_foto_frontal']      = $savePhoto($validated['doc_foto_frontal']      ?? null, $folder, 'doc_frontal');
         $validated['doc_foto_trasera']      = $savePhoto($validated['doc_foto_trasera']      ?? null, $folder, 'doc_trasera');
         $validated['vehiculo_foto_frontal'] = $savePhoto($validated['vehiculo_foto_frontal'] ?? null, $folder, 'vehiculo_frontal');
@@ -664,6 +670,30 @@ class VisitaAccesoController extends Controller
         $validated['datos_acceso_completados'] = true;
 
         $invitacion->update($validated);
+
+        // Notificar al visitante por WhatsApp confirmando que sus datos fueron registrados y su pase QR está activo
+        if (!empty($invitacion->visitante_telefono)) {
+            try {
+                $empresa    = Empresa::find($invitacion->empresa_id) ?: Empresa::first();
+                $cleanPhone = preg_replace('/[^0-9]/', '', $invitacion->visitante_telefono);
+                if (strlen($cleanPhone) >= 9) {
+                    $pais       = $invitacion->paisTelefono ?: Pais::find($invitacion->pais_telefono_id);
+                    $prefix     = $pais ? preg_replace('/[^0-9]/', '', $pais->codigo_telefonico) : '51';
+                    $to         = $prefix . $cleanPhone;
+                    $paseUrl    = url("/pase-digital/{$invitacion->uuid}");
+                    $msg  = "✅ *¡REGISTRO DE ACCESO COMPLETADO Y PASE QR ACTIVO!*\n\n";
+                    $msg .= "Hola *{$invitacion->visitante_nombre}*,\n";
+                    $msg .= "Tus datos de acceso (vehículo, fotografías y acompañantes) se han guardado correctamente.\n\n";
+                    $msg .= "🎫 Presenta tu *Pase Digital QR* al oficial de seguridad en la garita al llegar:\n";
+                    $msg .= "🔗 {$paseUrl}";
+
+                    $ws = new WhatsAppService($empresa);
+                    $ws->sendMessage($to, $msg, true);
+                }
+            } catch (\Exception $e) {
+                \Illuminate\Support\Facades\Log::error('Error enviando confirmación de Pase Digital por WhatsApp: ' . $e->getMessage());
+            }
+        }
 
         return back()->with('success', '¡Datos de acceso registrados correctamente! Muestra este pase en la garita al llegar.');
     }

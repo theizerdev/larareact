@@ -38,6 +38,8 @@ createInertiaApp({
             case name.startsWith('preregistro-productor/'):
             case name.startsWith('Public/'):
             case name === 'Public/AutorizarAcceso':
+            case name === 'admin/VisitasAccesos/PaseDigital':
+            case name.toLowerCase().endsWith('/pasedigital'):
                 return null;
             case name.startsWith('auth/'):
                 return AuthLayout;

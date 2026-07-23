@@ -23,6 +23,7 @@ class VisitaAccesoInvitacion extends Model
         'visitante_nombres',
         'visitante_apellidos',
         'visitante_documento',
+        'foto_carnet',
         'doc_foto_frontal',
         'doc_foto_trasera',
         'pais_telefono_id',
