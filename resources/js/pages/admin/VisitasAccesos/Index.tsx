@@ -129,6 +129,8 @@ interface VisitasAccesosProps {
         productores: number;
     };
     responsables: any[];
+    paises?: any[];
+    tipoServicios?: any[];
     siguienteCodigo: number;
     filters: {
         search?: string;
@@ -270,6 +272,8 @@ export default function Index({
     accesos = { data: [], current_page: 1, last_page: 1, per_page: 10, total: 0, links: [] },
     stats = { total: 0, en_instalaciones: 0, finalizados: 0, empleados: 0, proveedores: 0, productores: 0 },
     responsables = [],
+    paises = [],
+    tipoServicios = [],
     siguienteCodigo = 80000001,
     filters = {},
 }: VisitasAccesosProps) {
@@ -279,6 +283,90 @@ export default function Index({
         { title: __('Dashboard'), href: '/dashboard' },
         { title: __('Accesos a Instalaciones'), href: '/admin/visitas-accesos' },
     ];
+
+    // ─── PRE-ANUNCIAR / MODAL INVITACIÓN ───────────────────────────────────────
+    const [isCreateInvitacionOpen, setIsCreateInvitacionOpen] = useState(false);
+
+    // Tipo de visita seleccionado en el modal
+    const [invTipoAcceso, setInvTipoAcceso] = useState<'visitante' | 'proveedor' | 'productor'>('visitante');
+
+    // Buscador de Responsable / Anfitrión
+    const [invResponsableQuery, setInvResponsableQuery] = useState('');
+    const [selectedInvResponsable, setSelectedInvResponsable] = useState<any>(null);
+    const [invResponsableOpen, setInvResponsableOpen] = useState(false);
+    const invResponsableRef = useRef<HTMLDivElement>(null);
+
+    const filteredResponsables = responsables.filter((r) => {
+        const q = invResponsableQuery.toLowerCase();
+        return !q || r.nombres?.toLowerCase().includes(q) || r.apellidos?.toLowerCase().includes(q) || r.departamento?.nombre?.toLowerCase().includes(q);
+    });
+
+    useEffect(() => {
+        const close = (e: MouseEvent) => {
+            if (invResponsableRef.current && !invResponsableRef.current.contains(e.target as Node)) {
+                setInvResponsableOpen(false);
+            }
+        };
+        document.addEventListener('mousedown', close);
+        return () => document.removeEventListener('mousedown', close);
+    }, []);
+
+    // Buscador dinámico de Proveedor / Productor
+    const [invEntityQuery, setInvEntityQuery] = useState('');
+    const [invEntityResults, setInvEntityResults] = useState<any[]>([]);
+    const [isSearchingInvEntity, setIsSearchingInvEntity] = useState(false);
+    const [selectedInvEntity, setSelectedInvEntity] = useState<any>(null);
+
+    useEffect(() => {
+        if (!invEntityQuery || invEntityQuery.length < 2) { setInvEntityResults([]); return; }
+        const t = setTimeout(() => {
+            setIsSearchingInvEntity(true);
+            fetch(`/admin/visitas-accesos/buscar-entidades?tipo_acceso=${invTipoAcceso}&query=${encodeURIComponent(invEntityQuery)}`)
+                .then(r => r.json())
+                .then(d => { setInvEntityResults(d); setIsSearchingInvEntity(false); })
+                .catch(() => setIsSearchingInvEntity(false));
+        }, 300);
+        return () => clearTimeout(t);
+    }, [invEntityQuery, invTipoAcceso]);
+
+    // Form de Invitación
+    const invForm = useForm({
+        tipo_acceso: 'visitante' as string,
+        anfitrion_id: '' as string,
+        visitante_nombres: '',
+        visitante_apellidos: '',
+        visitante_telefono: '',
+        pais_telefono_id: paises.length > 0 ? String(paises[0].id) : '',
+        proveedor_id: '',
+        productor_id: '',
+        tipo_servicio_id: '',
+        fecha_estimada: new Date().toISOString().split('T')[0],
+        hora_estimada: '09:00',
+        motivo_visita: '',
+    });
+
+    const resetInvModal = () => {
+        setInvTipoAcceso('visitante');
+        setSelectedInvResponsable(null);
+        setInvResponsableQuery('');
+        setSelectedInvEntity(null);
+        setInvEntityQuery('');
+        setInvEntityResults([]);
+        invForm.reset();
+    };
+
+    const handleCreateInvitacionSubmit = (e: React.FormEvent) => {
+        e.preventDefault();
+        invForm.setData('tipo_acceso', invTipoAcceso);
+        invForm.post('/admin/visitas-accesos/invitaciones', {
+            onSuccess: () => {
+                setIsCreateInvitacionOpen(false);
+                resetInvModal();
+                notifySuccess(__('Pre-Anuncio de visita registrado correctamente.'));
+            },
+            onError: () => notifyError(__('Verifique los datos ingresados e intente nuevamente.')),
+        });
+    };
 
     // Estados de filtros y tabla
     const [searchTerm, setSearchTerm] = useState(filters.search || '');
@@ -1153,10 +1241,20 @@ export default function Index({
                     description={__('Gestión unificada de entradas/salidas para Empleados, Proveedores y Productores con Código de Visitante (80000001+).')}
                     colorClassName="bg-[#104a29]"
                 >
-                    <Button onClick={handleCreateClick} className="bg-[#104a29] hover:bg-[#0c371e] text-white w-full sm:w-auto shadow-md">
-                        <Plus className="mr-2 h-4 w-4" />
-                        {__('Nuevo Registro de Acceso')}
-                    </Button>
+                    <div className="flex flex-wrap items-center gap-2 w-full sm:w-auto">
+                        <Button
+                            onClick={() => { resetInvModal(); setIsCreateInvitacionOpen(true); }}
+                            variant="secondary"
+                            className="bg-white/10 hover:bg-white/20 text-white border border-white/20 w-full sm:w-auto font-bold"
+                        >
+                            <Calendar className="mr-2 h-4 w-4 text-emerald-300" />
+                            {__('Pre-Anunciar / Invitar Visita')}
+                        </Button>
+                        <Button onClick={handleCreateClick} className="bg-emerald-600 hover:bg-emerald-700 text-white w-full sm:w-auto shadow-md font-bold">
+                            <Plus className="mr-2 h-4 w-4" />
+                            {__('Nuevo Registro de Acceso')}
+                        </Button>
+                    </div>
                 </ModuleHeader>
 
                 {/* Tarjetas de Estadísticas Totalmente Responsivas */}
@@ -2528,6 +2626,385 @@ export default function Index({
                         </form>
                     </DialogContent>
                 </Dialog>
+
+                {/* ═══════════════════════════════════════════════════════════
+                    MODAL: PRE-ANUNCIAR / GENERAR PASE DIGITAL DE VISITA
+                ═══════════════════════════════════════════════════════════ */}
+                <Dialog
+                    open={isCreateInvitacionOpen}
+                    onOpenChange={(open) => {
+                        if (!open) resetInvModal();
+                        setIsCreateInvitacionOpen(open);
+                    }}
+                >
+                    <DialogContent className="max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+                        <DialogHeader className="px-6 pt-6 pb-0">
+                            <DialogTitle className="text-lg font-extrabold flex items-center gap-2 text-[#104a29]">
+                                <Calendar className="w-5 h-5 text-emerald-600" />
+                                {__('Pre-Anunciar / Generar Pase Digital de Visita')}
+                            </DialogTitle>
+                        </DialogHeader>
+
+                        <form onSubmit={handleCreateInvitacionSubmit} className="flex flex-col gap-5 px-6 py-5">
+
+                            {/* PASO 1 — Tipo de Visita */}
+                            <div className="space-y-2">
+                                <Label className="text-xs font-bold uppercase tracking-wider text-slate-500">
+                                    {__('Tipo de Visita')} <span className="text-rose-500">*</span>
+                                </Label>
+                                <div className="grid grid-cols-3 gap-2">
+                                    {([
+                                        { val: 'visitante', icon: '👤', label: __('Visitante Particular') },
+                                        { val: 'proveedor', icon: '🚚', label: __('Proveedor de Servicios') },
+                                        { val: 'productor', icon: '🌱', label: __('Productor / Socio Agrícola') },
+                                    ] as const).map((opt) => (
+                                        <button
+                                            key={opt.val}
+                                            type="button"
+                                            onClick={() => {
+                                                setInvTipoAcceso(opt.val);
+                                                setSelectedInvEntity(null);
+                                                setInvEntityQuery('');
+                                                setInvEntityResults([]);
+                                                invForm.setData((prev: any) => ({
+                                                    ...prev,
+                                                    tipo_acceso: opt.val,
+                                                    proveedor_id: '',
+                                                    productor_id: '',
+                                                    tipo_servicio_id: '',
+                                                    visitante_nombres: '',
+                                                    visitante_apellidos: '',
+                                                }));
+                                            }}
+                                            className={`flex flex-col items-center gap-1.5 rounded-xl border-2 p-3 text-xs font-bold transition-all cursor-pointer ${
+                                                invTipoAcceso === opt.val
+                                                    ? 'border-emerald-600 bg-emerald-50 dark:bg-emerald-950/30 text-emerald-800 dark:text-emerald-300 shadow-sm'
+                                                    : 'border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-600 dark:text-slate-400 hover:border-slate-300'
+                                            }`}
+                                        >
+                                            <span className="text-xl">{opt.icon}</span>
+                                            <span className="text-center leading-tight">{opt.label}</span>
+                                        </button>
+                                    ))}
+                                </div>
+                            </div>
+
+                            {/* PASO 2 — Responsable / Anfitrión (siempre visible) */}
+                            <div className="space-y-2" ref={invResponsableRef}>
+                                <Label className="text-xs font-bold uppercase tracking-wider text-slate-500">
+                                    {invTipoAcceso === 'visitante' ? __('Anfitrión / Responsable Driscoll\'s') : __('Responsable Driscoll\'s')}
+                                    <span className="text-rose-500"> *</span>
+                                </Label>
+
+                                {selectedInvResponsable ? (
+                                    <div className="flex items-center gap-3 p-3 rounded-xl bg-emerald-50 dark:bg-emerald-950/20 border border-emerald-200 dark:border-emerald-800">
+                                        <div className="w-9 h-9 rounded-full bg-emerald-600 flex items-center justify-center text-white text-sm font-extrabold flex-shrink-0">
+                                            {selectedInvResponsable.nombres?.[0]}{selectedInvResponsable.apellidos?.[0]}
+                                        </div>
+                                        <div className="flex-1 min-w-0">
+                                            <div className="text-xs font-bold text-emerald-900 dark:text-emerald-300 truncate">
+                                                {selectedInvResponsable.nombres} {selectedInvResponsable.apellidos}
+                                            </div>
+                                            {selectedInvResponsable.departamento && (
+                                                <div className="text-[11px] text-slate-500">{selectedInvResponsable.departamento.nombre}</div>
+                                            )}
+                                        </div>
+                                        <button
+                                            type="button"
+                                            onClick={() => {
+                                                setSelectedInvResponsable(null);
+                                                setInvResponsableQuery('');
+                                                invForm.setData('anfitrion_id', '');
+                                            }}
+                                            className="text-rose-500 hover:text-rose-700 text-xs font-bold px-2.5 py-1 rounded-lg hover:bg-rose-50 dark:hover:bg-rose-950/20 transition-colors"
+                                        >
+                                            {__('Cambiar')}
+                                        </button>
+                                    </div>
+                                ) : (
+                                    <div className="relative">
+                                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400 pointer-events-none" />
+                                        <Input
+                                            placeholder={__('Buscar por nombre, apellido o departamento...')}
+                                            value={invResponsableQuery}
+                                            onChange={(e) => { setInvResponsableQuery(e.target.value); setInvResponsableOpen(true); }}
+                                            onFocus={() => setInvResponsableOpen(true)}
+                                            className="pl-9 h-10 w-full bg-white dark:bg-slate-900 text-xs"
+                                        />
+                                        {invResponsableOpen && filteredResponsables.length > 0 && (
+                                            <div className="absolute z-50 top-full mt-1 w-full border rounded-xl bg-white dark:bg-slate-900 divide-y divide-slate-100 dark:divide-slate-800 max-h-52 overflow-y-auto shadow-xl">
+                                                {filteredResponsables.map((resp) => (
+                                                    <button
+                                                        key={resp.id}
+                                                        type="button"
+                                                        className="w-full flex items-center gap-3 px-4 py-2.5 hover:bg-slate-50 dark:hover:bg-slate-800 text-left"
+                                                        onClick={() => {
+                                                            setSelectedInvResponsable(resp);
+                                                            invForm.setData('anfitrion_id', String(resp.id));
+                                                            setInvResponsableOpen(false);
+                                                            setInvResponsableQuery('');
+                                                        }}
+                                                    >
+                                                        <div className="w-7 h-7 rounded-full bg-slate-100 dark:bg-slate-700 flex items-center justify-center text-xs font-bold text-slate-600 dark:text-slate-300 flex-shrink-0">
+                                                            {resp.nombres?.[0]}{resp.apellidos?.[0]}
+                                                        </div>
+                                                        <div>
+                                                            <div className="text-xs font-bold text-slate-800 dark:text-slate-200">{resp.nombres} {resp.apellidos}</div>
+                                                            {resp.departamento && <div className="text-[10px] text-slate-500">{resp.departamento.nombre}</div>}
+                                                        </div>
+                                                    </button>
+                                                ))}
+                                            </div>
+                                        )}
+                                    </div>
+                                )}
+                            </div>
+
+                            <div className="border-t border-dashed pt-4 space-y-4">
+
+                            {/* ── VISITANTE PARTICULAR ── */}
+                            {invTipoAcceso === 'visitante' && (
+                                <>
+                                    {/* Nombres y Apellidos */}
+                                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                        <div className="space-y-1.5">
+                                            <Label className="text-xs font-bold text-slate-600 dark:text-slate-400">{__('Nombres')} <span className="text-rose-500">*</span></Label>
+                                            <Input
+                                                placeholder="Ej: Juan Carlos"
+                                                value={invForm.data.visitante_nombres}
+                                                onChange={(e) => invForm.setData('visitante_nombres', e.target.value)}
+                                                className="h-10 w-full bg-white dark:bg-slate-900 text-xs"
+                                                required
+                                            />
+                                        </div>
+                                        <div className="space-y-1.5">
+                                            <Label className="text-xs font-bold text-slate-600 dark:text-slate-400">{__('Apellidos')} <span className="text-rose-500">*</span></Label>
+                                            <Input
+                                                placeholder="Ej: Pérez Gómez"
+                                                value={invForm.data.visitante_apellidos}
+                                                onChange={(e) => invForm.setData('visitante_apellidos', e.target.value)}
+                                                className="h-10 w-full bg-white dark:bg-slate-900 text-xs"
+                                                required
+                                            />
+                                        </div>
+                                    </div>
+
+                                    {/* País + Teléfono */}
+                                    <div className="space-y-1.5">
+                                        <Label className="text-xs font-bold text-slate-600 dark:text-slate-400">{__('Teléfono (WhatsApp)')} <span className="text-rose-500">*</span></Label>
+                                        <div className="flex gap-2">
+                                            <Select
+                                                value={invForm.data.pais_telefono_id}
+                                                onValueChange={(v) => invForm.setData('pais_telefono_id', v)}
+                                            >
+                                                <SelectTrigger className="w-48 flex-shrink-0 h-10 text-xs bg-white dark:bg-slate-900 font-mono">
+                                                    <SelectValue placeholder={__('País...')} />
+                                                </SelectTrigger>
+                                                <SelectContent>
+                                                    {paises.map((p: any) => (
+                                                        <SelectItem key={p.id} value={String(p.id)}>
+                                                            {p.nombre} ({p.codigo_telefonico})
+                                                        </SelectItem>
+                                                    ))}
+                                                </SelectContent>
+                                            </Select>
+                                            <Input
+                                                placeholder="Ej: 33 1234 5678"
+                                                value={invForm.data.visitante_telefono}
+                                                onChange={(e) => invForm.setData('visitante_telefono', e.target.value)}
+                                                className="flex-1 h-10 bg-white dark:bg-slate-900 text-xs font-mono"
+                                                required
+                                            />
+                                        </div>
+                                    </div>
+
+                                    {/* Fecha y Hora */}
+                                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                        <div className="space-y-1.5">
+                                            <Label className="text-xs font-bold text-slate-600 dark:text-slate-400">{__('Fecha Estimada')} <span className="text-rose-500">*</span></Label>
+                                            <Input type="date" value={invForm.data.fecha_estimada} onChange={(e) => invForm.setData('fecha_estimada', e.target.value)} className="h-10 w-full bg-white dark:bg-slate-900 text-xs" required />
+                                        </div>
+                                        <div className="space-y-1.5">
+                                            <Label className="text-xs font-bold text-slate-600 dark:text-slate-400">{__('Hora Estimada')}</Label>
+                                            <Input type="time" value={invForm.data.hora_estimada} onChange={(e) => invForm.setData('hora_estimada', e.target.value)} className="h-10 w-full bg-white dark:bg-slate-900 text-xs" />
+                                        </div>
+                                    </div>
+
+                                    {/* Motivo */}
+                                    <div className="space-y-1.5">
+                                        <Label className="text-xs font-bold text-slate-600 dark:text-slate-400">{__('Motivo de Visita')} <span className="text-rose-500">*</span></Label>
+                                        <Textarea placeholder="Ej: Reunión comercial en sala de juntas..." value={invForm.data.motivo_visita} onChange={(e) => invForm.setData('motivo_visita', e.target.value)} className="min-h-[80px] w-full bg-white dark:bg-slate-900 text-xs" required />
+                                    </div>
+                                </>
+                            )}
+
+                            {/* ── PROVEEDOR ── */}
+                            {invTipoAcceso === 'proveedor' && (
+                                <>
+                                    {/* Buscador de Proveedor */}
+                                    <div className="space-y-1.5">
+                                        <Label className="text-xs font-bold text-slate-600 dark:text-slate-400">{__('Buscar Proveedor')} <span className="text-rose-500">*</span></Label>
+                                        {selectedInvEntity ? (
+                                            <div className="flex items-center gap-3 p-3 rounded-xl bg-amber-50 dark:bg-amber-950/20 border border-amber-200">
+                                                <div className="w-9 h-9 rounded-xl bg-amber-500 flex items-center justify-center text-white flex-shrink-0"><Truck className="w-4 h-4" /></div>
+                                                <div className="flex-1 min-w-0">
+                                                    <div className="text-xs font-bold text-amber-900 dark:text-amber-300 truncate">{selectedInvEntity.razon_social || selectedInvEntity.nombre_comercial}</div>
+                                                    <div className="text-[11px] text-slate-500">RFC/Doc: {selectedInvEntity.documento_identidad || 'N/A'}</div>
+                                                </div>
+                                                <button type="button" onClick={() => { setSelectedInvEntity(null); invForm.setData('proveedor_id', ''); setInvEntityQuery(''); }} className="text-rose-500 hover:text-rose-700 text-xs font-bold px-2.5 py-1 rounded-lg hover:bg-rose-50 transition-colors">{__('Cambiar')}</button>
+                                            </div>
+                                        ) : (
+                                            <div className="space-y-1.5">
+                                                <div className="relative">
+                                                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400 pointer-events-none" />
+                                                    <Input placeholder={__('Razón Social, Nombre Comercial o RFC...')} value={invEntityQuery} onChange={(e) => setInvEntityQuery(e.target.value)} className="pl-9 h-10 w-full bg-white dark:bg-slate-900 text-xs" />
+                                                </div>
+                                                {isSearchingInvEntity && <p className="text-xs text-slate-500 px-1">{__('Buscando...')}</p>}
+                                                {invEntityResults.length > 0 && (
+                                                    <div className="border rounded-xl bg-white dark:bg-slate-900 divide-y max-h-48 overflow-y-auto shadow-lg">
+                                                        {invEntityResults.map((e: any) => (
+                                                            <button key={e.id} type="button" onClick={() => { setSelectedInvEntity(e); invForm.setData('proveedor_id', String(e.id)); setInvEntityQuery(''); setInvEntityResults([]); }} className="w-full p-3 hover:bg-slate-50 dark:hover:bg-slate-800 flex items-center gap-3 text-left text-xs">
+                                                                <Truck className="w-4 h-4 text-amber-500 flex-shrink-0" />
+                                                                <div>
+                                                                    <div className="font-bold text-slate-800 dark:text-slate-200">{e.razon_social || e.nombre_comercial}</div>
+                                                                    <div className="text-[10px] text-slate-500">Doc: {e.documento_identidad || 'N/A'} · Tel: {e.telefono || 'N/A'}</div>
+                                                                </div>
+                                                            </button>
+                                                        ))}
+                                                    </div>
+                                                )}
+                                            </div>
+                                        )}
+                                    </div>
+
+                                    {/* Tipo de Servicio (sin IDs 1 y 6) */}
+                                    <div className="space-y-1.5">
+                                        <Label className="text-xs font-bold text-slate-600 dark:text-slate-400">{__('Tipo de Servicio')} <span className="text-rose-500">*</span></Label>
+                                        <Select value={invForm.data.tipo_servicio_id} onValueChange={(v) => invForm.setData('tipo_servicio_id', v)}>
+                                            <SelectTrigger className="h-10 w-full bg-white dark:bg-slate-900 text-xs">
+                                                <SelectValue placeholder={__('Seleccionar tipo de servicio...')} />
+                                            </SelectTrigger>
+                                            <SelectContent>
+                                                {tipoServicios.filter((ts: any) => ts.id !== 1 && ts.id !== 6).map((ts: any) => (
+                                                    <SelectItem key={ts.id} value={String(ts.id)}>{ts.nombre}</SelectItem>
+                                                ))}
+                                            </SelectContent>
+                                        </Select>
+                                    </div>
+
+                                    {/* Fecha y Hora */}
+                                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                        <div className="space-y-1.5">
+                                            <Label className="text-xs font-bold text-slate-600 dark:text-slate-400">{__('Fecha Estimada de Visita')} <span className="text-rose-500">*</span></Label>
+                                            <Input type="date" value={invForm.data.fecha_estimada} onChange={(e) => invForm.setData('fecha_estimada', e.target.value)} className="h-10 w-full bg-white dark:bg-slate-900 text-xs" required />
+                                        </div>
+                                        <div className="space-y-1.5">
+                                            <Label className="text-xs font-bold text-slate-600 dark:text-slate-400">{__('Hora de Llegada')}</Label>
+                                            <Input type="time" value={invForm.data.hora_estimada} onChange={(e) => invForm.setData('hora_estimada', e.target.value)} className="h-10 w-full bg-white dark:bg-slate-900 text-xs" />
+                                        </div>
+                                    </div>
+
+                                    {/* Motivo */}
+                                    <div className="space-y-1.5">
+                                        <Label className="text-xs font-bold text-slate-600 dark:text-slate-400">{__('Motivo de Visita')} <span className="text-rose-500">*</span></Label>
+                                        <Textarea placeholder="Ej: Mantenimiento preventivo de equipos..." value={invForm.data.motivo_visita} onChange={(e) => invForm.setData('motivo_visita', e.target.value)} className="min-h-[80px] w-full bg-white dark:bg-slate-900 text-xs" required />
+                                    </div>
+                                </>
+                            )}
+
+                            {/* ── PRODUCTOR ── */}
+                            {invTipoAcceso === 'productor' && (
+                                <>
+                                    {/* Buscador de Productor */}
+                                    <div className="space-y-1.5">
+                                        <Label className="text-xs font-bold text-slate-600 dark:text-slate-400">{__('Buscar Productor / Rancho')} <span className="text-rose-500">*</span></Label>
+                                        {selectedInvEntity ? (
+                                            <div className="flex items-center gap-3 p-3 rounded-xl bg-purple-50 dark:bg-purple-950/20 border border-purple-200">
+                                                <div className="w-9 h-9 rounded-xl bg-purple-600 flex items-center justify-center text-white flex-shrink-0"><Sprout className="w-4 h-4" /></div>
+                                                <div className="flex-1 min-w-0">
+                                                    <div className="text-xs font-bold text-purple-900 dark:text-purple-300 truncate">{selectedInvEntity.nombre_comercial_rancho || selectedInvEntity.razon_social_rancho || selectedInvEntity.nombre_comercial}</div>
+                                                    <div className="text-[11px] text-slate-500">RFC/Doc: {selectedInvEntity.documento_identidad || 'N/A'}</div>
+                                                </div>
+                                                <button type="button" onClick={() => { setSelectedInvEntity(null); invForm.setData('productor_id', ''); setInvEntityQuery(''); }} className="text-rose-500 hover:text-rose-700 text-xs font-bold px-2.5 py-1 rounded-lg hover:bg-rose-50 transition-colors">{__('Cambiar')}</button>
+                                            </div>
+                                        ) : (
+                                            <div className="space-y-1.5">
+                                                <div className="relative">
+                                                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400 pointer-events-none" />
+                                                    <Input placeholder={__('Nombre del Rancho, Razón Social o RFC...')} value={invEntityQuery} onChange={(e) => setInvEntityQuery(e.target.value)} className="pl-9 h-10 w-full bg-white dark:bg-slate-900 text-xs" />
+                                                </div>
+                                                {isSearchingInvEntity && <p className="text-xs text-slate-500 px-1">{__('Buscando...')}</p>}
+                                                {invEntityResults.length > 0 && (
+                                                    <div className="border rounded-xl bg-white dark:bg-slate-900 divide-y max-h-48 overflow-y-auto shadow-lg">
+                                                        {invEntityResults.map((e: any) => (
+                                                            <button key={e.id} type="button" onClick={() => { setSelectedInvEntity(e); invForm.setData('productor_id', String(e.id)); setInvEntityQuery(''); setInvEntityResults([]); }} className="w-full p-3 hover:bg-slate-50 dark:hover:bg-slate-800 flex items-center gap-3 text-left text-xs">
+                                                                <Sprout className="w-4 h-4 text-purple-500 flex-shrink-0" />
+                                                                <div>
+                                                                    <div className="font-bold text-slate-800 dark:text-slate-200">{e.nombre_comercial_rancho || e.razon_social_rancho || e.nombre_comercial}</div>
+                                                                    <div className="text-[10px] text-slate-500">Razón Social: {e.razon_social || 'N/A'} · RFC: {e.documento_identidad || 'N/A'}</div>
+                                                                </div>
+                                                            </button>
+                                                        ))}
+                                                    </div>
+                                                )}
+                                            </div>
+                                        )}
+                                    </div>
+
+                                    {/* Tipo de Servicio */}
+                                    <div className="space-y-1.5">
+                                        <Label className="text-xs font-bold text-slate-600 dark:text-slate-400">{__('Tipo de Servicio / Entrega')} <span className="text-rose-500">*</span></Label>
+                                        <Select value={invForm.data.tipo_servicio_id} onValueChange={(v) => invForm.setData('tipo_servicio_id', v)}>
+                                            <SelectTrigger className="h-10 w-full bg-white dark:bg-slate-900 text-xs">
+                                                <SelectValue placeholder={__('Seleccionar tipo de servicio agrícola...')} />
+                                            </SelectTrigger>
+                                            <SelectContent>
+                                                {tipoServicios.map((ts: any) => (
+                                                    <SelectItem key={ts.id} value={String(ts.id)}>{ts.nombre}</SelectItem>
+                                                ))}
+                                            </SelectContent>
+                                        </Select>
+                                    </div>
+
+                                    {/* Fecha y Hora */}
+                                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                        <div className="space-y-1.5">
+                                            <Label className="text-xs font-bold text-slate-600 dark:text-slate-400">{__('Fecha Estimada de Visita')} <span className="text-rose-500">*</span></Label>
+                                            <Input type="date" value={invForm.data.fecha_estimada} onChange={(e) => invForm.setData('fecha_estimada', e.target.value)} className="h-10 w-full bg-white dark:bg-slate-900 text-xs" required />
+                                        </div>
+                                        <div className="space-y-1.5">
+                                            <Label className="text-xs font-bold text-slate-600 dark:text-slate-400">{__('Hora de Llegada')}</Label>
+                                            <Input type="time" value={invForm.data.hora_estimada} onChange={(e) => invForm.setData('hora_estimada', e.target.value)} className="h-10 w-full bg-white dark:bg-slate-900 text-xs" />
+                                        </div>
+                                    </div>
+
+                                    {/* Motivo */}
+                                    <div className="space-y-1.5">
+                                        <Label className="text-xs font-bold text-slate-600 dark:text-slate-400">{__('Motivo de Visita')} <span className="text-rose-500">*</span></Label>
+                                        <Textarea placeholder="Ej: Entrega de cosecha / Reunión agrícola..." value={invForm.data.motivo_visita} onChange={(e) => invForm.setData('motivo_visita', e.target.value)} className="min-h-[80px] w-full bg-white dark:bg-slate-900 text-xs" required />
+                                    </div>
+                                </>
+                            )}
+
+                            </div>{/* end border-t section */}
+
+                            <DialogFooter className="gap-2 pt-2 border-t">
+                                <Button type="button" variant="outline" onClick={() => setIsCreateInvitacionOpen(false)} className="h-10 px-6 text-xs">
+                                    {__('Cancelar')}
+                                </Button>
+                                <Button
+                                    type="submit"
+                                    disabled={invForm.processing || !invForm.data.anfitrion_id}
+                                    className="bg-[#104a29] hover:bg-[#0c371e] text-white h-10 px-6 text-xs font-bold gap-1.5"
+                                >
+                                    <Send className="w-3.5 h-3.5" />
+                                    {__('Pre-Anunciar e Invitar (Pase QR)')}
+                                </Button>
+                            </DialogFooter>
+                        </form>
+                    </DialogContent>
+                </Dialog>
+
             </div>
         </>
     );

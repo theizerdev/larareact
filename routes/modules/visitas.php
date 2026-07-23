@@ -16,6 +16,7 @@ Route::middleware(['permission:visitas_temporales.create'])->group(function () {
     Route::post('/visitas-temporales/pre-registro', [VisitaTemporalController::class, 'generatePreRegistro'])->name('visitas-temporales.pre-registro');
     Route::post('/tipo-servicios', [VisitaTemporalController::class, 'storeTipoServicio'])->name('tipo-servicios.store');
     Route::post('/visitas-accesos', [VisitaAccesoController::class, 'store'])->name('visitas-accesos.store');
+    Route::post('/visitas-accesos/invitaciones', [VisitaAccesoController::class, 'storeInvitacion'])->name('visitas-accesos.invitaciones.store');
     Route::post('/visitas-accesos/solicitar-autorizacion-whatsapp', [VisitaAccesoController::class, 'solicitarAutorizacionWhatsapp'])->name('visitas-accesos.solicitar-autorizacion-whatsapp');
 });
 
@@ -23,6 +24,8 @@ Route::middleware(['permission:visitas_temporales.edit'])->group(function () {
     Route::put('/visitas-temporales/{visitaTemporal}', [VisitaTemporalController::class, 'update'])->name('visitas-temporales.update');
     Route::patch('/visitas-temporales/{visitaTemporal}/toggle-status', [VisitaTemporalController::class, 'toggleStatus'])->name('visitas-temporales.toggle-status');
     Route::patch('/visitas-accesos/{visitaAcceso}/marcar-salida', [VisitaAccesoController::class, 'marcarSalida'])->name('visitas-accesos.marcar-salida');
+    Route::post('/visitas-accesos/invitaciones/{invitacion}/canjear', [VisitaAccesoController::class, 'canjearInvitacion'])->name('visitas-accesos.invitaciones.canjear');
+    Route::patch('/visitas-accesos/invitaciones/{invitacion}/cancelar', [VisitaAccesoController::class, 'cancelarInvitacion'])->name('visitas-accesos.invitaciones.cancelar');
 });
 
 Route::middleware(['permission:visitas_temporales.delete'])->group(function () {

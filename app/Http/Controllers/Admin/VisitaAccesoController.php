@@ -14,6 +14,9 @@ use App\Models\ProveedorVehiculo;
 use App\Models\ProductorVehiculo;
 use App\Models\Responsable;
 use App\Models\VisitaAccesoAutorizacion;
+use App\Models\VisitaAccesoInvitacion;
+use App\Models\Pais;
+use App\Models\TipoServicio;
 use App\Models\Empresa;
 use App\Models\Sucursal;
 use App\Services\WhatsAppService;
@@ -112,19 +115,36 @@ class VisitaAccesoController extends Controller
 
         $accesos = $query->latest('id')->paginate($request->perPage ?? 10)->withQueryString();
 
+        $visitasEsperadas = VisitaAccesoInvitacion::query()
+            ->with(['anfitrion', 'empleado', 'proveedor', 'productor', 'proveedorEmpleado', 'productorEmpleado', 'paisTelefono', 'tipoServicio'])
+            ->whereDate('fecha_estimada', '>=', now()->toDateString())
+            ->where('status', 'pendiente')
+            ->orderBy('fecha_estimada', 'asc')
+            ->orderBy('hora_estimada', 'asc')
+            ->get();
+
         $stats = [
-            'total'            => VisitaAcceso::count(),
-            'en_instalaciones' => VisitaAcceso::where('status', 1)->count(),
-            'finalizados'      => VisitaAcceso::where('status', 2)->count(),
-            'empleados'        => VisitaAcceso::where('tipo_acceso', 'empleado')->count(),
-            'proveedores'      => VisitaAcceso::where('tipo_acceso', 'proveedor')->count(),
-            'productores'      => VisitaAcceso::where('tipo_acceso', 'productor')->count(),
+            'total'                  => VisitaAcceso::count(),
+            'en_instalaciones'       => VisitaAcceso::where('status', 1)->count(),
+            'finalizados'            => VisitaAcceso::where('status', 2)->count(),
+            'empleados'              => VisitaAcceso::where('tipo_acceso', 'empleado')->count(),
+            'proveedores'            => VisitaAcceso::where('tipo_acceso', 'proveedor')->count(),
+            'productores'            => VisitaAcceso::where('tipo_acceso', 'productor')->count(),
+            'invitaciones_pendientes'=> $visitasEsperadas->count(),
         ];
 
         $responsables = Responsable::where('status', 1)
             ->with(['departamento', 'cargo'])
             ->orderBy('nombres', 'asc')
             ->get(['id', 'nombres', 'apellidos', 'departamento_id', 'cargo_id']);
+
+        $paises = Pais::where('activo', true)
+            ->orderBy('nombre', 'asc')
+            ->get(['id', 'nombre', 'codigo_iso2', 'codigo_telefonico']);
+
+        $tipoServicios = TipoServicio::where('status', 1)
+            ->orderBy('nombre', 'asc')
+            ->get(['id', 'nombre']);
 
         $user     = $request->user();
         $empresa  = Empresa::find($user->empresa_id) ?: Empresa::first();
@@ -133,13 +153,16 @@ class VisitaAccesoController extends Controller
         $siguienteCodigo = VisitaAcceso::generarSiguienteCodigoVisitante();
 
         return Inertia::render('admin/VisitasAccesos/Index', [
-            'accesos'         => $accesos,
-            'stats'           => $stats,
-            'responsables'    => $responsables,
-            'siguienteCodigo' => $siguienteCodigo,
-            'filters'         => $request->only('search', 'tipo_acceso', 'medio_acceso', 'status', 'perPage'),
-            'empresa'         => $empresa ? ['id' => $empresa->id, 'razon_social' => $empresa->razon_social] : null,
-            'sucursal'        => $sucursal ? ['id' => $sucursal->id, 'nombre' => $sucursal->nombre] : null,
+            'accesos'          => $accesos,
+            'visitasEsperadas' => $visitasEsperadas,
+            'stats'            => $stats,
+            'responsables'     => $responsables,
+            'paises'           => $paises,
+            'tipoServicios'    => $tipoServicios,
+            'siguienteCodigo'  => $siguienteCodigo,
+            'filters'          => $request->only('search', 'tipo_acceso', 'medio_acceso', 'status', 'perPage'),
+            'empresa'          => $empresa ? ['id' => $empresa->id, 'razon_social' => $empresa->razon_social] : null,
+            'sucursal'         => $sucursal ? ['id' => $sucursal->id, 'nombre' => $sucursal->nombre] : null,
         ]);
     }
 
@@ -425,4 +448,225 @@ class VisitaAccesoController extends Controller
             'telefono'           => $phone,
         ]);
     }
+
+    public function storeInvitacion(Request $request)
+    {
+        $validated = $request->validate([
+            'tipo_acceso'         => 'required|in:visitante,proveedor,productor',
+            'anfitrion_id'        => 'required|exists:responsables,id',
+            'visitante_nombres'   => 'nullable|string|max:150',
+            'visitante_apellidos' => 'nullable|string|max:150',
+            'visitante_nombre'    => 'nullable|string|max:255',
+            'pais_telefono_id'    => 'nullable|exists:pais,id',
+            'visitante_telefono'  => 'nullable|string|max:50',
+            'proveedor_id'        => 'nullable|exists:proveedores,id',
+            'productor_id'        => 'nullable|exists:productores,id',
+            'tipo_servicio_id'    => 'nullable|exists:tipo_servicios,id',
+            'fecha_estimada'      => 'required|date',
+            'hora_estimada'       => 'nullable|string',
+            'motivo_visita'       => 'nullable|string',
+        ]);
+
+        $user = $request->user();
+        $validated['anfitrion_user_id'] = $user->id;
+        $validated['empresa_id']        = $user->empresa_id ?? 1;
+        $validated['sucursal_id']       = $user->sucursal_id ?? 1;
+        $validated['status']            = 'pendiente';
+        $validated['medio_acceso']      = 'peatonal';
+
+        if ($request->tipo_acceso === 'visitante') {
+            $nombres = trim($request->input('visitante_nombres', ''));
+            $apellidos = trim($request->input('visitante_apellidos', ''));
+            $validated['visitante_nombre'] = trim("{$nombres} {$apellidos}") ?: 'Visitante Particular';
+        } elseif ($request->tipo_acceso === 'proveedor') {
+            if ($request->filled('proveedor_id')) {
+                $prov = Proveedor::find($request->proveedor_id);
+                if ($prov) {
+                    $validated['visitante_nombre'] = $prov->razon_social ?: $prov->nombre_comercial;
+                    $validated['visitante_empresa'] = $prov->nombre_comercial ?: $prov->razon_social;
+                    $validated['visitante_telefono'] = $prov->telefono;
+                    $validated['pais_telefono_id']   = $prov->pais_telefono_id;
+                }
+            }
+        } elseif ($request->tipo_acceso === 'productor') {
+            if ($request->filled('productor_id')) {
+                $prod = Productor::find($request->productor_id);
+                if ($prod) {
+                    $validated['visitante_nombre'] = $prod->nombre_comercial_rancho ?: ($prod->razon_social_rancho ?: $prod->nombre_comercial);
+                    $validated['visitante_empresa'] = $prod->nombre_comercial ?: $prod->razon_social;
+                    $validated['visitante_telefono'] = $prod->telefono;
+                    $validated['pais_telefono_id']   = $prod->pais_telefono_id;
+                }
+            }
+        }
+
+        $invitacion = VisitaAccesoInvitacion::create($validated);
+
+        // Notificar al visitante por WhatsApp si proporcionó teléfono
+        if (!empty($invitacion->visitante_telefono)) {
+            try {
+                $empresa    = Empresa::find($user->empresa_id) ?: Empresa::first();
+                $cleanPhone = preg_replace('/[^0-9]/', '', $invitacion->visitante_telefono);
+                if (strlen($cleanPhone) >= 9) {
+                    $pais       = $invitacion->paisTelefono ?: Pais::find($invitacion->pais_telefono_id);
+                    $prefix     = $pais ? preg_replace('/[^0-9]/', '', $pais->codigo_telefonico) : '51';
+                    $to         = $prefix . $cleanPhone;
+                    $paseUrl    = url("/pase-digital/{$invitacion->uuid}");
+                    $msg  = "Hola *{$invitacion->visitante_nombre}*,\n\n";
+                    $msg .= "Se ha generado tu *PASE DIGITAL DE INVITACIÓN* para ingresar a las instalaciones de *{$empresa->razon_social}*.\n";
+                    $msg .= "📅 *Fecha:* {$invitacion->fecha_estimada}\n";
+                    $msg .= "⏰ *Hora:* " . ($invitacion->hora_estimada ? substr($invitacion->hora_estimada, 0, 5) : 'Por confirmar') . "\n";
+                    $msg .= "🎫 *Código Invitación:* N° {$invitacion->codigo_invitacion}\n\n";
+                    $msg .= "👉 Muestra el código QR al llegar a garita:\n🔗 {$paseUrl}";
+
+                    $ws = new WhatsAppService($empresa);
+                    $ws->sendMessage($to, $msg, true);
+                }
+            } catch (\Exception $e) {
+                \Illuminate\Support\Facades\Log::error('Error enviando Pase Digital por WhatsApp: ' . $e->getMessage());
+            }
+        }
+
+        return redirect()->back()->with('success', "Pre-Anuncio N° {$invitacion->codigo_invitacion} registrado correctamente.");
+    }
+
+    public function canjearInvitacion(Request $request, VisitaAccesoInvitacion $invitacion)
+    {
+        if ($invitacion->status !== 'pendiente') {
+            return redirect()->back()->with('error', "La invitación N° {$invitacion->codigo_invitacion} ya no está disponible.");
+        }
+
+        $user = $request->user();
+
+        // Convertir invitacion en VisitaAcceso
+        $tipoAcceso = $invitacion->tipo_acceso === 'visitante' ? 'proveedor' : $invitacion->tipo_acceso;
+
+        $acceso = VisitaAcceso::create([
+            'codigo_visitante'      => VisitaAcceso::generarSiguienteCodigoVisitante(),
+            'tipo_acceso'           => $tipoAcceso,
+            'empleado_id'           => $invitacion->empleado_id,
+            'proveedor_id'          => $invitacion->proveedor_id,
+            'proveedor_empleado_id' => $invitacion->proveedor_empleado_id,
+            'productor_id'          => $invitacion->productor_id,
+            'productor_empleado_id' => $invitacion->productor_empleado_id,
+            'medio_acceso'          => $invitacion->medio_acceso,
+            'vehiculo_placa'        => $invitacion->vehiculo_placa,
+            'vehiculo_marca'        => $invitacion->vehiculo_marca,
+            'vehiculo_modelo'       => $invitacion->vehiculo_modelo,
+            'responsable_id'        => $invitacion->anfitrion_id,
+            'observaciones'         => "Pre-Anuncio N° {$invitacion->codigo_invitacion} | Visitante: {$invitacion->visitante_nombre} (" . ($invitacion->visitante_empresa ?: 'Particular') . "). Motivo: " . ($invitacion->motivo_visita ?: 'Reunión'),
+            'fecha_ingreso'         => now()->toDateString(),
+            'hora_ingreso'          => now()->toTimeString(),
+            'status'                => 1,
+            'empresa_id'            => $user->empresa_id ?? 1,
+            'sucursal_id'           => $user->sucursal_id ?? 1,
+        ]);
+
+        $invitacion->update(['status' => 'ingresado']);
+
+        // NOTIFICACIÓN AUTOMÁTICA DE LLEGADA EN TIEMPO REAL AL ANFITRIÓN
+        if ($invitacion->anfitrion_id) {
+            try {
+                $anfitrion = Responsable::with('paisTelefono')->find($invitacion->anfitrion_id);
+                if ($anfitrion && $anfitrion->telefono) {
+                    $empresa    = Empresa::find($user->empresa_id) ?: Empresa::first();
+                    $prefix     = $anfitrion->paisTelefono ? preg_replace('/[^0-9]/', '', $anfitrion->paisTelefono->codigo_telefonico) : '51';
+                    $cleanPhone = preg_replace('/[^0-9]/', '', $anfitrion->telefono);
+                    $fullPhone  = $prefix . $cleanPhone;
+
+                    $horaLlegada = now()->format('H:i');
+                    $placaTxt    = $invitacion->vehiculo_placa ? " (Vehículo Placa: `{$invitacion->vehiculo_placa}`)" : "";
+
+                    $mensaje  = "🟢 *¡TU VISITANTE HA LLEGADO!*\n\n";
+                    $mensaje .= "Hola *{$anfitrion->nombres} {$anfitrion->apellidos}*,\n";
+                    $mensaje .= "Tu visita programada *{$invitacion->visitante_nombre}* (" . ($invitacion->visitante_empresa ?: 'Particular') . ") acaba de ingresar por la Garita Principal a las *{$horaLlegada} hrs*{$placaTxt}.\n\n";
+                    $mensaje .= "🎫 *Código de Acceso:* N° {$acceso->codigo_visitante}\n";
+                    $mensaje .= "📝 *Motivo:* " . ($invitacion->motivo_visita ?: 'Reunión / Visita programada') . "\n\n";
+                    $mensaje .= "Por favor prepárate para recibirle en tu área de trabajo.";
+
+                    $ws = new WhatsAppService($empresa);
+                    $ws->sendMessage($fullPhone, $mensaje, true);
+                }
+            } catch (\Exception $e) {
+                \Illuminate\Support\Facades\Log::error('Error al notificar llegada al anfitrión vía WhatsApp: ' . $e->getMessage());
+            }
+        }
+
+        return redirect()->back()->with('success', "Ingreso registrado correctamente con Código de Visitante N° {$acceso->codigo_visitante}. Se ha notificado al anfitrión por WhatsApp.");
+    }
+
+    public function cancelarInvitacion(VisitaAccesoInvitacion $invitacion)
+    {
+        $invitacion->update(['status' => 'cancelado']);
+        return redirect()->back()->with('success', "Invitación N° {$invitacion->codigo_invitacion} cancelada correctamente.");
+    }
+
+    public function pasePublico(string $uuid)
+    {
+        $invitacion = VisitaAccesoInvitacion::with(['anfitrion', 'empresa', 'sucursal'])
+            ->where('uuid', $uuid)
+            ->firstOrFail();
+
+        return Inertia::render('admin/VisitasAccesos/PaseDigital', [
+            'invitacion' => $invitacion,
+        ]);
+    }
+    public function actualizarDatosAcceso(Request $request, string $uuid)
+    {
+        $invitacion = VisitaAccesoInvitacion::where('uuid', $uuid)->firstOrFail();
+
+        if ($invitacion->status !== 'pendiente') {
+            return back()->withErrors(['status' => 'Este pase ya no está activo o fue cancelado.']);
+        }
+
+        $validated = $request->validate([
+            'medio_acceso'         => 'required|in:peatonal,vehicular',
+            'doc_foto_frontal'     => 'nullable|string',
+            'doc_foto_trasera'     => 'nullable|string',
+            // Vehículo
+            'vehiculo_marca'       => 'nullable|string|max:100',
+            'vehiculo_modelo'      => 'nullable|string|max:100',
+            'vehiculo_anio'        => 'nullable|string|max:10',
+            'vehiculo_placa'       => 'nullable|string|max:50',
+            'vehiculo_foto_frontal'=> 'nullable|string',
+            'vehiculo_foto_trasera'=> 'nullable|string',
+            // Acompañantes
+            'acompanantes'         => 'nullable|array|max:10',
+            'acompanantes.*.nombre'    => 'required_with:acompanantes|string|max:200',
+            'acompanantes.*.documento' => 'nullable|string|max:100',
+        ]);
+
+        // Guardar fotos de documentos en storage si son base64
+        $savePhoto = function (?string $b64, string $folder, string $name): ?string {
+            if (!$b64 || !str_starts_with($b64, 'data:image')) return $b64;
+            $extension = str_contains($b64, 'png') ? 'png' : 'jpg';
+            $data = base64_decode(preg_replace('/^data:image\/\w+;base64,/', '', $b64));
+            $path = "{$folder}/{$name}.{$extension}";
+            Storage::disk('public')->put($path, $data);
+            return $path;
+        };
+
+        $folder = "invitaciones/{$invitacion->uuid}";
+        $validated['doc_foto_frontal']      = $savePhoto($validated['doc_foto_frontal']      ?? null, $folder, 'doc_frontal');
+        $validated['doc_foto_trasera']      = $savePhoto($validated['doc_foto_trasera']      ?? null, $folder, 'doc_trasera');
+        $validated['vehiculo_foto_frontal'] = $savePhoto($validated['vehiculo_foto_frontal'] ?? null, $folder, 'vehiculo_frontal');
+        $validated['vehiculo_foto_trasera'] = $savePhoto($validated['vehiculo_foto_trasera'] ?? null, $folder, 'vehiculo_trasera');
+
+        if ($validated['medio_acceso'] === 'peatonal') {
+            $validated['vehiculo_marca']       = null;
+            $validated['vehiculo_modelo']      = null;
+            $validated['vehiculo_anio']        = null;
+            $validated['vehiculo_placa']       = null;
+            $validated['vehiculo_foto_frontal'] = null;
+            $validated['vehiculo_foto_trasera'] = null;
+        }
+
+        $validated['datos_acceso_completados'] = true;
+
+        $invitacion->update($validated);
+
+        return back()->with('success', '¡Datos de acceso registrados correctamente! Muestra este pase en la garita al llegar.');
+    }
 }
+
+
