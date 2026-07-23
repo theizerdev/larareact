@@ -485,45 +485,50 @@ export default function Index({
             },
         },
         {
-            header: __('Actions'),
+            header: __('Acciones'),
             stopRowClick: true,
-            cell: (productor: Productor) => (
-                <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                        <Button variant="ghost" size="icon" className="h-8 w-8">
-                            <MoreVertical className="h-4 w-4" />
-                        </Button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end" className="w-48">
-                        <DropdownMenuItem onClick={() => setSelectedProductorForEmployees(productor)}>
-                            <Users className="h-4 w-4 mr-2 text-emerald-600" />
-                            {__('Collaborators')}
-                        </DropdownMenuItem>
-                        <DropdownMenuItem onClick={() => setSelectedProductorForVehicles(productor)}>
-                            <Car className="h-4 w-4 mr-2 text-indigo-600" />
-                            {__('Vehicles')}
-                        </DropdownMenuItem>
-                        <DropdownMenuItem onClick={() => handleToggleStatus(productor)}>
-                            <ToggleRight className="h-4 w-4 mr-2 text-amber-600" />
-                            {productor.status === 'activo' ? __('Suspend') : __('Activate')}
-                        </DropdownMenuItem>
-                        <DropdownMenuItem onClick={() => handleOpenEditModal(productor)}>
-                            <Pencil className="h-4 w-4 mr-2 text-slate-600" />
-                            {__('Edit Producer')}
-                        </DropdownMenuItem>
-                        <DropdownMenuItem
-                            onClick={() => {
-                                setDeletingProductor(productor);
-                                setIsDeleteModalOpen(true);
-                            }}
-                            className="text-red-600 focus:text-red-600"
-                        >
-                            <Trash2 className="h-4 w-4 mr-2" />
-                            {__('Delete')}
-                        </DropdownMenuItem>
-                    </DropdownMenuContent>
-                </DropdownMenu>
-            ),
+            cell: (productor: Productor) => {
+                const rawStatus = (productor.status || '').toLowerCase();
+                const isActive = rawStatus === 'activo' || rawStatus === 'active';
+
+                return (
+                    <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                            <Button variant="ghost" size="icon" className="h-8 w-8">
+                                <MoreVertical className="h-4 w-4" />
+                            </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end" className="w-48">
+                            <DropdownMenuItem onClick={() => setSelectedProductorForEmployees(productor)}>
+                                <Users className="h-4 w-4 mr-2 text-emerald-600" />
+                                {__('Colaboradores')}
+                            </DropdownMenuItem>
+                            <DropdownMenuItem onClick={() => setSelectedProductorForVehicles(productor)}>
+                                <Car className="h-4 w-4 mr-2 text-indigo-600" />
+                                {__('Vehículos')}
+                            </DropdownMenuItem>
+                            <DropdownMenuItem onClick={() => handleToggleStatus(productor)}>
+                                <ToggleRight className="h-4 w-4 mr-2 text-amber-600" />
+                                {isActive ? __('Suspender') : __('Activar')}
+                            </DropdownMenuItem>
+                            <DropdownMenuItem onClick={() => handleOpenEditModal(productor)}>
+                                <Pencil className="h-4 w-4 mr-2 text-slate-600" />
+                                {__('Editar Productor')}
+                            </DropdownMenuItem>
+                            <DropdownMenuItem
+                                onClick={() => {
+                                    setDeletingProductor(productor);
+                                    setIsDeleteModalOpen(true);
+                                }}
+                                className="text-red-600 focus:text-red-600"
+                            >
+                                <Trash2 className="h-4 w-4 mr-2" />
+                                {__('Eliminar')}
+                            </DropdownMenuItem>
+                        </DropdownMenuContent>
+                    </DropdownMenu>
+                );
+            },
         },
     ];
 

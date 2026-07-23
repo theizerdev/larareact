@@ -811,5 +811,8 @@
   "Guardar Cambios": "Save Changes",
   "Editar Productor": "Edit Producer",
   "Nuevo Productor": "New Producer",
-  "Eliminar Productor": "Delete Producer"
+  "Eliminar Productor": "Delete Producer",
+  "Suspender": "Suspend",
+  "Activar": "Activate",
+  "Acciones": "Actions"
 }
