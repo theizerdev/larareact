@@ -7,8 +7,11 @@ use App\Models\VisitaAcceso;
 use App\Models\Empleado;
 use App\Models\Proveedor;
 use App\Models\ProveedorEmpleado;
+use App\Models\Productor;
+use App\Models\ProductorEmpleado;
 use App\Models\EmpleadoVehiculo;
 use App\Models\ProveedorVehiculo;
+use App\Models\ProductorVehiculo;
 use App\Models\Responsable;
 use App\Models\VisitaAccesoAutorizacion;
 use App\Models\Empresa;
@@ -30,8 +33,12 @@ class VisitaAccesoController extends Controller
                 'proveedor.paisTelefono',
                 'proveedor.pais',
                 'proveedorEmpleado',
+                'productor.paisTelefono',
+                'productor.pais',
+                'productorEmpleado',
                 'empleadoVehiculo',
                 'proveedorVehiculo',
+                'productorVehiculo',
                 'responsable',
                 'empresa',
                 'sucursal'
@@ -53,6 +60,18 @@ class VisitaAccesoController extends Controller
                             $peQuery->where('nombres', 'like', "%{$search}%")
                                 ->orWhere('apellidos', 'like', "%{$search}%")
                                 ->orWhere('documento_identidad', 'like', "%{$search}%");
+                        })
+                        ->orWhereHas('productor', function ($prQuery) use ($search) {
+                            $prQuery->where('razon_social', 'like', "%{$search}%")
+                                ->orWhere('nombre_comercial', 'like', "%{$search}%")
+                                ->orWhere('razon_social_rancho', 'like', "%{$search}%")
+                                ->orWhere('nombre_comercial_rancho', 'like', "%{$search}%")
+                                ->orWhere('documento_identidad', 'like', "%{$search}%");
+                        })
+                        ->orWhereHas('productorEmpleado', function ($preQuery) use ($search) {
+                            $preQuery->where('nombres', 'like', "%{$search}%")
+                                ->orWhere('apellidos', 'like', "%{$search}%")
+                                ->orWhere('documento_identidad', 'like', "%{$search}%");
                         });
                 });
             })
@@ -69,11 +88,12 @@ class VisitaAccesoController extends Controller
         $accesos = $query->latest('id')->paginate($request->perPage ?? 10)->withQueryString();
 
         $stats = [
-            'total'           => VisitaAcceso::count(),
+            'total'            => VisitaAcceso::count(),
             'en_instalaciones' => VisitaAcceso::where('status', 1)->count(),
-            'finalizados'     => VisitaAcceso::where('status', 2)->count(),
-            'empleados'       => VisitaAcceso::where('tipo_acceso', 'empleado')->count(),
-            'proveedores'     => VisitaAcceso::where('tipo_acceso', 'proveedor')->count(),
+            'finalizados'      => VisitaAcceso::where('status', 2)->count(),
+            'empleados'        => VisitaAcceso::where('tipo_acceso', 'empleado')->count(),
+            'proveedores'      => VisitaAcceso::where('tipo_acceso', 'proveedor')->count(),
+            'productores'      => VisitaAcceso::where('tipo_acceso', 'productor')->count(),
         ];
 
         $responsables = Responsable::where('status', 1)
@@ -99,7 +119,7 @@ class VisitaAccesoController extends Controller
     }
 
     /**
-     * Búsqueda dinámica de empleados o proveedores para el formulario de registro de acceso
+     * Búsqueda dinámica de empleados, proveedores o productores para el formulario de registro de acceso
      */
     public function buscarEntidades(Request $request)
     {
@@ -150,19 +170,51 @@ class VisitaAccesoController extends Controller
             return response()->json($result);
         }
 
+        if ($tipo === 'productor') {
+            $productores = Productor::query()
+                ->where('status', 'activo')
+                ->where(function ($q) use ($query) {
+                    if (!empty($query)) {
+                        $q->where('razon_social', 'like', "%{$query}%")
+                          ->orWhere('nombre_comercial', 'like', "%{$query}%")
+                          ->orWhere('razon_social_rancho', 'like', "%{$query}%")
+                          ->orWhere('nombre_comercial_rancho', 'like', "%{$query}%")
+                          ->orWhere('documento_identidad', 'like', "%{$query}%");
+                    }
+                })
+                ->with(['user'])
+                ->limit(20)
+                ->get();
+
+            // Adjuntar empleados y vehículos para cada productor
+            $result = $productores->map(function ($prod) {
+                $empleados = ProductorEmpleado::where('productor_id', $prod->id)->get();
+                $vehiculos = ProductorVehiculo::where('productor_id', $prod->id)->get();
+                return array_merge($prod->toArray(), [
+                    'empleados_productor' => $empleados,
+                    'vehiculos_productor' => $vehiculos,
+                ]);
+            });
+
+            return response()->json($result);
+        }
+
         return response()->json([]);
     }
 
     public function store(Request $request)
     {
         $validated = $request->validate([
-            'tipo_acceso'           => 'required|in:empleado,proveedor',
+            'tipo_acceso'           => 'required|in:empleado,proveedor,productor',
             'empleado_id'           => 'nullable|required_if:tipo_acceso,empleado|exists:empleados,id',
             'proveedor_id'          => 'nullable|required_if:tipo_acceso,proveedor|exists:proveedores,id',
             'proveedor_empleado_id' => 'nullable|exists:proveedor_empleados,id',
+            'productor_id'          => 'nullable|required_if:tipo_acceso,productor|exists:productores,id',
+            'productor_empleado_id' => 'nullable|exists:productor_empleados,id',
             'medio_acceso'          => 'required|in:peatonal,vehicular',
             'empleado_vehiculo_id'  => 'nullable|exists:empleado_vehiculos,id',
             'proveedor_vehiculo_id' => 'nullable|exists:proveedor_vehiculos,id',
+            'productor_vehiculo_id' => 'nullable|exists:productor_vehiculos,id',
             'vehiculo_tipo'         => 'nullable|string|max:100',
             'vehiculo_marca'        => 'nullable|string|max:100',
             'vehiculo_modelo'       => 'nullable|string|max:100',
@@ -185,7 +237,17 @@ class VisitaAccesoController extends Controller
         $validated['status']          = 1; // En Instalaciones
 
         if ($validated['medio_acceso'] === 'vehicular') {
-            if (!empty($validated['proveedor_vehiculo_id'])) {
+            if (!empty($validated['productor_vehiculo_id'])) {
+                $prVehiculo = \App\Models\ProductorVehiculo::find($validated['productor_vehiculo_id']);
+                if ($prVehiculo) {
+                    $validated['vehiculo_marca'] = $validated['vehiculo_marca'] ?? $prVehiculo->marca;
+                    $validated['vehiculo_modelo'] = $validated['vehiculo_modelo'] ?? $prVehiculo->modelo;
+                    $validated['vehiculo_placa'] = $validated['vehiculo_placa'] ?? $prVehiculo->placa;
+                    $validated['vehiculo_tipo'] = $validated['vehiculo_tipo'] ?? ($prVehiculo->tipo_vehiculo ?? 'Auto');
+                    $validated['vehiculo_foto_frontal'] = $validated['vehiculo_foto_frontal'] ?? $prVehiculo->foto_frontal;
+                    $validated['vehiculo_foto_trasera'] = $validated['vehiculo_foto_trasera'] ?? $prVehiculo->foto_trasera;
+                }
+            } elseif (!empty($validated['proveedor_vehiculo_id'])) {
                 $pVehiculo = \App\Models\ProveedorVehiculo::find($validated['proveedor_vehiculo_id']);
                 if ($pVehiculo) {
                     $validated['vehiculo_marca'] = $validated['vehiculo_marca'] ?? $pVehiculo->marca;

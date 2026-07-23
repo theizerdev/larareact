@@ -41,9 +41,12 @@ class VisitaAcceso extends Model
         'empleado_id',
         'proveedor_id',
         'proveedor_empleado_id',
+        'productor_id',
+        'productor_empleado_id',
         'medio_acceso',
         'empleado_vehiculo_id',
         'proveedor_vehiculo_id',
+        'productor_vehiculo_id',
         'vehiculo_tipo',
         'vehiculo_marca',
         'vehiculo_modelo',
@@ -99,6 +102,16 @@ class VisitaAcceso extends Model
         return $this->belongsTo(ProveedorEmpleado::class, 'proveedor_empleado_id');
     }
 
+    public function productor(): BelongsTo
+    {
+        return $this->belongsTo(Productor::class, 'productor_id');
+    }
+
+    public function productorEmpleado(): BelongsTo
+    {
+        return $this->belongsTo(ProductorEmpleado::class, 'productor_empleado_id');
+    }
+
     public function empleadoVehiculo(): BelongsTo
     {
         return $this->belongsTo(EmpleadoVehiculo::class, 'empleado_vehiculo_id');
@@ -107,6 +120,11 @@ class VisitaAcceso extends Model
     public function proveedorVehiculo(): BelongsTo
     {
         return $this->belongsTo(ProveedorVehiculo::class, 'proveedor_vehiculo_id');
+    }
+
+    public function productorVehiculo(): BelongsTo
+    {
+        return $this->belongsTo(ProductorVehiculo::class, 'productor_vehiculo_id');
     }
 
     public function responsable(): BelongsTo

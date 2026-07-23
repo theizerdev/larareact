@@ -4,6 +4,7 @@ import {
     ShieldCheck, 
     User, 
     Truck, 
+    Sprout,
     Search, 
     Plus, 
     Calendar, 
@@ -73,13 +74,16 @@ import { cleanParams } from '@/lib/utils';
 interface VisitaAcceso {
     id: number;
     codigo_visitante: number;
-    tipo_acceso: 'empleado' | 'proveedor';
+    tipo_acceso: 'empleado' | 'proveedor' | 'productor';
     empleado_id?: number | null;
     proveedor_id?: number | null;
     proveedor_empleado_id?: number | null;
+    productor_id?: number | null;
+    productor_empleado_id?: number | null;
     medio_acceso: 'peatonal' | 'vehicular';
     empleado_vehiculo_id?: number | null;
     proveedor_vehiculo_id?: number | null;
+    productor_vehiculo_id?: number | null;
     vehiculo_tipo?: string | null;
     vehiculo_marca?: string | null;
     vehiculo_modelo?: string | null;
@@ -97,8 +101,11 @@ interface VisitaAcceso {
     empleado?: any;
     proveedor?: any;
     proveedor_empleado?: any;
+    productor?: any;
+    productor_empleado?: any;
     empleado_vehiculo?: any;
     proveedor_vehiculo?: any;
+    productor_vehiculo?: any;
     responsable?: any;
 }
 
@@ -119,6 +126,7 @@ interface VisitasAccesosProps {
         finalizados: number;
         empleados: number;
         proveedores: number;
+        productores: number;
     };
     responsables: any[];
     siguienteCodigo: number;
@@ -260,7 +268,7 @@ function CameraWidget({ onCapture, onCancel }: CameraWidgetProps) {
 
 export default function Index({
     accesos = { data: [], current_page: 1, last_page: 1, per_page: 10, total: 0, links: [] },
-    stats = { total: 0, en_instalaciones: 0, finalizados: 0, empleados: 0, proveedores: 0 },
+    stats = { total: 0, en_instalaciones: 0, finalizados: 0, empleados: 0, proveedores: 0, productores: 0 },
     responsables = [],
     siguienteCodigo = 80000001,
     filters = {},
@@ -282,7 +290,7 @@ export default function Index({
 
     // Modal estado creación
     const [isCreateOpen, setIsCreateOpen] = useState(false);
-    const [tipoAcceso, setTipoAcceso] = useState<'empleado' | 'proveedor'>('empleado');
+    const [tipoAcceso, setTipoAcceso] = useState<'empleado' | 'proveedor' | 'productor'>('empleado');
     const [searchQuery, setSearchQuery] = useState('');
     const [searchResults, setSearchResults] = useState<any[]>([]);
     const [isSearching, setIsSearching] = useState(false);
@@ -329,9 +337,12 @@ export default function Index({
         empleado_id: '',
         proveedor_id: '',
         proveedor_empleado_id: '',
+        productor_id: '',
+        productor_empleado_id: '',
         medio_acceso: 'peatonal',
         empleado_vehiculo_id: '',
         proveedor_vehiculo_id: '',
+        productor_vehiculo_id: '',
         vehiculo_tipo: '',
         vehiculo_marca: '',
         vehiculo_modelo: '',
@@ -446,18 +457,30 @@ export default function Index({
 
     const syncProveedorEmpleadosState = (ids: string[], entityParam?: any) => {
         const ent = entityParam || selectedEntity;
-        if (!ent?.empleados_proveedor || ids.length === 0) {
-            setData('proveedor_empleado_id', '');
+        const listaEmps = tipoAcceso === 'productor' ? ent?.empleados_productor : ent?.empleados_proveedor;
+
+        if (!listaEmps || ids.length === 0) {
+            if (tipoAcceso === 'productor') {
+                setData('productor_empleado_id', '');
+            } else {
+                setData('proveedor_empleado_id', '');
+            }
             setAcompanantesList([]);
             setData('acompanantes', []);
             return;
         }
 
         const mainId = ids[0];
-        setData('proveedor_empleado_id', mainId);
+        if (tipoAcceso === 'productor') {
+            setData('productor_empleado_id', mainId);
+            setData('proveedor_empleado_id', '');
+        } else {
+            setData('proveedor_empleado_id', mainId);
+            setData('productor_empleado_id', '');
+        }
 
         const extraIds = ids.slice(1);
-        const extraEmps = ent.empleados_proveedor
+        const extraEmps = listaEmps
             .filter((emp: any) => extraIds.includes(emp.id.toString()))
             .map((emp: any) => ({
                 id: emp.id,
@@ -466,8 +489,8 @@ export default function Index({
                 documento_identidad: emp.documento_identidad,
                 foto_empleado: emp.foto_carnet || emp.foto_empleado || null,
                 documento_frontal: emp.documento_frontal || null,
-                departamento: ent.nombre_comercial || ent.razon_social,
-                cargo: emp.cargo || 'Personal Proveedor',
+                departamento: ent.nombre_comercial_rancho || ent.razon_social_rancho || ent.nombre_comercial || ent.razon_social,
+                cargo: emp.cargo || (tipoAcceso === 'productor' ? 'Colaborador Productor' : 'Personal Proveedor'),
                 is_proveedor_empleado: true,
             }));
 
@@ -487,8 +510,9 @@ export default function Index({
     };
 
     const selectAllProveedorEmpleados = () => {
-        if (!selectedEntity?.empleados_proveedor) return;
-        const allIds = selectedEntity.empleados_proveedor.map((emp: any) => emp.id.toString());
+        const list = tipoAcceso === 'productor' ? selectedEntity?.empleados_productor : selectedEntity?.empleados_proveedor;
+        if (!list) return;
+        const allIds = list.map((emp: any) => emp.id.toString());
         setSelectedProveedorEmpleadoIds(allIds);
         syncProveedorEmpleadosState(allIds);
     };
@@ -508,6 +532,8 @@ export default function Index({
                 empleado_id: entity.id,
                 proveedor_id: '',
                 proveedor_empleado_id: '',
+                productor_id: '',
+                productor_empleado_id: '',
                 responsable_id: entity.responsable_id ? String(entity.responsable_id) : '',
             }));
 
@@ -516,12 +542,14 @@ export default function Index({
             } else {
                 setVehiculoSeleccionado('nuevo');
             }
-        } else {
+        } else if (tipoAcceso === 'proveedor') {
             setData((prev) => ({
                 ...prev,
                 tipo_acceso: 'proveedor',
                 proveedor_id: entity.id,
                 empleado_id: '',
+                productor_id: '',
+                productor_empleado_id: '',
             }));
 
             if (entity.empleados_proveedor && entity.empleados_proveedor.length > 0) {
@@ -535,6 +563,30 @@ export default function Index({
 
             if (entity.vehiculos_proveedor && entity.vehiculos_proveedor.length > 0) {
                 setVehiculoSeleccionado(entity.vehiculos_proveedor[0].id.toString());
+            } else {
+                setVehiculoSeleccionado('nuevo');
+            }
+        } else if (tipoAcceso === 'productor') {
+            setData((prev) => ({
+                ...prev,
+                tipo_acceso: 'productor',
+                productor_id: entity.id,
+                empleado_id: '',
+                proveedor_id: '',
+                proveedor_empleado_id: '',
+            }));
+
+            if (entity.empleados_productor && entity.empleados_productor.length > 0) {
+                const initialIds = [entity.empleados_productor[0].id.toString()];
+                setSelectedProveedorEmpleadoIds(initialIds);
+                syncProveedorEmpleadosState(initialIds, entity);
+            } else {
+                setSelectedProveedorEmpleadoIds([]);
+                syncProveedorEmpleadosState([], entity);
+            }
+
+            if (entity.vehiculos_productor && entity.vehiculos_productor.length > 0) {
+                setVehiculoSeleccionado(entity.vehiculos_productor[0].id.toString());
             } else {
                 setVehiculoSeleccionado('nuevo');
             }
@@ -875,7 +927,11 @@ export default function Index({
     // Obtener objeto del vehículo pre-registrado seleccionado
     const getVehiculoSeleccionadoObj = () => {
         if (!selectedEntity || vehiculoSeleccionado === 'nuevo') return null;
-        const listaVehiculos = tipoAcceso === 'empleado' ? selectedEntity.vehiculos : selectedEntity.vehiculos_proveedor;
+        const listaVehiculos = tipoAcceso === 'empleado'
+            ? selectedEntity.vehiculos
+            : tipoAcceso === 'productor'
+            ? selectedEntity.vehiculos_productor
+            : selectedEntity.vehiculos_proveedor;
         return listaVehiculos?.find((v: any) => v.id.toString() === vehiculoSeleccionado) || null;
     };
 
@@ -902,19 +958,28 @@ export default function Index({
             header: __('Persona / Entidad'),
             cell: (item) => {
                 const isEmp = item.tipo_acceso === 'empleado';
+                const isProd = item.tipo_acceso === 'productor';
                 const nombre = isEmp
                     ? `${item.empleado?.nombres || ''} ${item.empleado?.apellidos || ''}`
+                    : isProd
+                    ? (item.productor_empleado
+                        ? `${item.productor_empleado?.nombres || ''} ${item.productor_empleado?.apellidos || ''}`
+                        : item.productor?.nombre_comercial_rancho || item.productor?.razon_social_rancho || item.productor?.nombre_comercial || item.productor?.razon_social || '-')
                     : item.proveedor_empleado
                     ? `${item.proveedor_empleado?.nombres || ''} ${item.proveedor_empleado?.apellidos || ''}`
                     : item.proveedor?.nombre_comercial || item.proveedor?.razon_social || '-';
 
                 const doc = isEmp
                     ? item.empleado?.documento_identidad
-                    : item.proveedor_empleado?.documento_identidad || item.proveedor?.documento_identidad;
+                    : isProd
+                    ? (item.productor_empleado?.documento_identidad || item.productor?.documento_identidad)
+                    : (item.proveedor_empleado?.documento_identidad || item.proveedor?.documento_identidad);
 
                 const rawAvatar = isEmp
                     ? item.empleado?.foto_empleado
-                    : item.proveedor_empleado?.foto_carnet || (item.proveedor_empleado as any)?.foto_empleado;
+                    : isProd
+                    ? (item.productor_empleado?.foto_carnet || (item.productor_empleado as any)?.foto_empleado)
+                    : (item.proveedor_empleado?.foto_carnet || (item.proveedor_empleado as any)?.foto_empleado);
                 const avatar = formatImageUrl(rawAvatar);
                 const tieneAcompanantes = item.acompanantes && item.acompanantes.length > 0;
 
@@ -950,7 +1015,10 @@ export default function Index({
                             </div>
                             <span className="text-xs text-muted-foreground font-mono">
                                 Doc: {doc || '-'}
-                                {!isEmp && item.proveedor && (
+                                {isProd && item.productor && (
+                                    <span className="ml-1 text-purple-600 dark:text-purple-400">({item.productor.nombre_comercial_rancho || item.productor.razon_social_rancho || item.productor.nombre_comercial})</span>
+                                )}
+                                {!isEmp && !isProd && item.proveedor && (
                                     <span className="ml-1 text-amber-600 dark:text-amber-400">({item.proveedor.nombre_comercial || item.proveedor.razon_social})</span>
                                 )}
                             </span>
@@ -966,6 +1034,10 @@ export default function Index({
                 item.tipo_acceso === 'empleado' ? (
                     <Badge className="bg-blue-50 text-blue-700 border-blue-200 dark:bg-blue-950/30 dark:text-blue-400 dark:border-blue-900 gap-1">
                         <User className="w-3 h-3" /> {__('Empleado')}
+                    </Badge>
+                ) : item.tipo_acceso === 'productor' ? (
+                    <Badge className="bg-purple-50 text-purple-700 border-purple-200 dark:bg-purple-950/30 dark:text-purple-400 dark:border-purple-900 gap-1">
+                        <Sprout className="w-3 h-3" /> {__('Productor')}
                     </Badge>
                 ) : (
                     <Badge className="bg-amber-50 text-amber-700 border-amber-200 dark:bg-amber-950/30 dark:text-amber-400 dark:border-amber-900 gap-1">
@@ -1076,7 +1148,7 @@ export default function Index({
                 <ModuleHeader
                     icon={<ShieldCheck className="h-6 w-6 text-white" />}
                     title={__('Control de Accesos a Instalaciones')}
-                    description={__('Gestión unificada de entradas/salidas para Empleados y Proveedores con Código de Visitante (80000001+).')}
+                    description={__('Gestión unificada de entradas/salidas para Empleados, Proveedores y Productores con Código de Visitante (80000001+).')}
                     colorClassName="bg-[#104a29]"
                 >
                     <Button onClick={handleCreateClick} className="bg-[#104a29] hover:bg-[#0c371e] text-white w-full sm:w-auto shadow-md">
@@ -1086,7 +1158,7 @@ export default function Index({
                 </ModuleHeader>
 
                 {/* Tarjetas de Estadísticas Totalmente Responsivas */}
-                <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3 sm:gap-4 lg:gap-6">
+                <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3 sm:gap-4 lg:gap-6">
                     <StatCard
                         icon={<FileText className="h-6 w-6" />}
                         title={__('TOTAL ACCESOS')}
@@ -1117,6 +1189,12 @@ export default function Index({
                         value={stats.proveedores}
                         colorClassName="bg-amber-100 text-amber-600 dark:bg-amber-950/20 dark:text-amber-400"
                     />
+                    <StatCard
+                        icon={<Sprout className="h-6 w-6" />}
+                        title={__('PRODUCTORES')}
+                        value={stats.productores || 0}
+                        colorClassName="bg-purple-100 text-purple-600 dark:bg-purple-950/20 dark:text-purple-400"
+                    />
                 </div>
 
                 {/* Barra de Filtros */}
@@ -1140,6 +1218,7 @@ export default function Index({
                                     <SelectItem value="all">{__('Todos')}</SelectItem>
                                     <SelectItem value="empleado">{__('Empleado')}</SelectItem>
                                     <SelectItem value="proveedor">{__('Proveedor')}</SelectItem>
+                                    <SelectItem value="productor">{__('Productor')}</SelectItem>
                                 </SelectContent>
                             </Select>
                         </FilterField>
@@ -1227,6 +1306,8 @@ export default function Index({
                                             <span className="text-slate-500 uppercase">{__('Tipo:')}</span>
                                             {selectedAccesoDetail.tipo_acceso === 'empleado' ? (
                                                 <Badge className="bg-blue-100 text-blue-800 border-blue-300">Empleado</Badge>
+                                            ) : selectedAccesoDetail.tipo_acceso === 'productor' ? (
+                                                <Badge className="bg-purple-100 text-purple-800 border-purple-300">Productor</Badge>
                                             ) : (
                                                 <Badge className="bg-amber-100 text-amber-800 border-amber-300">Proveedor</Badge>
                                             )}
@@ -1262,7 +1343,11 @@ export default function Index({
                                 <div className="border rounded-2xl p-5 bg-white dark:bg-slate-900 space-y-4 shadow-sm">
                                     <h4 className="text-xs font-bold uppercase tracking-wider text-slate-500 flex items-center gap-2 border-b pb-2">
                                         <User className="w-4 h-4 text-emerald-600" />
-                                        1. {selectedAccesoDetail.tipo_acceso === 'empleado' ? __('Información del Empleado / Conductor') : __('Información de la Empresa Proveedora y Personal')}
+                                        1. {selectedAccesoDetail.tipo_acceso === 'empleado'
+                                            ? __('Información del Empleado / Conductor')
+                                            : selectedAccesoDetail.tipo_acceso === 'productor'
+                                            ? __('Información del Rancho / Productor y Personal')
+                                            : __('Información de la Empresa Proveedora y Personal')}
                                     </h4>
 
                                     {selectedAccesoDetail.tipo_acceso === 'empleado' ? (
@@ -1304,6 +1389,97 @@ export default function Index({
                                                     </div>
                                                 )}
                                             </div>
+                                        </div>
+                                    ) : selectedAccesoDetail.tipo_acceso === 'productor' ? (
+                                        <div className="space-y-4">
+                                            {/* Ficha del Rancho / Productor */}
+                                            <div className="p-4 rounded-xl bg-purple-50/70 dark:bg-purple-950/30 border border-purple-200/80 dark:border-purple-900/60 space-y-3">
+                                                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-purple-200/80 dark:border-purple-900/60 pb-2">
+                                                    <div className="flex items-center gap-2.5">
+                                                        <div className="p-2 bg-purple-600 text-white rounded-xl">
+                                                            <Sprout className="w-5 h-5" />
+                                                        </div>
+                                                        <div>
+                                                            <h3 className="text-base font-extrabold text-slate-900 dark:text-slate-100">
+                                                                {selectedAccesoDetail.productor?.nombre_comercial_rancho || selectedAccesoDetail.productor?.razon_social_rancho || selectedAccesoDetail.productor?.nombre_comercial || selectedAccesoDetail.productor?.razon_social || __('Rancho Productor')}
+                                                            </h3>
+                                                            {(selectedAccesoDetail.productor?.razon_social_rancho || selectedAccesoDetail.productor?.razon_social) && (
+                                                                <p className="text-xs text-slate-600 dark:text-slate-400 font-medium">
+                                                                    Razón Social: {selectedAccesoDetail.productor.razon_social_rancho || selectedAccesoDetail.productor.razon_social}
+                                                                </p>
+                                                            )}
+                                                        </div>
+                                                    </div>
+                                                    <Badge variant="outline" className="bg-purple-100 dark:bg-purple-900/60 text-purple-900 dark:text-purple-200 border-purple-300 font-mono text-xs w-fit">
+                                                        RFC/Doc: {selectedAccesoDetail.productor?.documento_identidad || 'N/A'}
+                                                    </Badge>
+                                                </div>
+
+                                                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-xs">
+                                                    <div>
+                                                        <span className="text-slate-500 block font-medium">{__('Teléfono de Contacto')}</span>
+                                                        <span className="font-bold text-slate-800 dark:text-slate-200 font-mono">
+                                                            {selectedAccesoDetail.productor?.telefono || 'N/A'}
+                                                        </span>
+                                                    </div>
+                                                    <div>
+                                                        <span className="text-slate-500 block font-medium">{__('Contacto / Encargado')}</span>
+                                                        <span className="font-bold text-slate-800 dark:text-slate-200">
+                                                            {selectedAccesoDetail.productor?.responsable || 'N/A'}
+                                                        </span>
+                                                    </div>
+                                                    <div>
+                                                        <span className="text-slate-500 block font-medium">{__('Ubicación Rancho')}</span>
+                                                        <span className="font-bold text-slate-800 dark:text-slate-200 truncate block">
+                                                            {selectedAccesoDetail.productor?.direccion || 'N/A'}
+                                                        </span>
+                                                    </div>
+                                                </div>
+                                            </div>
+
+                                            {/* Conductor / Personal Principal del Productor */}
+                                            {selectedAccesoDetail.productor_empleado && (
+                                                <div className="p-3.5 rounded-xl border bg-slate-50 dark:bg-slate-800/40 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+                                                    <div className="flex items-center gap-3 min-w-0">
+                                                        <div className="flex gap-2 shrink-0">
+                                                            <div className="w-14 h-14 rounded-2xl overflow-hidden border bg-white dark:bg-slate-800 flex items-center justify-center shadow-xs">
+                                                                {formatImageUrl(selectedAccesoDetail.productor_empleado.foto_carnet || (selectedAccesoDetail.productor_empleado as any).foto_empleado) ? (
+                                                                    <img
+                                                                        src={formatImageUrl(selectedAccesoDetail.productor_empleado.foto_carnet || (selectedAccesoDetail.productor_empleado as any).foto_empleado)!}
+                                                                        alt=""
+                                                                        className="w-full h-full object-cover"
+                                                                    />
+                                                                ) : (
+                                                                    <User className="w-7 h-7 text-slate-400" />
+                                                                )}
+                                                            </div>
+                                                            {formatImageUrl(selectedAccesoDetail.productor_empleado.documento_frontal) && (
+                                                                <div className="w-14 h-14 rounded-2xl overflow-hidden border bg-white dark:bg-slate-800 flex items-center justify-center shadow-xs">
+                                                                    <img
+                                                                        src={formatImageUrl(selectedAccesoDetail.productor_empleado.documento_frontal)!}
+                                                                        alt="Documento"
+                                                                        className="w-full h-full object-cover"
+                                                                    />
+                                                                </div>
+                                                            )}
+                                                        </div>
+                                                        <div className="min-w-0">
+                                                            <div className="font-bold text-sm text-slate-800 dark:text-slate-200 flex flex-wrap items-center gap-2">
+                                                                <span>{selectedAccesoDetail.productor_empleado.nombres} {selectedAccesoDetail.productor_empleado.apellidos}</span>
+                                                                <Badge className="bg-purple-600 text-white text-[10px]">Conductor / Principal 🚗</Badge>
+                                                            </div>
+                                                            <div className="text-xs text-slate-500 font-mono mt-1">
+                                                                Doc: <span className="font-bold text-slate-700 dark:text-slate-300">{selectedAccesoDetail.productor_empleado.documento_identidad}</span>
+                                                                {selectedAccesoDetail.productor_empleado.cargo && (
+                                                                    <span className="ml-2 font-sans text-purple-600 dark:text-purple-400 font-medium">
+                                                                        • {selectedAccesoDetail.productor_empleado.cargo}
+                                                                    </span>
+                                                                )}
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            )}
                                         </div>
                                     ) : (
                                         <div className="space-y-4">
@@ -1611,7 +1787,7 @@ export default function Index({
                                 <Label className="text-xs font-bold uppercase tracking-wider text-slate-500">
                                     1. {__('Seleccione Tipo de Acceso')}
                                 </Label>
-                                <div className="grid grid-cols-2 gap-4">
+                                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                                     <Button
                                         type="button"
                                         size="lg"
@@ -1624,7 +1800,7 @@ export default function Index({
                                             setActiveAuthToken(null);
                                             setAutorizacionRecibida(null);
                                         }}
-                                        className={`h-14 text-base font-semibold ${tipoAcceso === 'empleado' ? 'bg-blue-600 hover:bg-blue-700 text-white shadow-md' : ''}`}
+                                        className={`h-14 text-sm font-semibold ${tipoAcceso === 'empleado' ? 'bg-blue-600 hover:bg-blue-700 text-white shadow-md' : ''}`}
                                     >
                                         <User className="mr-2 h-5 w-5" />
                                         {__('Empleado')}
@@ -1642,10 +1818,28 @@ export default function Index({
                                             setActiveAuthToken(null);
                                             setAutorizacionRecibida(null);
                                         }}
-                                        className={`h-14 text-base font-semibold ${tipoAcceso === 'proveedor' ? 'bg-amber-600 hover:bg-amber-700 text-white shadow-md' : ''}`}
+                                        className={`h-14 text-sm font-semibold ${tipoAcceso === 'proveedor' ? 'bg-amber-600 hover:bg-amber-700 text-white shadow-md' : ''}`}
                                     >
                                         <Truck className="mr-2 h-5 w-5" />
                                         {__('Proveedor')}
+                                    </Button>
+
+                                    <Button
+                                        type="button"
+                                        size="lg"
+                                        variant={tipoAcceso === 'productor' ? 'default' : 'outline'}
+                                        onClick={() => {
+                                            setTipoAcceso('productor');
+                                            setSelectedEntity(null);
+                                            setSearchQuery('');
+                                            setAcompanantesList([]);
+                                            setActiveAuthToken(null);
+                                            setAutorizacionRecibida(null);
+                                        }}
+                                        className={`h-14 text-sm font-semibold ${tipoAcceso === 'productor' ? 'bg-purple-600 hover:bg-purple-700 text-white shadow-md' : ''}`}
+                                    >
+                                        <Sprout className="mr-2 h-5 w-5" />
+                                        {__('Productor')}
                                     </Button>
                                 </div>
                             </div>
@@ -1653,12 +1847,20 @@ export default function Index({
                             {/* PASO 2: Búsqueda dinámica de entidad */}
                             <div className="space-y-2">
                                 <Label className="text-xs font-bold uppercase tracking-wider text-slate-500">
-                                    2. {tipoAcceso === 'empleado' ? __('Buscar Empleado Conductor (Nombre, Apellidos, Documento)') : __('Buscar Proveedor (Razón Social, Nombre Comercial, RUC/DNI)')}
+                                    2. {tipoAcceso === 'empleado'
+                                        ? __('Buscar Empleado Conductor (Nombre, Apellidos, Documento)')
+                                        : tipoAcceso === 'productor'
+                                        ? __('Buscar Productor / Rancho (Razón Social, Nombre Comercial, RFC)')
+                                        : __('Buscar Proveedor (Razón Social, Nombre Comercial, RUC/DNI)')}
                                 </Label>
                                 <div className="relative">
                                     <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 h-5 w-5 text-slate-400" />
                                     <Input
-                                        placeholder={tipoAcceso === 'empleado' ? __('Escriba nombre, apellido o documento...') : __('Escriba razón social, nombre comercial o RUC...')}
+                                        placeholder={tipoAcceso === 'empleado'
+                                            ? __('Escriba nombre, apellido o documento...')
+                                            : tipoAcceso === 'productor'
+                                            ? __('Escriba nombre del rancho, razón social o RFC...')
+                                            : __('Escriba razón social, nombre comercial o RUC...')}
                                         value={searchQuery}
                                         onChange={(e) => setSearchQuery(e.target.value)}
                                         className="pl-11 h-12 text-base bg-white dark:bg-slate-900 w-full"
@@ -1677,11 +1879,13 @@ export default function Index({
                                             >
                                                 <div className="flex items-center gap-3">
                                                     <div className="w-10 h-10 rounded-full bg-slate-100 dark:bg-slate-800 flex items-center justify-center font-bold text-slate-600 dark:text-slate-300">
-                                                        {(item.nombres || item.nombre_comercial || item.razon_social).charAt(0)}
+                                                        {(item.nombres || item.nombre_comercial_rancho || item.nombre_comercial || item.razon_social).charAt(0)}
                                                     </div>
                                                     <div>
                                                         <div className="font-semibold text-sm">
-                                                            {tipoAcceso === 'empleado' ? `${item.nombres} ${item.apellidos}` : item.nombre_comercial || item.razon_social}
+                                                            {tipoAcceso === 'empleado'
+                                                                ? `${item.nombres} ${item.apellidos}`
+                                                                : item.nombre_comercial_rancho || item.razon_social_rancho || item.nombre_comercial || item.razon_social}
                                                         </div>
                                                         <div className="text-xs text-muted-foreground">Doc: {item.documento_identidad || 'N/A'}</div>
                                                     </div>
@@ -1718,7 +1922,7 @@ export default function Index({
                                                 <h4 className="font-bold text-base">
                                                     {tipoAcceso === 'empleado'
                                                         ? `${selectedEntity.nombres} ${selectedEntity.apellidos}`
-                                                        : selectedEntity.nombre_comercial || selectedEntity.razon_social}
+                                                        : selectedEntity.nombre_comercial_rancho || selectedEntity.razon_social_rancho || selectedEntity.nombre_comercial || selectedEntity.razon_social}
                                                 </h4>
                                                 <p className="text-xs text-muted-foreground font-mono">Doc: {selectedEntity.documento_identidad}</p>
                                                 {tipoAcceso === 'empleado' && (
@@ -1756,21 +1960,21 @@ export default function Index({
                                         </div>
                                     )}
 
-                                    {/* Si es Proveedor: Selección Múltiple de Empleados del Proveedor */}
-                                    {tipoAcceso === 'proveedor' && (
+                                    {/* Si es Proveedor o Productor: Selección Múltiple de Empleados del Proveedor/Productor */}
+                                    {(tipoAcceso === 'proveedor' || tipoAcceso === 'productor') && (
                                         <div className="space-y-3 bg-white dark:bg-slate-900 p-4 rounded-xl border shadow-sm">
                                             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b pb-2.5">
                                                 <div>
                                                     <Label className="text-xs font-bold uppercase tracking-wider text-slate-700 dark:text-slate-200 flex items-center gap-1.5">
                                                         <Users className="w-4 h-4 text-indigo-600" />
-                                                        {__('Personal del Proveedor que accederá:')}
+                                                        {tipoAcceso === 'productor' ? __('Personal del Productor que accederá:') : __('Personal del Proveedor que accederá:')}
                                                     </Label>
                                                     <p className="text-[11px] text-muted-foreground mt-0.5">
                                                         {__('Seleccione uno o varios empleados. El primero actuará como Conductor / Principal.')}
                                                     </p>
                                                 </div>
 
-                                                {selectedEntity.empleados_proveedor && selectedEntity.empleados_proveedor.length > 0 && (
+                                                {((tipoAcceso === 'productor' ? selectedEntity.empleados_productor : selectedEntity.empleados_proveedor)?.length > 0) && (
                                                     <div className="flex items-center gap-2 shrink-0">
                                                         <Button
                                                             type="button"
@@ -1794,9 +1998,9 @@ export default function Index({
                                                 )}
                                             </div>
 
-                                            {selectedEntity.empleados_proveedor && selectedEntity.empleados_proveedor.length > 0 ? (
+                                            {((tipoAcceso === 'productor' ? selectedEntity.empleados_productor : selectedEntity.empleados_proveedor)?.length > 0) ? (
                                                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 pt-1">
-                                                    {selectedEntity.empleados_proveedor.map((emp: any) => {
+                                                    {(tipoAcceso === 'productor' ? selectedEntity.empleados_productor : selectedEntity.empleados_proveedor).map((emp: any) => {
                                                         const empIdStr = emp.id.toString();
                                                         const isSelected = selectedProveedorEmpleadoIds.includes(empIdStr);
                                                         const isMain = selectedProveedorEmpleadoIds[0] === empIdStr;
@@ -1855,8 +2059,10 @@ export default function Index({
                                                     })}
                                                 </div>
                                             ) : (
-                                                <div className="p-4 rounded-xl bg-amber-50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-900/50 text-amber-800 dark:text-amber-300 text-xs">
-                                                    {__('Este proveedor no tiene empleados pre-registrados en el sistema. Puede registrar el acceso del vehículo y agregar observaciones.')}
+                                                <div className="p-4 rounded-xl bg-purple-50 dark:bg-purple-950/20 border border-purple-200 dark:border-purple-900/50 text-purple-800 dark:text-purple-300 text-xs">
+                                                    {tipoAcceso === 'productor'
+                                                        ? __('Este productor no tiene colaboradores pre-registrados en el sistema. Puede registrar el acceso del vehículo y agregar observaciones.')
+                                                        : __('Este proveedor no tiene empleados pre-registrados en el sistema. Puede registrar el acceso del vehículo y agregar observaciones.')}
                                                 </div>
                                             )}
                                         </div>
@@ -1910,7 +2116,8 @@ export default function Index({
 
                                             {/* Vehículos Pre-registrados */}
                                             {((tipoAcceso === 'empleado' && selectedEntity.vehiculos?.length > 0) ||
-                                                (tipoAcceso === 'proveedor' && selectedEntity.vehiculos_proveedor?.length > 0)) && (
+                                                (tipoAcceso === 'proveedor' && selectedEntity.vehiculos_proveedor?.length > 0) ||
+                                                (tipoAcceso === 'productor' && selectedEntity.vehiculos_productor?.length > 0)) && (
                                                 <div className="space-y-1.5">
                                                     <Label className="text-xs text-muted-foreground">{__('Seleccionar Vehículo Registrado:')}</Label>
                                                     <Select
@@ -1922,7 +2129,11 @@ export default function Index({
                                                         </SelectTrigger>
                                                         <SelectContent>
                                                             <SelectItem value="nuevo">{__('+ Registrar otro vehículo ad-hoc')}</SelectItem>
-                                                            {(tipoAcceso === 'empleado' ? selectedEntity.vehiculos : selectedEntity.vehiculos_proveedor).map((v: any) => (
+                                                            {(tipoAcceso === 'empleado'
+                                                                ? selectedEntity.vehiculos
+                                                                : tipoAcceso === 'productor'
+                                                                ? selectedEntity.vehiculos_productor
+                                                                : selectedEntity.vehiculos_proveedor).map((v: any) => (
                                                                 <SelectItem key={v.id} value={v.id.toString()}>
                                                                     {v.marca} {v.modelo} - Placa: {v.placa} ({v.tipo_vehiculo || 'Auto'})
                                                                 </SelectItem>
