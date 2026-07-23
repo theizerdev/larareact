@@ -705,6 +705,8 @@ export default function Index({
             if (vehiculoSeleccionado !== 'nuevo') {
                 if (tipoAcceso === 'empleado') {
                     payload.empleado_vehiculo_id = vehiculoSeleccionado;
+                } else if (tipoAcceso === 'productor') {
+                    payload.productor_vehiculo_id = vehiculoSeleccionado;
                 } else {
                     payload.proveedor_vehiculo_id = vehiculoSeleccionado;
                 }
@@ -1317,7 +1319,11 @@ export default function Index({
                                             <span className="text-slate-500 uppercase">{__('Medio:')}</span>
                                             {selectedAccesoDetail.medio_acceso === 'vehicular' ? (
                                                 <Badge className="bg-amber-100 text-amber-800 border-amber-300 flex items-center gap-1">
-                                                    <Car className="w-3.5 h-3.5" /> Vehicular ({selectedAccesoDetail.vehiculo_placa || 'Sin placa'})
+                                                    <Car className="w-3.5 h-3.5" /> Vehicular ({
+                                                        selectedAccesoDetail.tipo_acceso === 'productor' && (selectedAccesoDetail.productor_vehiculo?.placa || selectedAccesoDetail.productor?.vehiculos?.[0]?.placa)
+                                                            ? (selectedAccesoDetail.productor_vehiculo?.placa || selectedAccesoDetail.productor?.vehiculos?.[0]?.placa)
+                                                            : (selectedAccesoDetail.vehiculo_placa || 'Sin placa')
+                                                    })
                                                 </Badge>
                                             ) : (
                                                 <Badge className="bg-emerald-100 text-emerald-800 border-emerald-300 flex items-center gap-1">
@@ -1583,65 +1589,102 @@ export default function Index({
                                             2. {__('Información y Fotografías del Vehículo')}
                                         </h4>
 
-                                        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 text-xs bg-slate-50 dark:bg-slate-800/40 p-3 rounded-xl border">
-                                            <div>
-                                                <span className="text-slate-500 block">{__('Marca / Modelo')}</span>
-                                                <span className="font-bold text-slate-800 dark:text-slate-200">
-                                                    {selectedAccesoDetail.vehiculo_marca || selectedAccesoDetail.empleado_vehiculo?.marca || selectedAccesoDetail.proveedor_vehiculo?.marca || 'N/A'} - {selectedAccesoDetail.vehiculo_modelo || selectedAccesoDetail.empleado_vehiculo?.modelo || selectedAccesoDetail.proveedor_vehiculo?.modelo || ''}
-                                                </span>
-                                            </div>
-                                            <div>
-                                                <span className="text-slate-500 block">{__('Placa de Rodaje')}</span>
-                                                <span className="font-bold font-mono text-amber-600 dark:text-amber-400">
-                                                    {selectedAccesoDetail.vehiculo_placa || selectedAccesoDetail.empleado_vehiculo?.placa || selectedAccesoDetail.proveedor_vehiculo?.placa || 'N/A'}
-                                                </span>
-                                            </div>
-                                            <div>
-                                                <span className="text-slate-500 block">{__('Tipo Vehículo')}</span>
-                                                <span className="font-bold text-slate-800 dark:text-slate-200">
-                                                    {selectedAccesoDetail.vehiculo_tipo || selectedAccesoDetail.empleado_vehiculo?.tipo_vehiculo || 'Auto'}
-                                                </span>
-                                            </div>
-                                        </div>
+                                        {(() => {
+                                            const vDet = (() => {
+                                                const isProd = selectedAccesoDetail.tipo_acceso === 'productor';
+                                                const isProv = selectedAccesoDetail.tipo_acceso === 'proveedor';
 
-                                        {/* Fotos Frontal y Trasera panorámicas */}
-                                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-1">
-                                            <div className="space-y-1.5">
-                                                <span className="text-xs font-semibold flex items-center gap-1 text-slate-700 dark:text-slate-300">
-                                                    <Camera className="w-3.5 h-3.5 text-emerald-600" /> Foto Frontal
-                                                </span>
-                                                <div className="w-full aspect-[16/9] rounded-xl overflow-hidden bg-slate-100 dark:bg-slate-800 border flex items-center justify-center">
-                                                    {(selectedAccesoDetail.vehiculo_foto_frontal || selectedAccesoDetail.empleado_vehiculo?.foto_frontal || selectedAccesoDetail.proveedor_vehiculo?.foto_frontal) ? (
-                                                        <img
-                                                            src={formatImageUrl(selectedAccesoDetail.vehiculo_foto_frontal || selectedAccesoDetail.empleado_vehiculo?.foto_frontal || selectedAccesoDetail.proveedor_vehiculo?.foto_frontal)}
-                                                            alt="Foto Frontal"
-                                                            className="w-full h-full object-cover cursor-pointer hover:scale-105 transition-transform"
-                                                            onClick={() => window.open(formatImageUrl(selectedAccesoDetail.vehiculo_foto_frontal || selectedAccesoDetail.empleado_vehiculo?.foto_frontal || selectedAccesoDetail.proveedor_vehiculo?.foto_frontal), '_blank')}
-                                                        />
-                                                    ) : (
-                                                        <span className="text-xs text-slate-400 italic">Sin fotografía frontal registrada</span>
-                                                    )}
-                                                </div>
-                                            </div>
+                                                let veh = isProd
+                                                    ? (selectedAccesoDetail.productor_vehiculo || selectedAccesoDetail.productor?.vehiculos?.[0] || selectedAccesoDetail.productor?.vehiculos_productor?.[0])
+                                                    : isProv
+                                                    ? (selectedAccesoDetail.proveedor_vehiculo || selectedAccesoDetail.proveedor?.vehiculos?.[0] || selectedAccesoDetail.proveedor?.vehiculos_proveedor?.[0])
+                                                    : selectedAccesoDetail.empleado_vehiculo;
 
-                                            <div className="space-y-1.5">
-                                                <span className="text-xs font-semibold flex items-center gap-1 text-slate-700 dark:text-slate-300">
-                                                    <Camera className="w-3.5 h-3.5 text-emerald-600" /> Foto Trasera
-                                                </span>
-                                                <div className="w-full aspect-[16/9] rounded-xl overflow-hidden bg-slate-100 dark:bg-slate-800 border flex items-center justify-center">
-                                                    {(selectedAccesoDetail.vehiculo_foto_trasera || selectedAccesoDetail.empleado_vehiculo?.foto_trasera || selectedAccesoDetail.proveedor_vehiculo?.foto_trasera) ? (
-                                                        <img
-                                                            src={formatImageUrl(selectedAccesoDetail.vehiculo_foto_trasera || selectedAccesoDetail.empleado_vehiculo?.foto_trasera || selectedAccesoDetail.proveedor_vehiculo?.foto_trasera)}
-                                                            alt="Foto Trasera"
-                                                            className="w-full h-full object-cover cursor-pointer hover:scale-105 transition-transform"
-                                                            onClick={() => window.open(formatImageUrl(selectedAccesoDetail.vehiculo_foto_trasera || selectedAccesoDetail.empleado_vehiculo?.foto_trasera || selectedAccesoDetail.proveedor_vehiculo?.foto_trasera), '_blank')}
-                                                        />
-                                                    ) : (
-                                                        <span className="text-xs text-slate-400 italic">Sin fotografía trasera registrada</span>
-                                                    )}
-                                                </div>
-                                            </div>
-                                        </div>
+                                                if (veh) {
+                                                    return {
+                                                        marca: veh.marca || 'N/A',
+                                                        modelo: veh.modelo || '',
+                                                        placa: veh.placa || 'N/A',
+                                                        tipo: veh.tipo_vehiculo || 'Auto',
+                                                        fotoFrontal: veh.foto_frontal || null,
+                                                        fotoTrasera: veh.foto_trasera || null,
+                                                    };
+                                                }
+
+                                                return {
+                                                    marca: selectedAccesoDetail.vehiculo_marca || 'N/A',
+                                                    modelo: selectedAccesoDetail.vehiculo_modelo || '',
+                                                    placa: selectedAccesoDetail.vehiculo_placa || 'N/A',
+                                                    tipo: selectedAccesoDetail.vehiculo_tipo || 'Auto',
+                                                    fotoFrontal: selectedAccesoDetail.vehiculo_foto_frontal,
+                                                    fotoTrasera: selectedAccesoDetail.vehiculo_foto_trasera,
+                                                };
+                                            })();
+
+                                            return (
+                                                <>
+                                                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 text-xs bg-slate-50 dark:bg-slate-800/40 p-3 rounded-xl border">
+                                                        <div>
+                                                            <span className="text-slate-500 block">{__('Marca / Modelo')}</span>
+                                                            <span className="font-bold text-slate-800 dark:text-slate-200">
+                                                                {vDet.marca} - {vDet.modelo}
+                                                            </span>
+                                                        </div>
+                                                        <div>
+                                                            <span className="text-slate-500 block">{__('Placa de Rodaje')}</span>
+                                                            <span className="font-bold font-mono text-amber-600 dark:text-amber-400">
+                                                                {vDet.placa}
+                                                            </span>
+                                                        </div>
+                                                        <div>
+                                                            <span className="text-slate-500 block">{__('Tipo Vehículo')}</span>
+                                                            <span className="font-bold text-slate-800 dark:text-slate-200">
+                                                                {vDet.tipo}
+                                                            </span>
+                                                        </div>
+                                                    </div>
+
+                                                    {/* Fotos Frontal y Trasera panorámicas */}
+                                                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-1">
+                                                        <div className="space-y-1.5">
+                                                            <span className="text-xs font-semibold flex items-center gap-1 text-slate-700 dark:text-slate-300">
+                                                                <Camera className="w-3.5 h-3.5 text-emerald-600" /> Foto Frontal
+                                                            </span>
+                                                            <div className="w-full aspect-[16/9] rounded-xl overflow-hidden bg-slate-100 dark:bg-slate-800 border flex items-center justify-center">
+                                                                {vDet.fotoFrontal ? (
+                                                                    <img
+                                                                        src={formatImageUrl(vDet.fotoFrontal)!}
+                                                                        alt="Foto Frontal"
+                                                                        className="w-full h-full object-cover cursor-pointer hover:scale-105 transition-transform"
+                                                                        onClick={() => window.open(formatImageUrl(vDet.fotoFrontal)!, '_blank')}
+                                                                    />
+                                                                ) : (
+                                                                    <span className="text-xs text-slate-400 italic">Sin fotografía frontal registrada</span>
+                                                                )}
+                                                            </div>
+                                                        </div>
+
+                                                        <div className="space-y-1.5">
+                                                            <span className="text-xs font-semibold flex items-center gap-1 text-slate-700 dark:text-slate-300">
+                                                                <Camera className="w-3.5 h-3.5 text-emerald-600" /> Foto Trasera
+                                                            </span>
+                                                            <div className="w-full aspect-[16/9] rounded-xl overflow-hidden bg-slate-100 dark:bg-slate-800 border flex items-center justify-center">
+                                                                {vDet.fotoTrasera ? (
+                                                                    <img
+                                                                        src={formatImageUrl(vDet.fotoTrasera)!}
+                                                                        alt="Foto Trasera"
+                                                                        className="w-full h-full object-cover cursor-pointer hover:scale-105 transition-transform"
+                                                                        onClick={() => window.open(formatImageUrl(vDet.fotoTrasera)!, '_blank')}
+                                                                    />
+                                                                ) : (
+                                                                    <span className="text-xs text-slate-400 italic">Sin fotografía trasera registrada</span>
+                                                                )}
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                </>
+                                            );
+                                        })()}
                                     </div>
                                 )}
 

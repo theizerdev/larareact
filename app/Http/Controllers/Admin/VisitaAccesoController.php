@@ -26,15 +26,40 @@ class VisitaAccesoController extends Controller
 {
     public function index(Request $request)
     {
+        // Auto-reparar/vincular vehículo de Productor en registros de acceso existentes que tenían datos errados
+        VisitaAcceso::where('tipo_acceso', 'productor')
+            ->where(function ($q) {
+                $q->whereNull('productor_vehiculo_id')
+                  ->orWhereNotNull('proveedor_vehiculo_id');
+            })
+            ->get()
+            ->each(function ($acc) {
+                $pv = ProductorVehiculo::where('productor_id', $acc->productor_id)->first();
+                if ($pv) {
+                    $acc->update([
+                        'productor_vehiculo_id' => $pv->id,
+                        'proveedor_vehiculo_id' => null,
+                        'vehiculo_marca'        => $pv->marca,
+                        'vehiculo_modelo'       => $pv->modelo,
+                        'vehiculo_placa'        => $pv->placa,
+                        'vehiculo_tipo'         => $pv->tipo_vehiculo ?? 'Auto',
+                        'vehiculo_foto_frontal' => $pv->foto_frontal,
+                        'vehiculo_foto_trasera' => $pv->foto_trasera,
+                    ]);
+                }
+            });
+
         $query = VisitaAcceso::query()
             ->with([
                 'empleado.departamento',
                 'empleado.cargo',
                 'proveedor.paisTelefono',
                 'proveedor.pais',
+                'proveedor.vehiculos',
                 'proveedorEmpleado',
                 'productor.paisTelefono',
                 'productor.pais',
+                'productor.vehiculos',
                 'productorEmpleado',
                 'empleadoVehiculo',
                 'proveedorVehiculo',
@@ -240,32 +265,32 @@ class VisitaAccesoController extends Controller
             if (!empty($validated['productor_vehiculo_id'])) {
                 $prVehiculo = \App\Models\ProductorVehiculo::find($validated['productor_vehiculo_id']);
                 if ($prVehiculo) {
-                    $validated['vehiculo_marca'] = $validated['vehiculo_marca'] ?? $prVehiculo->marca;
-                    $validated['vehiculo_modelo'] = $validated['vehiculo_modelo'] ?? $prVehiculo->modelo;
-                    $validated['vehiculo_placa'] = $validated['vehiculo_placa'] ?? $prVehiculo->placa;
-                    $validated['vehiculo_tipo'] = $validated['vehiculo_tipo'] ?? ($prVehiculo->tipo_vehiculo ?? 'Auto');
-                    $validated['vehiculo_foto_frontal'] = $validated['vehiculo_foto_frontal'] ?? $prVehiculo->foto_frontal;
-                    $validated['vehiculo_foto_trasera'] = $validated['vehiculo_foto_trasera'] ?? $prVehiculo->foto_trasera;
+                    $validated['vehiculo_marca'] = !empty($validated['vehiculo_marca']) ? $validated['vehiculo_marca'] : $prVehiculo->marca;
+                    $validated['vehiculo_modelo'] = !empty($validated['vehiculo_modelo']) ? $validated['vehiculo_modelo'] : $prVehiculo->modelo;
+                    $validated['vehiculo_placa'] = !empty($validated['vehiculo_placa']) ? $validated['vehiculo_placa'] : $prVehiculo->placa;
+                    $validated['vehiculo_tipo'] = !empty($validated['vehiculo_tipo']) ? $validated['vehiculo_tipo'] : ($prVehiculo->tipo_vehiculo ?? 'Auto');
+                    $validated['vehiculo_foto_frontal'] = !empty($validated['vehiculo_foto_frontal']) ? $validated['vehiculo_foto_frontal'] : $prVehiculo->foto_frontal;
+                    $validated['vehiculo_foto_trasera'] = !empty($validated['vehiculo_foto_trasera']) ? $validated['vehiculo_foto_trasera'] : $prVehiculo->foto_trasera;
                 }
             } elseif (!empty($validated['proveedor_vehiculo_id'])) {
                 $pVehiculo = \App\Models\ProveedorVehiculo::find($validated['proveedor_vehiculo_id']);
                 if ($pVehiculo) {
-                    $validated['vehiculo_marca'] = $validated['vehiculo_marca'] ?? $pVehiculo->marca;
-                    $validated['vehiculo_modelo'] = $validated['vehiculo_modelo'] ?? $pVehiculo->modelo;
-                    $validated['vehiculo_placa'] = $validated['vehiculo_placa'] ?? $pVehiculo->placa;
-                    $validated['vehiculo_tipo'] = $validated['vehiculo_tipo'] ?? ($pVehiculo->tipo_vehiculo ?? 'Auto');
-                    $validated['vehiculo_foto_frontal'] = $validated['vehiculo_foto_frontal'] ?? $pVehiculo->foto_frontal;
-                    $validated['vehiculo_foto_trasera'] = $validated['vehiculo_foto_trasera'] ?? $pVehiculo->foto_trasera;
+                    $validated['vehiculo_marca'] = !empty($validated['vehiculo_marca']) ? $validated['vehiculo_marca'] : $pVehiculo->marca;
+                    $validated['vehiculo_modelo'] = !empty($validated['vehiculo_modelo']) ? $validated['vehiculo_modelo'] : $pVehiculo->modelo;
+                    $validated['vehiculo_placa'] = !empty($validated['vehiculo_placa']) ? $validated['vehiculo_placa'] : $pVehiculo->placa;
+                    $validated['vehiculo_tipo'] = !empty($validated['vehiculo_tipo']) ? $validated['vehiculo_tipo'] : ($pVehiculo->tipo_vehiculo ?? 'Auto');
+                    $validated['vehiculo_foto_frontal'] = !empty($validated['vehiculo_foto_frontal']) ? $validated['vehiculo_foto_frontal'] : $pVehiculo->foto_frontal;
+                    $validated['vehiculo_foto_trasera'] = !empty($validated['vehiculo_foto_trasera']) ? $validated['vehiculo_foto_trasera'] : $pVehiculo->foto_trasera;
                 }
             } elseif (!empty($validated['empleado_vehiculo_id'])) {
                 $eVehiculo = \App\Models\EmpleadoVehiculo::find($validated['empleado_vehiculo_id']);
                 if ($eVehiculo) {
-                    $validated['vehiculo_marca'] = $validated['vehiculo_marca'] ?? $eVehiculo->marca;
-                    $validated['vehiculo_modelo'] = $validated['vehiculo_modelo'] ?? $eVehiculo->modelo;
-                    $validated['vehiculo_placa'] = $validated['vehiculo_placa'] ?? $eVehiculo->placa;
-                    $validated['vehiculo_tipo'] = $validated['vehiculo_tipo'] ?? ($eVehiculo->tipo_vehiculo ?? 'Auto');
-                    $validated['vehiculo_foto_frontal'] = $validated['vehiculo_foto_frontal'] ?? $eVehiculo->foto_frontal;
-                    $validated['vehiculo_foto_trasera'] = $validated['vehiculo_foto_trasera'] ?? $eVehiculo->foto_trasera;
+                    $validated['vehiculo_marca'] = !empty($validated['vehiculo_marca']) ? $validated['vehiculo_marca'] : $eVehiculo->marca;
+                    $validated['vehiculo_modelo'] = !empty($validated['vehiculo_modelo']) ? $validated['vehiculo_modelo'] : $eVehiculo->modelo;
+                    $validated['vehiculo_placa'] = !empty($validated['vehiculo_placa']) ? $validated['vehiculo_placa'] : $eVehiculo->placa;
+                    $validated['vehiculo_tipo'] = !empty($validated['vehiculo_tipo']) ? $validated['vehiculo_tipo'] : ($eVehiculo->tipo_vehiculo ?? 'Auto');
+                    $validated['vehiculo_foto_frontal'] = !empty($validated['vehiculo_foto_frontal']) ? $validated['vehiculo_foto_frontal'] : $eVehiculo->foto_frontal;
+                    $validated['vehiculo_foto_trasera'] = !empty($validated['vehiculo_foto_trasera']) ? $validated['vehiculo_foto_trasera'] : $eVehiculo->foto_trasera;
                 }
             }
         }

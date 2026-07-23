@@ -29,6 +29,39 @@ return new class extends Migration
                 $table->foreignId('productor_vehiculo_id')->nullable()->after('proveedor_vehiculo_id')->constrained('productor_vehiculos')->onDelete('set null');
             }
         });
+
+        // Corregir registros existentes donde se guardó proveedor_vehiculo_id erróneamente en tipo_acceso productor
+        try {
+            $accesosProductorErrados = DB::table('visitas_accesos')
+                ->where('tipo_acceso', 'productor')
+                ->get();
+
+            foreach ($accesosProductorErrados as $acc) {
+                $prodVehId = $acc->productor_vehiculo_id ?? $acc->proveedor_vehiculo_id;
+                $pv = null;
+                if ($prodVehId) {
+                    $pv = DB::table('productor_vehiculos')->where('id', $prodVehId)->first();
+                }
+                if (!$pv && $acc->productor_id) {
+                    $pv = DB::table('productor_vehiculos')->where('productor_id', $acc->productor_id)->first();
+                }
+
+                if ($pv) {
+                    DB::table('visitas_accesos')->where('id', $acc->id)->update([
+                        'productor_vehiculo_id' => $pv->id,
+                        'proveedor_vehiculo_id' => null,
+                        'vehiculo_marca'        => $pv->marca,
+                        'vehiculo_modelo'       => $pv->modelo,
+                        'vehiculo_placa'        => $pv->placa,
+                        'vehiculo_tipo'         => $pv->tipo_vehiculo ?? 'Auto',
+                        'vehiculo_foto_frontal' => $pv->foto_frontal,
+                        'vehiculo_foto_trasera' => $pv->foto_trasera,
+                    ]);
+                }
+            }
+        } catch (\Throwable $e) {
+            // Ignorar en entornos de pruebas
+        }
     }
 
     /**

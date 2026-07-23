@@ -113,4 +113,14 @@ class Proveedor extends Model
     {
         return $this->belongsTo(User::class);
     }
+
+    public function empleados(): \Illuminate\Database\Eloquent\Relations\HasMany
+    {
+        return $this->hasMany(ProveedorEmpleado::class, 'proveedor_id');
+    }
+
+    public function vehiculos(): \Illuminate\Database\Eloquent\Relations\HasMany
+    {
+        return $this->hasMany(ProveedorVehiculo::class, 'proveedor_id');
+    }
 }
