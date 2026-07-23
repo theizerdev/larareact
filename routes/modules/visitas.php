@@ -5,6 +5,7 @@ use App\Http\Controllers\Admin\VisitaTemporalController;
 
 use App\Http\Controllers\Admin\VisitaAccesoController;
 
+
 Route::middleware(['permission:visitas_temporales.view'])->group(function () {
     Route::get('/visitas-temporales', [VisitaTemporalController::class, 'index'])->name('visitas-temporales.index');
     Route::get('/visitas-accesos', [VisitaAccesoController::class, 'index'])->name('visitas-accesos.index');

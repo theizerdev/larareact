@@ -697,6 +697,79 @@ class VisitaAccesoController extends Controller
 
         return back()->with('success', '¡Datos de acceso registrados correctamente! Muestra este pase en la garita al llegar.');
     }
+
+    /**
+     * Muestra la interfaz del oficial de garita para escanear QR y consultar visitas
+     */
+    public function garita(Request $request)
+    {
+        $search = trim($request->input('q', ''));
+        $resultado = null;
+        $visitasEsperadas = collect([]);
+
+        try {
+            if (!empty($search)) {
+                // 1. Buscar en invitaciones (pre-anuncios)
+                $invitacion = VisitaAccesoInvitacion::query()
+                    ->with(['anfitrion', 'empleado', 'proveedor', 'productor', 'paisTelefono', 'tipoServicio'])
+                    ->where('uuid', $search)
+                    ->orWhere('codigo_invitacion', $search)
+                    ->orWhere('visitante_nombre', 'like', "%{$search}%")
+                    ->orWhere('visitante_documento', $search)
+                    ->orWhere('vehiculo_placa', $search)
+                    ->first();
+
+                if ($invitacion) {
+                    $resultado = [
+                        'tipo' => 'invitacion',
+                        'data' => $invitacion,
+                    ];
+                } else {
+                    // 2. Buscar en accesos (entradas registradas)
+                    $acceso = VisitaAcceso::query()
+                        ->with([
+                            'empleado', 'proveedor', 'proveedorEmpleado',
+                            'productor', 'productorEmpleado', 'responsable',
+                            'empleadoVehiculo', 'proveedorVehiculo', 'productorVehiculo'
+                        ])
+                        ->where('codigo_visitante', $search)
+                        ->orWhere('vehiculo_placa', $search)
+                        ->latest()
+                        ->first();
+
+                    if ($acceso) {
+                        $resultado = [
+                            'tipo' => 'acceso',
+                            'data' => $acceso,
+                        ];
+                    }
+                }
+            }
+
+            // Obtener las visitas esperadas para hoy
+            $visitasEsperadas = VisitaAccesoInvitacion::query()
+                ->with(['anfitrion', 'paisTelefono', 'tipoServicio'])
+                ->whereDate('fecha_estimada', '>=', now()->toDateString())
+                ->where('status', 'pendiente')
+                ->orderBy('fecha_estimada', 'asc')
+                ->orderBy('hora_estimada', 'asc')
+                ->limit(20)
+                ->get();
+        } catch (\Exception $e) {
+            \Illuminate\Support\Facades\Log::error('Error en GaritaControl controller: ' . $e->getMessage());
+        }
+
+        \App\Services\RegionalConfigurationService::setRegionalConfiguration();
+        $timezone = config('app.timezone', 'America/Mexico_City');
+
+        return Inertia::render('admin/VisitasAccesos/GaritaControl', [
+            'searchQuery'      => $search,
+            'resultado'        => $resultado,
+            'visitasEsperadas' => $visitasEsperadas,
+            'siguienteCodigo'  => VisitaAcceso::generarSiguienteCodigoVisitante(),
+            'timezone'         => $timezone,
+        ]);
+    }
 }
 
 

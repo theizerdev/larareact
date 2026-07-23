@@ -1,11 +1,17 @@
 <?php
 
 use App\Http\Controllers\Admin\DashboardController;
+use App\Http\Controllers\Admin\VisitaAccesoController;
 use App\Http\Controllers\Auth\ForgotPasswordOtpController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 
 Route::inertia('/', 'welcome')->name('home');
+
+// Módulo de Control de Garita (Lector QR)
+Route::get('/garita', [VisitaAccesoController::class, 'garita'])->name('garita.show');
+Route::get('/admin/garita', [VisitaAccesoController::class, 'garita'])->name('admin.garita.show');
+Route::get('/admin/visitas-accesos/garita', [VisitaAccesoController::class, 'garita'])->name('admin.visitas-accesos.garita.show');
 
 Route::middleware(['guest'])->group(function () {
     Route::get('/forgot-password', [ForgotPasswordOtpController::class, 'show'])->name('password.request');
@@ -24,12 +30,8 @@ Route::post('locale', function (Request $request) {
     return back();
 })->name('locale.update');
 
-Route::middleware(['auth', 'verified'])->group(function () {
+Route::middleware(['auth'])->group(function () {
     Route::inertia('dashboard', 'dashboard')->name('dashboard');
-
-    Route::prefix('admin')->name('admin.')->group(function () {
-        Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
-    });
 });
 
 use App\Http\Controllers\ProveedorPreRegistroController;
@@ -54,7 +56,6 @@ use App\Http\Controllers\VisitaAccesoAutorizacionController;
 Route::get('/autorizar-acceso/{token}', [VisitaAccesoAutorizacionController::class, 'show'])->name('autorizar-acceso.show');
 Route::post('/autorizar-acceso/{token}', [VisitaAccesoAutorizacionController::class, 'autorizar'])->name('autorizar-acceso.post');
 Route::get('/api/autorizar-acceso/{token}/check', [VisitaAccesoAutorizacionController::class, 'checkStatus'])->name('autorizar-acceso.check');
-use App\Http\Controllers\Admin\VisitaAccesoController;
 Route::get('/pase-digital/{uuid}', [VisitaAccesoController::class, 'pasePublico'])->name('pase-digital-visita.show');
 Route::post('/pase-digital/{uuid}/datos-acceso', [VisitaAccesoController::class, 'actualizarDatosAcceso'])->name('pase-digital-visita.datos-acceso');
 

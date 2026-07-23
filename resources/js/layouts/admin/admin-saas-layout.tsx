@@ -209,7 +209,7 @@ function CollapsibleNavItem({
             {isOpen && (
                 <div className="pl-9 space-y-1 transition-all duration-300">
                     {items.map((item, idx) => {
-                        const active = url.startsWith(item.href);
+                        const active = url === item.href || (url.startsWith(item.href) && item.href.length > 22 && !url.includes('/garita'));
 
                         return (
                             <Link
@@ -451,6 +451,11 @@ export default function AdminSaasLayout({
                                 {
                                     title: 'Accesos a Instalaciones',
                                     href: '/admin/visitas-accesos',
+                                    permission: 'visitas_temporales.view',
+                                },
+                                {
+                                    title: 'Control de Garita (Lector QR)',
+                                    href: '/admin/visitas-accesos/garita',
                                     permission: 'visitas_temporales.view',
                                 },
                             ].filter(item => hasPermission(item.permission));
