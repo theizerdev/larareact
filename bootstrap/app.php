@@ -40,6 +40,7 @@ return Application::configure(basePath: dirname(__DIR__))
 
         $middleware->validateCsrfTokens(except: [
             'preregistro/*',
+            'preregistro-productor/*',
         ]);
 
         $middleware->alias([

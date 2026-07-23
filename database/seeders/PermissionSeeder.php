@@ -90,6 +90,12 @@ class PermissionSeeder extends Seeder
                 'proveedores.create' => 'Crear Proveedor',
                 'proveedores.edit' => 'Editar Proveedor',
                 'proveedores.delete' => 'Eliminar Proveedor',
+
+                // Módulo: Productores
+                'productores.view' => 'Ver Productores',
+                'productores.create' => 'Crear Productor',
+                'productores.edit' => 'Editar Productor',
+                'productores.delete' => 'Eliminar Productor',
             ],
             // Sector: Monitoreo
             'monitoreo' => [
@@ -130,6 +136,7 @@ class PermissionSeeder extends Seeder
                     str_starts_with($permission, 'empleados.') => 'empleados',
                     str_starts_with($permission, 'integrations.') => 'integraciones',
                     str_starts_with($permission, 'proveedores.') => 'proveedores',
+                    str_starts_with($permission, 'productores.') => 'productores',
                     str_starts_with($permission, 'monitoreo.') => 'monitoreo',
                     str_starts_with($permission, 'visitas_temporales.') => 'visitas_temporales',
 

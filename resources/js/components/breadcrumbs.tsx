@@ -11,44 +11,41 @@ import {
 import { useTranslate } from '@/hooks/use-translate';
 import type { BreadcrumbItem as BreadcrumbItemType } from '@/types';
 
-
 export function Breadcrumbs({
     breadcrumbs,
 }: {
-    breadcrumbs: BreadcrumbItemType[];
+    breadcrumbs?: BreadcrumbItemType[];
 }) {
     const { __ } = useTranslate();
 
-    return (
-        <>
-            {breadcrumbs.length > 0 && (
-                <Breadcrumb>
-                    <BreadcrumbList>
-                        {breadcrumbs.map((item, index) => {
-                            const isLast = index === breadcrumbs.length - 1;
+    if (!breadcrumbs || breadcrumbs.length === 0) return null;
 
-                            return (
-                                <Fragment key={index}>
-                                    <BreadcrumbItem>
-                                        {isLast ? (
-                                            <BreadcrumbPage>
-                                                {__(item.title)}
-                                            </BreadcrumbPage>
-                                        ) : (
-                                            <BreadcrumbLink asChild>
-                                                <Link href={item.href}>
-                                                    {__(item.title)}
-                                                </Link>
-                                            </BreadcrumbLink>
-                                        )}
-                                    </BreadcrumbItem>
-                                    {!isLast && <BreadcrumbSeparator />}
-                                </Fragment>
-                            );
-                        })}
-                    </BreadcrumbList>
-                </Breadcrumb>
-            )}
-        </>
+    return (
+        <Breadcrumb>
+            <BreadcrumbList>
+                {breadcrumbs.map((item, index) => {
+                    const isLast = index === breadcrumbs.length - 1;
+
+                    return (
+                        <Fragment key={index}>
+                            <BreadcrumbItem>
+                                {isLast ? (
+                                    <BreadcrumbPage>
+                                        {__(item.title)}
+                                    </BreadcrumbPage>
+                                ) : (
+                                    <BreadcrumbLink asChild>
+                                        <Link href={item.href}>
+                                            {__(item.title)}
+                                        </Link>
+                                    </BreadcrumbLink>
+                                )}
+                            </BreadcrumbItem>
+                            {!isLast && <BreadcrumbSeparator />}
+                        </Fragment>
+                    );
+                })}
+            </BreadcrumbList>
+        </Breadcrumb>
     );
 }

@@ -35,6 +35,7 @@ createInertiaApp({
             case name.startsWith('preregistro/'):
             case name.startsWith('preregistro-empleado/'):
             case name.startsWith('preregistro-visita/'):
+            case name.startsWith('preregistro-productor/'):
             case name.startsWith('Public/'):
             case name === 'Public/AutorizarAcceso':
                 return null;

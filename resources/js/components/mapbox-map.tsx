@@ -6,11 +6,17 @@ import { useTranslate } from '@/hooks/use-translate';
 import 'mapbox-gl/dist/mapbox-gl.css';
 import { cn } from '@/lib/utils';
 
+export interface MapAddressDetails {
+    codigo_postal?: string;
+    estado?: string;
+    direccion?: string;
+}
+
 interface MapboxMapProps {
     lat: number;
     lng: number;
     zoom?: number;
-    onChange?: (lat: number, lng: number) => void;
+    onChange?: (lat: number, lng: number, details?: MapAddressDetails) => void;
     markers?: Array<{ lat: number; lng: number; label?: string }>;
     interactive?: boolean;
     className?: string;
@@ -36,6 +42,31 @@ export default function MapboxMap({
     const mapboxApiKey = props.mapbox_api_key || props.auth?.user?.empresa?.mapbox_api_key;
     const mapboxActive = props.mapbox_active !== undefined ? props.mapbox_active : props.auth?.user?.empresa?.mapbox_active;
 
+    const fetchReverseGeocode = async (newLat: number, newLng: number): Promise<MapAddressDetails> => {
+        if (!mapboxApiKey) return {};
+        try {
+            const response = await fetch(`https://api.mapbox.com/geocoding/v5/mapbox.places/${newLng},${newLat}.json?access_token=${mapboxApiKey}&language=es`);
+            if (!response.ok) return {};
+            const data = await response.json();
+            const details: MapAddressDetails = {};
+            if (data.features && data.features.length > 0) {
+                details.direccion = data.features[0].place_name || '';
+                for (const feature of data.features) {
+                    if (feature.place_type.includes('postcode')) {
+                        details.codigo_postal = feature.text;
+                    }
+                    if (feature.place_type.includes('region')) {
+                        details.estado = feature.text;
+                    }
+                }
+            }
+            return details;
+        } catch (e) {
+            console.error('Error in reverse geocoding:', e);
+            return {};
+        }
+    };
+
     // Efecto 1: Inicializar el mapa una sola vez
     useEffect(() => {
         if (!mapboxActive || !mapboxApiKey) {
@@ -47,8 +78,8 @@ export default function MapboxMap({
         mapboxgl.accessToken = mapboxApiKey;
 
         if (!mapContainerRef.current) {
-return;
-}
+            return;
+        }
 
         const isDark = document.documentElement.classList.contains('dark');
         const mapStyle = isDark 
@@ -82,14 +113,19 @@ return;
                 markerRef.current = marker;
 
                 if (interactive && onChange) {
+                    const notifyChange = async (targetLat: number, targetLng: number) => {
+                        const details = await fetchReverseGeocode(targetLat, targetLng);
+                        onChange(targetLat, targetLng, details);
+                    };
+
                     marker.on('dragend', () => {
                         const lngLat = marker.getLngLat();
-                        onChange(lngLat.lat, lngLat.lng);
+                        notifyChange(lngLat.lat, lngLat.lng);
                     });
 
                     map.on('click', (e) => {
                         marker.setLngLat(e.lngLat);
-                        onChange(e.lngLat.lat, e.lngLat.lng);
+                        notifyChange(e.lngLat.lat, e.lngLat.lng);
                     });
                 }
             }

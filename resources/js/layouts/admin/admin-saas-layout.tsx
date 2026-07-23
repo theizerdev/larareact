@@ -419,6 +419,11 @@ export default function AdminSaasLayout({
                                     href: '/admin/proveedores',
                                     permission: 'proveedores.view',
                                 },
+                                {
+                                    title: 'Producers',
+                                    href: '/admin/productores',
+                                    permission: 'productores.view',
+                                },
                             ].filter(item => hasPermission(item.permission));
 
                             if (orgItems.length === 0) return null;

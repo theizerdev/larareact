@@ -129,7 +129,7 @@ return;
     };
 
     const handleSelectAll = (checked: boolean) => {
-        if (onSelectionChange) {
+        if (onSelectionChange && data?.data) {
             onSelectionChange(checked ? data.data.map(getRowId) : []);
         }
     };
@@ -161,22 +161,22 @@ return;
     // Helper para determinar la responsividad
     const getResponsiveClass = (hideOn?: 'mobile' | 'tablet') => {
         if (!hideOn) {
-return '';
-}
+            return '';
+        }
 
         if (hideOn === 'mobile') {
-return 'hidden sm:table-cell';
-}
+            return 'hidden sm:table-cell';
+        }
 
         if (hideOn === 'tablet') {
-return 'hidden md:table-cell';
-}
+            return 'hidden md:table-cell';
+        }
 
         return '';
     };
 
     const allSelected =
-        data.data.length > 0 &&
+        Boolean(data?.data?.length) &&
         selectedIds &&
         data.data.every((row) => selectedIds.includes(getRowId(row)));
 

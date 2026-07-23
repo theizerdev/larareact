@@ -23,6 +23,7 @@ import React, { useState, useEffect, useRef, lazy, Suspense } from 'react';
 import { toast } from 'sonner';
 
 import { Breadcrumbs } from '@/components/breadcrumbs';
+import { ModuleHeader } from '@/components/module-header';
 import { FilterBar, FilterField } from '@/components/filter-bar';
 import { DataTable } from '@/components/data-table';
 import { StatCard } from '@/components/stat-card';
@@ -588,33 +589,31 @@ export default function ProveedoresIndexPage({
                 <Breadcrumbs breadcrumbs={breadcrumbs} />
 
                 {/* ── Encabezado principal ── */}
-                <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-                    <div>
-                        <h1 className="text-2xl font-bold tracking-tight text-slate-800 dark:text-slate-100">
-                            {__('Suppliers')}
-                        </h1>
-                        <p className="text-sm text-muted-foreground mt-0.5">
-                            {__('Manage suppliers, their contact, tax info and physical location.')}
-                        </p>
-                    </div>                    <div className="flex items-center gap-2 self-start md:self-auto">
+                <ModuleHeader
+                    icon={<Truck className="h-6 w-6 text-white" />}
+                    title={__('Suppliers')}
+                    description={__('Manage suppliers, their contact, tax info and physical location.')}
+                    colorClassName="bg-[#104a29]"
+                >
+                    <div className="flex items-center gap-2">
                         <Button
                             type="button"
                             onClick={() => setIsPreRegistroModalOpen(true)}
                             variant="outline"
-                            className="border-[#104a29] text-[#104a29] hover:bg-[#104a29]/10 flex items-center gap-1.5"
+                            className="bg-white text-[#104a29] hover:bg-white/90 font-semibold flex items-center gap-1.5 shadow-sm"
                         >
                             <Phone className="w-4 h-4" />
                             {__('Pre-registro')}
                         </Button>
                         <Button
                             onClick={handleCreateClick}
-                            className="bg-[#104a29] hover:bg-[#0c371e] text-white flex items-center gap-1.5"
+                            className="bg-white text-[#104a29] hover:bg-white/90 font-semibold flex items-center gap-1.5 shadow-sm"
                         >
                             <Plus className="w-4.5 h-4.5" />
                             {__('New Supplier')}
                         </Button>
                     </div>
-                </div>
+                </ModuleHeader>
 
                 {/* ── Tarjetas Estadísticas ── */}
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
