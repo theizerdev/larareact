@@ -2,7 +2,7 @@
 
 use App\Providers\AppServiceProvider;
 use App\Providers\FortifyServiceProvider;
-use TheizerDev\LaraReact\LaraReactServiceProvider;
+use App\Providers\LaraReactServiceProvider;
 
 return [
     AppServiceProvider::class,

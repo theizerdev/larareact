@@ -40,6 +40,7 @@
     36 => 'Spatie\\Permission\\PermissionServiceProvider',
     37 => 'App\\Providers\\AppServiceProvider',
     38 => 'App\\Providers\\FortifyServiceProvider',
+    39 => 'App\\Providers\\LaraReactServiceProvider',
   ),
   'eager' => 
   array (
@@ -66,6 +67,7 @@
     20 => 'Spatie\\Permission\\PermissionServiceProvider',
     21 => 'App\\Providers\\AppServiceProvider',
     22 => 'App\\Providers\\FortifyServiceProvider',
+    23 => 'App\\Providers\\LaraReactServiceProvider',
   ),
   'deferred' => 
   array (
