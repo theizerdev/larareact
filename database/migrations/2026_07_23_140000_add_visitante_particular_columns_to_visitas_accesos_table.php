@@ -13,8 +13,12 @@ return new class extends Migration
     public function up(): void
     {
         Schema::table('visitas_accesos', function (Blueprint $table) {
-            // Permitir 'visitante' en tipo_acceso ENUM
-            DB::statement("ALTER TABLE visitas_accesos MODIFY COLUMN tipo_acceso ENUM('empleado', 'proveedor', 'productor', 'visitante') NOT NULL DEFAULT 'empleado'");
+            // Permitir 'visitante' en tipo_acceso ENUM (solo MySQL: usa ENUM real.
+            // En SQLite la columna es un varchar sin CHECK constraint, así que
+            // no requiere ningún cambio de esquema para aceptar el nuevo valor).
+            if (DB::getDriverName() === 'mysql') {
+                DB::statement("ALTER TABLE visitas_accesos MODIFY COLUMN tipo_acceso ENUM('empleado', 'proveedor', 'productor', 'visitante') NOT NULL DEFAULT 'empleado'");
+            }
 
             if (!Schema::hasColumn('visitas_accesos', 'invitacion_id')) {
                 $table->foreignId('invitacion_id')->nullable()->after('productor_vehiculo_id')->constrained('visita_acceso_invitaciones')->onDelete('set null');
@@ -62,7 +66,9 @@ return new class extends Migration
                     'visitante_telefono',
                 ]);
             }
-            DB::statement("ALTER TABLE visitas_accesos MODIFY COLUMN tipo_acceso ENUM('empleado', 'proveedor', 'productor') NOT NULL DEFAULT 'empleado'");
+            if (DB::getDriverName() === 'mysql') {
+                DB::statement("ALTER TABLE visitas_accesos MODIFY COLUMN tipo_acceso ENUM('empleado', 'proveedor', 'productor') NOT NULL DEFAULT 'empleado'");
+            }
         });
     }
 };
