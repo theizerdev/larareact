@@ -30,8 +30,9 @@ Route::post('locale', function (Request $request) {
     return back();
 })->name('locale.update');
 
-Route::middleware(['auth'])->group(function () {
-    Route::inertia('dashboard', 'dashboard')->name('dashboard');
+Route::middleware(['auth','verified'])->group(function () {
+    Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard')->can('dashboard.view');
+    Route::get('/api/dashboard/stats', [DashboardController::class, 'stats'])->name('api.dashboard.stats');
 });
 
 use App\Http\Controllers\ProveedorPreRegistroController;
