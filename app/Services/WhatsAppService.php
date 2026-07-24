@@ -249,6 +249,33 @@ class WhatsAppService
 
             $fileContents = file_get_contents($filePath);
             $fileName = basename($filePath);
+            $mimeType = mime_content_type($filePath);
+
+            $allowedMimes = [
+                'application/pdf',
+                'application/vnd.ms-excel',
+                'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+                'application/msword',
+                'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+                'text/plain',
+                'text/csv',
+            ];
+            if (!in_array($mimeType, $allowedMimes)) {
+                Log::warning('WhatsApp Send Document blocked – MIME not allowed', [
+                    'mime' => $mimeType,
+                    'file' => $fileName,
+                    'company_id' => $this->companyId,
+                ]);
+                return null;
+            }
+            if (filesize($filePath) > 16 * 1024 * 1024) {
+                Log::warning('WhatsApp Send Document blocked – file too large', [
+                    'size' => filesize($filePath),
+                    'file' => $fileName,
+                    'company_id' => $this->companyId,
+                ]);
+                return null;
+            }
 
             $response = Http::timeout($this->timeout)
                 ->withHeaders([
@@ -256,8 +283,6 @@ class WhatsAppService
                     'X-Company-Id' => (string) $this->companyId,
                 ])
                 ->attach('document', $fileContents, $fileName)
-                ->attach('file', $fileContents, $fileName)
-                ->attach('media', $fileContents, $fileName)
                 ->post("{$this->baseUrl}/api/whatsapp/send-document", [
                     'to' => $to,
                     'caption' => $caption,

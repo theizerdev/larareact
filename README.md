@@ -107,6 +107,12 @@ npm run dev
 - Gestión de tokens de autenticación API y credenciales de servidor.
 - Sincronización del estado de conexión de WhatsApp y simulación de envío de mensajes de prueba.
 
+**WhatsApp API endpoints (Laravel side)**
+- `POST /api/whatsapp/send` – JSON payload for text, images (fallback works).
+- `POST /api/whatsapp/send-document` – multipart with **single field `document`** (PDF, Excel, Word, CSV, plain text). Max size 16 MiB.
+
+> **Important:** The endpoint `/api/whatsapp/send-image` does **not** exist in the service; attempts to call it will return 404.
+
 ### 🖥️ Módulo de Monitoreo del Sistema y Servidor
 - **Dashboard de Servidor**: Gráficos interactivos de consumo de CPU, Memoria RAM, Almacenamiento y Red en tiempo real.
 - **Auditoría de Logs**: Visor integrado de logs de Laravel y base de datos con filtros de severidad y búsquedas.

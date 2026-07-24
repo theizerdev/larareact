@@ -55,6 +55,13 @@ class PermissionSeeder extends Seeder
                 // Módulo: Integraciones
                 'integrations.view' => 'Ver Integraciones',
                 'integrations.edit' => 'Editar Integraciones',
+                // Nuevos permisos WhatsApp
+                'whatsapp.view' => 'Ver configuración de WhatsApp',
+                'whatsapp.manage' => 'Gestionar configuración WhatsApp',
+                'whatsapp.send' => 'Enviar mensajes WhatsApp',
+                // Permisos para envío de carnet por WhatsApp
+                'proveedores.send-carnet-whatsapp' => 'Enviar carnet por WhatsApp a Proveedor',
+                'productores.send-carnet-whatsapp' => 'Enviar carnet por WhatsApp a Productor',
 
                 
             ],
@@ -135,6 +142,7 @@ class PermissionSeeder extends Seeder
                     str_starts_with($permission, 'responsables.') => 'responsables',
                     str_starts_with($permission, 'empleados.') => 'empleados',
                     str_starts_with($permission, 'integrations.') => 'integraciones',
+                    str_starts_with($permission, 'whatsapp.') => 'integraciones',
                     str_starts_with($permission, 'proveedores.') => 'proveedores',
                     str_starts_with($permission, 'productores.') => 'productores',
                     str_starts_with($permission, 'monitoreo.') => 'monitoreo',
