@@ -1,4 +1,8 @@
 {
+  "Visits": "Visits",
+  "Temporary Visits": "Temporary Visits",
+  "Facility Accesses": "Facility Accesses",
+  "Gate Control (QR Reader)": "Gate Control (QR Reader)",
   "Control de Accesos a Instalaciones": "Facility Access Control",
   "Gestión unificada de entradas/salidas para Empleados y Proveedores con Código de Visitante (80000001+).": "Unified entry/exit management for Employees and Suppliers with Visitor Code (80000001+).",
   "Gestión unificada de entradas/salidas para Empleados, Proveedores y Productores con Código de Visitante (80000001+).": "Unified entry/exit management for Employees, Suppliers and Producers with Visitor Code (80000001+).",

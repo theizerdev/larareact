@@ -449,12 +449,12 @@ export default function AdminSaasLayout({
                                     permission: 'visitas_temporales.view',
                                 },
                                 {
-                                    title: 'Accesos a Instalaciones',
+                                    title: 'Facility Accesses',
                                     href: '/admin/visitas-accesos',
                                     permission: 'visitas_temporales.view',
                                 },
                                 {
-                                    title: 'Control de Garita (Lector QR)',
+                                    title: 'Gate Control (QR Reader)',
                                     href: '/admin/visitas-accesos/garita',
                                     permission: 'visitas_temporales.view',
                                 },
