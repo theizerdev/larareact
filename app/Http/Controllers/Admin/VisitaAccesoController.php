@@ -743,39 +743,74 @@ class VisitaAccesoController extends Controller
 
         try {
             if (!empty($search)) {
-                // 1. Buscar en invitaciones (pre-anuncios)
-                $invitacion = VisitaAccesoInvitacion::query()
-                    ->with(['anfitrion', 'empleado', 'proveedor', 'productor', 'paisTelefono', 'tipoServicio'])
-                    ->where('uuid', $search)
-                    ->orWhere('codigo_invitacion', $search)
-                    ->orWhere('visitante_nombre', 'like', "%{$search}%")
-                    ->orWhere('visitante_documento', $search)
-                    ->orWhere('vehiculo_placa', $search)
+                // 1. Buscar primero en Empleados (por documento_identidad, ID o Nombres)
+                $empleado = Empleado::query()
+                    ->with(['departamento', 'cargo', 'responsable', 'vehiculos', 'empresa', 'sucursal'])
+                    ->where('documento_identidad', $search)
+                    ->orWhere('documento_identidad', 'like', "%{$search}%")
+                    ->orWhereRaw("TRIM(documento_identidad) = ?", [$search])
+                    ->orWhere('id', $search)
+                    ->orWhereRaw("CONCAT(nombres, ' ', apellidos) LIKE ?", ["%{$search}%"])
                     ->first();
 
-                if ($invitacion) {
-                    $resultado = [
-                        'tipo' => 'invitacion',
-                        'data' => $invitacion,
-                    ];
-                } else {
-                    // 2. Buscar en accesos (entradas registradas)
-                    $acceso = VisitaAcceso::query()
-                        ->with([
-                            'empleado', 'proveedor', 'proveedorEmpleado',
-                            'productor', 'productorEmpleado', 'responsable',
-                            'empleadoVehiculo', 'proveedorVehiculo', 'productorVehiculo'
-                        ])
-                        ->where('codigo_visitante', $search)
-                        ->orWhere('vehiculo_placa', $search)
+                if ($empleado) {
+                    $accesoExistente = VisitaAcceso::query()
+                        ->with(['empleado', 'responsable', 'empleadoVehiculo'])
+                        ->where('empleado_id', $empleado->id)
+                        ->where('status', 1)
                         ->latest()
                         ->first();
 
-                    if ($acceso) {
+                    $resultado = [
+                        'tipo'             => 'empleado',
+                        'data'             => $empleado,
+                        'acceso_existente' => $accesoExistente,
+                    ];
+                } else {
+                    // 2. Buscar en invitaciones (pre-anuncios)
+                    $invitacion = VisitaAccesoInvitacion::query()
+                        ->with(['anfitrion', 'empleado', 'proveedor', 'productor', 'paisTelefono', 'tipoServicio'])
+                        ->where('uuid', $search)
+                        ->orWhere('codigo_invitacion', $search)
+                        ->orWhere('visitante_nombre', 'like', "%{$search}%")
+                        ->orWhere('visitante_documento', $search)
+                        ->orWhere('vehiculo_placa', $search)
+                        ->first();
+
+                    if ($invitacion) {
                         $resultado = [
-                            'tipo' => 'acceso',
-                            'data' => $acceso,
+                            'tipo' => 'invitacion',
+                            'data' => $invitacion,
                         ];
+                    } else {
+                        // 3. Buscar en accesos generales (entradas registradas)
+                        $acceso = VisitaAcceso::query()
+                            ->with([
+                                'empleado', 'proveedor', 'proveedorEmpleado',
+                                'productor', 'productorEmpleado', 'responsable',
+                                'empleadoVehiculo', 'proveedorVehiculo', 'productorVehiculo'
+                            ])
+                            ->where('codigo_visitante', $search)
+                            ->orWhere('visitante_documento', $search)
+                            ->orWhere('vehiculo_placa', $search)
+                            ->latest()
+                            ->first();
+
+                        if ($acceso) {
+                            if ($acceso->empleado) {
+                                $accesoExistente = ($acceso->status == 1) ? $acceso : null;
+                                $resultado = [
+                                    'tipo'             => 'empleado',
+                                    'data'             => $acceso->empleado->load(['departamento', 'cargo', 'responsable', 'vehiculos', 'empresa', 'sucursal']),
+                                    'acceso_existente' => $accesoExistente,
+                                ];
+                            } else {
+                                $resultado = [
+                                    'tipo' => 'acceso',
+                                    'data' => $acceso,
+                                ];
+                            }
+                        }
                     }
                 }
             }

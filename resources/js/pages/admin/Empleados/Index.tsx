@@ -22,6 +22,7 @@ import {
     Eye,
     Upload,
     Car,
+    Send,
 } from 'lucide-react';
 import React, { useState, useRef, useEffect } from 'react';
 import { Breadcrumbs } from '@/components/breadcrumbs';
@@ -570,11 +571,20 @@ export default function EmpleadosIndexPage({
         setActiveCameraField(null);
     };
 
+    const formatImageUrl = (url: string | null | undefined): string | null => {
+        if (!url) return null;
+        if (url.startsWith('data:') || url.startsWith('blob:') || url.startsWith('http://') || url.startsWith('https://')) {
+            return url;
+        }
+        const cleanUrl = url.replace(/^\/?(storage\/)+/, '');
+        return `/storage/${cleanUrl}`;
+    };
+
     // Resolver preview de imagen
     const getImageSrc = (fieldVal: any) => {
         if (!fieldVal) return null;
-        if (typeof fieldVal === 'string') return fieldVal; // Base64 o URL guardada (/storage/...)
         if (fieldVal instanceof File) return URL.createObjectURL(fieldVal);
+        if (typeof fieldVal === 'string') return formatImageUrl(fieldVal);
         return null;
     };
 
@@ -586,7 +596,7 @@ export default function EmpleadosIndexPage({
             accessorKey: 'nombres',
             className: 'font-medium',
             cell: (emp) => {
-                const foto = emp.foto_empleado || '/image/avatar-placeholder.png'; // fallback avatar
+                const foto = formatImageUrl(emp.foto_empleado) || '/image/avatar-placeholder.png'; // fallback avatar
                 return (
                     <div className="flex items-center gap-3">
                         <img
@@ -705,6 +715,10 @@ export default function EmpleadosIndexPage({
                         <DropdownMenuItem onClick={() => router.get(`/admin/empleados/${emp.id}/carnet`)}>
                             <Eye className="mr-2 h-4 w-4" />
                             {__('Ver Carnet')}
+                        </DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => router.post(`/admin/empleados/${emp.id}/enviar-carnet`)}>
+                            <Send className="mr-2 h-4 w-4 text-emerald-600 dark:text-emerald-400" />
+                            {__('Enviar Carnet por WhatsApp')}
                         </DropdownMenuItem>
                         <DropdownMenuItem onClick={() => handleToggleStatus(emp)}>
                             <ToggleRight className="mr-2 h-4 w-4" />

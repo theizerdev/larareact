@@ -169,29 +169,7 @@ class EmpleadoPreRegistroController extends Controller
                 }
             }
 
-            // 3. Registrar automáticamente en visitas_accesos
-            \App\Models\VisitaAcceso::create([
-                'codigo_visitante'      => \App\Models\VisitaAcceso::generarSiguienteCodigoVisitante(),
-                'tipo_acceso'           => 'empleado',
-                'empleado_id'           => $empleado->id,
-                'responsable_id'        => $empleado->responsable_id,
-                'medio_acceso'          => $primerVehiculo ? 'vehicular' : 'peatonal',
-                'empleado_vehiculo_id'  => $primerVehiculo?->id,
-                'vehiculo_tipo'         => $primerVehiculo?->tipo_vehiculo ?? ($primerVehiculo ? 'Auto' : null),
-                'vehiculo_marca'        => $primerVehiculo?->marca,
-                'vehiculo_modelo'       => $primerVehiculo?->modelo,
-                'vehiculo_placa'        => $primerVehiculo?->placa,
-                'vehiculo_foto_frontal' => $primerVehiculo?->foto_frontal,
-                'vehiculo_foto_trasera' => $primerVehiculo?->foto_trasera,
-                'fecha_ingreso'         => now()->toDateString(),
-                'hora_ingreso'          => now()->toTimeString(),
-                'status'                => 1, // En Instalaciones
-                'empresa_id'            => $preRegistro->empresa_id ?? 1,
-                'sucursal_id'           => $preRegistro->sucursal_id ?? 1,
-                'observaciones'         => 'Registro de acceso automático por pre-registro de empleado.',
-            ]);
-
-            // 4. Marcar pre-registro como completado
+            // 3. Marcar pre-registro como completado
             $preRegistro->update(['status' => 'completado']);
 
             DB::commit();
@@ -207,10 +185,17 @@ class EmpleadoPreRegistroController extends Controller
                     $empresa = $preRegistro->empresa;
                     $whatsappService = new WhatsAppService($empresa);
 
-                    $message = "Estimado Colaborador *{$preRegistro->nombres} {$preRegistro->apellidos}*, hemos recibido la información de su pre-registro satisfactoriamente.\n\n"
-                        . "Su registro se encuentra en revisión. Le notificaremos una vez que sea activado por el área correspondiente.";
+                    $carnetUrl = url("/carnet-empleado/{$empleado->id}");
+                    $message = "Estimado Colaborador *{$preRegistro->nombres} {$preRegistro->apellidos}*, hemos recibido la información de tu registro satisfactoriamente.\n\n"
+                        . "🪪 *Tu Gafete / Carnet Digital Driscoll's:* \n🔗 {$carnetUrl}\n\n"
+                        . "Presenta este carnet o código QR en garita para tu control de accesos.";
 
-                    $whatsappService->sendMessage($to, $message, true);
+                    $carnetPath = \App\Services\CarnetGeneratorService::generarCarnetPNG($empleado);
+                    if ($carnetPath && file_exists($carnetPath)) {
+                        $whatsappService->sendImage($to, $carnetPath, $message);
+                    } else {
+                        $whatsappService->sendMessage($to, $message, true);
+                    }
                 }
             } catch (\Exception $e) {
                 \Illuminate\Support\Facades\Log::error('Error al enviar WhatsApp de pre-registro de empleado completado: ' . $e->getMessage());

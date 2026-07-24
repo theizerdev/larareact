@@ -1,6 +1,6 @@
-import { Head, Link } from '@inertiajs/react';
-import { ArrowLeft, Printer } from 'lucide-react';
-import React from 'react';
+import { Head, Link, usePage } from '@inertiajs/react';
+import { ArrowLeft, Printer, Download } from 'lucide-react';
+import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { useTranslate } from '@/hooks/use-translate';
 
@@ -53,6 +53,17 @@ interface CarnetPageProps {
 
 export default function CarnetPage({ empleado }: CarnetPageProps) {
     const { __ } = useTranslate();
+    const { auth } = usePage().props as any;
+    const [downloading, setDownloading] = useState(false);
+
+    const formatImageUrl = (url: string | null | undefined): string | null => {
+        if (!url) return null;
+        if (url.startsWith('data:') || url.startsWith('blob:') || url.startsWith('http://') || url.startsWith('https://')) {
+            return url;
+        }
+        const cleanUrl = url.replace(/^\/?(storage\/)+/, '');
+        return `/storage/${cleanUrl}`;
+    };
 
     // Generar la URL del QR de verificación
     const qrData = empleado.documento_identidad;
@@ -67,18 +78,83 @@ export default function CarnetPage({ empleado }: CarnetPageProps) {
         window.print();
     };
 
+    const loadHtml2Canvas = (): Promise<any> => {
+        return new Promise((resolve, reject) => {
+            if ((window as any).html2canvas) {
+                return resolve((window as any).html2canvas);
+            }
+            const script = document.createElement('script');
+            // Cargar html2canvas-pro que soporta oklch y sintaxis moderna de CSS
+            script.src = 'https://cdn.jsdelivr.net/npm/html2canvas-pro@1.5.8/dist/html2canvas-pro.min.js';
+            script.onload = () => resolve((window as any).html2canvas || (window as any).html2canvasPro);
+            script.onerror = () => {
+                const fallbackScript = document.createElement('script');
+                fallbackScript.src = 'https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js';
+                fallbackScript.onload = () => resolve((window as any).html2canvas);
+                fallbackScript.onerror = () => reject(new Error('Failed to load html2canvas'));
+                document.body.appendChild(fallbackScript);
+            };
+            document.body.appendChild(script);
+        });
+    };
+
+    const handleDownloadImage = async () => {
+        const badgeElement = document.getElementById('badge-wrapper');
+        if (!badgeElement) return;
+
+        try {
+            setDownloading(true);
+            const html2canvas = await loadHtml2Canvas();
+            const canvas = await html2canvas(badgeElement, {
+                scale: 3,
+                useCORS: true,
+                allowTaint: true,
+                backgroundColor: '#ffffff',
+                onclone: (clonedDoc: Document) => {
+                    // Prevenir error de oklch en parsers removiendo hojas de estilo externas que usen oklch
+                    const styleElements = Array.from(clonedDoc.querySelectorAll('style, link[rel="stylesheet"]'));
+                    styleElements.forEach((el) => {
+                        try {
+                            if (el.textContent && el.textContent.includes('oklch')) {
+                                el.remove();
+                            }
+                        } catch (e) {
+                            // Ignorar errores al inspeccionar elementos
+                        }
+                    });
+                }
+            });
+
+            const image = canvas.toDataURL('image/png');
+            const link = document.createElement('a');
+            link.href = image;
+            link.download = `Carnet_${empleado.nombres}_${empleado.apellidos}.png`.replace(/\s+/g, '_');
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+        } catch (err) {
+            console.error('Error al generar la imagen del carnet:', err);
+        } finally {
+            setDownloading(false);
+        }
+    };
+
     return (
         <>
             <Head title={`${__('ID Badge')} - ${empleado.nombres} ${empleado.apellidos}`} />
 
             {/* Importar fuentes manuscritas similares a las del carnet de la imagen */}
-            <style dangerouslySetInnerHTML={{ __html: `
+            <style dangerouslySetInnerHTML={{
+                __html: `
                 @import url('https://fonts.googleapis.com/css2?family=Caveat:wght@700&family=Dancing+Script:wght@700&display=swap');
                 
                 @media print {
                     /* Ocultar todo lo demás al imprimir */
                     body * {
                         visibility: hidden !important;
+                    }
+                    .no-print {
+                        display: none !important;
                     }
                     #badge-wrapper, #badge-wrapper * {
                         visibility: visible !important;
@@ -102,24 +178,36 @@ export default function CarnetPage({ empleado }: CarnetPageProps) {
             `}} />
 
             <div className="min-h-screen bg-slate-100 dark:bg-slate-900 py-8 px-4 flex flex-col items-center justify-center">
-                
-                {/* Controles de navegación y acción (ocultos al imprimir) */}
-                <div className="w-full max-w-[340px] flex items-center justify-between mb-6 no-print">
-                    <Link
-                        href="/admin/empleados"
-                        className="flex items-center gap-1.5 text-sm font-medium text-slate-600 hover:text-slate-900 dark:text-slate-400 dark:hover:text-slate-100 transition-colors"
-                    >
-                        <ArrowLeft className="w-4 h-4" />
-                        {__('Employees')}
-                    </Link>
 
-                    <Button
-                        onClick={handlePrint}
-                        className="bg-[#104a29] hover:bg-[#0c371e] text-white flex items-center gap-2 shadow-sm"
-                    >
-                        <Printer className="w-4 h-4" />
-                        {__('Print')}
-                    </Button>
+                {/* Controles de navegación y acción (ocultos al imprimir) */}
+                <div className="w-full max-w-[340px] flex items-center justify-between gap-2 mb-6 no-print">
+                    {auth?.user ? (
+                        <Link
+                            href="/admin/empleados"
+                            className="flex items-center gap-1.5 text-sm font-medium text-slate-600 hover:text-slate-900 dark:text-slate-400 dark:hover:text-slate-100 transition-colors"
+                        >
+                            <ArrowLeft className="w-4 h-4" />
+                            {__('Employees')}
+                        </Link>
+                    ) : (
+                        <span className="text-xs font-semibold text-emerald-700 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/60 px-2.5 py-1 rounded-full border border-emerald-200 dark:border-emerald-800">
+                            🪪 Carnet Digital Driscoll's
+                        </span>
+                    )}
+
+                    <div className="flex items-center gap-2">
+                        <Button
+                            onClick={handleDownloadImage}
+                            disabled={downloading}
+                            variant="outline"
+                            className="border-emerald-600 text-emerald-700 hover:bg-emerald-50 dark:border-emerald-500 dark:text-emerald-300 dark:hover:bg-emerald-950 flex items-center gap-1.5 shadow-sm text-xs"
+                        >
+                            <Download className="w-4 h-4" />
+                            {downloading ? __('Generando...') : __('Descargar')}
+                        </Button>
+
+
+                    </div>
                 </div>
 
                 {/* ── Credencial (Carnet) ── */}
@@ -141,10 +229,10 @@ export default function CarnetPage({ empleado }: CarnetPageProps) {
                         fontFamily: 'system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif'
                     }}
                 >
-                    {/* Watercolor abstract top shapes (Recrea fielmente el patrón de manchas orgánicas) */}
-                    <div style={{ position: 'absolute', top: '-10px', left: '-10px', width: '100px', height: '65px', backgroundColor: 'rgba(200, 16, 46, 0.85)', borderRadius: '40% 60% 70% 30% / 50% 60% 40% 50%', filter: 'blur(3px)', mixBlendMode: 'multiply' }} />
-                    <div style={{ position: 'absolute', top: '-15px', left: '90px', width: '85px', height: '60px', backgroundColor: 'rgba(109, 32, 119, 0.75)', borderRadius: '50% 40% 60% 40% / 40% 50% 50% 60%', filter: 'blur(3px)', mixBlendMode: 'multiply' }} />
-                    <div style={{ position: 'absolute', top: '-18px', left: '160px', width: '90px', height: '55px', backgroundColor: 'rgba(0, 90, 156, 0.75)', borderRadius: '30% 70% 40% 60% / 50% 40% 60% 50%', filter: 'blur(3px)', mixBlendMode: 'multiply' }} />
+                    {/* Watercolor abstract top spots matching physical card */}
+                    <div style={{ position: 'absolute', top: '-8px', left: '-5px', width: '95px', height: '60px', backgroundColor: 'rgba(211, 18, 42, 0.95)', borderRadius: '45% 55% 70% 30% / 50% 60% 40% 50%', filter: 'blur(1.5px)', mixBlendMode: 'multiply' }} />
+                    <div style={{ position: 'absolute', top: '-12px', left: '80px', width: '85px', height: '58px', backgroundColor: 'rgba(88, 28, 93, 0.9)', borderRadius: '50% 40% 60% 40% / 40% 50% 50% 60%', filter: 'blur(1.5px)', mixBlendMode: 'multiply' }} />
+                    <div style={{ position: 'absolute', top: '-15px', left: '155px', width: '90px', height: '52px', backgroundColor: 'rgba(16, 117, 188, 0.9)', borderRadius: '30% 70% 40% 60% / 50% 40% 60% 50%', filter: 'blur(1.5px)', mixBlendMode: 'multiply' }} />
 
                     {/* ══ Sección Superior (Nombres Apilados y Foto) ══ */}
                     <div
@@ -195,15 +283,15 @@ export default function CarnetPage({ empleado }: CarnetPageProps) {
                                     justifyContent: 'center'
                                 }}
                             >
-                                {empleado.foto_empleado ? (
+                                {formatImageUrl(empleado.foto_empleado) ? (
                                     <img
-                                        src={empleado.foto_empleado}
+                                        src={formatImageUrl(empleado.foto_empleado)!}
                                         alt={`${empleado.nombres} ${empleado.apellidos}`}
                                         style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
                                     />
                                 ) : (
                                     <div style={{ color: '#cbd5e1' }}>
-                                        <svg xmlns="http://www.w3.org/2000/svg" width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+                                        <svg xmlns="http://www.w3.org/2000/svg" width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2" /><circle cx="12" cy="7" r="4" /></svg>
                                     </div>
                                 )}
                             </div>
@@ -282,31 +370,31 @@ export default function CarnetPage({ empleado }: CarnetPageProps) {
                             />
                         </div>
 
-                        {/* Driscoll's Logo original del proyecto */}
-                        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
+                        {/* Logo sin fondo idéntico al de login.tsx */}
+                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '75px', width: '100%', padding: '0 10px', boxSizing: 'border-box' }}>
                             <img
-                                src="/image/logo/driscolls_logo.png"
-                                alt="Driscoll's Logo"
-                                style={{ height: '44px', width: 'auto', display: 'block', objectFit: 'contain' }}
-                            />
-                            {/* Subtexto en letra sans-serif pequeña y elegante */}
-                            <p
-                                style={{
-                                    fontSize: '9px',
-                                    fontWeight: 'bold',
-                                    letterSpacing: '0.15em',
-                                    color: '#104a29',
-                                    margin: '4px 0 0 0',
-                                    textTransform: 'none',
-                                    opacity: 0.9,
-                                    fontFamily: 'system-ui, sans-serif'
+                                src="/image/logo/larareact_logo_transparent.webp"
+                                onError={(e) => {
+                                    (e.target as HTMLImageElement).src = "/image/logo/larareact_logo_transparent.png";
                                 }}
-                            >
-                                Only the Finest Berries™
-                            </p>
+                                alt="Driscoll's Logo"
+                                style={{ height: '72px', maxWidth: '250px', width: 'auto', display: 'block', objectFit: 'contain', backgroundColor: 'transparent' }}
+                            />
                         </div>
                     </div>
 
+                </div>
+
+                {/* Botón principal de descarga para teléfono celular / escritorio */}
+                <div className="mt-6 w-full max-w-[340px] no-print">
+                    <Button
+                        onClick={handleDownloadImage}
+                        disabled={downloading}
+                        className="w-full bg-[#104a29] hover:bg-[#0c371e] text-white py-6 rounded-xl font-bold flex items-center justify-center gap-2 shadow-lg text-base"
+                    >
+                        <Download className="w-5 h-5" />
+                        {downloading ? __('Generando Imagen PNG...') : __('Descargar Carnet como Imagen')}
+                    </Button>
                 </div>
 
             </div>

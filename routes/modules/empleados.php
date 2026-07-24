@@ -6,6 +6,7 @@ use App\Http\Controllers\Admin\EmpleadoController;
 Route::middleware(['permission:empleados.view'])->group(function () {
     Route::get('/empleados', [EmpleadoController::class, 'index'])->name('empleados.index');
     Route::get('/empleados/{empleado}/carnet', [EmpleadoController::class, 'carnet'])->name('empleados.carnet');
+    Route::post('/empleados/{empleado}/enviar-carnet', [EmpleadoController::class, 'enviarCarnetWhatsApp'])->name('empleados.enviar-carnet');
 });
 
 Route::middleware(['permission:empleados.create'])->group(function () {

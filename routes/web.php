@@ -58,6 +58,7 @@ Route::post('/autorizar-acceso/{token}', [VisitaAccesoAutorizacionController::cl
 Route::get('/api/autorizar-acceso/{token}/check', [VisitaAccesoAutorizacionController::class, 'checkStatus'])->name('autorizar-acceso.check');
 Route::get('/pase-digital/{uuid}', [VisitaAccesoController::class, 'pasePublico'])->name('pase-digital-visita.show');
 Route::post('/pase-digital/{uuid}/datos-acceso', [VisitaAccesoController::class, 'actualizarDatosAcceso'])->name('pase-digital-visita.datos-acceso');
+Route::get('/carnet-empleado/{empleado}', [\App\Http\Controllers\Admin\EmpleadoController::class, 'carnetPublico'])->name('empleados.carnet.publico');
 
 if (file_exists(__DIR__.'/larareact-settings.php')) {
     require __DIR__.'/larareact-settings.php';

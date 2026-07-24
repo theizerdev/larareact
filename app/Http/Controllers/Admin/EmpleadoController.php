@@ -119,27 +119,8 @@ class EmpleadoController extends Controller
             }
         }
 
-        // Registrar automáticamente en visitas_accesos
-        \App\Models\VisitaAcceso::create([
-            'codigo_visitante'      => \App\Models\VisitaAcceso::generarSiguienteCodigoVisitante(),
-            'tipo_acceso'           => 'empleado',
-            'empleado_id'           => $empleado->id,
-            'responsable_id'        => $empleado->responsable_id,
-            'medio_acceso'          => $primerVehiculo ? 'vehicular' : 'peatonal',
-            'empleado_vehiculo_id'  => $primerVehiculo?->id,
-            'vehiculo_tipo'         => $primerVehiculo?->tipo_vehiculo ?? ($primerVehiculo ? 'Auto' : null),
-            'vehiculo_marca'        => $primerVehiculo?->marca,
-            'vehiculo_modelo'       => $primerVehiculo?->modelo,
-            'vehiculo_placa'        => $primerVehiculo?->placa,
-            'vehiculo_foto_frontal' => $primerVehiculo?->foto_frontal,
-            'vehiculo_foto_trasera' => $primerVehiculo?->foto_trasera,
-            'fecha_ingreso'         => now()->toDateString(),
-            'hora_ingreso'          => now()->toTimeString(),
-            'status'                => 1, // En Instalaciones
-            'empresa_id'            => $empleado->empresa_id ?? 1,
-            'sucursal_id'           => $empleado->sucursal_id ?? 1,
-            'observaciones'         => 'Registro de acceso automático al registrar empleado.',
-        ]);
+        // Enviar Gafete / Carnet por WhatsApp al empleado automáticamente
+        $this->enviarCarnetWhatsAppInternal($empleado);
 
         return back()->with('notification', [
             'type' => 'success',
@@ -147,14 +128,91 @@ class EmpleadoController extends Controller
         ]);
     }
 
+    public function carnetPublico(Empleado $empleado)
+    {
+        $empleado->load(['paisTelefono', 'departamento', 'cargo', 'empresa', 'sucursal']);
+
+        return Inertia::render('admin/Empleados/Carnet', [
+            'empleado' => $empleado,
+        ]);
+    }
+
+    public function enviarCarnetWhatsApp(Empleado $empleado)
+    {
+        $sent = $this->enviarCarnetWhatsAppInternal($empleado);
+
+        if ($sent) {
+            return back()->with('notification', [
+                'type' => 'success',
+                'message' => "Carnet enviado por WhatsApp a {$empleado->nombres} {$empleado->apellidos}.",
+            ]);
+        }
+
+        return back()->with('notification', [
+            'type' => 'error',
+            'message' => 'El empleado no cuenta con un número de teléfono válido para enviarle el WhatsApp.',
+        ]);
+    }
+
+    private function enviarCarnetWhatsAppInternal(Empleado $empleado): bool
+    {
+        if (empty($empleado->telefono)) {
+            return false;
+        }
+
+        try {
+            $user = request()->user();
+            $empresa = Empresa::find($empleado->empresa_id) ?: (Empresa::find($user->empresa_id ?? 1) ?: Empresa::first());
+
+            $cleanPhone = preg_replace('/[^0-9]/', '', $empleado->telefono);
+            if (strlen($cleanPhone) >= 9) {
+                $pais = $empleado->paisTelefono ?: Pais::find($empleado->pais_telefono_id);
+                $prefix = $pais ? preg_replace('/[^0-9]/', '', $pais->codigo_telefonico) : '51';
+                $to = $prefix . $cleanPhone;
+
+                $carnetUrl = url("/carnet-empleado/{$empleado->id}");
+                $deptoNombre = $empleado->departamento->nombre ?? 'General';
+
+                $msg  = "🪪 *¡TU GAFETE / CARNET DIGITAL DRISCOLL'S ESTÁ LISTO!*\n\n";
+                $msg .= "Hola *{$empleado->nombres} {$empleado->apellidos}*,\n";
+                $msg .= "Se ha generado tu Carnet de Identificación de Empleado.\n\n";
+                $msg .= "📌 *Documento:* {$empleado->documento_identidad}\n";
+                $msg .= "🏢 *Departamento:* {$deptoNombre}\n\n";
+                $msg .= "📲 *Accede a tu carnet digital aquí:*\n";
+                $msg .= "🔗 {$carnetUrl}\n\n";
+                $msg .= "Presenta este carnet o código QR en garita para tu control de accesos.";
+
+                $ws = new \App\Services\WhatsAppService($empresa);
+                $carnetPath = \App\Services\CarnetGeneratorService::generarCarnetPNG($empleado);
+
+                if ($carnetPath && file_exists($carnetPath)) {
+                    $ws->sendImage($to, $carnetPath, $msg);
+                } else {
+                    $ws->sendMessage($to, $msg, true);
+                }
+                return true;
+            }
+        } catch (\Exception $e) {
+            \Illuminate\Support\Facades\Log::error('Error enviando Carnet por WhatsApp: ' . $e->getMessage());
+        }
+
+        return false;
+    }
+
     public function update(EmpleadoRequest $request, Empleado $empleado)
     {
         $data = $request->validated();
 
         // Manejar Foto del Empleado
-        if ($request->exists('foto_empleado')) {
+        if ($request->hasFile('foto_empleado')) {
+            $newPath = $this->handleImageUpload(null, 'foto_empleado');
+            if ($newPath) {
+                $this->deleteOldImage($empleado->foto_empleado);
+                $data['foto_empleado'] = $newPath;
+            }
+        } elseif ($request->exists('foto_empleado')) {
             $input = $request->input('foto_empleado');
-            if (empty($input)) {
+            if ($input === '' || $input === null) {
                 $this->deleteOldImage($empleado->foto_empleado);
                 $data['foto_empleado'] = null;
             } else {
@@ -164,18 +222,18 @@ class EmpleadoController extends Controller
                     $data['foto_empleado'] = $newPath;
                 }
             }
-        } elseif ($request->hasFile('foto_empleado')) {
-            $newPath = $this->handleImageUpload(null, 'foto_empleado');
-            if ($newPath) {
-                $this->deleteOldImage($empleado->foto_empleado);
-                $data['foto_empleado'] = $newPath;
-            }
         }
 
         // Manejar Foto del Empleado 2
-        if ($request->exists('foto_empleado_2')) {
+        if ($request->hasFile('foto_empleado_2')) {
+            $newPath = $this->handleImageUpload(null, 'foto_empleado_2');
+            if ($newPath) {
+                $this->deleteOldImage($empleado->foto_empleado_2);
+                $data['foto_empleado_2'] = $newPath;
+            }
+        } elseif ($request->exists('foto_empleado_2')) {
             $input = $request->input('foto_empleado_2');
-            if (empty($input)) {
+            if ($input === '' || $input === null) {
                 $this->deleteOldImage($empleado->foto_empleado_2);
                 $data['foto_empleado_2'] = null;
             } else {
@@ -185,18 +243,18 @@ class EmpleadoController extends Controller
                     $data['foto_empleado_2'] = $newPath;
                 }
             }
-        } elseif ($request->hasFile('foto_empleado_2')) {
-            $newPath = $this->handleImageUpload(null, 'foto_empleado_2');
-            if ($newPath) {
-                $this->deleteOldImage($empleado->foto_empleado_2);
-                $data['foto_empleado_2'] = $newPath;
-            }
         }
 
         // Manejar Foto del Documento
-        if ($request->exists('foto_documento')) {
+        if ($request->hasFile('foto_documento')) {
+            $newPath = $this->handleImageUpload(null, 'foto_documento');
+            if ($newPath) {
+                $this->deleteOldImage($empleado->foto_documento);
+                $data['foto_documento'] = $newPath;
+            }
+        } elseif ($request->exists('foto_documento')) {
             $input = $request->input('foto_documento');
-            if (empty($input)) {
+            if ($input === '' || $input === null) {
                 $this->deleteOldImage($empleado->foto_documento);
                 $data['foto_documento'] = null;
             } else {
@@ -206,18 +264,18 @@ class EmpleadoController extends Controller
                     $data['foto_documento'] = $newPath;
                 }
             }
-        } elseif ($request->hasFile('foto_documento')) {
-            $newPath = $this->handleImageUpload(null, 'foto_documento');
-            if ($newPath) {
-                $this->deleteOldImage($empleado->foto_documento);
-                $data['foto_documento'] = $newPath;
-            }
         }
 
         // Manejar Foto del Documento (Reverso)
-        if ($request->exists('foto_documento_reverso')) {
+        if ($request->hasFile('foto_documento_reverso')) {
+            $newPath = $this->handleImageUpload(null, 'foto_documento_reverso');
+            if ($newPath) {
+                $this->deleteOldImage($empleado->foto_documento_reverso);
+                $data['foto_documento_reverso'] = $newPath;
+            }
+        } elseif ($request->exists('foto_documento_reverso')) {
             $input = $request->input('foto_documento_reverso');
-            if (empty($input)) {
+            if ($input === '' || $input === null) {
                 $this->deleteOldImage($empleado->foto_documento_reverso);
                 $data['foto_documento_reverso'] = null;
             } else {
@@ -226,12 +284,6 @@ class EmpleadoController extends Controller
                     $this->deleteOldImage($empleado->foto_documento_reverso);
                     $data['foto_documento_reverso'] = $newPath;
                 }
-            }
-        } elseif ($request->hasFile('foto_documento_reverso')) {
-            $newPath = $this->handleImageUpload(null, 'foto_documento_reverso');
-            if ($newPath) {
-                $this->deleteOldImage($empleado->foto_documento_reverso);
-                $data['foto_documento_reverso'] = $newPath;
             }
         }
 
@@ -364,17 +416,17 @@ class EmpleadoController extends Controller
 
     private function handleImageUpload($input, $fieldName)
     {
-        if (!$input) {
-            return null;
-        }
-
-        // Si es un archivo subido directamente
-        if (request()->hasFile($fieldName) && request()->file($fieldName)->isValid()) {
+        // 1. Si es un archivo subido directamente por multipart form
+        if ($fieldName && request()->hasFile($fieldName) && request()->file($fieldName)->isValid()) {
             $path = request()->file($fieldName)->store('empleados', 'public');
             return '/storage/' . $path;
         }
 
-        // Si es una cadena Base64 de la webcam
+        if (!$input) {
+            return null;
+        }
+
+        // 2. Si es una cadena Base64 de la webcam
         if (is_string($input) && preg_match('/^data:image\/(\w+);base64,/', $input, $type)) {
             $data = substr($input, strpos($input, ',') + 1);
             $type = strtolower($type[1]); // png, jpg, jpeg, webp
@@ -396,7 +448,7 @@ class EmpleadoController extends Controller
             return '/storage/' . $filePath;
         }
 
-        // Si es una ruta ya guardada anteriormente
+        // 3. Si es una ruta ya guardada anteriormente
         if (is_string($input)) {
             if (str_starts_with($input, '/storage/') || str_starts_with($input, 'http://') || str_starts_with($input, 'https://')) {
                 return $input;

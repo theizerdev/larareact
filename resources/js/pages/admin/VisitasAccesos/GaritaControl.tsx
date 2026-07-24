@@ -27,7 +27,10 @@ import {
     SwitchCamera,
     Video,
     Volume2,
-    Shield
+    Shield,
+    AlertTriangle,
+    MessageSquare,
+    CheckCircle
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -44,8 +47,9 @@ interface Acompanante {
 interface GaritaProps {
     searchQuery?: string;
     resultado?: {
-        tipo: 'invitacion' | 'acceso';
+        tipo: 'invitacion' | 'acceso' | 'empleado';
         data: any;
+        acceso_existente?: any;
     } | null;
     visitasEsperadas?: any[];
     siguienteCodigo?: number;
@@ -70,6 +74,25 @@ export default function GaritaControl({
     const [cameraError, setCameraError] = useState<string | null>(null);
     const [currentTime, setCurrentTime] = useState<string>('');
     const [activeImageModal, setActiveImageModal] = useState<string | null>(null);
+
+    // Estado para Autorización en Tiempo Real vía WhatsApp (Garita Empleados)
+    const [activeAuthToken, setActiveAuthToken] = useState<string | null>(null);
+    const [autorizacionRecibida, setAutorizacionRecibida] = useState<{
+        status: string;
+        motivo: string;
+        responsable: string;
+    } | null>(null);
+    const [medioAcceso, setMedioAcceso] = useState<'peatonal' | 'vehicular'>('peatonal');
+    const [empleadoVehiculoId, setEmpleadoVehiculoId] = useState<string>('');
+
+    const formatImageUrl = (url: string | null | undefined): string | null => {
+        if (!url) return null;
+        if (url.startsWith('data:') || url.startsWith('blob:') || url.startsWith('http://') || url.startsWith('https://')) {
+            return url;
+        }
+        const cleanUrl = url.replace(/^\/?(storage\/)+/, '');
+        return `/storage/${cleanUrl}`;
+    };
 
     // Reloj en vivo para la tablet de garita según la zona horaria oficial de la sucursal
     useEffect(() => {
@@ -340,19 +363,101 @@ export default function GaritaControl({
         });
     };
 
-    // Marcar salida oficial de Garita
-    const handleMarcarSalida = (accesoId: number) => {
-        router.patch(`/admin/visitas-accesos/${accesoId}/marcar-salida`, {}, {
+    // Polling en vivo para detectar cuando el Responsable presione "Autorizar" en su pantalla
+    useEffect(() => {
+        if (!activeAuthToken || autorizacionRecibida?.status === 'autorizado') return;
+
+        const interval = setInterval(() => {
+            fetch(`/api/autorizar-acceso/${activeAuthToken}/check`)
+                .then((res) => res.json())
+                .then((resData) => {
+                    if (resData.found && resData.status === 'autorizado') {
+                        setAutorizacionRecibida({
+                            status: 'autorizado',
+                            motivo: resData.motivo_autorizacion || '',
+                            responsable: resData.responsable_nombre || '',
+                        });
+                        notifySuccess(__('¡El Responsable ') + (resData.responsable_nombre || '') + __(' autorizó el ingreso desde WhatsApp!'));
+                    }
+                })
+                .catch((err) => console.error(err));
+        }, 3000);
+
+        return () => clearInterval(interval);
+    }, [activeAuthToken, autorizacionRecibida]);
+
+    const handleSolicitarWhatsappGarita = async (empNombre: string, empDoc: string, respId: number, empId: number) => {
+        try {
+            const response = await fetch('/admin/visitas-accesos/solicitar-autorizacion-whatsapp', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRF-TOKEN': (document.querySelector('meta[name="csrf-token"]') as HTMLMetaElement)?.content || '',
+                    'Accept': 'application/json',
+                },
+                body: JSON.stringify({
+                    responsable_id: respId,
+                    empleado_id: empId,
+                    empleado_nombre: empNombre,
+                    empleado_documento: empDoc,
+                    es_acompanante: false,
+                }),
+            });
+
+            const resData = await response.json();
+            if (resData.success && resData.token) {
+                setActiveAuthToken(resData.token);
+                notifySuccess(__('Solicitud de autorización enviada vía WhatsApp al responsable ') + (resData.responsable_nombre || ''));
+            } else {
+                notifyError(resData.message || __('No se pudo enviar la solicitud por WhatsApp.'));
+            }
+        } catch (e) {
+            console.error(e);
+            notifyError(__('Ocurrió un error al enviar la solicitud de autorización.'));
+        }
+    };
+
+    const handleRegistrarIngresoEmpleadoGarita = (empId: number, respId: number) => {
+        playScanBeep();
+        router.post('/admin/visitas-accesos', {
+            tipo_acceso: 'empleado',
+            empleado_id: empId,
+            responsable_id: respId,
+            medio_acceso: medioAcceso,
+            empleado_vehiculo_id: empleadoVehiculoId || null,
+            observaciones: autorizacionRecibida
+                ? `Autorizado Fuera de Horario por ${autorizacionRecibida.responsable}: ${autorizacionRecibida.motivo}`
+                : 'Ingreso directo por Garita (Horario Habitual)',
+        }, {
             preserveScroll: true,
             onSuccess: () => {
-                notifySuccess(__('Salida registrada correctamente en Garita.'));
+                notifySuccess(__('Ingreso de Empleado registrado correctamente en Garita.'));
             },
         });
     };
 
     const isInvitacion = resultado?.tipo === 'invitacion';
     const isAcceso = resultado?.tipo === 'acceso';
+    const isEmpleado = resultado?.tipo === 'empleado';
     const record = resultado?.data;
+    const accesoExistente = resultado?.acceso_existente;
+
+    // Validación de Jornada Laboral de Empleado para hoy
+    const diasSemana = ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'];
+    const hoyNombre = diasSemana[new Date().getDay()];
+
+    const isDiaActivo = (j: any) => {
+        if (!j) return false;
+        return j.activo === true || j.activo === 1 || j.activo === '1' || j.activo === 'true';
+    };
+
+    const jornadaLaboralItems = isEmpleado ? (record?.jornada_laboral || record?.jornadaLaboral || []) : [];
+    const jornadaHoy = Array.isArray(jornadaLaboralItems)
+        ? jornadaLaboralItems.find((j: any) => j.dia && j.dia.toLowerCase() === hoyNombre.toLowerCase())
+        : null;
+
+    const autorizadoHabitual = Boolean(jornadaHoy && isDiaActivo(jornadaHoy));
+    const autorizadoHoy = autorizadoHabitual || autorizacionRecibida?.status === 'autorizado';
 
     return (
         <>
@@ -470,15 +575,33 @@ export default function GaritaControl({
                                 </div>
                                 <div>
                                     <span className="text-xs font-bold uppercase tracking-wider text-emerald-200 block">
-                                        {isInvitacion ? __('Pre-Anuncio Registrado') : __('Registro de Acceso Garita')}
+                                        {isEmpleado ? __('Colaborador / Empleado Driscoll\'s') : isInvitacion ? __('Pre-Anuncio Registrado') : __('Registro de Acceso Garita')}
                                     </span>
                                     <h2 className="text-xl font-extrabold tracking-tight">
-                                        {isInvitacion ? record.visitante_nombre : (record.empleado ? `${record.empleado.nombres} ${record.empleado.apellidos}` : record.proveedor ? (record.proveedor.razon_social || record.proveedor.nombre_comercial) : (record.productor?.nombre_comercial_rancho || 'Visitante'))}
+                                        {isEmpleado ? `${record.nombres} ${record.apellidos}` : isInvitacion ? record.visitante_nombre : (record.empleado ? `${record.empleado.nombres} ${record.empleado.apellidos}` : record.proveedor ? (record.proveedor.razon_social || record.proveedor.nombre_comercial) : (record.productor?.nombre_comercial_rancho || 'Visitante'))}
                                     </h2>
                                 </div>
                             </div>
 
                             <div className="flex items-center gap-3">
+                                {isEmpleado && accesoExistente && (
+                                    <Badge className="bg-blue-300 text-blue-950 font-extrabold text-xs px-3.5 py-1.5 rounded-full border-0">
+                                        <CheckCircle2 className="w-4 h-4 mr-1" />
+                                        {__('EN INSTALACIONES (INGRESADO)')}
+                                    </Badge>
+                                )}
+                                {isEmpleado && !accesoExistente && autorizadoHoy && (
+                                    <Badge className="bg-emerald-400 text-emerald-950 font-extrabold text-xs px-3.5 py-1.5 rounded-full border-0">
+                                        <CheckCircle2 className="w-4 h-4 mr-1" />
+                                        {__('AUTORIZADO PARA INGRESAR')}
+                                    </Badge>
+                                )}
+                                {isEmpleado && !accesoExistente && !autorizadoHoy && (
+                                    <Badge className="bg-rose-400 text-rose-950 font-extrabold text-xs px-3.5 py-1.5 rounded-full border-0">
+                                        <AlertTriangle className="w-4 h-4 mr-1" />
+                                        {__('REQUIERE AUTORIZACIÓN FUERA DE HORARIO')}
+                                    </Badge>
+                                )}
                                 {isInvitacion && record.status === 'pendiente' && (
                                     <Badge className="bg-emerald-400 text-emerald-950 font-extrabold text-xs px-3.5 py-1.5 rounded-full border-0">
                                         <CheckCircle2 className="w-4 h-4 mr-1" />
@@ -504,7 +627,7 @@ export default function GaritaControl({
                                     </Badge>
                                 )}
                                 <span className="font-mono text-xs font-bold bg-white/10 px-3 py-1 rounded-full border border-white/20">
-                                    N° {isInvitacion ? record.codigo_invitacion : record.codigo_visitante}
+                                    N° {isEmpleado ? record.documento_identidad : (isInvitacion ? record.codigo_invitacion : record.codigo_visitante)}
                                 </span>
                             </div>
                         </div>
@@ -519,9 +642,9 @@ export default function GaritaControl({
                                         {__('Fotografía del Rostro')}
                                     </span>
                                     
-                                    {record.foto_carnet ? (
-                                        <div className="relative w-40 h-40 mx-auto rounded-3xl overflow-hidden border-4 border-[#104a29] shadow-lg group cursor-pointer" onClick={() => setActiveImageModal(record.foto_carnet.startsWith('data:') ? record.foto_carnet : `/storage/${record.foto_carnet}`)}>
-                                            <img src={record.foto_carnet.startsWith('data:') ? record.foto_carnet : `/storage/${record.foto_carnet}`} alt="Carnet" className="w-full h-full object-cover group-hover:scale-105 transition-transform" />
+                                    {formatImageUrl(isEmpleado ? record.foto_empleado : (record.foto_carnet || record.empleado?.foto_empleado || record.proveedor_empleado?.foto_carnet || record.productor_empleado?.foto_carnet)) ? (
+                                        <div className="relative w-40 h-40 mx-auto rounded-3xl overflow-hidden border-4 border-[#104a29] shadow-lg group cursor-pointer" onClick={() => setActiveImageModal(formatImageUrl(isEmpleado ? record.foto_empleado : (record.foto_carnet || record.empleado?.foto_empleado || record.proveedor_empleado?.foto_carnet || record.productor_empleado?.foto_carnet))!)}>
+                                            <img src={formatImageUrl(isEmpleado ? record.foto_empleado : (record.foto_carnet || record.empleado?.foto_empleado || record.proveedor_empleado?.foto_carnet || record.productor_empleado?.foto_carnet))!} alt="Fotografía" className="w-full h-full object-cover group-hover:scale-105 transition-transform" />
                                             <div className="absolute inset-0 bg-black/30 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center text-white">
                                                 <Maximize2 className="w-6 h-6" />
                                             </div>
@@ -534,16 +657,21 @@ export default function GaritaControl({
 
                                     <div className="space-y-1">
                                         <h3 className="font-extrabold text-lg text-slate-900">
-                                            {isInvitacion ? record.visitante_nombre : (record.empleado ? `${record.empleado.nombres} ${record.empleado.apellidos}` : record.proveedor ? record.proveedor.razon_social : record.productor?.nombre_comercial_rancho)}
+                                            {isEmpleado ? `${record.nombres} ${record.apellidos}` : isInvitacion ? record.visitante_nombre : (record.empleado ? `${record.empleado.nombres} ${record.empleado.apellidos}` : record.proveedor ? record.proveedor.razon_social : record.productor?.nombre_comercial_rancho)}
                                         </h3>
-                                        {record.visitante_empresa && (
+                                        {isEmpleado && record.departamento && (
+                                            <span className="text-xs font-semibold text-emerald-700 block flex items-center justify-center gap-1">
+                                                <Building className="w-3.5 h-3.5 text-emerald-600" /> {record.departamento.nombre}
+                                            </span>
+                                        )}
+                                        {!isEmpleado && record.visitante_empresa && (
                                             <span className="text-xs font-semibold text-slate-600 block flex items-center justify-center gap-1">
                                                 <Building className="w-3.5 h-3.5 text-emerald-600" /> {record.visitante_empresa}
                                             </span>
                                         )}
-                                        {record.visitante_documento && (
+                                        {(record.documento_identidad || record.visitante_documento) && (
                                             <span className="text-xs font-mono text-slate-500 block">
-                                                Doc ID: {record.visitante_documento}
+                                                Doc ID: {record.documento_identidad || record.visitante_documento}
                                             </span>
                                         )}
                                     </div>
@@ -557,9 +685,9 @@ export default function GaritaControl({
                                     <div className="grid grid-cols-2 gap-3">
                                         <div className="space-y-1 text-center">
                                             <span className="text-[11px] font-bold text-slate-500">{__('Doc. Frontal')}</span>
-                                            {record.doc_foto_frontal ? (
-                                                <div className="w-full aspect-[4/3] rounded-2xl overflow-hidden border border-slate-300 cursor-pointer group relative" onClick={() => setActiveImageModal(record.doc_foto_frontal.startsWith('data:') ? record.doc_foto_frontal : `/storage/${record.doc_foto_frontal}`)}>
-                                                    <img src={record.doc_foto_frontal.startsWith('data:') ? record.doc_foto_frontal : `/storage/${record.doc_foto_frontal}`} alt="Doc Frontal" className="w-full h-full object-cover group-hover:scale-105 transition-transform" />
+                                            {formatImageUrl(record.foto_documento || record.doc_foto_frontal || record.empleado?.foto_documento) ? (
+                                                <div className="w-full aspect-[4/3] rounded-2xl overflow-hidden border border-slate-300 cursor-pointer group relative" onClick={() => setActiveImageModal(formatImageUrl(record.foto_documento || record.doc_foto_frontal || record.empleado?.foto_documento)!)}>
+                                                    <img src={formatImageUrl(record.foto_documento || record.doc_foto_frontal || record.empleado?.foto_documento)!} alt="Doc Frontal" className="w-full h-full object-cover group-hover:scale-105 transition-transform" />
                                                     <div className="absolute inset-0 bg-black/30 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center text-white"><Maximize2 className="w-5 h-5" /></div>
                                                 </div>
                                             ) : (
@@ -569,9 +697,9 @@ export default function GaritaControl({
 
                                         <div className="space-y-1 text-center">
                                             <span className="text-[11px] font-bold text-slate-500">{__('Doc. Trasero')}</span>
-                                            {record.doc_foto_trasera ? (
-                                                <div className="w-full aspect-[4/3] rounded-2xl overflow-hidden border border-slate-300 cursor-pointer group relative" onClick={() => setActiveImageModal(record.doc_foto_trasera.startsWith('data:') ? record.doc_foto_trasera : `/storage/${record.doc_foto_trasera}`)}>
-                                                    <img src={record.doc_foto_trasera.startsWith('data:') ? record.doc_foto_trasera : `/storage/${record.doc_foto_trasera}`} alt="Doc Trasero" className="w-full h-full object-cover group-hover:scale-105 transition-transform" />
+                                            {formatImageUrl(record.foto_documento_reverso || record.doc_foto_trasera || record.empleado?.foto_documento_reverso) ? (
+                                                <div className="w-full aspect-[4/3] rounded-2xl overflow-hidden border border-slate-300 cursor-pointer group relative" onClick={() => setActiveImageModal(formatImageUrl(record.foto_documento_reverso || record.doc_foto_trasera || record.empleado?.foto_documento_reverso)!)}>
+                                                    <img src={formatImageUrl(record.foto_documento_reverso || record.doc_foto_trasera || record.empleado?.foto_documento_reverso)!} alt="Doc Trasero" className="w-full h-full object-cover group-hover:scale-105 transition-transform" />
                                                     <div className="absolute inset-0 bg-black/30 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center text-white"><Maximize2 className="w-5 h-5" /></div>
                                                 </div>
                                             ) : (
@@ -710,10 +838,107 @@ export default function GaritaControl({
                                             </div>
                                         )}
                                     </div>
+
+                                    {/* Validación de Horario / Día de Acceso para Empleado */}
+                                    {isEmpleado && (
+                                        <div className="bg-slate-50 p-5 rounded-3xl border border-slate-200 space-y-3">
+                                            <span className="text-slate-400 font-bold uppercase tracking-wider block text-[11px]">
+                                                {__('Validación de Horario / Día de Acceso')}
+                                            </span>
+
+                                            <div className="flex flex-col gap-2">
+                                                <div className="flex items-center justify-between text-xs">
+                                                    <span className="font-semibold text-slate-700">
+                                                        {__('Día de ingreso')} ({hoyNombre}):
+                                                    </span>
+                                                    {autorizadoHoy ? (
+                                                        <Badge className="bg-emerald-100 text-emerald-900 border-emerald-300 font-mono text-xs px-2.5 py-1 flex items-center gap-1.5 font-bold shadow-xs">
+                                                            <Check className="w-3.5 h-3.5 text-emerald-600" />
+                                                            {autorizadoHabitual
+                                                                ? `${__('Autorizado:')} ${jornadaHoy?.hora_ingreso || '08:00'} a ${jornadaHoy?.hora_salida || '17:00'}`
+                                                                : __('Autorizado por WhatsApp ✓')}
+                                                        </Badge>
+                                                    ) : (
+                                                        <Badge variant="outline" className="bg-rose-50 text-rose-800 border-rose-300 text-xs px-2.5 py-1 flex items-center gap-1.5 font-bold">
+                                                            <AlertTriangle className="w-3.5 h-3.5 text-rose-600 shrink-0" />
+                                                            {__('Fuera de Horario / Día No Autorizado')}
+                                                        </Badge>
+                                                    )}
+                                                </div>
+
+                                                {/* Botón WhatsApp si NO está autorizado hoy */}
+                                                {!autorizadoHoy && record.responsable_id && (
+                                                    <Button
+                                                        type="button"
+                                                        onClick={() => handleSolicitarWhatsappGarita(`${record.nombres} ${record.apellidos}`, record.documento_identidad || '', record.responsable_id, record.id)}
+                                                        className={`w-full h-11 text-xs font-bold rounded-xl gap-2 shadow-md transition-all ${
+                                                            activeAuthToken
+                                                                ? 'bg-amber-500 hover:bg-amber-600 text-white animate-pulse'
+                                                                : 'bg-emerald-600 hover:bg-emerald-700 text-white shadow-emerald-600/20'
+                                                        }`}
+                                                    >
+                                                        {activeAuthToken ? (
+                                                            <>
+                                                                <RefreshCw className="w-4 h-4 animate-spin" />
+                                                                <span>{__('Solicitud enviada. Esperando respuesta...')}</span>
+                                                            </>
+                                                        ) : (
+                                                            <>
+                                                                <MessageSquare className="w-4 h-4" />
+                                                                <span>{__('Solicitar Autorización vía WhatsApp')}</span>
+                                                            </>
+                                                        )}
+                                                    </Button>
+                                                )}
+
+                                                {/* Notificación de Autorización Recibida en Tiempo Real */}
+                                                {autorizacionRecibida?.status === 'autorizado' && (
+                                                    <div className="p-3 rounded-2xl bg-emerald-50 border border-emerald-300 text-xs space-y-1 mt-2">
+                                                        <div className="font-bold text-emerald-900 flex items-center gap-1.5">
+                                                            <CheckCircle className="w-4 h-4 text-emerald-600" />
+                                                            {__('Acceso Autorizado por:')} {autorizacionRecibida.responsable}
+                                                        </div>
+                                                        <div className="text-slate-600 italic">
+                                                            "{autorizacionRecibida.motivo}"
+                                                        </div>
+                                                    </div>
+                                                )}
+                                            </div>
+                                        </div>
+                                    )}
                                 </div>
 
                                 {/* BOTÓN DE ACCIÓN 1-CLIC DE GARITA */}
                                 <div className="space-y-3 pt-4 border-t border-slate-200">
+                                    {isEmpleado && (
+                                        <>
+                                            {accesoExistente ? (
+                                                <Button
+                                                    type="button"
+                                                    onClick={() => handleMarcarSalida(accesoExistente.id)}
+                                                    className="w-full h-16 bg-slate-900 hover:bg-black text-white text-base font-extrabold rounded-2xl shadow-xl gap-2 flex items-center justify-center transition-transform active:scale-[0.98]"
+                                                >
+                                                    <LogOut className="w-6 h-6 text-rose-400" />
+                                                    {__('Marcar Salida de Garita')}
+                                                </Button>
+                                            ) : (
+                                                <Button
+                                                    type="button"
+                                                    disabled={!autorizadoHoy}
+                                                    onClick={() => handleRegistrarIngresoEmpleadoGarita(record.id, record.responsable_id)}
+                                                    className={`w-full h-16 text-base font-extrabold rounded-2xl shadow-xl gap-2 flex items-center justify-center transition-transform active:scale-[0.98] ${
+                                                        autorizadoHoy
+                                                            ? 'bg-[#104a29] hover:bg-[#0c371e] text-white'
+                                                            : 'bg-slate-300 text-slate-500 cursor-not-allowed'
+                                                    }`}
+                                                >
+                                                    <CheckCircle2 className="w-6 h-6 text-emerald-400" />
+                                                    {autorizadoHoy ? __('Registrar Ingreso de Empleado (1-Clic)') : __('Requiere Autorización para Ingresar')}
+                                                </Button>
+                                            )}
+                                        </>
+                                    )}
+
                                     {isInvitacion && record.status === 'pendiente' && (
                                         <Button
                                             type="button"
