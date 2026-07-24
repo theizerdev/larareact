@@ -143,13 +143,14 @@ class EmpleadoPreRegistroController extends Controller
                 'user_id' => null,
             ]);
 
+            $primerVehiculo = null;
             // 2. Crear Vehículos
             if ($request->filled('vehiculos')) {
                 foreach ($request->vehiculos as $veh) {
                     $fotoFrontal = isset($veh['foto_frontal']) ? $saveBase64Image($veh['foto_frontal'], 'empleados') : null;
                     $fotoTrasera = isset($veh['foto_trasera']) ? $saveBase64Image($veh['foto_trasera'], 'empleados') : null;
 
-                    EmpleadoVehiculo::create([
+                    $vCreated = EmpleadoVehiculo::create([
                         'empleado_id' => $empleado->id,
                         'tipo_vehiculo' => $veh['tipo_vehiculo'],
                         'marca' => $veh['marca'],
@@ -161,10 +162,36 @@ class EmpleadoPreRegistroController extends Controller
                         'empresa_id' => $preRegistro->empresa_id,
                         'sucursal_id' => $preRegistro->sucursal_id,
                     ]);
+
+                    if (!$primerVehiculo) {
+                        $primerVehiculo = $vCreated;
+                    }
                 }
             }
 
-            // 3. Marcar pre-registro como completado
+            // 3. Registrar automáticamente en visitas_accesos
+            \App\Models\VisitaAcceso::create([
+                'codigo_visitante'      => \App\Models\VisitaAcceso::generarSiguienteCodigoVisitante(),
+                'tipo_acceso'           => 'empleado',
+                'empleado_id'           => $empleado->id,
+                'responsable_id'        => $empleado->responsable_id,
+                'medio_acceso'          => $primerVehiculo ? 'vehicular' : 'peatonal',
+                'empleado_vehiculo_id'  => $primerVehiculo?->id,
+                'vehiculo_tipo'         => $primerVehiculo?->tipo_vehiculo ?? ($primerVehiculo ? 'Auto' : null),
+                'vehiculo_marca'        => $primerVehiculo?->marca,
+                'vehiculo_modelo'       => $primerVehiculo?->modelo,
+                'vehiculo_placa'        => $primerVehiculo?->placa,
+                'vehiculo_foto_frontal' => $primerVehiculo?->foto_frontal,
+                'vehiculo_foto_trasera' => $primerVehiculo?->foto_trasera,
+                'fecha_ingreso'         => now()->toDateString(),
+                'hora_ingreso'          => now()->toTimeString(),
+                'status'                => 1, // En Instalaciones
+                'empresa_id'            => $preRegistro->empresa_id ?? 1,
+                'sucursal_id'           => $preRegistro->sucursal_id ?? 1,
+                'observaciones'         => 'Registro de acceso automático por pre-registro de empleado.',
+            ]);
+
+            // 4. Marcar pre-registro como completado
             $preRegistro->update(['status' => 'completado']);
 
             DB::commit();
