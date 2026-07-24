@@ -1139,20 +1139,20 @@ export default function GaritaControl({
                                 <div className="space-y-2">
                                     <h4 className="text-xs font-extrabold uppercase tracking-wider text-slate-500 flex items-center justify-between">
                                         <span className="flex items-center gap-1.5"><Users className="w-4 h-4 text-emerald-600" /> {__('Acompañantes')}</span>
-                                        {isEmpleado && !accesoExistente ? (
+                                        {!accesoExistente && resultado ? (
                                             <span className="text-[11px] font-bold text-emerald-700 bg-emerald-100 border border-emerald-200 px-2.5 py-0.5 rounded-full">
                                                 {acompanantesList.length} {__('Añadido(s)')}
                                             </span>
                                         ) : (
-                                            <span className="text-[11px] text-slate-400">({record.acompanantes?.length || accesoExistente?.acompanantes?.length || 0})</span>
+                                            <span className="text-[11px] text-slate-400">({record?.acompanantes?.length || accesoExistente?.acompanantes?.length || 0})</span>
                                         )}
                                     </h4>
 
-                                    {isEmpleado && !accesoExistente ? (
+                                    {!accesoExistente && resultado ? (
                                         <div className="space-y-3 bg-slate-50 p-4 rounded-3xl border border-slate-200">
                                             <div className="flex items-center justify-between">
                                                 <span className="text-xs font-bold text-slate-700">
-                                                    {__('Acompañantes del Colaborador')}
+                                                    {__('Acompañantes del Ingreso / Visita')}
                                                 </span>
                                                 <Button
                                                     type="button"

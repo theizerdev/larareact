@@ -44,6 +44,7 @@ import { Badge } from '@/components/ui/badge';
 import {
     Dialog,
     DialogContent,
+    DialogDescription,
     DialogHeader,
     DialogTitle,
     DialogFooter,
@@ -406,6 +407,15 @@ export default function Index({
     const [acompananteSearchTerm, setAcompananteSearchTerm] = useState('');
     const [acompananteSearchResults, setAcompananteSearchResults] = useState<any[]>([]);
     const [isSearchingAcompanantes, setIsSearchingAcompanantes] = useState(false);
+
+    // Modal para registrar acompañantes externos/visitas
+    const [isAcompananteModalOpen, setIsAcompananteModalOpen] = useState(false);
+    const [nuevoAcompanante, setNuevoAcompanante] = useState({
+        nombre: '',
+        documento: '',
+        telefono: '',
+        observacion: '',
+    });
 
     // Polling de Autorización en tiempo real desde WhatsApp
     const [activeAuthToken, setActiveAuthToken] = useState<string | null>(null);
@@ -2611,25 +2621,38 @@ export default function Index({
                                                  );
                                              })()}
 
-                                            {/* SECCIÓN DE EMPLEADOS ACOMPAÑANTES EN EL VEHÍCULO */}
+                                            {/* SECCIÓN DE ACOMPAÑANTES EN EL ACCESO */}
                                             <div className="pt-4 border-t space-y-3">
                                                 <div className="flex items-center justify-between">
                                                     <Label className="text-xs font-bold uppercase tracking-wider text-slate-700 dark:text-slate-200 flex items-center gap-1.5">
-                                                        <Users className="w-4 h-4 text-blue-600" />
-                                                        {__('Empleados Acompañantes en el Vehículo (Opcional)')}
+                                                        <Users className="w-4 h-4 text-emerald-600" />
+                                                        {__('Acompañantes del Acceso / Visita (Opcional)')}
                                                     </Label>
-                                                    {acompanantesList.length > 0 && (
-                                                        <Badge variant="outline" className="bg-blue-50 text-blue-800 border-blue-200 font-bold">
-                                                            {acompanantesList.length} {acompanantesList.length === 1 ? 'Acompañante' : 'Acompañantes'}
-                                                        </Badge>
-                                                    )}
+                                                    <div className="flex items-center gap-2">
+                                                        {acompanantesList.length > 0 && (
+                                                            <Badge variant="outline" className="bg-emerald-50 text-emerald-800 border-emerald-200 font-bold">
+                                                                {acompanantesList.length} {acompanantesList.length === 1 ? 'Acompañante' : 'Acompañantes'}
+                                                            </Badge>
+                                                        )}
+                                                        <Button
+                                                            type="button"
+                                                            size="sm"
+                                                            onClick={() => {
+                                                                setNuevoAcompanante({ nombre: '', documento: '', telefono: '', observacion: '' });
+                                                                setIsAcompananteModalOpen(true);
+                                                            }}
+                                                            className="h-8 text-xs font-bold bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl gap-1"
+                                                        >
+                                                            <Plus className="w-3.5 h-3.5" /> {__('Registrar Acompañante')}
+                                                        </Button>
+                                                    </div>
                                                 </div>
 
                                                 {/* Buscador de acompañante */}
                                                 <div className="relative">
                                                     <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
                                                     <Input
-                                                        placeholder={__('Escriba nombre o DNI para agregar acompañante...')}
+                                                        placeholder={__('Escriba nombre o DNI de empleado para agregar acompañante...')}
                                                         value={acompananteSearchTerm}
                                                         onChange={(e) => setAcompananteSearchTerm(e.target.value)}
                                                         className="pl-9 bg-white dark:bg-slate-900 text-sm h-10 w-full"
@@ -2682,12 +2705,13 @@ export default function Index({
                                                                         )}
                                                                     </div>
                                                                     <div className="space-y-1">
-                                                                        <div className="font-bold text-sm text-slate-800 dark:text-slate-200">
-                                                                            {ac.nombres} {ac.apellidos}
-                                                                            <span className="text-xs text-muted-foreground font-mono font-normal ml-2">Doc: {ac.documento_identidad}</span>
+                                                                        <div className="font-bold text-sm text-slate-800 dark:text-slate-200 flex items-center gap-2">
+                                                                            <span>{ac.nombres} {ac.apellidos}</span>
+                                                                            {ac.documento_identidad && <span className="text-xs text-muted-foreground font-mono font-normal">Doc: {ac.documento_identidad}</span>}
+                                                                            {ac.observacion && <span className="text-[10px] bg-slate-100 dark:bg-slate-800 px-2 py-0.5 rounded font-medium text-slate-600 dark:text-slate-300">{ac.observacion}</span>}
                                                                         </div>
                                                                         <div className="text-xs text-indigo-600 dark:text-indigo-400 font-medium">
-                                                                            Depto: {ac.departamento || 'General'} {ac.cargo && `| Cargo: ${ac.cargo}`}
+                                                                            {ac.departamento ? `Depto: ${ac.departamento}` : 'Acompañante Extra'} {ac.cargo && `| Cargo: ${ac.cargo}`} {ac.telefono && `| Tel: ${ac.telefono}`}
                                                                         </div>
                                                                         {ac.jornada_laboral && renderHorarioJornada(ac.jornada_laboral, `${ac.nombres} ${ac.apellidos}`, ac.documento_identidad, true)}
                                                                     </div>
@@ -3148,6 +3172,114 @@ export default function Index({
                                 </Button>
                             </DialogFooter>
                         </form>
+                    </DialogContent>
+                </Dialog>
+
+                {/* MODAL PARA REGISTRAR ACOMPAÑANTE EXTERNO / VISITA */}
+                <Dialog open={isAcompananteModalOpen} onOpenChange={setIsAcompananteModalOpen}>
+                    <DialogContent className="max-w-md bg-white dark:bg-slate-900 rounded-3xl p-6 shadow-2xl border border-slate-100 dark:border-slate-800">
+                        <DialogHeader className="space-y-1 text-left">
+                            <DialogTitle className="text-lg font-extrabold text-slate-900 dark:text-slate-100 flex items-center gap-2">
+                                <Users className="w-5 h-5 text-emerald-600" />
+                                {__('Registrar Acompañante')}
+                            </DialogTitle>
+                            <DialogDescription className="text-xs text-slate-500 dark:text-slate-400">
+                                {__('Ingrese los datos del acompañante (proveedor, productor, visita o particular) que ingresará.')}
+                            </DialogDescription>
+                        </DialogHeader>
+
+                        <div className="space-y-4 py-2">
+                            <div className="space-y-1">
+                                <Label className="text-xs font-bold text-slate-700 dark:text-slate-300 block mb-1">
+                                    {__('Nombres y Apellidos *')}
+                                </Label>
+                                <Input
+                                    type="text"
+                                    placeholder="Ej: Juan Carlos Pérez"
+                                    value={nuevoAcompanante.nombre}
+                                    onChange={(e) => setNuevoAcompanante({ ...nuevoAcompanante, nombre: e.target.value })}
+                                    className="h-10 text-xs font-medium bg-slate-50 dark:bg-slate-800 border-slate-300 dark:border-slate-700 focus:border-emerald-600"
+                                />
+                            </div>
+
+                            <div className="grid grid-cols-2 gap-3">
+                                <div className="space-y-1">
+                                    <Label className="text-xs font-bold text-slate-700 dark:text-slate-300 block mb-1">
+                                        {__('Documento de Identidad')}
+                                    </Label>
+                                    <Input
+                                        type="text"
+                                        placeholder="Ej: DNI / Cédula"
+                                        value={nuevoAcompanante.documento}
+                                        onChange={(e) => setNuevoAcompanante({ ...nuevoAcompanante, documento: e.target.value })}
+                                        className="h-10 text-xs font-mono font-bold bg-slate-50 dark:bg-slate-800 border-slate-300 dark:border-slate-700 focus:border-emerald-600"
+                                    />
+                                </div>
+
+                                <div className="space-y-1">
+                                    <Label className="text-xs font-bold text-slate-700 dark:text-slate-300 block mb-1">
+                                        {__('Teléfono de Contacto')}
+                                    </Label>
+                                    <Input
+                                        type="text"
+                                        placeholder="Ej: 3312345678"
+                                        value={nuevoAcompanante.telefono}
+                                        onChange={(e) => setNuevoAcompanante({ ...nuevoAcompanante, telefono: e.target.value })}
+                                        className="h-10 text-xs font-medium bg-slate-50 dark:bg-slate-800 border-slate-300 dark:border-slate-700 focus:border-emerald-600"
+                                    />
+                                </div>
+                            </div>
+
+                            <div className="space-y-1">
+                                <Label className="text-xs font-bold text-slate-700 dark:text-slate-300 block mb-1">
+                                    {__('Observación / Parentesco')}
+                                </Label>
+                                <Input
+                                    type="text"
+                                    placeholder="Ej: Proveedor auxiliar / Familiar / Acompañante"
+                                    value={nuevoAcompanante.observacion}
+                                    onChange={(e) => setNuevoAcompanante({ ...nuevoAcompanante, observacion: e.target.value })}
+                                    className="h-10 text-xs font-medium bg-slate-50 dark:bg-slate-800 border-slate-300 dark:border-slate-700 focus:border-emerald-600"
+                                />
+                            </div>
+                        </div>
+
+                        <DialogFooter className="flex items-center justify-end gap-2 pt-2 border-t border-slate-100 dark:border-slate-800">
+                            <Button
+                                type="button"
+                                variant="outline"
+                                onClick={() => setIsAcompananteModalOpen(false)}
+                                className="h-10 text-xs font-bold rounded-xl text-slate-600 dark:text-slate-400"
+                            >
+                                {__('Cancelar')}
+                            </Button>
+                            <Button
+                                type="button"
+                                disabled={!nuevoAcompanante.nombre.trim()}
+                                onClick={() => {
+                                    if (nuevoAcompanante.nombre.trim()) {
+                                        const nuevoItem = {
+                                            id: `ext_${Date.now()}`,
+                                            nombres: nuevoAcompanante.nombre.trim(),
+                                            apellidos: '',
+                                            documento_identidad: nuevoAcompanante.documento.trim(),
+                                            telefono: nuevoAcompanante.telefono.trim(),
+                                            observacion: nuevoAcompanante.observacion.trim(),
+                                            departamento: nuevoAcompanante.observacion.trim() || 'Acompañante Extra',
+                                        };
+                                        const nuevaLista = [...acompanantesList, nuevoItem];
+                                        setAcompanantesList(nuevaLista);
+                                        setData('acompanantes', nuevaLista);
+                                        setNuevoAcompanante({ nombre: '', documento: '', telefono: '', observacion: '' });
+                                        setIsAcompananteModalOpen(false);
+                                    }
+                                }}
+                                className="h-10 text-xs font-extrabold rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white shadow-md gap-1.5 px-4"
+                            >
+                                <Check className="w-4 h-4" />
+                                {__('Guardar Acompañante')}
+                            </Button>
+                        </DialogFooter>
                     </DialogContent>
                 </Dialog>
 
