@@ -230,11 +230,10 @@ class ProveedorController extends Controller
                 $carnetPath = \App\Services\CarnetGeneratorService::generarCarnetProveedorPNG($proveedor);
 
                 if ($carnetPath && file_exists($carnetPath)) {
-                    $result = $ws->sendDocument($to, $carnetPath, $msg);
+                    // Attempt to send the carnet image directly via WhatsApp
+                    $result = $ws->sendImage($to, $carnetPath, $msg);
                     if (!$result) {
-                        $result = $ws->sendImage($to, $carnetPath, $msg);
-                    }
-                    if (!$result) {
+                        // Fallback: send as plain text message if image fails
                         $ws->sendMessage($to, $msg, true);
                     }
                 } else {

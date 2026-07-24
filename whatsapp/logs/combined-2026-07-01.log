@@ -1,0 +1,608 @@
+{"level":"info","message":"✅ Base de datos conectada","service":"whatsapp-api-v2","timestamp":"2026-07-01 11:55:10","version":"v2"}
+{"level":"info","message":"✅ Modo sin cache activado","service":"whatsapp-api-v2","timestamp":"2026-07-01 11:55:10","version":"v2"}
+{"level":"info","message":"Inicializando conexiones para todas las empresas activas...","service":"whatsapp-api-v2","timestamp":"2026-07-01 11:55:10","version":"v2"}
+{"category":"whatsapp","level":"info","message":"Iniciando servicio para empresa ID: 1","service":"whatsapp-api-v2","timestamp":"2026-07-01 11:55:10","version":"v2"}
+{"category":"whatsapp","level":"info","message":"Inicializando servicio WhatsApp...","service":"whatsapp-api-v2","timestamp":"2026-07-01 11:55:10","version":"v2"}
+{"category":"whatsapp","level":"info","message":"Usando Baileys v2.3000.1035194821, es la última: true","service":"whatsapp-api-v2","timestamp":"2026-07-01 11:55:10","version":"v2"}
+{"category":"whatsapp","level":"info","message":"Inicializando autenticación...","service":"whatsapp-api-v2","timestamp":"2026-07-01 11:55:10","version":"v2"}
+{"category":"whatsapp","level":"info","message":"Autenticación cargada exitosamente","service":"whatsapp-api-v2","timestamp":"2026-07-01 11:55:10","version":"v2"}
+{"category":"whatsapp","level":"info","message":"Iniciando servicio para empresa ID: 2","service":"whatsapp-api-v2","timestamp":"2026-07-01 11:55:10","version":"v2"}
+{"category":"whatsapp","level":"info","message":"Inicializando servicio WhatsApp...","service":"whatsapp-api-v2","timestamp":"2026-07-01 11:55:10","version":"v2"}
+{"category":"whatsapp","connection":"connecting","level":"info","message":"Actualización de conexión:","service":"whatsapp-api-v2","timestamp":"2026-07-01 11:55:10","version":"v2"}
+{"category":"whatsapp","level":"info","message":"Usando Baileys v2.3000.1035194821, es la última: true","service":"whatsapp-api-v2","timestamp":"2026-07-01 11:55:10","version":"v2"}
+{"category":"whatsapp","level":"info","message":"Inicializando autenticación...","service":"whatsapp-api-v2","timestamp":"2026-07-01 11:55:10","version":"v2"}
+{"category":"whatsapp","level":"info","message":"Autenticación cargada exitosamente","service":"whatsapp-api-v2","timestamp":"2026-07-01 11:55:11","version":"v2"}
+{"category":"whatsapp","level":"info","message":"Iniciando servicio para empresa ID: 3","service":"whatsapp-api-v2","timestamp":"2026-07-01 11:55:11","version":"v2"}
+{"category":"whatsapp","level":"info","message":"Inicializando servicio WhatsApp...","service":"whatsapp-api-v2","timestamp":"2026-07-01 11:55:11","version":"v2"}
+{"category":"whatsapp","connection":"connecting","level":"info","message":"Actualización de conexión:","service":"whatsapp-api-v2","timestamp":"2026-07-01 11:55:11","version":"v2"}
+{"category":"whatsapp","level":"info","message":"Usando Baileys v2.3000.1035194821, es la última: true","service":"whatsapp-api-v2","timestamp":"2026-07-01 11:55:11","version":"v2"}
+{"category":"whatsapp","level":"info","message":"Inicializando autenticación...","service":"whatsapp-api-v2","timestamp":"2026-07-01 11:55:11","version":"v2"}
+{"category":"whatsapp","level":"info","message":"Autenticación cargada exitosamente","service":"whatsapp-api-v2","timestamp":"2026-07-01 11:55:11","version":"v2"}
+{"level":"info","message":"✅ 3 empresas conectadas/inicializadas.","service":"whatsapp-api-v2","timestamp":"2026-07-01 11:55:11","version":"v2"}
+{"level":"info","message":"✅ Servicio WhatsApp inicializado","service":"whatsapp-api-v2","timestamp":"2026-07-01 11:55:11","version":"v2"}
+{"category":"whatsapp","connection":"connecting","level":"info","message":"Actualización de conexión:","service":"whatsapp-api-v2","timestamp":"2026-07-01 11:55:11","version":"v2"}
+{"level":"info","message":"🚀 WhatsApp API v2 ejecutándose en puerto 3001","service":"whatsapp-api-v2","timestamp":"2026-07-01 11:55:11","version":"v2"}
+{"level":"info","message":"📱 Entorno: development","service":"whatsapp-api-v2","timestamp":"2026-07-01 11:55:11","version":"v2"}
+{"level":"info","message":"🔗 Health check: http://localhost:3001/health","service":"whatsapp-api-v2","timestamp":"2026-07-01 11:55:11","version":"v2"}
+{"category":"whatsapp","level":"info","message":"Actualización de conexión:","service":"whatsapp-api-v2","timestamp":"2026-07-01 11:55:12","version":"v2"}
+{"category":"whatsapp","level":"info","message":"Código QR generado","service":"whatsapp-api-v2","timestamp":"2026-07-01 11:55:12","version":"v2"}
+{"category":"whatsapp","level":"info","message":"Actualización de conexión:","service":"whatsapp-api-v2","timestamp":"2026-07-01 11:55:12","version":"v2"}
+{"category":"whatsapp","level":"info","message":"Actualización de conexión:","service":"whatsapp-api-v2","timestamp":"2026-07-01 11:55:12","version":"v2"}
+{"category":"whatsapp","level":"info","message":"Código QR generado","service":"whatsapp-api-v2","timestamp":"2026-07-01 11:55:12","version":"v2"}
+{"category":"whatsapp","level":"info","message":"Actualización de conexión:","service":"whatsapp-api-v2","timestamp":"2026-07-01 11:55:12","version":"v2"}
+{"category":"whatsapp","connection":"open","level":"info","message":"Actualización de conexión:","service":"whatsapp-api-v2","timestamp":"2026-07-01 11:55:12","version":"v2"}
+{"category":"whatsapp","level":"info","message":"✅ Conectado a WhatsApp exitosamente","service":"whatsapp-api-v2","timestamp":"2026-07-01 11:55:13","version":"v2"}
+{"category":"whatsapp","level":"info","message":"Actualización de conexión:","service":"whatsapp-api-v2","timestamp":"2026-07-01 11:56:12","version":"v2"}
+{"category":"whatsapp","level":"info","message":"Código QR generado","service":"whatsapp-api-v2","timestamp":"2026-07-01 11:56:12","version":"v2"}
+{"category":"whatsapp","level":"info","message":"Actualización de conexión:","service":"whatsapp-api-v2","timestamp":"2026-07-01 11:56:12","version":"v2"}
+{"category":"whatsapp","level":"info","message":"Código QR generado","service":"whatsapp-api-v2","timestamp":"2026-07-01 11:56:12","version":"v2"}
+{"category":"whatsapp","level":"info","message":"Actualización de conexión:","service":"whatsapp-api-v2","timestamp":"2026-07-01 11:56:32","version":"v2"}
+{"category":"whatsapp","level":"info","message":"Código QR generado","service":"whatsapp-api-v2","timestamp":"2026-07-01 11:56:32","version":"v2"}
+{"category":"whatsapp","level":"info","message":"Actualización de conexión:","service":"whatsapp-api-v2","timestamp":"2026-07-01 11:56:32","version":"v2"}
+{"category":"whatsapp","level":"info","message":"Código QR generado","service":"whatsapp-api-v2","timestamp":"2026-07-01 11:56:32","version":"v2"}
+{"category":"whatsapp","level":"info","message":"Actualización de conexión:","service":"whatsapp-api-v2","timestamp":"2026-07-01 11:56:52","version":"v2"}
+{"category":"whatsapp","level":"info","message":"Código QR generado","service":"whatsapp-api-v2","timestamp":"2026-07-01 11:56:52","version":"v2"}
+{"category":"whatsapp","level":"info","message":"Actualización de conexión:","service":"whatsapp-api-v2","timestamp":"2026-07-01 11:56:52","version":"v2"}
+{"category":"whatsapp","level":"info","message":"Código QR generado","service":"whatsapp-api-v2","timestamp":"2026-07-01 11:56:52","version":"v2"}
+{"category":"whatsapp","level":"info","message":"Actualización de conexión:","service":"whatsapp-api-v2","timestamp":"2026-07-01 11:57:12","version":"v2"}
+{"category":"whatsapp","level":"info","message":"Código QR generado","service":"whatsapp-api-v2","timestamp":"2026-07-01 11:57:12","version":"v2"}
+{"category":"whatsapp","level":"info","message":"Actualización de conexión:","service":"whatsapp-api-v2","timestamp":"2026-07-01 11:57:12","version":"v2"}
+{"category":"whatsapp","level":"info","message":"Código QR generado","service":"whatsapp-api-v2","timestamp":"2026-07-01 11:57:12","version":"v2"}
+{"category":"whatsapp","level":"info","message":"Actualización de conexión:","service":"whatsapp-api-v2","timestamp":"2026-07-01 11:57:32","version":"v2"}
+{"category":"whatsapp","level":"info","message":"Código QR generado","service":"whatsapp-api-v2","timestamp":"2026-07-01 11:57:32","version":"v2"}
+{"category":"whatsapp","level":"info","message":"Actualización de conexión:","service":"whatsapp-api-v2","timestamp":"2026-07-01 11:57:32","version":"v2"}
+{"category":"whatsapp","level":"info","message":"Código QR generado","service":"whatsapp-api-v2","timestamp":"2026-07-01 11:57:32","version":"v2"}
+{"category":"whatsapp","connection":"close","lastDisconnect":408,"level":"info","message":"Actualización de conexión:","service":"whatsapp-api-v2","timestamp":"2026-07-01 11:57:52","version":"v2"}
+{"category":"whatsapp","level":"info","message":"Desconectado de WhatsApp:","reason":408,"reconnectAttempts":0,"service":"whatsapp-api-v2","shouldReconnect":true,"timestamp":"2026-07-01 11:57:52","version":"v2"}
+{"category":"whatsapp","level":"info","message":"Reintentando conexión en 2000ms (intento 1/5)","service":"whatsapp-api-v2","timestamp":"2026-07-01 11:57:52","version":"v2"}
+{"category":"whatsapp","connection":"close","lastDisconnect":408,"level":"info","message":"Actualización de conexión:","service":"whatsapp-api-v2","timestamp":"2026-07-01 11:57:52","version":"v2"}
+{"category":"whatsapp","level":"info","message":"Desconectado de WhatsApp:","reason":408,"reconnectAttempts":0,"service":"whatsapp-api-v2","shouldReconnect":true,"timestamp":"2026-07-01 11:57:52","version":"v2"}
+{"category":"whatsapp","level":"info","message":"Reintentando conexión en 2000ms (intento 1/5)","service":"whatsapp-api-v2","timestamp":"2026-07-01 11:57:52","version":"v2"}
+{"category":"whatsapp","level":"info","message":"Inicializando autenticación...","service":"whatsapp-api-v2","timestamp":"2026-07-01 11:57:54","version":"v2"}
+{"category":"whatsapp","level":"info","message":"Autenticación cargada exitosamente","service":"whatsapp-api-v2","timestamp":"2026-07-01 11:57:54","version":"v2"}
+{"category":"whatsapp","connection":"connecting","level":"info","message":"Actualización de conexión:","service":"whatsapp-api-v2","timestamp":"2026-07-01 11:57:54","version":"v2"}
+{"category":"whatsapp","level":"info","message":"Inicializando autenticación...","service":"whatsapp-api-v2","timestamp":"2026-07-01 11:57:54","version":"v2"}
+{"category":"whatsapp","level":"info","message":"Autenticación cargada exitosamente","service":"whatsapp-api-v2","timestamp":"2026-07-01 11:57:55","version":"v2"}
+{"category":"whatsapp","connection":"connecting","level":"info","message":"Actualización de conexión:","service":"whatsapp-api-v2","timestamp":"2026-07-01 11:57:55","version":"v2"}
+{"category":"whatsapp","level":"info","message":"Actualización de conexión:","service":"whatsapp-api-v2","timestamp":"2026-07-01 11:57:56","version":"v2"}
+{"category":"whatsapp","level":"info","message":"Actualización de conexión:","service":"whatsapp-api-v2","timestamp":"2026-07-01 11:57:56","version":"v2"}
+{"category":"whatsapp","level":"info","message":"Código QR generado","service":"whatsapp-api-v2","timestamp":"2026-07-01 11:57:56","version":"v2"}
+{"category":"whatsapp","level":"info","message":"Código QR generado","service":"whatsapp-api-v2","timestamp":"2026-07-01 11:57:56","version":"v2"}
+{"category":"whatsapp","level":"info","message":"Actualización de conexión:","service":"whatsapp-api-v2","timestamp":"2026-07-01 11:58:56","version":"v2"}
+{"category":"whatsapp","level":"info","message":"Actualización de conexión:","service":"whatsapp-api-v2","timestamp":"2026-07-01 11:58:56","version":"v2"}
+{"category":"whatsapp","level":"info","message":"Código QR generado","service":"whatsapp-api-v2","timestamp":"2026-07-01 11:58:56","version":"v2"}
+{"category":"whatsapp","level":"info","message":"Código QR generado","service":"whatsapp-api-v2","timestamp":"2026-07-01 11:58:56","version":"v2"}
+{"category":"whatsapp","level":"info","message":"Actualización de conexión:","service":"whatsapp-api-v2","timestamp":"2026-07-01 11:59:16","version":"v2"}
+{"category":"whatsapp","level":"info","message":"Actualización de conexión:","service":"whatsapp-api-v2","timestamp":"2026-07-01 11:59:16","version":"v2"}
+{"category":"whatsapp","level":"info","message":"Código QR generado","service":"whatsapp-api-v2","timestamp":"2026-07-01 11:59:16","version":"v2"}
+{"category":"whatsapp","level":"info","message":"Código QR generado","service":"whatsapp-api-v2","timestamp":"2026-07-01 11:59:16","version":"v2"}
+{"category":"whatsapp","level":"info","message":"Actualización de conexión:","service":"whatsapp-api-v2","timestamp":"2026-07-01 11:59:36","version":"v2"}
+{"category":"whatsapp","level":"info","message":"Código QR generado","service":"whatsapp-api-v2","timestamp":"2026-07-01 11:59:36","version":"v2"}
+{"category":"whatsapp","level":"info","message":"Actualización de conexión:","service":"whatsapp-api-v2","timestamp":"2026-07-01 11:59:36","version":"v2"}
+{"category":"whatsapp","level":"info","message":"Código QR generado","service":"whatsapp-api-v2","timestamp":"2026-07-01 11:59:36","version":"v2"}
+{"category":"whatsapp","level":"info","message":"Actualización de conexión:","service":"whatsapp-api-v2","timestamp":"2026-07-01 11:59:56","version":"v2"}
+{"category":"whatsapp","level":"info","message":"Código QR generado","service":"whatsapp-api-v2","timestamp":"2026-07-01 11:59:56","version":"v2"}
+{"category":"whatsapp","level":"info","message":"Actualización de conexión:","service":"whatsapp-api-v2","timestamp":"2026-07-01 11:59:56","version":"v2"}
+{"category":"whatsapp","level":"info","message":"Código QR generado","service":"whatsapp-api-v2","timestamp":"2026-07-01 11:59:56","version":"v2"}
+{"category":"whatsapp","level":"info","message":"Actualización de conexión:","service":"whatsapp-api-v2","timestamp":"2026-07-01 12:00:16","version":"v2"}
+{"category":"whatsapp","level":"info","message":"Actualización de conexión:","service":"whatsapp-api-v2","timestamp":"2026-07-01 12:00:16","version":"v2"}
+{"category":"whatsapp","level":"info","message":"Código QR generado","service":"whatsapp-api-v2","timestamp":"2026-07-01 12:00:16","version":"v2"}
+{"category":"whatsapp","level":"info","message":"Código QR generado","service":"whatsapp-api-v2","timestamp":"2026-07-01 12:00:16","version":"v2"}
+{"category":"whatsapp","connection":"close","lastDisconnect":408,"level":"info","message":"Actualización de conexión:","service":"whatsapp-api-v2","timestamp":"2026-07-01 12:00:36","version":"v2"}
+{"category":"whatsapp","level":"info","message":"Desconectado de WhatsApp:","reason":408,"reconnectAttempts":1,"service":"whatsapp-api-v2","shouldReconnect":true,"timestamp":"2026-07-01 12:00:36","version":"v2"}
+{"category":"whatsapp","level":"info","message":"Reintentando conexión en 4000ms (intento 2/5)","service":"whatsapp-api-v2","timestamp":"2026-07-01 12:00:36","version":"v2"}
+{"category":"whatsapp","connection":"close","lastDisconnect":408,"level":"info","message":"Actualización de conexión:","service":"whatsapp-api-v2","timestamp":"2026-07-01 12:00:36","version":"v2"}
+{"category":"whatsapp","level":"info","message":"Desconectado de WhatsApp:","reason":408,"reconnectAttempts":1,"service":"whatsapp-api-v2","shouldReconnect":true,"timestamp":"2026-07-01 12:00:36","version":"v2"}
+{"category":"whatsapp","level":"info","message":"Reintentando conexión en 4000ms (intento 2/5)","service":"whatsapp-api-v2","timestamp":"2026-07-01 12:00:36","version":"v2"}
+{"category":"whatsapp","level":"info","message":"Inicializando autenticación...","service":"whatsapp-api-v2","timestamp":"2026-07-01 12:00:40","version":"v2"}
+{"category":"whatsapp","level":"info","message":"Autenticación cargada exitosamente","service":"whatsapp-api-v2","timestamp":"2026-07-01 12:00:40","version":"v2"}
+{"category":"whatsapp","level":"info","message":"Inicializando autenticación...","service":"whatsapp-api-v2","timestamp":"2026-07-01 12:00:40","version":"v2"}
+{"category":"whatsapp","level":"info","message":"Autenticación cargada exitosamente","service":"whatsapp-api-v2","timestamp":"2026-07-01 12:00:40","version":"v2"}
+{"category":"whatsapp","connection":"connecting","level":"info","message":"Actualización de conexión:","service":"whatsapp-api-v2","timestamp":"2026-07-01 12:00:40","version":"v2"}
+{"category":"whatsapp","connection":"connecting","level":"info","message":"Actualización de conexión:","service":"whatsapp-api-v2","timestamp":"2026-07-01 12:00:40","version":"v2"}
+{"category":"whatsapp","level":"info","message":"Actualización de conexión:","service":"whatsapp-api-v2","timestamp":"2026-07-01 12:00:41","version":"v2"}
+{"category":"whatsapp","level":"info","message":"Código QR generado","service":"whatsapp-api-v2","timestamp":"2026-07-01 12:00:41","version":"v2"}
+{"category":"whatsapp","level":"info","message":"Actualización de conexión:","service":"whatsapp-api-v2","timestamp":"2026-07-01 12:00:41","version":"v2"}
+{"category":"whatsapp","level":"info","message":"Código QR generado","service":"whatsapp-api-v2","timestamp":"2026-07-01 12:00:41","version":"v2"}
+{"category":"whatsapp","level":"info","message":"Actualización de conexión:","service":"whatsapp-api-v2","timestamp":"2026-07-01 12:01:41","version":"v2"}
+{"category":"whatsapp","level":"info","message":"Código QR generado","service":"whatsapp-api-v2","timestamp":"2026-07-01 12:01:41","version":"v2"}
+{"category":"whatsapp","level":"info","message":"Actualización de conexión:","service":"whatsapp-api-v2","timestamp":"2026-07-01 12:01:41","version":"v2"}
+{"category":"whatsapp","level":"info","message":"Código QR generado","service":"whatsapp-api-v2","timestamp":"2026-07-01 12:01:41","version":"v2"}
+{"category":"whatsapp","level":"info","message":"Actualización de conexión:","service":"whatsapp-api-v2","timestamp":"2026-07-01 12:02:01","version":"v2"}
+{"category":"whatsapp","level":"info","message":"Código QR generado","service":"whatsapp-api-v2","timestamp":"2026-07-01 12:02:01","version":"v2"}
+{"category":"whatsapp","level":"info","message":"Actualización de conexión:","service":"whatsapp-api-v2","timestamp":"2026-07-01 12:02:01","version":"v2"}
+{"category":"whatsapp","level":"info","message":"Código QR generado","service":"whatsapp-api-v2","timestamp":"2026-07-01 12:02:01","version":"v2"}
+{"category":"whatsapp","level":"info","message":"Actualización de conexión:","service":"whatsapp-api-v2","timestamp":"2026-07-01 12:02:21","version":"v2"}
+{"category":"whatsapp","level":"info","message":"Código QR generado","service":"whatsapp-api-v2","timestamp":"2026-07-01 12:02:21","version":"v2"}
+{"category":"whatsapp","level":"info","message":"Actualización de conexión:","service":"whatsapp-api-v2","timestamp":"2026-07-01 12:02:21","version":"v2"}
+{"category":"whatsapp","level":"info","message":"Código QR generado","service":"whatsapp-api-v2","timestamp":"2026-07-01 12:02:21","version":"v2"}
+{"category":"whatsapp","level":"info","message":"Actualización de conexión:","service":"whatsapp-api-v2","timestamp":"2026-07-01 12:02:41","version":"v2"}
+{"category":"whatsapp","level":"info","message":"Código QR generado","service":"whatsapp-api-v2","timestamp":"2026-07-01 12:02:41","version":"v2"}
+{"category":"whatsapp","level":"info","message":"Actualización de conexión:","service":"whatsapp-api-v2","timestamp":"2026-07-01 12:02:41","version":"v2"}
+{"category":"whatsapp","level":"info","message":"Código QR generado","service":"whatsapp-api-v2","timestamp":"2026-07-01 12:02:42","version":"v2"}
+{"category":"whatsapp","level":"info","message":"Actualización de conexión:","service":"whatsapp-api-v2","timestamp":"2026-07-01 12:03:01","version":"v2"}
+{"category":"whatsapp","level":"info","message":"Código QR generado","service":"whatsapp-api-v2","timestamp":"2026-07-01 12:03:01","version":"v2"}
+{"category":"whatsapp","level":"info","message":"Actualización de conexión:","service":"whatsapp-api-v2","timestamp":"2026-07-01 12:03:01","version":"v2"}
+{"category":"whatsapp","level":"info","message":"Código QR generado","service":"whatsapp-api-v2","timestamp":"2026-07-01 12:03:01","version":"v2"}
+{"category":"whatsapp","connection":"close","lastDisconnect":408,"level":"info","message":"Actualización de conexión:","service":"whatsapp-api-v2","timestamp":"2026-07-01 12:03:21","version":"v2"}
+{"category":"whatsapp","level":"info","message":"Desconectado de WhatsApp:","reason":408,"reconnectAttempts":2,"service":"whatsapp-api-v2","shouldReconnect":true,"timestamp":"2026-07-01 12:03:21","version":"v2"}
+{"category":"whatsapp","level":"info","message":"Reintentando conexión en 8000ms (intento 3/5)","service":"whatsapp-api-v2","timestamp":"2026-07-01 12:03:21","version":"v2"}
+{"category":"whatsapp","connection":"close","lastDisconnect":408,"level":"info","message":"Actualización de conexión:","service":"whatsapp-api-v2","timestamp":"2026-07-01 12:03:21","version":"v2"}
+{"category":"whatsapp","level":"info","message":"Desconectado de WhatsApp:","reason":408,"reconnectAttempts":2,"service":"whatsapp-api-v2","shouldReconnect":true,"timestamp":"2026-07-01 12:03:21","version":"v2"}
+{"category":"whatsapp","level":"info","message":"Reintentando conexión en 8000ms (intento 3/5)","service":"whatsapp-api-v2","timestamp":"2026-07-01 12:03:21","version":"v2"}
+{"category":"whatsapp","level":"info","message":"Inicializando autenticación...","service":"whatsapp-api-v2","timestamp":"2026-07-01 12:03:29","version":"v2"}
+{"category":"whatsapp","level":"info","message":"Autenticación cargada exitosamente","service":"whatsapp-api-v2","timestamp":"2026-07-01 12:03:29","version":"v2"}
+{"category":"whatsapp","level":"info","message":"Inicializando autenticación...","service":"whatsapp-api-v2","timestamp":"2026-07-01 12:03:30","version":"v2"}
+{"category":"whatsapp","level":"info","message":"Autenticación cargada exitosamente","service":"whatsapp-api-v2","timestamp":"2026-07-01 12:03:30","version":"v2"}
+{"category":"whatsapp","connection":"connecting","level":"info","message":"Actualización de conexión:","service":"whatsapp-api-v2","timestamp":"2026-07-01 12:03:30","version":"v2"}
+{"category":"whatsapp","connection":"connecting","level":"info","message":"Actualización de conexión:","service":"whatsapp-api-v2","timestamp":"2026-07-01 12:03:30","version":"v2"}
+{"category":"whatsapp","level":"info","message":"Actualización de conexión:","service":"whatsapp-api-v2","timestamp":"2026-07-01 12:03:31","version":"v2"}
+{"category":"whatsapp","level":"info","message":"Código QR generado","service":"whatsapp-api-v2","timestamp":"2026-07-01 12:03:31","version":"v2"}
+{"category":"whatsapp","level":"info","message":"Actualización de conexión:","service":"whatsapp-api-v2","timestamp":"2026-07-01 12:03:31","version":"v2"}
+{"category":"whatsapp","level":"info","message":"Código QR generado","service":"whatsapp-api-v2","timestamp":"2026-07-01 12:03:31","version":"v2"}
+{"category":"whatsapp","level":"info","message":"Actualización de conexión:","service":"whatsapp-api-v2","timestamp":"2026-07-01 12:04:31","version":"v2"}
+{"category":"whatsapp","level":"info","message":"Código QR generado","service":"whatsapp-api-v2","timestamp":"2026-07-01 12:04:31","version":"v2"}
+{"category":"whatsapp","level":"info","message":"Actualización de conexión:","service":"whatsapp-api-v2","timestamp":"2026-07-01 12:04:31","version":"v2"}
+{"category":"whatsapp","level":"info","message":"Código QR generado","service":"whatsapp-api-v2","timestamp":"2026-07-01 12:04:31","version":"v2"}
+{"category":"whatsapp","level":"info","message":"Actualización de conexión:","service":"whatsapp-api-v2","timestamp":"2026-07-01 12:04:51","version":"v2"}
+{"category":"whatsapp","level":"info","message":"Código QR generado","service":"whatsapp-api-v2","timestamp":"2026-07-01 12:04:51","version":"v2"}
+{"category":"whatsapp","level":"info","message":"Actualización de conexión:","service":"whatsapp-api-v2","timestamp":"2026-07-01 12:04:51","version":"v2"}
+{"category":"whatsapp","level":"info","message":"Código QR generado","service":"whatsapp-api-v2","timestamp":"2026-07-01 12:04:51","version":"v2"}
+{"category":"whatsapp","level":"info","message":"Actualización de conexión:","service":"whatsapp-api-v2","timestamp":"2026-07-01 12:05:11","version":"v2"}
+{"category":"whatsapp","level":"info","message":"Código QR generado","service":"whatsapp-api-v2","timestamp":"2026-07-01 12:05:11","version":"v2"}
+{"category":"whatsapp","level":"info","message":"Actualización de conexión:","service":"whatsapp-api-v2","timestamp":"2026-07-01 12:05:11","version":"v2"}
+{"category":"whatsapp","level":"info","message":"Código QR generado","service":"whatsapp-api-v2","timestamp":"2026-07-01 12:05:11","version":"v2"}
+{"category":"whatsapp","level":"info","message":"Actualización de conexión:","service":"whatsapp-api-v2","timestamp":"2026-07-01 12:05:31","version":"v2"}
+{"category":"whatsapp","level":"info","message":"Código QR generado","service":"whatsapp-api-v2","timestamp":"2026-07-01 12:05:31","version":"v2"}
+{"category":"whatsapp","level":"info","message":"Actualización de conexión:","service":"whatsapp-api-v2","timestamp":"2026-07-01 12:05:31","version":"v2"}
+{"category":"whatsapp","level":"info","message":"Código QR generado","service":"whatsapp-api-v2","timestamp":"2026-07-01 12:05:31","version":"v2"}
+{"category":"whatsapp","level":"info","message":"Actualización de conexión:","service":"whatsapp-api-v2","timestamp":"2026-07-01 12:05:51","version":"v2"}
+{"category":"whatsapp","level":"info","message":"Código QR generado","service":"whatsapp-api-v2","timestamp":"2026-07-01 12:05:51","version":"v2"}
+{"category":"whatsapp","level":"info","message":"Actualización de conexión:","service":"whatsapp-api-v2","timestamp":"2026-07-01 12:05:51","version":"v2"}
+{"category":"whatsapp","level":"info","message":"Código QR generado","service":"whatsapp-api-v2","timestamp":"2026-07-01 12:05:51","version":"v2"}
+{"category":"whatsapp","connection":"close","lastDisconnect":408,"level":"info","message":"Actualización de conexión:","service":"whatsapp-api-v2","timestamp":"2026-07-01 12:06:11","version":"v2"}
+{"category":"whatsapp","level":"info","message":"Desconectado de WhatsApp:","reason":408,"reconnectAttempts":3,"service":"whatsapp-api-v2","shouldReconnect":true,"timestamp":"2026-07-01 12:06:11","version":"v2"}
+{"category":"whatsapp","level":"info","message":"Reintentando conexión en 16000ms (intento 4/5)","service":"whatsapp-api-v2","timestamp":"2026-07-01 12:06:11","version":"v2"}
+{"category":"whatsapp","connection":"close","lastDisconnect":408,"level":"info","message":"Actualización de conexión:","service":"whatsapp-api-v2","timestamp":"2026-07-01 12:06:11","version":"v2"}
+{"category":"whatsapp","level":"info","message":"Desconectado de WhatsApp:","reason":408,"reconnectAttempts":3,"service":"whatsapp-api-v2","shouldReconnect":true,"timestamp":"2026-07-01 12:06:11","version":"v2"}
+{"category":"whatsapp","level":"info","message":"Reintentando conexión en 16000ms (intento 4/5)","service":"whatsapp-api-v2","timestamp":"2026-07-01 12:06:11","version":"v2"}
+{"category":"whatsapp","level":"info","message":"Inicializando autenticación...","service":"whatsapp-api-v2","timestamp":"2026-07-01 12:06:27","version":"v2"}
+{"category":"whatsapp","level":"info","message":"Autenticación cargada exitosamente","service":"whatsapp-api-v2","timestamp":"2026-07-01 12:06:27","version":"v2"}
+{"category":"whatsapp","level":"info","message":"Inicializando autenticación...","service":"whatsapp-api-v2","timestamp":"2026-07-01 12:06:27","version":"v2"}
+{"category":"whatsapp","level":"info","message":"Autenticación cargada exitosamente","service":"whatsapp-api-v2","timestamp":"2026-07-01 12:06:27","version":"v2"}
+{"category":"whatsapp","connection":"connecting","level":"info","message":"Actualización de conexión:","service":"whatsapp-api-v2","timestamp":"2026-07-01 12:06:28","version":"v2"}
+{"category":"whatsapp","connection":"connecting","level":"info","message":"Actualización de conexión:","service":"whatsapp-api-v2","timestamp":"2026-07-01 12:06:28","version":"v2"}
+{"category":"whatsapp","level":"info","message":"Actualización de conexión:","service":"whatsapp-api-v2","timestamp":"2026-07-01 12:06:29","version":"v2"}
+{"category":"whatsapp","level":"info","message":"Actualización de conexión:","service":"whatsapp-api-v2","timestamp":"2026-07-01 12:06:29","version":"v2"}
+{"category":"whatsapp","level":"info","message":"Código QR generado","service":"whatsapp-api-v2","timestamp":"2026-07-01 12:06:29","version":"v2"}
+{"category":"whatsapp","level":"info","message":"Código QR generado","service":"whatsapp-api-v2","timestamp":"2026-07-01 12:06:29","version":"v2"}
+{"category":"whatsapp","level":"info","message":"Actualización de conexión:","service":"whatsapp-api-v2","timestamp":"2026-07-01 12:07:29","version":"v2"}
+{"category":"whatsapp","level":"info","message":"Actualización de conexión:","service":"whatsapp-api-v2","timestamp":"2026-07-01 12:07:29","version":"v2"}
+{"category":"whatsapp","level":"info","message":"Código QR generado","service":"whatsapp-api-v2","timestamp":"2026-07-01 12:07:29","version":"v2"}
+{"category":"whatsapp","level":"info","message":"Código QR generado","service":"whatsapp-api-v2","timestamp":"2026-07-01 12:07:29","version":"v2"}
+{"category":"whatsapp","level":"info","message":"Actualización de conexión:","service":"whatsapp-api-v2","timestamp":"2026-07-01 12:07:49","version":"v2"}
+{"category":"whatsapp","level":"info","message":"Actualización de conexión:","service":"whatsapp-api-v2","timestamp":"2026-07-01 12:07:49","version":"v2"}
+{"category":"whatsapp","level":"info","message":"Código QR generado","service":"whatsapp-api-v2","timestamp":"2026-07-01 12:07:49","version":"v2"}
+{"category":"whatsapp","level":"info","message":"Código QR generado","service":"whatsapp-api-v2","timestamp":"2026-07-01 12:07:49","version":"v2"}
+{"category":"whatsapp","level":"info","message":"Actualización de conexión:","service":"whatsapp-api-v2","timestamp":"2026-07-01 12:08:09","version":"v2"}
+{"category":"whatsapp","level":"info","message":"Código QR generado","service":"whatsapp-api-v2","timestamp":"2026-07-01 12:08:09","version":"v2"}
+{"category":"whatsapp","level":"info","message":"Actualización de conexión:","service":"whatsapp-api-v2","timestamp":"2026-07-01 12:08:09","version":"v2"}
+{"category":"whatsapp","level":"info","message":"Código QR generado","service":"whatsapp-api-v2","timestamp":"2026-07-01 12:08:09","version":"v2"}
+{"category":"whatsapp","level":"info","message":"Actualización de conexión:","service":"whatsapp-api-v2","timestamp":"2026-07-01 12:08:29","version":"v2"}
+{"category":"whatsapp","level":"info","message":"Código QR generado","service":"whatsapp-api-v2","timestamp":"2026-07-01 12:08:29","version":"v2"}
+{"category":"whatsapp","level":"info","message":"Actualización de conexión:","service":"whatsapp-api-v2","timestamp":"2026-07-01 12:08:29","version":"v2"}
+{"category":"whatsapp","level":"info","message":"Código QR generado","service":"whatsapp-api-v2","timestamp":"2026-07-01 12:08:29","version":"v2"}
+{"category":"whatsapp","level":"info","message":"Actualización de conexión:","service":"whatsapp-api-v2","timestamp":"2026-07-01 12:08:49","version":"v2"}
+{"category":"whatsapp","level":"info","message":"Código QR generado","service":"whatsapp-api-v2","timestamp":"2026-07-01 12:08:49","version":"v2"}
+{"category":"whatsapp","level":"info","message":"Actualización de conexión:","service":"whatsapp-api-v2","timestamp":"2026-07-01 12:08:49","version":"v2"}
+{"category":"whatsapp","level":"info","message":"Código QR generado","service":"whatsapp-api-v2","timestamp":"2026-07-01 12:08:49","version":"v2"}
+{"category":"whatsapp","connection":"close","lastDisconnect":408,"level":"info","message":"Actualización de conexión:","service":"whatsapp-api-v2","timestamp":"2026-07-01 12:09:09","version":"v2"}
+{"category":"whatsapp","level":"info","message":"Desconectado de WhatsApp:","reason":408,"reconnectAttempts":4,"service":"whatsapp-api-v2","shouldReconnect":true,"timestamp":"2026-07-01 12:09:09","version":"v2"}
+{"category":"whatsapp","level":"info","message":"Reintentando conexión en 30000ms (intento 5/5)","service":"whatsapp-api-v2","timestamp":"2026-07-01 12:09:09","version":"v2"}
+{"category":"whatsapp","connection":"close","lastDisconnect":408,"level":"info","message":"Actualización de conexión:","service":"whatsapp-api-v2","timestamp":"2026-07-01 12:09:09","version":"v2"}
+{"category":"whatsapp","level":"info","message":"Desconectado de WhatsApp:","reason":408,"reconnectAttempts":4,"service":"whatsapp-api-v2","shouldReconnect":true,"timestamp":"2026-07-01 12:09:09","version":"v2"}
+{"category":"whatsapp","level":"info","message":"Reintentando conexión en 30000ms (intento 5/5)","service":"whatsapp-api-v2","timestamp":"2026-07-01 12:09:09","version":"v2"}
+{"category":"whatsapp","level":"info","message":"Inicializando autenticación...","service":"whatsapp-api-v2","timestamp":"2026-07-01 12:09:39","version":"v2"}
+{"category":"whatsapp","level":"info","message":"Autenticación cargada exitosamente","service":"whatsapp-api-v2","timestamp":"2026-07-01 12:09:39","version":"v2"}
+{"category":"whatsapp","level":"info","message":"Inicializando autenticación...","service":"whatsapp-api-v2","timestamp":"2026-07-01 12:09:39","version":"v2"}
+{"category":"whatsapp","level":"info","message":"Autenticación cargada exitosamente","service":"whatsapp-api-v2","timestamp":"2026-07-01 12:09:39","version":"v2"}
+{"category":"whatsapp","connection":"connecting","level":"info","message":"Actualización de conexión:","service":"whatsapp-api-v2","timestamp":"2026-07-01 12:09:40","version":"v2"}
+{"category":"whatsapp","connection":"connecting","level":"info","message":"Actualización de conexión:","service":"whatsapp-api-v2","timestamp":"2026-07-01 12:09:40","version":"v2"}
+{"category":"whatsapp","level":"info","message":"Actualización de conexión:","service":"whatsapp-api-v2","timestamp":"2026-07-01 12:09:40","version":"v2"}
+{"category":"whatsapp","level":"info","message":"Código QR generado","service":"whatsapp-api-v2","timestamp":"2026-07-01 12:09:40","version":"v2"}
+{"category":"whatsapp","level":"info","message":"Actualización de conexión:","service":"whatsapp-api-v2","timestamp":"2026-07-01 12:09:41","version":"v2"}
+{"category":"whatsapp","level":"info","message":"Código QR generado","service":"whatsapp-api-v2","timestamp":"2026-07-01 12:09:41","version":"v2"}
+{"category":"whatsapp","level":"info","message":"Actualización de conexión:","service":"whatsapp-api-v2","timestamp":"2026-07-01 12:10:40","version":"v2"}
+{"category":"whatsapp","level":"info","message":"Código QR generado","service":"whatsapp-api-v2","timestamp":"2026-07-01 12:10:40","version":"v2"}
+{"category":"whatsapp","level":"info","message":"Actualización de conexión:","service":"whatsapp-api-v2","timestamp":"2026-07-01 12:10:41","version":"v2"}
+{"category":"whatsapp","level":"info","message":"Código QR generado","service":"whatsapp-api-v2","timestamp":"2026-07-01 12:10:41","version":"v2"}
+{"category":"whatsapp","level":"info","message":"Actualización de conexión:","service":"whatsapp-api-v2","timestamp":"2026-07-01 12:11:00","version":"v2"}
+{"category":"whatsapp","level":"info","message":"Código QR generado","service":"whatsapp-api-v2","timestamp":"2026-07-01 12:11:00","version":"v2"}
+{"category":"whatsapp","level":"info","message":"Actualización de conexión:","service":"whatsapp-api-v2","timestamp":"2026-07-01 12:11:01","version":"v2"}
+{"category":"whatsapp","level":"info","message":"Código QR generado","service":"whatsapp-api-v2","timestamp":"2026-07-01 12:11:01","version":"v2"}
+{"category":"whatsapp","level":"info","message":"Actualización de conexión:","service":"whatsapp-api-v2","timestamp":"2026-07-01 12:11:20","version":"v2"}
+{"category":"whatsapp","level":"info","message":"Código QR generado","service":"whatsapp-api-v2","timestamp":"2026-07-01 12:11:20","version":"v2"}
+{"category":"whatsapp","level":"info","message":"Actualización de conexión:","service":"whatsapp-api-v2","timestamp":"2026-07-01 12:11:21","version":"v2"}
+{"category":"whatsapp","level":"info","message":"Código QR generado","service":"whatsapp-api-v2","timestamp":"2026-07-01 12:11:21","version":"v2"}
+{"category":"whatsapp","level":"info","message":"Actualización de conexión:","service":"whatsapp-api-v2","timestamp":"2026-07-01 12:11:40","version":"v2"}
+{"category":"whatsapp","level":"info","message":"Código QR generado","service":"whatsapp-api-v2","timestamp":"2026-07-01 12:11:40","version":"v2"}
+{"category":"whatsapp","level":"info","message":"Actualización de conexión:","service":"whatsapp-api-v2","timestamp":"2026-07-01 12:11:41","version":"v2"}
+{"category":"whatsapp","level":"info","message":"Código QR generado","service":"whatsapp-api-v2","timestamp":"2026-07-01 12:11:41","version":"v2"}
+{"category":"whatsapp","level":"info","message":"Actualización de conexión:","service":"whatsapp-api-v2","timestamp":"2026-07-01 12:12:00","version":"v2"}
+{"category":"whatsapp","level":"info","message":"Código QR generado","service":"whatsapp-api-v2","timestamp":"2026-07-01 12:12:01","version":"v2"}
+{"category":"whatsapp","level":"info","message":"Actualización de conexión:","service":"whatsapp-api-v2","timestamp":"2026-07-01 12:12:01","version":"v2"}
+{"category":"whatsapp","level":"info","message":"Código QR generado","service":"whatsapp-api-v2","timestamp":"2026-07-01 12:12:01","version":"v2"}
+{"category":"whatsapp","connection":"close","lastDisconnect":408,"level":"info","message":"Actualización de conexión:","service":"whatsapp-api-v2","timestamp":"2026-07-01 12:12:20","version":"v2"}
+{"category":"whatsapp","level":"info","message":"Desconectado de WhatsApp:","reason":408,"reconnectAttempts":5,"service":"whatsapp-api-v2","shouldReconnect":true,"timestamp":"2026-07-01 12:12:20","version":"v2"}
+{"category":"whatsapp","level":"info","message":"Máximo de reintentos alcanzado o sesión cerrada","service":"whatsapp-api-v2","timestamp":"2026-07-01 12:12:20","version":"v2"}
+{"category":"whatsapp","connection":"close","lastDisconnect":408,"level":"info","message":"Actualización de conexión:","service":"whatsapp-api-v2","timestamp":"2026-07-01 12:12:21","version":"v2"}
+{"category":"whatsapp","level":"info","message":"Desconectado de WhatsApp:","reason":408,"reconnectAttempts":5,"service":"whatsapp-api-v2","shouldReconnect":true,"timestamp":"2026-07-01 12:12:21","version":"v2"}
+{"category":"whatsapp","level":"info","message":"Máximo de reintentos alcanzado o sesión cerrada","service":"whatsapp-api-v2","timestamp":"2026-07-01 12:12:21","version":"v2"}
+{"category":"whatsapp","connection":"close","lastDisconnect":428,"level":"info","message":"Actualización de conexión:","service":"whatsapp-api-v2","timestamp":"2026-07-01 12:18:32","version":"v2"}
+{"category":"whatsapp","level":"info","message":"Desconectado de WhatsApp:","reason":428,"reconnectAttempts":0,"service":"whatsapp-api-v2","shouldReconnect":true,"timestamp":"2026-07-01 12:18:32","version":"v2"}
+{"category":"whatsapp","level":"info","message":"Reintentando conexión en 2000ms (intento 1/5)","service":"whatsapp-api-v2","timestamp":"2026-07-01 12:18:32","version":"v2"}
+{"category":"whatsapp","level":"info","message":"Inicializando autenticación...","service":"whatsapp-api-v2","timestamp":"2026-07-01 12:18:34","version":"v2"}
+{"category":"whatsapp","level":"info","message":"Autenticación cargada exitosamente","service":"whatsapp-api-v2","timestamp":"2026-07-01 12:18:34","version":"v2"}
+{"category":"whatsapp","connection":"connecting","level":"info","message":"Actualización de conexión:","service":"whatsapp-api-v2","timestamp":"2026-07-01 12:18:34","version":"v2"}
+{"category":"whatsapp","level":"info","message":"Actualización de conexión:","service":"whatsapp-api-v2","timestamp":"2026-07-01 12:18:36","version":"v2"}
+{"category":"whatsapp","level":"info","message":"Actualización de conexión:","service":"whatsapp-api-v2","timestamp":"2026-07-01 12:18:36","version":"v2"}
+{"category":"whatsapp","connection":"open","level":"info","message":"Actualización de conexión:","service":"whatsapp-api-v2","timestamp":"2026-07-01 12:18:36","version":"v2"}
+{"category":"whatsapp","level":"info","message":"✅ Conectado a WhatsApp exitosamente","service":"whatsapp-api-v2","timestamp":"2026-07-01 12:18:36","version":"v2"}
+{"category":"message","from":"status@broadcast","level":"info","message":"Message received","messageType":"senderKeyDistributionMessage","service":"whatsapp-api-v2","timestamp":"2026-07-01 12:30:47","version":"v2"}
+{"category":"message","level":"info","message":"Message updated","messageId":"3AF9D7840A8FD892A7B3","service":"whatsapp-api-v2","status":"delivered","timestamp":"2026-07-01 12:30:47","version":"v2"}
+{"category":"message","from":"status@broadcast","level":"info","message":"Message received","messageType":"protocolMessage","service":"whatsapp-api-v2","timestamp":"2026-07-01 12:30:48","version":"v2"}
+{"category":"message","level":"info","message":"Message updated","messageId":"3AABBA075E30550B34AD","service":"whatsapp-api-v2","status":"delivered","timestamp":"2026-07-01 12:30:48","version":"v2"}
+{"category":"message","from":"status@broadcast","level":"info","message":"Message received","messageType":"protocolMessage","service":"whatsapp-api-v2","timestamp":"2026-07-01 12:30:48","version":"v2"}
+{"category":"message","level":"info","message":"Message updated","messageId":"3A4397FE50A27CCA88F4","service":"whatsapp-api-v2","status":"delivered","timestamp":"2026-07-01 12:30:48","version":"v2"}
+{"category":"message","from":"status@broadcast","level":"info","message":"Message received","messageType":"imageMessage","service":"whatsapp-api-v2","timestamp":"2026-07-01 12:31:06","version":"v2"}
+{"category":"message","from":"status@broadcast","level":"info","message":"Message received","messageType":"senderKeyDistributionMessage","service":"whatsapp-api-v2","timestamp":"2026-07-01 12:36:20","version":"v2"}
+{"category":"message","from":"status@broadcast","level":"info","message":"Message received","messageType":"senderKeyDistributionMessage","service":"whatsapp-api-v2","timestamp":"2026-07-01 12:50:08","version":"v2"}
+{"category":"message","from":"status@broadcast","level":"info","message":"Message received","messageType":"senderKeyDistributionMessage","service":"whatsapp-api-v2","timestamp":"2026-07-01 13:18:08","version":"v2"}
+{"category":"message","from":"status@broadcast","level":"info","message":"Message received","messageType":"senderKeyDistributionMessage","service":"whatsapp-api-v2","timestamp":"2026-07-01 13:41:32","version":"v2"}
+{"category":"message","level":"info","message":"Message updated","messageId":"A5B753C159D6C8D495469F528E1903D9","service":"whatsapp-api-v2","status":"read","timestamp":"2026-07-01 14:24:15","version":"v2"}
+{"category":"message","from":"status@broadcast","level":"info","message":"Message received","messageType":"senderKeyDistributionMessage","service":"whatsapp-api-v2","timestamp":"2026-07-01 14:54:37","version":"v2"}
+{"category":"whatsapp","connection":"close","lastDisconnect":428,"level":"info","message":"Actualización de conexión:","service":"whatsapp-api-v2","timestamp":"2026-07-01 15:23:02","version":"v2"}
+{"category":"whatsapp","level":"info","message":"Desconectado de WhatsApp:","reason":428,"reconnectAttempts":0,"service":"whatsapp-api-v2","shouldReconnect":true,"timestamp":"2026-07-01 15:23:02","version":"v2"}
+{"category":"whatsapp","level":"info","message":"Reintentando conexión en 2000ms (intento 1/5)","service":"whatsapp-api-v2","timestamp":"2026-07-01 15:23:02","version":"v2"}
+{"category":"whatsapp","level":"info","message":"Inicializando autenticación...","service":"whatsapp-api-v2","timestamp":"2026-07-01 15:23:04","version":"v2"}
+{"category":"whatsapp","level":"info","message":"Autenticación cargada exitosamente","service":"whatsapp-api-v2","timestamp":"2026-07-01 15:23:04","version":"v2"}
+{"category":"whatsapp","connection":"connecting","level":"info","message":"Actualización de conexión:","service":"whatsapp-api-v2","timestamp":"2026-07-01 15:23:05","version":"v2"}
+{"category":"whatsapp","level":"info","message":"Actualización de conexión:","service":"whatsapp-api-v2","timestamp":"2026-07-01 15:23:06","version":"v2"}
+{"category":"whatsapp","level":"info","message":"Actualización de conexión:","service":"whatsapp-api-v2","timestamp":"2026-07-01 15:23:07","version":"v2"}
+{"category":"whatsapp","connection":"open","level":"info","message":"Actualización de conexión:","service":"whatsapp-api-v2","timestamp":"2026-07-01 15:23:07","version":"v2"}
+{"category":"whatsapp","level":"info","message":"✅ Conectado a WhatsApp exitosamente","service":"whatsapp-api-v2","timestamp":"2026-07-01 15:23:07","version":"v2"}
+{"category":"whatsapp","connection":"close","lastDisconnect":428,"level":"info","message":"Actualización de conexión:","service":"whatsapp-api-v2","timestamp":"2026-07-01 15:32:36","version":"v2"}
+{"category":"whatsapp","level":"info","message":"Desconectado de WhatsApp:","reason":428,"reconnectAttempts":0,"service":"whatsapp-api-v2","shouldReconnect":true,"timestamp":"2026-07-01 15:32:36","version":"v2"}
+{"category":"whatsapp","level":"info","message":"Reintentando conexión en 2000ms (intento 1/5)","service":"whatsapp-api-v2","timestamp":"2026-07-01 15:32:36","version":"v2"}
+{"category":"whatsapp","level":"info","message":"Inicializando autenticación...","service":"whatsapp-api-v2","timestamp":"2026-07-01 15:32:38","version":"v2"}
+{"category":"whatsapp","level":"info","message":"Autenticación cargada exitosamente","service":"whatsapp-api-v2","timestamp":"2026-07-01 15:32:38","version":"v2"}
+{"category":"whatsapp","connection":"connecting","level":"info","message":"Actualización de conexión:","service":"whatsapp-api-v2","timestamp":"2026-07-01 15:32:38","version":"v2"}
+{"category":"whatsapp","level":"info","message":"Actualización de conexión:","service":"whatsapp-api-v2","timestamp":"2026-07-01 15:32:39","version":"v2"}
+{"category":"whatsapp","level":"info","message":"Actualización de conexión:","service":"whatsapp-api-v2","timestamp":"2026-07-01 15:32:39","version":"v2"}
+{"category":"whatsapp","connection":"open","level":"info","message":"Actualización de conexión:","service":"whatsapp-api-v2","timestamp":"2026-07-01 15:32:39","version":"v2"}
+{"category":"whatsapp","level":"info","message":"✅ Conectado a WhatsApp exitosamente","service":"whatsapp-api-v2","timestamp":"2026-07-01 15:32:39","version":"v2"}
+{"category":"whatsapp","connection":"close","lastDisconnect":428,"level":"info","message":"Actualización de conexión:","service":"whatsapp-api-v2","timestamp":"2026-07-01 16:01:37","version":"v2"}
+{"category":"whatsapp","level":"info","message":"Desconectado de WhatsApp:","reason":428,"reconnectAttempts":0,"service":"whatsapp-api-v2","shouldReconnect":true,"timestamp":"2026-07-01 16:01:37","version":"v2"}
+{"category":"whatsapp","level":"info","message":"Reintentando conexión en 2000ms (intento 1/5)","service":"whatsapp-api-v2","timestamp":"2026-07-01 16:01:37","version":"v2"}
+{"category":"whatsapp","level":"info","message":"Inicializando autenticación...","service":"whatsapp-api-v2","timestamp":"2026-07-01 16:01:39","version":"v2"}
+{"category":"whatsapp","level":"info","message":"Autenticación cargada exitosamente","service":"whatsapp-api-v2","timestamp":"2026-07-01 16:01:39","version":"v2"}
+{"category":"whatsapp","connection":"connecting","level":"info","message":"Actualización de conexión:","service":"whatsapp-api-v2","timestamp":"2026-07-01 16:01:39","version":"v2"}
+{"category":"whatsapp","level":"info","message":"Actualización de conexión:","service":"whatsapp-api-v2","timestamp":"2026-07-01 16:01:42","version":"v2"}
+{"category":"whatsapp","level":"info","message":"Actualización de conexión:","service":"whatsapp-api-v2","timestamp":"2026-07-01 16:01:42","version":"v2"}
+{"category":"whatsapp","connection":"open","level":"info","message":"Actualización de conexión:","service":"whatsapp-api-v2","timestamp":"2026-07-01 16:01:42","version":"v2"}
+{"category":"whatsapp","level":"info","message":"✅ Conectado a WhatsApp exitosamente","service":"whatsapp-api-v2","timestamp":"2026-07-01 16:01:42","version":"v2"}
+{"category":"whatsapp","connection":"close","lastDisconnect":428,"level":"info","message":"Actualización de conexión:","service":"whatsapp-api-v2","timestamp":"2026-07-01 16:38:17","version":"v2"}
+{"category":"whatsapp","level":"info","message":"Desconectado de WhatsApp:","reason":428,"reconnectAttempts":0,"service":"whatsapp-api-v2","shouldReconnect":true,"timestamp":"2026-07-01 16:38:17","version":"v2"}
+{"category":"whatsapp","level":"info","message":"Reintentando conexión en 2000ms (intento 1/5)","service":"whatsapp-api-v2","timestamp":"2026-07-01 16:38:17","version":"v2"}
+{"category":"whatsapp","level":"info","message":"Inicializando autenticación...","service":"whatsapp-api-v2","timestamp":"2026-07-01 16:38:19","version":"v2"}
+{"category":"whatsapp","level":"info","message":"Autenticación cargada exitosamente","service":"whatsapp-api-v2","timestamp":"2026-07-01 16:38:19","version":"v2"}
+{"category":"whatsapp","connection":"connecting","level":"info","message":"Actualización de conexión:","service":"whatsapp-api-v2","timestamp":"2026-07-01 16:38:19","version":"v2"}
+{"category":"whatsapp","level":"info","message":"Actualización de conexión:","service":"whatsapp-api-v2","timestamp":"2026-07-01 16:38:21","version":"v2"}
+{"category":"whatsapp","level":"info","message":"Actualización de conexión:","service":"whatsapp-api-v2","timestamp":"2026-07-01 16:38:21","version":"v2"}
+{"category":"whatsapp","connection":"open","level":"info","message":"Actualización de conexión:","service":"whatsapp-api-v2","timestamp":"2026-07-01 16:38:21","version":"v2"}
+{"category":"whatsapp","level":"info","message":"✅ Conectado a WhatsApp exitosamente","service":"whatsapp-api-v2","timestamp":"2026-07-01 16:38:21","version":"v2"}
+{"category":"whatsapp","connection":"close","lastDisconnect":428,"level":"info","message":"Actualización de conexión:","service":"whatsapp-api-v2","timestamp":"2026-07-01 17:19:51","version":"v2"}
+{"category":"whatsapp","level":"info","message":"Desconectado de WhatsApp:","reason":428,"reconnectAttempts":0,"service":"whatsapp-api-v2","shouldReconnect":true,"timestamp":"2026-07-01 17:19:51","version":"v2"}
+{"category":"whatsapp","level":"info","message":"Reintentando conexión en 2000ms (intento 1/5)","service":"whatsapp-api-v2","timestamp":"2026-07-01 17:19:51","version":"v2"}
+{"category":"whatsapp","level":"info","message":"Inicializando autenticación...","service":"whatsapp-api-v2","timestamp":"2026-07-01 17:19:53","version":"v2"}
+{"category":"whatsapp","level":"info","message":"Autenticación cargada exitosamente","service":"whatsapp-api-v2","timestamp":"2026-07-01 17:19:53","version":"v2"}
+{"category":"whatsapp","connection":"connecting","level":"info","message":"Actualización de conexión:","service":"whatsapp-api-v2","timestamp":"2026-07-01 17:19:53","version":"v2"}
+{"category":"whatsapp","connection":"close","lastDisconnect":408,"level":"info","message":"Actualización de conexión:","service":"whatsapp-api-v2","timestamp":"2026-07-01 17:19:53","version":"v2"}
+{"category":"whatsapp","level":"info","message":"Desconectado de WhatsApp:","reason":408,"reconnectAttempts":1,"service":"whatsapp-api-v2","shouldReconnect":true,"timestamp":"2026-07-01 17:19:53","version":"v2"}
+{"category":"whatsapp","level":"info","message":"Reintentando conexión en 4000ms (intento 2/5)","service":"whatsapp-api-v2","timestamp":"2026-07-01 17:19:53","version":"v2"}
+{"category":"whatsapp","level":"info","message":"Inicializando autenticación...","service":"whatsapp-api-v2","timestamp":"2026-07-01 17:19:57","version":"v2"}
+{"category":"whatsapp","level":"info","message":"Autenticación cargada exitosamente","service":"whatsapp-api-v2","timestamp":"2026-07-01 17:19:57","version":"v2"}
+{"category":"whatsapp","connection":"connecting","level":"info","message":"Actualización de conexión:","service":"whatsapp-api-v2","timestamp":"2026-07-01 17:19:57","version":"v2"}
+{"category":"whatsapp","connection":"close","lastDisconnect":408,"level":"info","message":"Actualización de conexión:","service":"whatsapp-api-v2","timestamp":"2026-07-01 17:19:57","version":"v2"}
+{"category":"whatsapp","level":"info","message":"Desconectado de WhatsApp:","reason":408,"reconnectAttempts":2,"service":"whatsapp-api-v2","shouldReconnect":true,"timestamp":"2026-07-01 17:19:57","version":"v2"}
+{"category":"whatsapp","level":"info","message":"Reintentando conexión en 8000ms (intento 3/5)","service":"whatsapp-api-v2","timestamp":"2026-07-01 17:19:57","version":"v2"}
+{"category":"whatsapp","level":"info","message":"Inicializando autenticación...","service":"whatsapp-api-v2","timestamp":"2026-07-01 17:20:05","version":"v2"}
+{"category":"whatsapp","level":"info","message":"Autenticación cargada exitosamente","service":"whatsapp-api-v2","timestamp":"2026-07-01 17:20:05","version":"v2"}
+{"category":"whatsapp","connection":"connecting","level":"info","message":"Actualización de conexión:","service":"whatsapp-api-v2","timestamp":"2026-07-01 17:20:05","version":"v2"}
+{"category":"whatsapp","connection":"close","lastDisconnect":408,"level":"info","message":"Actualización de conexión:","service":"whatsapp-api-v2","timestamp":"2026-07-01 17:20:05","version":"v2"}
+{"category":"whatsapp","level":"info","message":"Desconectado de WhatsApp:","reason":408,"reconnectAttempts":3,"service":"whatsapp-api-v2","shouldReconnect":true,"timestamp":"2026-07-01 17:20:05","version":"v2"}
+{"category":"whatsapp","level":"info","message":"Reintentando conexión en 16000ms (intento 4/5)","service":"whatsapp-api-v2","timestamp":"2026-07-01 17:20:05","version":"v2"}
+{"category":"whatsapp","level":"info","message":"Inicializando autenticación...","service":"whatsapp-api-v2","timestamp":"2026-07-01 17:20:21","version":"v2"}
+{"category":"whatsapp","level":"info","message":"Autenticación cargada exitosamente","service":"whatsapp-api-v2","timestamp":"2026-07-01 17:20:21","version":"v2"}
+{"category":"whatsapp","connection":"connecting","level":"info","message":"Actualización de conexión:","service":"whatsapp-api-v2","timestamp":"2026-07-01 17:20:21","version":"v2"}
+{"category":"whatsapp","connection":"close","lastDisconnect":408,"level":"info","message":"Actualización de conexión:","service":"whatsapp-api-v2","timestamp":"2026-07-01 17:20:21","version":"v2"}
+{"category":"whatsapp","level":"info","message":"Desconectado de WhatsApp:","reason":408,"reconnectAttempts":4,"service":"whatsapp-api-v2","shouldReconnect":true,"timestamp":"2026-07-01 17:20:21","version":"v2"}
+{"category":"whatsapp","level":"info","message":"Reintentando conexión en 30000ms (intento 5/5)","service":"whatsapp-api-v2","timestamp":"2026-07-01 17:20:22","version":"v2"}
+{"category":"whatsapp","level":"info","message":"Inicializando autenticación...","service":"whatsapp-api-v2","timestamp":"2026-07-01 17:20:52","version":"v2"}
+{"category":"whatsapp","level":"info","message":"Autenticación cargada exitosamente","service":"whatsapp-api-v2","timestamp":"2026-07-01 17:20:52","version":"v2"}
+{"category":"whatsapp","connection":"connecting","level":"info","message":"Actualización de conexión:","service":"whatsapp-api-v2","timestamp":"2026-07-01 17:20:52","version":"v2"}
+{"category":"whatsapp","connection":"close","lastDisconnect":408,"level":"info","message":"Actualización de conexión:","service":"whatsapp-api-v2","timestamp":"2026-07-01 17:20:52","version":"v2"}
+{"category":"whatsapp","level":"info","message":"Desconectado de WhatsApp:","reason":408,"reconnectAttempts":5,"service":"whatsapp-api-v2","shouldReconnect":true,"timestamp":"2026-07-01 17:20:52","version":"v2"}
+{"category":"whatsapp","level":"info","message":"Máximo de reintentos alcanzado o sesión cerrada","service":"whatsapp-api-v2","timestamp":"2026-07-01 17:20:52","version":"v2"}
+{"ip":"::ffff:127.0.0.1","level":"info","message":"GET /api/whatsapp/status","service":"whatsapp-api-v2","timestamp":"2026-07-01 20:50:13","userAgent":"GuzzleHttp/7","version":"v2"}
+{"ip":"::ffff:127.0.0.1","level":"info","message":"GET /api/whatsapp/status","service":"whatsapp-api-v2","timestamp":"2026-07-01 20:50:21","userAgent":"GuzzleHttp/7","version":"v2"}
+{"ip":"::ffff:127.0.0.1","level":"info","message":"POST /api/whatsapp/connect","service":"whatsapp-api-v2","timestamp":"2026-07-01 20:50:24","userAgent":"GuzzleHttp/7","version":"v2"}
+{"category":"whatsapp","level":"info","message":"Inicializando autenticación...","service":"whatsapp-api-v2","timestamp":"2026-07-01 20:50:24","version":"v2"}
+{"category":"whatsapp","level":"info","message":"Autenticación cargada exitosamente","service":"whatsapp-api-v2","timestamp":"2026-07-01 20:50:24","version":"v2"}
+{"category":"whatsapp","connection":"connecting","level":"info","message":"Actualización de conexión:","service":"whatsapp-api-v2","timestamp":"2026-07-01 20:50:24","version":"v2"}
+{"ip":"::ffff:127.0.0.1","level":"info","message":"GET /api/whatsapp/status","service":"whatsapp-api-v2","timestamp":"2026-07-01 20:50:26","userAgent":"GuzzleHttp/7","version":"v2"}
+{"ip":"::ffff:127.0.0.1","level":"info","message":"GET /api/whatsapp/qr","service":"whatsapp-api-v2","timestamp":"2026-07-01 20:50:26","userAgent":"GuzzleHttp/7","version":"v2"}
+{"category":"whatsapp","level":"info","message":"Actualización de conexión:","service":"whatsapp-api-v2","timestamp":"2026-07-01 20:50:26","version":"v2"}
+{"category":"whatsapp","level":"info","message":"Actualización de conexión:","service":"whatsapp-api-v2","timestamp":"2026-07-01 20:50:26","version":"v2"}
+{"category":"whatsapp","connection":"open","level":"info","message":"Actualización de conexión:","service":"whatsapp-api-v2","timestamp":"2026-07-01 20:50:27","version":"v2"}
+{"category":"whatsapp","level":"info","message":"✅ Conectado a WhatsApp exitosamente","service":"whatsapp-api-v2","timestamp":"2026-07-01 20:50:27","version":"v2"}
+{"ip":"::ffff:127.0.0.1","level":"info","message":"GET /api/whatsapp/status","service":"whatsapp-api-v2","timestamp":"2026-07-01 20:50:30","userAgent":"GuzzleHttp/7","version":"v2"}
+{"ip":"::ffff:127.0.0.1","level":"info","message":"GET /api/whatsapp/stats","service":"whatsapp-api-v2","timestamp":"2026-07-01 20:50:30","userAgent":"GuzzleHttp/7","version":"v2"}
+{"ip":"::ffff:127.0.0.1","level":"info","message":"GET /api/whatsapp/messages","service":"whatsapp-api-v2","timestamp":"2026-07-01 20:50:30","userAgent":"GuzzleHttp/7","version":"v2"}
+{"ip":"::ffff:127.0.0.1","level":"info","message":"GET /api/whatsapp/status","service":"whatsapp-api-v2","timestamp":"2026-07-01 20:50:41","userAgent":"GuzzleHttp/7","version":"v2"}
+{"ip":"::ffff:127.0.0.1","level":"info","message":"GET /api/whatsapp/stats","service":"whatsapp-api-v2","timestamp":"2026-07-01 20:50:41","userAgent":"GuzzleHttp/7","version":"v2"}
+{"ip":"::ffff:127.0.0.1","level":"info","message":"GET /api/whatsapp/messages","service":"whatsapp-api-v2","timestamp":"2026-07-01 20:50:41","userAgent":"GuzzleHttp/7","version":"v2"}
+{"ip":"::ffff:127.0.0.1","level":"info","message":"POST /api/whatsapp/send","service":"whatsapp-api-v2","timestamp":"2026-07-01 20:55:34","userAgent":"GuzzleHttp/7","version":"v2"}
+{"category":"whatsapp","id":"94841870516253@lid","level":"info","message":"Actualización de presencia:","presences":{"94841870516253@lid":{"lastKnownPresence":"composing"}},"service":"whatsapp-api-v2","timestamp":"2026-07-01 20:57:53","version":"v2"}
+{"category":"message","from":"94841870516253@lid","level":"info","message":"Message received","messageType":"conversation","service":"whatsapp-api-v2","timestamp":"2026-07-01 20:57:57","version":"v2"}
+{"category":"whatsapp","level":"info","message":"Usuario 94841870516253 auto-opt-in registrado","service":"whatsapp-api-v2","timestamp":"2026-07-01 20:57:57","version":"v2"}
+{"ip":"::ffff:127.0.0.1","level":"info","message":"POST /api/whatsapp/send","service":"whatsapp-api-v2","timestamp":"2026-07-01 20:58:46","userAgent":"GuzzleHttp/7","version":"v2"}
+{"ip":"::ffff:127.0.0.1","level":"info","message":"POST /api/whatsapp/send","service":"whatsapp-api-v2","timestamp":"2026-07-01 21:01:17","userAgent":"GuzzleHttp/7","version":"v2"}
+{"level":"info","message":"Recibida señal SIGINT, cerrando servidor...","service":"whatsapp-api-v2","timestamp":"2026-07-01 21:01:28","version":"v2"}
+{"level":"info","message":"✅ Base de datos conectada","service":"whatsapp-api-v2","timestamp":"2026-07-01 21:01:50","version":"v2"}
+{"level":"info","message":"✅ Modo sin cache activado","service":"whatsapp-api-v2","timestamp":"2026-07-01 21:01:50","version":"v2"}
+{"level":"info","message":"Inicializando conexiones para todas las empresas activas...","service":"whatsapp-api-v2","timestamp":"2026-07-01 21:01:50","version":"v2"}
+{"category":"whatsapp","level":"info","message":"Iniciando servicio para empresa ID: 1","service":"whatsapp-api-v2","timestamp":"2026-07-01 21:01:50","version":"v2"}
+{"category":"whatsapp","level":"info","message":"Inicializando servicio WhatsApp...","service":"whatsapp-api-v2","timestamp":"2026-07-01 21:01:50","version":"v2"}
+{"category":"whatsapp","level":"info","message":"Usando Baileys v2.3000.1035194821, es la última: true","service":"whatsapp-api-v2","timestamp":"2026-07-01 21:01:51","version":"v2"}
+{"category":"whatsapp","level":"info","message":"Inicializando autenticación...","service":"whatsapp-api-v2","timestamp":"2026-07-01 21:01:51","version":"v2"}
+{"category":"whatsapp","level":"info","message":"Autenticación cargada exitosamente","service":"whatsapp-api-v2","timestamp":"2026-07-01 21:01:51","version":"v2"}
+{"category":"whatsapp","level":"info","message":"Iniciando servicio para empresa ID: 2","service":"whatsapp-api-v2","timestamp":"2026-07-01 21:01:51","version":"v2"}
+{"category":"whatsapp","level":"info","message":"Inicializando servicio WhatsApp...","service":"whatsapp-api-v2","timestamp":"2026-07-01 21:01:51","version":"v2"}
+{"category":"whatsapp","connection":"connecting","level":"info","message":"Actualización de conexión:","service":"whatsapp-api-v2","timestamp":"2026-07-01 21:01:51","version":"v2"}
+{"category":"whatsapp","level":"info","message":"Usando Baileys v2.3000.1035194821, es la última: true","service":"whatsapp-api-v2","timestamp":"2026-07-01 21:01:51","version":"v2"}
+{"category":"whatsapp","level":"info","message":"Inicializando autenticación...","service":"whatsapp-api-v2","timestamp":"2026-07-01 21:01:51","version":"v2"}
+{"category":"whatsapp","level":"info","message":"Autenticación cargada exitosamente","service":"whatsapp-api-v2","timestamp":"2026-07-01 21:01:51","version":"v2"}
+{"category":"whatsapp","level":"info","message":"Iniciando servicio para empresa ID: 3","service":"whatsapp-api-v2","timestamp":"2026-07-01 21:01:52","version":"v2"}
+{"category":"whatsapp","level":"info","message":"Inicializando servicio WhatsApp...","service":"whatsapp-api-v2","timestamp":"2026-07-01 21:01:52","version":"v2"}
+{"category":"whatsapp","connection":"connecting","level":"info","message":"Actualización de conexión:","service":"whatsapp-api-v2","timestamp":"2026-07-01 21:01:52","version":"v2"}
+{"category":"whatsapp","level":"info","message":"Usando Baileys v2.3000.1035194821, es la última: true","service":"whatsapp-api-v2","timestamp":"2026-07-01 21:01:52","version":"v2"}
+{"category":"whatsapp","level":"info","message":"Inicializando autenticación...","service":"whatsapp-api-v2","timestamp":"2026-07-01 21:01:52","version":"v2"}
+{"category":"whatsapp","level":"info","message":"Autenticación cargada exitosamente","service":"whatsapp-api-v2","timestamp":"2026-07-01 21:01:52","version":"v2"}
+{"level":"info","message":"✅ 3 empresas conectadas/inicializadas.","service":"whatsapp-api-v2","timestamp":"2026-07-01 21:01:52","version":"v2"}
+{"level":"info","message":"✅ Servicio WhatsApp inicializado","service":"whatsapp-api-v2","timestamp":"2026-07-01 21:01:52","version":"v2"}
+{"category":"whatsapp","connection":"connecting","level":"info","message":"Actualización de conexión:","service":"whatsapp-api-v2","timestamp":"2026-07-01 21:01:52","version":"v2"}
+{"level":"info","message":"🚀 WhatsApp API v2 ejecutándose en puerto 3001","service":"whatsapp-api-v2","timestamp":"2026-07-01 21:01:52","version":"v2"}
+{"level":"info","message":"📱 Entorno: development","service":"whatsapp-api-v2","timestamp":"2026-07-01 21:01:52","version":"v2"}
+{"level":"info","message":"🔗 Health check: http://localhost:3001/health","service":"whatsapp-api-v2","timestamp":"2026-07-01 21:01:52","version":"v2"}
+{"category":"whatsapp","level":"info","message":"Actualización de conexión:","service":"whatsapp-api-v2","timestamp":"2026-07-01 21:01:53","version":"v2"}
+{"category":"whatsapp","level":"info","message":"Código QR generado","service":"whatsapp-api-v2","timestamp":"2026-07-01 21:01:53","version":"v2"}
+{"category":"whatsapp","level":"info","message":"Actualización de conexión:","service":"whatsapp-api-v2","timestamp":"2026-07-01 21:01:53","version":"v2"}
+{"category":"whatsapp","level":"info","message":"Código QR generado","service":"whatsapp-api-v2","timestamp":"2026-07-01 21:01:53","version":"v2"}
+{"category":"whatsapp","level":"info","message":"Actualización de conexión:","service":"whatsapp-api-v2","timestamp":"2026-07-01 21:01:53","version":"v2"}
+{"category":"whatsapp","level":"info","message":"Actualización de conexión:","service":"whatsapp-api-v2","timestamp":"2026-07-01 21:01:54","version":"v2"}
+{"category":"whatsapp","connection":"open","level":"info","message":"Actualización de conexión:","service":"whatsapp-api-v2","timestamp":"2026-07-01 21:01:54","version":"v2"}
+{"category":"whatsapp","level":"info","message":"✅ Conectado a WhatsApp exitosamente","service":"whatsapp-api-v2","timestamp":"2026-07-01 21:01:54","version":"v2"}
+{"ip":"::ffff:127.0.0.1","level":"info","message":"POST /api/whatsapp/send","service":"whatsapp-api-v2","timestamp":"2026-07-01 21:02:08","userAgent":"GuzzleHttp/7","version":"v2"}
+{"companyId":1,"level":"info","message":"Anti-block: Message validated and delayed for 584241703465@s.whatsapp.net","messageLength":223,"service":"whatsapp-api-v2","timestamp":"2026-07-01 21:02:08","to":"584241703465@s.whatsapp.net","version":"v2"}
+{"category":"whatsapp","level":"info","message":"Simulando composing para 584241703465@s.whatsapp.net durante 5134ms","service":"whatsapp-api-v2","timestamp":"2026-07-01 21:02:08","version":"v2"}
+{"category":"message","level":"info","message":"Message sent","messageId":"3EB0E04C3577F01A7FEB90","service":"whatsapp-api-v2","timestamp":"2026-07-01 21:02:14","to":"584241703465@s.whatsapp.net","version":"v2"}
+{"category":"message","level":"info","message":"Message updated","messageId":"3EB0E04C3577F01A7FEB90","service":"whatsapp-api-v2","status":"read","timestamp":"2026-07-01 21:02:14","version":"v2"}
+{"category":"message","level":"info","message":"Message updated","messageId":"3EB0E04C3577F01A7FEB90","service":"whatsapp-api-v2","status":"read","timestamp":"2026-07-01 21:02:15","version":"v2"}
+{"category":"message","level":"info","message":"Message updated","messageId":"3EB0E04C3577F01A7FEB90","service":"whatsapp-api-v2","status":"read","timestamp":"2026-07-01 21:02:22","version":"v2"}
+{"category":"whatsapp","level":"info","message":"Actualización de conexión:","service":"whatsapp-api-v2","timestamp":"2026-07-01 21:02:53","version":"v2"}
+{"category":"whatsapp","level":"info","message":"Código QR generado","service":"whatsapp-api-v2","timestamp":"2026-07-01 21:02:53","version":"v2"}
+{"category":"whatsapp","level":"info","message":"Actualización de conexión:","service":"whatsapp-api-v2","timestamp":"2026-07-01 21:02:53","version":"v2"}
+{"category":"whatsapp","level":"info","message":"Código QR generado","service":"whatsapp-api-v2","timestamp":"2026-07-01 21:02:53","version":"v2"}
+{"category":"whatsapp","level":"info","message":"Actualización de conexión:","service":"whatsapp-api-v2","timestamp":"2026-07-01 21:03:13","version":"v2"}
+{"category":"whatsapp","level":"info","message":"Código QR generado","service":"whatsapp-api-v2","timestamp":"2026-07-01 21:03:13","version":"v2"}
+{"category":"whatsapp","level":"info","message":"Actualización de conexión:","service":"whatsapp-api-v2","timestamp":"2026-07-01 21:03:13","version":"v2"}
+{"category":"whatsapp","level":"info","message":"Código QR generado","service":"whatsapp-api-v2","timestamp":"2026-07-01 21:03:13","version":"v2"}
+{"category":"whatsapp","level":"info","message":"Actualización de conexión:","service":"whatsapp-api-v2","timestamp":"2026-07-01 21:03:33","version":"v2"}
+{"category":"whatsapp","level":"info","message":"Código QR generado","service":"whatsapp-api-v2","timestamp":"2026-07-01 21:03:33","version":"v2"}
+{"category":"whatsapp","level":"info","message":"Actualización de conexión:","service":"whatsapp-api-v2","timestamp":"2026-07-01 21:03:33","version":"v2"}
+{"category":"whatsapp","level":"info","message":"Código QR generado","service":"whatsapp-api-v2","timestamp":"2026-07-01 21:03:33","version":"v2"}
+{"category":"whatsapp","level":"info","message":"Actualización de conexión:","service":"whatsapp-api-v2","timestamp":"2026-07-01 21:03:53","version":"v2"}
+{"category":"whatsapp","level":"info","message":"Código QR generado","service":"whatsapp-api-v2","timestamp":"2026-07-01 21:03:53","version":"v2"}
+{"category":"whatsapp","level":"info","message":"Actualización de conexión:","service":"whatsapp-api-v2","timestamp":"2026-07-01 21:03:53","version":"v2"}
+{"category":"whatsapp","level":"info","message":"Código QR generado","service":"whatsapp-api-v2","timestamp":"2026-07-01 21:03:53","version":"v2"}
+{"category":"whatsapp","level":"info","message":"Actualización de conexión:","service":"whatsapp-api-v2","timestamp":"2026-07-01 21:04:13","version":"v2"}
+{"category":"whatsapp","level":"info","message":"Código QR generado","service":"whatsapp-api-v2","timestamp":"2026-07-01 21:04:13","version":"v2"}
+{"category":"whatsapp","level":"info","message":"Actualización de conexión:","service":"whatsapp-api-v2","timestamp":"2026-07-01 21:04:13","version":"v2"}
+{"category":"whatsapp","level":"info","message":"Código QR generado","service":"whatsapp-api-v2","timestamp":"2026-07-01 21:04:14","version":"v2"}
+{"category":"whatsapp","connection":"close","lastDisconnect":408,"level":"info","message":"Actualización de conexión:","service":"whatsapp-api-v2","timestamp":"2026-07-01 21:04:33","version":"v2"}
+{"category":"whatsapp","level":"info","message":"Desconectado de WhatsApp:","reason":408,"reconnectAttempts":0,"service":"whatsapp-api-v2","shouldReconnect":true,"timestamp":"2026-07-01 21:04:33","version":"v2"}
+{"category":"whatsapp","level":"info","message":"Reintentando conexión en 2000ms (intento 1/5)","service":"whatsapp-api-v2","timestamp":"2026-07-01 21:04:33","version":"v2"}
+{"category":"whatsapp","connection":"close","lastDisconnect":408,"level":"info","message":"Actualización de conexión:","service":"whatsapp-api-v2","timestamp":"2026-07-01 21:04:33","version":"v2"}
+{"category":"whatsapp","level":"info","message":"Desconectado de WhatsApp:","reason":408,"reconnectAttempts":0,"service":"whatsapp-api-v2","shouldReconnect":true,"timestamp":"2026-07-01 21:04:33","version":"v2"}
+{"category":"whatsapp","level":"info","message":"Reintentando conexión en 2000ms (intento 1/5)","service":"whatsapp-api-v2","timestamp":"2026-07-01 21:04:33","version":"v2"}
+{"category":"whatsapp","level":"info","message":"Inicializando autenticación...","service":"whatsapp-api-v2","timestamp":"2026-07-01 21:04:35","version":"v2"}
+{"category":"whatsapp","level":"info","message":"Autenticación cargada exitosamente","service":"whatsapp-api-v2","timestamp":"2026-07-01 21:04:35","version":"v2"}
+{"category":"whatsapp","connection":"connecting","level":"info","message":"Actualización de conexión:","service":"whatsapp-api-v2","timestamp":"2026-07-01 21:04:35","version":"v2"}
+{"category":"whatsapp","level":"info","message":"Inicializando autenticación...","service":"whatsapp-api-v2","timestamp":"2026-07-01 21:04:36","version":"v2"}
+{"category":"whatsapp","level":"info","message":"Autenticación cargada exitosamente","service":"whatsapp-api-v2","timestamp":"2026-07-01 21:04:36","version":"v2"}
+{"category":"whatsapp","connection":"connecting","level":"info","message":"Actualización de conexión:","service":"whatsapp-api-v2","timestamp":"2026-07-01 21:04:36","version":"v2"}
+{"category":"whatsapp","level":"info","message":"Actualización de conexión:","service":"whatsapp-api-v2","timestamp":"2026-07-01 21:04:37","version":"v2"}
+{"category":"whatsapp","level":"info","message":"Código QR generado","service":"whatsapp-api-v2","timestamp":"2026-07-01 21:04:37","version":"v2"}
+{"category":"whatsapp","level":"info","message":"Actualización de conexión:","service":"whatsapp-api-v2","timestamp":"2026-07-01 21:04:38","version":"v2"}
+{"category":"whatsapp","level":"info","message":"Código QR generado","service":"whatsapp-api-v2","timestamp":"2026-07-01 21:04:38","version":"v2"}
+{"category":"whatsapp","level":"info","message":"Actualización de conexión:","service":"whatsapp-api-v2","timestamp":"2026-07-01 21:05:37","version":"v2"}
+{"category":"whatsapp","level":"info","message":"Código QR generado","service":"whatsapp-api-v2","timestamp":"2026-07-01 21:05:37","version":"v2"}
+{"category":"whatsapp","level":"info","message":"Actualización de conexión:","service":"whatsapp-api-v2","timestamp":"2026-07-01 21:05:38","version":"v2"}
+{"category":"whatsapp","level":"info","message":"Código QR generado","service":"whatsapp-api-v2","timestamp":"2026-07-01 21:05:38","version":"v2"}
+{"category":"whatsapp","level":"info","message":"Actualización de conexión:","service":"whatsapp-api-v2","timestamp":"2026-07-01 21:05:57","version":"v2"}
+{"category":"whatsapp","level":"info","message":"Código QR generado","service":"whatsapp-api-v2","timestamp":"2026-07-01 21:05:57","version":"v2"}
+{"category":"whatsapp","level":"info","message":"Actualización de conexión:","service":"whatsapp-api-v2","timestamp":"2026-07-01 21:05:58","version":"v2"}
+{"category":"whatsapp","level":"info","message":"Código QR generado","service":"whatsapp-api-v2","timestamp":"2026-07-01 21:05:58","version":"v2"}
+{"category":"whatsapp","level":"info","message":"Actualización de conexión:","service":"whatsapp-api-v2","timestamp":"2026-07-01 21:06:17","version":"v2"}
+{"category":"whatsapp","level":"info","message":"Código QR generado","service":"whatsapp-api-v2","timestamp":"2026-07-01 21:06:17","version":"v2"}
+{"category":"whatsapp","level":"info","message":"Actualización de conexión:","service":"whatsapp-api-v2","timestamp":"2026-07-01 21:06:18","version":"v2"}
+{"category":"whatsapp","level":"info","message":"Código QR generado","service":"whatsapp-api-v2","timestamp":"2026-07-01 21:06:18","version":"v2"}
+{"category":"whatsapp","level":"info","message":"Actualización de conexión:","service":"whatsapp-api-v2","timestamp":"2026-07-01 21:06:37","version":"v2"}
+{"category":"whatsapp","level":"info","message":"Código QR generado","service":"whatsapp-api-v2","timestamp":"2026-07-01 21:06:37","version":"v2"}
+{"category":"whatsapp","level":"info","message":"Actualización de conexión:","service":"whatsapp-api-v2","timestamp":"2026-07-01 21:06:38","version":"v2"}
+{"category":"whatsapp","level":"info","message":"Código QR generado","service":"whatsapp-api-v2","timestamp":"2026-07-01 21:06:38","version":"v2"}
+{"category":"whatsapp","level":"info","message":"Actualización de conexión:","service":"whatsapp-api-v2","timestamp":"2026-07-01 21:06:57","version":"v2"}
+{"category":"whatsapp","level":"info","message":"Código QR generado","service":"whatsapp-api-v2","timestamp":"2026-07-01 21:06:57","version":"v2"}
+{"category":"whatsapp","level":"info","message":"Actualización de conexión:","service":"whatsapp-api-v2","timestamp":"2026-07-01 21:06:58","version":"v2"}
+{"category":"whatsapp","level":"info","message":"Código QR generado","service":"whatsapp-api-v2","timestamp":"2026-07-01 21:06:58","version":"v2"}
+{"category":"whatsapp","connection":"close","lastDisconnect":408,"level":"info","message":"Actualización de conexión:","service":"whatsapp-api-v2","timestamp":"2026-07-01 21:07:17","version":"v2"}
+{"category":"whatsapp","level":"info","message":"Desconectado de WhatsApp:","reason":408,"reconnectAttempts":1,"service":"whatsapp-api-v2","shouldReconnect":true,"timestamp":"2026-07-01 21:07:17","version":"v2"}
+{"category":"whatsapp","level":"info","message":"Reintentando conexión en 4000ms (intento 2/5)","service":"whatsapp-api-v2","timestamp":"2026-07-01 21:07:17","version":"v2"}
+{"category":"whatsapp","connection":"close","lastDisconnect":408,"level":"info","message":"Actualización de conexión:","service":"whatsapp-api-v2","timestamp":"2026-07-01 21:07:18","version":"v2"}
+{"category":"whatsapp","level":"info","message":"Desconectado de WhatsApp:","reason":408,"reconnectAttempts":1,"service":"whatsapp-api-v2","shouldReconnect":true,"timestamp":"2026-07-01 21:07:18","version":"v2"}
+{"category":"whatsapp","level":"info","message":"Reintentando conexión en 4000ms (intento 2/5)","service":"whatsapp-api-v2","timestamp":"2026-07-01 21:07:18","version":"v2"}
+{"category":"whatsapp","level":"info","message":"Inicializando autenticación...","service":"whatsapp-api-v2","timestamp":"2026-07-01 21:07:21","version":"v2"}
+{"category":"whatsapp","level":"info","message":"Autenticación cargada exitosamente","service":"whatsapp-api-v2","timestamp":"2026-07-01 21:07:21","version":"v2"}
+{"category":"whatsapp","connection":"connecting","level":"info","message":"Actualización de conexión:","service":"whatsapp-api-v2","timestamp":"2026-07-01 21:07:21","version":"v2"}
+{"category":"whatsapp","level":"info","message":"Inicializando autenticación...","service":"whatsapp-api-v2","timestamp":"2026-07-01 21:07:22","version":"v2"}
+{"category":"whatsapp","level":"info","message":"Autenticación cargada exitosamente","service":"whatsapp-api-v2","timestamp":"2026-07-01 21:07:22","version":"v2"}
+{"category":"whatsapp","connection":"connecting","level":"info","message":"Actualización de conexión:","service":"whatsapp-api-v2","timestamp":"2026-07-01 21:07:22","version":"v2"}
+{"category":"whatsapp","level":"info","message":"Actualización de conexión:","service":"whatsapp-api-v2","timestamp":"2026-07-01 21:07:23","version":"v2"}
+{"category":"whatsapp","level":"info","message":"Código QR generado","service":"whatsapp-api-v2","timestamp":"2026-07-01 21:07:23","version":"v2"}
+{"category":"whatsapp","level":"info","message":"Actualización de conexión:","service":"whatsapp-api-v2","timestamp":"2026-07-01 21:07:24","version":"v2"}
+{"category":"whatsapp","level":"info","message":"Código QR generado","service":"whatsapp-api-v2","timestamp":"2026-07-01 21:07:24","version":"v2"}
+{"category":"whatsapp","level":"info","message":"Actualización de conexión:","service":"whatsapp-api-v2","timestamp":"2026-07-01 21:08:23","version":"v2"}
+{"category":"whatsapp","level":"info","message":"Código QR generado","service":"whatsapp-api-v2","timestamp":"2026-07-01 21:08:23","version":"v2"}
+{"category":"whatsapp","level":"info","message":"Actualización de conexión:","service":"whatsapp-api-v2","timestamp":"2026-07-01 21:08:24","version":"v2"}
+{"category":"whatsapp","level":"info","message":"Código QR generado","service":"whatsapp-api-v2","timestamp":"2026-07-01 21:08:24","version":"v2"}
+{"category":"whatsapp","level":"info","message":"Actualización de conexión:","service":"whatsapp-api-v2","timestamp":"2026-07-01 21:08:43","version":"v2"}
+{"category":"whatsapp","level":"info","message":"Código QR generado","service":"whatsapp-api-v2","timestamp":"2026-07-01 21:08:43","version":"v2"}
+{"category":"whatsapp","level":"info","message":"Actualización de conexión:","service":"whatsapp-api-v2","timestamp":"2026-07-01 21:08:44","version":"v2"}
+{"category":"whatsapp","level":"info","message":"Código QR generado","service":"whatsapp-api-v2","timestamp":"2026-07-01 21:08:44","version":"v2"}
+{"category":"whatsapp","level":"info","message":"Actualización de conexión:","service":"whatsapp-api-v2","timestamp":"2026-07-01 21:09:03","version":"v2"}
+{"category":"whatsapp","level":"info","message":"Código QR generado","service":"whatsapp-api-v2","timestamp":"2026-07-01 21:09:04","version":"v2"}
+{"category":"whatsapp","level":"info","message":"Actualización de conexión:","service":"whatsapp-api-v2","timestamp":"2026-07-01 21:09:04","version":"v2"}
+{"category":"whatsapp","level":"info","message":"Código QR generado","service":"whatsapp-api-v2","timestamp":"2026-07-01 21:09:04","version":"v2"}
+{"category":"whatsapp","level":"info","message":"Actualización de conexión:","service":"whatsapp-api-v2","timestamp":"2026-07-01 21:09:24","version":"v2"}
+{"category":"whatsapp","level":"info","message":"Código QR generado","service":"whatsapp-api-v2","timestamp":"2026-07-01 21:09:24","version":"v2"}
+{"category":"whatsapp","level":"info","message":"Actualización de conexión:","service":"whatsapp-api-v2","timestamp":"2026-07-01 21:09:24","version":"v2"}
+{"category":"whatsapp","level":"info","message":"Código QR generado","service":"whatsapp-api-v2","timestamp":"2026-07-01 21:09:24","version":"v2"}
+{"category":"whatsapp","level":"info","message":"Actualización de conexión:","service":"whatsapp-api-v2","timestamp":"2026-07-01 21:09:44","version":"v2"}
+{"category":"whatsapp","level":"info","message":"Código QR generado","service":"whatsapp-api-v2","timestamp":"2026-07-01 21:09:44","version":"v2"}
+{"category":"whatsapp","level":"info","message":"Actualización de conexión:","service":"whatsapp-api-v2","timestamp":"2026-07-01 21:09:44","version":"v2"}
+{"category":"whatsapp","level":"info","message":"Código QR generado","service":"whatsapp-api-v2","timestamp":"2026-07-01 21:09:44","version":"v2"}
+{"category":"whatsapp","connection":"close","lastDisconnect":408,"level":"info","message":"Actualización de conexión:","service":"whatsapp-api-v2","timestamp":"2026-07-01 21:10:04","version":"v2"}
+{"category":"whatsapp","level":"info","message":"Desconectado de WhatsApp:","reason":408,"reconnectAttempts":2,"service":"whatsapp-api-v2","shouldReconnect":true,"timestamp":"2026-07-01 21:10:04","version":"v2"}
+{"category":"whatsapp","level":"info","message":"Reintentando conexión en 8000ms (intento 3/5)","service":"whatsapp-api-v2","timestamp":"2026-07-01 21:10:04","version":"v2"}
+{"category":"whatsapp","connection":"close","lastDisconnect":408,"level":"info","message":"Actualización de conexión:","service":"whatsapp-api-v2","timestamp":"2026-07-01 21:10:04","version":"v2"}
+{"category":"whatsapp","level":"info","message":"Desconectado de WhatsApp:","reason":408,"reconnectAttempts":2,"service":"whatsapp-api-v2","shouldReconnect":true,"timestamp":"2026-07-01 21:10:04","version":"v2"}
+{"category":"whatsapp","level":"info","message":"Reintentando conexión en 8000ms (intento 3/5)","service":"whatsapp-api-v2","timestamp":"2026-07-01 21:10:04","version":"v2"}
+{"category":"whatsapp","level":"info","message":"Inicializando autenticación...","service":"whatsapp-api-v2","timestamp":"2026-07-01 21:10:12","version":"v2"}
+{"category":"whatsapp","level":"info","message":"Autenticación cargada exitosamente","service":"whatsapp-api-v2","timestamp":"2026-07-01 21:10:12","version":"v2"}
+{"category":"whatsapp","connection":"connecting","level":"info","message":"Actualización de conexión:","service":"whatsapp-api-v2","timestamp":"2026-07-01 21:10:12","version":"v2"}
+{"category":"whatsapp","level":"info","message":"Inicializando autenticación...","service":"whatsapp-api-v2","timestamp":"2026-07-01 21:10:12","version":"v2"}
+{"category":"whatsapp","level":"info","message":"Autenticación cargada exitosamente","service":"whatsapp-api-v2","timestamp":"2026-07-01 21:10:12","version":"v2"}
+{"category":"whatsapp","connection":"connecting","level":"info","message":"Actualización de conexión:","service":"whatsapp-api-v2","timestamp":"2026-07-01 21:10:12","version":"v2"}
+{"category":"whatsapp","level":"info","message":"Actualización de conexión:","service":"whatsapp-api-v2","timestamp":"2026-07-01 21:10:13","version":"v2"}
+{"category":"whatsapp","level":"info","message":"Código QR generado","service":"whatsapp-api-v2","timestamp":"2026-07-01 21:10:13","version":"v2"}
+{"category":"whatsapp","level":"info","message":"Actualización de conexión:","service":"whatsapp-api-v2","timestamp":"2026-07-01 21:10:14","version":"v2"}
+{"category":"whatsapp","level":"info","message":"Código QR generado","service":"whatsapp-api-v2","timestamp":"2026-07-01 21:10:14","version":"v2"}
+{"category":"whatsapp","level":"info","message":"Actualización de conexión:","service":"whatsapp-api-v2","timestamp":"2026-07-01 21:11:13","version":"v2"}
+{"category":"whatsapp","level":"info","message":"Código QR generado","service":"whatsapp-api-v2","timestamp":"2026-07-01 21:11:14","version":"v2"}
+{"category":"whatsapp","level":"info","message":"Actualización de conexión:","service":"whatsapp-api-v2","timestamp":"2026-07-01 21:11:14","version":"v2"}
+{"category":"whatsapp","level":"info","message":"Código QR generado","service":"whatsapp-api-v2","timestamp":"2026-07-01 21:11:14","version":"v2"}
+{"category":"whatsapp","level":"info","message":"Actualización de conexión:","service":"whatsapp-api-v2","timestamp":"2026-07-01 21:11:33","version":"v2"}
+{"category":"whatsapp","level":"info","message":"Código QR generado","service":"whatsapp-api-v2","timestamp":"2026-07-01 21:11:34","version":"v2"}
+{"category":"whatsapp","level":"info","message":"Actualización de conexión:","service":"whatsapp-api-v2","timestamp":"2026-07-01 21:11:34","version":"v2"}
+{"category":"whatsapp","level":"info","message":"Código QR generado","service":"whatsapp-api-v2","timestamp":"2026-07-01 21:11:34","version":"v2"}
+{"category":"whatsapp","level":"info","message":"Actualización de conexión:","service":"whatsapp-api-v2","timestamp":"2026-07-01 21:11:54","version":"v2"}
+{"category":"whatsapp","level":"info","message":"Código QR generado","service":"whatsapp-api-v2","timestamp":"2026-07-01 21:11:54","version":"v2"}
+{"category":"whatsapp","level":"info","message":"Actualización de conexión:","service":"whatsapp-api-v2","timestamp":"2026-07-01 21:11:54","version":"v2"}
+{"category":"whatsapp","level":"info","message":"Código QR generado","service":"whatsapp-api-v2","timestamp":"2026-07-01 21:11:54","version":"v2"}
+{"category":"whatsapp","level":"info","message":"Actualización de conexión:","service":"whatsapp-api-v2","timestamp":"2026-07-01 21:12:14","version":"v2"}
+{"category":"whatsapp","level":"info","message":"Código QR generado","service":"whatsapp-api-v2","timestamp":"2026-07-01 21:12:14","version":"v2"}
+{"category":"whatsapp","level":"info","message":"Actualización de conexión:","service":"whatsapp-api-v2","timestamp":"2026-07-01 21:12:14","version":"v2"}
+{"category":"whatsapp","level":"info","message":"Código QR generado","service":"whatsapp-api-v2","timestamp":"2026-07-01 21:12:14","version":"v2"}
+{"category":"whatsapp","level":"info","message":"Actualización de conexión:","service":"whatsapp-api-v2","timestamp":"2026-07-01 21:12:34","version":"v2"}
+{"category":"whatsapp","level":"info","message":"Código QR generado","service":"whatsapp-api-v2","timestamp":"2026-07-01 21:12:34","version":"v2"}
+{"category":"whatsapp","level":"info","message":"Actualización de conexión:","service":"whatsapp-api-v2","timestamp":"2026-07-01 21:12:34","version":"v2"}
+{"category":"whatsapp","level":"info","message":"Código QR generado","service":"whatsapp-api-v2","timestamp":"2026-07-01 21:12:34","version":"v2"}
+{"category":"whatsapp","connection":"close","lastDisconnect":408,"level":"info","message":"Actualización de conexión:","service":"whatsapp-api-v2","timestamp":"2026-07-01 21:12:54","version":"v2"}
+{"category":"whatsapp","level":"info","message":"Desconectado de WhatsApp:","reason":408,"reconnectAttempts":3,"service":"whatsapp-api-v2","shouldReconnect":true,"timestamp":"2026-07-01 21:12:54","version":"v2"}
+{"category":"whatsapp","level":"info","message":"Reintentando conexión en 16000ms (intento 4/5)","service":"whatsapp-api-v2","timestamp":"2026-07-01 21:12:54","version":"v2"}
+{"category":"whatsapp","connection":"close","lastDisconnect":408,"level":"info","message":"Actualización de conexión:","service":"whatsapp-api-v2","timestamp":"2026-07-01 21:12:54","version":"v2"}
+{"category":"whatsapp","level":"info","message":"Desconectado de WhatsApp:","reason":408,"reconnectAttempts":3,"service":"whatsapp-api-v2","shouldReconnect":true,"timestamp":"2026-07-01 21:12:54","version":"v2"}
+{"category":"whatsapp","level":"info","message":"Reintentando conexión en 16000ms (intento 4/5)","service":"whatsapp-api-v2","timestamp":"2026-07-01 21:12:54","version":"v2"}
+{"category":"whatsapp","level":"info","message":"Inicializando autenticación...","service":"whatsapp-api-v2","timestamp":"2026-07-01 21:13:10","version":"v2"}
+{"category":"whatsapp","level":"info","message":"Autenticación cargada exitosamente","service":"whatsapp-api-v2","timestamp":"2026-07-01 21:13:10","version":"v2"}
+{"category":"whatsapp","connection":"connecting","level":"info","message":"Actualización de conexión:","service":"whatsapp-api-v2","timestamp":"2026-07-01 21:13:10","version":"v2"}
+{"category":"whatsapp","level":"info","message":"Inicializando autenticación...","service":"whatsapp-api-v2","timestamp":"2026-07-01 21:13:10","version":"v2"}
+{"category":"whatsapp","level":"info","message":"Autenticación cargada exitosamente","service":"whatsapp-api-v2","timestamp":"2026-07-01 21:13:10","version":"v2"}
+{"category":"whatsapp","connection":"connecting","level":"info","message":"Actualización de conexión:","service":"whatsapp-api-v2","timestamp":"2026-07-01 21:13:10","version":"v2"}
+{"category":"whatsapp","level":"info","message":"Actualización de conexión:","service":"whatsapp-api-v2","timestamp":"2026-07-01 21:13:11","version":"v2"}
+{"category":"whatsapp","level":"info","message":"Código QR generado","service":"whatsapp-api-v2","timestamp":"2026-07-01 21:13:11","version":"v2"}
+{"category":"whatsapp","level":"info","message":"Actualización de conexión:","service":"whatsapp-api-v2","timestamp":"2026-07-01 21:13:11","version":"v2"}
+{"category":"whatsapp","level":"info","message":"Código QR generado","service":"whatsapp-api-v2","timestamp":"2026-07-01 21:13:11","version":"v2"}
+{"category":"whatsapp","level":"info","message":"Actualización de conexión:","service":"whatsapp-api-v2","timestamp":"2026-07-01 21:14:11","version":"v2"}
+{"category":"whatsapp","level":"info","message":"Código QR generado","service":"whatsapp-api-v2","timestamp":"2026-07-01 21:14:11","version":"v2"}
+{"category":"whatsapp","level":"info","message":"Actualización de conexión:","service":"whatsapp-api-v2","timestamp":"2026-07-01 21:14:11","version":"v2"}
+{"category":"whatsapp","level":"info","message":"Código QR generado","service":"whatsapp-api-v2","timestamp":"2026-07-01 21:14:11","version":"v2"}
+{"category":"whatsapp","level":"info","message":"Actualización de conexión:","service":"whatsapp-api-v2","timestamp":"2026-07-01 21:14:31","version":"v2"}
+{"category":"whatsapp","level":"info","message":"Código QR generado","service":"whatsapp-api-v2","timestamp":"2026-07-01 21:14:31","version":"v2"}
+{"category":"whatsapp","level":"info","message":"Actualización de conexión:","service":"whatsapp-api-v2","timestamp":"2026-07-01 21:14:31","version":"v2"}
+{"category":"whatsapp","level":"info","message":"Código QR generado","service":"whatsapp-api-v2","timestamp":"2026-07-01 21:14:31","version":"v2"}
+{"category":"whatsapp","level":"info","message":"Actualización de conexión:","service":"whatsapp-api-v2","timestamp":"2026-07-01 21:14:51","version":"v2"}
+{"category":"whatsapp","level":"info","message":"Código QR generado","service":"whatsapp-api-v2","timestamp":"2026-07-01 21:14:51","version":"v2"}
+{"category":"whatsapp","level":"info","message":"Actualización de conexión:","service":"whatsapp-api-v2","timestamp":"2026-07-01 21:14:51","version":"v2"}
+{"category":"whatsapp","level":"info","message":"Código QR generado","service":"whatsapp-api-v2","timestamp":"2026-07-01 21:14:51","version":"v2"}
+{"category":"whatsapp","level":"info","message":"Actualización de conexión:","service":"whatsapp-api-v2","timestamp":"2026-07-01 21:15:11","version":"v2"}
+{"category":"whatsapp","level":"info","message":"Código QR generado","service":"whatsapp-api-v2","timestamp":"2026-07-01 21:15:11","version":"v2"}
+{"category":"whatsapp","level":"info","message":"Actualización de conexión:","service":"whatsapp-api-v2","timestamp":"2026-07-01 21:15:11","version":"v2"}
+{"category":"whatsapp","level":"info","message":"Código QR generado","service":"whatsapp-api-v2","timestamp":"2026-07-01 21:15:11","version":"v2"}
+{"category":"whatsapp","level":"info","message":"Actualización de conexión:","service":"whatsapp-api-v2","timestamp":"2026-07-01 21:15:31","version":"v2"}
+{"category":"whatsapp","level":"info","message":"Código QR generado","service":"whatsapp-api-v2","timestamp":"2026-07-01 21:15:31","version":"v2"}
+{"category":"whatsapp","level":"info","message":"Actualización de conexión:","service":"whatsapp-api-v2","timestamp":"2026-07-01 21:15:31","version":"v2"}
+{"category":"whatsapp","level":"info","message":"Código QR generado","service":"whatsapp-api-v2","timestamp":"2026-07-01 21:15:32","version":"v2"}
+{"category":"whatsapp","connection":"close","lastDisconnect":408,"level":"info","message":"Actualización de conexión:","service":"whatsapp-api-v2","timestamp":"2026-07-01 21:15:51","version":"v2"}
+{"category":"whatsapp","level":"info","message":"Desconectado de WhatsApp:","reason":408,"reconnectAttempts":4,"service":"whatsapp-api-v2","shouldReconnect":true,"timestamp":"2026-07-01 21:15:51","version":"v2"}
+{"category":"whatsapp","level":"info","message":"Reintentando conexión en 30000ms (intento 5/5)","service":"whatsapp-api-v2","timestamp":"2026-07-01 21:15:51","version":"v2"}
+{"category":"whatsapp","connection":"close","lastDisconnect":408,"level":"info","message":"Actualización de conexión:","service":"whatsapp-api-v2","timestamp":"2026-07-01 21:15:52","version":"v2"}
+{"category":"whatsapp","level":"info","message":"Desconectado de WhatsApp:","reason":408,"reconnectAttempts":4,"service":"whatsapp-api-v2","shouldReconnect":true,"timestamp":"2026-07-01 21:15:52","version":"v2"}
+{"category":"whatsapp","level":"info","message":"Reintentando conexión en 30000ms (intento 5/5)","service":"whatsapp-api-v2","timestamp":"2026-07-01 21:15:52","version":"v2"}
+{"category":"whatsapp","level":"info","message":"Inicializando autenticación...","service":"whatsapp-api-v2","timestamp":"2026-07-01 21:16:21","version":"v2"}
+{"category":"whatsapp","level":"info","message":"Autenticación cargada exitosamente","service":"whatsapp-api-v2","timestamp":"2026-07-01 21:16:21","version":"v2"}
+{"category":"whatsapp","level":"info","message":"Inicializando autenticación...","service":"whatsapp-api-v2","timestamp":"2026-07-01 21:16:22","version":"v2"}
+{"category":"whatsapp","level":"info","message":"Autenticación cargada exitosamente","service":"whatsapp-api-v2","timestamp":"2026-07-01 21:16:22","version":"v2"}
+{"category":"whatsapp","connection":"connecting","level":"info","message":"Actualización de conexión:","service":"whatsapp-api-v2","timestamp":"2026-07-01 21:16:22","version":"v2"}
+{"category":"whatsapp","connection":"connecting","level":"info","message":"Actualización de conexión:","service":"whatsapp-api-v2","timestamp":"2026-07-01 21:16:22","version":"v2"}
+{"category":"whatsapp","level":"info","message":"Actualización de conexión:","service":"whatsapp-api-v2","timestamp":"2026-07-01 21:16:23","version":"v2"}
+{"category":"whatsapp","level":"info","message":"Código QR generado","service":"whatsapp-api-v2","timestamp":"2026-07-01 21:16:24","version":"v2"}
+{"category":"whatsapp","level":"info","message":"Actualización de conexión:","service":"whatsapp-api-v2","timestamp":"2026-07-01 21:16:24","version":"v2"}
+{"category":"whatsapp","level":"info","message":"Código QR generado","service":"whatsapp-api-v2","timestamp":"2026-07-01 21:16:24","version":"v2"}
+{"category":"whatsapp","level":"info","message":"Actualización de conexión:","service":"whatsapp-api-v2","timestamp":"2026-07-01 21:17:23","version":"v2"}
+{"category":"whatsapp","level":"info","message":"Código QR generado","service":"whatsapp-api-v2","timestamp":"2026-07-01 21:17:24","version":"v2"}
+{"category":"whatsapp","level":"info","message":"Actualización de conexión:","service":"whatsapp-api-v2","timestamp":"2026-07-01 21:17:24","version":"v2"}
+{"category":"whatsapp","level":"info","message":"Código QR generado","service":"whatsapp-api-v2","timestamp":"2026-07-01 21:17:24","version":"v2"}
+{"category":"whatsapp","level":"info","message":"Actualización de conexión:","service":"whatsapp-api-v2","timestamp":"2026-07-01 21:17:44","version":"v2"}
+{"category":"whatsapp","level":"info","message":"Código QR generado","service":"whatsapp-api-v2","timestamp":"2026-07-01 21:17:44","version":"v2"}
+{"category":"whatsapp","level":"info","message":"Actualización de conexión:","service":"whatsapp-api-v2","timestamp":"2026-07-01 21:17:44","version":"v2"}
+{"category":"whatsapp","level":"info","message":"Código QR generado","service":"whatsapp-api-v2","timestamp":"2026-07-01 21:17:44","version":"v2"}
+{"category":"whatsapp","level":"info","message":"Actualización de conexión:","service":"whatsapp-api-v2","timestamp":"2026-07-01 21:18:04","version":"v2"}
+{"category":"whatsapp","level":"info","message":"Código QR generado","service":"whatsapp-api-v2","timestamp":"2026-07-01 21:18:04","version":"v2"}
+{"category":"whatsapp","level":"info","message":"Actualización de conexión:","service":"whatsapp-api-v2","timestamp":"2026-07-01 21:18:04","version":"v2"}
+{"category":"whatsapp","level":"info","message":"Código QR generado","service":"whatsapp-api-v2","timestamp":"2026-07-01 21:18:04","version":"v2"}
+{"category":"whatsapp","level":"info","message":"Actualización de conexión:","service":"whatsapp-api-v2","timestamp":"2026-07-01 21:18:24","version":"v2"}
+{"category":"whatsapp","level":"info","message":"Código QR generado","service":"whatsapp-api-v2","timestamp":"2026-07-01 21:18:24","version":"v2"}
+{"category":"whatsapp","level":"info","message":"Actualización de conexión:","service":"whatsapp-api-v2","timestamp":"2026-07-01 21:18:24","version":"v2"}
+{"category":"whatsapp","level":"info","message":"Código QR generado","service":"whatsapp-api-v2","timestamp":"2026-07-01 21:18:24","version":"v2"}
+{"category":"whatsapp","level":"info","message":"Actualización de conexión:","service":"whatsapp-api-v2","timestamp":"2026-07-01 21:18:44","version":"v2"}
+{"category":"whatsapp","level":"info","message":"Código QR generado","service":"whatsapp-api-v2","timestamp":"2026-07-01 21:18:44","version":"v2"}
+{"category":"whatsapp","level":"info","message":"Actualización de conexión:","service":"whatsapp-api-v2","timestamp":"2026-07-01 21:18:44","version":"v2"}
+{"category":"whatsapp","level":"info","message":"Código QR generado","service":"whatsapp-api-v2","timestamp":"2026-07-01 21:18:44","version":"v2"}
+{"category":"whatsapp","connection":"close","lastDisconnect":408,"level":"info","message":"Actualización de conexión:","service":"whatsapp-api-v2","timestamp":"2026-07-01 21:19:04","version":"v2"}
+{"category":"whatsapp","level":"info","message":"Desconectado de WhatsApp:","reason":408,"reconnectAttempts":5,"service":"whatsapp-api-v2","shouldReconnect":true,"timestamp":"2026-07-01 21:19:04","version":"v2"}
+{"category":"whatsapp","level":"info","message":"Máximo de reintentos alcanzado o sesión cerrada","service":"whatsapp-api-v2","timestamp":"2026-07-01 21:19:04","version":"v2"}
+{"category":"whatsapp","connection":"close","lastDisconnect":408,"level":"info","message":"Actualización de conexión:","service":"whatsapp-api-v2","timestamp":"2026-07-01 21:19:04","version":"v2"}
+{"category":"whatsapp","level":"info","message":"Desconectado de WhatsApp:","reason":408,"reconnectAttempts":5,"service":"whatsapp-api-v2","shouldReconnect":true,"timestamp":"2026-07-01 21:19:04","version":"v2"}
+{"category":"whatsapp","level":"info","message":"Máximo de reintentos alcanzado o sesión cerrada","service":"whatsapp-api-v2","timestamp":"2026-07-01 21:19:04","version":"v2"}
