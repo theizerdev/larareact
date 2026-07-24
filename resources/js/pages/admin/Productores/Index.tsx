@@ -20,6 +20,7 @@ import {
     Car,
     Users,
     Send,
+    QrCode,
 } from 'lucide-react';
 import React, { useState, useEffect, useRef, lazy, Suspense } from 'react';
 import { toast } from 'sonner';
@@ -365,6 +366,14 @@ export default function Index({
         );
     };
 
+    const handleSendCarnetWhatsApp = (productor: Productor) => {
+        router.post(`/admin/productores/${productor.id}/send-carnet-whatsapp`, {}, {
+            preserveScroll: true,
+            onSuccess: () => toast.success(__('Gafete Azul enviado por WhatsApp.')),
+            onError: () => toast.error(__('No se pudo enviar el WhatsApp.')),
+        });
+    };
+
     // Filter fields configuration
     const filterFields: FilterField[] = [
         {
@@ -515,6 +524,16 @@ export default function Index({
                                 <Pencil className="h-4 w-4 mr-2 text-slate-600" />
                                 {__('Editar Productor')}
                             </DropdownMenuItem>
+                            <DropdownMenuItem onClick={() => router.get(`/admin/productores/${productor.id}/carnet`)}>
+                                <QrCode className="h-4 w-4 mr-2 text-blue-600" />
+                                {__('Gafete Azul / Carnet')}
+                            </DropdownMenuItem>
+                            {productor.telefono && (
+                                <DropdownMenuItem onClick={() => handleSendCarnetWhatsApp(productor)}>
+                                    <Send className="h-4 w-4 mr-2 text-emerald-600" />
+                                    {__('Enviar Gafete por WhatsApp')}
+                                </DropdownMenuItem>
+                            )}
                             <DropdownMenuItem
                                 onClick={() => {
                                     setDeletingProductor(productor);

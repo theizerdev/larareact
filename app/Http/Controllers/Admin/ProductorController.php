@@ -82,9 +82,95 @@ class ProductorController extends Controller
         $data['razon_social_rancho'] = $data['razon_social_rancho'] ?? $data['razon_social'];
         $data['nombre_comercial_rancho'] = $data['nombre_comercial_rancho'] ?? $data['nombre_comercial'];
 
-        Productor::create($data);
+        $productor = Productor::create($data);
+        $this->enviarCarnetWhatsAppInternal($productor);
 
         return redirect()->back();
+    }
+
+    public function carnet(Productor $productor)
+    {
+        $productor->load(['pais', 'paisTelefono', 'empresa', 'sucursal']);
+
+        return Inertia::render('admin/Productores/Carnet', [
+            'productor' => $productor,
+        ]);
+    }
+
+    public function carnetPublico(Productor $productor)
+    {
+        $productor->load(['pais', 'paisTelefono', 'empresa', 'sucursal']);
+
+        return Inertia::render('admin/Productores/Carnet', [
+            'productor' => $productor,
+        ]);
+    }
+
+    public function sendCarnetWhatsApp(Productor $productor)
+    {
+        $sent = $this->enviarCarnetWhatsAppInternal($productor);
+
+        if ($sent) {
+            return back()->with('notification', [
+                'type' => 'success',
+                'message' => "Gafete Azul enviado por WhatsApp a {$productor->nombre_comercial}.",
+            ]);
+        }
+
+        return back()->with('notification', [
+            'type' => 'error',
+            'message' => 'El productor no cuenta con un número de teléfono válido para enviarle el WhatsApp.',
+        ]);
+    }
+
+    public function enviarCarnetWhatsAppInternal(Productor $productor): bool
+    {
+        if (empty($productor->telefono)) {
+            return false;
+        }
+
+        try {
+            $user = request()->user();
+            $empresa = Empresa::find($productor->empresa_id) ?: (Empresa::find($user->empresa_id ?? 1) ?: Empresa::first());
+
+            $cleanPhone = preg_replace('/[^0-9]/', '', $productor->telefono);
+            if (strlen($cleanPhone) >= 9) {
+                $pais = $productor->paisTelefono ?: Pais::find($productor->pais_telefono_id);
+                $prefix = $pais ? preg_replace('/[^0-9]/', '', $pais->codigo_telefonico) : '51';
+                $to = $prefix . $cleanPhone;
+
+                $carnetUrl = url("/carnet-productor/{$productor->id}");
+
+                $msg  = "🪪 *¡SU GAFETE / CARNET AZUL DE PRODUCTOR ESTÁ LISTO!*\n\n";
+                $msg .= "Estimado Productor *{$productor->nombre_comercial}*,\n";
+                $msg .= "Se ha generado su Gafete Oficial de Acceso de Productor Autorizado.\n\n";
+                $msg .= "📌 *Doc / RUC:* {$productor->documento_identidad}\n";
+                $msg .= "👤 *Responsable:* {$productor->responsable}\n\n";
+                $msg .= "📲 *Acceda a su gafete digital aquí:*\n";
+                $msg .= "🔗 {$carnetUrl}\n\n";
+                $msg .= "Presente este carnet o código QR en garita para su control de accesos.";
+
+                $ws = new \App\Services\WhatsAppService($empresa);
+                $carnetPath = \App\Services\CarnetGeneratorService::generarCarnetProductorPNG($productor);
+
+                if ($carnetPath && file_exists($carnetPath)) {
+                    $result = $ws->sendDocument($to, $carnetPath, $msg);
+                    if (!$result) {
+                        $result = $ws->sendImage($to, $carnetPath, $msg);
+                    }
+                    if (!$result) {
+                        $ws->sendMessage($to, $msg, true);
+                    }
+                } else {
+                    $ws->sendMessage($to, $msg, true);
+                }
+                return true;
+            }
+        } catch (\Exception $e) {
+            \Illuminate\Support\Facades\Log::error('Error al enviar WhatsApp carnet productor: ' . $e->getMessage());
+        }
+
+        return false;
     }
 
     public function update(ProductorRequest $request, Productor $productor)

@@ -262,6 +262,7 @@ class WhatsAppService
                     'to' => $to,
                     'caption' => $caption,
                     'message' => $caption,
+                    'isWelcome' => true,
                 ]);
 
             if ($response->successful()) {
@@ -313,6 +314,7 @@ class WhatsAppService
                     'to' => $to,
                     'caption' => $caption,
                     'message' => $caption,
+                    'isWelcome' => true,
                 ]);
 
             if ($response->successful()) {
@@ -345,6 +347,7 @@ class WhatsAppService
                     'mediaUrl' => $publicUrl,
                     'imageUrl' => $publicUrl,
                     'image' => $base64Data,
+                    'isWelcome' => true,
                 ]);
 
             if ($jsonResponse->successful()) {

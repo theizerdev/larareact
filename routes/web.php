@@ -63,6 +63,10 @@ Route::get('/carnet-proveedor/{proveedor}', [\App\Http\Controllers\Admin\Proveed
 Route::get('/admin/proveedores/{proveedor}/carnet', [\App\Http\Controllers\Admin\ProveedorController::class, 'carnet'])->name('proveedores.carnet');
 Route::post('/admin/proveedores/{proveedor}/send-carnet-whatsapp', [\App\Http\Controllers\Admin\ProveedorController::class, 'sendCarnetWhatsApp'])->name('proveedores.send-carnet-whatsapp');
 
+Route::get('/carnet-productor/{productor}', [\App\Http\Controllers\Admin\ProductorController::class, 'carnetPublico'])->name('productores.carnet.publico');
+Route::get('/admin/productores/{productor}/carnet', [\App\Http\Controllers\Admin\ProductorController::class, 'carnet'])->name('productores.carnet');
+Route::post('/admin/productores/{productor}/send-carnet-whatsapp', [\App\Http\Controllers\Admin\ProductorController::class, 'sendCarnetWhatsApp'])->name('productores.send-carnet-whatsapp');
+
 if (file_exists(__DIR__.'/larareact-settings.php')) {
     require __DIR__.'/larareact-settings.php';
 }
