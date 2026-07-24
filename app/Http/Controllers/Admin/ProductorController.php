@@ -154,10 +154,7 @@ class ProductorController extends Controller
                 $carnetPath = \App\Services\CarnetGeneratorService::generarCarnetProductorPNG($productor);
 
                 if ($carnetPath && file_exists($carnetPath)) {
-                    $result = $ws->sendDocument($to, $carnetPath, $msg);
-                    if (!$result) {
-                        $result = $ws->sendImage($to, $carnetPath, $msg);
-                    }
+                    $result = $ws->sendImage($to, $carnetPath, $msg);
                     if (!$result) {
                         $ws->sendMessage($to, $msg, true);
                     }

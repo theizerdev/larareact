@@ -299,44 +299,12 @@ class WhatsAppService
             }
 
             $fileContents = file_get_contents($filePath);
-            $fileName = basename($filePath);
-
-            // 1. Intentar envío mediante multipart/form-data a /api/whatsapp/send-image
-            $response = Http::timeout($this->timeout)
-                ->withHeaders([
-                    'X-API-Key' => $this->apiKey,
-                    'X-Company-Id' => (string) $this->companyId,
-                ])
-                ->attach('image', $fileContents, $fileName)
-                ->attach('media', $fileContents, $fileName)
-                ->attach('file', $fileContents, $fileName)
-                ->post("{$this->baseUrl}/api/whatsapp/send-image", [
-                    'to' => $to,
-                    'caption' => $caption,
-                    'message' => $caption,
-                    'isWelcome' => true,
-                ]);
-
-            if ($response->successful()) {
-                Log::info('WhatsApp imagen enviada por multipart', [
-                    'company_id' => $this->companyId,
-                    'to' => $to,
-                    'response' => $response->json(),
-                ]);
-                return $response->json();
-            }
-
-            Log::warning('WhatsApp Send Image Multipart Failed, probando por JSON media/imageUrl...', [
-                'status' => $response->status(),
-                'body' => $response->body(),
-            ]);
-
-            // 2. Fallback: Intentar envío por JSON a /api/whatsapp/send con base64 y URL pública
             $base64Data = 'data:image/png;base64,' . base64_encode($fileContents);
             $relativePath = str_replace([storage_path('app/public'), public_path()], '', $filePath);
-            $publicUrl = url('/storage/' . ltrim($relativePath, '/\\'));
+            $publicUrl = url('/storage/' . ltrim(str_replace('\\', '/', $relativePath), '/'));
 
-            $jsonResponse = Http::timeout($this->timeout)
+            // 1. Envío al endpoint principal /api/whatsapp/send (soporta type: image + base64 + URL)
+            $response = Http::timeout($this->timeout)
                 ->withHeaders($this->getHeaders())
                 ->post("{$this->baseUrl}/api/whatsapp/send", [
                     'to' => $to,
@@ -350,19 +318,40 @@ class WhatsAppService
                     'isWelcome' => true,
                 ]);
 
-            if ($jsonResponse->successful()) {
-                Log::info('WhatsApp imagen enviada por JSON fallback', [
+            if ($response->successful()) {
+                Log::info('WhatsApp imagen enviada exitosamente', [
                     'company_id' => $this->companyId,
                     'to' => $to,
-                    'response' => $jsonResponse->json(),
+                    'response' => $response->json(),
                 ]);
-                return $jsonResponse->json();
+                return $response->json();
             }
 
-            Log::error('WhatsApp Send Image JSON Fallback Failed', [
-                'status' => $jsonResponse->status(),
-                'body' => $jsonResponse->body(),
+            Log::warning('WhatsApp Send Image JSON Failed, intentando multipart...', [
+                'status' => $response->status(),
+                'body' => $response->body(),
             ]);
+
+            // 2. Fallback multipart
+            $fileName = basename($filePath);
+            $multipartResponse = Http::timeout($this->timeout)
+                ->withHeaders([
+                    'X-API-Key' => $this->apiKey,
+                    'X-Company-Id' => (string) $this->companyId,
+                ])
+                ->attach('document', $fileContents, $fileName)
+                ->attach('image', $fileContents, $fileName)
+                ->attach('media', $fileContents, $fileName)
+                ->post("{$this->baseUrl}/api/whatsapp/send-document", [
+                    'to' => $to,
+                    'caption' => $caption,
+                    'message' => $caption,
+                    'isWelcome' => true,
+                ]);
+
+            if ($multipartResponse->successful()) {
+                return $multipartResponse->json();
+            }
 
             return null;
         } catch (\Exception $e) {
