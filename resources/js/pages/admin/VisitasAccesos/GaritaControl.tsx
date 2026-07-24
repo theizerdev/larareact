@@ -35,6 +35,15 @@ import {
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
+import { Checkbox } from '@/components/ui/checkbox';
+import {
+    Dialog,
+    DialogContent,
+    DialogDescription,
+    DialogFooter,
+    DialogHeader,
+    DialogTitle,
+} from '@/components/ui/dialog';
 import { ModuleHeader } from '@/components/module-header';
 import { notifySuccess, notifyError } from '@/utils/notifications';
 import { useTranslate } from '@/hooks/use-translate';
@@ -83,7 +92,61 @@ export default function GaritaControl({
         responsable: string;
     } | null>(null);
     const [medioAcceso, setMedioAcceso] = useState<'peatonal' | 'vehicular'>('peatonal');
+    const [selectedVehiculoMode, setSelectedVehiculoMode] = useState<'registrado' | 'nuevo'>('registrado');
     const [empleadoVehiculoId, setEmpleadoVehiculoId] = useState<string>('');
+    const [nuevoVehiculoPlaca, setNuevoVehiculoPlaca] = useState<string>('');
+    const [nuevoVehiculoMarca, setNuevoVehiculoMarca] = useState<string>('');
+    const [nuevoVehiculoModelo, setNuevoVehiculoModelo] = useState<string>('');
+    const [nuevoVehiculoTipo, setNuevoVehiculoTipo] = useState<string>('Auto');
+    const [nuevoVehiculoFotoFrontal, setNuevoVehiculoFotoFrontal] = useState<string>('');
+    const [nuevoVehiculoFotoTrasera, setNuevoVehiculoFotoTrasera] = useState<string>('');
+
+    // Estado para Acompañantes en Ingreso de Empleados por Garita
+    const [acompanantesList, setAcompanantesList] = useState<Array<{ nombre: string; documento?: string; telefono?: string; observacion?: string }>>([]);
+    const [isAcompananteModalOpen, setIsAcompananteModalOpen] = useState(false);
+    const [nuevoAcompanante, setNuevoAcompanante] = useState({
+        nombre: '',
+        documento: '',
+        telefono: '',
+        observacion: '',
+    });
+
+    const vehiculoFrontalInputRef = useRef<HTMLInputElement>(null);
+    const vehiculoTraseraInputRef = useRef<HTMLInputElement>(null);
+
+    const handleVehicleImageUpload = (
+        e: React.ChangeEvent<HTMLInputElement>,
+        setter: React.Dispatch<React.SetStateAction<string>>
+    ) => {
+        const file = e.target.files?.[0];
+        if (!file) return;
+        const reader = new FileReader();
+        reader.onload = (event) => {
+            if (event.target?.result) {
+                setter(event.target.result as string);
+            }
+        };
+        reader.readAsDataURL(file);
+    };
+
+    // Auto-selección inicial de vehículo y reseteo de acompañantes
+    useEffect(() => {
+        if (resultado?.tipo === 'empleado' && resultado?.data) {
+            setAcompanantesList([]);
+            setNuevoAcompanante({ nombre: '', documento: '', telefono: '', observacion: '' });
+            setIsAcompananteModalOpen(false);
+            const vehs = resultado.data.vehiculos || [];
+            if (vehs.length > 0) {
+                setMedioAcceso('vehicular');
+                setSelectedVehiculoMode('registrado');
+                setEmpleadoVehiculoId(String(vehs[0].id));
+            } else {
+                setMedioAcceso('peatonal');
+                setSelectedVehiculoMode('nuevo');
+                setEmpleadoVehiculoId('');
+            }
+        }
+    }, [resultado]);
 
     const formatImageUrl = (url: string | null | undefined): string | null => {
         if (!url) return null;
@@ -419,16 +482,38 @@ export default function GaritaControl({
 
     const handleRegistrarIngresoEmpleadoGarita = (empId: number, respId: number) => {
         playScanBeep();
-        router.post('/admin/visitas-accesos', {
+        const payload: any = {
             tipo_acceso: 'empleado',
             empleado_id: empId,
             responsable_id: respId,
             medio_acceso: medioAcceso,
-            empleado_vehiculo_id: empleadoVehiculoId || null,
             observaciones: autorizacionRecibida
                 ? `Autorizado Fuera de Horario por ${autorizacionRecibida.responsable}: ${autorizacionRecibida.motivo}`
                 : 'Ingreso directo por Garita (Horario Habitual)',
-        }, {
+        };
+
+        if (medioAcceso === 'vehicular') {
+            if (selectedVehiculoMode === 'registrado' && empleadoVehiculoId) {
+                payload.empleado_vehiculo_id = empleadoVehiculoId;
+            } else {
+                payload.vehiculo_placa = nuevoVehiculoPlaca;
+                payload.vehiculo_marca = nuevoVehiculoMarca;
+                payload.vehiculo_modelo = nuevoVehiculoModelo;
+                payload.vehiculo_tipo = nuevoVehiculoTipo;
+                if (nuevoVehiculoFotoFrontal) {
+                    payload.vehiculo_foto_frontal = nuevoVehiculoFotoFrontal;
+                }
+                if (nuevoVehiculoFotoTrasera) {
+                    payload.vehiculo_foto_trasera = nuevoVehiculoFotoTrasera;
+                }
+            }
+        }
+
+        if (acompanantesList.length > 0) {
+            payload.acompanantes = acompanantesList;
+        }
+
+        router.post('/admin/visitas-accesos', payload, {
             preserveScroll: true,
             onSuccess: () => {
                 notifySuccess(__('Ingreso de Empleado registrado correctamente en Garita.'));
@@ -714,54 +799,331 @@ export default function GaritaControl({
                             <div className="space-y-6">
                                 {/* Medio de Acceso */}
                                 <div className="space-y-2">
-                                    <h4 className="text-xs font-extrabold uppercase tracking-wider text-slate-500 flex items-center gap-1.5">
-                                        {record.medio_acceso === 'vehicular' ? <Car className="w-4 h-4 text-amber-500" /> : <Footprints className="w-4 h-4 text-emerald-600" />}
-                                        {__('Medio de Acceso')}
+                                    <h4 className="text-xs font-extrabold uppercase tracking-wider text-slate-500 flex items-center justify-between">
+                                        <span className="flex items-center gap-1.5">
+                                            {medioAcceso === 'vehicular' ? <Car className="w-4 h-4 text-amber-500" /> : <Footprints className="w-4 h-4 text-emerald-600" />}
+                                            {__('Medio de Acceso')}
+                                        </span>
+                                        {isEmpleado && !accesoExistente && (record.vehiculos?.length || 0) > 0 && (
+                                            <span className="text-[10px] font-bold text-amber-800 bg-amber-100 border border-amber-300 px-2 py-0.5 rounded-full">
+                                                {record.vehiculos.length} {__('Vehículo(s) Registrado(s)')}
+                                            </span>
+                                        )}
                                     </h4>
 
-                                    {record.medio_acceso === 'vehicular' ? (
+                                    {isEmpleado && !accesoExistente ? (
+                                        <div className="space-y-4 bg-slate-50 p-4 rounded-3xl border border-slate-200">
+                                            {/* Selector de Opciones Peatonal / Vehicular */}
+                                            <div className="grid grid-cols-2 gap-2 p-1 bg-slate-200/70 rounded-2xl">
+                                                <button
+                                                    type="button"
+                                                    onClick={() => setMedioAcceso('peatonal')}
+                                                    className={`py-2.5 px-3 rounded-xl font-extrabold text-xs flex items-center justify-center gap-2 transition-all ${
+                                                        medioAcceso === 'peatonal'
+                                                            ? 'bg-emerald-600 text-white shadow-md'
+                                                            : 'text-slate-700 hover:bg-slate-300/60'
+                                                    }`}
+                                                >
+                                                    <Footprints className="w-4 h-4" />
+                                                    {__('Peatonal')}
+                                                </button>
+
+                                                <button
+                                                    type="button"
+                                                    onClick={() => setMedioAcceso('vehicular')}
+                                                    className={`py-2.5 px-3 rounded-xl font-extrabold text-xs flex items-center justify-center gap-2 transition-all ${
+                                                        medioAcceso === 'vehicular'
+                                                            ? 'bg-amber-600 text-white shadow-md'
+                                                            : 'text-slate-700 hover:bg-slate-300/60'
+                                                    }`}
+                                                >
+                                                    <Car className="w-4 h-4" />
+                                                    {__('Vehicular')}
+                                                </button>
+                                            </div>
+
+                                            {/* Configuración de Vehículo cuando se elige Vehicular */}
+                                            {medioAcceso === 'vehicular' && (
+                                                <div className="space-y-3 pt-1">
+                                                    {(record.vehiculos || []).length > 0 && (
+                                                        <div className="flex items-center gap-5 text-xs font-bold text-slate-700 bg-amber-50/80 p-3 rounded-2xl border border-amber-200">
+                                                            <label className="flex items-center gap-2 cursor-pointer select-none">
+                                                                <Checkbox
+                                                                    checked={selectedVehiculoMode === 'registrado'}
+                                                                    onCheckedChange={(checked) => {
+                                                                        if (checked) setSelectedVehiculoMode('registrado');
+                                                                        else setSelectedVehiculoMode('nuevo');
+                                                                    }}
+                                                                    className="border-amber-400 data-[state=checked]:bg-amber-600 data-[state=checked]:border-amber-600 shadow-xs"
+                                                                />
+                                                                <span>{__('Vehículo Registrado')}</span>
+                                                            </label>
+
+                                                            <label className="flex items-center gap-2 cursor-pointer select-none">
+                                                                <Checkbox
+                                                                    checked={selectedVehiculoMode === 'nuevo'}
+                                                                    onCheckedChange={(checked) => {
+                                                                        if (checked) setSelectedVehiculoMode('nuevo');
+                                                                        else setSelectedVehiculoMode('registrado');
+                                                                    }}
+                                                                    className="border-amber-400 data-[state=checked]:bg-amber-600 data-[state=checked]:border-amber-600 shadow-xs"
+                                                                />
+                                                                <span>{__('Vehículo No Registrado')}</span>
+                                                            </label>
+                                                        </div>
+                                                    )}
+
+                                                    {/* Dropdown y Fotos de Vehículos Registrados del Empleado */}
+                                                    {selectedVehiculoMode === 'registrado' && (record.vehiculos || []).length > 0 ? (
+                                                        <div className="space-y-3">
+                                                            <div className="space-y-1.5">
+                                                                <label className="text-[11px] font-bold text-slate-600 block">
+                                                                    {__('Seleccionar Vehículo Habitual del Empleado:')}
+                                                                </label>
+                                                                <select
+                                                                    value={empleadoVehiculoId}
+                                                                    onChange={(e) => setEmpleadoVehiculoId(e.target.value)}
+                                                                    className="w-full h-11 bg-white border border-slate-300 rounded-xl px-3 text-xs font-bold text-slate-800 focus:border-amber-500 focus:ring-amber-500 shadow-xs"
+                                                                >
+                                                                    {record.vehiculos.map((v: any) => (
+                                                                        <option key={v.id} value={v.id}>
+                                                                            {v.placa ? `[${v.placa}] ` : ''}{v.marca || ''} {v.modelo || ''} ({v.tipo_vehiculo || 'Auto'})
+                                                                        </option>
+                                                                    ))}
+                                                                </select>
+                                                            </div>
+
+                                                            {/* Fotos del Vehículo Registrado Seleccionado */}
+                                                            {(() => {
+                                                                const selVeh = (record.vehiculos || []).find((v: any) => String(v.id) === String(empleadoVehiculoId)) || (record.vehiculos || [])[0];
+                                                                if (!selVeh) return null;
+                                                                return (
+                                                                    <div className="space-y-2 pt-1">
+                                                                        <span className="text-[11px] font-extrabold text-slate-600 uppercase tracking-wider block">
+                                                                            {__('Fotografías Registradas del Vehículo')}
+                                                                        </span>
+                                                                        <div className="grid grid-cols-2 gap-2">
+                                                                            <div className="text-center space-y-1">
+                                                                                <span className="text-[10px] font-bold text-slate-500">{__('Frontal')}</span>
+                                                                                {formatImageUrl(selVeh.foto_frontal) ? (
+                                                                                    <div className="w-full aspect-[4/3] rounded-xl overflow-hidden border border-slate-300 cursor-pointer group relative" onClick={() => setActiveImageModal(formatImageUrl(selVeh.foto_frontal)!)}>
+                                                                                        <img src={formatImageUrl(selVeh.foto_frontal)!} alt="Frontal" className="w-full h-full object-cover group-hover:scale-105 transition-transform" />
+                                                                                        <div className="absolute inset-0 bg-black/30 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center text-white"><Maximize2 className="w-4 h-4" /></div>
+                                                                                    </div>
+                                                                                ) : (
+                                                                                    <div className="w-full aspect-[4/3] rounded-xl bg-amber-100/50 border border-dashed border-amber-300 flex items-center justify-center text-slate-400 text-[10px] font-medium">{__('Sin foto')}</div>
+                                                                                )}
+                                                                            </div>
+
+                                                                            <div className="text-center space-y-1">
+                                                                                <span className="text-[10px] font-bold text-slate-500">{__('Trasera')}</span>
+                                                                                {formatImageUrl(selVeh.foto_trasera) ? (
+                                                                                    <div className="w-full aspect-[4/3] rounded-xl overflow-hidden border border-slate-300 cursor-pointer group relative" onClick={() => setActiveImageModal(formatImageUrl(selVeh.foto_trasera)!)}>
+                                                                                        <img src={formatImageUrl(selVeh.foto_trasera)!} alt="Trasera" className="w-full h-full object-cover group-hover:scale-105 transition-transform" />
+                                                                                        <div className="absolute inset-0 bg-black/30 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center text-white"><Maximize2 className="w-4 h-4" /></div>
+                                                                                    </div>
+                                                                                ) : (
+                                                                                    <div className="w-full aspect-[4/3] rounded-xl bg-amber-100/50 border border-dashed border-amber-300 flex items-center justify-center text-slate-400 text-[10px] font-medium">{__('Sin foto')}</div>
+                                                                                )}
+                                                                            </div>
+                                                                        </div>
+                                                                    </div>
+                                                                );
+                                                            })()}
+                                                        </div>
+                                                    ) : (
+                                                        /* Formulario y Fotos para Vehículo No Registrado */
+                                                        <div className="space-y-3 bg-amber-50/60 p-3.5 rounded-2xl border border-amber-200">
+                                                            <div className="flex items-center justify-between">
+                                                                <span className="text-[11px] font-extrabold text-amber-900 uppercase tracking-wider">
+                                                                    {__('Datos del Vehículo No Registrado')}
+                                                                </span>
+                                                                <Badge variant="outline" className="text-[10px] bg-amber-100 border-amber-300 text-amber-800 font-bold">
+                                                                    {__('Ingreso Temporal')}
+                                                                </Badge>
+                                                            </div>
+
+                                                            <div className="grid grid-cols-2 gap-2">
+                                                                <div>
+                                                                    <label className="text-[10px] font-bold text-slate-500 uppercase block mb-1">{__('Placa *')}</label>
+                                                                    <Input
+                                                                        type="text"
+                                                                        placeholder="EJ: ABC-123"
+                                                                        value={nuevoVehiculoPlaca}
+                                                                        onChange={(e) => setNuevoVehiculoPlaca(e.target.value.toUpperCase())}
+                                                                        className="h-9 text-xs font-mono font-extrabold uppercase bg-white border-slate-300 focus:border-amber-500"
+                                                                    />
+                                                                </div>
+
+                                                                <div>
+                                                                    <label className="text-[10px] font-bold text-slate-500 uppercase block mb-1">{__('Tipo')}</label>
+                                                                    <select
+                                                                        value={nuevoVehiculoTipo}
+                                                                        onChange={(e) => setNuevoVehiculoTipo(e.target.value)}
+                                                                        className="w-full h-9 bg-white border border-slate-300 rounded-xl px-2 text-xs font-medium focus:border-amber-500"
+                                                                    >
+                                                                        <option value="Auto">Auto</option>
+                                                                        <option value="Camioneta">Camioneta</option>
+                                                                        <option value="Motocicleta">Motocicleta</option>
+                                                                        <option value="Camión">Camión</option>
+                                                                    </select>
+                                                                </div>
+
+                                                                <div>
+                                                                    <label className="text-[10px] font-bold text-slate-500 uppercase block mb-1">{__('Marca')}</label>
+                                                                    <Input
+                                                                        type="text"
+                                                                        placeholder="Nissan, Toyota..."
+                                                                        value={nuevoVehiculoMarca}
+                                                                        onChange={(e) => setNuevoVehiculoMarca(e.target.value)}
+                                                                        className="h-9 text-xs font-medium bg-white border-slate-300 focus:border-amber-500"
+                                                                    />
+                                                                </div>
+
+                                                                <div>
+                                                                    <label className="text-[10px] font-bold text-slate-500 uppercase block mb-1">{__('Modelo')}</label>
+                                                                    <Input
+                                                                        type="text"
+                                                                        placeholder="Sentra, Hilux..."
+                                                                        value={nuevoVehiculoModelo}
+                                                                        onChange={(e) => setNuevoVehiculoModelo(e.target.value)}
+                                                                        className="h-9 text-xs font-medium bg-white border-slate-300 focus:border-amber-500"
+                                                                    />
+                                                                </div>
+                                                            </div>
+
+                                                            {/* Fotos del Vehículo No Registrado */}
+                                                            <div className="pt-2 border-t border-amber-200/80 space-y-2">
+                                                                <span className="text-[10px] font-extrabold text-amber-900 uppercase tracking-wider block">
+                                                                    {__('Capturar Fotografías del Vehículo Temporal')}
+                                                                </span>
+
+                                                                <div className="grid grid-cols-2 gap-2">
+                                                                    {/* Foto Frontal */}
+                                                                    <div className="text-center space-y-1">
+                                                                        <span className="text-[10px] font-bold text-slate-600 block">{__('Foto Frontal')}</span>
+                                                                        {nuevoVehiculoFotoFrontal ? (
+                                                                            <div className="relative w-full aspect-[4/3] rounded-xl overflow-hidden border border-amber-300 group">
+                                                                                <img src={nuevoVehiculoFotoFrontal} alt="Frontal" className="w-full h-full object-cover" />
+                                                                                <button
+                                                                                    type="button"
+                                                                                    onClick={() => setNuevoVehiculoFotoFrontal('')}
+                                                                                    className="absolute inset-0 bg-red-600/85 text-white opacity-0 group-hover:opacity-100 flex items-center justify-center font-bold text-xs transition-opacity"
+                                                                                >
+                                                                                    {__('Quitar Foto')}
+                                                                                </button>
+                                                                            </div>
+                                                                        ) : (
+                                                                            <div className="w-full aspect-[4/3] rounded-xl bg-white border border-dashed border-amber-300 flex flex-col items-center justify-center p-2">
+                                                                                <Button
+                                                                                    type="button"
+                                                                                    variant="outline"
+                                                                                    size="xs"
+                                                                                    onClick={() => vehiculoFrontalInputRef.current?.click()}
+                                                                                    className="h-7 text-[10px] font-bold gap-1 w-full border-amber-300 text-amber-900 bg-amber-50 hover:bg-amber-100"
+                                                                                >
+                                                                                    <Camera className="w-3 h-3 text-amber-600" />
+                                                                                    {__('Tomar / Adjuntar')}
+                                                                                </Button>
+                                                                                <input
+                                                                                    ref={vehiculoFrontalInputRef}
+                                                                                    type="file"
+                                                                                    accept="image/*"
+                                                                                    capture="environment"
+                                                                                    className="hidden"
+                                                                                    onChange={(e) => handleVehicleImageUpload(e, setNuevoVehiculoFotoFrontal)}
+                                                                                />
+                                                                            </div>
+                                                                        )}
+                                                                    </div>
+
+                                                                    {/* Foto Trasera */}
+                                                                    <div className="text-center space-y-1">
+                                                                        <span className="text-[10px] font-bold text-slate-600 block">{__('Foto Trasera')}</span>
+                                                                        {nuevoVehiculoFotoTrasera ? (
+                                                                            <div className="relative w-full aspect-[4/3] rounded-xl overflow-hidden border border-amber-300 group">
+                                                                                <img src={nuevoVehiculoFotoTrasera} alt="Trasera" className="w-full h-full object-cover" />
+                                                                                <button
+                                                                                    type="button"
+                                                                                    onClick={() => setNuevoVehiculoFotoTrasera('')}
+                                                                                    className="absolute inset-0 bg-red-600/85 text-white opacity-0 group-hover:opacity-100 flex items-center justify-center font-bold text-xs transition-opacity"
+                                                                                >
+                                                                                    {__('Quitar Foto')}
+                                                                                </button>
+                                                                            </div>
+                                                                        ) : (
+                                                                            <div className="w-full aspect-[4/3] rounded-xl bg-white border border-dashed border-amber-300 flex flex-col items-center justify-center p-2">
+                                                                                <Button
+                                                                                    type="button"
+                                                                                    variant="outline"
+                                                                                    size="xs"
+                                                                                    onClick={() => vehiculoTraseraInputRef.current?.click()}
+                                                                                    className="h-7 text-[10px] font-bold gap-1 w-full border-amber-300 text-amber-900 bg-amber-50 hover:bg-amber-100"
+                                                                                >
+                                                                                    <Camera className="w-3 h-3 text-amber-600" />
+                                                                                    {__('Tomar / Adjuntar')}
+                                                                                </Button>
+                                                                                <input
+                                                                                    ref={vehiculoTraseraInputRef}
+                                                                                    type="file"
+                                                                                    accept="image/*"
+                                                                                    capture="environment"
+                                                                                    className="hidden"
+                                                                                    onChange={(e) => handleVehicleImageUpload(e, setNuevoVehiculoFotoTrasera)}
+                                                                                />
+                                                                            </div>
+                                                                        )}
+                                                                    </div>
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                    )}
+                                                </div>
+                                            )}
+                                        </div>
+                                    ) : (record.medio_acceso === 'vehicular' || (accesoExistente && accesoExistente.medio_acceso === 'vehicular')) ? (
                                         <div className="p-4 rounded-3xl bg-amber-50 border border-amber-200 space-y-3">
                                             <div className="flex items-center justify-between">
                                                 <span className="font-extrabold text-amber-900 text-sm flex items-center gap-2">
                                                     <Car className="w-5 h-5 text-amber-600" /> {__('Acceso Vehicular')}
                                                 </span>
-                                                {record.vehiculo_placa && (
+                                                {(record.vehiculo_placa || accesoExistente?.vehiculo_placa) && (
                                                     <span className="font-mono text-sm font-extrabold bg-amber-200 text-amber-950 px-3 py-1 rounded-xl border border-amber-300">
-                                                        {record.vehiculo_placa}
+                                                        {record.vehiculo_placa || accesoExistente?.vehiculo_placa}
                                                     </span>
                                                 )}
                                             </div>
 
                                             <div className="grid grid-cols-2 gap-2 text-xs text-slate-700 font-mono">
-                                                <div><span className="text-slate-400 font-sans">{__('Marca:')}</span> {record.vehiculo_marca || '-'}</div>
-                                                <div><span className="text-slate-400 font-sans">{__('Modelo:')}</span> {record.vehiculo_modelo || '-'}</div>
+                                                <div><span className="text-slate-400 font-sans">{__('Marca:')}</span> {record.vehiculo_marca || accesoExistente?.vehiculo_marca || '-'}</div>
+                                                <div><span className="text-slate-400 font-sans">{__('Modelo:')}</span> {record.vehiculo_modelo || accesoExistente?.vehiculo_modelo || '-'}</div>
                                                 <div><span className="text-slate-400 font-sans">{__('Año:')}</span> {record.vehiculo_anio || '-'}</div>
-                                                <div><span className="text-slate-400 font-sans">{__('Tipo:')}</span> {record.vehiculo_tipo || 'Auto'}</div>
+                                                <div><span className="text-slate-400 font-sans">{__('Tipo:')}</span> {record.vehiculo_tipo || accesoExistente?.vehiculo_tipo || 'Auto'}</div>
                                             </div>
 
-                                            {/* Fotos del Vehículo */}
-                                            <div className="grid grid-cols-2 gap-2 pt-2">
-                                                <div className="text-center">
+                                            {/* Fotos del Vehículo en Accesos Registrados */}
+                                            <div className="grid grid-cols-2 gap-2 pt-2 border-t border-amber-200">
+                                                <div className="text-center space-y-1">
                                                     <span className="text-[10px] font-bold text-slate-500">{__('Vehículo Frontal')}</span>
-                                                    {record.vehiculo_foto_frontal ? (
-                                                        <div className="w-full aspect-[4/3] rounded-xl overflow-hidden border border-slate-300 cursor-pointer group relative" onClick={() => setActiveImageModal(record.vehiculo_foto_frontal.startsWith('data:') ? record.vehiculo_foto_frontal : `/storage/${record.vehiculo_foto_frontal}`)}>
-                                                            <img src={record.vehiculo_foto_frontal.startsWith('data:') ? record.vehiculo_foto_frontal : `/storage/${record.vehiculo_foto_frontal}`} alt="Vehículo Frontal" className="w-full h-full object-cover group-hover:scale-105 transition-transform" />
+                                                    {formatImageUrl(record.vehiculo_foto_frontal || accesoExistente?.vehiculo_foto_frontal) ? (
+                                                        <div className="w-full aspect-[4/3] rounded-xl overflow-hidden border border-slate-300 cursor-pointer group relative" onClick={() => setActiveImageModal(formatImageUrl(record.vehiculo_foto_frontal || accesoExistente?.vehiculo_foto_frontal)!)}>
+                                                            <img src={formatImageUrl(record.vehiculo_foto_frontal || accesoExistente?.vehiculo_foto_frontal)!} alt="Vehículo Frontal" className="w-full h-full object-cover group-hover:scale-105 transition-transform" />
                                                             <div className="absolute inset-0 bg-black/30 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center text-white"><Maximize2 className="w-4 h-4" /></div>
                                                         </div>
                                                     ) : (
-                                                        <div className="w-full aspect-[4/3] rounded-xl bg-amber-100/50 border border-dashed flex items-center justify-center text-slate-400 text-[10px]">{__('Sin foto')}</div>
+                                                        <div className="w-full aspect-[4/3] rounded-xl bg-amber-100/50 border border-dashed border-amber-300 flex items-center justify-center text-slate-400 text-[10px] font-medium">{__('Sin foto')}</div>
                                                     )}
                                                 </div>
 
-                                                <div className="text-center">
+                                                <div className="text-center space-y-1">
                                                     <span className="text-[10px] font-bold text-slate-500">{__('Vehículo Trasero')}</span>
-                                                    {record.vehiculo_foto_trasera ? (
-                                                        <div className="w-full aspect-[4/3] rounded-xl overflow-hidden border border-slate-300 cursor-pointer group relative" onClick={() => setActiveImageModal(record.vehiculo_foto_trasera.startsWith('data:') ? record.vehiculo_foto_trasera : `/storage/${record.vehiculo_foto_trasera}`)}>
-                                                            <img src={record.vehiculo_foto_trasera.startsWith('data:') ? record.vehiculo_foto_trasera : `/storage/${record.vehiculo_foto_trasera}`} alt="Vehículo Trasero" className="w-full h-full object-cover group-hover:scale-105 transition-transform" />
+                                                    {formatImageUrl(record.vehiculo_foto_trasera || accesoExistente?.vehiculo_foto_trasera) ? (
+                                                        <div className="w-full aspect-[4/3] rounded-xl overflow-hidden border border-slate-300 cursor-pointer group relative" onClick={() => setActiveImageModal(formatImageUrl(record.vehiculo_foto_trasera || accesoExistente?.vehiculo_foto_trasera)!)}>
+                                                            <img src={formatImageUrl(record.vehiculo_foto_trasera || accesoExistente?.vehiculo_foto_trasera)!} alt="Vehículo Trasero" className="w-full h-full object-cover group-hover:scale-105 transition-transform" />
                                                             <div className="absolute inset-0 bg-black/30 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center text-white"><Maximize2 className="w-4 h-4" /></div>
                                                         </div>
                                                     ) : (
-                                                        <div className="w-full aspect-[4/3] rounded-xl bg-amber-100/50 border border-dashed flex items-center justify-center text-slate-400 text-[10px]">{__('Sin foto')}</div>
+                                                        <div className="w-full aspect-[4/3] rounded-xl bg-amber-100/50 border border-dashed border-amber-300 flex items-center justify-center text-slate-400 text-[10px] font-medium">{__('Sin foto')}</div>
                                                     )}
                                                 </div>
                                             </div>
@@ -777,12 +1139,68 @@ export default function GaritaControl({
                                 <div className="space-y-2">
                                     <h4 className="text-xs font-extrabold uppercase tracking-wider text-slate-500 flex items-center justify-between">
                                         <span className="flex items-center gap-1.5"><Users className="w-4 h-4 text-emerald-600" /> {__('Acompañantes')}</span>
-                                        <span className="text-[11px] text-slate-400">({record.acompanantes?.length || 0})</span>
+                                        {isEmpleado && !accesoExistente ? (
+                                            <span className="text-[11px] font-bold text-emerald-700 bg-emerald-100 border border-emerald-200 px-2.5 py-0.5 rounded-full">
+                                                {acompanantesList.length} {__('Añadido(s)')}
+                                            </span>
+                                        ) : (
+                                            <span className="text-[11px] text-slate-400">({record.acompanantes?.length || accesoExistente?.acompanantes?.length || 0})</span>
+                                        )}
                                     </h4>
 
-                                    {record.acompanantes && record.acompanantes.length > 0 ? (
+                                    {isEmpleado && !accesoExistente ? (
+                                        <div className="space-y-3 bg-slate-50 p-4 rounded-3xl border border-slate-200">
+                                            <div className="flex items-center justify-between">
+                                                <span className="text-xs font-bold text-slate-700">
+                                                    {__('Acompañantes del Colaborador')}
+                                                </span>
+                                                <Button
+                                                    type="button"
+                                                    size="sm"
+                                                    onClick={() => {
+                                                        setNuevoAcompanante({ nombre: '', documento: '', telefono: '', observacion: '' });
+                                                        setIsAcompananteModalOpen(true);
+                                                    }}
+                                                    className="h-8 text-xs font-extrabold bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl gap-1 shadow-xs"
+                                                >
+                                                    + {__('Agregar Acompañante')}
+                                                </Button>
+                                            </div>
+
+                                            {/* Listado de Acompañantes Añadidos */}
+                                            {acompanantesList.length > 0 ? (
+                                                <div className="space-y-2 pt-1">
+                                                    {acompanantesList.map((ac: any, idx: number) => (
+                                                        <div key={idx} className="p-3 rounded-2xl bg-white border border-slate-200 text-xs flex items-center justify-between shadow-2xs">
+                                                            <div className="space-y-0.5">
+                                                                <div className="font-bold text-slate-900 flex items-center gap-2">
+                                                                    <span>{ac.nombre}</span>
+                                                                    {ac.observacion && <span className="text-[10px] font-medium bg-slate-100 text-slate-600 px-2 py-0.5 rounded-md">{ac.observacion}</span>}
+                                                                </div>
+                                                                <div className="flex items-center gap-3 text-[11px] text-slate-500 font-mono">
+                                                                    {ac.documento && <span>Doc: {ac.documento}</span>}
+                                                                    {ac.telefono && <span>Tel: {ac.telefono}</span>}
+                                                                </div>
+                                                            </div>
+                                                            <button
+                                                                type="button"
+                                                                onClick={() => setAcompanantesList(acompanantesList.filter((_, i) => i !== idx))}
+                                                                className="text-red-500 hover:text-red-700 hover:bg-red-50 font-bold text-xs p-1.5 rounded-xl transition-colors"
+                                                            >
+                                                                <X className="w-4 h-4" />
+                                                            </button>
+                                                        </div>
+                                                    ))}
+                                                </div>
+                                            ) : (
+                                                <div className="p-4 rounded-2xl bg-white/70 border border-dashed border-slate-300 text-xs text-slate-400 text-center italic">
+                                                    {__('No se han agregado acompañantes a este ingreso. Pulse "+ Agregar Acompañante" para registrar uno.')}
+                                                </div>
+                                            )}
+                                        </div>
+                                    ) : (record.acompanantes && record.acompanantes.length > 0) || (accesoExistente?.acompanantes && accesoExistente.acompanantes.length > 0) ? (
                                         <div className="space-y-1.5 max-h-48 overflow-y-auto pr-1">
-                                            {record.acompanantes.map((ac: any, idx: number) => {
+                                            {(record.acompanantes || accesoExistente.acompanantes).map((ac: any, idx: number) => {
                                                 const nombreCompleto = ac.nombre || `${ac.nombres || ''} ${ac.apellidos || ''}`.trim() || `Acompañante #${idx + 1}`;
                                                 const docIdentidad = ac.documento || ac.documento_identidad || null;
                                                 return (
@@ -1091,6 +1509,111 @@ export default function GaritaControl({
                     </div>
                 </div>
             )}
+
+            {/* Modal para Registrar Nuevo Acompañante */}
+            <Dialog open={isAcompananteModalOpen} onOpenChange={setIsAcompananteModalOpen}>
+                <DialogContent className="max-w-md bg-white rounded-3xl p-6 shadow-2xl border border-slate-100">
+                    <DialogHeader className="space-y-1 text-left">
+                        <DialogTitle className="text-lg font-extrabold text-slate-900 flex items-center gap-2">
+                            <Users className="w-5 h-5 text-emerald-600" />
+                            {__('Registrar Acompañante')}
+                        </DialogTitle>
+                        <DialogDescription className="text-xs text-slate-500">
+                            {__('Ingrese los datos del acompañante que ingresará con el colaborador.')}
+                        </DialogDescription>
+                    </DialogHeader>
+
+                    <div className="space-y-4 py-2">
+                        <div className="space-y-1">
+                            <label className="text-xs font-bold text-slate-700 block mb-1">
+                                {__('Nombres y Apellidos *')}
+                            </label>
+                            <Input
+                                type="text"
+                                placeholder="Ej: Juan Carlos Pérez"
+                                value={nuevoAcompanante.nombre}
+                                onChange={(e) => setNuevoAcompanante({ ...nuevoAcompanante, nombre: e.target.value })}
+                                className="h-10 text-xs font-medium bg-slate-50 border-slate-300 focus:border-emerald-600 focus:bg-white"
+                            />
+                        </div>
+
+                        <div className="grid grid-cols-2 gap-3">
+                            <div className="space-y-1">
+                                <label className="text-xs font-bold text-slate-700 block mb-1">
+                                    {__('Documento de Identidad')}
+                                </label>
+                                <Input
+                                    type="text"
+                                    placeholder="Ej: DNI / Cédula"
+                                    value={nuevoAcompanante.documento}
+                                    onChange={(e) => setNuevoAcompanante({ ...nuevoAcompanante, documento: e.target.value })}
+                                    className="h-10 text-xs font-mono font-bold bg-slate-50 border-slate-300 focus:border-emerald-600 focus:bg-white"
+                                />
+                            </div>
+
+                            <div className="space-y-1">
+                                <label className="text-xs font-bold text-slate-700 block mb-1">
+                                    {__('Teléfono de Contacto')}
+                                </label>
+                                <Input
+                                    type="text"
+                                    placeholder="Ej: 3312345678"
+                                    value={nuevoAcompanante.telefono}
+                                    onChange={(e) => setNuevoAcompanante({ ...nuevoAcompanante, telefono: e.target.value })}
+                                    className="h-10 text-xs font-medium bg-slate-50 border-slate-300 focus:border-emerald-600 focus:bg-white"
+                                />
+                            </div>
+                        </div>
+
+                        <div className="space-y-1">
+                            <label className="text-xs font-bold text-slate-700 block mb-1">
+                                {__('Observación / Parentesco')}
+                            </label>
+                            <Input
+                                type="text"
+                                placeholder="Ej: Familiar / Contratista externo"
+                                value={nuevoAcompanante.observacion}
+                                onChange={(e) => setNuevoAcompanante({ ...nuevoAcompanante, observacion: e.target.value })}
+                                className="h-10 text-xs font-medium bg-slate-50 border-slate-300 focus:border-emerald-600 focus:bg-white"
+                            />
+                        </div>
+                    </div>
+
+                    <DialogFooter className="flex items-center justify-end gap-2 pt-2 border-t border-slate-100">
+                        <Button
+                            type="button"
+                            variant="outline"
+                            onClick={() => setIsAcompananteModalOpen(false)}
+                            className="h-10 text-xs font-bold rounded-xl text-slate-600 hover:bg-slate-100"
+                        >
+                            {__('Cancelar')}
+                        </Button>
+                        <Button
+                            type="button"
+                            disabled={!nuevoAcompanante.nombre.trim()}
+                            onClick={() => {
+                                if (nuevoAcompanante.nombre.trim()) {
+                                    setAcompanantesList([
+                                        ...acompanantesList,
+                                        {
+                                            nombre: nuevoAcompanante.nombre.trim(),
+                                            documento: nuevoAcompanante.documento.trim(),
+                                            telefono: nuevoAcompanante.telefono.trim(),
+                                            observacion: nuevoAcompanante.observacion.trim(),
+                                        },
+                                    ]);
+                                    setNuevoAcompanante({ nombre: '', documento: '', telefono: '', observacion: '' });
+                                    setIsAcompananteModalOpen(false);
+                                }
+                            }}
+                            className="h-10 text-xs font-extrabold rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white shadow-md gap-1.5 px-4"
+                        >
+                            <Check className="w-4 h-4" />
+                            {__('Guardar Acompañante')}
+                        </Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
         </>
     );
 }
