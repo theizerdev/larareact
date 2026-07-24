@@ -485,8 +485,14 @@ class VisitaAccesoController extends Controller
             if ($request->filled('proveedor_id')) {
                 $prov = Proveedor::find($request->proveedor_id);
                 if ($prov) {
-                    $validated['visitante_nombre'] = $prov->razon_social ?: $prov->nombre_comercial;
-                    $validated['visitante_empresa'] = $prov->nombre_comercial ?: $prov->razon_social;
+                    $razon     = trim($prov->razon_social ?? '');
+                    $comercial = trim($prov->nombre_comercial ?? '');
+                    $nombreCompleto = ($razon && $comercial && strtolower($razon) !== strtolower($comercial))
+                        ? "{$razon} ({$comercial})"
+                        : ($razon ?: $comercial);
+
+                    $validated['visitante_nombre']   = $nombreCompleto;
+                    $validated['visitante_empresa']  = $comercial ?: $razon;
                     $validated['visitante_telefono'] = $prov->telefono;
                     $validated['pais_telefono_id']   = $prov->pais_telefono_id;
                 }
@@ -495,8 +501,14 @@ class VisitaAccesoController extends Controller
             if ($request->filled('productor_id')) {
                 $prod = Productor::find($request->productor_id);
                 if ($prod) {
-                    $validated['visitante_nombre'] = $prod->nombre_comercial_rancho ?: ($prod->razon_social_rancho ?: $prod->nombre_comercial);
-                    $validated['visitante_empresa'] = $prod->nombre_comercial ?: $prod->razon_social;
+                    $razon     = trim($prod->razon_social_rancho ?: ($prod->razon_social ?? ''));
+                    $comercial = trim($prod->nombre_comercial_rancho ?: ($prod->nombre_comercial ?? ''));
+                    $nombreCompleto = ($razon && $comercial && strtolower($razon) !== strtolower($comercial))
+                        ? "{$razon} ({$comercial})"
+                        : ($razon ?: $comercial);
+
+                    $validated['visitante_nombre']   = $nombreCompleto;
+                    $validated['visitante_empresa']  = $comercial ?: $razon;
                     $validated['visitante_telefono'] = $prod->telefono;
                     $validated['pais_telefono_id']   = $prod->pais_telefono_id;
                 }
@@ -543,7 +555,7 @@ class VisitaAccesoController extends Controller
         $user = $request->user();
 
         // Convertir invitacion en VisitaAcceso preservando datos y fotos del visitante particular
-        $tipoAcceso = ($invitacion->tipo_acceso === 'visitante' || !empty($invitacion->visitante_nombre)) ? 'visitante' : $invitacion->tipo_acceso;
+        $tipoAcceso = $invitacion->tipo_acceso ?: ($invitacion->proveedor_id ? 'proveedor' : ($invitacion->productor_id ? 'productor' : ($invitacion->empleado_id ? 'empleado' : 'visitante')));
 
         $acceso = VisitaAcceso::create([
             'codigo_visitante'      => VisitaAcceso::generarSiguienteCodigoVisitante(),
@@ -592,9 +604,12 @@ class VisitaAccesoController extends Controller
                     $horaLlegada = now()->format('H:i');
                     $placaTxt    = $invitacion->vehiculo_placa ? " (Vehículo Placa: `{$invitacion->vehiculo_placa}`)" : "";
 
+                    $empresaTag = ($invitacion->tipo_acceso === 'visitante' || empty($invitacion->tipo_acceso))
+                        ? " (" . ($invitacion->visitante_empresa ?: 'Particular') . ")"
+                        : "";
                     $mensaje  = "🟢 *¡TU VISITANTE HA LLEGADO!*\n\n";
                     $mensaje .= "Hola *{$anfitrion->nombres} {$anfitrion->apellidos}*,\n";
-                    $mensaje .= "Tu visita programada *{$invitacion->visitante_nombre}* (" . ($invitacion->visitante_empresa ?: 'Particular') . ") acaba de ingresar por la Garita Principal a las *{$horaLlegada} hrs*{$placaTxt}.\n\n";
+                    $mensaje .= "Tu visita programada *{$invitacion->visitante_nombre}*{$empresaTag} acaba de ingresar por la Garita Principal a las *{$horaLlegada} hrs*{$placaTxt}.\n\n";
                     $mensaje .= "🎫 *Código de Acceso:* N° {$acceso->codigo_visitante}\n";
                     $mensaje .= "📝 *Motivo:* " . ($invitacion->motivo_visita ?: 'Reunión / Visita programada') . "\n\n";
                     $mensaje .= "Por favor prepárate para recibirle en tu área de trabajo.";
@@ -618,9 +633,17 @@ class VisitaAccesoController extends Controller
 
     public function pasePublico(string $uuid)
     {
-        $invitacion = VisitaAccesoInvitacion::with(['anfitrion', 'empresa', 'sucursal'])
-            ->where('uuid', $uuid)
-            ->firstOrFail();
+        $invitacion = VisitaAccesoInvitacion::with([
+            'anfitrion',
+            'empresa',
+            'sucursal',
+            'proveedor.empleados',
+            'proveedor.vehiculos',
+            'productor.empleados',
+            'productor.vehiculos',
+        ])
+        ->where('uuid', $uuid)
+        ->firstOrFail();
 
         return Inertia::render('admin/VisitasAccesos/PaseDigital', [
             'invitacion' => $invitacion,

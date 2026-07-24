@@ -1060,37 +1060,38 @@ export default function Index({
             id: 'visitante',
             header: __('Persona / Entidad'),
             cell: (item) => {
-                const isVisitante = item.tipo_acceso === 'visitante' || !!item.visitante_nombre;
-                const isEmp = item.tipo_acceso === 'empleado';
-                const isProd = item.tipo_acceso === 'productor';
+                const isProv = item.tipo_acceso === 'proveedor' || (item.tipo_acceso !== 'empleado' && item.tipo_acceso !== 'productor' && (!!item.proveedor_id || !!item.proveedor || !!item.proveedor_empleado));
+                const isProd = item.tipo_acceso === 'productor' || (item.tipo_acceso !== 'empleado' && (!!item.productor_id || !!item.productor || !!item.productor_empleado));
+                const isEmp = item.tipo_acceso === 'empleado' || !!item.empleado_id || !!item.empleado;
+                const isVisitante = !isProv && !isProd && !isEmp;
 
                 const nombre = isVisitante
                     ? (item.visitante_nombre || 'Visitante Particular')
                     : isEmp
-                    ? `${item.empleado?.nombres || ''} ${item.empleado?.apellidos || ''}`
+                    ? `${item.empleado?.nombres || ''} ${item.empleado?.apellidos || ''}`.trim() || 'Empleado'
                     : isProd
                     ? (item.productor_empleado
-                        ? `${item.productor_empleado?.nombres || ''} ${item.productor_empleado?.apellidos || ''}`
-                        : item.productor?.nombre_comercial_rancho || item.productor?.razon_social_rancho || item.productor?.nombre_comercial || item.productor?.razon_social || '-')
-                    : item.proveedor_empleado
-                    ? `${item.proveedor_empleado?.nombres || ''} ${item.proveedor_empleado?.apellidos || ''}`
-                    : item.proveedor?.nombre_comercial || item.proveedor?.razon_social || '-';
+                        ? `${item.productor_empleado?.nombres || ''} ${item.productor_empleado?.apellidos || ''}`.trim()
+                        : item.productor?.nombre_comercial_rancho || item.productor?.razon_social_rancho || item.productor?.nombre_comercial || item.productor?.razon_social || item.visitante_nombre || '-')
+                    : (item.proveedor_empleado
+                        ? `${item.proveedor_empleado?.nombres || ''} ${item.proveedor_empleado?.apellidos || ''}`.trim()
+                        : item.proveedor?.nombre_comercial || item.proveedor?.razon_social || item.visitante_nombre || '-');
 
                 const doc = isVisitante
                     ? item.visitante_documento
                     : isEmp
                     ? item.empleado?.documento_identidad
                     : isProd
-                    ? (item.productor_empleado?.documento_identidad || item.productor?.documento_identidad)
-                    : (item.proveedor_empleado?.documento_identidad || item.proveedor?.documento_identidad);
+                    ? (item.productor_empleado?.documento_identidad || item.productor?.documento_identidad || item.visitante_documento)
+                    : (item.proveedor_empleado?.documento_identidad || item.proveedor?.documento_identidad || item.visitante_documento);
 
                 const rawAvatar = isVisitante
                     ? item.foto_carnet
                     : isEmp
                     ? item.empleado?.foto_empleado
                     : isProd
-                    ? (item.productor_empleado?.foto_carnet || (item.productor_empleado as any)?.foto_empleado)
-                    : (item.proveedor_empleado?.foto_carnet || (item.proveedor_empleado as any)?.foto_empleado);
+                    ? (item.productor_empleado?.foto_carnet || (item.productor_empleado as any)?.foto_empleado || item.foto_carnet)
+                    : (item.proveedor_empleado?.foto_carnet || (item.proveedor_empleado as any)?.foto_empleado || item.foto_carnet);
                 const avatar = formatImageUrl(rawAvatar);
                 const tieneAcompanantes = item.acompanantes && item.acompanantes.length > 0;
 
@@ -1144,25 +1145,38 @@ export default function Index({
         {
             id: 'tipo_acceso',
             header: __('Tipo Acceso'),
-            cell: (item) => (
-                item.tipo_acceso === 'visitante' || item.visitante_nombre ? (
+            cell: (item) => {
+                const isProv = item.tipo_acceso === 'proveedor' || (item.tipo_acceso !== 'empleado' && item.tipo_acceso !== 'productor' && (!!item.proveedor_id || !!item.proveedor || !!item.proveedor_empleado));
+                const isProd = item.tipo_acceso === 'productor' || (item.tipo_acceso !== 'empleado' && (!!item.productor_id || !!item.productor || !!item.productor_empleado));
+                const isEmp = item.tipo_acceso === 'empleado' || !!item.empleado_id || !!item.empleado;
+
+                if (isEmp) {
+                    return (
+                        <Badge className="bg-blue-50 text-blue-700 border-blue-200 dark:bg-blue-950/30 dark:text-blue-400 dark:border-blue-900 gap-1">
+                            <User className="w-3 h-3" /> {__('Empleado')}
+                        </Badge>
+                    );
+                }
+                if (isProd) {
+                    return (
+                        <Badge className="bg-purple-50 text-purple-700 border-purple-200 dark:bg-purple-950/30 dark:text-purple-400 dark:border-purple-900 gap-1">
+                            <Sprout className="w-3 h-3" /> {__('Productor')}
+                        </Badge>
+                    );
+                }
+                if (isProv) {
+                    return (
+                        <Badge className="bg-amber-50 text-amber-700 border-amber-200 dark:bg-amber-950/30 dark:text-amber-400 dark:border-amber-900 gap-1">
+                            <Truck className="w-3 h-3" /> {__('Proveedor')}
+                        </Badge>
+                    );
+                }
+                return (
                     <Badge className="bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-950/30 dark:text-emerald-400 dark:border-emerald-900 gap-1">
                         <User className="w-3 h-3" /> {__('Visitante Particular')}
                     </Badge>
-                ) : item.tipo_acceso === 'empleado' ? (
-                    <Badge className="bg-blue-50 text-blue-700 border-blue-200 dark:bg-blue-950/30 dark:text-blue-400 dark:border-blue-900 gap-1">
-                        <User className="w-3 h-3" /> {__('Empleado')}
-                    </Badge>
-                ) : item.tipo_acceso === 'productor' ? (
-                    <Badge className="bg-purple-50 text-purple-700 border-purple-200 dark:bg-purple-950/30 dark:text-purple-400 dark:border-purple-900 gap-1">
-                        <Sprout className="w-3 h-3" /> {__('Productor')}
-                    </Badge>
-                ) : (
-                    <Badge className="bg-amber-50 text-amber-700 border-amber-200 dark:bg-amber-950/30 dark:text-amber-400 dark:border-amber-900 gap-1">
-                        <Truck className="w-3 h-3" /> {__('Proveedor')}
-                    </Badge>
-                )
-            ),
+                );
+            },
         },
         {
             id: 'medio_acceso',
@@ -1476,16 +1490,16 @@ export default function Index({
                                 <div className="border rounded-2xl p-5 bg-white dark:bg-slate-900 space-y-4 shadow-sm">
                                     <h4 className="text-xs font-bold uppercase tracking-wider text-slate-500 flex items-center gap-2 border-b pb-2">
                                         <User className="w-4 h-4 text-emerald-600" />
-                                        1. {selectedAccesoDetail.tipo_acceso === 'empleado'
+                                        1. {selectedAccesoDetail.tipo_acceso === 'empleado' || selectedAccesoDetail.empleado_id
                                             ? __('Información del Empleado / Conductor')
-                                            : selectedAccesoDetail.tipo_acceso === 'productor'
+                                            : selectedAccesoDetail.tipo_acceso === 'productor' || selectedAccesoDetail.productor_id || selectedAccesoDetail.productor
                                             ? __('Información del Rancho / Productor y Personal')
-                                            : selectedAccesoDetail.tipo_acceso === 'visitante' || selectedAccesoDetail.visitante_nombre
-                                            ? __('Información del Visitante Particular')
-                                            : __('Información de la Empresa Proveedora y Personal')}
+                                            : selectedAccesoDetail.tipo_acceso === 'proveedor' || selectedAccesoDetail.proveedor_id || selectedAccesoDetail.proveedor
+                                            ? __('Información de la Empresa Proveedora y Personal')
+                                            : __('Información del Visitante Particular')}
                                     </h4>
 
-                                    {selectedAccesoDetail.tipo_acceso === 'empleado' ? (
+                                    {selectedAccesoDetail.tipo_acceso === 'empleado' || selectedAccesoDetail.empleado_id ? (
                                         <div className="flex flex-col sm:flex-row gap-5 items-start">
                                             <div className="flex gap-3 shrink-0">
                                                 <div className="w-20 h-20 rounded-2xl overflow-hidden border bg-slate-100 dark:bg-slate-800 flex items-center justify-center shadow">
@@ -1525,7 +1539,7 @@ export default function Index({
                                                 )}
                                             </div>
                                         </div>
-                                    ) : selectedAccesoDetail.tipo_acceso === 'productor' ? (
+                                    ) : selectedAccesoDetail.tipo_acceso === 'productor' || selectedAccesoDetail.productor_id || selectedAccesoDetail.productor ? (
                                         <div className="space-y-4">
                                             {/* Ficha del Rancho / Productor */}
                                             <div className="p-4 rounded-xl bg-purple-50/70 dark:bg-purple-950/30 border border-purple-200/80 dark:border-purple-900/60 space-y-3">
@@ -1616,7 +1630,7 @@ export default function Index({
                                                 </div>
                                             )}
                                         </div>
-                                    ) : (selectedAccesoDetail.tipo_acceso === 'visitante' || selectedAccesoDetail.visitante_nombre) ? (
+                                    ) : (selectedAccesoDetail.tipo_acceso === 'visitante') ? (
                                         <div className="space-y-4">
                                             {/* Ficha del Visitante Particular */}
                                             <div className="p-5 rounded-2xl bg-emerald-50/80 dark:bg-emerald-950/30 border border-emerald-200 dark:border-emerald-800 space-y-4">

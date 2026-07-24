@@ -74,6 +74,60 @@ interface PaseDigitalProps {
         sucursal?: {
             nombre: string;
         } | null;
+        proveedor?: {
+            id: number;
+            razon_social?: string;
+            nombre_comercial?: string;
+            documento_identidad?: string;
+            telefono?: string;
+            responsable?: string;
+            empleados?: Array<{
+                id: number;
+                nombres: string;
+                apellidos: string;
+                documento_identidad?: string;
+                foto_carnet?: string;
+                foto_empleado?: string;
+                cargo?: any;
+            }>;
+            vehiculos?: Array<{
+                id: number;
+                tipo?: string;
+                marca?: string;
+                modelo?: string;
+                placa?: string;
+                foto_frontal?: string;
+                foto_trasera?: string;
+            }>;
+        } | null;
+        productor?: {
+            id: number;
+            razon_social?: string;
+            nombre_comercial?: string;
+            razon_social_rancho?: string;
+            nombre_comercial_rancho?: string;
+            documento_identidad?: string;
+            telefono?: string;
+            responsable?: string;
+            empleados?: Array<{
+                id: number;
+                nombres: string;
+                apellidos: string;
+                documento_identidad?: string;
+                foto_carnet?: string;
+                foto_empleado?: string;
+                cargo?: any;
+            }>;
+            vehiculos?: Array<{
+                id: number;
+                tipo?: string;
+                marca?: string;
+                modelo?: string;
+                placa?: string;
+                foto_frontal?: string;
+                foto_trasera?: string;
+            }>;
+        } | null;
     };
 }
 
@@ -566,9 +620,41 @@ export default function PaseDigital({ invitacion }: PaseDigitalProps) {
                             {/* 3. SECCIÓN: DATOS Y FOTOS DEL VEHÍCULO (Si es vehicular) */}
                             {data.medio_acceso === 'vehicular' && (
                                 <div className="space-y-6 pt-4 border-t border-slate-200 dark:border-slate-800">
-                                    <label className="text-xs font-extrabold text-amber-800 dark:text-amber-400 uppercase tracking-wider flex items-center gap-2">
-                                        <Car className="w-5 h-5 text-amber-500" /> 3. Datos y Fotografías del Vehículo
+                                    <label className="text-xs font-extrabold text-amber-800 dark:text-amber-400 uppercase tracking-wider flex items-center justify-between">
+                                        <span className="flex items-center gap-2"><Car className="w-5 h-5 text-amber-500" /> 3. Datos y Fotografías del Vehículo</span>
+                                        {invitacion.proveedor && <span className="text-[11px] font-bold text-amber-700 dark:text-amber-300">Vehículo de Proveedor</span>}
                                     </label>
+
+                                    {/* Selector de Vehículos Pre-registrados del Proveedor */}
+                                    {((invitacion.proveedor?.vehiculos && invitacion.proveedor.vehiculos.length > 0) || (invitacion.productor?.vehiculos && invitacion.productor.vehiculos.length > 0)) && (
+                                        <div className="p-3.5 rounded-2xl bg-amber-50/70 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-900/60 space-y-2">
+                                            <span className="text-xs font-bold text-amber-800 dark:text-amber-300 flex items-center gap-1.5 uppercase tracking-wider">
+                                                <Car className="w-4 h-4 text-amber-600" /> Vehículos Flota Registrados del Proveedor:
+                                            </span>
+                                            <div className="flex flex-wrap gap-2 pt-1">
+                                                {(invitacion.proveedor?.vehiculos || invitacion.productor?.vehiculos || []).map((v: any) => (
+                                                    <button
+                                                        key={v.id}
+                                                        type="button"
+                                                        onClick={() => {
+                                                            setData({
+                                                                ...data,
+                                                                vehiculo_marca: v.marca || '',
+                                                                vehiculo_modelo: v.modelo || '',
+                                                                vehiculo_placa: (v.placa || '').toUpperCase(),
+                                                                vehiculo_foto_frontal: v.foto_frontal || data.vehiculo_foto_frontal,
+                                                                vehiculo_foto_trasera: v.foto_trasera || data.vehiculo_foto_trasera,
+                                                            });
+                                                        }}
+                                                        className="px-3.5 py-2 rounded-xl bg-white dark:bg-slate-900 border border-amber-300 dark:border-amber-800 text-xs font-bold text-slate-800 dark:text-slate-200 hover:bg-amber-100 dark:hover:bg-amber-900/50 flex items-center gap-2 shadow-xs cursor-pointer transition-colors"
+                                                    >
+                                                        <span className="font-mono text-amber-700 dark:text-amber-400 font-extrabold bg-amber-100 dark:bg-amber-950 px-1.5 py-0.5 rounded border border-amber-300">{v.placa || 'S/N'}</span>
+                                                        <span>{v.marca} {v.modelo}</span>
+                                                    </button>
+                                                ))}
+                                            </div>
+                                        </div>
+                                    )}
 
                                     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
                                         <div className="space-y-1.5">
@@ -671,12 +757,88 @@ export default function PaseDigital({ invitacion }: PaseDigitalProps) {
                                 </div>
                             )}
 
-                            {/* 4. SECCIÓN: ACOMPAÑANTES */}
+                            {/* 4. SECCIÓN: ACOMPAÑANTES DE INGRESO A DRISCOLL'S */}
                             <div className="space-y-4 pt-4 border-t border-slate-200 dark:border-slate-800">
                                 <label className="text-xs font-extrabold text-slate-700 dark:text-slate-300 uppercase tracking-wider flex items-center justify-between">
-                                    <span className="flex items-center gap-2"><Users className="w-5 h-5 text-emerald-600" /> 4. Acompañantes en el Ingreso</span>
-                                    <span className="text-xs text-slate-500 font-normal">({data.acompanantes.length} añadidos)</span>
+                                    <span className="flex items-center gap-2"><Users className="w-5 h-5 text-emerald-600" /> 4. Acompañantes que Accederán a Driscoll's</span>
+                                    <span className="text-xs text-slate-500 font-normal">({data.acompanantes.length} seleccionados)</span>
                                 </label>
+
+                                {/* Muestrario de Empleados del Proveedor si existen */}
+                                {((invitacion.proveedor?.empleados && invitacion.proveedor.empleados.length > 0) || (invitacion.productor?.empleados && invitacion.productor.empleados.length > 0)) && (
+                                    <div className="space-y-3 p-4 rounded-2xl bg-emerald-50/70 dark:bg-emerald-950/30 border border-emerald-200 dark:border-emerald-900/60">
+                                        <div className="flex items-center justify-between">
+                                            <span className="text-xs font-extrabold text-emerald-800 dark:text-emerald-300 uppercase tracking-wider flex items-center gap-2">
+                                                <Building2 className="w-4 h-4 text-emerald-600" />
+                                                Empleados Registrados de {invitacion.proveedor?.nombre_comercial || invitacion.proveedor?.razon_social || invitacion.productor?.nombre_comercial || 'la Empresa Proveedora'}
+                                            </span>
+                                            <span className="text-[11px] font-bold text-emerald-700 dark:text-emerald-400 bg-white dark:bg-slate-900 px-2.5 py-0.5 rounded-full border border-emerald-300">
+                                                {(invitacion.proveedor?.empleados || invitacion.productor?.empleados || []).length} Empleados
+                                            </span>
+                                        </div>
+                                        <p className="text-xs text-slate-600 dark:text-slate-400">
+                                            Haga clic en los empleados que acompañarán al conductor e ingresarán a las instalaciones:
+                                        </p>
+
+                                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
+                                            {(invitacion.proveedor?.empleados || invitacion.productor?.empleados || []).map((emp: any) => {
+                                                const nombreEmp = `${emp.nombres} ${emp.apellidos}`.trim();
+                                                const docEmp = emp.documento_identidad || '';
+                                                const isSelected = data.acompanantes.some(ac => ac.nombre === nombreEmp || (docEmp && ac.documento === docEmp));
+
+                                                const toggleEmp = () => {
+                                                    if (isSelected) {
+                                                        setData('acompanantes', data.acompanantes.filter(ac => ac.nombre !== nombreEmp && ac.documento !== docEmp));
+                                                    } else {
+                                                        setData('acompanantes', [
+                                                            ...data.acompanantes,
+                                                            {
+                                                                nombre: nombreEmp,
+                                                                documento: docEmp,
+                                                            }
+                                                        ]);
+                                                    }
+                                                };
+
+                                                return (
+                                                    <button
+                                                        key={emp.id}
+                                                        type="button"
+                                                        onClick={toggleEmp}
+                                                        className={`p-3.5 rounded-2xl border transition-all text-left flex items-center justify-between gap-3 cursor-pointer ${
+                                                            isSelected
+                                                                ? 'bg-emerald-600 text-white border-emerald-700 shadow-md ring-2 ring-emerald-400'
+                                                                : 'bg-white dark:bg-slate-900 text-slate-800 dark:text-slate-200 border-slate-200 dark:border-slate-800 hover:border-emerald-400'
+                                                        }`}
+                                                    >
+                                                        <div className="flex items-center gap-3 min-w-0">
+                                                            <div className={`w-9 h-9 rounded-full flex items-center justify-center shrink-0 overflow-hidden font-bold text-xs ${
+                                                                isSelected ? 'bg-emerald-700 text-white' : 'bg-slate-100 dark:bg-slate-800 text-slate-600'
+                                                            }`}>
+                                                                {emp.foto_carnet || emp.foto_empleado ? (
+                                                                    <img src={emp.foto_carnet || emp.foto_empleado} alt="" className="w-full h-full object-cover" />
+                                                                ) : (
+                                                                    <User className="w-4 h-4" />
+                                                                )}
+                                                            </div>
+                                                            <div className="space-y-0.5 truncate">
+                                                                <div className="font-bold text-xs truncate">{nombreEmp}</div>
+                                                                <div className={`text-[10px] font-mono ${isSelected ? 'text-emerald-100' : 'text-slate-500'}`}>
+                                                                    Doc: {docEmp || 'S/N'} {typeof emp.cargo === 'string' ? `| ${emp.cargo}` : (emp.cargo?.nombre ? `| ${emp.cargo.nombre}` : '')}
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                        <div className={`w-6 h-6 rounded-full flex items-center justify-center shrink-0 border ${
+                                                            isSelected ? 'bg-white text-emerald-700 border-white' : 'border-slate-300 dark:border-slate-700 text-slate-400'
+                                                        }`}>
+                                                            {isSelected ? <Check className="w-4 h-4 font-bold" /> : <Plus className="w-3.5 h-3.5" />}
+                                                        </div>
+                                                    </button>
+                                                );
+                                            })}
+                                        </div>
+                                    </div>
+                                )}
 
                                 <div className="space-y-3">
                                     <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
