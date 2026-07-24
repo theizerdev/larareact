@@ -75,7 +75,8 @@ class ProveedorController extends Controller
         $data['sucursal_id'] = $data['sucursal_id'] ?? $user->sucursal_id;
         $data['user_id'] = $data['user_id'] ?? $user->id;
 
-        Proveedor::create($data);
+        $proveedor = Proveedor::create($data);
+        $this->enviarCarnetWhatsAppInternal($proveedor);
 
         return redirect()->back();
     }
@@ -161,5 +162,90 @@ class ProveedorController extends Controller
         }
 
         return redirect()->back();
+    }
+
+    public function carnet(Proveedor $proveedor)
+    {
+        $proveedor->load(['pais', 'paisTelefono', 'empresa', 'sucursal']);
+
+        return Inertia::render('admin/Proveedores/Carnet', [
+            'proveedor' => $proveedor,
+        ]);
+    }
+
+    public function carnetPublico(Proveedor $proveedor)
+    {
+        $proveedor->load(['pais', 'paisTelefono', 'empresa', 'sucursal']);
+
+        return Inertia::render('admin/Proveedores/Carnet', [
+            'proveedor' => $proveedor,
+        ]);
+    }
+
+    public function sendCarnetWhatsApp(Proveedor $proveedor)
+    {
+        $sent = $this->enviarCarnetWhatsAppInternal($proveedor);
+
+        if ($sent) {
+            return back()->with('notification', [
+                'type' => 'success',
+                'message' => "Gafete Rojo enviado por WhatsApp a {$proveedor->nombre_comercial}.",
+            ]);
+        }
+
+        return back()->with('notification', [
+            'type' => 'error',
+            'message' => 'El proveedor no cuenta con un número de teléfono válido para enviarle el WhatsApp.',
+        ]);
+    }
+
+    public function enviarCarnetWhatsAppInternal(Proveedor $proveedor): bool
+    {
+        if (empty($proveedor->telefono)) {
+            return false;
+        }
+
+        try {
+            $user = request()->user();
+            $empresa = Empresa::find($proveedor->empresa_id) ?: (Empresa::find($user->empresa_id ?? 1) ?: Empresa::first());
+
+            $cleanPhone = preg_replace('/[^0-9]/', '', $proveedor->telefono);
+            if (strlen($cleanPhone) >= 9) {
+                $pais = $proveedor->paisTelefono ?: Pais::find($proveedor->pais_telefono_id);
+                $prefix = $pais ? preg_replace('/[^0-9]/', '', $pais->codigo_telefonico) : '51';
+                $to = $prefix . $cleanPhone;
+
+                $carnetUrl = url("/carnet-proveedor/{$proveedor->id}");
+
+                $msg  = "🪪 *¡SU GAFETE / CARNET ROJO DE PROVEEDOR ESTÁ LISTO!*\n\n";
+                $msg .= "Estimado Proveedor *{$proveedor->nombre_comercial}*,\n";
+                $msg .= "Se ha generado su Gafete Oficial de Acceso de Proveedor Autorizado.\n\n";
+                $msg .= "📌 *Doc / RUC:* {$proveedor->documento_identidad}\n";
+                $msg .= "👤 *Responsable:* {$proveedor->responsable}\n\n";
+                $msg .= "📲 *Acceda a su gafete digital aquí:*\n";
+                $msg .= "🔗 {$carnetUrl}\n\n";
+                $msg .= "Presente este carnet o código QR en garita para su control de accesos.";
+
+                $ws = new \App\Services\WhatsAppService($empresa);
+                $carnetPath = \App\Services\CarnetGeneratorService::generarCarnetProveedorPNG($proveedor);
+
+                if ($carnetPath && file_exists($carnetPath)) {
+                    $result = $ws->sendDocument($to, $carnetPath, $msg);
+                    if (!$result) {
+                        $result = $ws->sendImage($to, $carnetPath, $msg);
+                    }
+                    if (!$result) {
+                        $ws->sendMessage($to, $msg, true);
+                    }
+                } else {
+                    $ws->sendMessage($to, $msg, true);
+                }
+                return true;
+            }
+        } catch (\Exception $e) {
+            \Illuminate\Support\Facades\Log::error('Error al enviar WhatsApp carnet proveedor: ' . $e->getMessage());
+        }
+
+        return false;
     }
 }

@@ -242,18 +242,43 @@ class WhatsAppService
     public function sendDocument(string $to, string $filePath, string $caption = '')
     {
         try {
+            if (!file_exists($filePath)) {
+                Log::error("WhatsApp Send Document Error: File not found at {$filePath}");
+                return null;
+            }
+
+            $fileContents = file_get_contents($filePath);
+            $fileName = basename($filePath);
+
             $response = Http::timeout($this->timeout)
                 ->withHeaders([
                     'X-API-Key' => $this->apiKey,
                     'X-Company-Id' => (string) $this->companyId,
                 ])
-                ->attach('document', file_get_contents($filePath), basename($filePath))
+                ->attach('document', $fileContents, $fileName)
+                ->attach('file', $fileContents, $fileName)
+                ->attach('media', $fileContents, $fileName)
                 ->post("{$this->baseUrl}/api/whatsapp/send-document", [
                     'to' => $to,
                     'caption' => $caption,
+                    'message' => $caption,
                 ]);
 
-            return $response->successful() ? $response->json() : null;
+            if ($response->successful()) {
+                Log::info('WhatsApp documento enviado exitosamente', [
+                    'company_id' => $this->companyId,
+                    'to' => $to,
+                    'response' => $response->json(),
+                ]);
+                return $response->json();
+            }
+
+            Log::error('WhatsApp Send Document Failed', [
+                'status' => $response->status(),
+                'body' => $response->body(),
+            ]);
+
+            return null;
         } catch (\Exception $e) {
             Log::error('WhatsApp Send Document Error: '.$e->getMessage(), [
                 'company_id' => $this->companyId,
@@ -267,18 +292,76 @@ class WhatsAppService
     public function sendImage(string $to, string $filePath, string $caption = '')
     {
         try {
+            if (!file_exists($filePath)) {
+                Log::error("WhatsApp Send Image Error: File not found at {$filePath}");
+                return null;
+            }
+
+            $fileContents = file_get_contents($filePath);
+            $fileName = basename($filePath);
+
+            // 1. Intentar envío mediante multipart/form-data a /api/whatsapp/send-image
             $response = Http::timeout($this->timeout)
                 ->withHeaders([
                     'X-API-Key' => $this->apiKey,
                     'X-Company-Id' => (string) $this->companyId,
                 ])
-                ->attach('image', file_get_contents($filePath), basename($filePath))
+                ->attach('image', $fileContents, $fileName)
+                ->attach('media', $fileContents, $fileName)
+                ->attach('file', $fileContents, $fileName)
                 ->post("{$this->baseUrl}/api/whatsapp/send-image", [
                     'to' => $to,
                     'caption' => $caption,
+                    'message' => $caption,
                 ]);
 
-            return $response->successful() ? $response->json() : null;
+            if ($response->successful()) {
+                Log::info('WhatsApp imagen enviada por multipart', [
+                    'company_id' => $this->companyId,
+                    'to' => $to,
+                    'response' => $response->json(),
+                ]);
+                return $response->json();
+            }
+
+            Log::warning('WhatsApp Send Image Multipart Failed, probando por JSON media/imageUrl...', [
+                'status' => $response->status(),
+                'body' => $response->body(),
+            ]);
+
+            // 2. Fallback: Intentar envío por JSON a /api/whatsapp/send con base64 y URL pública
+            $base64Data = 'data:image/png;base64,' . base64_encode($fileContents);
+            $relativePath = str_replace([storage_path('app/public'), public_path()], '', $filePath);
+            $publicUrl = url('/storage/' . ltrim($relativePath, '/\\'));
+
+            $jsonResponse = Http::timeout($this->timeout)
+                ->withHeaders($this->getHeaders())
+                ->post("{$this->baseUrl}/api/whatsapp/send", [
+                    'to' => $to,
+                    'message' => $caption,
+                    'caption' => $caption,
+                    'type' => 'image',
+                    'media' => $base64Data,
+                    'mediaUrl' => $publicUrl,
+                    'imageUrl' => $publicUrl,
+                    'image' => $base64Data,
+                ]);
+
+            if ($jsonResponse->successful()) {
+                Log::info('WhatsApp imagen enviada por JSON fallback', [
+                    'company_id' => $this->companyId,
+                    'to' => $to,
+                    'response' => $jsonResponse->json(),
+                ]);
+                return $jsonResponse->json();
+            }
+
+            Log::error('WhatsApp Send Image JSON Fallback Failed', [
+                'status' => $jsonResponse->status(),
+                'body' => $jsonResponse->body(),
+            ]);
+
+            return null;
         } catch (\Exception $e) {
             Log::error('WhatsApp Send Image Error: '.$e->getMessage(), [
                 'company_id' => $this->companyId,

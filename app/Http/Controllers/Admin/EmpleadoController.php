@@ -186,7 +186,13 @@ class EmpleadoController extends Controller
                 $carnetPath = \App\Services\CarnetGeneratorService::generarCarnetPNG($empleado);
 
                 if ($carnetPath && file_exists($carnetPath)) {
-                    $ws->sendImage($to, $carnetPath, $msg);
+                    $result = $ws->sendDocument($to, $carnetPath, $msg);
+                    if (!$result) {
+                        $result = $ws->sendImage($to, $carnetPath, $msg);
+                    }
+                    if (!$result) {
+                        $ws->sendMessage($to, $msg, true);
+                    }
                 } else {
                     $ws->sendMessage($to, $msg, true);
                 }

@@ -18,6 +18,8 @@ import {
     Globe,
     Navigation,
     Car,
+    QrCode,
+    Send,
 } from 'lucide-react';
 import React, { useState, useEffect, useRef, lazy, Suspense } from 'react';
 import { toast } from 'sonner';
@@ -364,6 +366,14 @@ export default function ProveedoresIndexPage({
         );
     };
 
+    const handleSendCarnetWhatsApp = (prov: Proveedor) => {
+        router.post(`/admin/proveedores/${prov.id}/send-carnet-whatsapp`, {}, {
+            preserveScroll: true,
+            onSuccess: () => notifySuccess(__('Gafete Rojo enviado por WhatsApp.')),
+            onError: () => notifyError(__('No se pudo enviar el WhatsApp.')),
+        });
+    };
+
     const handleDeleteClick = () => {
         if (!deletingProveedor) return;
 
@@ -560,6 +570,16 @@ export default function ProveedoresIndexPage({
                             <Pencil className="mr-2 h-4 w-4" />
                             {__('Edit')}
                         </DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => router.get(`/admin/proveedores/${prov.id}/carnet`)}>
+                            <QrCode className="mr-2 h-4 w-4 text-rose-600" />
+                            {__('Gafete Rojo / Carnet')}
+                        </DropdownMenuItem>
+                        {prov.telefono && (
+                            <DropdownMenuItem onClick={() => handleSendCarnetWhatsApp(prov)}>
+                                <Send className="mr-2 h-4 w-4 text-emerald-600" />
+                                {__('Enviar Gafete por WhatsApp')}
+                            </DropdownMenuItem>
+                        )}
                         <DropdownMenuItem onClick={() => handleManageEmployeesClick(prov)}>
                             <UserIcon className="mr-2 h-4 w-4 text-[#104a29]" />
                             {__('Employees')}

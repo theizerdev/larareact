@@ -59,6 +59,9 @@ Route::get('/api/autorizar-acceso/{token}/check', [VisitaAccesoAutorizacionContr
 Route::get('/pase-digital/{uuid}', [VisitaAccesoController::class, 'pasePublico'])->name('pase-digital-visita.show');
 Route::post('/pase-digital/{uuid}/datos-acceso', [VisitaAccesoController::class, 'actualizarDatosAcceso'])->name('pase-digital-visita.datos-acceso');
 Route::get('/carnet-empleado/{empleado}', [\App\Http\Controllers\Admin\EmpleadoController::class, 'carnetPublico'])->name('empleados.carnet.publico');
+Route::get('/carnet-proveedor/{proveedor}', [\App\Http\Controllers\Admin\ProveedorController::class, 'carnetPublico'])->name('proveedores.carnet.publico');
+Route::get('/admin/proveedores/{proveedor}/carnet', [\App\Http\Controllers\Admin\ProveedorController::class, 'carnet'])->name('proveedores.carnet');
+Route::post('/admin/proveedores/{proveedor}/send-carnet-whatsapp', [\App\Http\Controllers\Admin\ProveedorController::class, 'sendCarnetWhatsApp'])->name('proveedores.send-carnet-whatsapp');
 
 if (file_exists(__DIR__.'/larareact-settings.php')) {
     require __DIR__.'/larareact-settings.php';

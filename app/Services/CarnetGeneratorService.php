@@ -164,4 +164,130 @@ class CarnetGeneratorService
             return null;
         }
     }
+
+    /**
+     * Genera la imagen PNG del carnet / gafete rojo del proveedor.
+     */
+    public static function generarCarnetProveedorPNG(\App\Models\Proveedor $proveedor): ?string
+    {
+        try {
+            $proveedor->loadMissing(['sucursal', 'empresa']);
+
+            $width = 680;
+            $height = 1080;
+
+            $im = imagecreatetruecolor($width, $height);
+            if (!$im) {
+                return null;
+            }
+
+            imagealphablending($im, true);
+            imagesavealpha($im, true);
+
+            // Asignación de Colores para el Gafete ROJO del Proveedor
+            $white    = imagecolorallocate($im, 255, 255, 255);
+            $redTheme = imagecolorallocate($im, 185, 28, 28);    // #b91c1c (Rojo Intenso)
+            $black    = imagecolorallocate($im, 26, 32, 44);    // #1a202c
+            $redDark  = imagecolorallocatealpha($im, 153, 27, 27, 20); // ~rgba(153, 27, 27, 0.85)
+            $amber    = imagecolorallocatealpha($im, 217, 119, 6, 25);  // ~rgba(217, 119, 6, 0.8)
+            $rose     = imagecolorallocatealpha($im, 225, 29, 72, 25);  // ~rgba(225, 29, 72, 0.8)
+
+            // Fondo Blanco
+            imagefilledrectangle($im, 0, 0, $width, $height, $white);
+
+            // Manchas orgánicas superiores en tonalidades rojas
+            imagefilledellipse($im, 100, 30, 200, 120, $redDark);
+            imagefilledellipse($im, 290, 20, 180, 110, $amber);
+            imagefilledellipse($im, 460, 15, 190, 100, $rose);
+
+            // Marco ROJO exterior (Borde grueso de 16px)
+            for ($i = 0; $i < 16; $i++) {
+                imagerectangle($im, $i, $i, $width - 1 - $i, $height - 1 - $i, $redTheme);
+            }
+
+            // --- 1. Nombre / Razón Social del Proveedor (Lado izquierdo) ---
+            $nombreDisplay = trim($proveedor->nombre_comercial ?: $proveedor->razon_social);
+            $palabras = array_filter(explode(' ', $nombreDisplay));
+
+            $yPos = 150;
+            foreach (array_slice($palabras, 0, 5) as $palabra) {
+                $wordText = ucfirst(strtolower($palabra));
+                imagestring($im, 5, 45, $yPos, $wordText, $black);
+                $yPos += 35;
+            }
+
+            // --- 2. Marco Foto / Icono (Lado derecho) ---
+            $photoX = 390;
+            $photoY = 120;
+            $photoW = 230;
+            $photoH = 270;
+
+            for ($t = 0; $t < 6; $t++) {
+                imagerectangle($im, $photoX - $t, $photoY - $t, $photoX + $photoW + $t, $photoY + $photoH + $t, $redTheme);
+            }
+
+            // --- 3. Franja Central ROJA (PROVEEDOR AUTORIZADO) ---
+            $bannerY1 = 430;
+            $bannerY2 = 610;
+            imagefilledrectangle($im, 16, $bannerY1, $width - 16, $bannerY2, $redTheme);
+
+            $tituloText = "PROVEEDOR";
+            $subText = "RUC/ID: " . ($proveedor->documento_identidad ?: 'N/A');
+
+            $tituloX = (int) (($width - (strlen($tituloText) * 14)) / 2);
+            imagestring($im, 5, max(30, $tituloX), $bannerY1 + 45, $tituloText, $white);
+
+            $subX = (int) (($width - (strlen($subText) * 10)) / 2);
+            imagestring($im, 5, max(30, $subX), $bannerY1 + 105, $subText, $white);
+
+            // --- 4. Código QR ---
+            $qrUrl = "https://api.qrserver.com/v1/create-qr-code/?size=250x250&data=" . urlencode($proveedor->documento_identidad ?: "PROV_{$proveedor->id}") . "&color=b91c1c";
+            $qrData = @file_get_contents($qrUrl);
+            if ($qrData) {
+                $qrImg = @imagecreatefromstring($qrData);
+                if ($qrImg) {
+                    $qrSize = 190;
+                    $qrX = (int) (($width - $qrSize) / 2);
+                    $qrY = 640;
+                    imagecopyresampled($im, $qrImg, $qrX, $qrY, 0, 0, $qrSize, $qrSize, imagesx($qrImg), imagesy($qrImg));
+                    imagedestroy($qrImg);
+                }
+            }
+
+            // --- 5. Logotipo Driscoll's ---
+            $logoPath = public_path('image/logo/larareact_logo_transparent.png');
+            if (!file_exists($logoPath)) {
+                $logoPath = public_path('image/logo/driscolls_logo.png');
+            }
+            if (file_exists($logoPath)) {
+                $logoData = @file_get_contents($logoPath);
+                if ($logoData) {
+                    $logoImg = @imagecreatefromstring($logoData);
+                    if ($logoImg) {
+                        $logoW = 340;
+                        $logoH = 140;
+                        $logoX = (int) (($width - $logoW) / 2);
+                        $logoY = 870;
+                        imagecopyresampled($im, $logoImg, $logoX, $logoY, 0, 0, $logoW, $logoH, imagesx($logoImg), imagesy($logoImg));
+                        imagedestroy($logoImg);
+                    }
+                }
+            }
+
+            $directory = storage_path('app/public/carnets');
+            if (!file_exists($directory)) {
+                mkdir($directory, 0755, true);
+            }
+
+            $filePath = $directory . "/carnet_proveedor_{$proveedor->id}.png";
+            imagepng($im, $filePath, 9);
+            imagedestroy($im);
+
+            return file_exists($filePath) ? $filePath : null;
+
+        } catch (\Exception $e) {
+            Log::error('Error generando PNG carnet proveedor: ' . $e->getMessage());
+            return null;
+        }
+    }
 }
