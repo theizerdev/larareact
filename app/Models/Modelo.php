@@ -22,13 +22,13 @@ class Modelo extends Model
         'nombre_comercial',
         'codigo_modelo',
         'imagen_url',
-        'especificaciones',
+        'specs_overrides',
         'estado',
     ];
 
     protected $casts = [
-        'especificaciones' => 'array',
         'estado' => 'boolean',
+        'specs_json' => 'array',
     ];
 
     public function empresa(): BelongsTo
@@ -55,4 +55,15 @@ class Modelo extends Model
     {
         return $this->belongsTo(Categoria::class);
     }
+
+    /**
+     * Combined specifications (family + model) with model overriding family.
+     */
+    public function getCombinedSpecsAttribute(): array
+    {
+        $familySpecs = $this->familia->specs_json ?? [];
+        $modelSpecs = $this->specs_overrides ?? [];
+        return array_merge($familySpecs, $modelSpecs);
+    }
+
 }

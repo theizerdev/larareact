@@ -22,10 +22,12 @@ class Familia extends Model
         'nombre',
         'descripcion',
         'estado',
+        'specs_json',
     ];
 
     protected $casts = [
         'estado' => 'boolean',
+        'specs_json' => 'array',
     ];
 
     public function empresa(): BelongsTo
