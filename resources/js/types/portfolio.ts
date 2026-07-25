@@ -29,6 +29,8 @@ export interface Project {
     live_url: string | null;
     github_url: string | null;
     category: string;
+    frontend_tech?: string[] | string | null;
+    backend_tech?: string[] | string | null;
     is_featured: boolean;
     order: number;
     created_at?: string;

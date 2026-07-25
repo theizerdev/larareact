@@ -838,13 +838,51 @@ export default function Welcome({ auth, about, projects, skills, experiences, cl
 
                                         {/* Content Container */}
                                         <div className="p-6 flex-grow flex flex-col justify-between space-y-4">
-                                            <div className="space-y-2">
+                                            <div className="space-y-3">
                                                 <h3 className="text-lg font-bold group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors">
                                                     {project.title}
                                                 </h3>
                                                 <p className="text-sm text-slate-600 dark:text-slate-400 font-light leading-relaxed line-clamp-3">
                                                     {project.description}
                                                 </p>
+
+                                                {/* Tech Stack Pills */}
+                                                {((Array.isArray(project.frontend_tech) && project.frontend_tech.length > 0) ||
+                                                  (Array.isArray(project.backend_tech) && project.backend_tech.length > 0)) && (
+                                                    <div className="pt-1 space-y-2 border-t border-slate-100 dark:border-slate-800/80 mt-3">
+                                                        {Array.isArray(project.frontend_tech) && project.frontend_tech.length > 0 && (
+                                                            <div className="flex flex-wrap items-center gap-1.5">
+                                                                <span className="text-[10px] font-bold tracking-wider text-indigo-500 dark:text-indigo-400 uppercase mr-1">
+                                                                    Frontend:
+                                                                </span>
+                                                                {project.frontend_tech.map((tech, idx) => (
+                                                                    <span
+                                                                        key={`fe-pill-${idx}`}
+                                                                        className="px-2 py-0.5 text-[11px] font-medium rounded-full bg-indigo-50 dark:bg-indigo-950/50 text-indigo-700 dark:text-indigo-300 border border-indigo-200/60 dark:border-indigo-800/50 shadow-2xs"
+                                                                    >
+                                                                        {tech}
+                                                                    </span>
+                                                                ))}
+                                                            </div>
+                                                        )}
+
+                                                        {Array.isArray(project.backend_tech) && project.backend_tech.length > 0 && (
+                                                            <div className="flex flex-wrap items-center gap-1.5">
+                                                                <span className="text-[10px] font-bold tracking-wider text-emerald-600 dark:text-emerald-400 uppercase mr-1">
+                                                                    Backend:
+                                                                </span>
+                                                                {project.backend_tech.map((tech, idx) => (
+                                                                    <span
+                                                                        key={`be-pill-${idx}`}
+                                                                        className="px-2 py-0.5 text-[11px] font-medium rounded-full bg-emerald-50 dark:bg-emerald-950/50 text-emerald-700 dark:text-emerald-300 border border-emerald-200/60 dark:border-emerald-800/50 shadow-2xs"
+                                                                    >
+                                                                        {tech}
+                                                                    </span>
+                                                                ))}
+                                                            </div>
+                                                        )}
+                                                    </div>
+                                                )}
                                             </div>
 
                                             <div className="flex items-center space-x-3 pt-2">

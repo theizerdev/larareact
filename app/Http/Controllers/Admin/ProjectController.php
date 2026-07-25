@@ -42,9 +42,18 @@ class ProjectController extends Controller
             'live_url' => 'nullable|url|max:255',
             'github_url' => 'nullable|url|max:255',
             'category' => 'required|string|max:255',
+            'frontend_tech' => 'nullable',
+            'backend_tech' => 'nullable',
             'order' => 'required|integer',
             'is_featured' => 'required|boolean',
         ]);
+
+        if (isset($validated['frontend_tech']) && is_string($validated['frontend_tech'])) {
+            $validated['frontend_tech'] = array_filter(array_map('trim', explode(',', $validated['frontend_tech'])));
+        }
+        if (isset($validated['backend_tech']) && is_string($validated['backend_tech'])) {
+            $validated['backend_tech'] = array_filter(array_map('trim', explode(',', $validated['backend_tech'])));
+        }
 
         if ($request->hasFile('image')) {
             $path = $request->file('image')->store('projects', 'public');
@@ -78,9 +87,18 @@ class ProjectController extends Controller
             'live_url' => 'nullable|url|max:255',
             'github_url' => 'nullable|url|max:255',
             'category' => 'required|string|max:255',
+            'frontend_tech' => 'nullable',
+            'backend_tech' => 'nullable',
             'order' => 'required|integer',
             'is_featured' => 'required|boolean',
         ]);
+
+        if (isset($validated['frontend_tech']) && is_string($validated['frontend_tech'])) {
+            $validated['frontend_tech'] = array_filter(array_map('trim', explode(',', $validated['frontend_tech'])));
+        }
+        if (isset($validated['backend_tech']) && is_string($validated['backend_tech'])) {
+            $validated['backend_tech'] = array_filter(array_map('trim', explode(',', $validated['backend_tech'])));
+        }
 
         if ($request->hasFile('image')) {
             // Delete old image if exists

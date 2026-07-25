@@ -338,6 +338,8 @@ export default function ProjectsIndexPage({ projects = [] }: { projects: Project
         live_url: '',
         github_url: '',
         category: 'Frontend',
+        frontend_tech: '',
+        backend_tech: '',
         order: 0,
         is_featured: false,
         _method: 'POST', // standard method parameter for laravel upload simulation
@@ -350,6 +352,8 @@ export default function ProjectsIndexPage({ projects = [] }: { projects: Project
         reset();
         setData((prev) => ({
             ...prev,
+            frontend_tech: '',
+            backend_tech: '',
             _method: 'POST',
         }));
         setIsModalOpen(true);
@@ -365,6 +369,8 @@ export default function ProjectsIndexPage({ projects = [] }: { projects: Project
             live_url: project.live_url || '',
             github_url: project.github_url || '',
             category: project.category || 'Frontend',
+            frontend_tech: Array.isArray(project.frontend_tech) ? project.frontend_tech.join(', ') : (project.frontend_tech || ''),
+            backend_tech: Array.isArray(project.backend_tech) ? project.backend_tech.join(', ') : (project.backend_tech || ''),
             order: project.order || 0,
             is_featured: project.is_featured ? true : false,
             _method: 'PUT',
@@ -522,7 +528,22 @@ export default function ProjectsIndexPage({ projects = [] }: { projects: Project
                                         <TableCell>
                                             <div>
                                                 <p className="font-semibold text-slate-800 dark:text-slate-100">{project.title}</p>
-                                                <div className="flex gap-2.5 mt-1">
+                                                
+                                                {/* Tech Badges */}
+                                                <div className="flex flex-wrap gap-1 mt-1.5">
+                                                    {Array.isArray(project.frontend_tech) && project.frontend_tech.map((tech, idx) => (
+                                                        <span key={`fe-${idx}`} className="px-1.5 py-0.5 text-[9px] font-medium rounded bg-indigo-50 dark:bg-indigo-950/40 text-indigo-600 dark:text-indigo-300 border border-indigo-200/50 dark:border-indigo-800/40">
+                                                            FE: {tech}
+                                                        </span>
+                                                    ))}
+                                                    {Array.isArray(project.backend_tech) && project.backend_tech.map((tech, idx) => (
+                                                        <span key={`be-${idx}`} className="px-1.5 py-0.5 text-[9px] font-medium rounded bg-emerald-50 dark:bg-emerald-950/40 text-emerald-600 dark:text-emerald-300 border border-emerald-200/50 dark:border-emerald-800/40">
+                                                            BE: {tech}
+                                                        </span>
+                                                    ))}
+                                                </div>
+
+                                                <div className="flex gap-2.5 mt-1.5">
                                                     {project.live_url && (
                                                         <a href={project.live_url} target="_blank" rel="noreferrer" className="inline-flex items-center text-[10px] text-indigo-500 hover:underline">
                                                             <ExternalLink className="h-2.5 w-2.5 mr-0.5" />
@@ -653,6 +674,30 @@ export default function ProjectsIndexPage({ projects = [] }: { projects: Project
                                         onChange={(e) => setData('github_url', e.target.value)}
                                     />
                                     {errors.github_url && <div className="text-xs text-red-500 mt-1">{errors.github_url}</div>}
+                                </div>
+
+                                <div className="space-y-1.5">
+                                    <Label htmlFor="frontend_tech">{__('Tecnologías Frontend')}</Label>
+                                    <Input
+                                        id="frontend_tech"
+                                        type="text"
+                                        placeholder="Ej: React, TypeScript, TailwindCSS, Inertia.js"
+                                        value={data.frontend_tech}
+                                        onChange={(e) => setData('frontend_tech', e.target.value)}
+                                    />
+                                    <p className="text-[10px] text-slate-400">{__('Separa las tecnologías con comas (,)ej: React, TypeScript')}</p>
+                                </div>
+
+                                <div className="space-y-1.5">
+                                    <Label htmlFor="backend_tech">{__('Tecnologías Backend')}</Label>
+                                    <Input
+                                        id="backend_tech"
+                                        type="text"
+                                        placeholder="Ej: PHP, Laravel, MySQL, Redis"
+                                        value={data.backend_tech}
+                                        onChange={(e) => setData('backend_tech', e.target.value)}
+                                    />
+                                    <p className="text-[10px] text-slate-400">{__('Separa las tecnologías con comas (,)ej: Laravel, MySQL')}</p>
                                 </div>
 
                                 <div className="grid grid-cols-2 gap-4 items-center pt-2">
