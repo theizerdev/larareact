@@ -50,7 +50,7 @@ class ModeloController extends Controller
         return inertia('admin/Equipos/Modelos/Index', [
             'modelos' => $modelos,
             'marcas' => Marca::where('estado', true)->orderBy('nombre')->get(['id', 'nombre'])->unique('id')->values(),
-            'familias' => Familia::where('estado', true)->orderBy('nombre')->get(['id', 'nombre', 'marca_id'])->unique('id')->values(),
+            'familias' => Familia::where('estado', true)->orderBy('nombre')->get(['id', 'nombre', 'marca_id', 'specs_json'])->unique('id')->values(),
             'categorias' => Categoria::where('estado', true)->orderBy('nombre')->get(['id', 'nombre'])->unique('id')->values(),
             'filters' => $request->only(['search', 'marca_id', 'familia_id', 'categoria_id', 'status', 'perPage']),
         ]);
@@ -65,7 +65,7 @@ class ModeloController extends Controller
             'nombre_comercial' => 'required|string|max:255',
             'codigo_modelo' => 'nullable|string|max:255',
             'imagen_url' => 'nullable|string|max:255',
-            'specs_json' => 'nullable|array',
+            'specs_overrides' => 'nullable|array',
             'estado' => 'boolean',
             'empresa_id' => 'nullable|exists:empresas,id',
             'sucursal_id' => 'nullable|exists:sucursales,id',
@@ -88,7 +88,7 @@ class ModeloController extends Controller
             'nombre_comercial' => 'required|string|max:255',
             'codigo_modelo' => 'nullable|string|max:255',
             'imagen_url' => 'nullable|string|max:255',
-            'specs_json' => 'nullable|array',
+            'specs_overrides' => 'nullable|array',
             'estado' => 'boolean',
             'empresa_id' => 'nullable|exists:empresas,id',
             'sucursal_id' => 'nullable|exists:sucursales,id',

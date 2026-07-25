@@ -1,5 +1,6 @@
 import { Head, useForm, router } from '@inertiajs/react';
-import { Smartphone, Plus, CheckCircle, XCircle, MoreVertical, Pencil, Trash2 } from 'lucide-react';
+import SpecEditor from '@/components/spec-editor';
+import { Smartphone, Plus, CheckCircle, XCircle, MoreVertical, Pencil, Trash2, SlidersHorizontal } from 'lucide-react';
 import React, { useState } from 'react';
 import { Breadcrumbs } from '@/components/breadcrumbs';
 import type { ColumnDef } from '@/components/data-table';
@@ -35,6 +36,7 @@ interface Option {
     id: number;
     nombre: string;
     marca_id?: number;
+    specs_json?: Record<string, string>;
 }
 
 interface Modelo {
@@ -45,6 +47,8 @@ interface Modelo {
     nombre_comercial: string;
     codigo_modelo?: string;
     imagen_url?: string;
+    specs_overrides?: Record<string, string>;
+    combined_specs?: Record<string, string>;
     estado: boolean;
     marca?: Option;
     familia?: Option;
@@ -104,6 +108,49 @@ export default function Index({ modelos, marcas: marcasProp, familias: familiasP
     const [newFamiliaNombre, setNewFamiliaNombre] = useState('');
     const [isSavingFamilia, setIsSavingFamilia] = useState(false);
 
+    // Modal de edición rápida de Especificaciones Técnicas
+    const [isSpecsModalOpen, setIsSpecsModalOpen] = useState(false);
+    const [specsTargetModelo, setSpecsTargetModelo] = useState<Modelo | null>(null);
+    const [modalSpecs, setModalSpecs] = useState<Record<string, string>>({});
+    const [isSavingSpecs, setIsSavingSpecs] = useState(false);
+
+    const handleOpenSpecsModal = (modelo: Modelo) => {
+        setSpecsTargetModelo(modelo);
+        setModalSpecs(modelo.specs_overrides || {});
+        setIsSpecsModalOpen(true);
+    };
+
+    const handleSaveQuickSpecs = (e: React.FormEvent) => {
+        e.preventDefault();
+        if (!specsTargetModelo) return;
+
+        setIsSavingSpecs(true);
+        router.put(
+            `/admin/modelos/${specsTargetModelo.id}`,
+            {
+                marca_id: String(specsTargetModelo.marca_id),
+                familia_id: String(specsTargetModelo.familia_id),
+                categoria_id: String(specsTargetModelo.categoria_id),
+                nombre_comercial: specsTargetModelo.nombre_comercial,
+                codigo_modelo: specsTargetModelo.codigo_modelo || '',
+                imagen_url: specsTargetModelo.imagen_url || '',
+                estado: specsTargetModelo.estado,
+                specs_overrides: modalSpecs,
+            },
+            {
+                preserveScroll: true,
+                preserveState: true,
+                onSuccess: () => {
+                    notifySuccess(__('Especificaciones actualizadas correctamente.'));
+                    setIsSpecsModalOpen(false);
+                    setSpecsTargetModelo(null);
+                },
+                onError: () => notifyError(__('Error al actualizar las especificaciones.')),
+                onFinish: () => setIsSavingSpecs(false),
+            }
+        );
+    };
+
     // Filtros
     const [searchTerm, setSearchTerm] = useState(filters.search || '');
     const [marcaFilter, setMarcaFilter] = useState(filters.marca_id || '');
@@ -138,12 +185,21 @@ export default function Index({ modelos, marcas: marcasProp, familias: familiasP
         { title: __('Modelos'), href: '/admin/modelos' },
     ];
 
-    const { data, setData, post, put, processing, errors, reset } = useForm({
+    const { data, setData, post, put, processing, errors, reset } = useForm<{
+        marca_id: string;
+        familia_id: string;
+        categoria_id: string;
+        nombre_comercial: string;
+        codigo_modelo: string;
+        specs_overrides: Record<string, string>;
+        estado: boolean;
+    }>({
         marca_id: marcas[0]?.id ? String(marcas[0].id) : '',
         familia_id: familias[0]?.id ? String(familias[0].id) : '',
         categoria_id: categorias[0]?.id ? String(categorias[0].id) : '',
         nombre_comercial: '',
         codigo_modelo: '',
+        specs_overrides: {},
         estado: true,
     });
 
@@ -168,6 +224,7 @@ export default function Index({ modelos, marcas: marcasProp, familias: familiasP
             categoria_id: String(modelo.categoria_id),
             nombre_comercial: modelo.nombre_comercial,
             codigo_modelo: modelo.codigo_modelo || '',
+            specs_overrides: modelo.specs_overrides || {},
             estado: modelo.estado,
         });
         setIsCreateOpen(true);
@@ -347,6 +404,32 @@ export default function Index({ modelos, marcas: marcasProp, familias: familiasP
                     {modelo.categoria?.nombre || 'General'}
                 </span>
             ),
+        },
+        {
+            header: __('Especificaciones'),
+            stopRowClick: true,
+            cell: (modelo) => {
+                const count = Object.keys(modelo.specs_overrides || {}).length;
+                return (
+                    <button
+                        type="button"
+                        onClick={(e) => {
+                            e.stopPropagation();
+                            handleOpenSpecsModal(modelo);
+                        }}
+                        className={cn(
+                            "inline-flex items-center gap-1.5 rounded-md px-2.5 py-1 text-xs font-medium border transition-all hover:scale-105 shadow-xs cursor-pointer",
+                            count > 0
+                                ? "bg-amber-50 text-amber-800 border-amber-200 hover:bg-amber-100 dark:bg-amber-950/40 dark:text-amber-300 dark:border-amber-900"
+                                : "bg-slate-50 text-slate-700 border-slate-200 hover:bg-slate-100 dark:bg-slate-900/40 dark:text-slate-400 dark:border-slate-800"
+                        )}
+                        title={__('Haz clic para ver y editar especificaciones')}
+                    >
+                        <SlidersHorizontal className="w-3 h-3 text-amber-600 dark:text-amber-400" />
+                        {count > 0 ? `${count} personalizadas` : __('Heredadas (Editar)')}
+                    </button>
+                );
+            },
         },
         {
             header: __('Estado'),
@@ -712,6 +795,13 @@ export default function Index({ modelos, marcas: marcasProp, familias: familiasP
                                 </div>
                             </div>
 
+                            <SpecEditor
+                                initialSpecs={data.specs_overrides}
+                                onChange={(specs) => setData('specs_overrides', specs)}
+                                title={__('Especificaciones Específicas del Modelo')}
+                                description={__('Define atributos exclusivos de este modelo (Ej: 128GB, 256GB, Color, etc.) que complementan o sobrescriben la familia.')}
+                            />
+
                             <div className="flex items-center justify-between rounded-lg border p-3">
                                 <div>
                                     <Label className="text-base">{__('Estado Activo')}</Label>
@@ -729,6 +819,39 @@ export default function Index({ modelos, marcas: marcasProp, familias: familiasP
                                 </Button>
                                 <Button type="submit" disabled={processing}>
                                     {editingModelo ? __('Guardar Cambios') : __('Crear Modelo')}
+                                </Button>
+                            </DialogFooter>
+                        </form>
+                    </DialogContent>
+                </Dialog>
+
+                {/* Modal de Edición Rápida de Especificaciones */}
+                <Dialog open={isSpecsModalOpen} onOpenChange={setIsSpecsModalOpen}>
+                    <DialogContent className="sm:max-w-xl">
+                        <DialogHeader>
+                            <DialogTitle className="flex items-center gap-2">
+                                <SlidersHorizontal className="h-5 w-5 text-amber-500" />
+                                {__('Especificaciones Técnicas -')} {specsTargetModelo?.nombre_comercial}
+                            </DialogTitle>
+                            <DialogDescription>
+                                {__('Visualiza y edita las especificaciones técnicas de este modelo.')}
+                            </DialogDescription>
+                        </DialogHeader>
+
+                        <form onSubmit={handleSaveQuickSpecs} className="space-y-4 py-2">
+                            <SpecEditor
+                                initialSpecs={modalSpecs}
+                                onChange={setModalSpecs}
+                                title={__('Especificaciones Personalizadas del Modelo')}
+                                description={__('Añade o modifica atributos únicos para este modelo.')}
+                            />
+
+                            <DialogFooter className="gap-2 sm:gap-0">
+                                <Button type="button" variant="outline" onClick={() => setIsSpecsModalOpen(false)}>
+                                    {__('Cancelar')}
+                                </Button>
+                                <Button type="submit" disabled={isSavingSpecs} className="bg-amber-600 hover:bg-amber-700 text-white">
+                                    {isSavingSpecs ? __('Guardando...') : __('Guardar Especificaciones')}
                                 </Button>
                             </DialogFooter>
                         </form>

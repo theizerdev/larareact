@@ -28,7 +28,7 @@ class Modelo extends Model
 
     protected $casts = [
         'estado' => 'boolean',
-        'specs_json' => 'array',
+        'specs_overrides' => 'array',
     ];
 
     public function empresa(): BelongsTo

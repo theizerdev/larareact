@@ -25,6 +25,7 @@ class DatabaseSeeder extends Seeder
             SucursalSeeder::class,
             UsersSeeder::class,
             EquiposInicialSeeder::class,
+            EspecificacionesSeeder::class,
         ]);
     }
 }

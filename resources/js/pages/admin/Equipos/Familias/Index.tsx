@@ -1,5 +1,6 @@
 import { Head, useForm, router } from '@inertiajs/react';
-import { FolderTree, Plus, CheckCircle, XCircle, MoreVertical, Pencil, Trash2 } from 'lucide-react';
+import SpecEditor from '@/components/spec-editor';
+import { FolderTree, Plus, CheckCircle, XCircle, MoreVertical, Pencil, Trash2, SlidersHorizontal } from 'lucide-react';
 import React, { useState } from 'react';
 import { Breadcrumbs } from '@/components/breadcrumbs';
 import type { ColumnDef } from '@/components/data-table';
@@ -48,6 +49,7 @@ interface Familia {
     categoria_id?: number;
     nombre: string;
     descripcion?: string;
+    specs_json?: Record<string, string>;
     estado: boolean;
     marca?: MarcaOption;
     categoria?: CategoriaOption;
@@ -95,6 +97,47 @@ export default function Index({ familias, marcas: marcasProp, categorias: catego
     const [newCategoriaNombre, setNewCategoriaNombre] = useState('');
     const [isSavingCategoria, setIsSavingCategoria] = useState(false);
 
+    // Modal de edición rápida de Especificaciones Base de la Familia
+    const [isSpecsModalOpen, setIsSpecsModalOpen] = useState(false);
+    const [specsTargetFamilia, setSpecsTargetFamilia] = useState<Familia | null>(null);
+    const [modalSpecs, setModalSpecs] = useState<Record<string, string>>({});
+    const [isSavingSpecs, setIsSavingSpecs] = useState(false);
+
+    const handleOpenSpecsModal = (familia: Familia) => {
+        setSpecsTargetFamilia(familia);
+        setModalSpecs(familia.specs_json || {});
+        setIsSpecsModalOpen(true);
+    };
+
+    const handleSaveQuickSpecs = (e: React.FormEvent) => {
+        e.preventDefault();
+        if (!specsTargetFamilia) return;
+
+        setIsSavingSpecs(true);
+        router.put(
+            `/admin/familias/${specsTargetFamilia.id}`,
+            {
+                marca_id: String(specsTargetFamilia.marca_id),
+                categoria_id: specsTargetFamilia.categoria_id ? String(specsTargetFamilia.categoria_id) : '',
+                nombre: specsTargetFamilia.nombre,
+                descripcion: specsTargetFamilia.descripcion || '',
+                estado: specsTargetFamilia.estado,
+                specs_json: modalSpecs,
+            },
+            {
+                preserveScroll: true,
+                preserveState: true,
+                onSuccess: () => {
+                    notifySuccess(__('Especificaciones base actualizadas correctamente.'));
+                    setIsSpecsModalOpen(false);
+                    setSpecsTargetFamilia(null);
+                },
+                onError: () => notifyError(__('Error al actualizar las especificaciones base.')),
+                onFinish: () => setIsSavingSpecs(false),
+            }
+        );
+    };
+
     // Filtros
     const [searchTerm, setSearchTerm] = useState(filters.search || '');
     const [marcaFilter, setMarcaFilter] = useState(filters.marca_id || '');
@@ -127,11 +170,19 @@ export default function Index({ familias, marcas: marcasProp, categorias: catego
         { title: __('Familias'), href: '/admin/familias' },
     ];
 
-    const { data, setData, post, put, processing, errors, reset } = useForm({
+    const { data, setData, post, put, processing, errors, reset } = useForm<{
+        marca_id: string;
+        categoria_id: string;
+        nombre: string;
+        descripcion: string;
+        specs_json: Record<string, string>;
+        estado: boolean;
+    }>({
         marca_id: marcas[0]?.id ? String(marcas[0].id) : '',
         categoria_id: categorias[0]?.id ? String(categorias[0].id) : '',
         nombre: '',
         descripcion: '',
+        specs_json: {},
         estado: true,
     });
 
@@ -150,6 +201,7 @@ export default function Index({ familias, marcas: marcasProp, categorias: catego
             categoria_id: familia.categoria_id ? String(familia.categoria_id) : '',
             nombre: familia.nombre,
             descripcion: familia.descripcion || '',
+            specs_json: familia.specs_json || {},
             estado: familia.estado,
         });
         setIsCreateOpen(true);
@@ -292,6 +344,32 @@ export default function Index({ familias, marcas: marcasProp, categorias: catego
                     {familia.modelos_count || 0} modelos
                 </span>
             ),
+        },
+        {
+            header: __('Especificaciones Base'),
+            stopRowClick: true,
+            cell: (familia) => {
+                const count = Object.keys(familia.specs_json || {}).length;
+                return (
+                    <button
+                        type="button"
+                        onClick={(e) => {
+                            e.stopPropagation();
+                            handleOpenSpecsModal(familia);
+                        }}
+                        className={cn(
+                            "inline-flex items-center gap-1.5 rounded-md px-2.5 py-1 text-xs font-medium border transition-all hover:scale-105 shadow-xs cursor-pointer",
+                            count > 0
+                                ? "bg-blue-50 text-blue-800 border-blue-200 hover:bg-blue-100 dark:bg-blue-950/40 dark:text-blue-300 dark:border-blue-900"
+                                : "bg-slate-50 text-slate-700 border-slate-200 hover:bg-slate-100 dark:bg-slate-900/40 dark:text-slate-400 dark:border-slate-800"
+                        )}
+                        title={__('Haz clic para ver y editar especificaciones base')}
+                    >
+                        <SlidersHorizontal className="w-3 h-3 text-blue-600 dark:text-blue-400" />
+                        {count > 0 ? `${count} atributos` : __('Sin definir (Editar)')}
+                    </button>
+                );
+            },
         },
         {
             header: __('Estado'),
@@ -590,6 +668,13 @@ export default function Index({ familias, marcas: marcasProp, categorias: catego
                                 />
                             </div>
 
+                            <SpecEditor
+                                initialSpecs={data.specs_json}
+                                onChange={(specs) => setData('specs_json', specs)}
+                                title={__('Especificaciones por Defecto de la Familia')}
+                                description={__('Define las especificaciones técnicas base que compartirán los modelos de esta familia.')}
+                            />
+
                             <div className="flex items-center justify-between rounded-lg border p-3">
                                 <div>
                                     <Label className="text-base">{__('Estado Activo')}</Label>
@@ -611,8 +696,40 @@ export default function Index({ familias, marcas: marcasProp, categorias: catego
                         </form>
                     </DialogContent>
                 </Dialog>
+
+                {/* Modal de Edición Rápida de Especificaciones Base */}
+                <Dialog open={isSpecsModalOpen} onOpenChange={setIsSpecsModalOpen}>
+                    <DialogContent className="sm:max-w-xl">
+                        <DialogHeader>
+                            <DialogTitle className="flex items-center gap-2">
+                                <SlidersHorizontal className="h-5 w-5 text-blue-500" />
+                                {__('Especificaciones Base - Familia')} {specsTargetFamilia?.nombre}
+                            </DialogTitle>
+                            <DialogDescription>
+                                {__('Gestiona los atributos técnicos comunes que compartirán todos los modelos pertenecientes a esta familia.')}
+                            </DialogDescription>
+                        </DialogHeader>
+
+                        <form onSubmit={handleSaveQuickSpecs} className="space-y-4 py-2">
+                            <SpecEditor
+                                initialSpecs={modalSpecs}
+                                onChange={setModalSpecs}
+                                title={__('Especificaciones Base de la Familia')}
+                                description={__('Añade o modifica los atributos generales de esta línea de producto.')}
+                            />
+
+                            <DialogFooter className="gap-2 sm:gap-0">
+                                <Button type="button" variant="outline" onClick={() => setIsSpecsModalOpen(false)}>
+                                    {__('Cancelar')}
+                                </Button>
+                                <Button type="submit" disabled={isSavingSpecs} className="bg-blue-600 hover:bg-blue-700 text-white">
+                                    {isSavingSpecs ? __('Guardando...') : __('Guardar Especificaciones')}
+                                </Button>
+                            </DialogFooter>
+                        </form>
+                    </DialogContent>
+                </Dialog>
             </div>
         </>
     );
 }
-

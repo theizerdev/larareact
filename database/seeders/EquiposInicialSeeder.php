@@ -384,6 +384,9 @@ class EquiposInicialSeeder extends Seeder
                 }
             }
         }
+
+        // Aplicar especificaciones técnicas a todas las familias y modelos creados
+        $this->call(EspecificacionesSeeder::class);
     }
 }
 
