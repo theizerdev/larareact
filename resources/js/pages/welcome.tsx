@@ -150,7 +150,7 @@ const SkillBar = ({ proficiency }: { proficiency: number }) => {
 
 export default function Welcome({ auth, about, projects, skills, experiences, clients = [] }: WelcomeProps) {
     const { __ } = useTranslate();
-    const [theme, setTheme] = useState('dark');
+    const [theme] = useState('light');
     const [activeFilter, setActiveFilter] = useState('All');
     const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
     const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -217,27 +217,10 @@ export default function Welcome({ auth, about, projects, skills, experiences, cl
         setData('phone', phoneInput ? `${country.code}${phoneInput}` : '');
     };
 
-    // Toggle Theme
+    // Ensure page is always rendered in light mode
     useEffect(() => {
-        const savedTheme = localStorage.getItem('theme') || 'dark';
-        setTheme(savedTheme);
-        if (savedTheme === 'dark') {
-            document.documentElement.classList.add('dark');
-        } else {
-            document.documentElement.classList.remove('dark');
-        }
+        document.documentElement.classList.remove('dark');
     }, []);
-
-    const toggleTheme = () => {
-        const newTheme = theme === 'dark' ? 'light' : 'dark';
-        setTheme(newTheme);
-        localStorage.setItem('theme', newTheme);
-        if (newTheme === 'dark') {
-            document.documentElement.classList.add('dark');
-        } else {
-            document.documentElement.classList.remove('dark');
-        }
-    };
 
     // Custom Cursor tracking
     useEffect(() => {
@@ -524,23 +507,6 @@ export default function Welcome({ auth, about, projects, skills, experiences, cl
                         <div className="flex items-center space-x-4">
                             {/* Language Toggle */}
                             <LanguageToggle />
-
-                            {/* Theme Toggle */}
-                            <button
-                                onClick={toggleTheme}
-                                className="p-2 rounded-full bg-slate-100 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-800 transition-all cursor-pointer"
-                                aria-label={__('Cambiar Tema')}
-                            >
-                                {theme === 'dark' ? (
-                                    <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 3v1m0 16v1m9-9h-1M4 9H3m15.364-6.364l-.707.707M6.343 17.657l-.707.707m0-12.728l.707.707m12.728 12.728l.707-.707M6.343 17.657L5.636 18.364m12.728-12.728L17.657 6.343M12 5a7 7 0 100 14 7 7 0 000-14z" />
-                                    </svg>
-                                ) : (
-                                    <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z" />
-                                    </svg>
-                                )}
-                            </button>
 
                             {/* Admin Link */}
                             {auth.user ? (
