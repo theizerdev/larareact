@@ -201,6 +201,16 @@ const DragDropImageUpload = ({
 
     const processFile = (file: File) => {
         if (file.type.startsWith("image/")) {
+            const maxSizeInBytes = 10 * 1024 * 1024; // 10MB
+            if (file.size > maxSizeInBytes) {
+                Swal.fire({
+                    title: "Archivo muy grande",
+                    text: `La imagen elegida pesa ${(file.size / (1024 * 1024)).toFixed(2)}MB. El tamaño máximo permitido es 10MB.`,
+                    icon: "warning"
+                });
+                if (fileInputRef.current) fileInputRef.current.value = "";
+                return;
+            }
             onChange(file);
             setPreviewUrl(URL.createObjectURL(file));
         } else {
@@ -283,7 +293,7 @@ const DragDropImageUpload = ({
                             Arrastra y suelta tu imagen aquí, o haz clic para explorar.
                         </p>
                         <p className="text-[10px] text-slate-400 mt-0.5">
-                            Archivos permitidos: JPEG, PNG, JPG, WEBP (Máx 2MB)
+                            Archivos permitidos: JPEG, PNG, JPG, WEBP (Máx 10MB)
                         </p>
                     </div>
                 )}

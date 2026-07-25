@@ -38,7 +38,7 @@ class ProjectController extends Controller
         $validated = $request->validate([
             'title' => 'required|string|max:255',
             'description' => 'required|string',
-            'image' => 'nullable|image|mimes:jpeg,png,jpg,gif,svg,webp|max:2048',
+            'image' => 'nullable|image|mimes:jpeg,png,jpg,gif,svg,webp|max:10240',
             'live_url' => 'nullable|url|max:255',
             'github_url' => 'nullable|url|max:255',
             'category' => 'required|string|max:255',
@@ -74,7 +74,7 @@ class ProjectController extends Controller
         $validated = $request->validate([
             'title' => 'required|string|max:255',
             'description' => 'required|string',
-            'image' => 'nullable|image|mimes:jpeg,png,jpg,gif,svg,webp|max:2048',
+            'image' => 'nullable|image|mimes:jpeg,png,jpg,gif,svg,webp|max:10240',
             'live_url' => 'nullable|url|max:255',
             'github_url' => 'nullable|url|max:255',
             'category' => 'required|string|max:255',

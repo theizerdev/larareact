@@ -64,6 +64,16 @@ const DragDropLogoUpload = ({
 
     const processFile = (file: File) => {
         if (file.type.startsWith("image/")) {
+            const maxSizeInBytes = 2 * 1024 * 1024; // 2MB
+            if (file.size > maxSizeInBytes) {
+                Swal.fire({
+                    title: "Archivo muy grande",
+                    text: `La imagen elegida pesa ${(file.size / (1024 * 1024)).toFixed(2)}MB. El tamaño máximo permitido es 2MB.`,
+                    icon: "warning"
+                });
+                if (fileInputRef.current) fileInputRef.current.value = "";
+                return;
+            }
             onChange(file);
             setPreviewUrl(URL.createObjectURL(file));
         } else {

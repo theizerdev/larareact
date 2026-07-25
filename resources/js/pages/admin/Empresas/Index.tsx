@@ -215,6 +215,15 @@ export default function EmpresasIndexPage({ auth, empresas, stats, paises, filte
 
     const handleLogoFileChange = (file: File | null, type: 'logo' | 'logo_mini') => {
         if (!file) return;
+        const maxSizeInBytes = 5 * 1024 * 1024; // 5MB
+        if (file.size > maxSizeInBytes) {
+            Swal.fire({
+                title: "Archivo muy grande",
+                text: `El logo elegido pesa ${(file.size / (1024 * 1024)).toFixed(2)}MB. El tamaño máximo permitido es 5MB.`,
+                icon: "warning"
+            });
+            return;
+        }
         const reader = new FileReader();
         reader.onloadend = () => {
             if (type === 'logo') {
