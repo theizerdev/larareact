@@ -805,14 +805,16 @@ export default function Index({ productos, categorias: categoriasProp, marcas: m
                 <Breadcrumbs items={breadcrumbs} />
 
                 <ModuleHeader
+                    icon={<Package className="h-6 w-6 text-white" />}
                     title={__('Productos & Variantes de Inventario')}
                     description={__('Gestión de stock físico, atributos de variante, precio de venta minorista, precio mayoreo y fichas técnicas.')}
-                    action={{
-                        label: __('Nuevo Producto'),
-                        icon: <Plus className="h-4 w-4 mr-2" />,
-                        onClick: handleCreate,
-                    }}
-                />
+                    colorClassName="bg-blue-600"
+                >
+                    <Button onClick={handleCreate}>
+                        <Plus className="mr-2 h-4 w-4" />
+                        {__('Nuevo Producto')}
+                    </Button>
+                </ModuleHeader>
 
                 {/* Tarjetas Estadísticas de Inventario */}
                 <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
