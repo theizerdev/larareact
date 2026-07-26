@@ -415,6 +415,11 @@ export default function AdminSaasLayout({
                                     href: '/admin/modelos',
                                     permission: 'modelos.view',
                                 },
+                                {
+                                    title: 'Productos / Stock',
+                                    href: '/admin/productos',
+                                    permission: 'modelos.view',
+                                },
                             ].filter(item => hasPermission(item.permission));
 
                             if (equiposItems.length === 0) return null;

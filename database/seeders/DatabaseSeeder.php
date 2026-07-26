@@ -26,6 +26,7 @@ class DatabaseSeeder extends Seeder
             UsersSeeder::class,
             EquiposInicialSeeder::class,
             EspecificacionesSeeder::class,
+            ProductosSeeder::class,
         ]);
     }
 }

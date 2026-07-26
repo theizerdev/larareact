@@ -385,8 +385,9 @@ class EquiposInicialSeeder extends Seeder
             }
         }
 
-        // Aplicar especificaciones técnicas a todas las familias y modelos creados
+        // Aplicar especificaciones técnicas y poblar inventario inicial de productos
         $this->call(EspecificacionesSeeder::class);
+        $this->call(ProductosSeeder::class);
     }
 }
 

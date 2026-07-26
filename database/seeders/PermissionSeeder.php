@@ -95,6 +95,12 @@ class PermissionSeeder extends Seeder
                 'modelos.create' => 'Crear Modelos',
                 'modelos.edit' => 'Editar Modelos',
                 'modelos.delete' => 'Eliminar Modelos',
+
+                // Módulo: Productos
+                'productos.view' => 'Ver Productos',
+                'productos.create' => 'Crear Productos',
+                'productos.edit' => 'Editar Productos',
+                'productos.delete' => 'Eliminar Productos',
             ],
 
 
@@ -116,6 +122,7 @@ class PermissionSeeder extends Seeder
                     str_starts_with($permission, 'marcas.') => 'marcas',
                     str_starts_with($permission, 'familias.') => 'familias',
                     str_starts_with($permission, 'modelos.') => 'modelos',
+                    str_starts_with($permission, 'productos.') => 'productos',
 
                     default => 'general',
                 };

@@ -18,19 +18,18 @@ interface SpecEditorProps {
 }
 
 const COMMON_SUGGESTIONS = [
-    'Pantalla',
-    'Procesador',
     'RAM',
     'Almacenamiento',
+    'Color',
+    'Pantalla',
+    'Procesador',
     'Batería',
+    'Salud de Batería',
     'Sistema Operativo',
     'Cámara Principal',
-    'Cámara Frontal',
     'Conectividad',
-    'Resolución',
-    'GPU',
-    'Peso',
-    'Garantía'
+    'Garantía',
+    'Accesorios'
 ];
 
 export default function SpecEditor({
@@ -127,7 +126,7 @@ export default function SpecEditor({
                 <div>
                     <Label className="text-sm font-semibold flex items-center gap-1.5">
                         <SlidersHorizontal className="h-4 w-4 text-blue-500" />
-                        {title || __('Especificaciones Técnicas (JSON)')}
+                        {title || __('Especificaciones Técnicas')}
                     </Label>
                     {description && (
                         <p className="text-xs text-muted-foreground mt-0.5">{description}</p>
