@@ -342,71 +342,87 @@ export default function Show({ caja, summary }: Props) {
                     />
                 </div>
 
-                {/* Desglose Agrupado por Método de Pago */}
-                <div className="space-y-3">
-                    <h3 className="text-md font-bold tracking-tight text-slate-800 dark:text-slate-200 flex items-center gap-2">
-                        <CreditCard className="w-4 h-4 text-blue-600" />
-                        {__('Desglose por Método de Pago')}
-                    </h3>
-                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
-                        {paymentMethodList.map((pm) => {
-                            const data = summary.by_payment_method?.[pm.key] || { inflow: 0, outflow: 0, net: 0 };
-                            const IconComponent = pm.icon;
-                            return (
-                                <div key={pm.key} className="rounded-lg border p-3.5 bg-card text-card-foreground shadow-sm space-y-1">
-                                    <div className="flex items-center justify-between text-xs text-muted-foreground">
-                                        <span className="font-medium">{pm.label}</span>
-                                        <IconComponent className="w-4 h-4 text-slate-400" />
+                {/* Desgloses Agrupados (Listados 6 y 6) */}
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                    {/* Listado 1: Resumen por Método de Pago (6 cols) */}
+                    <div className="rounded-xl border bg-card text-card-foreground shadow-sm overflow-hidden flex flex-col">
+                        <div className="p-4 border-b bg-slate-50/50 dark:bg-slate-900/50 flex items-center justify-between">
+                            <div className="flex items-center gap-2 font-bold text-sm text-slate-800 dark:text-slate-200">
+                                <CreditCard className="w-4 h-4 text-blue-600" />
+                                {__('Resumen por Método de Pago')}
+                            </div>
+                            <span className="text-xs text-muted-foreground">{paymentMethodList.length} {__('métodos')}</span>
+                        </div>
+                        <div className="divide-y text-sm flex-1">
+                            {paymentMethodList.map((pm) => {
+                                const data = summary.by_payment_method?.[pm.key] || { inflow: 0, outflow: 0, net: 0 };
+                                const IconComponent = pm.icon;
+                                return (
+                                    <div key={pm.key} className="p-3.5 flex items-center justify-between hover:bg-slate-50/50 dark:hover:bg-slate-800/30 transition-colors">
+                                        <div className="flex items-center gap-3">
+                                            <div className="w-8 h-8 rounded bg-blue-50 dark:bg-blue-950/30 flex items-center justify-center">
+                                                <IconComponent className="w-4 h-4 text-blue-600 dark:text-blue-400" />
+                                            </div>
+                                            <div>
+                                                <p className="font-medium text-sm">{pm.label}</p>
+                                                <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                                                    <span className="text-emerald-600">+{currencySymbol}{data.inflow.toFixed(2)}</span>
+                                                    <span>•</span>
+                                                    <span className="text-rose-600">-{currencySymbol}{data.outflow.toFixed(2)}</span>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div className={cn('font-mono font-bold text-sm', data.net >= 0 ? 'text-slate-900 dark:text-white' : 'text-rose-600')}>
+                                            {currencySymbol}{data.net.toFixed(2)}
+                                        </div>
                                     </div>
-                                    <p className="text-lg font-bold font-mono">
-                                        {currencySymbol}{data.net.toFixed(2)}
-                                    </p>
-                                    <div className="flex justify-between text-[11px] text-muted-foreground pt-1 border-t">
-                                        <span className="text-emerald-600 font-medium">+{currencySymbol}{data.inflow.toFixed(2)}</span>
-                                        <span className="text-rose-600 font-medium">-{currencySymbol}{data.outflow.toFixed(2)}</span>
+                                );
+                            })}
+                        </div>
+                    </div>
+
+                    {/* Listado 2: Resumen por Concepto (6 cols) */}
+                    <div className="rounded-xl border bg-card text-card-foreground shadow-sm overflow-hidden flex flex-col">
+                        <div className="p-4 border-b bg-slate-50/50 dark:bg-slate-900/50 flex items-center justify-between">
+                            <div className="flex items-center gap-2 font-bold text-sm text-slate-800 dark:text-slate-200">
+                                <Tag className="w-4 h-4 text-emerald-600" />
+                                {__('Resumen por Concepto')}
+                            </div>
+                            <span className="text-xs text-muted-foreground">{conceptList.length} {__('conceptos')}</span>
+                        </div>
+                        <div className="divide-y text-sm flex-1">
+                            {conceptList.map((c) => {
+                                const data = summary.by_concept?.[c.key] || { inflow: 0, outflow: 0, net: 0 };
+                                const IconComponent = c.icon;
+                                return (
+                                    <div key={c.key} className="p-3.5 flex items-center justify-between hover:bg-slate-50/50 dark:hover:bg-slate-800/30 transition-colors">
+                                        <div className="flex items-center gap-3">
+                                            <div className="w-8 h-8 rounded bg-emerald-50 dark:bg-emerald-950/30 flex items-center justify-center">
+                                                <IconComponent className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
+                                            </div>
+                                            <div>
+                                                <p className="font-medium text-sm">{c.label}</p>
+                                                <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                                                    <span className="text-emerald-600">+{currencySymbol}{data.inflow.toFixed(2)}</span>
+                                                    <span>•</span>
+                                                    <span className="text-rose-600">-{currencySymbol}{data.outflow.toFixed(2)}</span>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div className={cn('font-mono font-bold text-sm', data.net >= 0 ? 'text-slate-900 dark:text-white' : 'text-rose-600')}>
+                                            {currencySymbol}{data.net.toFixed(2)}
+                                        </div>
                                     </div>
-                                </div>
-                            );
-                        })}
+                                );
+                            })}
+                        </div>
                     </div>
                 </div>
 
-                {/* Desglose Agrupado por Concepto */}
-                <div className="space-y-3">
-                    <h3 className="text-md font-bold tracking-tight text-slate-800 dark:text-slate-200 flex items-center gap-2">
-                        <Tag className="w-4 h-4 text-emerald-600" />
-                        {__('Desglose por Concepto')}
-                    </h3>
-                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                        {conceptList.map((c) => {
-                            const data = summary.by_concept?.[c.key] || { inflow: 0, outflow: 0, net: 0 };
-                            const IconComponent = c.icon;
-                            if (data.inflow === 0 && data.outflow === 0) return null; // Solo mostrar los usados
-                            return (
-                                <div key={c.key} className="rounded-lg border p-4 bg-card text-card-foreground shadow-sm flex items-center justify-between">
-                                    <div className="space-y-0.5">
-                                        <div className="flex items-center gap-2">
-                                            <IconComponent className="w-4 h-4 text-emerald-600" />
-                                            <span className="text-sm font-semibold">{c.label}</span>
-                                        </div>
-                                        <div className="flex items-center gap-3 text-xs text-muted-foreground">
-                                            <span>{__('Ingresos')}: <strong className="text-emerald-600">+{currencySymbol}{data.inflow.toFixed(2)}</strong></span>
-                                            <span>{__('Egresos')}: <strong className="text-rose-600">-{currencySymbol}{data.outflow.toFixed(2)}</strong></span>
-                                        </div>
-                                    </div>
-                                    <div className="text-right font-mono font-bold text-md">
-                                        {currencySymbol}{data.net.toFixed(2)}
-                                    </div>
-                                </div>
-                            );
-                        })}
-                    </div>
-                </div>
-
-                {/* Tabla de Movimientos */}
-                <div className="space-y-4">
+                {/* Tabla Completa de Transacciones (Detalle) */}
+                <div className="space-y-4 pt-2">
                     <div className="flex items-center justify-between">
-                        <h2 className="text-lg font-bold tracking-tight">{__('Historial de Movimientos')}</h2>
+                        <h2 className="text-lg font-bold tracking-tight">{__('Historial Completo de Transacciones')}</h2>
                         <span className="text-xs text-muted-foreground">
                             {caja.movements?.length || 0} {__('movimientos registrados')}
                         </span>
