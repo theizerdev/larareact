@@ -444,6 +444,11 @@ export default function AdminSaasLayout({
                                     href: '/admin/cajas',
                                     permission: 'cajas.view',
                                 },
+                                {
+                                    title: 'Servicios',
+                                    href: '/admin/servicios',
+                                    permission: 'servicios.view',
+                                },
                             ].filter(item => hasPermission(item.permission));
 
                             if (posItems.length === 0) return null;

@@ -8,6 +8,7 @@ use App\Models\Empresa;
 use App\Models\Pais;
 use App\Services\CashRegisterService;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 
 class CashRegisterController extends Controller
 {
@@ -104,6 +105,42 @@ class CashRegisterController extends Controller
         $openingAmount = (float) $caja->opening_amount;
         $currentBalance = $openingAmount + $inflows - $outflows;
 
+        // Group by Payment Method
+        $byPaymentMethodRaw = $caja->movements()
+            ->select('metodo_pago', 'type', DB::raw('SUM(amount) as total'))
+            ->groupBy('metodo_pago', 'type')
+            ->get();
+
+        $byPaymentMethod = [];
+        foreach ($byPaymentMethodRaw as $item) {
+            $method = $item->metodo_pago;
+            if (!isset($byPaymentMethod[$method])) {
+                $byPaymentMethod[$method] = ['inflow' => 0.0, 'outflow' => 0.0, 'net' => 0.0];
+            }
+            $byPaymentMethod[$method][$item->type] = (float) $item->total;
+        }
+        foreach ($byPaymentMethod as $method => $values) {
+            $byPaymentMethod[$method]['net'] = $values['inflow'] - $values['outflow'];
+        }
+
+        // Group by Concept
+        $byConceptRaw = $caja->movements()
+            ->select('concepto', 'type', DB::raw('SUM(amount) as total'))
+            ->groupBy('concepto', 'type')
+            ->get();
+
+        $byConcept = [];
+        foreach ($byConceptRaw as $item) {
+            $concept = $item->concepto;
+            if (!isset($byConcept[$concept])) {
+                $byConcept[$concept] = ['inflow' => 0.0, 'outflow' => 0.0, 'net' => 0.0];
+            }
+            $byConcept[$concept][$item->type] = (float) $item->total;
+        }
+        foreach ($byConcept as $concept => $values) {
+            $byConcept[$concept]['net'] = $values['inflow'] - $values['outflow'];
+        }
+
         return inertia('admin/PointOfSale/CashRegisters/Show', [
             'caja' => $caja,
             'summary' => [
@@ -111,6 +148,8 @@ class CashRegisterController extends Controller
                 'outflows' => $outflows,
                 'current_balance' => $currentBalance,
                 'currency_symbol' => $this->getCurrencySymbol(),
+                'by_payment_method' => $byPaymentMethod,
+                'by_concept' => $byConcept,
             ],
         ]);
     }
@@ -126,6 +165,8 @@ class CashRegisterController extends Controller
 
         $validated = $request->validate([
             'type' => 'required|in:inflow,outflow',
+            'concepto' => 'required|string|max:100',
+            'metodo_pago' => 'required|string|max:100',
             'amount' => 'required|numeric|gt:0',
             'description' => 'nullable|string|max:255',
         ]);
@@ -133,6 +174,8 @@ class CashRegisterController extends Controller
         $service->addMovement(
             $caja,
             $validated['type'],
+            $validated['concepto'],
+            $validated['metodo_pago'],
             (float) $validated['amount'],
             $validated['description'] ?? null,
             auth()->id()

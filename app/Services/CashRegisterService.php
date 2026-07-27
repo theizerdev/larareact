@@ -26,6 +26,8 @@ class CashRegisterService
     public function addMovement(
         CashRegister $register,
         string $type,
+        string $concepto,
+        string $metodoPago,
         float $amount,
         ?string $description,
         int $creatorId
@@ -37,6 +39,8 @@ class CashRegisterService
             'empresa_id' => $creator?->empresa_id ?? $register->empresa_id,
             'sucursal_id' => $creator?->sucursal_id ?? $register->sucursal_id,
             'type' => $type,
+            'concepto' => $concepto,
+            'metodo_pago' => $metodoPago,
             'amount' => $amount,
             'description' => $description,
             'created_by' => $creatorId,

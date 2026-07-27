@@ -111,6 +111,12 @@ class PermissionSeeder extends Seeder
                 'cajas.create' => 'Aperturar Cajas',
                 'cajas.edit' => 'Registrar Movimientos',
                 'cajas.close' => 'Cerrar Cajas',
+
+                // Módulo: Servicios
+                'servicios.view' => 'Ver Servicios',
+                'servicios.create' => 'Crear Servicios',
+                'servicios.edit' => 'Editar Servicios',
+                'servicios.delete' => 'Eliminar Servicios',
             ],
         ];
 
@@ -132,6 +138,7 @@ class PermissionSeeder extends Seeder
                     str_starts_with($permission, 'modelos.') => 'modelos',
                     str_starts_with($permission, 'productos.') => 'productos',
                     str_starts_with($permission, 'cajas.') => 'cajas',
+                    str_starts_with($permission, 'servicios.') => 'servicios',
 
                     default => 'general',
                 };

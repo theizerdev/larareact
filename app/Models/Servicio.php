@@ -7,30 +7,26 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
-class CashMovement extends Model
+class Servicio extends Model
 {
     use HasFactory, Multitenantable;
 
+    protected $table = 'servicios';
+
     protected $fillable = [
-        'cash_register_id',
         'empresa_id',
         'sucursal_id',
-        'type',
-        'concepto',
-        'metodo_pago',
-        'amount',
-        'description',
-        'created_by',
+        'nombre',
+        'codigo',
+        'descripcion',
+        'precio',
+        'estado',
     ];
 
     protected $casts = [
-        'amount' => 'float',
+        'precio' => 'float',
+        'estado' => 'boolean',
     ];
-
-    public function cashRegister(): BelongsTo
-    {
-        return $this->belongsTo(CashRegister::class);
-    }
 
     public function empresa(): BelongsTo
     {
@@ -40,10 +36,5 @@ class CashMovement extends Model
     public function sucursal(): BelongsTo
     {
         return $this->belongsTo(Sucursal::class);
-    }
-
-    public function creator(): BelongsTo
-    {
-        return $this->belongsTo(User::class, 'created_by');
     }
 }

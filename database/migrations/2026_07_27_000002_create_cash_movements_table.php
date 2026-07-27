@@ -11,6 +11,8 @@ return new class extends Migration {
             $table->foreignId('empresa_id')->nullable()->constrained('empresas')->onDelete('set null');
             $table->foreignId('sucursal_id')->nullable()->constrained('sucursales')->onDelete('set null');
             $table->enum('type', ['inflow', 'outflow']);
+            $table->string('concepto')->default('otro');
+            $table->string('metodo_pago')->default('efectivo');
             $table->decimal('amount', 15, 2);
             $table->string('description')->nullable();
             $table->foreignId('created_by')->constrained('users');

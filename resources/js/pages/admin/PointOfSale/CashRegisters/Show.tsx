@@ -7,6 +7,12 @@ import {
     Plus,
     Lock,
     ArrowLeft,
+    CreditCard,
+    Building2,
+    Smartphone,
+    Tag,
+    Layers,
+    Receipt,
 } from 'lucide-react';
 import React, { useState } from 'react';
 import { Breadcrumbs } from '@/components/breadcrumbs';
@@ -41,6 +47,8 @@ interface CashMovement {
     id: number;
     cash_register_id: number;
     type: 'inflow' | 'outflow';
+    concepto: string;
+    metodo_pago: string;
     amount: number;
     description: string | null;
     created_by: number;
@@ -60,11 +68,19 @@ interface CashRegister {
     movements: CashMovement[];
 }
 
+interface GroupedAmount {
+    inflow: number;
+    outflow: number;
+    net: number;
+}
+
 interface Summary {
     inflows: number;
     outflows: number;
     current_balance: number;
     currency_symbol?: string;
+    by_payment_method?: Record<string, GroupedAmount>;
+    by_concept?: Record<string, GroupedAmount>;
 }
 
 interface Props {
@@ -86,6 +102,8 @@ export default function Show({ caja, summary }: Props) {
 
     const { data, setData, post, processing, errors, reset } = useForm({
         type: 'inflow' as 'inflow' | 'outflow',
+        concepto: 'venta',
+        metodo_pago: 'efectivo',
         amount: '',
         description: '',
     });
@@ -116,6 +134,27 @@ export default function Show({ caja, summary }: Props) {
         }
     };
 
+    const formatConceptoLabel = (key: string) => {
+        switch (key) {
+            case 'venta': return __('Venta');
+            case 'reparacion': return __('Reparación de Equipo');
+            case 'compra': return __('Compra');
+            case 'gasto': return __('Gasto Operacional');
+            case 'ajuste': return __('Ajuste de Caja');
+            default: return key.charAt(0).toUpperCase() + key.slice(1);
+        }
+    };
+
+    const formatMetodoPagoLabel = (key: string) => {
+        switch (key) {
+            case 'efectivo': return __('Efectivo');
+            case 'transferencia': return __('Transferencia Bancaria');
+            case 'tarjeta': return __('Tarjeta Débito/Crédito');
+            case 'pago_movil': return __('Pago Móvil');
+            default: return key.charAt(0).toUpperCase() + key.slice(1);
+        }
+    };
+
     const columns: ColumnDef<CashMovement>[] = [
         {
             header: __('Tipo'),
@@ -134,6 +173,26 @@ export default function Show({ caja, summary }: Props) {
                         </span>
                     )}
                 </div>
+            ),
+        },
+        {
+            header: __('Concepto'),
+            accessorKey: 'concepto',
+            cell: (movement) => (
+                <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-slate-100 dark:bg-slate-800 text-xs font-medium text-slate-700 dark:text-slate-300">
+                    <Tag className="w-3 h-3 text-slate-500" />
+                    {formatConceptoLabel(movement.concepto || 'otro')}
+                </span>
+            ),
+        },
+        {
+            header: __('Método de Pago'),
+            accessorKey: 'metodo_pago',
+            cell: (movement) => (
+                <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-blue-50 dark:bg-blue-950/30 text-xs font-medium text-blue-700 dark:text-blue-400 border border-blue-100 dark:border-blue-900">
+                    <CreditCard className="w-3 h-3 text-blue-500" />
+                    {formatMetodoPagoLabel(movement.metodo_pago || 'efectivo')}
+                </span>
             ),
         },
         {
@@ -181,6 +240,23 @@ export default function Show({ caja, summary }: Props) {
     const finalBalance = isOpen
         ? Number(summary.current_balance || 0)
         : Number(caja.closing_amount !== null && caja.closing_amount !== undefined ? caja.closing_amount : summary.current_balance);
+
+    const paymentMethodList = [
+        { key: 'efectivo', label: __('Efectivo'), icon: Wallet },
+        { key: 'transferencia', label: __('Transferencia Bancaria'), icon: Building2 },
+        { key: 'tarjeta', label: __('Tarjeta Débito/Crédito'), icon: CreditCard },
+        { key: 'pago_movil', label: __('Pago Móvil'), icon: Smartphone },
+        { key: 'otro', label: __('Otros Métodos'), icon: Receipt },
+    ];
+
+    const conceptList = [
+        { key: 'venta', label: __('Ventas'), icon: Tag },
+        { key: 'reparacion', label: __('Reparación de Equipo'), icon: Layers },
+        { key: 'compra', label: __('Compras'), icon: Receipt },
+        { key: 'gasto', label: __('Gastos Operacionales'), icon: ArrowDownCircle },
+        { key: 'ajuste', label: __('Ajustes de Caja'), icon: DollarSign },
+        { key: 'otro', label: __('Otros Conceptos'), icon: Tag },
+    ];
 
     return (
         <>
@@ -238,7 +314,7 @@ export default function Show({ caja, summary }: Props) {
                     </div>
                 )}
 
-                {/* Summary Stat Cards */}
+                {/* Totales Generales */}
                 <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-4">
                     <StatCard
                         icon={<Wallet className="h-6 w-6" />}
@@ -264,6 +340,67 @@ export default function Show({ caja, summary }: Props) {
                         value={`${currencySymbol}${finalBalance.toFixed(2)}`}
                         colorClassName={isOpen ? 'bg-amber-100 text-amber-600' : 'bg-purple-100 text-purple-600'}
                     />
+                </div>
+
+                {/* Desglose Agrupado por Método de Pago */}
+                <div className="space-y-3">
+                    <h3 className="text-md font-bold tracking-tight text-slate-800 dark:text-slate-200 flex items-center gap-2">
+                        <CreditCard className="w-4 h-4 text-blue-600" />
+                        {__('Desglose por Método de Pago')}
+                    </h3>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
+                        {paymentMethodList.map((pm) => {
+                            const data = summary.by_payment_method?.[pm.key] || { inflow: 0, outflow: 0, net: 0 };
+                            const IconComponent = pm.icon;
+                            return (
+                                <div key={pm.key} className="rounded-lg border p-3.5 bg-card text-card-foreground shadow-sm space-y-1">
+                                    <div className="flex items-center justify-between text-xs text-muted-foreground">
+                                        <span className="font-medium">{pm.label}</span>
+                                        <IconComponent className="w-4 h-4 text-slate-400" />
+                                    </div>
+                                    <p className="text-lg font-bold font-mono">
+                                        {currencySymbol}{data.net.toFixed(2)}
+                                    </p>
+                                    <div className="flex justify-between text-[11px] text-muted-foreground pt-1 border-t">
+                                        <span className="text-emerald-600 font-medium">+{currencySymbol}{data.inflow.toFixed(2)}</span>
+                                        <span className="text-rose-600 font-medium">-{currencySymbol}{data.outflow.toFixed(2)}</span>
+                                    </div>
+                                </div>
+                            );
+                        })}
+                    </div>
+                </div>
+
+                {/* Desglose Agrupado por Concepto */}
+                <div className="space-y-3">
+                    <h3 className="text-md font-bold tracking-tight text-slate-800 dark:text-slate-200 flex items-center gap-2">
+                        <Tag className="w-4 h-4 text-emerald-600" />
+                        {__('Desglose por Concepto')}
+                    </h3>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                        {conceptList.map((c) => {
+                            const data = summary.by_concept?.[c.key] || { inflow: 0, outflow: 0, net: 0 };
+                            const IconComponent = c.icon;
+                            if (data.inflow === 0 && data.outflow === 0) return null; // Solo mostrar los usados
+                            return (
+                                <div key={c.key} className="rounded-lg border p-4 bg-card text-card-foreground shadow-sm flex items-center justify-between">
+                                    <div className="space-y-0.5">
+                                        <div className="flex items-center gap-2">
+                                            <IconComponent className="w-4 h-4 text-emerald-600" />
+                                            <span className="text-sm font-semibold">{c.label}</span>
+                                        </div>
+                                        <div className="flex items-center gap-3 text-xs text-muted-foreground">
+                                            <span>{__('Ingresos')}: <strong className="text-emerald-600">+{currencySymbol}{data.inflow.toFixed(2)}</strong></span>
+                                            <span>{__('Egresos')}: <strong className="text-rose-600">-{currencySymbol}{data.outflow.toFixed(2)}</strong></span>
+                                        </div>
+                                    </div>
+                                    <div className="text-right font-mono font-bold text-md">
+                                        {currencySymbol}{data.net.toFixed(2)}
+                                    </div>
+                                </div>
+                            );
+                        })}
+                    </div>
                 </div>
 
                 {/* Tabla de Movimientos */}
@@ -295,41 +432,86 @@ export default function Show({ caja, summary }: Props) {
                         <DialogHeader>
                             <DialogTitle>{__('Registrar Movimiento de Caja')}</DialogTitle>
                             <DialogDescription>
-                                {__('Registre una entrada o salida de dinero de la caja actual.')}
+                                {__('Registre una entrada o salida de dinero de la caja actual con su concepto y método de pago.')}
                             </DialogDescription>
                         </DialogHeader>
 
                         <form onSubmit={handleMovementSubmit} className="space-y-4 py-2">
-                            <div className="space-y-2">
-                                <Label htmlFor="type">{__('Tipo de Movimiento')}</Label>
-                                <Select
-                                    value={data.type}
-                                    onValueChange={(val: 'inflow' | 'outflow') => setData('type', val)}
-                                >
-                                    <SelectTrigger id="type">
-                                        <SelectValue />
-                                    </SelectTrigger>
-                                    <SelectContent>
-                                        <SelectItem value="inflow">{__('Ingreso (+) Entrada de dinero')}</SelectItem>
-                                        <SelectItem value="outflow">{__('Egreso (-) Salida de dinero')}</SelectItem>
-                                    </SelectContent>
-                                </Select>
-                                {errors.type && <p className="text-xs text-rose-500">{errors.type}</p>}
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                <div className="space-y-2">
+                                    <Label htmlFor="type">{__('Tipo de Movimiento')}</Label>
+                                    <Select
+                                        value={data.type}
+                                        onValueChange={(val: 'inflow' | 'outflow') => setData('type', val)}
+                                    >
+                                        <SelectTrigger id="type">
+                                            <SelectValue />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                            <SelectItem value="inflow">{__('Ingreso (+) Entrada')}</SelectItem>
+                                            <SelectItem value="outflow">{__('Egreso (-) Salida')}</SelectItem>
+                                        </SelectContent>
+                                    </Select>
+                                    {errors.type && <p className="text-xs text-rose-500">{errors.type}</p>}
+                                </div>
+
+                                <div className="space-y-2">
+                                    <Label htmlFor="concepto">{__('Concepto')}</Label>
+                                    <Select
+                                        value={data.concepto}
+                                        onValueChange={(val: string) => setData('concepto', val)}
+                                    >
+                                        <SelectTrigger id="concepto">
+                                            <SelectValue />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                            <SelectItem value="venta">{__('Venta')}</SelectItem>
+                                            <SelectItem value="reparacion">{__('Reparación de Equipo')}</SelectItem>
+                                            <SelectItem value="compra">{__('Compra')}</SelectItem>
+                                            <SelectItem value="gasto">{__('Gasto Operacional')}</SelectItem>
+                                            <SelectItem value="ajuste">{__('Ajuste de Caja')}</SelectItem>
+                                            <SelectItem value="otro">{__('Otro')}</SelectItem>
+                                        </SelectContent>
+                                    </Select>
+                                    {errors.concepto && <p className="text-xs text-rose-500">{errors.concepto}</p>}
+                                </div>
                             </div>
 
-                            <div className="space-y-2">
-                                <Label htmlFor="amount">{__('Monto')} ({currencySymbol})</Label>
-                                <Input
-                                    id="amount"
-                                    type="number"
-                                    step="0.01"
-                                    min="0.01"
-                                    value={data.amount}
-                                    onChange={(e) => setData('amount', e.target.value)}
-                                    placeholder="Ej: 50.00"
-                                    required
-                                />
-                                {errors.amount && <p className="text-xs text-rose-500">{errors.amount}</p>}
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                <div className="space-y-2">
+                                    <Label htmlFor="metodo_pago">{__('Método de Pago')}</Label>
+                                    <Select
+                                        value={data.metodo_pago}
+                                        onValueChange={(val: string) => setData('metodo_pago', val)}
+                                    >
+                                        <SelectTrigger id="metodo_pago">
+                                            <SelectValue />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                            <SelectItem value="efectivo">{__('Efectivo')}</SelectItem>
+                                            <SelectItem value="transferencia">{__('Transferencia Bancaria')}</SelectItem>
+                                            <SelectItem value="tarjeta">{__('Tarjeta Débito/Crédito')}</SelectItem>
+                                            <SelectItem value="pago_movil">{__('Pago Móvil')}</SelectItem>
+                                            <SelectItem value="otro">{__('Otro')}</SelectItem>
+                                        </SelectContent>
+                                    </Select>
+                                    {errors.metodo_pago && <p className="text-xs text-rose-500">{errors.metodo_pago}</p>}
+                                </div>
+
+                                <div className="space-y-2">
+                                    <Label htmlFor="amount">{__('Monto')} ({currencySymbol})</Label>
+                                    <Input
+                                        id="amount"
+                                        type="number"
+                                        step="0.01"
+                                        min="0.01"
+                                        value={data.amount}
+                                        onChange={(e) => setData('amount', e.target.value)}
+                                        placeholder="Ej: 50.00"
+                                        required
+                                    />
+                                    {errors.amount && <p className="text-xs text-rose-500">{errors.amount}</p>}
+                                </div>
                             </div>
 
                             <div className="space-y-2">
@@ -339,7 +521,7 @@ export default function Show({ caja, summary }: Props) {
                                     rows={3}
                                     value={data.description}
                                     onChange={(e) => setData('description', e.target.value)}
-                                    placeholder={__('Ej: Pago de flete, venta en efectivo, base para cambio...')}
+                                    placeholder={__('Ej: Pago de flete, venta de accesorio, cambio de pantalla...')}
                                 />
                                 {errors.description && <p className="text-xs text-rose-500">{errors.description}</p>}
                             </div>
