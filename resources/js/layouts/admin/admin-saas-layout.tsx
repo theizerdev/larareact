@@ -440,6 +440,16 @@ export default function AdminSaasLayout({
                         {(() => {
                             const posItems = [
                                 {
+                                    title: 'Terminal POS',
+                                    href: '/admin/ventas/terminal',
+                                    permission: 'ventas.terminal',
+                                },
+                                {
+                                    title: 'Historial de Ventas',
+                                    href: '/admin/ventas',
+                                    permission: 'ventas.view',
+                                },
+                                {
                                     title: 'Flujo de Caja',
                                     href: '/admin/cajas',
                                     permission: 'cajas.view',

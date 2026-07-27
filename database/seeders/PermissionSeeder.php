@@ -117,6 +117,11 @@ class PermissionSeeder extends Seeder
                 'servicios.create' => 'Crear Servicios',
                 'servicios.edit' => 'Editar Servicios',
                 'servicios.delete' => 'Eliminar Servicios',
+
+                // Módulo: Ventas / Terminal POS
+                'ventas.terminal' => 'Acceder a Terminal POS',
+                'ventas.view' => 'Ver Historial de Ventas',
+                'ventas.anular' => 'Anular Ventas',
             ],
         ];
 
@@ -139,6 +144,7 @@ class PermissionSeeder extends Seeder
                     str_starts_with($permission, 'productos.') => 'productos',
                     str_starts_with($permission, 'cajas.') => 'cajas',
                     str_starts_with($permission, 'servicios.') => 'servicios',
+                    str_starts_with($permission, 'ventas.') => 'ventas',
 
                     default => 'general',
                 };
