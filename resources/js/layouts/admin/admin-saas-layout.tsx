@@ -21,7 +21,7 @@ import {
     Activity,
     Link2,
 } from 'lucide-react';
-import { Building2, GitBranch, Briefcase, Calendar, Smartphone } from 'lucide-react';
+import { Building2, GitBranch, Briefcase, Calendar, Smartphone, Wallet } from 'lucide-react';
 import * as React from 'react';
 import LanguageToggle from '@/components/language-toggle';
 import TemplateCustomizer from '@/components/template-customizer';
@@ -431,6 +431,30 @@ export default function AdminSaasLayout({
                                         icon={Smartphone}
                                         collapsed={collapsed}
                                         items={equiposItems}
+                                    />
+                                </div>
+                            );
+                        })()}
+
+                        {/* Punto de Venta Group */}
+                        {(() => {
+                            const posItems = [
+                                {
+                                    title: 'Flujo de Caja',
+                                    href: '/admin/cajas',
+                                    permission: 'cajas.view',
+                                },
+                            ].filter(item => hasPermission(item.permission));
+
+                            if (posItems.length === 0) return null;
+
+                            return (
+                                <div className="pt-2">
+                                    <CollapsibleNavItem
+                                        title="Punto de Venta"
+                                        icon={Wallet}
+                                        collapsed={collapsed}
+                                        items={posItems}
                                     />
                                 </div>
                             );

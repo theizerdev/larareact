@@ -97,13 +97,21 @@ class PermissionSeeder extends Seeder
                 'modelos.delete' => 'Eliminar Modelos',
 
                 // Módulo: Productos
+                // Módulo: Productos
                 'productos.view' => 'Ver Productos',
                 'productos.create' => 'Crear Productos',
                 'productos.edit' => 'Editar Productos',
                 'productos.delete' => 'Eliminar Productos',
             ],
 
-
+            // Sector: Punto de Venta
+            'punto_de_venta' => [
+                // Módulo: Flujo de Caja
+                'cajas.view' => 'Ver Cajas',
+                'cajas.create' => 'Aperturar Cajas',
+                'cajas.edit' => 'Registrar Movimientos',
+                'cajas.close' => 'Cerrar Cajas',
+            ],
         ];
 
         foreach ($permissions as $sector => $sectorPermissions) {
@@ -123,6 +131,7 @@ class PermissionSeeder extends Seeder
                     str_starts_with($permission, 'familias.') => 'familias',
                     str_starts_with($permission, 'modelos.') => 'modelos',
                     str_starts_with($permission, 'productos.') => 'productos',
+                    str_starts_with($permission, 'cajas.') => 'cajas',
 
                     default => 'general',
                 };

@@ -55,6 +55,12 @@ class RoleSeeder extends Seeder
         // Cliente: storefront customers
         $cliente = Role::firstOrCreate(['name' => 'cliente', 'guard_name' => 'web']);
 
+        // Cajero: POS Cash Register management
+        $cajero = Role::firstOrCreate(['name' => 'Cajero', 'guard_name' => 'web']);
+        $cajero->syncPermissions(
+            Permission::where('module', 'cajas')->orWhere('name', 'dashboard.view')->get()
+        );
+
         // Reset cached roles and permissions
         app()[PermissionRegistrar::class]->forgetCachedPermissions();
     }
