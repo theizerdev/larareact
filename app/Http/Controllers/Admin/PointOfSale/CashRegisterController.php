@@ -15,9 +15,7 @@ class CashRegisterController extends Controller
     private function getCurrencySymbol(): string
     {
         $user = auth()->user();
-        if (!$user) {
-            return '$';
-        }
+        if (!$user) return '$';
 
         $empresa = $user->empresa;
         if (!$empresa && $user->empresa_id) {
@@ -91,7 +89,7 @@ class CashRegisterController extends Controller
         ]);
     }
 
-    public function show(CashRegister $caja)
+    public function show(CashRegister $caja, CashRegisterService $service)
     {
         $caja->load([
             'user',
@@ -105,23 +103,7 @@ class CashRegisterController extends Controller
         $openingAmount = (float) $caja->opening_amount;
         $currentBalance = $openingAmount + $inflows - $outflows;
 
-        // Group by Payment Method
-        $byPaymentMethodRaw = $caja->movements()
-            ->select('metodo_pago', 'type', DB::raw('SUM(amount) as total'))
-            ->groupBy('metodo_pago', 'type')
-            ->get();
-
-        $byPaymentMethod = [];
-        foreach ($byPaymentMethodRaw as $item) {
-            $method = $item->metodo_pago;
-            if (!isset($byPaymentMethod[$method])) {
-                $byPaymentMethod[$method] = ['inflow' => 0.0, 'outflow' => 0.0, 'net' => 0.0];
-            }
-            $byPaymentMethod[$method][$item->type] = (float) $item->total;
-        }
-        foreach ($byPaymentMethod as $method => $values) {
-            $byPaymentMethod[$method]['net'] = $values['inflow'] - $values['outflow'];
-        }
+        $byPaymentMethod = $service->getPaymentMethodBreakdown($caja);
 
         // Group by Concept
         $byConceptRaw = $caja->movements()
@@ -187,7 +169,7 @@ class CashRegisterController extends Controller
         ]);
     }
 
-    public function close(CashRegister $caja, CashRegisterService $service)
+    public function close(Request $request, CashRegister $caja, CashRegisterService $service)
     {
         if ($caja->status !== 'open') {
             return back()->with('notification', [
@@ -196,7 +178,13 @@ class CashRegisterController extends Controller
             ]);
         }
 
-        $service->closeRegister($caja);
+        $validated = $request->validate([
+            'counted_amount' => 'nullable|numeric|min:0',
+        ]);
+
+        $countedAmount = isset($validated['counted_amount']) ? (float) $validated['counted_amount'] : null;
+
+        $service->closeRegister($caja, $countedAmount);
 
         return back()->with('notification', [
             'type' => 'success',

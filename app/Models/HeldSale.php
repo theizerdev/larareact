@@ -6,34 +6,24 @@ use App\Traits\Multitenantable;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
-use Illuminate\Database\Eloquent\Relations\HasMany;
 
-class CashRegister extends Model
+class HeldSale extends Model
 {
     use HasFactory, Multitenantable;
+
+    protected $table = 'held_sales';
 
     protected $fillable = [
         'empresa_id',
         'sucursal_id',
         'user_id',
-        'opening_amount',
-        'closing_amount',
-        'counted_amount',
-        'expected_amount',
-        'difference',
-        'opened_at',
-        'closed_at',
-        'status',
+        'label',
+        'cart_data',
+        'cliente_nombre',
     ];
 
     protected $casts = [
-        'opened_at' => 'datetime',
-        'closed_at' => 'datetime',
-        'opening_amount' => 'float',
-        'closing_amount' => 'float',
-        'counted_amount' => 'float',
-        'expected_amount' => 'float',
-        'difference' => 'float',
+        'cart_data' => 'array',
     ];
 
     public function user(): BelongsTo
@@ -49,10 +39,5 @@ class CashRegister extends Model
     public function sucursal(): BelongsTo
     {
         return $this->belongsTo(Sucursal::class);
-    }
-
-    public function movements(): HasMany
-    {
-        return $this->hasMany(CashMovement::class);
     }
 }

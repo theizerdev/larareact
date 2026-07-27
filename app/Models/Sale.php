@@ -19,6 +19,7 @@ class Sale extends Model
         'sucursal_id',
         'cash_register_id',
         'user_id',
+        'cliente_id',
         'codigo_ticket',
         'cliente_nombre',
         'metodo_pago',
@@ -29,6 +30,8 @@ class Sale extends Model
         'monto_recibido',
         'cambio',
         'estado',
+        'es_credito',
+        'saldo_credito',
         'notas',
     ];
 
@@ -39,6 +42,8 @@ class Sale extends Model
         'total' => 'float',
         'monto_recibido' => 'float',
         'cambio' => 'float',
+        'saldo_credito' => 'float',
+        'es_credito' => 'boolean',
     ];
 
     public function items(): HasMany
@@ -46,9 +51,24 @@ class Sale extends Model
         return $this->hasMany(SaleItem::class);
     }
 
+    public function payments(): HasMany
+    {
+        return $this->hasMany(SalePayment::class);
+    }
+
+    public function creditPayments(): HasMany
+    {
+        return $this->hasMany(CreditPayment::class);
+    }
+
     public function user(): BelongsTo
     {
         return $this->belongsTo(User::class);
+    }
+
+    public function cliente(): BelongsTo
+    {
+        return $this->belongsTo(Cliente::class);
     }
 
     public function cashRegister(): BelongsTo

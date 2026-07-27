@@ -47,19 +47,52 @@ class CashRegisterService
         ]);
     }
 
-    public function closeRegister(CashRegister $register): CashRegister
+    public function closeRegister(CashRegister $register, ?float $countedAmount = null): CashRegister
     {
         $inflows = (float) $register->movements()->where('type', 'inflow')->sum('amount');
         $outflows = (float) $register->movements()->where('type', 'outflow')->sum('amount');
         $openingAmount = (float) $register->opening_amount;
-        $closingAmount = $openingAmount + $inflows - $outflows;
+        $expectedAmount = $openingAmount + $inflows - $outflows;
 
-        $register->update([
-            'closing_amount' => $closingAmount,
+        $data = [
+            'closing_amount' => $expectedAmount,
+            'expected_amount' => $expectedAmount,
             'closed_at' => Carbon::now(),
             'status' => 'closed',
-        ]);
+        ];
+
+        if ($countedAmount !== null) {
+            $data['counted_amount'] = $countedAmount;
+            $data['difference'] = $countedAmount - $expectedAmount;
+        }
+
+        $register->update($data);
 
         return $register;
+    }
+
+    /**
+     * Get breakdown of movements by payment method for a register.
+     */
+    public function getPaymentMethodBreakdown(CashRegister $register): array
+    {
+        $rows = $register->movements()
+            ->selectRaw('metodo_pago, type, SUM(amount) as total')
+            ->groupBy('metodo_pago', 'type')
+            ->get();
+
+        $breakdown = [];
+        foreach ($rows as $row) {
+            $method = $row->metodo_pago;
+            if (!isset($breakdown[$method])) {
+                $breakdown[$method] = ['inflow' => 0.0, 'outflow' => 0.0, 'net' => 0.0];
+            }
+            $breakdown[$method][$row->type] = (float) $row->total;
+        }
+        foreach ($breakdown as $method => $vals) {
+            $breakdown[$method]['net'] = $vals['inflow'] - $vals['outflow'];
+        }
+
+        return $breakdown;
     }
 }

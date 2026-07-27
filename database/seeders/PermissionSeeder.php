@@ -122,6 +122,13 @@ class PermissionSeeder extends Seeder
                 'ventas.terminal' => 'Acceder a Terminal POS',
                 'ventas.view' => 'Ver Historial de Ventas',
                 'ventas.anular' => 'Anular Ventas',
+
+                // Módulo: Clientes / Cuentas por Cobrar
+                'clientes.view' => 'Ver Clientes',
+                'clientes.create' => 'Crear Clientes',
+                'clientes.edit' => 'Editar Clientes',
+                'clientes.delete' => 'Eliminar Clientes',
+                'clientes.abono' => 'Registrar Abonos de Crédito',
             ],
         ];
 
@@ -145,6 +152,7 @@ class PermissionSeeder extends Seeder
                     str_starts_with($permission, 'cajas.') => 'cajas',
                     str_starts_with($permission, 'servicios.') => 'servicios',
                     str_starts_with($permission, 'ventas.') => 'ventas',
+                    str_starts_with($permission, 'clientes.') => 'clientes',
 
                     default => 'general',
                 };

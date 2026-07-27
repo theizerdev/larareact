@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\Admin\PointOfSale\CashRegisterController;
+use App\Http\Controllers\Admin\PointOfSale\ClienteController;
 use App\Http\Controllers\Admin\PointOfSale\SaleController;
 use App\Http\Controllers\Admin\PointOfSale\ServicioController;
 use Illuminate\Support\Facades\Route;
@@ -17,4 +18,13 @@ Route::middleware(['verified'])->group(function () {
     // Terminal POS & Ventas
     Route::get('ventas/terminal', [SaleController::class, 'terminal'])->name('ventas.terminal');
     Route::resource('ventas', SaleController::class)->only(['index', 'store', 'show']);
+
+    // Ventas en Espera
+    Route::post('ventas/hold', [SaleController::class, 'holdSale'])->name('ventas.hold');
+    Route::post('ventas/resume/{heldSale}', [SaleController::class, 'resumeSale'])->name('ventas.resume');
+    Route::delete('ventas/held/{heldSale}', [SaleController::class, 'deleteHeldSale'])->name('ventas.held.delete');
+
+    // Clientes y Cuentas por Cobrar
+    Route::resource('clientes', ClienteController::class)->except(['create', 'edit']);
+    Route::post('clientes/{cliente}/abono', [ClienteController::class, 'registrarAbono'])->name('clientes.abono');
 });
