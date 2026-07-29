@@ -113,13 +113,37 @@ class SaleController extends Controller
             ->orderBy('nombre')
             ->get();
 
+        $empresa = auth()->user()?->empresa;
+        $valorDolar = (float) ($empresa?->valor_dolar ?? 20.0);
+
         return inertia('admin/PointOfSale/Ventas/Terminal', [
             'catalog' => $catalog,
             'activeRegister' => $activeRegister,
             'activeRegisterSummary' => $registerSummary,
             'currencySymbol' => $this->getCurrencySymbol(),
+            'valorDolar' => $valorDolar,
             'heldSales' => $heldSales,
             'clientes' => $clientes,
+        ]);
+    }
+
+    public function updateValorDolar(Request $request)
+    {
+        $validated = $request->validate([
+            'valor_dolar' => 'required|numeric|gt:0',
+        ]);
+
+        $user = auth()->user();
+        if ($user && $user->empresa_id) {
+            $empresa = Empresa::find($user->empresa_id);
+            if ($empresa) {
+                $empresa->update(['valor_dolar' => (float) $validated['valor_dolar']]);
+            }
+        }
+
+        return back()->with('notification', [
+            'type' => 'success',
+            'message' => __('Valor del dólar actualizado exitosamente.'),
         ]);
     }
 

@@ -45,6 +45,7 @@ class Empresa extends Model
         'whatsapp_phone',
         'whatsapp_status',
         'whatsapp_last_connected',
+        'valor_dolar',
         'mapbox_api_key',
         'mapbox_active',
         'google_maps_api_key',

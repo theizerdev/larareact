@@ -79,13 +79,24 @@ class CashRegisterController extends Controller
 
         $validated = $request->validate([
             'opening_amount' => 'required|numeric|min:0',
+            'valor_dolar' => 'nullable|numeric|gt:0',
         ]);
 
         $service->openRegister(auth()->id(), (float) $validated['opening_amount']);
 
+        if (!empty($validated['valor_dolar'])) {
+            $user = auth()->user();
+            if ($user && $user->empresa_id) {
+                $empresa = Empresa::find($user->empresa_id);
+                if ($empresa) {
+                    $empresa->update(['valor_dolar' => (float) $validated['valor_dolar']]);
+                }
+            }
+        }
+
         return back()->with('notification', [
             'type' => 'success',
-            'message' => __('Caja aperturada exitosamente.'),
+            'message' => __('Caja aperturada exitosamente con tipo de cambio configurado.'),
         ]);
     }
 

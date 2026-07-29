@@ -1,5 +1,5 @@
 import { useForm, usePage } from '@inertiajs/react';
-import { Wallet, AlertTriangle } from 'lucide-react';
+import { Wallet, AlertTriangle, Coins } from 'lucide-react';
 import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import {
@@ -30,6 +30,7 @@ export function OpenCashRegisterModal() {
 
     const { data, setData, post, processing, errors, reset } = useForm({
         opening_amount: '0.00',
+        valor_dolar: '20.00',
     });
 
     const handleSubmit = (e: React.FormEvent) => {
@@ -57,7 +58,7 @@ export function OpenCashRegisterModal() {
                         {__('Apertura de Caja del Día')}
                     </DialogTitle>
                     <DialogDescription>
-                        {__('Atención Administrador: No se encuentra ninguna caja aperturada para el día de hoy en su empresa. Ingrese el fondo inicial para abrir turno.')}
+                        {__('No se encuentra ninguna caja aperturada para el día de hoy. Ingrese el fondo inicial y la tasa del dólar para abrir turno.')}
                     </DialogDescription>
                 </DialogHeader>
 
@@ -66,13 +67,13 @@ export function OpenCashRegisterModal() {
                         <AlertTriangle className="w-4 h-4 text-amber-500 shrink-0 mt-0.5" />
                         <div>
                             <p className="font-bold">{__('Apertura Requerida')}</p>
-                            <p className="mt-0.5">{__('Registrar el fondo en efectivo facilitará el control de arqueo y registro de operaciones del día.')}</p>
+                            <p className="mt-0.5">{__('Configure el fondo en efectivo y el valor del dólar ($1 USD) para las operaciones y conversiones en tienda.')}</p>
                         </div>
                     </div>
 
                     <div className="space-y-2">
                         <Label htmlFor="opening_amount_modal" className="font-semibold">
-                            {__('Monto Inicial de Fondo ($)')}
+                            {__('Monto Inicial de Fondo en Efectivo ($)')}
                         </Label>
                         <Input
                             id="opening_amount_modal"
@@ -88,6 +89,27 @@ export function OpenCashRegisterModal() {
                         />
                         {errors.opening_amount && (
                             <p className="text-xs text-rose-500">{errors.opening_amount}</p>
+                        )}
+                    </div>
+
+                    <div className="space-y-2">
+                        <Label htmlFor="valor_dolar_modal" className="font-semibold flex items-center gap-1.5">
+                            <Coins className="w-4 h-4 text-emerald-600" />
+                            {__('Valor del Dólar ($1 USD en MXN)')}
+                        </Label>
+                        <Input
+                            id="valor_dolar_modal"
+                            type="number"
+                            step="0.01"
+                            min="0.01"
+                            value={data.valor_dolar}
+                            onChange={(e) => setData('valor_dolar', e.target.value)}
+                            placeholder="20.00"
+                            className="font-mono text-lg h-11 text-center font-bold text-emerald-600"
+                            required
+                        />
+                        {errors.valor_dolar && (
+                            <p className="text-xs text-rose-500">{errors.valor_dolar}</p>
                         )}
                     </div>
 

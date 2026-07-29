@@ -88,6 +88,7 @@ export default function Index({ cajas, activeRegister, currencySymbol = '$', fil
 
     const { data, setData, post, processing, errors, reset } = useForm({
         opening_amount: '',
+        valor_dolar: '20.00',
     });
 
     const handleOpenCreate = () => {
@@ -342,6 +343,23 @@ export default function Index({ cajas, activeRegister, currencySymbol = '$', fil
                                 />
                                 {errors.opening_amount && (
                                     <p className="text-xs text-rose-500">{errors.opening_amount}</p>
+                                )}
+                            </div>
+
+                            <div className="space-y-2">
+                                <Label htmlFor="valor_dolar">{__('Valor del Dólar ($1 USD en MXN)')}</Label>
+                                <Input
+                                    id="valor_dolar"
+                                    type="number"
+                                    step="0.01"
+                                    min="0.01"
+                                    value={data.valor_dolar}
+                                    onChange={(e) => setData('valor_dolar', e.target.value)}
+                                    placeholder="Ej: 20.00"
+                                    required
+                                />
+                                {errors.valor_dolar && (
+                                    <p className="text-xs text-rose-500">{errors.valor_dolar}</p>
                                 )}
                             </div>
 

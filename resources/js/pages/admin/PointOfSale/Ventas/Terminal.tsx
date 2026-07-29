@@ -3,7 +3,7 @@ import {
     ShoppingCart, Search, Plus, Minus, Trash2, CheckCircle2, CreditCard, DollarSign,
     Package, Wrench, User, AlertCircle, Building2, Smartphone, Receipt, Pause,
     Play, X, Wallet, Tag, Barcode, HelpCircle, Layers, FileText, ArrowRight, Eye, RefreshCw,
-    Calculator, ArrowUpRight, ArrowDownLeft, Scale, Printer, Lock
+    Calculator, ArrowUpRight, ArrowDownLeft, Scale, Printer, Lock, Coins, Edit3
 } from 'lucide-react';
 import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { Breadcrumbs } from '@/components/breadcrumbs';
@@ -73,6 +73,7 @@ interface Props {
     activeRegister: CashRegister | null;
     activeRegisterSummary: RegisterSummary | null;
     currencySymbol?: string;
+    valorDolar?: number;
     heldSales: HeldSaleRecord[];
     clientes: ClienteRecord[];
 }
@@ -82,10 +83,15 @@ export default function Terminal({
     activeRegister,
     activeRegisterSummary,
     currencySymbol = '$',
+    valorDolar = 20.0,
     heldSales = [],
     clientes = [],
 }: Props) {
     const { __ } = useTranslate();
+
+    // Valor del Dólar (Exchange Rate) Modal State
+    const [isDolarModalOpen, setIsDolarModalOpen] = useState(false);
+    const [dolarInput, setDolarInput] = useState(String(valorDolar));
 
     // Multi-Ticket Tabs (Eleventa Style)
     const [tickets, setTickets] = useState<TicketTab[]>([
@@ -123,7 +129,7 @@ export default function Terminal({
     const [isCorteOpen, setIsCorteOpen] = useState(false);
     const [countedAmountInput, setCountedAmountInput] = useState('');
 
-    // Movement / Entradas y Salidas Modal (F7 / Movement)
+    // Movement / Entradas y Salidas Modal
     const [isMovementModalOpen, setIsMovementModalOpen] = useState(false);
     const [movementForm, setMovementForm] = useState({
         type: 'outflow' as 'inflow' | 'outflow',
@@ -164,6 +170,28 @@ export default function Terminal({
     useEffect(() => {
         barcodeInputRef.current?.focus();
     }, []);
+
+    // Handle Dollar Rate update submission
+    const handleUpdateDolarRate = (e: React.FormEvent) => {
+        e.preventDefault();
+        const rate = parseFloat(dolarInput);
+        if (isNaN(rate) || rate <= 0) {
+            notifyError(__('Ingrese una tasa de cambio válida.'));
+            return;
+        }
+
+        router.post(
+            '/admin/ventas/valor-dolar',
+            { valor_dolar: rate },
+            {
+                onSuccess: () => {
+                    setIsDolarModalOpen(false);
+                    notifySuccess(__('Valor del Dólar actualizado exitosamente.'));
+                },
+                onError: () => notifyError(__('Error al actualizar el valor del dólar.')),
+            }
+        );
+    };
 
     // Ticket Management
     const addTicketTab = () => {
@@ -325,6 +353,7 @@ export default function Terminal({
     // Totals calculations
     const subtotal = activeTicket.cart.reduce((acc, item) => acc + item.precio_unitario * item.cantidad, 0);
     const total = Math.max(0, subtotal - activeTicket.descuento);
+    const totalUSD = valorDolar > 0 ? total / valorDolar : 0;
     const totalItemsCount = activeTicket.cart.reduce((acc, item) => acc + item.cantidad, 0);
 
     // Payment calculations
@@ -435,7 +464,7 @@ export default function Terminal({
         );
     };
 
-    // Keyboard Shortcuts (F12: Cobrar, F10: Buscar, F9: Verificador, F8: Corte, INS/F7: Art Vario, F6: Nuevo Cliente, F5: En Espera)
+    // Keyboard Shortcuts (F12: Cobrar, F10: Buscar, F9: Verificador, F8: Corte, INS: Art Vario, F6: Nuevo Cliente, F5: En Espera)
     useEffect(() => {
         const handleKeyDown = (e: KeyboardEvent) => {
             if (e.key === 'F12') {
@@ -597,8 +626,21 @@ export default function Terminal({
                             </div>
                         </div>
 
-                        {/* Botones de Atajos Rápidos Eleventa */}
+                        {/* Botones de Atajos Rápidos Eleventa & Módulo Valor del Dólar */}
                         <div className="flex flex-wrap items-center gap-1.5">
+                            {/* MÓDULO VALOR DEL DÓLAR (CAMBIO USD) */}
+                            <Button
+                                type="button"
+                                variant="outline"
+                                size="sm"
+                                className="text-xs gap-1.5 bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 border-emerald-300 font-bold"
+                                onClick={() => setIsDolarModalOpen(true)}
+                            >
+                                <Coins className="w-3.5 h-3.5 text-emerald-600" />
+                                <span>$1 USD = ${valorDolar.toFixed(2)} MXN</span>
+                                <Edit3 className="w-3 h-3 ml-0.5 opacity-60" />
+                            </Button>
+
                             {/* BOTÓN F8 CORTE DE CAJA */}
                             {activeRegister && (
                                 <Button
@@ -892,7 +934,7 @@ export default function Terminal({
                         </table>
                     </div>
 
-                    {/* RESUMEN INFERIOR ESTILO ELEVENTA */}
+                    {/* RESUMEN INFERIOR CON CONVERSIÓN A DÓLARES */}
                     <div className="p-4 border-t bg-slate-50 dark:bg-slate-950 flex flex-col sm:flex-row items-center justify-between gap-4 mt-auto">
                         <div className="space-y-1">
                             <span className="text-sm font-bold text-slate-700 dark:text-slate-300 block">
@@ -908,9 +950,14 @@ export default function Terminal({
                         <div className="flex items-center gap-6">
                             <div className="text-right">
                                 <span className="text-xs font-bold text-muted-foreground uppercase tracking-wider block">{__('Total a Pagar')}</span>
-                                <span className="text-4xl font-black font-mono text-indigo-600 dark:text-indigo-400">
-                                    {currencySymbol}{total.toFixed(2)}
-                                </span>
+                                <div className="flex items-baseline justify-end gap-2">
+                                    <span className="text-4xl font-black font-mono text-indigo-600 dark:text-indigo-400">
+                                        {currencySymbol}{total.toFixed(2)}
+                                    </span>
+                                    <span className="text-sm font-bold font-mono text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/40 px-2 py-0.5 rounded border border-emerald-200">
+                                        ≈ ${totalUSD.toFixed(2)} USD
+                                    </span>
+                                </div>
                             </div>
 
                             <Button
@@ -925,6 +972,56 @@ export default function Terminal({
                         </div>
                     </div>
                 </div>
+
+                {/* MODAL CONFIGURACIÓN DEL VALOR DEL DÓLAR (TASA DE CAMBIO) */}
+                <Dialog open={isDolarModalOpen} onOpenChange={setIsDolarModalOpen}>
+                    <DialogContent className="sm:max-w-md">
+                        <DialogHeader>
+                            <DialogTitle className="flex items-center gap-2 text-emerald-600">
+                                <Coins className="w-5 h-5" />
+                                {__('Configurar Valor del Dólar (Tipo de Cambio)')}
+                            </DialogTitle>
+                            <DialogDescription>
+                                {__('Establezca el precio del Dólar ($1 USD) para las ventas y cobros del día en su tienda.')}
+                            </DialogDescription>
+                        </DialogHeader>
+
+                        <form onSubmit={handleUpdateDolarRate} className="space-y-4 py-2">
+                            <div className="space-y-2">
+                                <Label className="font-bold">{__('Valor del Dólar ($1 USD equivale a:)')}</Label>
+                                <div className="relative">
+                                    <span className="absolute left-3.5 top-2.5 font-mono font-bold text-muted-foreground">$</span>
+                                    <Input
+                                        type="number"
+                                        step="0.01"
+                                        min="0.01"
+                                        value={dolarInput}
+                                        onChange={(e) => setDolarInput(e.target.value)}
+                                        className="pl-8 font-mono text-xl font-bold"
+                                        placeholder="20.00"
+                                        autoFocus
+                                        required
+                                    />
+                                    <span className="absolute right-3.5 top-3 text-xs font-bold text-muted-foreground">MXN</span>
+                                </div>
+                            </div>
+
+                            <div className="p-3 rounded-lg bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-900 text-xs text-emerald-800 dark:text-emerald-300">
+                                <p className="font-bold mb-0.5">{__('Ejemplo de Conversión:')}</p>
+                                <p>{__('Una venta de $200.00 MXN equivaldrá a')} <strong>${(200 / (parseFloat(dolarInput) || 1)).toFixed(2)} USD</strong>.</p>
+                            </div>
+
+                            <DialogFooter className="pt-2">
+                                <Button type="button" variant="outline" onClick={() => setIsDolarModalOpen(false)}>
+                                    {__('Cancelar')}
+                                </Button>
+                                <Button type="submit" className="bg-emerald-600 hover:bg-emerald-700 font-bold text-white">
+                                    {__('Guardar Valor del Dólar')}
+                                </Button>
+                            </DialogFooter>
+                        </form>
+                    </DialogContent>
+                </Dialog>
 
                 {/* MODAL CORTE DE CAJA (F8) ESTILO ELEVENTA */}
                 <Dialog open={isCorteOpen} onOpenChange={setIsCorteOpen}>
@@ -1212,7 +1309,7 @@ export default function Terminal({
                     </DialogContent>
                 </Dialog>
 
-                {/* MODAL COBRAR (F12) */}
+                {/* MODAL COBRAR (F12) CON CONVERSIÓN A DÓLARES */}
                 <Dialog open={isPaymentModalOpen} onOpenChange={setIsPaymentModalOpen}>
                     <DialogContent className="sm:max-w-md">
                         <DialogHeader>
@@ -1229,6 +1326,9 @@ export default function Terminal({
                             <div className="rounded-xl bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-900 p-4 text-center">
                                 <span className="text-xs font-semibold uppercase text-emerald-700 dark:text-emerald-400">{__('TOTAL A COBRAR')}</span>
                                 <p className="text-3xl font-extrabold font-mono text-emerald-600 dark:text-emerald-300">{currencySymbol}{total.toFixed(2)}</p>
+                                <p className="text-xs font-bold text-emerald-700 dark:text-emerald-400 mt-1 font-mono">
+                                    ≈ ${totalUSD.toFixed(2)} USD <span className="font-normal">({__('Tasa:')} ${valorDolar.toFixed(2)} MXN)</span>
+                                </p>
                             </div>
 
                             {/* Selector de Cliente */}
@@ -1291,7 +1391,7 @@ export default function Terminal({
                                                 <SelectItem value="efectivo">{__('Efectivo')}</SelectItem>
                                                 <SelectItem value="transferencia">{__('Transferencia')}</SelectItem>
                                                 <SelectItem value="tarjeta">{__('Tarjeta')}</SelectItem>
-                                                <SelectItem value="pago_movil">{__('Pago Móvil')}</SelectItem>
+                                                <SelectItem value="pago_movil">{__('Pago Móvil / Dólar')}</SelectItem>
                                             </SelectContent>
                                         </Select>
                                         <Input
@@ -1373,6 +1473,9 @@ export default function Terminal({
                                     <p className="text-xs text-muted-foreground font-mono">SKU / Código: {verifierItem.codigo}</p>
                                     <p className="text-3xl font-extrabold font-mono text-emerald-600 dark:text-emerald-400">
                                         {currencySymbol}{verifierItem.precio.toFixed(2)}
+                                    </p>
+                                    <p className="text-xs text-emerald-700 font-bold font-mono">
+                                        ≈ ${(verifierItem.precio / (valorDolar || 1)).toFixed(2)} USD
                                     </p>
                                     {verifierItem.stock !== null && (
                                         <Badge variant="outline" className="bg-white dark:bg-slate-800 font-bold">
@@ -1528,7 +1631,13 @@ export default function Terminal({
                             </DialogHeader>
                             <div className="py-3 border-y space-y-2 text-sm text-left font-mono">
                                 <div className="flex justify-between"><span className="text-muted-foreground">{__('Cliente')}:</span><span className="font-semibold">{completedSale.cliente_nombre}</span></div>
-                                <div className="flex justify-between text-base font-bold"><span>{__('Total')}:</span><span className="text-emerald-600">{currencySymbol}{Number(completedSale.total).toFixed(2)}</span></div>
+                                <div className="flex justify-between text-base font-bold"><span>{__('Total MXN')}:</span><span className="text-emerald-600">{currencySymbol}{Number(completedSale.total).toFixed(2)}</span></div>
+                                {valorDolar > 0 && (
+                                    <div className="flex justify-between text-xs text-muted-foreground font-semibold">
+                                        <span>{__('Equivalente USD')}:</span>
+                                        <span>${(Number(completedSale.total) / valorDolar).toFixed(2)} USD</span>
+                                    </div>
+                                )}
                             </div>
                             <DialogFooter className="flex flex-col sm:flex-row gap-2">
                                 <Button variant="outline" className="w-full font-bold" onClick={() => window.print()}>{__('Imprimir Ticket')}</Button>
