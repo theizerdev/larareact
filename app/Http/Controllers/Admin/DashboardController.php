@@ -144,8 +144,23 @@ class DashboardController extends Controller
         ->limit(5)
         ->get();
 
+        $maxQty = $topItems->max('total_qty') ?: 1;
+
+        $topItemsFormatted = $topItems->map(function ($item, $index) use ($maxQty) {
+            $qty = (int) $item->total_qty;
+            $amount = (float) $item->total_amount;
+            return [
+                'rank' => $index + 1,
+                'nombre' => $item->nombre,
+                'total_qty' => $qty,
+                'total_amount' => round($amount, 2),
+                'percent_of_max' => min(100, round(($qty / $maxQty) * 100)),
+            ];
+        })->values()->toArray();
+
         $topItemNames = $topItems->pluck('nombre')->toArray();
         $topItemQuantities = $topItems->pluck('total_qty')->map(fn($v) => (int) $v)->toArray();
+        $topItemAmounts = $topItems->pluck('total_amount')->map(fn($v) => round((float) $v, 2))->toArray();
 
         // Recent Sales Table (Latest 5)
         $recentSales = Sale::with(['user', 'items'])
@@ -185,6 +200,8 @@ class DashboardController extends Controller
                 'topItems' => [
                     'categories' => $topItemNames,
                     'series' => $topItemQuantities,
+                    'amounts' => $topItemAmounts,
+                    'list' => $topItemsFormatted,
                 ],
             ],
             'recentSales' => $recentSales,

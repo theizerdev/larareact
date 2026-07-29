@@ -95,7 +95,15 @@ export default function PasskeyRegistration({ onSuccess }: Props) {
                 </p>
             </div>
 
-            {error && <InputError message={error} />}
+            {error && (
+                <InputError
+                    message={
+                        error.toLowerCase().includes('cancelled') || error.toLowerCase().includes('canceled')
+                            ? __('La operación fue cancelada o esta Passkey ya se encuentra sincronizada en su cuenta de Google / Apple.')
+                            : __(error)
+                    }
+                />
+            )}
 
             <div className="flex gap-2">
                 <Button type="submit" disabled={isLoading || !name.trim()}>

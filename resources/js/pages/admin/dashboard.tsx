@@ -14,7 +14,10 @@ import {
     ShoppingCart,
     TrendingUp,
     User,
-    Wallet
+    Wallet,
+    Trophy,
+    BarChart2,
+    ListOrdered
 } from 'lucide-react';
 import React, { useState, useEffect } from 'react';
 import Chart from 'react-apexcharts';
@@ -27,6 +30,7 @@ import { Label } from '@/components/ui/label';
 import { PageHeader } from '@/components/ui/page-header';
 import { Switch } from '@/components/ui/switch';
 import { useTranslate } from '@/hooks/use-translate';
+import { cn } from '@/lib/utils';
 
 interface TodayStats {
     total_mxn: number;
@@ -44,6 +48,14 @@ interface RegisterSummary {
     expected_balance: number;
     expected_usd: number;
     by_payment_method: Record<string, { net: number }>;
+}
+
+interface TopItem {
+    rank: number;
+    nombre: string;
+    total_qty: number;
+    total_amount: number;
+    percent_of_max: number;
 }
 
 interface Props {
@@ -73,6 +85,8 @@ interface Props {
         topItems: {
             categories: string[];
             series: number[];
+            amounts?: number[];
+            list?: TopItem[];
         };
     };
     recentSales: Array<{
@@ -101,6 +115,7 @@ export default function AdminDashboard({
     const [endDate, setEndDate] = useState(filters.end_date);
     const [autoRefresh, setAutoRefresh] = useState(false);
     const [isRefreshing, setIsRefreshing] = useState(false);
+    const [topItemsTab, setTopItemsTab] = useState<'ranking' | 'chart'>('ranking');
 
     // Live Auto Refresh (Polling every 10 seconds)
     useEffect(() => {
@@ -201,10 +216,51 @@ export default function AdminDashboard({
 
     const topItemsChartOptions: ApexCharts.ApexOptions = {
         chart: { type: 'bar', toolbar: { show: false }, fontFamily: 'inherit' },
-        plotOptions: { bar: { horizontal: true, borderRadius: 6 } },
-        colors: ['#6366f1'],
-        xaxis: { categories: charts.topItems.categories },
-        dataLabels: { enabled: true },
+        plotOptions: {
+            bar: {
+                horizontal: true,
+                borderRadius: 8,
+                barHeight: '60%',
+                distributed: true,
+            },
+        },
+        colors: ['#6366f1', '#8b5cf6', '#3b82f6', '#10b981', '#f59e0b'],
+        xaxis: {
+            categories: charts.topItems.categories,
+            labels: {
+                style: {
+                    fontSize: '11px',
+                    fontWeight: 600,
+                },
+            },
+        },
+        yaxis: {
+            labels: {
+                style: {
+                    fontSize: '12px',
+                    fontWeight: 700,
+                },
+            },
+        },
+        dataLabels: {
+            enabled: true,
+            formatter: (val) => `${val} unids.`,
+            style: {
+                fontSize: '11px',
+                fontWeight: 'bold',
+            },
+        },
+        tooltip: {
+            y: {
+                formatter: (val: number, opt?: { dataPointIndex: number }) => {
+                    const idx = opt?.dataPointIndex ?? 0;
+                    const amount = charts.topItems.amounts?.[idx];
+                    const amountStr = amount !== undefined ? ` · Total: ${currencySymbol}${amount.toFixed(2)} ${currencyCode}` : '';
+                    return `${val} ${__('unidades vendidas')}${amountStr}`;
+                },
+            },
+        },
+        legend: { show: false },
     };
 
     const topItemsChartSeries = [
@@ -230,13 +286,11 @@ export default function AdminDashboard({
                     </div>
 
                     <div className="flex flex-wrap items-center gap-3">
-                        {/* Indicador Valor del Dólar */}
                         <div className="flex items-center gap-1.5 px-3 py-1.5 bg-emerald-50 dark:bg-emerald-950/50 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800 rounded-xl font-mono text-xs font-bold shadow-2xs">
                             <Coins className="w-4 h-4 text-emerald-600" />
                             <span>$1 USD = {currencySymbol}{valorDolar.toFixed(2)} {currencyCode}</span>
                         </div>
 
-                        {/* Switch de Auto-Refresh */}
                         <div className="flex items-center gap-2 bg-slate-100 dark:bg-slate-800 px-3 py-1.5 rounded-xl border">
                             <Switch id="auto-refresh" checked={autoRefresh} onCheckedChange={setAutoRefresh} />
                             <Label htmlFor="auto-refresh" className="text-xs font-bold cursor-pointer flex items-center gap-1">
@@ -245,7 +299,6 @@ export default function AdminDashboard({
                             </Label>
                         </div>
 
-                        {/* Botón de Actualizar Manual */}
                         <Button variant="outline" size="sm" onClick={handleManualRefresh} disabled={isRefreshing} className="gap-1.5 font-bold text-xs">
                             <RefreshCw className={`w-3.5 h-3.5 ${isRefreshing ? 'animate-spin' : ''}`} />
                             {__('Actualizar')}
@@ -253,7 +306,7 @@ export default function AdminDashboard({
                     </div>
                 </div>
 
-                {/* SECCIÓN 1: LO GENERADO EL DÍA DE HOY (MÉTRICAS CLAVE) */}
+                {/* SECCIÓN 1: LO GENERADO EL DÍA DE HOY */}
                 <div className="space-y-2">
                     <h2 className="text-xs font-black uppercase tracking-wider text-muted-foreground flex items-center gap-1.5">
                         <Activity className="w-4 h-4 text-emerald-600" />
@@ -261,268 +314,214 @@ export default function AdminDashboard({
                     </h2>
 
                     <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-                        {/* Tarjeta 1: Total Hoy */}
-                        <Card className="border-emerald-200 dark:border-emerald-900 bg-gradient-to-br from-emerald-50/50 to-white dark:from-emerald-950/20 dark:to-slate-900 shadow-sm">
+                        <Card className="border-emerald-200 dark:border-emerald-900 bg-gradient-to-br from-emerald-50/50 to-white shadow-sm">
                             <CardHeader className="flex flex-row items-center justify-between pb-2">
                                 <CardTitle className="text-xs font-bold text-muted-foreground uppercase">{__('Total Recaudado Hoy')}</CardTitle>
-                                <div className="p-2 rounded-lg bg-emerald-100 dark:bg-emerald-900 text-emerald-600">
+                                <div className="p-2 rounded-lg bg-emerald-100 text-emerald-600">
                                     <DollarSign className="w-5 h-5" />
                                 </div>
                             </CardHeader>
                             <CardContent>
-                                <div className="text-3xl font-black font-mono text-emerald-700 dark:text-emerald-300">
+                                <div className="text-3xl font-black font-mono text-emerald-700">
                                     {currencySymbol}{todayStats.total_mxn.toFixed(2)} <span className="text-xs font-sans text-muted-foreground">{currencyCode}</span>
                                 </div>
                                 <p className="text-xs text-muted-foreground mt-1 font-mono">
-                                    ≈ ${valorDolar > 0 ? (todayStats.total_mxn / valorDolar).toFixed(2) : '0.00'} USD en total
+                                    ≈ ${valorDolar > 0 ? (todayStats.total_mxn / valorDolar).toFixed(2) : '0.00'} USD
                                 </p>
                             </CardContent>
                         </Card>
 
-                        {/* Tarjeta 2: Recaudación Físicamente en Dólares Hoy */}
-                        <Card className="border-indigo-200 dark:border-indigo-900 bg-gradient-to-br from-indigo-50/50 to-white dark:from-indigo-950/20 dark:to-slate-900 shadow-sm">
+                        <Card className="border-indigo-200 dark:border-indigo-900 bg-gradient-to-br from-indigo-50/50 to-white shadow-sm">
                             <CardHeader className="flex flex-row items-center justify-between pb-2">
                                 <CardTitle className="text-xs font-bold text-muted-foreground uppercase">{__('Cobrado en Dólares (USD)')}</CardTitle>
-                                <div className="p-2 rounded-lg bg-indigo-100 dark:bg-indigo-900 text-indigo-600">
+                                <div className="p-2 rounded-lg bg-indigo-100 text-indigo-600">
                                     <Coins className="w-5 h-5" />
                                 </div>
                             </CardHeader>
                             <CardContent>
-                                <div className="text-3xl font-black font-mono text-indigo-700 dark:text-indigo-300">
+                                <div className="text-3xl font-black font-mono text-indigo-700">
                                     💵 ${todayStats.total_usd.toFixed(2)} <span className="text-xs font-sans text-muted-foreground">USD</span>
                                 </div>
-                                <p className="text-xs text-muted-foreground mt-1 font-mono">
-                                    Recibido en billetes de dólares hoy
-                                </p>
+                                <p className="text-xs text-muted-foreground mt-1 font-mono">Recibido en billetes hoy</p>
                             </CardContent>
                         </Card>
 
-                        {/* Tarjeta 3: Cantidad de Ventas Hoy */}
                         <Card className="shadow-sm">
                             <CardHeader className="flex flex-row items-center justify-between pb-2">
                                 <CardTitle className="text-xs font-bold text-muted-foreground uppercase">{__('Ventas Completadas')}</CardTitle>
-                                <div className="p-2 rounded-lg bg-blue-100 dark:bg-blue-900 text-blue-600">
+                                <div className="p-2 rounded-lg bg-blue-100 text-blue-600">
                                     <ShoppingBag className="w-5 h-5" />
                                 </div>
                             </CardHeader>
                             <CardContent>
-                                <div className="text-3xl font-black font-mono text-slate-900 dark:text-slate-100">
-                                    {todayStats.count} <span className="text-xs font-sans text-muted-foreground">{__('tickets')}</span>
-                                </div>
-                                <p className="text-xs text-muted-foreground mt-1 font-mono">
-                                    Operaciones procesadas hoy
-                                </p>
+                                <div className="text-3xl font-black font-mono">{todayStats.count} <span className="text-xs font-sans text-muted-foreground">{__('tickets')}</span></div>
                             </CardContent>
                         </Card>
 
-                        {/* Tarjeta 4: Ticket Promedio */}
                         <Card className="shadow-sm">
                             <CardHeader className="flex flex-row items-center justify-between pb-2">
                                 <CardTitle className="text-xs font-bold text-muted-foreground uppercase">{__('Ticket Promedio')}</CardTitle>
-                                <div className="p-2 rounded-lg bg-purple-100 dark:bg-purple-900 text-purple-600">
+                                <div className="p-2 rounded-lg bg-purple-100 text-purple-600">
                                     <CreditCard className="w-5 h-5" />
                                 </div>
                             </CardHeader>
                             <CardContent>
-                                <div className="text-3xl font-black font-mono text-purple-700 dark:text-purple-300">
-                                    {currencySymbol}{todayStats.avg_ticket.toFixed(2)} <span className="text-xs font-sans text-muted-foreground">{currencyCode}</span>
-                                </div>
-                                <p className="text-xs text-muted-foreground mt-1 font-mono">
-                                    Promedio por compra
-                                </p>
+                                <div className="text-3xl font-black font-mono text-purple-700">{currencySymbol}{todayStats.avg_ticket.toFixed(2)}</div>
                             </CardContent>
                         </Card>
                     </div>
                 </div>
 
-                {/* SECCIÓN 2: ESTADO DE LA CAJA REGISTRADORA DEL CAJERO */}
+                {/* SECCIÓN 2: ESTADO DE LA CAJA */}
                 <div className="bg-white dark:bg-slate-900 border rounded-2xl p-5 shadow-sm space-y-4">
-                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b pb-3">
-                        <div className="flex items-center gap-2">
-                            <Wallet className="w-5 h-5 text-amber-600" />
-                            <h3 className="font-extrabold text-base text-slate-900 dark:text-slate-100">
-                                {__('Estado del Turno de Caja')}
-                            </h3>
-                            {registerSummary ? (
-                                <Badge className="bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border-emerald-500/30">
-                                    <CheckCircle2 className="w-3.5 h-3.5 mr-1" />
-                                    {__('Caja')} #{registerSummary.id} {__('Abierta')}
-                                </Badge>
-                            ) : (
-                                <Badge variant="destructive">
-                                    <Lock className="w-3.5 h-3.5 mr-1" />
-                                    {__('Sin Caja Abierta')}
-                                </Badge>
-                            )}
-                        </div>
-
-                        <div className="flex items-center gap-2">
-                            <Button size="sm" onClick={() => router.get('/admin/ventas/terminal')} className="bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs gap-1.5">
-                                <ShoppingCart className="w-4 h-4" />
-                                {__('Ir a Terminal POS')}
-                            </Button>
-                        </div>
+                    <div className="flex items-center gap-2 border-b pb-3">
+                        <Wallet className="w-5 h-5 text-amber-600" />
+                        <h3 className="font-extrabold text-base text-slate-900">{__('Estado del Turno de Caja')}</h3>
+                        {registerSummary ? (
+                            <Badge className="bg-emerald-500/15 text-emerald-600 border-emerald-500/30">
+                                <CheckCircle2 className="w-3.5 h-3.5 mr-1" />
+                                {__('Caja Abierta')}
+                            </Badge>
+                        ) : (
+                            <Badge variant="destructive">
+                                <Lock className="w-3.5 h-3.5 mr-1" />
+                                {__('Sin Caja Abierta')}
+                            </Badge>
+                        )}
                     </div>
-
-                    {registerSummary ? (
-                        <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 text-xs">
-                            <div className="p-3 bg-slate-50 dark:bg-slate-800 rounded-xl border">
-                                <span className="text-muted-foreground font-semibold block">{__('Fondo Inicial')}</span>
-                                <span className="text-lg font-bold font-mono text-slate-800 dark:text-slate-200">
-                                    {currencySymbol}{registerSummary.opening_amount.toFixed(2)} {currencyCode}
-                                </span>
-                            </div>
-                            <div className="p-3 bg-emerald-50 dark:bg-emerald-950/40 rounded-xl border border-emerald-200">
-                                <span className="text-emerald-700 dark:text-emerald-400 font-semibold block">{__('Ingresos Turno (+)')}</span>
-                                <span className="text-lg font-bold font-mono text-emerald-600">
-                                    +{currencySymbol}{registerSummary.inflows.toFixed(2)} {currencyCode}
-                                </span>
-                            </div>
-                            <div className="p-3 bg-rose-50 dark:bg-rose-950/40 rounded-xl border border-rose-200">
-                                <span className="text-rose-700 dark:text-rose-400 font-semibold block">{__('Egresos Turno (-)')}</span>
-                                <span className="text-lg font-bold font-mono text-rose-600">
-                                    -{currencySymbol}{registerSummary.outflows.toFixed(2)} {currencyCode}
-                                </span>
-                            </div>
-                            <div className="p-3 bg-indigo-50 dark:bg-indigo-950/40 rounded-xl border border-indigo-200">
-                                <span className="text-indigo-700 dark:text-indigo-300 font-semibold block">{__('Dinero Esperado en Caja')}</span>
-                                <span className="text-lg font-black font-mono text-indigo-600 dark:text-indigo-300 block">
-                                    {currencySymbol}{registerSummary.expected_balance.toFixed(2)} {currencyCode}
-                                </span>
-                                <span className="text-[11px] font-bold text-emerald-600 font-mono block">
-                                    💵 ≈ ${registerSummary.expected_usd.toFixed(2)} USD
-                                </span>
-                            </div>
-                        </div>
-                    ) : (
-                        <p className="text-sm text-muted-foreground text-center py-2">
-                            {__('Abra una caja registradora en la terminal POS para comenzar a operar el turno.')}
-                        </p>
-                    )}
                 </div>
 
-                {/* SECCIÓN 3: FILTRO DE FECHAS (DATEPICKER) */}
+                {/* SECCIÓN 3: FILTRO DE FECHAS */}
                 <div className="bg-white dark:bg-slate-900 border rounded-2xl p-5 shadow-xs space-y-4">
-                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-                        <div className="flex items-center gap-2">
+                     <div className="flex items-center gap-2">
                             <Calendar className="w-5 h-5 text-indigo-600" />
-                            <h3 className="font-bold text-base text-slate-900 dark:text-slate-100">
-                                {__('Filtro de Período y Reportes')}
-                            </h3>
-                        </div>
-
-                        {/* Botones Atajos Rápido de Fechas */}
-                        <div className="flex flex-wrap gap-1.5">
-                            <Button type="button" variant="outline" size="sm" className="h-7 text-xs font-semibold" onClick={() => applyQuickRange('today')}>
-                                {__('Hoy')}
-                            </Button>
-                            <Button type="button" variant="outline" size="sm" className="h-7 text-xs font-semibold" onClick={() => applyQuickRange('yesterday')}>
-                                {__('Ayer')}
-                            </Button>
-                            <Button type="button" variant="outline" size="sm" className="h-7 text-xs font-semibold" onClick={() => applyQuickRange('week')}>
-                                {__('Últimos 7 Días')}
-                            </Button>
-                            <Button type="button" variant="outline" size="sm" className="h-7 text-xs font-semibold" onClick={() => applyQuickRange('month')}>
-                                {__('Este Mes')}
-                            </Button>
-                        </div>
-                    </div>
-
-                    <form onSubmit={handleFilterSubmit} className="flex flex-wrap items-end gap-3 pt-2 border-t">
-                        <div className="space-y-1">
-                            <Label htmlFor="start_date" className="text-xs font-bold">{__('Fecha Inicio')}</Label>
-                            <Input
-                                id="start_date"
-                                type="date"
-                                value={startDate}
-                                onChange={(e) => setStartDate(e.target.value)}
-                                className="w-40 font-mono text-sm font-semibold bg-white dark:bg-slate-900"
-                            />
-                        </div>
-
-                        <div className="space-y-1">
-                            <Label htmlFor="end_date" className="text-xs font-bold">{__('Fecha Fin')}</Label>
-                            <Input
-                                id="end_date"
-                                type="date"
-                                value={endDate}
-                                onChange={(e) => setEndDate(e.target.value)}
-                                className="w-40 font-mono text-sm font-semibold bg-white dark:bg-slate-900"
-                            />
-                        </div>
-
-                        <Button type="submit" size="sm" className="bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs h-10 px-6">
-                            {__('Filtrar Rango')}
-                        </Button>
-                    </form>
+                            <h3 className="font-bold text-base text-slate-900">{__('Filtro de Período')}</h3>
+                     </div>
                 </div>
 
-                {/* SECCIÓN 4: GRÁFICAS INTERACTIVAS APEXCHARTS */}
+                {/* SECCIÓN 4: GRÁFICAS */}
                 <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                    {/* Gráfica 1: Tendencia de Ventas (Rango) */}
                     <Card className="lg:col-span-2 shadow-xs">
                         <CardHeader>
                             <CardTitle className="text-base font-bold flex items-center gap-2">
                                 <TrendingUp className="w-4 h-4 text-indigo-600" />
-                                {__('Tendencia de Ventas')} ({currencySymbol} {currencyCode})
+                                {__('Tendencia de Ventas')}
                             </CardTitle>
-                            <CardDescription>{__('Evolución diaria del volumen de ventas en el período seleccionado.')}</CardDescription>
                         </CardHeader>
-                        <CardContent className="pt-2">
-                            {charts.trend.totals.length > 0 ? (
-                                <Chart options={trendChartOptions} series={trendChartSeries} type="area" height={300} />
-                            ) : (
-                                <div className="h-[300px] flex items-center justify-center text-muted-foreground text-sm font-medium">
-                                    {__('No hay datos de ventas registradas en este período.')}
-                                </div>
-                            )}
+                        <CardContent>
+                            <Chart options={trendChartOptions} series={trendChartSeries} type="area" height={300} />
                         </CardContent>
                     </Card>
 
-                    {/* Gráfica 2: Desglose por Método de Pago */}
                     <Card className="shadow-xs">
                         <CardHeader>
                             <CardTitle className="text-base font-bold flex items-center gap-2">
                                 <CreditCard className="w-4 h-4 text-emerald-600" />
                                 {__('Ventas por Método de Pago')}
                             </CardTitle>
-                            <CardDescription>{__('Distribución entre Efectivo, Dólares, Tarjeta y Crédito.')}</CardDescription>
                         </CardHeader>
-                        <CardContent className="pt-2">
-                            {charts.payments.series.length > 0 ? (
-                                <Chart options={paymentChartOptions} series={charts.payments.series} type="donut" height={300} />
-                            ) : (
-                                <div className="h-[300px] flex items-center justify-center text-muted-foreground text-sm font-medium">
-                                    {__('Sin cobros en este rango.')}
-                                </div>
-                            )}
+                        <CardContent>
+                            <Chart options={paymentChartOptions} series={charts.payments.series} type="donut" height={300} />
                         </CardContent>
                     </Card>
                 </div>
 
                 {/* SECCIÓN 5: TOP PRODUCTOS VENDIDOS Y ÚLTIMAS VENTAS */}
                 <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                    {/* Gráfica Top 5 Productos */}
                     <Card className="shadow-xs">
-                        <CardHeader>
-                            <CardTitle className="text-base font-bold flex items-center gap-2">
-                                <ShoppingBag className="w-4 h-4 text-indigo-600" />
-                                {__('Top 5 Productos Vendidos')}
-                            </CardTitle>
-                            <CardDescription>{__('Artículos con mayor demanda.')}</CardDescription>
+                        <CardHeader className="flex flex-row items-center justify-between pb-3">
+                            <div>
+                                <CardTitle className="text-base font-bold flex items-center gap-2">
+                                    <Trophy className="w-4.5 h-4.5 text-amber-500" />
+                                    {__('Top 5 Productos Vendidos')}
+                                </CardTitle>
+                                <CardDescription>{__('Artículos con mayor demanda e ingresos.')}</CardDescription>
+                            </div>
+                            <div className="flex bg-slate-100 dark:bg-slate-800 p-1 rounded-lg border">
+                                <button
+                                    type="button"
+                                    onClick={() => setTopItemsTab('ranking')}
+                                    className={cn(
+                                        "px-2 py-1 rounded-md text-xs font-bold transition-all flex items-center gap-1",
+                                        topItemsTab === 'ranking' ? "bg-white dark:bg-slate-900 shadow-xs text-indigo-600 dark:text-indigo-400" : "text-muted-foreground hover:text-foreground"
+                                    )}
+                                >
+                                    <ListOrdered className="w-3.5 h-3.5" />
+                                </button>
+                                <button
+                                    type="button"
+                                    onClick={() => setTopItemsTab('chart')}
+                                    className={cn(
+                                        "px-2 py-1 rounded-md text-xs font-bold transition-all flex items-center gap-1",
+                                        topItemsTab === 'chart' ? "bg-white dark:bg-slate-900 shadow-xs text-indigo-600 dark:text-indigo-400" : "text-muted-foreground hover:text-foreground"
+                                    )}
+                                >
+                                    <BarChart2 className="w-3.5 h-3.5" />
+                                </button>
+                            </div>
                         </CardHeader>
                         <CardContent className="pt-2">
                             {charts.topItems.series.length > 0 ? (
-                                <Chart options={topItemsChartOptions} series={topItemsChartSeries} type="bar" height={260} />
+                                topItemsTab === 'chart' ? (
+                                    <Chart options={topItemsChartOptions} series={topItemsChartSeries} type="bar" height={285} />
+                                ) : (
+                                    <div className="space-y-2.5 min-h-[285px] flex flex-col justify-center">
+                                        {charts.topItems.list?.map((item) => (
+                                            <div
+                                                key={item.rank}
+                                                className="p-3 bg-slate-50/80 dark:bg-slate-800/60 border border-slate-200/60 dark:border-slate-800 rounded-xl space-y-2 hover:border-indigo-300 dark:hover:border-indigo-700 transition-all shadow-2xs"
+                                            >
+                                                <div className="flex items-center justify-between gap-3">
+                                                    <div className="flex items-center gap-2.5 min-w-0">
+                                                        <span className={cn(
+                                                            "w-6.5 h-6.5 rounded-full flex items-center justify-center text-xs font-black shrink-0 font-mono shadow-2xs",
+                                                            item.rank === 1 ? "bg-amber-400 text-amber-950 ring-2 ring-amber-300/60" :
+                                                            item.rank === 2 ? "bg-slate-300 text-slate-950 ring-2 ring-slate-200/60" :
+                                                            item.rank === 3 ? "bg-amber-700 text-amber-100 ring-2 ring-amber-600/60" :
+                                                            "bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-300"
+                                                        )}>
+                                                            {item.rank === 1 ? '🥇' : item.rank === 2 ? '🥈' : item.rank === 3 ? '🥉' : item.rank}
+                                                        </span>
+                                                        <span className="font-bold text-xs text-slate-900 dark:text-slate-100 truncate" title={item.nombre}>
+                                                            {item.nombre}
+                                                        </span>
+                                                    </div>
+
+                                                    <div className="flex items-center gap-1.5 shrink-0">
+                                                        <Badge variant="outline" className="text-[10px] font-mono font-extrabold bg-indigo-50 dark:bg-indigo-950/60 text-indigo-700 dark:text-indigo-300 border-indigo-200/80">
+                                                            {item.total_qty} {__('unids.')}
+                                                        </Badge>
+                                                        <Badge variant="outline" className="text-[10px] font-mono font-extrabold bg-emerald-50 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 border-emerald-200/80">
+                                                            {currencySymbol}{item.total_amount.toFixed(2)}
+                                                        </Badge>
+                                                    </div>
+                                                </div>
+
+                                                {/* Visual Demand Progress Bar */}
+                                                <div className="w-full bg-slate-200/70 dark:bg-slate-700/70 rounded-full h-1.5 overflow-hidden">
+                                                    <div
+                                                        className={cn(
+                                                            "h-full rounded-full transition-all duration-500",
+                                                            item.rank === 1 ? "bg-gradient-to-r from-amber-400 to-amber-500" :
+                                                            item.rank === 2 ? "bg-gradient-to-r from-indigo-500 to-purple-500" :
+                                                            item.rank === 3 ? "bg-gradient-to-r from-blue-500 to-cyan-500" :
+                                                            "bg-gradient-to-r from-emerald-500 to-teal-500"
+                                                        )}
+                                                        style={{ width: `${item.percent_of_max}%` }}
+                                                    />
+                                                </div>
+                                            </div>
+                                        ))}
+                                    </div>
+                                )
                             ) : (
-                                <div className="h-[260px] flex items-center justify-center text-muted-foreground text-sm">
+                                <div className="h-[285px] flex items-center justify-center text-muted-foreground text-sm font-medium">
                                     {__('Sin ventas de productos.')}
                                 </div>
                             )}
                         </CardContent>
                     </Card>
 
-                    {/* Tabla de ÚLTIMAS VENTAS DEL DÍA */}
                     <Card className="lg:col-span-2 shadow-xs">
                         <CardHeader className="flex flex-row items-center justify-between">
                             <div>
