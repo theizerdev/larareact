@@ -938,9 +938,40 @@ export default function AdminSaasLayout({
                                     </div>
                                 </DropdownMenuContent>
                             </DropdownMenu>
-
                         </div>
                     </header>
+
+                    {/* Banner de Advertencia de Caja para Administradores */}
+                    {(() => {
+                        const pageProps = usePage().props as any;
+                        const alert = pageProps?.cash_register_alert;
+                        if (!alert?.show) return null;
+
+                        return (
+                            <div className="bg-amber-500/10 border-b border-amber-500/20 px-6 py-3 text-amber-800 dark:text-amber-300 flex flex-wrap items-center justify-between gap-4">
+                                <div className="flex items-center gap-3">
+                                    <div className="w-8 h-8 rounded-full bg-amber-500/20 flex items-center justify-center shrink-0 text-amber-600 dark:text-amber-400">
+                                        <AlertTriangle className="w-4 h-4" />
+                                    </div>
+                                    <div>
+                                        <p className="text-sm font-bold">
+                                            {__('Atención Administrador: Sin Caja Aperturada')}
+                                        </p>
+                                        <p className="text-xs text-amber-700/80 dark:text-amber-400/80">
+                                            {__('No se encuentra ninguna caja aperturada en su empresa para el día de hoy.')}
+                                        </p>
+                                    </div>
+                                </div>
+                                <Link
+                                    href="/admin/cajas"
+                                    className="inline-flex items-center justify-center rounded-md bg-amber-600 px-3.5 py-1.5 text-xs font-bold text-white shadow hover:bg-amber-700 transition-colors"
+                                >
+                                    <Wallet className="w-3.5 h-3.5 mr-1.5" />
+                                    {__('Ir a Flujo de Caja / Aperturar')}
+                                </Link>
+                            </div>
+                        );
+                    })()}
 
                     {/* Page content */}
                     <main

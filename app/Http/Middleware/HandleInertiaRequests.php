@@ -71,6 +71,33 @@ class HandleInertiaRequests extends Middleware
                     ->whereColumn('stock', '<=', 'stock_minimo')
                     ->count()
                 : 0,
+            'cash_register_alert' => fn () => $this->getCashRegisterAlert($request),
         ];
+    }
+
+    protected function getCashRegisterAlert(Request $request): ?array
+    {
+        $user = $request->user();
+        if (! $user) {
+            return null;
+        }
+
+        $isAdmin = $user->hasRole('Administrador') || $user->hasRole('Super Administrador');
+        if (! $isAdmin) {
+            return null;
+        }
+
+        $hasOpenRegister = \App\Models\CashRegister::where('empresa_id', $user->empresa_id)
+            ->where('status', 'open')
+            ->exists();
+
+        if (! $hasOpenRegister) {
+            return [
+                'show' => true,
+                'message' => __('No hay ninguna caja aperturada para el día de hoy en su empresa.'),
+            ];
+        }
+
+        return null;
     }
 }

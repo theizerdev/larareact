@@ -6,6 +6,7 @@ import {
     DollarSign,
     Users,
 } from 'lucide-react';
+import { OpenCashRegisterModal } from '@/components/open-cash-register-modal';
 import { Button } from '@/components/ui/button';
 import { PageHeader } from '@/components/ui/page-header';
 import { SectionCard } from '@/components/ui/section-card';
@@ -46,6 +47,7 @@ export default function Dashboard() {
     return (
         <>
             <Head title={__('Dashboard')} />
+            <OpenCashRegisterModal />
 
             <div className="flex flex-col gap-8">
                 <PageHeader

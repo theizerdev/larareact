@@ -13,13 +13,22 @@ import {
     Tag,
     Layers,
     Receipt,
+    Printer,
+    CheckCircle2,
+    AlertTriangle,
+    XCircle,
+    Calendar,
+    User as UserIcon,
+    Filter,
+    Search
 } from 'lucide-react';
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { Breadcrumbs } from '@/components/breadcrumbs';
 import type { ColumnDef } from '@/components/data-table';
 import { DataTable } from '@/components/data-table';
 import { ModuleHeader } from '@/components/module-header';
 import { StatCard } from '@/components/stat-card';
+import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import {
     Dialog,
@@ -32,6 +41,7 @@ import {
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Textarea } from '@/components/ui/textarea';
 import { useTranslate } from '@/hooks/use-translate';
 import { cn } from '@/lib/utils';
@@ -96,6 +106,9 @@ export default function Show({ caja, summary }: Props) {
     const [isMovementOpen, setIsMovementOpen] = useState(false);
     const [isCloseOpen, setIsCloseOpen] = useState(false);
     const [countedAmount, setCountedAmount] = useState('');
+    const [movementFilter, setMovementFilter] = useState<'all' | 'inflow' | 'outflow'>('all');
+    const [searchQuery, setSearchQuery] = useState('');
+
     const currencySymbol = summary.currency_symbol || '$';
 
     const expectedAmount = summary.current_balance;
@@ -103,7 +116,7 @@ export default function Show({ caja, summary }: Props) {
     const difference = countedAmount !== '' ? countedNum - expectedAmount : null;
 
     const breadcrumbs = [
-        { title: __('Dashboard'), href: '/admin/dashboard' },
+        { title: __('Dashboard'), href: '/dashboard' },
         { title: __('Punto de Venta'), href: '#' },
         { title: __('Flujo de Caja'), href: '/admin/cajas' },
         { title: `${__('Caja')} #${caja.id}`, href: `/admin/cajas/${caja.id}` },
@@ -147,6 +160,10 @@ export default function Show({ caja, summary }: Props) {
         );
     };
 
+    const handlePrint = () => {
+        window.print();
+    };
+
     const formatConceptoLabel = (key: string) => {
         switch (key) {
             case 'venta': return __('Venta');
@@ -176,12 +193,12 @@ export default function Show({ caja, summary }: Props) {
                 <div className="flex items-center gap-2">
                     {movement.type === 'inflow' ? (
                         <span className="inline-flex items-center gap-1 text-xs font-semibold px-2.5 py-0.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200 dark:bg-emerald-950/20 dark:text-emerald-400 dark:border-emerald-900">
-                            <ArrowUpCircle className="w-3.5 h-3.5" />
+                            <ArrowUpCircle className="w-3.5 h-3.5 text-emerald-600" />
                             {__('Ingreso')}
                         </span>
                     ) : (
                         <span className="inline-flex items-center gap-1 text-xs font-semibold px-2.5 py-0.5 rounded-full bg-rose-50 text-rose-700 border border-rose-200 dark:bg-rose-950/20 dark:text-rose-400 dark:border-rose-900">
-                            <ArrowDownCircle className="w-3.5 h-3.5" />
+                            <ArrowDownCircle className="w-3.5 h-3.5 text-rose-600" />
                             {__('Egreso')}
                         </span>
                     )}
@@ -254,6 +271,24 @@ export default function Show({ caja, summary }: Props) {
         ? Number(summary.current_balance || 0)
         : Number(caja.closing_amount !== null && caja.closing_amount !== undefined ? caja.closing_amount : summary.current_balance);
 
+    const filteredMovements = useMemo(() => {
+        let list = caja.movements || [];
+        if (movementFilter !== 'all') {
+            list = list.filter((m) => m.type === movementFilter);
+        }
+        if (searchQuery.trim()) {
+            const query = searchQuery.toLowerCase();
+            list = list.filter(
+                (m) =>
+                    (m.description || '').toLowerCase().includes(query) ||
+                    (m.concepto || '').toLowerCase().includes(query) ||
+                    (m.metodo_pago || '').toLowerCase().includes(query) ||
+                    (m.creator?.name || '').toLowerCase().includes(query)
+            );
+        }
+        return list;
+    }, [caja.movements, movementFilter, searchQuery]);
+
     const paymentMethodList = [
         { key: 'efectivo', label: __('Efectivo'), icon: Wallet },
         { key: 'transferencia', label: __('Transferencia Bancaria'), icon: Building2 },
@@ -275,59 +310,132 @@ export default function Show({ caja, summary }: Props) {
         <>
             <Head title={`${__('Detalle de Caja')} #${caja.id}`} />
 
-            <div className="space-y-6">
+            <div className="space-y-6 print:hidden">
                 <Breadcrumbs breadcrumbs={breadcrumbs} />
 
-                <ModuleHeader
-                    icon={<Wallet className="h-6 w-6 text-white" />}
-                    title={`${__('Detalle de Caja')} #${caja.id}`}
-                    description={`${__('Cajero')}: ${caja.user?.name || ''} | ${__('Apertura')}: ${new Date(caja.opened_at).toLocaleString()}`}
-                    colorClassName={isOpen ? 'bg-emerald-600' : 'bg-slate-600'}
-                >
-                    <div className="flex items-center gap-3">
-                        <Button
-                            variant="outline"
-                            className="bg-white text-slate-900 border-slate-200 hover:bg-slate-100 hover:text-slate-900 font-medium"
-                            onClick={() => router.get('/admin/cajas')}
-                        >
-                            <ArrowLeft className="mr-2 h-4 w-4 text-slate-900" />
-                            {__('Volver a Cajas')}
-                        </Button>
+                {/* Banner de Encabezado */}
+                <div className="bg-white dark:bg-slate-900 border rounded-xl p-6 shadow-sm space-y-4">
+                    <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+                        <div className="flex items-center gap-4">
+                            <Button variant="outline" size="icon" onClick={() => router.get('/admin/cajas')}>
+                                <ArrowLeft className="h-4 w-4" />
+                            </Button>
+                            <div>
+                                <div className="flex items-center gap-2">
+                                    <h1 className="text-xl font-bold text-slate-900 dark:text-slate-100">
+                                        {__('Caja')} #{caja.id}
+                                    </h1>
+                                    {isOpen ? (
+                                        <Badge className="bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-500/20 border-emerald-500/30">
+                                            <span className="w-2 h-2 rounded-full bg-emerald-500 mr-1.5 animate-pulse" />
+                                            {__('EN CURSO / ABIERTA')}
+                                        </Badge>
+                                    ) : (
+                                        <Badge variant="secondary" className="bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400">
+                                            <Lock className="w-3 h-3 mr-1" />
+                                            {__('CERRADA')}
+                                        </Badge>
+                                    )}
+                                </div>
+                                <div className="flex items-center gap-4 mt-1 text-xs text-muted-foreground">
+                                    <span className="flex items-center gap-1">
+                                        <UserIcon className="w-3.5 h-3.5 text-indigo-500" />
+                                        {caja.user?.name || __('Desconocido')}
+                                    </span>
+                                    <span>•</span>
+                                    <span className="flex items-center gap-1">
+                                        <Calendar className="w-3.5 h-3.5" />
+                                        {new Date(caja.opened_at).toLocaleString()}
+                                    </span>
+                                </div>
+                            </div>
+                        </div>
 
-                        {isOpen && (
-                            <>
-                                <Button onClick={handleOpenMovement}>
-                                    <Plus className="mr-2 h-4 w-4" />
-                                    {__('Registrar Movimiento')}
-                                </Button>
-                                <Button
-                                    variant="destructive"
-                                    onClick={handleCloseRegister}
-                                >
-                                    <Lock className="mr-2 h-4 w-4" />
-                                    {__('Cerrar Caja')}
-                                </Button>
-                            </>
-                        )}
+                        <div className="flex flex-wrap items-center gap-2">
+                            <Button variant="outline" onClick={handlePrint} className="gap-2">
+                                <Printer className="w-4 h-4 text-slate-600 dark:text-slate-400" />
+                                {__('Imprimir Arqueo')}
+                            </Button>
+
+                            {isOpen && (
+                                <>
+                                    <Button onClick={handleOpenMovement} className="bg-indigo-600 hover:bg-indigo-700 text-white font-bold gap-2">
+                                        <Plus className="w-4 h-4" />
+                                        {__('Registrar Movimiento')}
+                                    </Button>
+                                    <Button variant="destructive" onClick={handleCloseRegister} className="font-bold gap-2">
+                                        <Lock className="w-4 h-4" />
+                                        {__('Cerrar Caja')}
+                                    </Button>
+                                </>
+                            )}
+                        </div>
                     </div>
-                </ModuleHeader>
+                </div>
 
-                {/* Banner si la caja está cerrada */}
+                {/* Banner de Resultado de Arqueo en Cajas Cerradas */}
                 {!isOpen && (
-                    <div className="rounded-lg border border-slate-200 bg-slate-50 dark:bg-slate-900/50 dark:border-slate-800 p-4 flex items-center gap-3">
-                        <Lock className="h-5 w-5 text-slate-500" />
-                        <div>
-                            <p className="text-sm font-semibold text-slate-800 dark:text-slate-200">
-                                {__('Esta caja se encuentra CERRADA')} ({caja.closed_at ? new Date(caja.closed_at).toLocaleString() : ''})
-                            </p>
-                            <p className="text-xs text-slate-500">
-                                {__('Los movimientos registrados en esta sesión de caja son de solo lectura y no se pueden modificar.')}
-                            </p>
+                    <div className="bg-white dark:bg-slate-900 border rounded-xl p-5 shadow-sm space-y-3">
+                        <div className="flex items-center justify-between border-b pb-3">
+                            <div className="flex items-center gap-2 font-bold text-sm text-slate-900 dark:text-slate-100">
+                                <Lock className="w-4 h-4 text-slate-500" />
+                                {__('Resultado del Arqueo y Cierre de Turno')}
+                            </div>
+                            <span className="text-xs text-muted-foreground">
+                                {caja.closed_at ? new Date(caja.closed_at).toLocaleString() : ''}
+                            </span>
+                        </div>
+
+                        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 text-center">
+                            <div className="p-3 rounded-lg bg-slate-50 dark:bg-slate-800/50 border">
+                                <span className="text-xs text-muted-foreground uppercase tracking-wider block mb-1">
+                                    {__('Esperado por Sistema')}
+                                </span>
+                                <span className="font-mono text-xl font-bold text-slate-800 dark:text-slate-200">
+                                    {currencySymbol}{(caja.expected_amount !== null ? caja.expected_amount : summary.current_balance).toFixed(2)}
+                                </span>
+                            </div>
+
+                            <div className="p-3 rounded-lg bg-slate-50 dark:bg-slate-800/50 border">
+                                <span className="text-xs text-muted-foreground uppercase tracking-wider block mb-1">
+                                    {__('Físicamente Contado')}
+                                </span>
+                                <span className="font-mono text-xl font-bold text-indigo-600 dark:text-indigo-400">
+                                    {caja.counted_amount !== null ? `${currencySymbol}${caja.counted_amount.toFixed(2)}` : '—'}
+                                </span>
+                            </div>
+
+                            <div className="p-3 rounded-lg bg-slate-50 dark:bg-slate-800/50 border">
+                                <span className="text-xs text-muted-foreground uppercase tracking-wider block mb-1">
+                                    {__('Diferencia / Descuadre')}
+                                </span>
+                                {caja.difference !== null ? (
+                                    <span
+                                        className={cn(
+                                            'font-mono text-xl font-extrabold flex items-center justify-center gap-1',
+                                            caja.difference === 0
+                                                ? 'text-emerald-600'
+                                                : caja.difference > 0
+                                                ? 'text-blue-600'
+                                                : 'text-rose-600'
+                                        )}
+                                    >
+                                        {caja.difference === 0 && <CheckCircle2 className="w-4 h-4" />}
+                                        {caja.difference > 0 && <CheckCircle2 className="w-4 h-4" />}
+                                        {caja.difference < 0 && <AlertTriangle className="w-4 h-4" />}
+                                        {caja.difference > 0 ? '+' : ''}
+                                        {currencySymbol}
+                                        {caja.difference.toFixed(2)}
+                                    </span>
+                                ) : (
+                                    <span className="text-sm text-muted-foreground">{__('Sin conteo físico')}</span>
+                                )}
+                            </div>
                         </div>
                     </div>
                 )}
 
-                {/* Totales Generales */}
+                {/* Totales Generales KPI */}
                 <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-4">
                     <StatCard
                         icon={<Wallet className="h-6 w-6" />}
@@ -349,119 +457,183 @@ export default function Show({ caja, summary }: Props) {
                     />
                     <StatCard
                         icon={<DollarSign className="h-6 w-6" />}
-                        title={isOpen ? __('SALDO ACTUAL') : __('SALDO FINAL DE CIERRE')}
+                        title={isOpen ? __('SALDO ACTUAL EN CAJA') : __('SALDO FINAL DE CIERRE')}
                         value={`${currencySymbol}${finalBalance.toFixed(2)}`}
                         colorClassName={isOpen ? 'bg-amber-100 text-amber-600' : 'bg-purple-100 text-purple-600'}
                     />
                 </div>
 
-                {/* Desgloses Agrupados (Listados 6 y 6) */}
-                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                    {/* Listado 1: Resumen por Método de Pago (6 cols) */}
-                    <div className="rounded-xl border bg-card text-card-foreground shadow-sm overflow-hidden flex flex-col">
-                        <div className="p-4 border-b bg-slate-50/50 dark:bg-slate-900/50 flex items-center justify-between">
-                            <div className="flex items-center gap-2 font-bold text-sm text-slate-800 dark:text-slate-200">
-                                <CreditCard className="w-4 h-4 text-blue-600" />
-                                {__('Resumen por Método de Pago')}
+                {/* Organización con Tabs de Detalle y Desgloses */}
+                <Tabs defaultValue="movimientos" className="w-full">
+                    <TabsList className="grid grid-cols-3 w-full bg-slate-100 dark:bg-slate-900 p-1 rounded-lg">
+                        <TabsTrigger value="movimientos" className="flex items-center gap-1.5">
+                            <Receipt className="w-4 h-4 text-indigo-500" />
+                            {__('Movimientos')} ({caja.movements?.length || 0})
+                        </TabsTrigger>
+                        <TabsTrigger value="metodos" className="flex items-center gap-1.5">
+                            <CreditCard className="w-4 h-4 text-blue-500" />
+                            {__('Métodos de Pago')}
+                        </TabsTrigger>
+                        <TabsTrigger value="conceptos" className="flex items-center gap-1.5">
+                            <Tag className="w-4 h-4 text-emerald-500" />
+                            {__('Conceptos')}
+                        </TabsTrigger>
+                    </TabsList>
+
+                    {/* 1. MOVIEMIENTOS TAB */}
+                    <TabsContent value="movimientos" className="mt-4 space-y-4">
+                        <div className="bg-white dark:bg-slate-900 border rounded-xl p-4 shadow-sm flex flex-col sm:flex-row justify-between items-center gap-4">
+                            <div className="flex items-center gap-2 w-full sm:w-auto">
+                                <Filter className="w-4 h-4 text-slate-400" />
+                                <Select
+                                    value={movementFilter}
+                                    onValueChange={(v: 'all' | 'inflow' | 'outflow') => setMovementFilter(v)}
+                                >
+                                    <SelectTrigger className="w-[180px]">
+                                        <SelectValue />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        <SelectItem value="all">{__('Todos los Movimientos')}</SelectItem>
+                                        <SelectItem value="inflow">{__('Solo Ingresos (+)')}</SelectItem>
+                                        <SelectItem value="outflow">{__('Solo Egresos (-)')}</SelectItem>
+                                    </SelectContent>
+                                </Select>
                             </div>
-                            <span className="text-xs text-muted-foreground">{paymentMethodList.length} {__('métodos')}</span>
+
+                            <div className="relative w-full sm:w-72">
+                                <Search className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
+                                <Input
+                                    placeholder={__('Buscar por concepto, motivo...')}
+                                    value={searchQuery}
+                                    onChange={(e) => setSearchQuery(e.target.value)}
+                                    className="pl-9"
+                                />
+                            </div>
                         </div>
-                        <div className="divide-y text-sm flex-1">
+
+                        <DataTable
+                            columns={columns}
+                            data={{
+                                data: filteredMovements,
+                                total: filteredMovements.length,
+                                per_page: 100,
+                                current_page: 1,
+                                last_page: 1,
+                                from: 1,
+                                to: filteredMovements.length,
+                            }}
+                        />
+                    </TabsContent>
+
+                    {/* 2. MÉTODOS DE PAGO TAB */}
+                    <TabsContent value="metodos" className="mt-4">
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                             {paymentMethodList.map((pm) => {
                                 const data = summary.by_payment_method?.[pm.key] || { inflow: 0, outflow: 0, net: 0 };
                                 const IconComponent = pm.icon;
+                                const totalMethodInflow = summary.inflows > 0 ? (data.inflow / summary.inflows) * 100 : 0;
+
                                 return (
-                                    <div key={pm.key} className="p-3.5 flex items-center justify-between hover:bg-slate-50/50 dark:hover:bg-slate-800/30 transition-colors">
-                                        <div className="flex items-center gap-3">
-                                            <div className="w-8 h-8 rounded bg-blue-50 dark:bg-blue-950/30 flex items-center justify-center">
-                                                <IconComponent className="w-4 h-4 text-blue-600 dark:text-blue-400" />
-                                            </div>
-                                            <div>
-                                                <p className="font-medium text-sm">{pm.label}</p>
-                                                <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                                                    <span className="text-emerald-600">+{currencySymbol}{data.inflow.toFixed(2)}</span>
-                                                    <span>•</span>
-                                                    <span className="text-rose-600">-{currencySymbol}{data.outflow.toFixed(2)}</span>
+                                    <div
+                                        key={pm.key}
+                                        className="bg-white dark:bg-slate-900 border rounded-xl p-5 shadow-sm space-y-4 hover:border-indigo-300 dark:hover:border-indigo-800 transition-colors"
+                                    >
+                                        <div className="flex items-center justify-between">
+                                            <div className="flex items-center gap-3">
+                                                <div className="w-10 h-10 rounded-lg bg-blue-50 dark:bg-blue-950/40 flex items-center justify-center text-blue-600 dark:text-blue-400">
+                                                    <IconComponent className="w-5 h-5" />
+                                                </div>
+                                                <div>
+                                                    <h3 className="font-bold text-sm text-slate-900 dark:text-slate-100">{pm.label}</h3>
+                                                    <span className="text-xs text-muted-foreground font-mono">
+                                                        {totalMethodInflow.toFixed(1)}% {__('del total de ingresos')}
+                                                    </span>
                                                 </div>
                                             </div>
                                         </div>
-                                        <div className={cn('font-mono font-bold text-sm', data.net >= 0 ? 'text-slate-900 dark:text-white' : 'text-rose-600')}>
-                                            {currencySymbol}{data.net.toFixed(2)}
+
+                                        <div className="space-y-2 border-t pt-3 text-sm">
+                                            <div className="flex justify-between items-center text-emerald-600">
+                                                <span className="text-xs text-muted-foreground">{__('Ingresos')}</span>
+                                                <span className="font-mono font-bold">+{currencySymbol}{data.inflow.toFixed(2)}</span>
+                                            </div>
+                                            <div className="flex justify-between items-center text-rose-600">
+                                                <span className="text-xs text-muted-foreground">{__('Egresos')}</span>
+                                                <span className="font-mono font-bold">-{currencySymbol}{data.outflow.toFixed(2)}</span>
+                                            </div>
+                                            <div className="flex justify-between items-center font-bold text-slate-900 dark:text-slate-100 pt-1 border-t">
+                                                <span>{__('Balance Neto')}</span>
+                                                <span className="font-mono text-base">{currencySymbol}{data.net.toFixed(2)}</span>
+                                            </div>
+                                        </div>
+
+                                        {/* Progress Bar */}
+                                        <div className="w-full bg-slate-100 dark:bg-slate-800 rounded-full h-2">
+                                            <div
+                                                className="bg-blue-600 h-2 rounded-full transition-all"
+                                                style={{ width: `${Math.min(100, totalMethodInflow)}%` }}
+                                            />
                                         </div>
                                     </div>
                                 );
                             })}
                         </div>
-                    </div>
+                    </TabsContent>
 
-                    {/* Listado 2: Resumen por Concepto (6 cols) */}
-                    <div className="rounded-xl border bg-card text-card-foreground shadow-sm overflow-hidden flex flex-col">
-                        <div className="p-4 border-b bg-slate-50/50 dark:bg-slate-900/50 flex items-center justify-between">
-                            <div className="flex items-center gap-2 font-bold text-sm text-slate-800 dark:text-slate-200">
-                                <Tag className="w-4 h-4 text-emerald-600" />
-                                {__('Resumen por Concepto')}
-                            </div>
-                            <span className="text-xs text-muted-foreground">{conceptList.length} {__('conceptos')}</span>
-                        </div>
-                        <div className="divide-y text-sm flex-1">
+                    {/* 3. CONCEPTOS TAB */}
+                    <TabsContent value="conceptos" className="mt-4">
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                             {conceptList.map((c) => {
                                 const data = summary.by_concept?.[c.key] || { inflow: 0, outflow: 0, net: 0 };
                                 const IconComponent = c.icon;
+
                                 return (
-                                    <div key={c.key} className="p-3.5 flex items-center justify-between hover:bg-slate-50/50 dark:hover:bg-slate-800/30 transition-colors">
-                                        <div className="flex items-center gap-3">
-                                            <div className="w-8 h-8 rounded bg-emerald-50 dark:bg-emerald-950/30 flex items-center justify-center">
-                                                <IconComponent className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
-                                            </div>
-                                            <div>
-                                                <p className="font-medium text-sm">{c.label}</p>
-                                                <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                                                    <span className="text-emerald-600">+{currencySymbol}{data.inflow.toFixed(2)}</span>
-                                                    <span>•</span>
-                                                    <span className="text-rose-600">-{currencySymbol}{data.outflow.toFixed(2)}</span>
+                                    <div
+                                        key={c.key}
+                                        className="bg-white dark:bg-slate-900 border rounded-xl p-5 shadow-sm space-y-4 hover:border-emerald-300 dark:hover:border-emerald-800 transition-colors"
+                                    >
+                                        <div className="flex items-center justify-between">
+                                            <div className="flex items-center gap-3">
+                                                <div className="w-10 h-10 rounded-lg bg-emerald-50 dark:bg-emerald-950/40 flex items-center justify-center text-emerald-600 dark:text-emerald-400">
+                                                    <IconComponent className="w-5 h-5" />
+                                                </div>
+                                                <div>
+                                                    <h3 className="font-bold text-sm text-slate-900 dark:text-slate-100">{c.label}</h3>
                                                 </div>
                                             </div>
                                         </div>
-                                        <div className={cn('font-mono font-bold text-sm', data.net >= 0 ? 'text-slate-900 dark:text-white' : 'text-rose-600')}>
-                                            {currencySymbol}{data.net.toFixed(2)}
+
+                                        <div className="space-y-2 border-t pt-3 text-sm">
+                                            <div className="flex justify-between items-center text-emerald-600">
+                                                <span className="text-xs text-muted-foreground">{__('Ingresos')}</span>
+                                                <span className="font-mono font-bold">+{currencySymbol}{data.inflow.toFixed(2)}</span>
+                                            </div>
+                                            <div className="flex justify-between items-center text-rose-600">
+                                                <span className="text-xs text-muted-foreground">{__('Egresos')}</span>
+                                                <span className="font-mono font-bold">-{currencySymbol}{data.outflow.toFixed(2)}</span>
+                                            </div>
+                                            <div className="flex justify-between items-center font-bold text-slate-900 dark:text-slate-100 pt-1 border-t">
+                                                <span>{__('Neto por Concepto')}</span>
+                                                <span className="font-mono text-base">{currencySymbol}{data.net.toFixed(2)}</span>
+                                            </div>
                                         </div>
                                     </div>
                                 );
                             })}
                         </div>
-                    </div>
-                </div>
-
-                {/* Tabla Completa de Transacciones (Detalle) */}
-                <div className="space-y-4 pt-2">
-                    <div className="flex items-center justify-between">
-                        <h2 className="text-lg font-bold tracking-tight">{__('Historial Completo de Transacciones')}</h2>
-                        <span className="text-xs text-muted-foreground">
-                            {caja.movements?.length || 0} {__('movimientos registrados')}
-                        </span>
-                    </div>
-
-                    <DataTable
-                        columns={columns}
-                        data={{
-                            data: caja.movements || [],
-                            total: caja.movements?.length || 0,
-                            per_page: 100,
-                            current_page: 1,
-                            last_page: 1,
-                            from: 1,
-                            to: caja.movements?.length || 0,
-                        }}
-                    />
-                </div>
+                    </TabsContent>
+                </Tabs>
 
                 {/* Dialog registrar movimiento */}
                 <Dialog open={isMovementOpen} onOpenChange={setIsMovementOpen}>
-                    <DialogContent>
+                    <DialogContent className="sm:max-w-md">
                         <DialogHeader>
-                            <DialogTitle>{__('Registrar Movimiento de Caja')}</DialogTitle>
+                            <DialogTitle className="flex items-center gap-2">
+                                <Plus className="w-5 h-5 text-indigo-600" />
+                                {__('Registrar Movimiento de Caja')}
+                            </DialogTitle>
                             <DialogDescription>
-                                {__('Registre una entrada o salida de dinero de la caja actual con su concepto y método de pago.')}
+                                {__('Registre un ingreso o egreso de efectivo/banco con su motivo correspondiente.')}
                             </DialogDescription>
                         </DialogHeader>
 
@@ -481,7 +653,6 @@ export default function Show({ caja, summary }: Props) {
                                             <SelectItem value="outflow">{__('Egreso (-) Salida')}</SelectItem>
                                         </SelectContent>
                                     </Select>
-                                    {errors.type && <p className="text-xs text-rose-500">{errors.type}</p>}
                                 </div>
 
                                 <div className="space-y-2">
@@ -502,7 +673,6 @@ export default function Show({ caja, summary }: Props) {
                                             <SelectItem value="otro">{__('Otro')}</SelectItem>
                                         </SelectContent>
                                     </Select>
-                                    {errors.concepto && <p className="text-xs text-rose-500">{errors.concepto}</p>}
                                 </div>
                             </div>
 
@@ -524,7 +694,6 @@ export default function Show({ caja, summary }: Props) {
                                             <SelectItem value="otro">{__('Otro')}</SelectItem>
                                         </SelectContent>
                                     </Select>
-                                    {errors.metodo_pago && <p className="text-xs text-rose-500">{errors.metodo_pago}</p>}
                                 </div>
 
                                 <div className="space-y-2">
@@ -536,10 +705,10 @@ export default function Show({ caja, summary }: Props) {
                                         min="0.01"
                                         value={data.amount}
                                         onChange={(e) => setData('amount', e.target.value)}
-                                        placeholder="Ej: 50.00"
+                                        placeholder="0.00"
+                                        className="font-mono text-lg font-bold"
                                         required
                                     />
-                                    {errors.amount && <p className="text-xs text-rose-500">{errors.amount}</p>}
                                 </div>
                             </div>
 
@@ -550,23 +719,23 @@ export default function Show({ caja, summary }: Props) {
                                     rows={3}
                                     value={data.description}
                                     onChange={(e) => setData('description', e.target.value)}
-                                    placeholder={__('Ej: Pago de flete, venta de accesorio, cambio de pantalla...')}
+                                    placeholder={__('Ej: Pago de envío, cambio de repuesto, pago de servicio...')}
                                 />
-                                {errors.description && <p className="text-xs text-rose-500">{errors.description}</p>}
                             </div>
 
                             <DialogFooter>
                                 <Button type="button" variant="outline" onClick={() => setIsMovementOpen(false)}>
                                     {__('Cancelar')}
                                 </Button>
-                                <Button type="submit" disabled={processing}>
+                                <Button type="submit" className="bg-indigo-600 hover:bg-indigo-700 text-white font-bold" disabled={processing}>
                                     {__('Guardar Movimiento')}
                                 </Button>
                             </DialogFooter>
                         </form>
                     </DialogContent>
                 </Dialog>
-                {/* ===== Dialog: Corte de Caja (Cierre Mejorado) ===== */}
+
+                {/* Dialog: Corte de Caja (Cierre) */}
                 <Dialog open={isCloseOpen} onOpenChange={setIsCloseOpen}>
                     <DialogContent className="sm:max-w-md">
                         <DialogHeader>
@@ -575,15 +744,14 @@ export default function Show({ caja, summary }: Props) {
                                 {__('Corte de Caja / Cierre de Turno')}
                             </DialogTitle>
                             <DialogDescription>
-                                {__('Ingrese el dinero físicamente contado para comparar contra el saldo esperado por el sistema.')}
+                                {__('Ingrese el dinero físicamente contado para comparar contra el saldo esperado.')}
                             </DialogDescription>
                         </DialogHeader>
 
                         <form onSubmit={handleConfirmClose} className="space-y-5 py-2">
-                            {/* System expected */}
                             <div className="rounded-lg bg-slate-50 dark:bg-slate-900 border p-4 space-y-3 text-sm">
                                 <div className="flex justify-between items-center">
-                                    <span className="text-muted-foreground">{__('Fondo Inicial')}:</span>
+                                    <span className="text-muted-foreground">{__('Monto Inicial')}:</span>
                                     <span className="font-mono font-semibold">{currencySymbol}{(caja.opening_amount ?? 0).toFixed(2)}</span>
                                 </div>
                                 <div className="flex justify-between items-center text-emerald-600">
@@ -600,7 +768,6 @@ export default function Show({ caja, summary }: Props) {
                                 </div>
                             </div>
 
-                            {/* Physical count */}
                             <div className="space-y-2">
                                 <Label htmlFor="counted_amount" className="font-semibold">
                                     {__('Dinero Físicamente Contado')} ({currencySymbol})
@@ -613,27 +780,25 @@ export default function Show({ caja, summary }: Props) {
                                     value={countedAmount}
                                     onChange={(e) => setCountedAmount(e.target.value)}
                                     placeholder="0.00"
-                                    className="font-mono text-xl h-12 text-center"
+                                    className="font-mono text-xl h-12 text-center font-bold text-indigo-600"
                                     autoFocus
                                 />
-                                <p className="text-xs text-muted-foreground">{__('Deje en blanco para cerrar sin conteo físico.')}</p>
                             </div>
 
-                            {/* Difference display */}
                             {difference !== null && (
-                                <div className={`rounded-lg p-4 text-center border ${
+                                <div className={cn(
+                                    'rounded-lg p-4 text-center border',
                                     difference === 0 ? 'bg-emerald-50 border-emerald-200 dark:bg-emerald-950/20' :
                                     difference > 0 ? 'bg-blue-50 border-blue-200 dark:bg-blue-950/20' :
                                     'bg-rose-50 border-rose-200 dark:bg-rose-950/20'
-                                }`}>
+                                )}>
                                     <p className="text-xs font-semibold uppercase tracking-wider mb-1 text-muted-foreground">
-                                        {difference === 0 ? __('Sin Diferencia') :
-                                         difference > 0 ? __('Sobrante') : __('Faltante')}
+                                        {difference === 0 ? __('Sin Diferencia (Cuadrado)') : difference > 0 ? __('Sobrante') : __('Faltante')}
                                     </p>
-                                    <p className={`text-3xl font-extrabold font-mono ${
-                                        difference === 0 ? 'text-emerald-600' :
-                                        difference > 0 ? 'text-blue-600' : 'text-rose-600'
-                                    }`}>
+                                    <p className={cn(
+                                        'text-3xl font-extrabold font-mono',
+                                        difference === 0 ? 'text-emerald-600' : difference > 0 ? 'text-blue-600' : 'text-rose-600'
+                                    )}>
                                         {difference > 0 ? '+' : ''}{currencySymbol}{difference.toFixed(2)}
                                     </p>
                                 </div>
@@ -643,14 +808,66 @@ export default function Show({ caja, summary }: Props) {
                                 <Button type="button" variant="outline" onClick={() => setIsCloseOpen(false)}>
                                     {__('Cancelar')}
                                 </Button>
-                                <Button type="submit" variant="destructive">
+                                <Button type="submit" variant="destructive" className="font-bold">
                                     <Lock className="w-4 h-4 mr-2" />
-                                    {__('Cerrar Caja')}
+                                    {__('Confirmar Cierre de Caja')}
                                 </Button>
                             </DialogFooter>
                         </form>
                     </DialogContent>
                 </Dialog>
+            </div>
+
+            {/* FORMATO TICKET DE IMPRESIÓN PARA TICKETERA POS */}
+            <div className="hidden print:block font-mono text-xs p-4 max-w-xs mx-auto space-y-4">
+                <div className="text-center border-b pb-2">
+                    <h2 className="text-base font-bold uppercase">{__('Comprobante de Arqueo de Caja')}</h2>
+                    <p>Caja #{caja.id}</p>
+                    <p>{new Date().toLocaleString()}</p>
+                </div>
+
+                <div className="space-y-1">
+                    <p><strong>{__('Cajero')}:</strong> {caja.user?.name}</p>
+                    <p><strong>{__('Apertura')}:</strong> {new Date(caja.opened_at).toLocaleString()}</p>
+                    <p><strong>{__('Estado')}:</strong> {caja.status.toUpperCase()}</p>
+                    {caja.closed_at && <p><strong>{__('Cierre')}:</strong> {new Date(caja.closed_at).toLocaleString()}</p>}
+                </div>
+
+                <div className="border-t border-b py-2 space-y-1">
+                    <div className="flex justify-between">
+                        <span>{__('Fondo Inicial')}:</span>
+                        <span>{currencySymbol}{(caja.opening_amount ?? 0).toFixed(2)}</span>
+                    </div>
+                    <div className="flex justify-between">
+                        <span>{__('Total Ingresos')}:</span>
+                        <span>+{currencySymbol}{(summary.inflows ?? 0).toFixed(2)}</span>
+                    </div>
+                    <div className="flex justify-between">
+                        <span>{__('Total Egresos')}:</span>
+                        <span>-{currencySymbol}{(summary.outflows ?? 0).toFixed(2)}</span>
+                    </div>
+                    <div className="flex justify-between font-bold border-t pt-1">
+                        <span>{__('Saldo Esperado')}:</span>
+                        <span>{currencySymbol}{(expectedAmount ?? 0).toFixed(2)}</span>
+                    </div>
+                    {caja.counted_amount !== null && (
+                        <div className="flex justify-between font-bold">
+                            <span>{__('Monto Contado')}:</span>
+                            <span>{currencySymbol}{caja.counted_amount.toFixed(2)}</span>
+                        </div>
+                    )}
+                    {caja.difference !== null && (
+                        <div className="flex justify-between font-bold">
+                            <span>{__('Diferencia')}:</span>
+                            <span>{currencySymbol}{caja.difference.toFixed(2)}</span>
+                        </div>
+                    )}
+                </div>
+
+                <div className="text-center pt-4">
+                    <p>___________________________</p>
+                    <p className="mt-1">{__('Firma del Cajero')}</p>
+                </div>
             </div>
         </>
     );
