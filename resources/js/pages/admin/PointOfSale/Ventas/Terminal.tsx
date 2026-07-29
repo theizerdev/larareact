@@ -222,8 +222,29 @@ export default function Terminal({
         }
     };
 
+    // Web Audio POS Beep Sound
+    const playScanBeep = useCallback(() => {
+        try {
+            const AudioContext = window.AudioContext || (window as any).webkitAudioContext;
+            if (!AudioContext) return;
+            const audioCtx = new AudioContext();
+            const osc = audioCtx.createOscillator();
+            const gain = audioCtx.createGain();
+            osc.type = 'sine';
+            osc.frequency.setValueAtTime(1850, audioCtx.currentTime);
+            gain.gain.setValueAtTime(0.15, audioCtx.currentTime);
+            osc.connect(gain);
+            gain.connect(audioCtx.destination);
+            osc.start();
+            osc.stop(audioCtx.currentTime + 0.08);
+        } catch (e) {
+            // Audio context not allowed or failed
+        }
+    }, []);
+
     // Add Item to Active Ticket Cart
     const addToCart = (item: CatalogItem) => {
+        playScanBeep();
         updateActiveTicket((ticket) => {
             const cartId = `${item.tipo}-${item.id}`;
             const idx = ticket.cart.findIndex((ci) => ci.id === cartId);
@@ -356,10 +377,17 @@ export default function Terminal({
     const totalUSD = valorDolar > 0 ? total / valorDolar : 0;
     const totalItemsCount = activeTicket.cart.reduce((acc, item) => acc + item.cantidad, 0);
 
-    // Payment calculations
-    const totalPaid = paymentLines.reduce((acc, pl) => acc + (parseFloat(pl.monto) || 0), 0);
+    // Payment calculations (Automatic USD -> MXN conversion when paying in Dollars)
+    const totalPaid = paymentLines.reduce((acc, pl) => {
+        const val = parseFloat(pl.monto) || 0;
+        if (pl.metodo_pago === 'dolar') {
+            return acc + val * (valorDolar || 1);
+        }
+        return acc + val;
+    }, 0);
     const remaining = Math.max(0, total - totalPaid);
     const cambio = activeTicket.esCredito ? 0 : Math.max(0, totalPaid - total);
+    const cambioUSD = valorDolar > 0 ? cambio / valorDolar : 0;
 
     const addPaymentLine = () => setPaymentLines((prev) => [...prev, { metodo_pago: 'efectivo', monto: '' }]);
     const removePaymentLine = (idx: number) => setPaymentLines((prev) => prev.filter((_, i) => i !== idx));
@@ -386,7 +414,13 @@ export default function Terminal({
         e.preventDefault();
         const payments = paymentLines
             .filter((pl) => parseFloat(pl.monto) > 0)
-            .map((pl) => ({ metodo_pago: pl.metodo_pago, monto: parseFloat(pl.monto) }));
+            .map((pl) => {
+                const val = parseFloat(pl.monto);
+                return {
+                    metodo_pago: pl.metodo_pago,
+                    monto: pl.metodo_pago === 'dolar' ? val * (valorDolar || 1) : val,
+                };
+            });
 
         if (!activeTicket.esCredito && remaining > 0.01) {
             notifyError(__('El monto pagado no cubre el total de la venta.'));
@@ -1388,22 +1422,27 @@ export default function Terminal({
                                                 <SelectValue />
                                             </SelectTrigger>
                                             <SelectContent>
-                                                <SelectItem value="efectivo">{__('Efectivo')}</SelectItem>
+                                                <SelectItem value="efectivo">{__('Efectivo (MXN)')}</SelectItem>
+                                                <SelectItem value="dolar">💵 {__('Dólares (USD)')}</SelectItem>
                                                 <SelectItem value="transferencia">{__('Transferencia')}</SelectItem>
                                                 <SelectItem value="tarjeta">{__('Tarjeta')}</SelectItem>
-                                                <SelectItem value="pago_movil">{__('Pago Móvil / Dólar')}</SelectItem>
                                             </SelectContent>
                                         </Select>
-                                        <Input
-                                            ref={idx === 0 ? montoRef : undefined}
-                                            type="number"
-                                            step="0.01"
-                                            min="0"
-                                            placeholder="0.00"
-                                            className="font-mono text-lg font-bold"
-                                            value={pl.monto}
-                                            onChange={(e) => updatePaymentLine(idx, 'monto', e.target.value)}
-                                        />
+                                        <div className="relative flex-1">
+                                            <Input
+                                                ref={idx === 0 ? montoRef : undefined}
+                                                type="number"
+                                                step="0.01"
+                                                min="0"
+                                                placeholder={pl.metodo_pago === 'dolar' ? "0.00 USD" : "0.00 MXN"}
+                                                className="font-mono text-lg font-bold pr-12"
+                                                value={pl.monto}
+                                                onChange={(e) => updatePaymentLine(idx, 'monto', e.target.value)}
+                                            />
+                                            <span className="absolute right-3 top-2.5 text-xs font-bold text-muted-foreground font-mono">
+                                                {pl.metodo_pago === 'dolar' ? 'USD' : 'MXN'}
+                                            </span>
+                                        </div>
                                         {paymentLines.length > 1 && (
                                             <Button type="button" variant="ghost" size="icon" className="h-8 w-8 text-rose-500" onClick={() => removePaymentLine(idx)}>
                                                 <X className="h-4 w-4" />
