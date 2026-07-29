@@ -56,6 +56,9 @@ class PermissionSeeder extends Seeder
                 'integrations.view' => 'Ver Integraciones',
                 'integrations.edit' => 'Editar Integraciones',
 
+                // Módulo: Configuración de Créditos
+                'credit_config.view' => 'Ver Configuración de Créditos',
+                'credit_config.edit' => 'Editar Configuración de Créditos',
                 
             ],
             // Sector: Monitoreo
@@ -143,6 +146,7 @@ class PermissionSeeder extends Seeder
                     str_starts_with($permission, 'empresas.') => 'empresas',
                     str_starts_with($permission, 'sucursales.') => 'sucursales',
                     str_starts_with($permission, 'integrations.') => 'integraciones',
+                    str_starts_with($permission, 'credit_config.') => 'configuracion_credito',
                     str_starts_with($permission, 'monitoreo.') => 'monitoreo',
                     str_starts_with($permission, 'categorias.') => 'categorias',
                     str_starts_with($permission, 'marcas.') => 'marcas',
