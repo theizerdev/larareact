@@ -27,7 +27,6 @@ import { Switch } from '@/components/ui/switch';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useTranslate } from '@/hooks/use-translate';
-import AppLayout from '@/layouts/app-layout';
 
 interface PolicyData {
     id?: number;
@@ -201,10 +200,11 @@ export default function CreditConfigIndex({ policy, logs = [] }: Props) {
     };
 
     return (
-        <AppLayout breadcrumbs={breadcrumbs}>
+        <>
             <Head title={__('Configuración de Créditos')} />
 
             <div className="space-y-6">
+                <Breadcrumbs breadcrumbs={breadcrumbs} />
                 <ModuleHeader
                     icon={<CreditCard className="h-6 w-6 text-white" />}
                     title={__('Configuración de Créditos')}
@@ -724,6 +724,6 @@ export default function CreditConfigIndex({ policy, logs = [] }: Props) {
                     </div>
                 </form>
             </div>
-        </AppLayout>
+        </>
     );
 }
