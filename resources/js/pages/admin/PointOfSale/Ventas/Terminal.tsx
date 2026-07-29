@@ -317,16 +317,66 @@ export default function Terminal({
         notifySuccess(__('Artículo vario agregado al carrito.'));
     };
 
+    // Predictive Live Search Results for Barcode Input
+    const liveSearchResults = useMemo(() => {
+        if (!barcodeInput.trim()) return [];
+        const query = barcodeInput.trim().toLowerCase();
+        return catalog.filter((item) =>
+            (item.nombre || '').toLowerCase().includes(query) ||
+            (item.codigo || '').toLowerCase().includes(query)
+        ).slice(0, 8);
+    }, [catalog, barcodeInput]);
+
+    const [selectedIndex, setSelectedIndex] = useState<number>(-1);
+
+    // Reset selected index when search input changes
+    useEffect(() => {
+        setSelectedIndex(-1);
+    }, [barcodeInput]);
+
+    // Handle Barcode Search KeyDown for Live Dropdown (Arrow Up / Down / Enter / Esc)
+    const handleBarcodeKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+        if (liveSearchResults.length === 0) return;
+
+        if (e.key === 'ArrowDown') {
+            e.preventDefault();
+            setSelectedIndex((prev) => (prev < liveSearchResults.length - 1 ? prev + 1 : 0));
+        } else if (e.key === 'ArrowUp') {
+            e.preventDefault();
+            setSelectedIndex((prev) => (prev > 0 ? prev - 1 : liveSearchResults.length - 1));
+        } else if (e.key === 'Enter') {
+            if (selectedIndex >= 0 && liveSearchResults[selectedIndex]) {
+                e.preventDefault();
+                addToCart(liveSearchResults[selectedIndex]);
+                setBarcodeInput('');
+                setSelectedIndex(-1);
+            }
+        } else if (e.key === 'Escape') {
+            setBarcodeInput('');
+            setSelectedIndex(-1);
+        }
+    };
+
     // Barcode scanner submission
     const handleBarcodeSubmit = (e: React.FormEvent) => {
         e.preventDefault();
         if (!barcodeInput.trim()) return;
+
+        if (selectedIndex >= 0 && liveSearchResults[selectedIndex]) {
+            addToCart(liveSearchResults[selectedIndex]);
+            setBarcodeInput('');
+            setSelectedIndex(-1);
+            return;
+        }
 
         const code = barcodeInput.trim().toLowerCase();
         const found = catalog.find((c) => (c.codigo || '').toLowerCase() === code || (c.nombre || '').toLowerCase() === code);
 
         if (found) {
             addToCart(found);
+            setBarcodeInput('');
+        } else if (liveSearchResults.length > 0) {
+            addToCart(liveSearchResults[0]);
             setBarcodeInput('');
         } else {
             setSearchModalQuery(barcodeInput);
@@ -1455,13 +1505,22 @@ export default function Terminal({
                             {/* Resumen Cambio / Faltante */}
                             <div className="rounded-lg border p-3 space-y-1 text-sm bg-slate-50 dark:bg-slate-900">
                                 <div className="flex justify-between">
-                                    <span className="text-muted-foreground">{__('Total Pagado')}:</span>
+                                    <span className="text-muted-foreground">{__('Total Abonado (en MXN)')}:</span>
                                     <span className="font-mono font-bold">{currencySymbol}{totalPaid.toFixed(2)}</span>
                                 </div>
+                                {remaining > 0.01 && !activeTicket.esCredito && (
+                                    <div className="flex justify-between text-rose-600 font-bold border-t pt-1">
+                                        <span>{__('Falta por Cobrar')}:</span>
+                                        <span className="font-mono">{currencySymbol}{remaining.toFixed(2)}</span>
+                                    </div>
+                                )}
                                 {cambio > 0 && (
-                                    <div className="flex justify-between text-emerald-600 font-bold border-t pt-1">
-                                        <span>{__('Cambio / Vuelto')}:</span>
-                                        <span className="font-mono">{currencySymbol}{cambio.toFixed(2)}</span>
+                                    <div className="flex items-center justify-between text-emerald-600 font-bold border-t pt-1">
+                                        <span>{__('Cambio / Vuelto a Entregar')}:</span>
+                                        <div className="text-right">
+                                            <span className="font-mono block text-base">{currencySymbol}{cambio.toFixed(2)} MXN</span>
+                                            <span className="font-mono text-xs text-emerald-700 block">≈ ${cambioUSD.toFixed(2)} USD</span>
+                                        </div>
                                     </div>
                                 )}
                             </div>
