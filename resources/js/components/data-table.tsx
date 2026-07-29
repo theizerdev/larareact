@@ -128,9 +128,12 @@ return;
         );
     };
 
+    const rows = Array.isArray(data) ? data : (data?.data ?? []);
+    const totalCount = Array.isArray(data) ? data.length : (data?.total ?? 0);
+
     const handleSelectAll = (checked: boolean) => {
         if (onSelectionChange) {
-            onSelectionChange(checked ? data.data.map(getRowId) : []);
+            onSelectionChange(checked ? rows.map(getRowId) : []);
         }
     };
 
@@ -161,24 +164,24 @@ return;
     // Helper para determinar la responsividad
     const getResponsiveClass = (hideOn?: 'mobile' | 'tablet') => {
         if (!hideOn) {
-return '';
-}
+            return '';
+        }
 
         if (hideOn === 'mobile') {
-return 'hidden sm:table-cell';
-}
+            return 'hidden sm:table-cell';
+        }
 
         if (hideOn === 'tablet') {
-return 'hidden md:table-cell';
-}
+            return 'hidden md:table-cell';
+        }
 
         return '';
     };
 
     const allSelected =
-        data.data.length > 0 &&
+        rows.length > 0 &&
         selectedIds &&
-        data.data.every((row) => selectedIds.includes(getRowId(row)));
+        rows.every((row) => selectedIds.includes(getRowId(row)));
 
     const activeColumns = columns.filter((_, idx) => !hiddenColumnIndices.has(idx));
     const totalCols = activeColumns.length + (showCheckboxes ? 1 : 0);
@@ -238,8 +241,8 @@ return 'hidden md:table-cell';
                         </div>
                     ) : (
                         <div className="text-sm text-muted-foreground">
-                            {data.total > 0 && !isLoading && (
-                                <span>{__('Total records')}: {data.total}</span>
+                            {totalCount > 0 && !isLoading && (
+                                <span>{__('Total records')}: {totalCount}</span>
                             )}
                         </div>
                     )}
@@ -368,9 +371,9 @@ return null;
                                     })}
                                 </TableRow>
                             ))
-                        ) : data.data.length > 0 ? (
+                        ) : rows.length > 0 ? (
                             /* --- Renderizado de Filas de Datos --- */
-                            data.data.map((row, rowIdx) => {
+                            rows.map((row, rowIdx) => {
                                 const rowId = getRowId(row);
                                 const isSelected = selectedIds?.includes(rowId) ?? false;
 
@@ -470,7 +473,9 @@ return null;
             </div>
 
             {/* Componente de Paginación Integrado */}
-            <Pagination paginatedData={data} filters={filters} />
+            {data && !Array.isArray(data) && 'current_page' in data && (
+                <Pagination paginatedData={data as any} filters={filters} />
+            )}
         </div>
     );
 }
