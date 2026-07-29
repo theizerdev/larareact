@@ -898,23 +898,90 @@ export default function Terminal({
                     </Button>
                 </div>
 
-                {/* ===== BARRA PRINCIPAL DE ESCÁNER Y BÚSQUEDA RÁPIDA ===== */}
-                <form onSubmit={handleBarcodeSubmit} className="bg-white dark:bg-slate-900 border rounded-xl p-3 shadow-sm flex gap-3 items-center">
-                    <div className="relative flex-1">
-                        <Barcode className="absolute left-3.5 top-3 h-5 w-5 text-indigo-500" />
-                        <Input
-                            ref={barcodeInputRef}
-                            value={barcodeInput}
-                            onChange={(e) => setBarcodeInput(e.target.value)}
-                            placeholder={__('Código del Producto / Nombre / Escáner (ENTER para Agregar o F10 para Buscar)...')}
-                            className="pl-11 h-11 text-base font-mono font-semibold text-slate-900 dark:text-slate-100 bg-slate-50 dark:bg-slate-800/60"
-                        />
-                    </div>
-                    <Button type="submit" className="h-11 px-6 bg-indigo-600 hover:bg-indigo-700 text-white font-bold gap-2">
-                        <Plus className="w-4 h-4" />
-                        {__('ENTER - Agregar Producto')}
-                    </Button>
-                </form>
+                {/* ===== BARRA PRINCIPAL DE ESCÁNER Y BÚSQUEDA RÁPIDA PREDICITVA ===== */}
+                <div className="relative">
+                    <form onSubmit={handleBarcodeSubmit} className="bg-white dark:bg-slate-900 border rounded-xl p-3 shadow-sm flex gap-3 items-center">
+                        <div className="relative flex-1">
+                            <Barcode className="absolute left-3.5 top-3 h-5 w-5 text-indigo-500" />
+                            <Input
+                                ref={barcodeInputRef}
+                                value={barcodeInput}
+                                onChange={(e) => setBarcodeInput(e.target.value)}
+                                onKeyDown={handleBarcodeKeyDown}
+                                placeholder={__('Escriba código de barras, nombre de producto o escanee...')}
+                                className="pl-11 h-11 text-base font-mono font-semibold text-slate-900 dark:text-slate-100 bg-slate-50 dark:bg-slate-800/60"
+                            />
+                        </div>
+                        <Button type="submit" className="h-11 px-6 bg-indigo-600 hover:bg-indigo-700 text-white font-bold gap-2">
+                            <Plus className="w-4 h-4" />
+                            {__('ENTER - Agregar Producto')}
+                        </Button>
+                    </form>
+
+                    {/* MENÚ DESPLEGABLE PREDICTIVO DE BÚSQUEDA MANUAL */}
+                    {barcodeInput.trim().length > 0 && liveSearchResults.length > 0 && (
+                        <div className="absolute top-full left-0 right-0 z-50 mt-1 bg-white dark:bg-slate-900 border rounded-xl shadow-2xl overflow-hidden divide-y">
+                            <div className="p-2.5 bg-slate-100/80 dark:bg-slate-800/80 text-xs font-bold text-muted-foreground flex justify-between items-center border-b">
+                                <span>{__('Resultados Coincidentes')} ({liveSearchResults.length})</span>
+                                <span className="font-mono text-[11px] text-indigo-600 dark:text-indigo-400">
+                                    {__('Use teclas ↑ ↓ para navegar, ENTER o Clic para seleccionar')}
+                                </span>
+                            </div>
+                            <div className="max-h-[320px] overflow-y-auto divide-y">
+                                {liveSearchResults.map((item, idx) => (
+                                    <div
+                                        key={`${item.tipo}-${item.id}`}
+                                        onClick={() => {
+                                            addToCart(item);
+                                            setBarcodeInput('');
+                                            setSelectedIndex(-1);
+                                        }}
+                                        onMouseEnter={() => setSelectedIndex(idx)}
+                                        className={cn(
+                                            "p-3.5 flex items-center justify-between gap-4 cursor-pointer transition-colors",
+                                            selectedIndex === idx
+                                                ? "bg-indigo-50 dark:bg-indigo-950/70 border-l-4 border-l-indigo-600"
+                                                : "hover:bg-slate-50 dark:hover:bg-slate-800/60"
+                                        )}
+                                    >
+                                        <div className="flex items-center gap-3 min-w-0">
+                                            <div className="w-9 h-9 rounded-lg bg-indigo-100 dark:bg-indigo-950 text-indigo-600 flex items-center justify-center font-bold shrink-0">
+                                                {item.tipo === 'producto' ? <Package className="w-4 h-4" /> : <Wrench className="w-4 h-4" />}
+                                            </div>
+                                            <div className="min-w-0">
+                                                <div className="flex items-center gap-2 mb-0.5">
+                                                    <span className="font-bold text-base text-slate-900 dark:text-slate-100 truncate">{item.nombre}</span>
+                                                    <span className="font-mono text-xs font-bold text-muted-foreground bg-slate-100 dark:bg-slate-800 px-2 py-0.5 rounded border">
+                                                        {item.codigo}
+                                                    </span>
+                                                </div>
+                                                <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                                                    <span className="capitalize font-semibold">{item.tipo}</span>
+                                                    {item.stock !== null && (
+                                                        <span className={cn("font-bold font-mono", item.stock > 0 ? "text-emerald-600 dark:text-emerald-400" : "text-rose-500")}>
+                                                            · Stock: {item.stock} {item.stock <= 0 ? '(Agotado)' : ''}
+                                                        </span>
+                                                    )}
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        <div className="text-right shrink-0">
+                                            <span className="font-mono font-black text-lg text-emerald-600 dark:text-emerald-400 block">
+                                                {currencySymbol}{item.precio.toFixed(2)}
+                                            </span>
+                                            {valorDolar > 0 && (
+                                                <span className="font-mono text-xs text-muted-foreground font-bold block">
+                                                    ≈ ${(item.precio / valorDolar).toFixed(2)} USD
+                                                </span>
+                                            )}
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+                    )}
+                </div>
 
                 {/* ===== PANTALLA COMPLETA 100% ANCHO PARA EL CARRITO ELEVENTA ===== */}
                 <div className="bg-white dark:bg-slate-900 border rounded-xl shadow-sm overflow-hidden flex flex-col min-h-[500px]">
