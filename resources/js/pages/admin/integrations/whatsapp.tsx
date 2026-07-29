@@ -19,6 +19,7 @@ interface LiveStatus {
     isConnected: boolean;
     connectionState: string;
     qrCode: string | null;
+    token?: string | null;
     user: {
         id: string;
         name?: string;
@@ -33,6 +34,7 @@ interface PageProps {
     empresa_nombre: string;
     whatsapp_api_key: string | null;
     whatsapp_api_url: string;
+    whatsapp_instance?: string;
     whatsapp_rate_limit: number;
     whatsapp_active: boolean;
     whatsapp_phone: string | null;
@@ -46,6 +48,7 @@ export default function WhatsAppIntegration({
     empresa_nombre,
     whatsapp_api_key,
     whatsapp_api_url,
+    whatsapp_instance = '',
     whatsapp_rate_limit,
     whatsapp_active,
     whatsapp_phone,
@@ -62,6 +65,8 @@ export default function WhatsAppIntegration({
     // Formulario de configuración
     const configForm = useForm({
         whatsapp_api_url: whatsapp_api_url,
+        whatsapp_instance: whatsapp_instance || `empresa_${empresa_id}`,
+        whatsapp_api_key: whatsapp_api_key || '',
         whatsapp_active: whatsapp_active,
         whatsapp_rate_limit: whatsapp_rate_limit,
     });
@@ -327,8 +332,8 @@ return '';
     };
 
     const copyToClipboard = () => {
-        if (whatsapp_api_key) {
-            navigator.clipboard.writeText(whatsapp_api_key);
+        if (configForm.data.whatsapp_api_key) {
+            navigator.clipboard.writeText(configForm.data.whatsapp_api_key);
             setCopied(true);
             setTimeout(() => setCopied(false), 2000);
         }
@@ -430,13 +435,28 @@ return '';
                                         <Label htmlFor="whatsapp_api_url">{__('Connection IP / API URL')}</Label>
                                         <Input
                                             id="whatsapp_api_url"
-                                            placeholder="http://localhost:3001"
+                                            placeholder="http://localhost:8092"
                                             value={configForm.data.whatsapp_api_url}
                                             onChange={(e) => configForm.setData('whatsapp_api_url', e.target.value)}
                                             className="font-mono text-sm"
                                         />
                                         <p className="text-xs text-muted-foreground">
-                                            {__('Node service base URL (Baileys server).')}
+                                            {__('Node service base URL.')}
+                                        </p>
+                                    </div>
+
+                                    {/* WhatsApp Instance Name */}
+                                    <div className="space-y-2">
+                                        <Label htmlFor="whatsapp_instance">{__('WhatsApp Instance Name')}</Label>
+                                        <Input
+                                            id="whatsapp_instance"
+                                            placeholder="empresa_1"
+                                            value={configForm.data.whatsapp_instance}
+                                            onChange={(e) => configForm.setData('whatsapp_instance', e.target.value)}
+                                            className="font-mono text-sm"
+                                        />
+                                        <p className="text-xs text-muted-foreground">
+                                            {__('Name of the session/instance in the WhatsApp API engine (e.g. ventas, empresa_1).')}
                                         </p>
                                     </div>
 
@@ -458,19 +478,21 @@ return '';
 
                                     {/* Company Token */}
                                     <div className="space-y-2">
-                                        <Label>{__('Company API Token')}</Label>
+                                        <Label htmlFor="whatsapp_api_key">{__('Company API Token')}</Label>
                                         <div className="flex gap-2">
                                             <Input
-                                                readOnly
+                                                id="whatsapp_api_key"
                                                 type="text"
-                                                value={whatsapp_api_key || __('No token generated')}
-                                                className="font-mono text-sm bg-slate-50 dark:bg-slate-900 text-slate-600 select-all"
+                                                placeholder={__('Paste or enter API token...')}
+                                                value={configForm.data.whatsapp_api_key}
+                                                onChange={(e) => configForm.setData('whatsapp_api_key', e.target.value)}
+                                                className="font-mono text-sm"
                                             />
                                             <Button
                                                 type="button"
                                                 variant="outline"
                                                 onClick={copyToClipboard}
-                                                disabled={!whatsapp_api_key}
+                                                disabled={!configForm.data.whatsapp_api_key}
                                                 className="shrink-0"
                                                 title={__('Copy to clipboard')}
                                             >
@@ -478,7 +500,7 @@ return '';
                                             </Button>
                                         </div>
                                         <p className="text-xs text-muted-foreground">
-                                            {__('This credentials token authorizes this company to communicate with the node server.')}
+                                            {__('This credentials token authorizes this company to communicate with the node server. You can copy or paste it directly.')}
                                         </p>
                                     </div>
                                 </CardContent>
@@ -601,7 +623,7 @@ return '';
                                             </Button>
                                         </div>
                                     </div>
-                                ) : liveStatusState?.connectionState === 'qr_ready' && liveStatusState.qrCode ? (
+                                ) : (liveStatusState?.connectionState === 'qr_ready' || liveStatusState?.status === 'qr' || Boolean(liveStatusState?.qrCode)) && liveStatusState?.qrCode ? (
                                     /* QR CODE VIEW */
                                     <div className="space-y-5 py-2">
                                         <h3 className="font-semibold text-slate-800 dark:text-slate-100 text-lg">
@@ -646,17 +668,11 @@ return '';
                                         </p>
                                         <Button
                                             onClick={handleConnect}
-                                            disabled={!whatsapp_api_key}
                                             className="gap-2 bg-emerald-600 hover:bg-emerald-700 text-white font-medium"
                                         >
                                             <Power className="h-4 w-4" />
                                             {__('Initiate Connection')}
                                         </Button>
-                                        {!whatsapp_api_key && (
-                                            <p className="text-xs text-rose-600 font-medium">
-                                                {__('You must generate a Token and Sync Company before connecting.')}
-                                            </p>
-                                        )}
                                     </div>
                                 )}
                             </CardContent>
