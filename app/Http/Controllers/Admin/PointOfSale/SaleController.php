@@ -11,6 +11,7 @@ use App\Models\Pais;
 use App\Models\Producto;
 use App\Models\Sale;
 use App\Models\Servicio;
+use App\Services\CashRegisterService;
 use App\Services\SaleService;
 use Illuminate\Http\Request;
 
@@ -36,11 +37,31 @@ class SaleController extends Controller
         return '$';
     }
 
-    public function terminal()
+    public function terminal(CashRegisterService $cashService)
     {
         $activeRegister = CashRegister::where('user_id', auth()->id())
             ->where('status', 'open')
             ->first();
+
+        $registerSummary = null;
+        if ($activeRegister) {
+            $inflows = (float) $activeRegister->movements()->where('type', 'inflow')->sum('amount');
+            $outflows = (float) $activeRegister->movements()->where('type', 'outflow')->sum('amount');
+            $openingAmount = (float) $activeRegister->opening_amount;
+            $expectedBalance = $openingAmount + $inflows - $outflows;
+
+            $paymentBreakdown = $cashService->getPaymentMethodBreakdown($activeRegister);
+
+            $registerSummary = [
+                'id' => $activeRegister->id,
+                'opened_at' => $activeRegister->opened_at,
+                'opening_amount' => $openingAmount,
+                'inflows' => $inflows,
+                'outflows' => $outflows,
+                'expected_balance' => $expectedBalance,
+                'by_payment_method' => $paymentBreakdown,
+            ];
+        }
 
         // Get active products
         $productos = Producto::where('estado', true)
@@ -95,6 +116,7 @@ class SaleController extends Controller
         return inertia('admin/PointOfSale/Ventas/Terminal', [
             'catalog' => $catalog,
             'activeRegister' => $activeRegister,
+            'activeRegisterSummary' => $registerSummary,
             'currencySymbol' => $this->getCurrencySymbol(),
             'heldSales' => $heldSales,
             'clientes' => $clientes,

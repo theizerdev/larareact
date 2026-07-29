@@ -2,7 +2,8 @@ import { Head, router, usePage } from '@inertiajs/react';
 import {
     ShoppingCart, Search, Plus, Minus, Trash2, CheckCircle2, CreditCard, DollarSign,
     Package, Wrench, User, AlertCircle, Building2, Smartphone, Receipt, Pause,
-    Play, X, Wallet, Tag, Barcode, HelpCircle, Layers, FileText, ArrowRight, Eye, RefreshCw
+    Play, X, Wallet, Tag, Barcode, HelpCircle, Layers, FileText, ArrowRight, Eye, RefreshCw,
+    Calculator, ArrowUpRight, ArrowDownLeft, Scale, Printer, Lock
 } from 'lucide-react';
 import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { Breadcrumbs } from '@/components/breadcrumbs';
@@ -16,6 +17,7 @@ import {
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Textarea } from '@/components/ui/textarea';
 import { useTranslate } from '@/hooks/use-translate';
 import { cn } from '@/lib/utils';
 import { notifySuccess, notifyError } from '@/utils/notifications';
@@ -40,7 +42,17 @@ interface CartItem {
     stock: number | null;
 }
 
-interface CashRegister { id: number; status: 'open' | 'closed'; }
+interface CashRegister { id: number; status: 'open' | 'closed'; opened_at?: string; }
+interface RegisterSummary {
+    id: number;
+    opened_at: string;
+    opening_amount: number;
+    inflows: number;
+    outflows: number;
+    expected_balance: number;
+    by_payment_method: Record<string, { inflow: number; outflow: number; net: number }>;
+}
+
 interface HeldSaleRecord { id: number; label: string | null; cliente_nombre: string; cart_data: CartItem[]; created_at: string; }
 interface ClienteRecord { id: number; nombre: string; telefono: string | null; limite_credito: number; saldo_pendiente: number; }
 
@@ -59,12 +71,20 @@ interface TicketTab {
 interface Props {
     catalog: CatalogItem[];
     activeRegister: CashRegister | null;
+    activeRegisterSummary: RegisterSummary | null;
     currencySymbol?: string;
     heldSales: HeldSaleRecord[];
     clientes: ClienteRecord[];
 }
 
-export default function Terminal({ catalog, activeRegister, currencySymbol = '$', heldSales = [], clientes = [] }: Props) {
+export default function Terminal({
+    catalog,
+    activeRegister,
+    activeRegisterSummary,
+    currencySymbol = '$',
+    heldSales = [],
+    clientes = [],
+}: Props) {
     const { __ } = useTranslate();
 
     // Multi-Ticket Tabs (Eleventa Style)
@@ -89,7 +109,7 @@ export default function Terminal({ catalog, activeRegister, currencySymbol = '$'
     const [searchModalQuery, setSearchModalQuery] = useState('');
     const [searchTypeFilter, setSearchTypeFilter] = useState<'all' | 'producto' | 'servicio'>('all');
 
-    // Payment modal
+    // Payment modal (F12)
     const [isPaymentModalOpen, setIsPaymentModalOpen] = useState(false);
     const [paymentLines, setPaymentLines] = useState<PaymentLine[]>([{ metodo_pago: 'efectivo', monto: '' }]);
     const montoRef = useRef<HTMLInputElement>(null);
@@ -99,7 +119,21 @@ export default function Terminal({ catalog, activeRegister, currencySymbol = '$'
     const [verifierQuery, setVerifierQuery] = useState('');
     const [verifierItem, setVerifierItem] = useState<CatalogItem | null>(null);
 
-    // Misc / Generic Article Modal (INS / F7)
+    // Corte de Caja Modal (F8)
+    const [isCorteOpen, setIsCorteOpen] = useState(false);
+    const [countedAmountInput, setCountedAmountInput] = useState('');
+
+    // Movement / Entradas y Salidas Modal (F7 / Movement)
+    const [isMovementModalOpen, setIsMovementModalOpen] = useState(false);
+    const [movementForm, setMovementForm] = useState({
+        type: 'outflow' as 'inflow' | 'outflow',
+        concepto: 'Gasto Rápido',
+        metodo_pago: 'efectivo',
+        amount: '',
+        description: '',
+    });
+
+    // Misc / Generic Article Modal (INS)
     const [isMiscModalOpen, setIsMiscModalOpen] = useState(false);
     const [miscForm, setMiscForm] = useState({ nombre: 'Artículo Varios', precio: '', cantidad: '1' });
 
@@ -246,7 +280,6 @@ export default function Terminal({ catalog, activeRegister, currencySymbol = '$'
             addToCart(found);
             setBarcodeInput('');
         } else {
-            // Open search modal pre-filled if not exact match
             setSearchModalQuery(barcodeInput);
             setIsSearchModalOpen(true);
             setBarcodeInput('');
@@ -360,7 +393,49 @@ export default function Terminal({ catalog, activeRegister, currencySymbol = '$'
         });
     };
 
-    // Keyboard Shortcuts (F12: Cobrar, F10: Buscar, F9: Verificador, F7/INS: Art Vario, F6: Nuevo Cliente, F5: En Espera)
+    // Handle Cash Movement submission (Entrada / Salida)
+    const handleMovementSubmit = (e: React.FormEvent) => {
+        e.preventDefault();
+        if (!activeRegister) return;
+        const amt = parseFloat(movementForm.amount);
+        if (isNaN(amt) || amt <= 0) {
+            notifyError(__('Ingrese un monto válido.'));
+            return;
+        }
+
+        router.post(`/admin/cajas/${activeRegister.id}/movements`, movementForm, {
+            onSuccess: () => {
+                setIsMovementModalOpen(false);
+                setMovementForm({ type: 'outflow', concepto: 'Gasto Rápido', metodo_pago: 'efectivo', amount: '', description: '' });
+                notifySuccess(__('Movimiento de dinero registrado.'));
+                router.reload();
+            },
+            onError: () => notifyError(__('Error al registrar el movimiento.')),
+        });
+    };
+
+    // Handle Corte de Caja (Cierre Z)
+    const handleCorteSubmit = (e: React.FormEvent) => {
+        e.preventDefault();
+        if (!activeRegister) return;
+
+        const counted = countedAmountInput !== '' ? parseFloat(countedAmountInput) : null;
+
+        router.post(
+            `/admin/cajas/${activeRegister.id}/close`,
+            { counted_amount: counted },
+            {
+                onSuccess: () => {
+                    setIsCorteOpen(false);
+                    notifySuccess(__('Corte de Caja realizado exitosamente. La caja ha sido cerrada.'));
+                    router.reload();
+                },
+                onError: () => notifyError(__('Error al realizar el corte de caja.')),
+            }
+        );
+    };
+
+    // Keyboard Shortcuts (F12: Cobrar, F10: Buscar, F9: Verificador, F8: Corte, INS/F7: Art Vario, F6: Nuevo Cliente, F5: En Espera)
     useEffect(() => {
         const handleKeyDown = (e: KeyboardEvent) => {
             if (e.key === 'F12') {
@@ -374,7 +449,10 @@ export default function Terminal({ catalog, activeRegister, currencySymbol = '$'
             } else if (e.key === 'F9') {
                 e.preventDefault();
                 setIsVerifierOpen(true);
-            } else if (e.key === 'Insert' || e.key === 'F7') {
+            } else if (e.key === 'F8') {
+                e.preventDefault();
+                if (activeRegister) setIsCorteOpen(true);
+            } else if (e.key === 'Insert') {
                 e.preventDefault();
                 setIsMiscModalOpen(true);
             } else if (e.key === 'F6') {
@@ -479,6 +557,11 @@ export default function Terminal({ catalog, activeRegister, currencySymbol = '$'
         });
     };
 
+    // Calculated difference for Corte de Caja
+    const expectedBal = activeRegisterSummary?.expected_balance ?? 0;
+    const countedBal = parseFloat(countedAmountInput) || 0;
+    const diffBal = countedBal - expectedBal;
+
     return (
         <>
             <Head title={__('Terminal POS - Ventas')} />
@@ -516,6 +599,34 @@ export default function Terminal({ catalog, activeRegister, currencySymbol = '$'
 
                         {/* Botones de Atajos Rápidos Eleventa */}
                         <div className="flex flex-wrap items-center gap-1.5">
+                            {/* BOTÓN F8 CORTE DE CAJA */}
+                            {activeRegister && (
+                                <Button
+                                    type="button"
+                                    variant="outline"
+                                    size="sm"
+                                    className="text-xs gap-1 bg-amber-500/10 text-amber-700 dark:text-amber-300 border-amber-300 font-bold"
+                                    onClick={() => setIsCorteOpen(true)}
+                                >
+                                    <Calculator className="w-3.5 h-3.5 text-amber-600" />
+                                    <span>[F8]</span> {__('Corte de Caja')}
+                                </Button>
+                            )}
+
+                            {/* BOTÓN ENTRADAS Y SALIDAS */}
+                            {activeRegister && (
+                                <Button
+                                    type="button"
+                                    variant="outline"
+                                    size="sm"
+                                    className="text-xs gap-1 bg-slate-50 dark:bg-slate-800"
+                                    onClick={() => setIsMovementModalOpen(true)}
+                                >
+                                    <ArrowUpRight className="w-3.5 h-3.5 text-rose-500" />
+                                    {__('Entrada/Salida')}
+                                </Button>
+                            )}
+
                             <Button
                                 type="button"
                                 variant="outline"
@@ -524,7 +635,7 @@ export default function Terminal({ catalog, activeRegister, currencySymbol = '$'
                                 onClick={() => setIsSearchModalOpen(true)}
                             >
                                 <Search className="w-3.5 h-3.5 text-blue-500" />
-                                <span className="font-bold">[F10]</span> {__('Buscar Producto')}
+                                <span className="font-bold">[F10]</span> {__('Buscar')}
                             </Button>
 
                             <Button
@@ -546,7 +657,7 @@ export default function Terminal({ catalog, activeRegister, currencySymbol = '$'
                                 onClick={() => setIsMiscModalOpen(true)}
                             >
                                 <Tag className="w-3.5 h-3.5 text-amber-500" />
-                                <span className="font-bold">[INS / F7]</span> {__('Art. Vario')}
+                                <span className="font-bold">[INS]</span> {__('Art. Vario')}
                             </Button>
 
                             <Button
@@ -815,7 +926,210 @@ export default function Terminal({ catalog, activeRegister, currencySymbol = '$'
                     </div>
                 </div>
 
-                {/* MODAL BUSCADOR DE PRODUCTOS Y SERVICIOS (F10) */}
+                {/* MODAL CORTE DE CAJA (F8) ESTILO ELEVENTA */}
+                <Dialog open={isCorteOpen} onOpenChange={setIsCorteOpen}>
+                    <DialogContent className="sm:max-w-xl max-h-[90vh] overflow-y-auto">
+                        <DialogHeader>
+                            <DialogTitle className="flex items-center gap-2 text-amber-600 text-lg">
+                                <Calculator className="w-5 h-5" />
+                                {__('Corte de Caja / Arqueo de Turno (F8)')}
+                            </DialogTitle>
+                            <DialogDescription>
+                                {__('Revise los totales acumulados del turno actual y realice el arqueo para el cierre de caja.')}
+                            </DialogDescription>
+                        </DialogHeader>
+
+                        {activeRegisterSummary ? (
+                            <form onSubmit={handleCorteSubmit} className="space-y-4 py-2">
+                                {/* Resumen Superior de Dinero */}
+                                <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                                    <div className="p-3 bg-slate-50 dark:bg-slate-800 border rounded-lg">
+                                        <span className="text-xs text-muted-foreground font-semibold block">{__('Fondo Inicial')}</span>
+                                        <span className="text-lg font-bold font-mono text-slate-800 dark:text-slate-200">
+                                            {currencySymbol}{activeRegisterSummary.opening_amount.toFixed(2)}
+                                        </span>
+                                    </div>
+
+                                    <div className="p-3 bg-emerald-50 dark:bg-emerald-950/30 border border-emerald-200 dark:border-emerald-900 rounded-lg">
+                                        <span className="text-xs text-emerald-700 dark:text-emerald-400 font-semibold block">{__('Total Ingresos (+)')}</span>
+                                        <span className="text-lg font-bold font-mono text-emerald-600 dark:text-emerald-400">
+                                            +{currencySymbol}{activeRegisterSummary.inflows.toFixed(2)}
+                                        </span>
+                                    </div>
+
+                                    <div className="p-3 bg-rose-50 dark:bg-rose-950/30 border border-rose-200 dark:border-rose-900 rounded-lg">
+                                        <span className="text-xs text-rose-700 dark:text-rose-400 font-semibold block">{__('Total Salidas (-)')}</span>
+                                        <span className="text-lg font-bold font-mono text-rose-600 dark:text-rose-400">
+                                            -{currencySymbol}{activeRegisterSummary.outflows.toFixed(2)}
+                                        </span>
+                                    </div>
+                                </div>
+
+                                {/* Balance Esperado */}
+                                <div className="p-4 bg-indigo-50 dark:bg-indigo-950/40 border border-indigo-200 dark:border-indigo-900 rounded-xl text-center">
+                                    <span className="text-xs font-bold text-indigo-700 dark:text-indigo-300 uppercase tracking-wider block">
+                                        {__('Dinero Esperado en Efectivo / Cajón')}
+                                    </span>
+                                    <span className="text-3xl font-extrabold font-mono text-indigo-600 dark:text-indigo-300">
+                                        {currencySymbol}{activeRegisterSummary.expected_balance.toFixed(2)}
+                                    </span>
+                                </div>
+
+                                {/* Desglose por Formas de Pago */}
+                                <div className="border rounded-lg p-3 space-y-2 bg-slate-50/50 dark:bg-slate-800/50">
+                                    <h4 className="text-xs font-bold uppercase text-muted-foreground flex items-center gap-1.5">
+                                        <CreditCard className="w-3.5 h-3.5" />
+                                        {__('Desglose por Método de Pago')}
+                                    </h4>
+                                    <div className="grid grid-cols-2 gap-2 text-xs font-medium">
+                                        {Object.entries(activeRegisterSummary.by_payment_method).map(([method, val]) => (
+                                            <div key={method} className="flex justify-between p-2 bg-white dark:bg-slate-900 rounded border">
+                                                <span className="capitalize">{method.replace('_', ' ')}:</span>
+                                                <span className="font-mono font-bold text-emerald-600">{currencySymbol}{val.net.toFixed(2)}</span>
+                                            </div>
+                                        ))}
+                                    </div>
+                                </div>
+
+                                {/* Arqueo Físico (Efectivo Contado) */}
+                                <div className="p-4 border rounded-xl space-y-3 bg-amber-50/40 dark:bg-amber-950/20 border-amber-200 dark:border-amber-900">
+                                    <div className="space-y-1">
+                                        <Label className="font-bold text-slate-800 dark:text-slate-200 flex items-center gap-1.5">
+                                            <Scale className="w-4 h-4 text-amber-600" />
+                                            {__('Efectivo Real Contado en Cajón')}
+                                        </Label>
+                                        <Input
+                                            type="number"
+                                            step="0.01"
+                                            min="0"
+                                            placeholder={activeRegisterSummary.expected_balance.toFixed(2)}
+                                            value={countedAmountInput}
+                                            onChange={(e) => setCountedAmountInput(e.target.value)}
+                                            className="font-mono text-xl font-bold bg-white dark:bg-slate-900"
+                                        />
+                                    </div>
+
+                                    {countedAmountInput !== '' && (
+                                        <div className={cn(
+                                            "flex items-center justify-between p-2.5 rounded-lg font-bold text-xs font-mono",
+                                            diffBal === 0
+                                                ? "bg-emerald-100 text-emerald-800 dark:bg-emerald-950/60 dark:text-emerald-300"
+                                                : diffBal > 0
+                                                    ? "bg-blue-100 text-blue-800 dark:bg-blue-950/60 dark:text-blue-300"
+                                                    : "bg-rose-100 text-rose-800 dark:bg-rose-950/60 dark:text-rose-300"
+                                        )}>
+                                            <span>
+                                                {diffBal === 0 ? __('Cuadre Perfecto (0.00)') : diffBal > 0 ? __('Sobrante en Caja:') : __('Faltante en Caja:')}
+                                            </span>
+                                            <span>
+                                                {diffBal > 0 ? '+' : ''}{currencySymbol}{diffBal.toFixed(2)}
+                                            </span>
+                                        </div>
+                                    )}
+                                </div>
+
+                                <DialogFooter className="gap-2 pt-2">
+                                    <Button type="button" variant="outline" onClick={() => setIsCorteOpen(false)}>
+                                        {__('Cancelar')}
+                                    </Button>
+                                    <Button type="submit" className="bg-amber-600 hover:bg-amber-700 text-white font-bold gap-2">
+                                        <Lock className="w-4 h-4" />
+                                        {__('Confirmar y Cerrar Caja (Corte Z)')}
+                                    </Button>
+                                </DialogFooter>
+                            </form>
+                        ) : (
+                            <div className="p-8 text-center text-muted-foreground">
+                                {__('Cargando resumen de caja...')}
+                            </div>
+                        )}
+                    </DialogContent>
+                </Dialog>
+
+                {/* MODAL ENTRADA / SALIDA DE DINERO */}
+                <Dialog open={isMovementModalOpen} onOpenChange={setIsMovementModalOpen}>
+                    <DialogContent className="sm:max-w-md">
+                        <DialogHeader>
+                            <DialogTitle className="flex items-center gap-2">
+                                <ArrowUpRight className="w-5 h-5 text-rose-500" />
+                                {__('Registrar Entrada / Salida de Efectivo')}
+                            </DialogTitle>
+                            <DialogDescription>
+                                {__('Registre retiros de dinero (gastos rápidos) o depósitos de efectivo en caja.')}
+                            </DialogDescription>
+                        </DialogHeader>
+
+                        <form onSubmit={handleMovementSubmit} className="space-y-4 py-2">
+                            <div className="space-y-2">
+                                <Label>{__('Tipo de Movimiento')}</Label>
+                                <Select
+                                    value={movementForm.type}
+                                    onValueChange={(v: 'inflow' | 'outflow') => setMovementForm({ ...movementForm, type: v })}
+                                >
+                                    <SelectTrigger>
+                                        <SelectValue />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        <SelectItem value="outflow">{__('Salida / Retiro de Dinero (-)')}</SelectItem>
+                                        <SelectItem value="inflow">{__('Entrada / Inyección de Dinero (+)')}</SelectItem>
+                                    </SelectContent>
+                                </Select>
+                            </div>
+
+                            <div className="space-y-2">
+                                <Label>{__('Concepto')}</Label>
+                                <Input
+                                    value={movementForm.concepto}
+                                    onChange={(e) => setMovementForm({ ...movementForm, concepto: e.target.value })}
+                                    placeholder={__('Ej: Pago proveedor, Compra insumos, Ajuste...')}
+                                    required
+                                />
+                            </div>
+
+                            <div className="space-y-2">
+                                <Label>{__('Monto')} ({currencySymbol})</Label>
+                                <Input
+                                    type="number"
+                                    step="0.01"
+                                    min="0.01"
+                                    value={movementForm.amount}
+                                    onChange={(e) => setMovementForm({ ...movementForm, amount: e.target.value })}
+                                    placeholder="0.00"
+                                    className="font-mono text-lg font-bold"
+                                    required
+                                    autoFocus
+                                />
+                            </div>
+
+                            <div className="space-y-2">
+                                <Label>{__('Notas u Observación')}</Label>
+                                <Textarea
+                                    value={movementForm.description}
+                                    onChange={(e) => setMovementForm({ ...movementForm, description: e.target.value })}
+                                    placeholder={__('Detalle opcional del movimiento...')}
+                                    rows={2}
+                                />
+                            </div>
+
+                            <DialogFooter className="pt-2">
+                                <Button type="button" variant="outline" onClick={() => setIsMovementModalOpen(false)}>
+                                    {__('Cancelar')}
+                                </Button>
+                                <Button
+                                    type="submit"
+                                    className={cn(
+                                        "font-bold text-white",
+                                        movementForm.type === 'outflow' ? "bg-rose-600 hover:bg-rose-700" : "bg-emerald-600 hover:bg-emerald-700"
+                                    )}
+                                >
+                                    {__('Registrar Movimiento')}
+                                </Button>
+                            </DialogFooter>
+                        </form>
+                    </DialogContent>
+                </Dialog>
+
+                {/* MODAL BUSCADOR DE PRODUCTOS (F10) */}
                 <Dialog open={isSearchModalOpen} onOpenChange={setIsSearchModalOpen}>
                     <DialogContent className="sm:max-w-2xl max-h-[85vh] flex flex-col">
                         <DialogHeader>
