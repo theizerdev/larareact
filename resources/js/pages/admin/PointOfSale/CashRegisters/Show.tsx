@@ -20,7 +20,9 @@ import {
     Calendar,
     User as UserIcon,
     Filter,
-    Search
+    Search,
+    Coins,
+    Scale
 } from 'lucide-react';
 import React, { useState, useMemo } from 'react';
 import { Breadcrumbs } from '@/components/breadcrumbs';
@@ -106,14 +108,18 @@ export default function Show({ caja, summary }: Props) {
     const [isMovementOpen, setIsMovementOpen] = useState(false);
     const [isCloseOpen, setIsCloseOpen] = useState(false);
     const [countedAmount, setCountedAmount] = useState('');
+    const [countedUSDShow, setCountedUSDShow] = useState('');
     const [movementFilter, setMovementFilter] = useState<'all' | 'inflow' | 'outflow'>('all');
     const [searchQuery, setSearchQuery] = useState('');
 
     const currencySymbol = summary.currency_symbol || '$';
+    const rateUSD = summary.valor_dolar || 20.0;
 
     const expectedAmount = summary.current_balance;
-    const countedNum = parseFloat(countedAmount) || 0;
-    const difference = countedAmount !== '' ? countedNum - expectedAmount : null;
+    const countedMXNNum = parseFloat(countedAmount) || 0;
+    const countedUSDNum = parseFloat(countedUSDShow) || 0;
+    const totalCountedCombined = countedMXNNum + (countedUSDNum * rateUSD);
+    const diffShow = (countedAmount !== '' || countedUSDShow !== '') ? totalCountedCombined - expectedAmount : null;
 
     const breadcrumbs = [
         { title: __('Dashboard'), href: '/dashboard' },
@@ -177,9 +183,11 @@ export default function Show({ caja, summary }: Props) {
 
     const formatMetodoPagoLabel = (key: string) => {
         switch (key) {
-            case 'efectivo': return __('Efectivo');
+            case 'efectivo': return __('Efectivo (MXN)');
+            case 'dolar': return __('💵 Dólares (USD)');
             case 'transferencia': return __('Transferencia Bancaria');
             case 'tarjeta': return __('Tarjeta Débito/Crédito');
+            case 'credito': return __('Venta a Crédito / Fiado');
             case 'pago_movil': return __('Pago Móvil');
             default: return key.charAt(0).toUpperCase() + key.slice(1);
         }
@@ -228,14 +236,28 @@ export default function Show({ caja, summary }: Props) {
         {
             header: __('Monto'),
             accessorKey: 'amount',
-            cell: (movement) => (
-                <span className={cn(
-                    'font-mono font-bold text-sm',
-                    movement.type === 'inflow' ? 'text-emerald-600 dark:text-emerald-400' : 'text-rose-600 dark:text-rose-400'
-                )}>
-                    {movement.type === 'inflow' ? '+' : '-'}{currencySymbol}{Number(movement.amount || 0).toFixed(2)}
-                </span>
-            ),
+            cell: (movement) => {
+                const amt = Number(movement.amount || 0);
+                const rate = summary.valor_dolar || 20.0;
+                const isUSD = movement.metodo_pago === 'dolar';
+                const amtUSD = rate > 0 ? amt / rate : 0;
+
+                return (
+                    <div className="flex flex-col gap-0.5">
+                        <span className={cn(
+                            'font-mono font-bold text-sm',
+                            movement.type === 'inflow' ? 'text-emerald-600 dark:text-emerald-400' : 'text-rose-600 dark:text-rose-400'
+                        )}>
+                            {movement.type === 'inflow' ? '+' : '-'}{currencySymbol}{amt.toFixed(2)} MXN
+                        </span>
+                        {isUSD && (
+                            <span className="font-mono text-xs font-extrabold text-emerald-700 dark:text-emerald-300 bg-emerald-50 dark:bg-emerald-950/40 px-1.5 py-0.5 rounded border border-emerald-200 dark:border-emerald-900 w-fit">
+                                💵 {movement.type === 'inflow' ? '+' : '-'}${amtUSD.toFixed(2)} USD
+                            </span>
+                        )}
+                    </div>
+                );
+            },
         },
         {
             header: __('Descripción / Motivo'),
@@ -290,9 +312,11 @@ export default function Show({ caja, summary }: Props) {
     }, [caja.movements, movementFilter, searchQuery]);
 
     const paymentMethodList = [
-        { key: 'efectivo', label: __('Efectivo'), icon: Wallet },
+        { key: 'efectivo', label: __('Efectivo (MXN)'), icon: Wallet },
+        { key: 'dolar', label: __('💵 Dólares (USD)'), icon: Coins },
         { key: 'transferencia', label: __('Transferencia Bancaria'), icon: Building2 },
         { key: 'tarjeta', label: __('Tarjeta Débito/Crédito'), icon: CreditCard },
+        { key: 'credito', label: __('Venta a Crédito (Fiado)'), icon: Wallet },
         { key: 'pago_movil', label: __('Pago Móvil'), icon: Smartphone },
         { key: 'otro', label: __('Otros Métodos'), icon: Receipt },
     ];
@@ -555,7 +579,14 @@ export default function Show({ caja, summary }: Props) {
                                         <div className="space-y-2 border-t pt-3 text-sm">
                                             <div className="flex justify-between items-center text-emerald-600">
                                                 <span className="text-xs text-muted-foreground">{__('Ingresos')}</span>
-                                                <span className="font-mono font-bold">+{currencySymbol}{data.inflow.toFixed(2)}</span>
+                                                <div className="text-right">
+                                                    <span className="font-mono font-bold block">+{currencySymbol}{data.inflow.toFixed(2)} MXN</span>
+                                                    {pm.key === 'dolar' && (
+                                                        <span className="font-mono text-xs font-extrabold text-emerald-700 dark:text-emerald-300 block">
+                                                            💵 +${(data.inflow / (summary.valor_dolar || 1)).toFixed(2)} USD
+                                                        </span>
+                                                    )}
+                                                </div>
                                             </div>
                                             <div className="flex justify-between items-center text-rose-600">
                                                 <span className="text-xs text-muted-foreground">{__('Egresos')}</span>
@@ -563,7 +594,14 @@ export default function Show({ caja, summary }: Props) {
                                             </div>
                                             <div className="flex justify-between items-center font-bold text-slate-900 dark:text-slate-100 pt-1 border-t">
                                                 <span>{__('Balance Neto')}</span>
-                                                <span className="font-mono text-base">{currencySymbol}{data.net.toFixed(2)}</span>
+                                                <div className="text-right">
+                                                    <span className="font-mono text-base block">{currencySymbol}{data.net.toFixed(2)} MXN</span>
+                                                    {pm.key === 'dolar' && (
+                                                        <span className="font-mono text-xs text-emerald-700 dark:text-emerald-300 font-extrabold block">
+                                                            💵 ${(data.net / (summary.valor_dolar || 1)).toFixed(2)} USD en físico
+                                                        </span>
+                                                    )}
+                                                </div>
                                             </div>
                                         </div>
 
@@ -687,9 +725,11 @@ export default function Show({ caja, summary }: Props) {
                                             <SelectValue />
                                         </SelectTrigger>
                                         <SelectContent>
-                                            <SelectItem value="efectivo">{__('Efectivo')}</SelectItem>
+                                            <SelectItem value="efectivo">{__('Efectivo (MXN)')}</SelectItem>
+                                            <SelectItem value="dolar">💵 {__('Dólares (USD)')}</SelectItem>
                                             <SelectItem value="transferencia">{__('Transferencia Bancaria')}</SelectItem>
                                             <SelectItem value="tarjeta">{__('Tarjeta Débito/Crédito')}</SelectItem>
+                                            <SelectItem value="credito">{__('Venta a Crédito / Fiado')}</SelectItem>
                                             <SelectItem value="pago_movil">{__('Pago Móvil')}</SelectItem>
                                             <SelectItem value="otro">{__('Otro')}</SelectItem>
                                         </SelectContent>
@@ -749,9 +789,9 @@ export default function Show({ caja, summary }: Props) {
                         </DialogHeader>
 
                         <form onSubmit={handleConfirmClose} className="space-y-5 py-2">
-                            <div className="rounded-lg bg-slate-50 dark:bg-slate-900 border p-4 space-y-3 text-sm">
+                            <div className="rounded-xl bg-slate-50 dark:bg-slate-900 border p-4 space-y-3 text-sm">
                                 <div className="flex justify-between items-center">
-                                    <span className="text-muted-foreground">{__('Monto Inicial')}:</span>
+                                    <span className="text-muted-foreground">{__('Fondo Inicial (MXN)')}:</span>
                                     <span className="font-mono font-semibold">{currencySymbol}{(caja.opening_amount ?? 0).toFixed(2)}</span>
                                 </div>
                                 <div className="flex justify-between items-center text-emerald-600">
@@ -763,43 +803,74 @@ export default function Show({ caja, summary }: Props) {
                                     <span className="font-mono font-semibold">-{currencySymbol}{(summary.outflows ?? 0).toFixed(2)}</span>
                                 </div>
                                 <div className="pt-2 border-t flex justify-between items-center font-bold">
-                                    <span>{__('Esperado en Caja')}:</span>
-                                    <span className="font-mono text-lg">{currencySymbol}{(expectedAmount ?? 0).toFixed(2)}</span>
+                                    <span>{__('Esperado en Caja (MXN)')}:</span>
+                                    <div className="text-right font-mono">
+                                        <span className="text-lg block text-indigo-600 dark:text-indigo-400">{currencySymbol}{(expectedAmount ?? 0).toFixed(2)}</span>
+                                        {summary.valor_dolar && summary.valor_dolar > 0 && (
+                                            <span className="text-xs text-muted-foreground block">≈ ${((expectedAmount ?? 0) / summary.valor_dolar).toFixed(2)} USD</span>
+                                        )}
+                                    </div>
                                 </div>
                             </div>
 
-                            <div className="space-y-2">
-                                <Label htmlFor="counted_amount" className="font-semibold">
-                                    {__('Dinero Físicamente Contado')} ({currencySymbol})
+                            {/* Conteo Físico en Cajón (Pesos + Dólares) */}
+                            <div className="space-y-3 border rounded-xl p-3.5 bg-amber-50/50 dark:bg-amber-950/30 border-amber-200">
+                                <Label className="font-bold text-slate-800 dark:text-slate-200 flex items-center gap-1.5 text-sm">
+                                    <Scale className="w-4 h-4 text-amber-600" />
+                                    {__('Conteo Físico en Cajón de Efectivo')}
                                 </Label>
-                                <Input
-                                    id="counted_amount"
-                                    type="number"
-                                    step="0.01"
-                                    min="0"
-                                    value={countedAmount}
-                                    onChange={(e) => setCountedAmount(e.target.value)}
-                                    placeholder="0.00"
-                                    className="font-mono text-xl h-12 text-center font-bold text-indigo-600"
-                                    autoFocus
-                                />
+
+                                <div className="grid grid-cols-2 gap-3">
+                                    <div className="space-y-1">
+                                        <Label className="text-xs font-semibold">{__('Pesos ($ MXN)')}</Label>
+                                        <Input
+                                            type="number"
+                                            step="0.01"
+                                            min="0"
+                                            value={countedAmount}
+                                            onChange={(e) => setCountedAmount(e.target.value)}
+                                            placeholder="0.00"
+                                            className="font-mono text-lg font-bold bg-white dark:bg-slate-900"
+                                            autoFocus
+                                        />
+                                    </div>
+
+                                    <div className="space-y-1">
+                                        <Label className="text-xs font-semibold text-emerald-700 dark:text-emerald-300 flex items-center gap-1">
+                                            <Coins className="w-3 h-3" />
+                                            {__('Dólares ($ USD)')}
+                                        </Label>
+                                        <div className="relative">
+                                            <Input
+                                                type="number"
+                                                step="0.01"
+                                                min="0"
+                                                value={countedUSDShow}
+                                                onChange={(e) => setCountedUSDShow(e.target.value)}
+                                                placeholder="0.00"
+                                                className="font-mono text-lg font-bold bg-white dark:bg-slate-900 pr-10"
+                                            />
+                                            <span className="absolute right-3 top-2.5 text-xs font-bold text-muted-foreground font-mono">USD</span>
+                                        </div>
+                                    </div>
+                                </div>
                             </div>
 
-                            {difference !== null && (
+                            {diffShow !== null && (
                                 <div className={cn(
-                                    'rounded-lg p-4 text-center border',
-                                    difference === 0 ? 'bg-emerald-50 border-emerald-200 dark:bg-emerald-950/20' :
-                                    difference > 0 ? 'bg-blue-50 border-blue-200 dark:bg-blue-950/20' :
+                                    'rounded-lg p-4 text-center border font-mono',
+                                    diffShow === 0 ? 'bg-emerald-50 border-emerald-200 dark:bg-emerald-950/20' :
+                                    diffShow > 0 ? 'bg-blue-50 border-blue-200 dark:bg-blue-950/20' :
                                     'bg-rose-50 border-rose-200 dark:bg-rose-950/20'
                                 )}>
                                     <p className="text-xs font-semibold uppercase tracking-wider mb-1 text-muted-foreground">
-                                        {difference === 0 ? __('Sin Diferencia (Cuadrado)') : difference > 0 ? __('Sobrante') : __('Faltante')}
+                                        {diffShow === 0 ? __('Sin Diferencia (Cuadrado)') : diffShow > 0 ? __('Sobrante en Caja') : __('Faltante en Caja')}
                                     </p>
                                     <p className={cn(
-                                        'text-3xl font-extrabold font-mono',
-                                        difference === 0 ? 'text-emerald-600' : difference > 0 ? 'text-blue-600' : 'text-rose-600'
+                                        'text-2xl font-extrabold font-mono',
+                                        diffShow === 0 ? 'text-emerald-600' : diffShow > 0 ? 'text-blue-600' : 'text-rose-600'
                                     )}>
-                                        {difference > 0 ? '+' : ''}{currencySymbol}{difference.toFixed(2)}
+                                        {diffShow > 0 ? '+' : ''}{currencySymbol}{diffShow.toFixed(2)} MXN
                                     </p>
                                 </div>
                             )}

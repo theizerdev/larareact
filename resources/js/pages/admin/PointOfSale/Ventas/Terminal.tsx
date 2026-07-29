@@ -128,6 +128,14 @@ export default function Terminal({
     // Corte de Caja Modal (F8)
     const [isCorteOpen, setIsCorteOpen] = useState(false);
     const [countedAmountInput, setCountedAmountInput] = useState('');
+    const [countedUSDInput, setCountedUSDInput] = useState('');
+
+    // Calculated difference for Corte de Caja
+    const expectedBal = activeRegisterSummary?.expected_balance ?? 0;
+    const countedMXN = parseFloat(countedAmountInput) || 0;
+    const countedUSD = parseFloat(countedUSDInput) || 0;
+    const totalCountedCombinedMXN = countedMXN + (countedUSD * (valorDolar || 1));
+    const diffBalCombined = totalCountedCombinedMXN - expectedBal;
 
     // Movement / Entradas y Salidas Modal
     const [isMovementModalOpen, setIsMovementModalOpen] = useState(false);
@@ -441,8 +449,32 @@ export default function Terminal({
 
     const addPaymentLine = () => setPaymentLines((prev) => [...prev, { metodo_pago: 'efectivo', monto: '' }]);
     const removePaymentLine = (idx: number) => setPaymentLines((prev) => prev.filter((_, i) => i !== idx));
+
     const updatePaymentLine = (idx: number, field: keyof PaymentLine, value: string) => {
-        setPaymentLines((prev) => prev.map((pl, i) => (i === idx ? { ...pl, [field]: value } : pl)));
+        setPaymentLines((prev) =>
+            prev.map((pl, i) => {
+                if (i !== idx) return pl;
+
+                if (field === 'metodo_pago') {
+                    const oldMethod = pl.metodo_pago;
+                    const newMethod = value;
+                    let newMonto = pl.monto;
+
+                    const currVal = parseFloat(pl.monto) || 0;
+                    if (oldMethod !== 'dolar' && newMethod === 'dolar') {
+                        // Converted from MXN to USD
+                        newMonto = currVal > 0 && valorDolar > 0 ? (currVal / valorDolar).toFixed(2) : (total / (valorDolar || 1)).toFixed(2);
+                    } else if (oldMethod === 'dolar' && newMethod !== 'dolar') {
+                        // Converted from USD to MXN
+                        newMonto = currVal > 0 && valorDolar > 0 ? (currVal * valorDolar).toFixed(2) : total.toFixed(2);
+                    }
+
+                    return { ...pl, metodo_pago: newMethod, monto: newMonto };
+                }
+
+                return { ...pl, [field]: value };
+            })
+        );
     };
 
     // Open Payment Modal
@@ -670,16 +702,11 @@ export default function Terminal({
         });
     };
 
-    // Calculated difference for Corte de Caja
-    const expectedBal = activeRegisterSummary?.expected_balance ?? 0;
-    const countedBal = parseFloat(countedAmountInput) || 0;
-    const diffBal = countedBal - expectedBal;
-
     return (
         <>
             <Head title={__('Terminal POS - Ventas')} />
 
-            <div className="space-y-4">
+            <div className="space-y-4 flex flex-col flex-1 min-h-[calc(100vh-7rem)]">
                 <Breadcrumbs breadcrumbs={breadcrumbs} />
 
                 {/* Banner de Estado de Caja y Resumen Eleventa */}
@@ -716,13 +743,12 @@ export default function Terminal({
                             <Button
                                 type="button"
                                 variant="outline"
-                                size="sm"
-                                className="text-xs gap-1.5 bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 border-emerald-300 font-bold"
+                                className="h-9 text-sm gap-2 bg-emerald-50 dark:bg-emerald-950/60 text-emerald-800 dark:text-emerald-300 border-2 border-emerald-400 dark:border-emerald-700 font-extrabold shadow-sm hover:bg-emerald-100 dark:hover:bg-emerald-900/60 transition-all"
                                 onClick={() => setIsDolarModalOpen(true)}
                             >
-                                <Coins className="w-3.5 h-3.5 text-emerald-600" />
+                                <Coins className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
                                 <span>$1 USD = ${valorDolar.toFixed(2)} MXN</span>
-                                <Edit3 className="w-3 h-3 ml-0.5 opacity-60" />
+                                <Edit3 className="w-3.5 h-3.5 ml-0.5 opacity-70" />
                             </Button>
 
                             {/* BOTÓN F8 CORTE DE CAJA */}
@@ -984,7 +1010,7 @@ export default function Terminal({
                 </div>
 
                 {/* ===== PANTALLA COMPLETA 100% ANCHO PARA EL CARRITO ELEVENTA ===== */}
-                <div className="bg-white dark:bg-slate-900 border rounded-xl shadow-sm overflow-hidden flex flex-col min-h-[500px]">
+                <div className="bg-white dark:bg-slate-900 border rounded-xl shadow-sm overflow-hidden flex flex-col flex-1 min-h-[460px]">
                     <div className="p-4 border-b bg-slate-50/50 dark:bg-slate-800/50 flex items-center justify-between">
                         <div className="flex items-center gap-2 font-bold text-sm">
                             <Receipt className="w-4 h-4 text-indigo-600" />
@@ -1016,8 +1042,8 @@ export default function Terminal({
                         </div>
                     </div>
 
-                    {/* TABLA PRINCIPAL DE ELEMENTOS */}
-                    <div className="flex-1 overflow-x-auto overflow-y-auto max-h-[460px]">
+                    {/* TABLA PRINCIPAL DE ELEMENTOS QUE SE EXPANDE VERTICALMENTE */}
+                    <div className="flex-1 overflow-x-auto overflow-y-auto min-h-[350px]">
                         <table className="w-full text-left text-sm">
                             <thead className="bg-slate-100/80 dark:bg-slate-800/80 text-xs font-bold uppercase text-muted-foreground border-b sticky top-0">
                                 <tr>
@@ -1098,14 +1124,14 @@ export default function Terminal({
                             )}
                         </div>
 
-                        <div className="flex items-center gap-6">
+                        <div className="flex items-center gap-5">
                             <div className="text-right">
                                 <span className="text-xs font-bold text-muted-foreground uppercase tracking-wider block">{__('Total a Pagar')}</span>
                                 <div className="flex items-baseline justify-end gap-2">
-                                    <span className="text-4xl font-black font-mono text-indigo-600 dark:text-indigo-400">
+                                    <span className="text-3xl font-extrabold font-mono text-indigo-600 dark:text-indigo-400">
                                         {currencySymbol}{total.toFixed(2)}
                                     </span>
-                                    <span className="text-sm font-bold font-mono text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/40 px-2 py-0.5 rounded border border-emerald-200">
+                                    <span className="text-xs font-bold font-mono text-emerald-700 dark:text-emerald-300 bg-emerald-50 dark:bg-emerald-950/40 px-2 py-0.5 rounded border border-emerald-200">
                                         ≈ ${totalUSD.toFixed(2)} USD
                                     </span>
                                 </div>
@@ -1113,11 +1139,11 @@ export default function Terminal({
 
                             <Button
                                 type="button"
-                                className="h-14 px-10 bg-emerald-600 hover:bg-emerald-700 text-white font-black text-lg shadow-lg gap-2"
+                                className="h-12 px-8 bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-base shadow-md gap-2"
                                 disabled={activeTicket.cart.length === 0 || !activeRegister}
                                 onClick={handleOpenPayment}
                             >
-                                <DollarSign className="w-6 h-6" />
+                                <DollarSign className="w-5 h-5" />
                                 [F12] {__('Cobrar')}
                             </Button>
                         </div>
@@ -1224,54 +1250,108 @@ export default function Terminal({
                                 </div>
 
                                 {/* Desglose por Formas de Pago */}
-                                <div className="border rounded-lg p-3 space-y-2 bg-slate-50/50 dark:bg-slate-800/50">
-                                    <h4 className="text-xs font-bold uppercase text-muted-foreground flex items-center gap-1.5">
-                                        <CreditCard className="w-3.5 h-3.5" />
-                                        {__('Desglose por Método de Pago')}
+                                <div className="border rounded-xl p-3.5 space-y-2.5 bg-slate-50/70 dark:bg-slate-800/70">
+                                    <h4 className="text-xs font-bold uppercase text-muted-foreground flex items-center justify-between">
+                                        <span className="flex items-center gap-1.5"><CreditCard className="w-3.5 h-3.5" />{__('Desglose por Forma de Pago')}</span>
+                                        <span className="text-[11px] font-mono font-normal">Tasa: $1 USD = ${valorDolar.toFixed(2)} MXN</span>
                                     </h4>
-                                    <div className="grid grid-cols-2 gap-2 text-xs font-medium">
-                                        {Object.entries(activeRegisterSummary.by_payment_method).map(([method, val]) => (
-                                            <div key={method} className="flex justify-between p-2 bg-white dark:bg-slate-900 rounded border">
-                                                <span className="capitalize">{method.replace('_', ' ')}:</span>
-                                                <span className="font-mono font-bold text-emerald-600">{currencySymbol}{val.net.toFixed(2)}</span>
-                                            </div>
-                                        ))}
+                                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs font-medium">
+                                        {Object.entries(activeRegisterSummary.by_payment_method).map(([method, val]) => {
+                                            const label = method === 'efectivo' ? __('Efectivo (MXN)') :
+                                                          method === 'dolar' ? __('💵 Dólares (USD)') :
+                                                          method === 'transferencia' ? __('Transferencia') :
+                                                          method === 'tarjeta' ? __('Tarjeta') :
+                                                          method === 'credito' ? __('Venta a Crédito (Fiado)') :
+                                                          method.replace('_', ' ');
+                                            const netVal = val.net;
+                                            const usdVal = valorDolar > 0 ? netVal / valorDolar : 0;
+
+                                            return (
+                                                <div key={method} className="flex items-center justify-between p-2.5 bg-white dark:bg-slate-900 rounded-lg border shadow-xs">
+                                                    <span className="font-semibold text-slate-800 dark:text-slate-200">{label}:</span>
+                                                    <div className="text-right font-mono">
+                                                        <span className="font-bold text-emerald-600 block">{currencySymbol}{netVal.toFixed(2)} MXN</span>
+                                                        {method === 'dolar' && (
+                                                            <span className="text-[11px] font-extrabold text-emerald-700 dark:text-emerald-300 block">
+                                                                💵 ${usdVal.toFixed(2)} USD
+                                                            </span>
+                                                        )}
+                                                    </div>
+                                                </div>
+                                            );
+                                        })}
                                     </div>
                                 </div>
 
-                                {/* Arqueo Físico (Efectivo Contado) */}
-                                <div className="p-4 border rounded-xl space-y-3 bg-amber-50/40 dark:bg-amber-950/20 border-amber-200 dark:border-amber-900">
-                                    <div className="space-y-1">
-                                        <Label className="font-bold text-slate-800 dark:text-slate-200 flex items-center gap-1.5">
+                                {/* Arqueo Físico (Efectivo Contado MXN + USD) */}
+                                <div className="p-4 border rounded-xl space-y-3 bg-amber-50/50 dark:bg-amber-950/30 border-amber-200 dark:border-amber-900">
+                                    <div className="flex items-center justify-between">
+                                        <Label className="font-bold text-slate-800 dark:text-slate-200 flex items-center gap-1.5 text-sm">
                                             <Scale className="w-4 h-4 text-amber-600" />
-                                            {__('Efectivo Real Contado en Cajón')}
+                                            {__('Conteo Físico en Cajón de Efectivo')}
                                         </Label>
-                                        <Input
-                                            type="number"
-                                            step="0.01"
-                                            min="0"
-                                            placeholder={activeRegisterSummary.expected_balance.toFixed(2)}
-                                            value={countedAmountInput}
-                                            onChange={(e) => setCountedAmountInput(e.target.value)}
-                                            className="font-mono text-xl font-bold bg-white dark:bg-slate-900"
-                                        />
+                                        <span className="text-xs text-muted-foreground font-semibold">{__('Ingrese el dinero real contado')}</span>
                                     </div>
 
-                                    {countedAmountInput !== '' && (
-                                        <div className={cn(
-                                            "flex items-center justify-between p-2.5 rounded-lg font-bold text-xs font-mono",
-                                            diffBal === 0
-                                                ? "bg-emerald-100 text-emerald-800 dark:bg-emerald-950/60 dark:text-emerald-300"
-                                                : diffBal > 0
-                                                    ? "bg-blue-100 text-blue-800 dark:bg-blue-950/60 dark:text-blue-300"
-                                                    : "bg-rose-100 text-rose-800 dark:bg-rose-950/60 dark:text-rose-300"
-                                        )}>
-                                            <span>
-                                                {diffBal === 0 ? __('Cuadre Perfecto (0.00)') : diffBal > 0 ? __('Sobrante en Caja:') : __('Faltante en Caja:')}
-                                            </span>
-                                            <span>
-                                                {diffBal > 0 ? '+' : ''}{currencySymbol}{diffBal.toFixed(2)}
-                                            </span>
+                                    <div className="grid grid-cols-2 gap-3">
+                                        <div className="space-y-1">
+                                            <Label className="text-xs font-semibold">{__('Efectivo Pesos ($ MXN)')}</Label>
+                                            <Input
+                                                type="number"
+                                                step="0.01"
+                                                min="0"
+                                                placeholder={activeRegisterSummary.expected_balance.toFixed(2)}
+                                                value={countedAmountInput}
+                                                onChange={(e) => setCountedAmountInput(e.target.value)}
+                                                className="font-mono text-lg font-bold bg-white dark:bg-slate-900"
+                                            />
+                                        </div>
+
+                                        <div className="space-y-1">
+                                            <Label className="text-xs font-semibold text-emerald-700 dark:text-emerald-300 flex items-center gap-1">
+                                                <Coins className="w-3 h-3" />
+                                                {__('Efectivo Dólares ($ USD)')}
+                                            </Label>
+                                            <div className="relative">
+                                                <Input
+                                                    type="number"
+                                                    step="0.01"
+                                                    min="0"
+                                                    placeholder="0.00"
+                                                    value={countedUSDInput}
+                                                    onChange={(e) => setCountedUSDInput(e.target.value)}
+                                                    className="font-mono text-lg font-bold bg-white dark:bg-slate-900 pr-12"
+                                                />
+                                                <span className="absolute right-3 top-2.5 text-xs font-bold text-muted-foreground font-mono">USD</span>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    {/* Muestra Total Físico Combinado y Diferencia */}
+                                    {(countedAmountInput !== '' || countedUSDInput !== '') && (
+                                        <div className="space-y-1.5 pt-1 border-t border-amber-200 dark:border-amber-900">
+                                            <div className="flex justify-between text-xs font-mono font-semibold text-slate-700 dark:text-slate-300">
+                                                <span>{__('Total Físico en Cajón (MXN + USD):')}</span>
+                                                <span className="font-bold text-indigo-600 dark:text-indigo-400">
+                                                    {currencySymbol}{totalCountedCombinedMXN.toFixed(2)} MXN
+                                                </span>
+                                            </div>
+
+                                            <div className={cn(
+                                                "flex items-center justify-between p-2.5 rounded-lg font-bold text-xs font-mono",
+                                                diffBalCombined === 0
+                                                    ? "bg-emerald-100 text-emerald-800 dark:bg-emerald-950/60 dark:text-emerald-300"
+                                                    : diffBalCombined > 0
+                                                        ? "bg-blue-100 text-blue-800 dark:bg-blue-950/60 dark:text-blue-300"
+                                                        : "bg-rose-100 text-rose-800 dark:bg-rose-950/60 dark:text-rose-300"
+                                            )}>
+                                                <span>
+                                                    {diffBalCombined === 0 ? __('Cuadre Perfecto (0.00)') : diffBalCombined > 0 ? __('Sobrante en Caja:') : __('Faltante en Caja:')}
+                                                </span>
+                                                <span>
+                                                    {diffBalCombined > 0 ? '+' : ''}{currencySymbol}{diffBalCombined.toFixed(2)} MXN
+                                                </span>
+                                            </div>
                                         </div>
                                     )}
                                 </div>
@@ -1523,6 +1603,58 @@ export default function Terminal({
                                 </label>
                             </div>
 
+                            {/* Botones de Pago Rápido Predefinidos */}
+                            <div className="space-y-1">
+                                <Label className="text-xs text-muted-foreground font-semibold">{__('Atajos de Cobro Rápido')}:</Label>
+                                <div className="flex flex-wrap gap-1.5">
+                                    <Button
+                                        type="button"
+                                        variant="outline"
+                                        size="sm"
+                                        className="h-7 text-xs font-mono font-bold bg-slate-50 dark:bg-slate-800"
+                                        onClick={() => setPaymentLines([{ metodo_pago: 'efectivo', monto: total.toFixed(2) }])}
+                                    >
+                                        Exacto MXN (${total.toFixed(2)})
+                                    </Button>
+                                    <Button
+                                        type="button"
+                                        variant="outline"
+                                        size="sm"
+                                        className="h-7 text-xs font-mono font-bold bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 border-emerald-200"
+                                        onClick={() => setPaymentLines([{ metodo_pago: 'dolar', monto: totalUSD.toFixed(2) }])}
+                                    >
+                                        💵 Exacto USD (${totalUSD.toFixed(2)})
+                                    </Button>
+                                    <Button
+                                        type="button"
+                                        variant="outline"
+                                        size="sm"
+                                        className="h-7 text-xs font-mono font-bold"
+                                        onClick={() => setPaymentLines([{ metodo_pago: 'dolar', monto: '20' }])}
+                                    >
+                                        $20 USD
+                                    </Button>
+                                    <Button
+                                        type="button"
+                                        variant="outline"
+                                        size="sm"
+                                        className="h-7 text-xs font-mono font-bold"
+                                        onClick={() => setPaymentLines([{ metodo_pago: 'dolar', monto: '50' }])}
+                                    >
+                                        $50 USD
+                                    </Button>
+                                    <Button
+                                        type="button"
+                                        variant="outline"
+                                        size="sm"
+                                        className="h-7 text-xs font-mono font-bold"
+                                        onClick={() => setPaymentLines([{ metodo_pago: 'dolar', monto: '100' }])}
+                                    >
+                                        $100 USD
+                                    </Button>
+                                </div>
+                            </div>
+
                             {/* Líneas de Pago */}
                             <div className="space-y-2">
                                 <div className="flex items-center justify-between">
@@ -1532,41 +1664,64 @@ export default function Terminal({
                                         {__('Agregar')}
                                     </Button>
                                 </div>
-                                {paymentLines.map((pl, idx) => (
-                                    <div key={idx} className="flex items-center gap-2">
-                                        <Select value={pl.metodo_pago} onValueChange={(v) => updatePaymentLine(idx, 'metodo_pago', v)}>
-                                            <SelectTrigger className="w-[160px]">
-                                                <SelectValue />
-                                            </SelectTrigger>
-                                            <SelectContent>
-                                                <SelectItem value="efectivo">{__('Efectivo (MXN)')}</SelectItem>
-                                                <SelectItem value="dolar">💵 {__('Dólares (USD)')}</SelectItem>
-                                                <SelectItem value="transferencia">{__('Transferencia')}</SelectItem>
-                                                <SelectItem value="tarjeta">{__('Tarjeta')}</SelectItem>
-                                            </SelectContent>
-                                        </Select>
-                                        <div className="relative flex-1">
-                                            <Input
-                                                ref={idx === 0 ? montoRef : undefined}
-                                                type="number"
-                                                step="0.01"
-                                                min="0"
-                                                placeholder={pl.metodo_pago === 'dolar' ? "0.00 USD" : "0.00 MXN"}
-                                                className="font-mono text-lg font-bold pr-12"
-                                                value={pl.monto}
-                                                onChange={(e) => updatePaymentLine(idx, 'monto', e.target.value)}
-                                            />
-                                            <span className="absolute right-3 top-2.5 text-xs font-bold text-muted-foreground font-mono">
-                                                {pl.metodo_pago === 'dolar' ? 'USD' : 'MXN'}
-                                            </span>
+                                {paymentLines.map((pl, idx) => {
+                                    const numVal = parseFloat(pl.monto) || 0;
+                                    const convMXN = pl.metodo_pago === 'dolar' ? numVal * (valorDolar || 1) : numVal;
+                                    const convUSD = valorDolar > 0 ? (pl.metodo_pago === 'dolar' ? numVal : numVal / valorDolar) : 0;
+
+                                    return (
+                                        <div key={idx} className="space-y-1">
+                                            <div className="flex items-center gap-2">
+                                                <Select value={pl.metodo_pago} onValueChange={(v) => updatePaymentLine(idx, 'metodo_pago', v)}>
+                                                    <SelectTrigger className="w-[160px]">
+                                                        <SelectValue />
+                                                    </SelectTrigger>
+                                                    <SelectContent>
+                                                        <SelectItem value="efectivo">{__('Efectivo (MXN)')}</SelectItem>
+                                                        <SelectItem value="dolar">💵 {__('Dólares (USD)')}</SelectItem>
+                                                        <SelectItem value="transferencia">{__('Transferencia')}</SelectItem>
+                                                        <SelectItem value="tarjeta">{__('Tarjeta')}</SelectItem>
+                                                    </SelectContent>
+                                                </Select>
+                                                <div className="relative flex-1">
+                                                    <Input
+                                                        ref={idx === 0 ? montoRef : undefined}
+                                                        type="number"
+                                                        step="0.01"
+                                                        min="0"
+                                                        placeholder={pl.metodo_pago === 'dolar' ? "0.00 USD" : "0.00 MXN"}
+                                                        className="font-mono text-lg font-bold pr-12"
+                                                        value={pl.monto}
+                                                        onChange={(e) => updatePaymentLine(idx, 'monto', e.target.value)}
+                                                    />
+                                                    <span className="absolute right-3 top-2.5 text-xs font-bold text-muted-foreground font-mono">
+                                                        {pl.metodo_pago === 'dolar' ? 'USD' : 'MXN'}
+                                                    </span>
+                                                </div>
+                                                {paymentLines.length > 1 && (
+                                                    <Button type="button" variant="ghost" size="icon" className="h-8 w-8 text-rose-500" onClick={() => removePaymentLine(idx)}>
+                                                        <X className="h-4 w-4" />
+                                                    </Button>
+                                                )}
+                                            </div>
+
+                                            {/* Helper de Conversión en Tiempo Real */}
+                                            {numVal > 0 && (
+                                                <div className="text-[11px] text-right font-mono font-semibold text-muted-foreground pr-1">
+                                                    {pl.metodo_pago === 'dolar' ? (
+                                                        <span className="text-emerald-600 font-bold">
+                                                            USD ${numVal.toFixed(2)} = ${convMXN.toFixed(2)} MXN
+                                                        </span>
+                                                    ) : (
+                                                        <span>
+                                                            ${numVal.toFixed(2)} MXN ≈ ${convUSD.toFixed(2)} USD
+                                                        </span>
+                                                    )}
+                                                </div>
+                                            )}
                                         </div>
-                                        {paymentLines.length > 1 && (
-                                            <Button type="button" variant="ghost" size="icon" className="h-8 w-8 text-rose-500" onClick={() => removePaymentLine(idx)}>
-                                                <X className="h-4 w-4" />
-                                            </Button>
-                                        )}
-                                    </div>
-                                ))}
+                                    );
+                                })}
                             </div>
 
                             {/* Resumen Cambio / Faltante */}

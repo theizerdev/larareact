@@ -134,13 +134,18 @@ class CashRegisterController extends Controller
             $byConcept[$concept]['net'] = $values['inflow'] - $values['outflow'];
         }
 
+        $empresa = auth()->user()?->empresa;
+        $valorDolar = (float) ($empresa?->valor_dolar ?? 20.0);
+
         return inertia('admin/PointOfSale/CashRegisters/Show', [
             'caja' => $caja,
+            'valorDolar' => $valorDolar,
             'summary' => [
                 'inflows' => $inflows,
                 'outflows' => $outflows,
                 'current_balance' => $currentBalance,
                 'currency_symbol' => $this->getCurrencySymbol(),
+                'valor_dolar' => $valorDolar,
                 'by_payment_method' => $byPaymentMethod,
                 'by_concept' => $byConcept,
             ],
