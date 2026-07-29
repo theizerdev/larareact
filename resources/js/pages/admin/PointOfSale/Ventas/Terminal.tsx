@@ -1624,7 +1624,7 @@ export default function Terminal({
                                                     {currencySymbol}{item.precio.toFixed(2)}
                                                 </span>
                                                 {item.stock !== null && (
-                                                    <span className="text-xs text-muted-foreground font-semibold">Stock: {item.stock}</span>
+                                                    <span className="text-xs text-muted-foreground font-semibold">{__('Stock')}: {item.stock}</span>
                                                 )}
                                             </div>
                                         </div>
