@@ -39,9 +39,24 @@ class HandleInertiaRequests extends Middleware
         $currentLocale = app()->getLocale();
        
 
+        $user = $request->user();
+        $empresa = $user?->empresa;
+        if (!$empresa && $user?->empresa_id) {
+            $empresa = \App\Models\Empresa::find($user->empresa_id);
+        }
+        $pais = $empresa?->pais ?? ($empresa?->pais_id ? \App\Models\Pais::find($empresa->pais_id) : null);
+        $currencySymbol = $pais?->simbolo_moneda ?? '$';
+        $currencyCode = $pais?->moneda_principal ?? 'MXN';
+        $countryCode = strtoupper($pais?->codigo_iso2 ?? 'MX');
+        $isVenezuela = $countryCode === 'VE' || ($pais && str_contains(strtolower($pais->nombre), 'venezuela'));
+
         return [
             ...parent::share($request),
             'name' => config('app.name'),
+            'currencySymbol' => $currencySymbol,
+            'currencyCode' => $currencyCode,
+            'countryCode' => $countryCode,
+            'isVenezuela' => $isVenezuela,
             'auth' => [
                 'user' => $request->user() ? array_merge($request->user()->toArray(), [
                     'empresa' => $request->user()->empresa ? [

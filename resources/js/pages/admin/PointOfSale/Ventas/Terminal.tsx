@@ -3,7 +3,7 @@ import {
     ShoppingCart, Search, Plus, Minus, Trash2, CheckCircle2, CreditCard, DollarSign,
     Package, Wrench, User, AlertCircle, Building2, Smartphone, Receipt, Pause,
     Play, X, Wallet, Tag, Barcode, HelpCircle, Layers, FileText, ArrowRight, Eye, RefreshCw,
-    Calculator, ArrowUpRight, ArrowDownLeft, Scale, Printer, Lock, Coins, Edit3
+    Calculator, ArrowUpRight, ArrowDownLeft, Scale, Printer, Lock, Coins, Edit3, Landmark
 } from 'lucide-react';
 import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { Breadcrumbs } from '@/components/breadcrumbs';
@@ -28,7 +28,25 @@ interface CatalogItem {
     nombre: string;
     codigo: string;
     precio: number;
-    stock: number | null;
+    stock: number;
+    usa_inventario: boolean;
+    categoria?: string;
+    familia?: string;
+    marca?: string;
+    modelo?: string;
+}
+
+interface TicketItem {
+    id: number;
+    catalog_id: number;
+    tipo: 'producto' | 'servicio';
+    nombre: string;
+    codigo: string;
+    precio_unitario: number;
+    precio: number;
+    cantidad: number;
+    usa_inventario: boolean;
+    stock_disponible: number;
 }
 
 interface CartItem {
@@ -53,15 +71,28 @@ interface RegisterSummary {
     by_payment_method: Record<string, { inflow: number; outflow: number; net: number }>;
 }
 
-interface HeldSaleRecord { id: number; label: string | null; cliente_nombre: string; cart_data: CartItem[]; created_at: string; }
-interface ClienteRecord { id: number; nombre: string; telefono: string | null; limite_credito: number; saldo_pendiente: number; }
+interface HeldSaleRecord {
+    id: number;
+    codigo_held: string;
+    cliente_nombre: string;
+    created_at: string;
+    payload: any;
+}
+
+interface ClienteRecord {
+    id: number;
+    nombre: string;
+    documento: string;
+    limite_credito: number;
+    saldo_pendiente: number;
+}
 
 interface PaymentLine { metodo_pago: string; monto: string; }
 
 interface TicketTab {
     id: number;
     name: string;
-    cart: CartItem[];
+    cart: TicketItem[];
     clienteId: number | null;
     clienteNombre: string;
     esCredito: boolean;
@@ -70,8 +101,8 @@ interface TicketTab {
 
 interface Props {
     catalog: CatalogItem[];
-    activeRegister: CashRegister | null;
-    activeRegisterSummary: RegisterSummary | null;
+    activeRegister?: any | null;
+    activeRegisterSummary?: any | null;
     currencySymbol?: string;
     valorDolar?: number;
     heldSales: HeldSaleRecord[];
@@ -88,10 +119,36 @@ export default function Terminal({
     clientes = [],
 }: Props) {
     const { __ } = useTranslate();
+    const pageProps = usePage().props as any;
+    const isVenezuela = Boolean(pageProps?.isVenezuela);
+    const currencyCode = pageProps?.currencyCode || 'MXN';
 
     // Valor del Dólar (Exchange Rate) Modal State
     const [isDolarModalOpen, setIsDolarModalOpen] = useState(false);
     const [dolarInput, setDolarInput] = useState(String(valorDolar));
+    const [isSyncingBcv, setIsSyncingBcv] = useState(false);
+
+    const handleSyncBcv = async () => {
+        setIsSyncingBcv(true);
+        try {
+            const res = await fetch('/admin/cajas/bcv-rate', {
+                headers: {
+                    'Accept': 'application/json',
+                },
+            });
+            const result = await res.json();
+            if (res.ok && result.success && result.rate) {
+                setDolarInput(String(result.rate));
+                notifySuccess(`${__('Tasa del BCV obtenida exitosamente:')} ${result.rate} Bs.`);
+            } else {
+                notifyError(result.message || __('No se pudo obtener la tasa del BCV.'));
+            }
+        } catch (error) {
+            notifyError(__('Error de conexión al consultar la tasa del BCV.'));
+        } finally {
+            setIsSyncingBcv(false);
+        }
+    };
 
     // Multi-Ticket Tabs (Eleventa Style)
     const [tickets, setTickets] = useState<TicketTab[]>([
@@ -1126,14 +1183,29 @@ export default function Terminal({
 
                         <div className="flex items-center gap-5">
                             <div className="text-right">
-                                <span className="text-xs font-bold text-muted-foreground uppercase tracking-wider block">{__('Total a Pagar')}</span>
+                                <span className="text-xs font-bold text-muted-foreground uppercase tracking-wider block">
+                                    {isVenezuela ? __('Total a Pagar en Bolívares (Bs.)') : __('Total a Pagar')}
+                                </span>
                                 <div className="flex items-baseline justify-end gap-2">
-                                    <span className="text-3xl font-extrabold font-mono text-indigo-600 dark:text-indigo-400">
-                                        {currencySymbol}{total.toFixed(2)}
-                                    </span>
-                                    <span className="text-xs font-bold font-mono text-emerald-700 dark:text-emerald-300 bg-emerald-50 dark:bg-emerald-950/40 px-2 py-0.5 rounded border border-emerald-200">
-                                        ≈ ${totalUSD.toFixed(2)} USD
-                                    </span>
+                                    {isVenezuela ? (
+                                        <>
+                                            <span className="text-3xl font-extrabold font-mono text-emerald-600 dark:text-emerald-400">
+                                                Bs. {(total * valorDolar).toLocaleString('es-VE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                            </span>
+                                            <span className="text-xs font-bold font-mono text-indigo-700 dark:text-indigo-300 bg-indigo-50 dark:bg-indigo-950/40 px-2.5 py-1 rounded-lg border border-indigo-200">
+                                                💵 ${total.toFixed(2)} USD
+                                            </span>
+                                        </>
+                                    ) : (
+                                        <>
+                                            <span className="text-3xl font-extrabold font-mono text-indigo-600 dark:text-indigo-400">
+                                                {currencySymbol}{total.toFixed(2)}
+                                            </span>
+                                            <span className="text-xs font-bold font-mono text-emerald-700 dark:text-emerald-300 bg-emerald-50 dark:bg-emerald-950/40 px-2 py-0.5 rounded border border-emerald-200">
+                                                ≈ ${totalUSD.toFixed(2)} USD
+                                            </span>
+                                        </>
+                                    )}
                                 </div>
                             </div>
 
@@ -1165,28 +1237,62 @@ export default function Terminal({
 
                         <form onSubmit={handleUpdateDolarRate} className="space-y-4 py-2">
                             <div className="space-y-2">
-                                <Label className="font-bold">{__('Valor del Dólar ($1 USD equivale a:)')}</Label>
+                                <div className="flex items-center justify-between gap-2">
+                                    <Label className="font-bold text-xs">{__('Valor del Dólar ($1 USD equivale a:)')}</Label>
+                                    {isVenezuela && (
+                                        <Button
+                                            type="button"
+                                            variant="outline"
+                                            size="sm"
+                                            onClick={handleSyncBcv}
+                                            disabled={isSyncingBcv}
+                                            className="h-7 px-2.5 text-[11px] font-extrabold gap-1 text-emerald-700 bg-emerald-50 border-emerald-300 hover:bg-emerald-100 dark:bg-emerald-950/60 dark:text-emerald-300 dark:border-emerald-800 shrink-0"
+                                        >
+                                            <RefreshCw className={`w-3 h-3 ${isSyncingBcv ? 'animate-spin' : ''}`} />
+                                            {isSyncingBcv ? __('Obteniendo...') : __('Sincronizar BCV')}
+                                        </Button>
+                                    )}
+                                </div>
                                 <div className="relative">
                                     <span className="absolute left-3.5 top-2.5 font-mono font-bold text-muted-foreground">$</span>
                                     <Input
                                         type="number"
-                                        step="0.01"
+                                        step="0.0001"
                                         min="0.01"
                                         value={dolarInput}
                                         onChange={(e) => setDolarInput(e.target.value)}
-                                        className="pl-8 font-mono text-xl font-bold"
-                                        placeholder="20.00"
+                                        className="pl-8 pr-14 font-mono text-xl font-bold"
+                                        placeholder="0.00"
                                         autoFocus
                                         required
                                     />
-                                    <span className="absolute right-3.5 top-3 text-xs font-bold text-muted-foreground">MXN</span>
+                                    <span className="absolute right-3.5 top-3 text-xs font-bold text-muted-foreground">{currencyCode}</span>
                                 </div>
                             </div>
 
-                            <div className="p-3 rounded-lg bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-900 text-xs text-emerald-800 dark:text-emerald-300">
-                                <p className="font-bold mb-0.5">{__('Ejemplo de Conversión:')}</p>
-                                <p>{__('Una venta de $200.00 MXN equivaldrá a')} <strong>${(200 / (parseFloat(dolarInput) || 1)).toFixed(2)} USD</strong>.</p>
-                            </div>
+                            {isVenezuela ? (
+                                <div className="space-y-1">
+                                    <p className="text-[11px] text-muted-foreground flex items-center gap-1">
+                                        <Landmark className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
+                                        <span>{__('Obtiene directamente la tasa oficial publicada por el Banco Central de Venezuela (BCV).')}</span>
+                                    </p>
+                                    {Number(dolarInput) > 0 && (
+                                        <div className="p-2.5 bg-emerald-500/10 border border-emerald-500/20 rounded-lg text-xs font-mono">
+                                            <p className="text-[11px] text-emerald-700 dark:text-emerald-300 font-semibold mb-0.5">
+                                                {__('Fórmula de Conversión (USD ↔ Bs.):')}
+                                            </p>
+                                            <p className="font-bold text-emerald-600 dark:text-emerald-400">
+                                                $580.00 USD × {Number(dolarInput).toFixed(2)} = Bs. {(580 * Number(dolarInput)).toLocaleString('es-VE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                            </p>
+                                        </div>
+                                    )}
+                                </div>
+                            ) : (
+                                <div className="p-3 rounded-lg bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-900 text-xs text-emerald-800 dark:text-emerald-300">
+                                    <p className="font-bold mb-0.5">{__('Ejemplo de Conversión:')}</p>
+                                    <p>{__('Una venta de $200.00')} {currencyCode} {__('equivaldrá a')} <strong>${(200 / (parseFloat(dolarInput) || 1)).toFixed(2)} USD</strong>.</p>
+                                </div>
+                            )}
 
                             <DialogFooter className="pt-2">
                                 <Button type="button" variant="outline" onClick={() => setIsDolarModalOpen(false)}>
@@ -1555,10 +1661,18 @@ export default function Terminal({
 
                         <form onSubmit={handleCompleteSale} className="space-y-4 py-2">
                             <div className="rounded-xl bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-900 p-4 text-center">
-                                <span className="text-xs font-semibold uppercase text-emerald-700 dark:text-emerald-400">{__('TOTAL A COBRAR')}</span>
-                                <p className="text-3xl font-extrabold font-mono text-emerald-600 dark:text-emerald-300">{currencySymbol}{total.toFixed(2)}</p>
+                                <span className="text-xs font-semibold uppercase text-emerald-700 dark:text-emerald-400">
+                                    {isVenezuela ? __('TOTAL A PAGAR EN BOLÍVARES (BS.)') : __('TOTAL A COBRAR')}
+                                </span>
+                                <p className="text-3xl font-extrabold font-mono text-emerald-600 dark:text-emerald-300">
+                                    {isVenezuela
+                                        ? `Bs. ${(total * valorDolar).toLocaleString('es-VE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+                                        : `${currencySymbol}${total.toFixed(2)}`}
+                                </p>
                                 <p className="text-xs font-bold text-emerald-700 dark:text-emerald-400 mt-1 font-mono">
-                                    ≈ ${totalUSD.toFixed(2)} USD <span className="font-normal">({__('Tasa:')} ${valorDolar.toFixed(2)} MXN)</span>
+                                    {isVenezuela
+                                        ? `💵 $${total.toFixed(2)} USD × Tasa ${valorDolar.toFixed(2)} Bs./USD`
+                                        : `≈ $${totalUSD.toFixed(2)} USD (${__('Tasa:')} $${valorDolar.toFixed(2)} MXN)`}
                                 </p>
                             </div>
 
@@ -1612,18 +1726,18 @@ export default function Terminal({
                                         variant="outline"
                                         size="sm"
                                         className="h-7 text-xs font-mono font-bold bg-slate-50 dark:bg-slate-800"
-                                        onClick={() => setPaymentLines([{ metodo_pago: 'efectivo', monto: total.toFixed(2) }])}
+                                        onClick={() => setPaymentLines([{ metodo_pago: 'efectivo', monto: (isVenezuela ? total * valorDolar : total).toFixed(2) }])}
                                     >
-                                        Exacto MXN (${total.toFixed(2)})
+                                        {isVenezuela ? `Exacto Bs. (${(total * valorDolar).toFixed(2)})` : `Exacto ${currencyCode} ($${total.toFixed(2)})`}
                                     </Button>
                                     <Button
                                         type="button"
                                         variant="outline"
                                         size="sm"
                                         className="h-7 text-xs font-mono font-bold bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 border-emerald-200"
-                                        onClick={() => setPaymentLines([{ metodo_pago: 'dolar', monto: totalUSD.toFixed(2) }])}
+                                        onClick={() => setPaymentLines([{ metodo_pago: 'dolar', monto: total.toFixed(2) }])}
                                     >
-                                        💵 Exacto USD (${totalUSD.toFixed(2)})
+                                        💵 Exacto USD (${total.toFixed(2)})
                                     </Button>
                                     <Button
                                         type="button"

@@ -1,5 +1,5 @@
 import { useForm, usePage } from '@inertiajs/react';
-import { Wallet, AlertTriangle, Coins } from 'lucide-react';
+import { Wallet, AlertTriangle, Coins, RefreshCw, Landmark } from 'lucide-react';
 import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import {
@@ -19,8 +19,12 @@ export function OpenCashRegisterModal() {
     const { __ } = useTranslate();
     const pageProps = usePage().props as any;
     const alert = pageProps?.cash_register_alert;
+    const isVenezuela = Boolean(pageProps?.isVenezuela);
+    const currencySymbol = pageProps?.currencySymbol || '$';
+    const currencyCode = pageProps?.currencyCode || 'MXN';
 
     const [isOpen, setIsOpen] = useState(false);
+    const [isSyncingBcv, setIsSyncingBcv] = useState(false);
 
     useEffect(() => {
         if (alert?.show) {
@@ -32,6 +36,28 @@ export function OpenCashRegisterModal() {
         opening_amount: '0.00',
         valor_dolar: '20.00',
     });
+
+    const handleSyncBcv = async () => {
+        setIsSyncingBcv(true);
+        try {
+            const res = await fetch('/admin/cajas/bcv-rate', {
+                headers: {
+                    'Accept': 'application/json',
+                },
+            });
+            const result = await res.json();
+            if (res.ok && result.success && result.rate) {
+                setData('valor_dolar', String(result.rate));
+                notifySuccess(`${__('Tasa del BCV obtenida exitosamente:')} ${result.rate} Bs.`);
+            } else {
+                notifyError(result.message || __('No se pudo obtener la tasa del BCV.'));
+            }
+        } catch (error) {
+            notifyError(__('Error de conexión al consultar la tasa del BCV.'));
+        } finally {
+            setIsSyncingBcv(false);
+        }
+    };
 
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
@@ -73,7 +99,7 @@ export function OpenCashRegisterModal() {
 
                     <div className="space-y-2">
                         <Label htmlFor="opening_amount_modal" className="font-semibold">
-                            {__('Monto Inicial de Fondo en Efectivo ($)')}
+                            {__('Monto Inicial de Fondo en Efectivo')} ({currencySymbol})
                         </Label>
                         <Input
                             id="opening_amount_modal"
@@ -93,21 +119,54 @@ export function OpenCashRegisterModal() {
                     </div>
 
                     <div className="space-y-2">
-                        <Label htmlFor="valor_dolar_modal" className="font-semibold flex items-center gap-1.5">
-                            <Coins className="w-4 h-4 text-emerald-600" />
-                            {__('Valor del Dólar ($1 USD en MXN)')}
-                        </Label>
+                        <div className="flex items-center justify-between gap-2">
+                            <Label htmlFor="valor_dolar_modal" className="font-semibold flex items-center gap-1.5 text-xs">
+                                <Coins className="w-4 h-4 text-emerald-600 shrink-0" />
+                                <span>{__('Valor del Dólar')} ($1 USD = {currencySymbol} {currencyCode})</span>
+                            </Label>
+                            {isVenezuela && (
+                                <Button
+                                    type="button"
+                                    variant="outline"
+                                    size="sm"
+                                    onClick={handleSyncBcv}
+                                    disabled={isSyncingBcv}
+                                    className="h-7 px-2.5 text-[11px] font-extrabold gap-1 text-emerald-700 bg-emerald-50 border-emerald-300 hover:bg-emerald-100 dark:bg-emerald-950/60 dark:text-emerald-300 dark:border-emerald-800 shrink-0"
+                                >
+                                    <RefreshCw className={`w-3 h-3 ${isSyncingBcv ? 'animate-spin' : ''}`} />
+                                    {isSyncingBcv ? __('Obteniendo...') : __('Sincronizar BCV')}
+                                </Button>
+                            )}
+                        </div>
                         <Input
                             id="valor_dolar_modal"
                             type="number"
-                            step="0.01"
+                            step="0.0001"
                             min="0.01"
                             value={data.valor_dolar}
                             onChange={(e) => setData('valor_dolar', e.target.value)}
-                            placeholder="20.00"
+                            placeholder="0.00"
                             className="font-mono text-lg h-11 text-center font-bold text-emerald-600"
                             required
                         />
+                        {isVenezuela && (
+                            <div className="space-y-1">
+                                <p className="text-[11px] text-muted-foreground flex items-center gap-1">
+                                    <Landmark className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
+                                    <span>{__('Obtiene directamente la tasa oficial publicada por el Banco Central de Venezuela (BCV).')}</span>
+                                </p>
+                                {Number(data.valor_dolar) > 0 && (
+                                    <div className="p-2.5 bg-emerald-500/10 border border-emerald-500/20 rounded-lg text-xs font-mono">
+                                        <p className="text-[11px] text-emerald-700 dark:text-emerald-300 font-semibold mb-0.5">
+                                            {__('Fórmula de Conversión (USD ↔ Bs.):')}
+                                        </p>
+                                        <p className="font-bold text-emerald-600 dark:text-emerald-400">
+                                            $580.00 USD × {Number(data.valor_dolar).toFixed(2)} = Bs. {(580 * Number(data.valor_dolar)).toLocaleString('es-VE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                        </p>
+                                    </div>
+                                )}
+                            </div>
+                        )}
                         {errors.valor_dolar && (
                             <p className="text-xs text-rose-500">{errors.valor_dolar}</p>
                         )}
@@ -127,3 +186,4 @@ export function OpenCashRegisterModal() {
         </Dialog>
     );
 }
+

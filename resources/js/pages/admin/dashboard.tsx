@@ -47,6 +47,8 @@ interface RegisterSummary {
 }
 
 interface Props {
+    currencySymbol?: string;
+    currencyCode?: string;
     valorDolar: number;
     filters: {
         start_date: string;
@@ -84,6 +86,8 @@ interface Props {
 }
 
 export default function AdminDashboard({
+    currencySymbol = '$',
+    currencyCode = 'MXN',
     valorDolar = 20.0,
     filters,
     todayStats,
@@ -166,9 +170,9 @@ export default function AdminDashboard({
                 min: 0,
                 forceNiceScale: true,
                 labels: {
-                    formatter: (val) => `$${Math.round(val)}`,
+                    formatter: (val) => `${currencySymbol}${Math.round(val)}`,
                 },
-                title: { text: 'Ventas (MXN)' },
+                title: { text: `Ventas (${currencyCode})` },
             },
         ],
         fill: {
@@ -179,11 +183,11 @@ export default function AdminDashboard({
                 opacityTo: 0.05,
             },
         },
-        tooltip: { y: { formatter: (val) => `$${val.toFixed(2)} MXN` } },
+        tooltip: { y: { formatter: (val) => `${currencySymbol}${val.toFixed(2)} ${currencyCode}` } },
     };
 
     const trendChartSeries = [
-        { name: 'Ventas ($ MXN)', data: charts.trend.totals },
+        { name: `Ventas (${currencySymbol} ${currencyCode})`, data: charts.trend.totals },
     ];
 
     const paymentChartOptions: ApexCharts.ApexOptions = {
@@ -192,7 +196,7 @@ export default function AdminDashboard({
         colors: ['#10b981', '#059669', '#3b82f6', '#8b5cf6', '#f59e0b'],
         legend: { position: 'bottom' },
         dataLabels: { enabled: true },
-        tooltip: { y: { formatter: (val) => `$${val.toFixed(2)} MXN` } },
+        tooltip: { y: { formatter: (val) => `${currencySymbol}${val.toFixed(2)} ${currencyCode}` } },
     };
 
     const topItemsChartOptions: ApexCharts.ApexOptions = {
@@ -229,7 +233,7 @@ export default function AdminDashboard({
                         {/* Indicador Valor del Dólar */}
                         <div className="flex items-center gap-1.5 px-3 py-1.5 bg-emerald-50 dark:bg-emerald-950/50 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800 rounded-xl font-mono text-xs font-bold shadow-2xs">
                             <Coins className="w-4 h-4 text-emerald-600" />
-                            <span>$1 USD = ${valorDolar.toFixed(2)} MXN</span>
+                            <span>$1 USD = {currencySymbol}{valorDolar.toFixed(2)} {currencyCode}</span>
                         </div>
 
                         {/* Switch de Auto-Refresh */}
@@ -257,7 +261,7 @@ export default function AdminDashboard({
                     </h2>
 
                     <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-                        {/* Tarjeta 1: Total MXN Hoy */}
+                        {/* Tarjeta 1: Total Hoy */}
                         <Card className="border-emerald-200 dark:border-emerald-900 bg-gradient-to-br from-emerald-50/50 to-white dark:from-emerald-950/20 dark:to-slate-900 shadow-sm">
                             <CardHeader className="flex flex-row items-center justify-between pb-2">
                                 <CardTitle className="text-xs font-bold text-muted-foreground uppercase">{__('Total Recaudado Hoy')}</CardTitle>
@@ -267,7 +271,7 @@ export default function AdminDashboard({
                             </CardHeader>
                             <CardContent>
                                 <div className="text-3xl font-black font-mono text-emerald-700 dark:text-emerald-300">
-                                    ${todayStats.total_mxn.toFixed(2)} <span className="text-xs font-sans text-muted-foreground">MXN</span>
+                                    {currencySymbol}{todayStats.total_mxn.toFixed(2)} <span className="text-xs font-sans text-muted-foreground">{currencyCode}</span>
                                 </div>
                                 <p className="text-xs text-muted-foreground mt-1 font-mono">
                                     ≈ ${valorDolar > 0 ? (todayStats.total_mxn / valorDolar).toFixed(2) : '0.00'} USD en total
@@ -321,7 +325,7 @@ export default function AdminDashboard({
                             </CardHeader>
                             <CardContent>
                                 <div className="text-3xl font-black font-mono text-purple-700 dark:text-purple-300">
-                                    ${todayStats.avg_ticket.toFixed(2)} <span className="text-xs font-sans text-muted-foreground">MXN</span>
+                                    {currencySymbol}{todayStats.avg_ticket.toFixed(2)} <span className="text-xs font-sans text-muted-foreground">{currencyCode}</span>
                                 </div>
                                 <p className="text-xs text-muted-foreground mt-1 font-mono">
                                     Promedio por compra
@@ -365,25 +369,25 @@ export default function AdminDashboard({
                             <div className="p-3 bg-slate-50 dark:bg-slate-800 rounded-xl border">
                                 <span className="text-muted-foreground font-semibold block">{__('Fondo Inicial')}</span>
                                 <span className="text-lg font-bold font-mono text-slate-800 dark:text-slate-200">
-                                    ${registerSummary.opening_amount.toFixed(2)} MXN
+                                    {currencySymbol}{registerSummary.opening_amount.toFixed(2)} {currencyCode}
                                 </span>
                             </div>
                             <div className="p-3 bg-emerald-50 dark:bg-emerald-950/40 rounded-xl border border-emerald-200">
                                 <span className="text-emerald-700 dark:text-emerald-400 font-semibold block">{__('Ingresos Turno (+)')}</span>
                                 <span className="text-lg font-bold font-mono text-emerald-600">
-                                    +${registerSummary.inflows.toFixed(2)} MXN
+                                    +{currencySymbol}{registerSummary.inflows.toFixed(2)} {currencyCode}
                                 </span>
                             </div>
                             <div className="p-3 bg-rose-50 dark:bg-rose-950/40 rounded-xl border border-rose-200">
                                 <span className="text-rose-700 dark:text-rose-400 font-semibold block">{__('Egresos Turno (-)')}</span>
                                 <span className="text-lg font-bold font-mono text-rose-600">
-                                    -${registerSummary.outflows.toFixed(2)} MXN
+                                    -{currencySymbol}{registerSummary.outflows.toFixed(2)} {currencyCode}
                                 </span>
                             </div>
                             <div className="p-3 bg-indigo-50 dark:bg-indigo-950/40 rounded-xl border border-indigo-200">
                                 <span className="text-indigo-700 dark:text-indigo-300 font-semibold block">{__('Dinero Esperado en Caja')}</span>
                                 <span className="text-lg font-black font-mono text-indigo-600 dark:text-indigo-300 block">
-                                    ${registerSummary.expected_balance.toFixed(2)} MXN
+                                    {currencySymbol}{registerSummary.expected_balance.toFixed(2)} {currencyCode}
                                 </span>
                                 <span className="text-[11px] font-bold text-emerald-600 font-mono block">
                                     💵 ≈ ${registerSummary.expected_usd.toFixed(2)} USD
@@ -460,7 +464,7 @@ export default function AdminDashboard({
                         <CardHeader>
                             <CardTitle className="text-base font-bold flex items-center gap-2">
                                 <TrendingUp className="w-4 h-4 text-indigo-600" />
-                                {__('Tendencia de Ventas ($ MXN)')}
+                                {__('Tendencia de Ventas')} ({currencySymbol} {currencyCode})
                             </CardTitle>
                             <CardDescription>{__('Evolución diaria del volumen de ventas en el período seleccionado.')}</CardDescription>
                         </CardHeader>
@@ -540,7 +544,7 @@ export default function AdminDashboard({
                                             <th className="py-2.5 px-3">{__('Ticket')}</th>
                                             <th className="py-2.5 px-3">{__('Cliente')}</th>
                                             <th className="py-2.5 px-3">{__('Método')}</th>
-                                            <th className="py-2.5 px-3 text-right">{__('Total ($ MXN)')}</th>
+                                            <th className="py-2.5 px-3 text-right">{__('Total')} ({currencySymbol} {currencyCode})</th>
                                             <th className="py-2.5 px-3 text-center">{__('Hora')}</th>
                                         </tr>
                                     </thead>
@@ -556,7 +560,7 @@ export default function AdminDashboard({
                                                         </Badge>
                                                     </td>
                                                     <td className="py-2.5 px-3 text-right font-mono font-bold text-slate-900 dark:text-slate-100">
-                                                        ${sale.total.toFixed(2)}
+                                                        {currencySymbol}{sale.total.toFixed(2)}
                                                     </td>
                                                     <td className="py-2.5 px-3 text-center font-mono text-muted-foreground">
                                                         {new Date(sale.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}

@@ -32,6 +32,23 @@ class CashRegisterController extends Controller
         return '$';
     }
 
+    public function getBcvRate(\App\Services\BcvRateService $bcvService)
+    {
+        $rate = $bcvService->getRate();
+        if ($rate) {
+            return response()->json([
+                'success' => true,
+                'rate' => $rate,
+                'message' => __('Tasa del BCV obtenida correctamente.'),
+            ]);
+        }
+
+        return response()->json([
+            'success' => false,
+            'message' => __('No se pudo obtener la tasa oficial del BCV en este momento.'),
+        ], 422);
+    }
+
     public function index(Request $request)
     {
         $search = $request->input('search');

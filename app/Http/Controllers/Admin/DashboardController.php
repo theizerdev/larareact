@@ -19,7 +19,16 @@ class DashboardController extends Controller
         $startDate = $request->input('start_date') ? Carbon::parse($request->input('start_date'))->startOfDay() : Carbon::today()->subDays(6)->startOfDay();
         $endDate = $request->input('end_date') ? Carbon::parse($request->input('end_date'))->endOfDay() : Carbon::now()->endOfDay();
 
-        $empresa = auth()->user()?->empresa;
+        $user = auth()->user();
+        $empresa = $user?->empresa;
+        if (!$empresa && $user?->empresa_id) {
+            $empresa = \App\Models\Empresa::find($user->empresa_id);
+        }
+
+        $pais = $empresa?->pais ?? ($empresa?->pais_id ? \App\Models\Pais::find($empresa->pais_id) : null);
+        $currencySymbol = $pais?->simbolo_moneda ?? '$';
+        $currencyCode = $pais?->moneda_principal ?? 'MXN';
+
         $valorDolar = (float) ($empresa?->valor_dolar ?? 20.0);
 
         // Active Cash Register of User
@@ -114,7 +123,7 @@ class DashboardController extends Controller
         $paymentSeries = [];
         foreach ($paymentsBreakdown as $pb) {
             $label = match ($pb->metodo_pago) {
-                'efectivo' => 'Efectivo (MXN)',
+                'efectivo' => "Efectivo ({$currencyCode})",
                 'dolar' => '💵 Dólares (USD)',
                 'transferencia' => 'Transferencia',
                 'tarjeta' => 'Tarjeta',
@@ -145,6 +154,8 @@ class DashboardController extends Controller
             ->get();
 
         return inertia('admin/dashboard', [
+            'currencySymbol' => $currencySymbol,
+            'currencyCode' => $currencyCode,
             'valorDolar' => $valorDolar,
             'filters' => [
                 'start_date' => $startDate->format('Y-m-d'),
