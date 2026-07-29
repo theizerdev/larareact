@@ -137,7 +137,7 @@ store.post = (options?: RouteQueryOptions): RouteDefinition<'post'> => ({
  * @see app/Http/Controllers/Admin/CargoController.php:63
  * @route '/admin/cargos/{cargo}'
  */
-export const update = (args: { cargo: number | { id: number } } | [cargo: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteDefinition<'put'> => ({
+export const update = (args: { cargo: string | number | { id: string | number } } | [cargo: string | number | { id: string | number } ] | string | number | { id: string | number }, options?: RouteQueryOptions): RouteDefinition<'put'> => ({
     url: update.url(args, options),
     method: 'put',
 })
@@ -152,7 +152,7 @@ update.definition = {
  * @see app/Http/Controllers/Admin/CargoController.php:63
  * @route '/admin/cargos/{cargo}'
  */
-update.url = (args: { cargo: number | { id: number } } | [cargo: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions) => {
+update.url = (args: { cargo: string | number | { id: string | number } } | [cargo: string | number | { id: string | number } ] | string | number | { id: string | number }, options?: RouteQueryOptions) => {
     if (typeof args === 'string' || typeof args === 'number') {
         args = { cargo: args }
     }
@@ -185,7 +185,7 @@ update.url = (args: { cargo: number | { id: number } } | [cargo: number | { id: 
  * @see app/Http/Controllers/Admin/CargoController.php:63
  * @route '/admin/cargos/{cargo}'
  */
-update.put = (args: { cargo: number | { id: number } } | [cargo: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteDefinition<'put'> => ({
+update.put = (args: { cargo: string | number | { id: string | number } } | [cargo: string | number | { id: string | number } ] | string | number | { id: string | number }, options?: RouteQueryOptions): RouteDefinition<'put'> => ({
     url: update.url(args, options),
     method: 'put',
 })
@@ -195,7 +195,7 @@ update.put = (args: { cargo: number | { id: number } } | [cargo: number | { id: 
  * @see app/Http/Controllers/Admin/CargoController.php:63
  * @route '/admin/cargos/{cargo}'
  */
-    const updateForm = (args: { cargo: number | { id: number } } | [cargo: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
+    const updateForm = (args: { cargo: string | number | { id: string | number } } | [cargo: string | number | { id: string | number } ] | string | number | { id: string | number }, options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
         action: update.url(args, {
                     [options?.mergeQuery ? 'mergeQuery' : 'query']: {
                         _method: 'PUT',
@@ -210,7 +210,7 @@ update.put = (args: { cargo: number | { id: number } } | [cargo: number | { id: 
  * @see app/Http/Controllers/Admin/CargoController.php:63
  * @route '/admin/cargos/{cargo}'
  */
-        updateForm.put = (args: { cargo: number | { id: number } } | [cargo: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
+        updateForm.put = (args: { cargo: string | number | { id: string | number } } | [cargo: string | number | { id: string | number } ] | string | number | { id: string | number }, options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
             action: update.url(args, {
                         [options?.mergeQuery ? 'mergeQuery' : 'query']: {
                             _method: 'PUT',
@@ -226,7 +226,7 @@ update.put = (args: { cargo: number | { id: number } } | [cargo: number | { id: 
  * @see app/Http/Controllers/Admin/CargoController.php:73
  * @route '/admin/cargos/{cargo}/toggle-status'
  */
-export const toggleStatus = (args: { cargo: number | { id: number } } | [cargo: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteDefinition<'patch'> => ({
+export const toggleStatus = (args: { cargo: string | number | { id: string | number } } | [cargo: string | number | { id: string | number } ] | string | number | { id: string | number }, options?: RouteQueryOptions): RouteDefinition<'patch'> => ({
     url: toggleStatus.url(args, options),
     method: 'patch',
 })
@@ -241,7 +241,7 @@ toggleStatus.definition = {
  * @see app/Http/Controllers/Admin/CargoController.php:73
  * @route '/admin/cargos/{cargo}/toggle-status'
  */
-toggleStatus.url = (args: { cargo: number | { id: number } } | [cargo: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions) => {
+toggleStatus.url = (args: { cargo: string | number | { id: string | number } } | [cargo: string | number | { id: string | number } ] | string | number | { id: string | number }, options?: RouteQueryOptions) => {
     if (typeof args === 'string' || typeof args === 'number') {
         args = { cargo: args }
     }
@@ -274,7 +274,7 @@ toggleStatus.url = (args: { cargo: number | { id: number } } | [cargo: number | 
  * @see app/Http/Controllers/Admin/CargoController.php:73
  * @route '/admin/cargos/{cargo}/toggle-status'
  */
-toggleStatus.patch = (args: { cargo: number | { id: number } } | [cargo: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteDefinition<'patch'> => ({
+toggleStatus.patch = (args: { cargo: string | number | { id: string | number } } | [cargo: string | number | { id: string | number } ] | string | number | { id: string | number }, options?: RouteQueryOptions): RouteDefinition<'patch'> => ({
     url: toggleStatus.url(args, options),
     method: 'patch',
 })
@@ -284,7 +284,7 @@ toggleStatus.patch = (args: { cargo: number | { id: number } } | [cargo: number 
  * @see app/Http/Controllers/Admin/CargoController.php:73
  * @route '/admin/cargos/{cargo}/toggle-status'
  */
-    const toggleStatusForm = (args: { cargo: number | { id: number } } | [cargo: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
+    const toggleStatusForm = (args: { cargo: string | number | { id: string | number } } | [cargo: string | number | { id: string | number } ] | string | number | { id: string | number }, options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
         action: toggleStatus.url(args, {
                     [options?.mergeQuery ? 'mergeQuery' : 'query']: {
                         _method: 'PATCH',
@@ -299,7 +299,7 @@ toggleStatus.patch = (args: { cargo: number | { id: number } } | [cargo: number 
  * @see app/Http/Controllers/Admin/CargoController.php:73
  * @route '/admin/cargos/{cargo}/toggle-status'
  */
-        toggleStatusForm.patch = (args: { cargo: number | { id: number } } | [cargo: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
+        toggleStatusForm.patch = (args: { cargo: string | number | { id: string | number } } | [cargo: string | number | { id: string | number } ] | string | number | { id: string | number }, options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
             action: toggleStatus.url(args, {
                         [options?.mergeQuery ? 'mergeQuery' : 'query']: {
                             _method: 'PATCH',
@@ -315,7 +315,7 @@ toggleStatus.patch = (args: { cargo: number | { id: number } } | [cargo: number 
  * @see app/Http/Controllers/Admin/CargoController.php:83
  * @route '/admin/cargos/{cargo}'
  */
-export const destroy = (args: { cargo: number | { id: number } } | [cargo: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteDefinition<'delete'> => ({
+export const destroy = (args: { cargo: string | number | { id: string | number } } | [cargo: string | number | { id: string | number } ] | string | number | { id: string | number }, options?: RouteQueryOptions): RouteDefinition<'delete'> => ({
     url: destroy.url(args, options),
     method: 'delete',
 })
@@ -330,7 +330,7 @@ destroy.definition = {
  * @see app/Http/Controllers/Admin/CargoController.php:83
  * @route '/admin/cargos/{cargo}'
  */
-destroy.url = (args: { cargo: number | { id: number } } | [cargo: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions) => {
+destroy.url = (args: { cargo: string | number | { id: string | number } } | [cargo: string | number | { id: string | number } ] | string | number | { id: string | number }, options?: RouteQueryOptions) => {
     if (typeof args === 'string' || typeof args === 'number') {
         args = { cargo: args }
     }
@@ -363,7 +363,7 @@ destroy.url = (args: { cargo: number | { id: number } } | [cargo: number | { id:
  * @see app/Http/Controllers/Admin/CargoController.php:83
  * @route '/admin/cargos/{cargo}'
  */
-destroy.delete = (args: { cargo: number | { id: number } } | [cargo: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteDefinition<'delete'> => ({
+destroy.delete = (args: { cargo: string | number | { id: string | number } } | [cargo: string | number | { id: string | number } ] | string | number | { id: string | number }, options?: RouteQueryOptions): RouteDefinition<'delete'> => ({
     url: destroy.url(args, options),
     method: 'delete',
 })
@@ -373,7 +373,7 @@ destroy.delete = (args: { cargo: number | { id: number } } | [cargo: number | { 
  * @see app/Http/Controllers/Admin/CargoController.php:83
  * @route '/admin/cargos/{cargo}'
  */
-    const destroyForm = (args: { cargo: number | { id: number } } | [cargo: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
+    const destroyForm = (args: { cargo: string | number | { id: string | number } } | [cargo: string | number | { id: string | number } ] | string | number | { id: string | number }, options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
         action: destroy.url(args, {
                     [options?.mergeQuery ? 'mergeQuery' : 'query']: {
                         _method: 'DELETE',
@@ -388,7 +388,7 @@ destroy.delete = (args: { cargo: number | { id: number } } | [cargo: number | { 
  * @see app/Http/Controllers/Admin/CargoController.php:83
  * @route '/admin/cargos/{cargo}'
  */
-        destroyForm.delete = (args: { cargo: number | { id: number } } | [cargo: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
+        destroyForm.delete = (args: { cargo: string | number | { id: string | number } } | [cargo: string | number | { id: string | number } ] | string | number | { id: string | number }, options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
             action: destroy.url(args, {
                         [options?.mergeQuery ? 'mergeQuery' : 'query']: {
                             _method: 'DELETE',

@@ -137,7 +137,7 @@ store.post = (options?: RouteQueryOptions): RouteDefinition<'post'> => ({
  * @see app/Http/Controllers/Admin/ResponsableController.php:94
  * @route '/admin/responsables/{responsable}'
  */
-export const update = (args: { responsable: number | { id: number } } | [responsable: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteDefinition<'put'> => ({
+export const update = (args: { responsable: string | number | { id: string | number } } | [responsable: string | number | { id: string | number } ] | string | number | { id: string | number }, options?: RouteQueryOptions): RouteDefinition<'put'> => ({
     url: update.url(args, options),
     method: 'put',
 })
@@ -152,7 +152,7 @@ update.definition = {
  * @see app/Http/Controllers/Admin/ResponsableController.php:94
  * @route '/admin/responsables/{responsable}'
  */
-update.url = (args: { responsable: number | { id: number } } | [responsable: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions) => {
+update.url = (args: { responsable: string | number | { id: string | number } } | [responsable: string | number | { id: string | number } ] | string | number | { id: string | number }, options?: RouteQueryOptions) => {
     if (typeof args === 'string' || typeof args === 'number') {
         args = { responsable: args }
     }
@@ -185,7 +185,7 @@ update.url = (args: { responsable: number | { id: number } } | [responsable: num
  * @see app/Http/Controllers/Admin/ResponsableController.php:94
  * @route '/admin/responsables/{responsable}'
  */
-update.put = (args: { responsable: number | { id: number } } | [responsable: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteDefinition<'put'> => ({
+update.put = (args: { responsable: string | number | { id: string | number } } | [responsable: string | number | { id: string | number } ] | string | number | { id: string | number }, options?: RouteQueryOptions): RouteDefinition<'put'> => ({
     url: update.url(args, options),
     method: 'put',
 })
@@ -195,7 +195,7 @@ update.put = (args: { responsable: number | { id: number } } | [responsable: num
  * @see app/Http/Controllers/Admin/ResponsableController.php:94
  * @route '/admin/responsables/{responsable}'
  */
-    const updateForm = (args: { responsable: number | { id: number } } | [responsable: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
+    const updateForm = (args: { responsable: string | number | { id: string | number } } | [responsable: string | number | { id: string | number } ] | string | number | { id: string | number }, options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
         action: update.url(args, {
                     [options?.mergeQuery ? 'mergeQuery' : 'query']: {
                         _method: 'PUT',
@@ -210,7 +210,7 @@ update.put = (args: { responsable: number | { id: number } } | [responsable: num
  * @see app/Http/Controllers/Admin/ResponsableController.php:94
  * @route '/admin/responsables/{responsable}'
  */
-        updateForm.put = (args: { responsable: number | { id: number } } | [responsable: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
+        updateForm.put = (args: { responsable: string | number | { id: string | number } } | [responsable: string | number | { id: string | number } ] | string | number | { id: string | number }, options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
             action: update.url(args, {
                         [options?.mergeQuery ? 'mergeQuery' : 'query']: {
                             _method: 'PUT',
@@ -226,7 +226,7 @@ update.put = (args: { responsable: number | { id: number } } | [responsable: num
  * @see app/Http/Controllers/Admin/ResponsableController.php:104
  * @route '/admin/responsables/{responsable}/toggle-status'
  */
-export const toggleStatus = (args: { responsable: number | { id: number } } | [responsable: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteDefinition<'patch'> => ({
+export const toggleStatus = (args: { responsable: string | number | { id: string | number } } | [responsable: string | number | { id: string | number } ] | string | number | { id: string | number }, options?: RouteQueryOptions): RouteDefinition<'patch'> => ({
     url: toggleStatus.url(args, options),
     method: 'patch',
 })
@@ -241,7 +241,7 @@ toggleStatus.definition = {
  * @see app/Http/Controllers/Admin/ResponsableController.php:104
  * @route '/admin/responsables/{responsable}/toggle-status'
  */
-toggleStatus.url = (args: { responsable: number | { id: number } } | [responsable: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions) => {
+toggleStatus.url = (args: { responsable: string | number | { id: string | number } } | [responsable: string | number | { id: string | number } ] | string | number | { id: string | number }, options?: RouteQueryOptions) => {
     if (typeof args === 'string' || typeof args === 'number') {
         args = { responsable: args }
     }
@@ -274,7 +274,7 @@ toggleStatus.url = (args: { responsable: number | { id: number } } | [responsabl
  * @see app/Http/Controllers/Admin/ResponsableController.php:104
  * @route '/admin/responsables/{responsable}/toggle-status'
  */
-toggleStatus.patch = (args: { responsable: number | { id: number } } | [responsable: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteDefinition<'patch'> => ({
+toggleStatus.patch = (args: { responsable: string | number | { id: string | number } } | [responsable: string | number | { id: string | number } ] | string | number | { id: string | number }, options?: RouteQueryOptions): RouteDefinition<'patch'> => ({
     url: toggleStatus.url(args, options),
     method: 'patch',
 })
@@ -284,7 +284,7 @@ toggleStatus.patch = (args: { responsable: number | { id: number } } | [responsa
  * @see app/Http/Controllers/Admin/ResponsableController.php:104
  * @route '/admin/responsables/{responsable}/toggle-status'
  */
-    const toggleStatusForm = (args: { responsable: number | { id: number } } | [responsable: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
+    const toggleStatusForm = (args: { responsable: string | number | { id: string | number } } | [responsable: string | number | { id: string | number } ] | string | number | { id: string | number }, options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
         action: toggleStatus.url(args, {
                     [options?.mergeQuery ? 'mergeQuery' : 'query']: {
                         _method: 'PATCH',
@@ -299,7 +299,7 @@ toggleStatus.patch = (args: { responsable: number | { id: number } } | [responsa
  * @see app/Http/Controllers/Admin/ResponsableController.php:104
  * @route '/admin/responsables/{responsable}/toggle-status'
  */
-        toggleStatusForm.patch = (args: { responsable: number | { id: number } } | [responsable: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
+        toggleStatusForm.patch = (args: { responsable: string | number | { id: string | number } } | [responsable: string | number | { id: string | number } ] | string | number | { id: string | number }, options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
             action: toggleStatus.url(args, {
                         [options?.mergeQuery ? 'mergeQuery' : 'query']: {
                             _method: 'PATCH',
@@ -315,7 +315,7 @@ toggleStatus.patch = (args: { responsable: number | { id: number } } | [responsa
  * @see app/Http/Controllers/Admin/ResponsableController.php:114
  * @route '/admin/responsables/{responsable}'
  */
-export const destroy = (args: { responsable: number | { id: number } } | [responsable: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteDefinition<'delete'> => ({
+export const destroy = (args: { responsable: string | number | { id: string | number } } | [responsable: string | number | { id: string | number } ] | string | number | { id: string | number }, options?: RouteQueryOptions): RouteDefinition<'delete'> => ({
     url: destroy.url(args, options),
     method: 'delete',
 })
@@ -330,7 +330,7 @@ destroy.definition = {
  * @see app/Http/Controllers/Admin/ResponsableController.php:114
  * @route '/admin/responsables/{responsable}'
  */
-destroy.url = (args: { responsable: number | { id: number } } | [responsable: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions) => {
+destroy.url = (args: { responsable: string | number | { id: string | number } } | [responsable: string | number | { id: string | number } ] | string | number | { id: string | number }, options?: RouteQueryOptions) => {
     if (typeof args === 'string' || typeof args === 'number') {
         args = { responsable: args }
     }
@@ -363,7 +363,7 @@ destroy.url = (args: { responsable: number | { id: number } } | [responsable: nu
  * @see app/Http/Controllers/Admin/ResponsableController.php:114
  * @route '/admin/responsables/{responsable}'
  */
-destroy.delete = (args: { responsable: number | { id: number } } | [responsable: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteDefinition<'delete'> => ({
+destroy.delete = (args: { responsable: string | number | { id: string | number } } | [responsable: string | number | { id: string | number } ] | string | number | { id: string | number }, options?: RouteQueryOptions): RouteDefinition<'delete'> => ({
     url: destroy.url(args, options),
     method: 'delete',
 })
@@ -373,7 +373,7 @@ destroy.delete = (args: { responsable: number | { id: number } } | [responsable:
  * @see app/Http/Controllers/Admin/ResponsableController.php:114
  * @route '/admin/responsables/{responsable}'
  */
-    const destroyForm = (args: { responsable: number | { id: number } } | [responsable: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
+    const destroyForm = (args: { responsable: string | number | { id: string | number } } | [responsable: string | number | { id: string | number } ] | string | number | { id: string | number }, options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
         action: destroy.url(args, {
                     [options?.mergeQuery ? 'mergeQuery' : 'query']: {
                         _method: 'DELETE',
@@ -388,7 +388,7 @@ destroy.delete = (args: { responsable: number | { id: number } } | [responsable:
  * @see app/Http/Controllers/Admin/ResponsableController.php:114
  * @route '/admin/responsables/{responsable}'
  */
-        destroyForm.delete = (args: { responsable: number | { id: number } } | [responsable: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
+        destroyForm.delete = (args: { responsable: string | number | { id: string | number } } | [responsable: string | number | { id: string | number } ] | string | number | { id: string | number }, options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
             action: destroy.url(args, {
                         [options?.mergeQuery ? 'mergeQuery' : 'query']: {
                             _method: 'DELETE',

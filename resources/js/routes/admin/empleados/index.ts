@@ -82,7 +82,7 @@ index.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
  * @see app/Http/Controllers/Admin/EmpleadoController.php:77
  * @route '/admin/empleados/{empleado}/carnet'
  */
-export const carnet = (args: { empleado: number | { id: number } } | [empleado: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteDefinition<'get'> => ({
+export const carnet = (args: { empleado: string | number | { id: string | number } } | [empleado: string | number | { id: string | number } ] | string | number | { id: string | number }, options?: RouteQueryOptions): RouteDefinition<'get'> => ({
     url: carnet.url(args, options),
     method: 'get',
 })
@@ -97,7 +97,7 @@ carnet.definition = {
  * @see app/Http/Controllers/Admin/EmpleadoController.php:77
  * @route '/admin/empleados/{empleado}/carnet'
  */
-carnet.url = (args: { empleado: number | { id: number } } | [empleado: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions) => {
+carnet.url = (args: { empleado: string | number | { id: string | number } } | [empleado: string | number | { id: string | number } ] | string | number | { id: string | number }, options?: RouteQueryOptions) => {
     if (typeof args === 'string' || typeof args === 'number') {
         args = { empleado: args }
     }
@@ -130,7 +130,7 @@ carnet.url = (args: { empleado: number | { id: number } } | [empleado: number | 
  * @see app/Http/Controllers/Admin/EmpleadoController.php:77
  * @route '/admin/empleados/{empleado}/carnet'
  */
-carnet.get = (args: { empleado: number | { id: number } } | [empleado: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteDefinition<'get'> => ({
+carnet.get = (args: { empleado: string | number | { id: string | number } } | [empleado: string | number | { id: string | number } ] | string | number | { id: string | number }, options?: RouteQueryOptions): RouteDefinition<'get'> => ({
     url: carnet.url(args, options),
     method: 'get',
 })
@@ -139,7 +139,7 @@ carnet.get = (args: { empleado: number | { id: number } } | [empleado: number | 
  * @see app/Http/Controllers/Admin/EmpleadoController.php:77
  * @route '/admin/empleados/{empleado}/carnet'
  */
-carnet.head = (args: { empleado: number | { id: number } } | [empleado: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteDefinition<'head'> => ({
+carnet.head = (args: { empleado: string | number | { id: string | number } } | [empleado: string | number | { id: string | number } ] | string | number | { id: string | number }, options?: RouteQueryOptions): RouteDefinition<'head'> => ({
     url: carnet.url(args, options),
     method: 'head',
 })
@@ -149,7 +149,7 @@ carnet.head = (args: { empleado: number | { id: number } } | [empleado: number |
  * @see app/Http/Controllers/Admin/EmpleadoController.php:77
  * @route '/admin/empleados/{empleado}/carnet'
  */
-    const carnetForm = (args: { empleado: number | { id: number } } | [empleado: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
+    const carnetForm = (args: { empleado: string | number | { id: string | number } } | [empleado: string | number | { id: string | number } ] | string | number | { id: string | number }, options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
         action: carnet.url(args, options),
         method: 'get',
     })
@@ -159,7 +159,7 @@ carnet.head = (args: { empleado: number | { id: number } } | [empleado: number |
  * @see app/Http/Controllers/Admin/EmpleadoController.php:77
  * @route '/admin/empleados/{empleado}/carnet'
  */
-        carnetForm.get = (args: { empleado: number | { id: number } } | [empleado: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
+        carnetForm.get = (args: { empleado: string | number | { id: string | number } } | [empleado: string | number | { id: string | number } ] | string | number | { id: string | number }, options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
             action: carnet.url(args, options),
             method: 'get',
         })
@@ -168,7 +168,7 @@ carnet.head = (args: { empleado: number | { id: number } } | [empleado: number |
  * @see app/Http/Controllers/Admin/EmpleadoController.php:77
  * @route '/admin/empleados/{empleado}/carnet'
  */
-        carnetForm.head = (args: { empleado: number | { id: number } } | [empleado: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
+        carnetForm.head = (args: { empleado: string | number | { id: string | number } } | [empleado: string | number | { id: string | number } ] | string | number | { id: string | number }, options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
             action: carnet.url(args, {
                         [options?.mergeQuery ? 'mergeQuery' : 'query']: {
                             _method: 'HEAD',
@@ -179,6 +179,85 @@ carnet.head = (args: { empleado: number | { id: number } } | [empleado: number |
         })
     
     carnet.form = carnetForm
+/**
+* @see \App\Http\Controllers\Admin\EmpleadoController::enviarCarnet
+ * @see app/Http/Controllers/Admin/EmpleadoController.php:140
+ * @route '/admin/empleados/{empleado}/enviar-carnet'
+ */
+export const enviarCarnet = (args: { empleado: string | number | { id: string | number } } | [empleado: string | number | { id: string | number } ] | string | number | { id: string | number }, options?: RouteQueryOptions): RouteDefinition<'post'> => ({
+    url: enviarCarnet.url(args, options),
+    method: 'post',
+})
+
+enviarCarnet.definition = {
+    methods: ["post"],
+    url: '/admin/empleados/{empleado}/enviar-carnet',
+} satisfies RouteDefinition<["post"]>
+
+/**
+* @see \App\Http\Controllers\Admin\EmpleadoController::enviarCarnet
+ * @see app/Http/Controllers/Admin/EmpleadoController.php:140
+ * @route '/admin/empleados/{empleado}/enviar-carnet'
+ */
+enviarCarnet.url = (args: { empleado: string | number | { id: string | number } } | [empleado: string | number | { id: string | number } ] | string | number | { id: string | number }, options?: RouteQueryOptions) => {
+    if (typeof args === 'string' || typeof args === 'number') {
+        args = { empleado: args }
+    }
+
+            if (typeof args === 'object' && !Array.isArray(args) && 'id' in args) {
+            args = { empleado: args.id }
+        }
+    
+    if (Array.isArray(args)) {
+        args = {
+                    empleado: args[0],
+                }
+    }
+
+    args = applyUrlDefaults(args)
+
+    const parsedArgs = {
+                        empleado: typeof args.empleado === 'object'
+                ? args.empleado.id
+                : args.empleado,
+                }
+
+    return enviarCarnet.definition.url
+            .replace('{empleado}', parsedArgs.empleado.toString())
+            .replace(/\/+$/, '') + queryParams(options)
+}
+
+/**
+* @see \App\Http\Controllers\Admin\EmpleadoController::enviarCarnet
+ * @see app/Http/Controllers/Admin/EmpleadoController.php:140
+ * @route '/admin/empleados/{empleado}/enviar-carnet'
+ */
+enviarCarnet.post = (args: { empleado: string | number | { id: string | number } } | [empleado: string | number | { id: string | number } ] | string | number | { id: string | number }, options?: RouteQueryOptions): RouteDefinition<'post'> => ({
+    url: enviarCarnet.url(args, options),
+    method: 'post',
+})
+
+    /**
+* @see \App\Http\Controllers\Admin\EmpleadoController::enviarCarnet
+ * @see app/Http/Controllers/Admin/EmpleadoController.php:140
+ * @route '/admin/empleados/{empleado}/enviar-carnet'
+ */
+    const enviarCarnetForm = (args: { empleado: string | number | { id: string | number } } | [empleado: string | number | { id: string | number } ] | string | number | { id: string | number }, options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
+        action: enviarCarnet.url(args, options),
+        method: 'post',
+    })
+
+            /**
+* @see \App\Http\Controllers\Admin\EmpleadoController::enviarCarnet
+ * @see app/Http/Controllers/Admin/EmpleadoController.php:140
+ * @route '/admin/empleados/{empleado}/enviar-carnet'
+ */
+        enviarCarnetForm.post = (args: { empleado: string | number | { id: string | number } } | [empleado: string | number | { id: string | number } ] | string | number | { id: string | number }, options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
+            action: enviarCarnet.url(args, options),
+            method: 'post',
+        })
+    
+    enviarCarnet.form = enviarCarnetForm
 /**
 * @see \App\Http\Controllers\Admin\EmpleadoController::store
  * @see app/Http/Controllers/Admin/EmpleadoController.php:86
@@ -236,7 +315,7 @@ store.post = (options?: RouteQueryOptions): RouteDefinition<'post'> => ({
     store.form = storeForm
 /**
 * @see \App\Http\Controllers\Admin\EmpleadoController::preRegistro
- * @see app/Http/Controllers/Admin/EmpleadoController.php:277
+ * @see app/Http/Controllers/Admin/EmpleadoController.php:362
  * @route '/admin/empleados/pre-registro'
  */
 export const preRegistro = (options?: RouteQueryOptions): RouteDefinition<'post'> => ({
@@ -251,7 +330,7 @@ preRegistro.definition = {
 
 /**
 * @see \App\Http\Controllers\Admin\EmpleadoController::preRegistro
- * @see app/Http/Controllers/Admin/EmpleadoController.php:277
+ * @see app/Http/Controllers/Admin/EmpleadoController.php:362
  * @route '/admin/empleados/pre-registro'
  */
 preRegistro.url = (options?: RouteQueryOptions) => {
@@ -260,7 +339,7 @@ preRegistro.url = (options?: RouteQueryOptions) => {
 
 /**
 * @see \App\Http\Controllers\Admin\EmpleadoController::preRegistro
- * @see app/Http/Controllers/Admin/EmpleadoController.php:277
+ * @see app/Http/Controllers/Admin/EmpleadoController.php:362
  * @route '/admin/empleados/pre-registro'
  */
 preRegistro.post = (options?: RouteQueryOptions): RouteDefinition<'post'> => ({
@@ -270,7 +349,7 @@ preRegistro.post = (options?: RouteQueryOptions): RouteDefinition<'post'> => ({
 
     /**
 * @see \App\Http\Controllers\Admin\EmpleadoController::preRegistro
- * @see app/Http/Controllers/Admin/EmpleadoController.php:277
+ * @see app/Http/Controllers/Admin/EmpleadoController.php:362
  * @route '/admin/empleados/pre-registro'
  */
     const preRegistroForm = (options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
@@ -280,7 +359,7 @@ preRegistro.post = (options?: RouteQueryOptions): RouteDefinition<'post'> => ({
 
             /**
 * @see \App\Http\Controllers\Admin\EmpleadoController::preRegistro
- * @see app/Http/Controllers/Admin/EmpleadoController.php:277
+ * @see app/Http/Controllers/Admin/EmpleadoController.php:362
  * @route '/admin/empleados/pre-registro'
  */
         preRegistroForm.post = (options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
@@ -291,10 +370,10 @@ preRegistro.post = (options?: RouteQueryOptions): RouteDefinition<'post'> => ({
     preRegistro.form = preRegistroForm
 /**
 * @see \App\Http\Controllers\Admin\EmpleadoController::update
- * @see app/Http/Controllers/Admin/EmpleadoController.php:123
+ * @see app/Http/Controllers/Admin/EmpleadoController.php:208
  * @route '/admin/empleados/{empleado}'
  */
-export const update = (args: { empleado: number | { id: number } } | [empleado: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteDefinition<'put'> => ({
+export const update = (args: { empleado: string | number | { id: string | number } } | [empleado: string | number | { id: string | number } ] | string | number | { id: string | number }, options?: RouteQueryOptions): RouteDefinition<'put'> => ({
     url: update.url(args, options),
     method: 'put',
 })
@@ -306,10 +385,10 @@ update.definition = {
 
 /**
 * @see \App\Http\Controllers\Admin\EmpleadoController::update
- * @see app/Http/Controllers/Admin/EmpleadoController.php:123
+ * @see app/Http/Controllers/Admin/EmpleadoController.php:208
  * @route '/admin/empleados/{empleado}'
  */
-update.url = (args: { empleado: number | { id: number } } | [empleado: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions) => {
+update.url = (args: { empleado: string | number | { id: string | number } } | [empleado: string | number | { id: string | number } ] | string | number | { id: string | number }, options?: RouteQueryOptions) => {
     if (typeof args === 'string' || typeof args === 'number') {
         args = { empleado: args }
     }
@@ -339,20 +418,20 @@ update.url = (args: { empleado: number | { id: number } } | [empleado: number | 
 
 /**
 * @see \App\Http\Controllers\Admin\EmpleadoController::update
- * @see app/Http/Controllers/Admin/EmpleadoController.php:123
+ * @see app/Http/Controllers/Admin/EmpleadoController.php:208
  * @route '/admin/empleados/{empleado}'
  */
-update.put = (args: { empleado: number | { id: number } } | [empleado: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteDefinition<'put'> => ({
+update.put = (args: { empleado: string | number | { id: string | number } } | [empleado: string | number | { id: string | number } ] | string | number | { id: string | number }, options?: RouteQueryOptions): RouteDefinition<'put'> => ({
     url: update.url(args, options),
     method: 'put',
 })
 
     /**
 * @see \App\Http\Controllers\Admin\EmpleadoController::update
- * @see app/Http/Controllers/Admin/EmpleadoController.php:123
+ * @see app/Http/Controllers/Admin/EmpleadoController.php:208
  * @route '/admin/empleados/{empleado}'
  */
-    const updateForm = (args: { empleado: number | { id: number } } | [empleado: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
+    const updateForm = (args: { empleado: string | number | { id: string | number } } | [empleado: string | number | { id: string | number } ] | string | number | { id: string | number }, options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
         action: update.url(args, {
                     [options?.mergeQuery ? 'mergeQuery' : 'query']: {
                         _method: 'PUT',
@@ -364,10 +443,10 @@ update.put = (args: { empleado: number | { id: number } } | [empleado: number | 
 
             /**
 * @see \App\Http\Controllers\Admin\EmpleadoController::update
- * @see app/Http/Controllers/Admin/EmpleadoController.php:123
+ * @see app/Http/Controllers/Admin/EmpleadoController.php:208
  * @route '/admin/empleados/{empleado}'
  */
-        updateForm.put = (args: { empleado: number | { id: number } } | [empleado: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
+        updateForm.put = (args: { empleado: string | number | { id: string | number } } | [empleado: string | number | { id: string | number } ] | string | number | { id: string | number }, options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
             action: update.url(args, {
                         [options?.mergeQuery ? 'mergeQuery' : 'query']: {
                             _method: 'PUT',
@@ -380,10 +459,10 @@ update.put = (args: { empleado: number | { id: number } } | [empleado: number | 
     update.form = updateForm
 /**
 * @see \App\Http\Controllers\Admin\EmpleadoController::toggleStatus
- * @see app/Http/Controllers/Admin/EmpleadoController.php:247
+ * @see app/Http/Controllers/Admin/EmpleadoController.php:332
  * @route '/admin/empleados/{empleado}/toggle-status'
  */
-export const toggleStatus = (args: { empleado: number | { id: number } } | [empleado: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteDefinition<'patch'> => ({
+export const toggleStatus = (args: { empleado: string | number | { id: string | number } } | [empleado: string | number | { id: string | number } ] | string | number | { id: string | number }, options?: RouteQueryOptions): RouteDefinition<'patch'> => ({
     url: toggleStatus.url(args, options),
     method: 'patch',
 })
@@ -395,10 +474,10 @@ toggleStatus.definition = {
 
 /**
 * @see \App\Http\Controllers\Admin\EmpleadoController::toggleStatus
- * @see app/Http/Controllers/Admin/EmpleadoController.php:247
+ * @see app/Http/Controllers/Admin/EmpleadoController.php:332
  * @route '/admin/empleados/{empleado}/toggle-status'
  */
-toggleStatus.url = (args: { empleado: number | { id: number } } | [empleado: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions) => {
+toggleStatus.url = (args: { empleado: string | number | { id: string | number } } | [empleado: string | number | { id: string | number } ] | string | number | { id: string | number }, options?: RouteQueryOptions) => {
     if (typeof args === 'string' || typeof args === 'number') {
         args = { empleado: args }
     }
@@ -428,20 +507,20 @@ toggleStatus.url = (args: { empleado: number | { id: number } } | [empleado: num
 
 /**
 * @see \App\Http\Controllers\Admin\EmpleadoController::toggleStatus
- * @see app/Http/Controllers/Admin/EmpleadoController.php:247
+ * @see app/Http/Controllers/Admin/EmpleadoController.php:332
  * @route '/admin/empleados/{empleado}/toggle-status'
  */
-toggleStatus.patch = (args: { empleado: number | { id: number } } | [empleado: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteDefinition<'patch'> => ({
+toggleStatus.patch = (args: { empleado: string | number | { id: string | number } } | [empleado: string | number | { id: string | number } ] | string | number | { id: string | number }, options?: RouteQueryOptions): RouteDefinition<'patch'> => ({
     url: toggleStatus.url(args, options),
     method: 'patch',
 })
 
     /**
 * @see \App\Http\Controllers\Admin\EmpleadoController::toggleStatus
- * @see app/Http/Controllers/Admin/EmpleadoController.php:247
+ * @see app/Http/Controllers/Admin/EmpleadoController.php:332
  * @route '/admin/empleados/{empleado}/toggle-status'
  */
-    const toggleStatusForm = (args: { empleado: number | { id: number } } | [empleado: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
+    const toggleStatusForm = (args: { empleado: string | number | { id: string | number } } | [empleado: string | number | { id: string | number } ] | string | number | { id: string | number }, options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
         action: toggleStatus.url(args, {
                     [options?.mergeQuery ? 'mergeQuery' : 'query']: {
                         _method: 'PATCH',
@@ -453,10 +532,10 @@ toggleStatus.patch = (args: { empleado: number | { id: number } } | [empleado: n
 
             /**
 * @see \App\Http\Controllers\Admin\EmpleadoController::toggleStatus
- * @see app/Http/Controllers/Admin/EmpleadoController.php:247
+ * @see app/Http/Controllers/Admin/EmpleadoController.php:332
  * @route '/admin/empleados/{empleado}/toggle-status'
  */
-        toggleStatusForm.patch = (args: { empleado: number | { id: number } } | [empleado: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
+        toggleStatusForm.patch = (args: { empleado: string | number | { id: string | number } } | [empleado: string | number | { id: string | number } ] | string | number | { id: string | number }, options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
             action: toggleStatus.url(args, {
                         [options?.mergeQuery ? 'mergeQuery' : 'query']: {
                             _method: 'PATCH',
@@ -469,10 +548,10 @@ toggleStatus.patch = (args: { empleado: number | { id: number } } | [empleado: n
     toggleStatus.form = toggleStatusForm
 /**
 * @see \App\Http\Controllers\Admin\EmpleadoController::destroy
- * @see app/Http/Controllers/Admin/EmpleadoController.php:257
+ * @see app/Http/Controllers/Admin/EmpleadoController.php:342
  * @route '/admin/empleados/{empleado}'
  */
-export const destroy = (args: { empleado: number | { id: number } } | [empleado: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteDefinition<'delete'> => ({
+export const destroy = (args: { empleado: string | number | { id: string | number } } | [empleado: string | number | { id: string | number } ] | string | number | { id: string | number }, options?: RouteQueryOptions): RouteDefinition<'delete'> => ({
     url: destroy.url(args, options),
     method: 'delete',
 })
@@ -484,10 +563,10 @@ destroy.definition = {
 
 /**
 * @see \App\Http\Controllers\Admin\EmpleadoController::destroy
- * @see app/Http/Controllers/Admin/EmpleadoController.php:257
+ * @see app/Http/Controllers/Admin/EmpleadoController.php:342
  * @route '/admin/empleados/{empleado}'
  */
-destroy.url = (args: { empleado: number | { id: number } } | [empleado: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions) => {
+destroy.url = (args: { empleado: string | number | { id: string | number } } | [empleado: string | number | { id: string | number } ] | string | number | { id: string | number }, options?: RouteQueryOptions) => {
     if (typeof args === 'string' || typeof args === 'number') {
         args = { empleado: args }
     }
@@ -517,20 +596,20 @@ destroy.url = (args: { empleado: number | { id: number } } | [empleado: number |
 
 /**
 * @see \App\Http\Controllers\Admin\EmpleadoController::destroy
- * @see app/Http/Controllers/Admin/EmpleadoController.php:257
+ * @see app/Http/Controllers/Admin/EmpleadoController.php:342
  * @route '/admin/empleados/{empleado}'
  */
-destroy.delete = (args: { empleado: number | { id: number } } | [empleado: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteDefinition<'delete'> => ({
+destroy.delete = (args: { empleado: string | number | { id: string | number } } | [empleado: string | number | { id: string | number } ] | string | number | { id: string | number }, options?: RouteQueryOptions): RouteDefinition<'delete'> => ({
     url: destroy.url(args, options),
     method: 'delete',
 })
 
     /**
 * @see \App\Http\Controllers\Admin\EmpleadoController::destroy
- * @see app/Http/Controllers/Admin/EmpleadoController.php:257
+ * @see app/Http/Controllers/Admin/EmpleadoController.php:342
  * @route '/admin/empleados/{empleado}'
  */
-    const destroyForm = (args: { empleado: number | { id: number } } | [empleado: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
+    const destroyForm = (args: { empleado: string | number | { id: string | number } } | [empleado: string | number | { id: string | number } ] | string | number | { id: string | number }, options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
         action: destroy.url(args, {
                     [options?.mergeQuery ? 'mergeQuery' : 'query']: {
                         _method: 'DELETE',
@@ -542,10 +621,10 @@ destroy.delete = (args: { empleado: number | { id: number } } | [empleado: numbe
 
             /**
 * @see \App\Http\Controllers\Admin\EmpleadoController::destroy
- * @see app/Http/Controllers/Admin/EmpleadoController.php:257
+ * @see app/Http/Controllers/Admin/EmpleadoController.php:342
  * @route '/admin/empleados/{empleado}'
  */
-        destroyForm.delete = (args: { empleado: number | { id: number } } | [empleado: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
+        destroyForm.delete = (args: { empleado: string | number | { id: string | number } } | [empleado: string | number | { id: string | number } ] | string | number | { id: string | number }, options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
             action: destroy.url(args, {
                         [options?.mergeQuery ? 'mergeQuery' : 'query']: {
                             _method: 'DELETE',
@@ -559,6 +638,7 @@ destroy.delete = (args: { empleado: number | { id: number } } | [empleado: numbe
 const empleados = {
     index: Object.assign(index, index),
 carnet: Object.assign(carnet, carnet),
+enviarCarnet: Object.assign(enviarCarnet, enviarCarnet),
 store: Object.assign(store, store),
 preRegistro: Object.assign(preRegistro, preRegistro),
 update: Object.assign(update, update),

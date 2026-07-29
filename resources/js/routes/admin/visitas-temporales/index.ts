@@ -192,7 +192,7 @@ preRegistro.post = (options?: RouteQueryOptions): RouteDefinition<'post'> => ({
  * @see app/Http/Controllers/Admin/VisitaTemporalController.php:125
  * @route '/admin/visitas-temporales/{visitaTemporal}'
  */
-export const update = (args: { visitaTemporal: number | { id: number } } | [visitaTemporal: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteDefinition<'put'> => ({
+export const update = (args: { visitaTemporal: string | number | { id: string | number } } | [visitaTemporal: string | number | { id: string | number } ] | string | number | { id: string | number }, options?: RouteQueryOptions): RouteDefinition<'put'> => ({
     url: update.url(args, options),
     method: 'put',
 })
@@ -207,7 +207,7 @@ update.definition = {
  * @see app/Http/Controllers/Admin/VisitaTemporalController.php:125
  * @route '/admin/visitas-temporales/{visitaTemporal}'
  */
-update.url = (args: { visitaTemporal: number | { id: number } } | [visitaTemporal: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions) => {
+update.url = (args: { visitaTemporal: string | number | { id: string | number } } | [visitaTemporal: string | number | { id: string | number } ] | string | number | { id: string | number }, options?: RouteQueryOptions) => {
     if (typeof args === 'string' || typeof args === 'number') {
         args = { visitaTemporal: args }
     }
@@ -240,7 +240,7 @@ update.url = (args: { visitaTemporal: number | { id: number } } | [visitaTempora
  * @see app/Http/Controllers/Admin/VisitaTemporalController.php:125
  * @route '/admin/visitas-temporales/{visitaTemporal}'
  */
-update.put = (args: { visitaTemporal: number | { id: number } } | [visitaTemporal: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteDefinition<'put'> => ({
+update.put = (args: { visitaTemporal: string | number | { id: string | number } } | [visitaTemporal: string | number | { id: string | number } ] | string | number | { id: string | number }, options?: RouteQueryOptions): RouteDefinition<'put'> => ({
     url: update.url(args, options),
     method: 'put',
 })
@@ -250,7 +250,7 @@ update.put = (args: { visitaTemporal: number | { id: number } } | [visitaTempora
  * @see app/Http/Controllers/Admin/VisitaTemporalController.php:125
  * @route '/admin/visitas-temporales/{visitaTemporal}'
  */
-    const updateForm = (args: { visitaTemporal: number | { id: number } } | [visitaTemporal: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
+    const updateForm = (args: { visitaTemporal: string | number | { id: string | number } } | [visitaTemporal: string | number | { id: string | number } ] | string | number | { id: string | number }, options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
         action: update.url(args, {
                     [options?.mergeQuery ? 'mergeQuery' : 'query']: {
                         _method: 'PUT',
@@ -265,7 +265,7 @@ update.put = (args: { visitaTemporal: number | { id: number } } | [visitaTempora
  * @see app/Http/Controllers/Admin/VisitaTemporalController.php:125
  * @route '/admin/visitas-temporales/{visitaTemporal}'
  */
-        updateForm.put = (args: { visitaTemporal: number | { id: number } } | [visitaTemporal: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
+        updateForm.put = (args: { visitaTemporal: string | number | { id: string | number } } | [visitaTemporal: string | number | { id: string | number } ] | string | number | { id: string | number }, options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
             action: update.url(args, {
                         [options?.mergeQuery ? 'mergeQuery' : 'query']: {
                             _method: 'PUT',
@@ -281,7 +281,7 @@ update.put = (args: { visitaTemporal: number | { id: number } } | [visitaTempora
  * @see app/Http/Controllers/Admin/VisitaTemporalController.php:329
  * @route '/admin/visitas-temporales/{visitaTemporal}/toggle-status'
  */
-export const toggleStatus = (args: { visitaTemporal: number | { id: number } } | [visitaTemporal: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteDefinition<'patch'> => ({
+export const toggleStatus = (args: { visitaTemporal: string | number | { id: string | number } } | [visitaTemporal: string | number | { id: string | number } ] | string | number | { id: string | number }, options?: RouteQueryOptions): RouteDefinition<'patch'> => ({
     url: toggleStatus.url(args, options),
     method: 'patch',
 })
@@ -296,7 +296,7 @@ toggleStatus.definition = {
  * @see app/Http/Controllers/Admin/VisitaTemporalController.php:329
  * @route '/admin/visitas-temporales/{visitaTemporal}/toggle-status'
  */
-toggleStatus.url = (args: { visitaTemporal: number | { id: number } } | [visitaTemporal: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions) => {
+toggleStatus.url = (args: { visitaTemporal: string | number | { id: string | number } } | [visitaTemporal: string | number | { id: string | number } ] | string | number | { id: string | number }, options?: RouteQueryOptions) => {
     if (typeof args === 'string' || typeof args === 'number') {
         args = { visitaTemporal: args }
     }
@@ -329,7 +329,7 @@ toggleStatus.url = (args: { visitaTemporal: number | { id: number } } | [visitaT
  * @see app/Http/Controllers/Admin/VisitaTemporalController.php:329
  * @route '/admin/visitas-temporales/{visitaTemporal}/toggle-status'
  */
-toggleStatus.patch = (args: { visitaTemporal: number | { id: number } } | [visitaTemporal: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteDefinition<'patch'> => ({
+toggleStatus.patch = (args: { visitaTemporal: string | number | { id: string | number } } | [visitaTemporal: string | number | { id: string | number } ] | string | number | { id: string | number }, options?: RouteQueryOptions): RouteDefinition<'patch'> => ({
     url: toggleStatus.url(args, options),
     method: 'patch',
 })
@@ -339,7 +339,7 @@ toggleStatus.patch = (args: { visitaTemporal: number | { id: number } } | [visit
  * @see app/Http/Controllers/Admin/VisitaTemporalController.php:329
  * @route '/admin/visitas-temporales/{visitaTemporal}/toggle-status'
  */
-    const toggleStatusForm = (args: { visitaTemporal: number | { id: number } } | [visitaTemporal: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
+    const toggleStatusForm = (args: { visitaTemporal: string | number | { id: string | number } } | [visitaTemporal: string | number | { id: string | number } ] | string | number | { id: string | number }, options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
         action: toggleStatus.url(args, {
                     [options?.mergeQuery ? 'mergeQuery' : 'query']: {
                         _method: 'PATCH',
@@ -354,7 +354,7 @@ toggleStatus.patch = (args: { visitaTemporal: number | { id: number } } | [visit
  * @see app/Http/Controllers/Admin/VisitaTemporalController.php:329
  * @route '/admin/visitas-temporales/{visitaTemporal}/toggle-status'
  */
-        toggleStatusForm.patch = (args: { visitaTemporal: number | { id: number } } | [visitaTemporal: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
+        toggleStatusForm.patch = (args: { visitaTemporal: string | number | { id: string | number } } | [visitaTemporal: string | number | { id: string | number } ] | string | number | { id: string | number }, options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
             action: toggleStatus.url(args, {
                         [options?.mergeQuery ? 'mergeQuery' : 'query']: {
                             _method: 'PATCH',
@@ -370,7 +370,7 @@ toggleStatus.patch = (args: { visitaTemporal: number | { id: number } } | [visit
  * @see app/Http/Controllers/Admin/VisitaTemporalController.php:350
  * @route '/admin/visitas-temporales/{visitaTemporal}'
  */
-export const destroy = (args: { visitaTemporal: number | { id: number } } | [visitaTemporal: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteDefinition<'delete'> => ({
+export const destroy = (args: { visitaTemporal: string | number | { id: string | number } } | [visitaTemporal: string | number | { id: string | number } ] | string | number | { id: string | number }, options?: RouteQueryOptions): RouteDefinition<'delete'> => ({
     url: destroy.url(args, options),
     method: 'delete',
 })
@@ -385,7 +385,7 @@ destroy.definition = {
  * @see app/Http/Controllers/Admin/VisitaTemporalController.php:350
  * @route '/admin/visitas-temporales/{visitaTemporal}'
  */
-destroy.url = (args: { visitaTemporal: number | { id: number } } | [visitaTemporal: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions) => {
+destroy.url = (args: { visitaTemporal: string | number | { id: string | number } } | [visitaTemporal: string | number | { id: string | number } ] | string | number | { id: string | number }, options?: RouteQueryOptions) => {
     if (typeof args === 'string' || typeof args === 'number') {
         args = { visitaTemporal: args }
     }
@@ -418,7 +418,7 @@ destroy.url = (args: { visitaTemporal: number | { id: number } } | [visitaTempor
  * @see app/Http/Controllers/Admin/VisitaTemporalController.php:350
  * @route '/admin/visitas-temporales/{visitaTemporal}'
  */
-destroy.delete = (args: { visitaTemporal: number | { id: number } } | [visitaTemporal: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteDefinition<'delete'> => ({
+destroy.delete = (args: { visitaTemporal: string | number | { id: string | number } } | [visitaTemporal: string | number | { id: string | number } ] | string | number | { id: string | number }, options?: RouteQueryOptions): RouteDefinition<'delete'> => ({
     url: destroy.url(args, options),
     method: 'delete',
 })
@@ -428,7 +428,7 @@ destroy.delete = (args: { visitaTemporal: number | { id: number } } | [visitaTem
  * @see app/Http/Controllers/Admin/VisitaTemporalController.php:350
  * @route '/admin/visitas-temporales/{visitaTemporal}'
  */
-    const destroyForm = (args: { visitaTemporal: number | { id: number } } | [visitaTemporal: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
+    const destroyForm = (args: { visitaTemporal: string | number | { id: string | number } } | [visitaTemporal: string | number | { id: string | number } ] | string | number | { id: string | number }, options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
         action: destroy.url(args, {
                     [options?.mergeQuery ? 'mergeQuery' : 'query']: {
                         _method: 'DELETE',
@@ -443,7 +443,7 @@ destroy.delete = (args: { visitaTemporal: number | { id: number } } | [visitaTem
  * @see app/Http/Controllers/Admin/VisitaTemporalController.php:350
  * @route '/admin/visitas-temporales/{visitaTemporal}'
  */
-        destroyForm.delete = (args: { visitaTemporal: number | { id: number } } | [visitaTemporal: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
+        destroyForm.delete = (args: { visitaTemporal: string | number | { id: string | number } } | [visitaTemporal: string | number | { id: string | number } ] | string | number | { id: string | number }, options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
             action: destroy.url(args, {
                         [options?.mergeQuery ? 'mergeQuery' : 'query']: {
                             _method: 'DELETE',
