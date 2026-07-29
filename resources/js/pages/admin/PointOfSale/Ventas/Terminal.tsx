@@ -763,157 +763,142 @@ export default function Terminal({
         <>
             <Head title={__('Terminal POS - Ventas')} />
 
-            <div className="space-y-4 flex flex-col flex-1 min-h-[calc(100vh-7rem)]">
-                <Breadcrumbs breadcrumbs={breadcrumbs} />
+            <div className="space-y-2 flex flex-col flex-1 min-h-0 h-[calc(100vh-9.5rem)] lg:h-[calc(100vh-10.5rem)]">
+                {/* BARRA SUPERIOR COMPACTA DE ACCIONES Y ATAJOS DEL POS */}
+                <div className="bg-white dark:bg-slate-900 border rounded-xl px-3 py-2 shadow-sm flex flex-wrap items-center justify-between gap-2 shrink-0">
+                    <div className="flex items-center gap-2">
+                        {/* Status Badge de Caja */}
+                        {activeRegister ? (
+                            <Badge className="bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border-emerald-500/30 font-bold px-2.5 py-1 text-xs">
+                                <CheckCircle2 className="w-3.5 h-3.5 mr-1" />
+                                {__('Caja')} #{activeRegister.id} {__('Abierta')}
+                            </Badge>
+                        ) : (
+                            <Badge variant="destructive" className="font-bold px-2.5 py-1 text-xs">
+                                <AlertCircle className="w-3.5 h-3.5 mr-1" />
+                                {__('Sin Caja Abierta')}
+                            </Badge>
+                        )}
 
-                {/* Banner de Estado de Caja y Resumen Eleventa */}
-                <div className="bg-white dark:bg-slate-900 border rounded-xl p-4 shadow-sm space-y-3">
-                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-                        <div className="flex items-center gap-3">
-                            <div className="w-10 h-10 rounded-lg bg-blue-600 text-white flex items-center justify-center font-bold shadow-sm">
-                                <ShoppingCart className="w-5 h-5" />
-                            </div>
-                            <div>
-                                <h1 className="text-lg font-bold text-slate-900 dark:text-slate-100 flex items-center gap-2">
-                                    {__('Terminal de Ventas POS')}
-                                    {activeRegister ? (
-                                        <Badge className="bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border-emerald-500/30">
-                                            <CheckCircle2 className="w-3.5 h-3.5 mr-1" />
-                                            {__('Caja')} #{activeRegister.id} {__('Abierta')}
-                                        </Badge>
-                                    ) : (
-                                        <Badge variant="destructive">
-                                            <AlertCircle className="w-3.5 h-3.5 mr-1" />
-                                            {__('Sin Caja Abierta')}
-                                        </Badge>
-                                    )}
-                                </h1>
-                                <p className="text-xs text-muted-foreground">
-                                    {__('Sistema de Cobro de Alta Velocidad. Use atajos F1-F12 para operar.')}
-                                </p>
-                            </div>
-                        </div>
+                        {/* MÓDULO VALOR DEL DÓLAR (CAMBIO USD) */}
+                        <Button
+                            type="button"
+                            variant="outline"
+                            size="sm"
+                            className="h-8 text-xs gap-1.5 bg-emerald-50 dark:bg-emerald-950/60 text-emerald-800 dark:text-emerald-300 border border-emerald-400 dark:border-emerald-700 font-extrabold shadow-sm hover:bg-emerald-100 dark:hover:bg-emerald-900/60 transition-all"
+                            onClick={() => setIsDolarModalOpen(true)}
+                        >
+                            <Coins className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
+                            <span>$1 USD = ${valorDolar.toFixed(2)} MXN</span>
+                            <Edit3 className="w-3 h-3 ml-0.5 opacity-70" />
+                        </Button>
+                    </div>
 
-                        {/* Botones de Atajos Rápidos Eleventa & Módulo Valor del Dólar */}
-                        <div className="flex flex-wrap items-center gap-1.5">
-                            {/* MÓDULO VALOR DEL DÓLAR (CAMBIO USD) */}
-                            <Button
-                                type="button"
-                                variant="outline"
-                                className="h-9 text-sm gap-2 bg-emerald-50 dark:bg-emerald-950/60 text-emerald-800 dark:text-emerald-300 border-2 border-emerald-400 dark:border-emerald-700 font-extrabold shadow-sm hover:bg-emerald-100 dark:hover:bg-emerald-900/60 transition-all"
-                                onClick={() => setIsDolarModalOpen(true)}
-                            >
-                                <Coins className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
-                                <span>$1 USD = ${valorDolar.toFixed(2)} MXN</span>
-                                <Edit3 className="w-3.5 h-3.5 ml-0.5 opacity-70" />
-                            </Button>
+                    {/* Botones de Atajos Rápidos */}
+                    <div className="flex flex-wrap items-center gap-1.5">
+                        <Button
+                            type="button"
+                            variant="outline"
+                            size="sm"
+                            className="h-8 text-xs gap-1 bg-slate-50 dark:bg-slate-800"
+                            onClick={() => setIsSearchModalOpen(true)}
+                        >
+                            <Search className="w-3.5 h-3.5 text-blue-500" />
+                            <span className="font-bold">[F10]</span> {__('Buscar')}
+                        </Button>
 
-                            {/* BOTÓN F8 CORTE DE CAJA */}
-                            {activeRegister && (
-                                <Button
-                                    type="button"
-                                    variant="outline"
-                                    size="sm"
-                                    className="text-xs gap-1 bg-amber-500/10 text-amber-700 dark:text-amber-300 border-amber-300 font-bold"
-                                    onClick={() => setIsCorteOpen(true)}
-                                >
-                                    <Calculator className="w-3.5 h-3.5 text-amber-600" />
-                                    <span>[F8]</span> {__('Corte de Caja')}
-                                </Button>
-                            )}
+                        <Button
+                            type="button"
+                            variant="outline"
+                            size="sm"
+                            className="h-8 text-xs gap-1 bg-slate-50 dark:bg-slate-800"
+                            onClick={() => setIsVerifierOpen(true)}
+                        >
+                            <Eye className="w-3.5 h-3.5 text-indigo-500" />
+                            <span className="font-bold">[F9]</span> {__('Verificador')}
+                        </Button>
 
-                            {/* BOTÓN ENTRADAS Y SALIDAS */}
-                            {activeRegister && (
-                                <Button
-                                    type="button"
-                                    variant="outline"
-                                    size="sm"
-                                    className="text-xs gap-1 bg-slate-50 dark:bg-slate-800"
-                                    onClick={() => setIsMovementModalOpen(true)}
-                                >
-                                    <ArrowUpRight className="w-3.5 h-3.5 text-rose-500" />
-                                    {__('Entrada/Salida')}
-                                </Button>
-                            )}
+                        <Button
+                            type="button"
+                            variant="outline"
+                            size="sm"
+                            className="h-8 text-xs gap-1 bg-slate-50 dark:bg-slate-800"
+                            onClick={() => setIsMiscModalOpen(true)}
+                        >
+                            <Tag className="w-3.5 h-3.5 text-amber-500" />
+                            <span className="font-bold">[INS]</span> {__('Art. Vario')}
+                        </Button>
 
-                            <Button
-                                type="button"
-                                variant="outline"
-                                size="sm"
-                                className="text-xs gap-1 bg-slate-50 dark:bg-slate-800"
-                                onClick={() => setIsSearchModalOpen(true)}
-                            >
-                                <Search className="w-3.5 h-3.5 text-blue-500" />
-                                <span className="font-bold">[F10]</span> {__('Buscar')}
-                            </Button>
+                        <Button
+                            type="button"
+                            variant="outline"
+                            size="sm"
+                            className="h-8 text-xs gap-1 bg-slate-50 dark:bg-slate-800"
+                            onClick={() => setIsNewClientModalOpen(true)}
+                        >
+                            <User className="w-3.5 h-3.5 text-purple-500" />
+                            <span className="font-bold">[F6]</span> {__('Cliente')}
+                        </Button>
 
+                        {activeRegister && (
                             <Button
                                 type="button"
                                 variant="outline"
                                 size="sm"
-                                className="text-xs gap-1 bg-slate-50 dark:bg-slate-800"
-                                onClick={() => setIsVerifierOpen(true)}
+                                className="h-8 text-xs gap-1 bg-slate-50 dark:bg-slate-800"
+                                onClick={() => setIsMovementModalOpen(true)}
                             >
-                                <Eye className="w-3.5 h-3.5 text-indigo-500" />
-                                <span className="font-bold">[F9]</span> {__('Verificador')}
+                                <ArrowUpRight className="w-3.5 h-3.5 text-rose-500" />
+                                {__('Entrada/Salida')}
                             </Button>
+                        )}
 
+                        {activeRegister && (
                             <Button
                                 type="button"
                                 variant="outline"
                                 size="sm"
-                                className="text-xs gap-1 bg-slate-50 dark:bg-slate-800"
-                                onClick={() => setIsMiscModalOpen(true)}
+                                className="h-8 text-xs gap-1 bg-amber-500/10 text-amber-700 dark:text-amber-300 border-amber-300 font-bold"
+                                onClick={() => setIsCorteOpen(true)}
                             >
-                                <Tag className="w-3.5 h-3.5 text-amber-500" />
-                                <span className="font-bold">[INS]</span> {__('Art. Vario')}
+                                <Calculator className="w-3.5 h-3.5 text-amber-600" />
+                                <span>[F8]</span> {__('Corte de Caja')}
                             </Button>
+                        )}
 
+                        {activeTicket.cart.length > 0 && (
                             <Button
                                 type="button"
                                 variant="outline"
                                 size="sm"
-                                className="text-xs gap-1 bg-slate-50 dark:bg-slate-800"
-                                onClick={() => setIsNewClientModalOpen(true)}
+                                className="h-8 text-xs gap-1 bg-amber-50 dark:bg-amber-950/20 text-amber-600 border-amber-200"
+                                onClick={() => setIsHoldOpen(true)}
                             >
-                                <User className="w-3.5 h-3.5 text-purple-500" />
-                                <span className="font-bold">[F6]</span> {__('Cliente')}
+                                <Pause className="w-3.5 h-3.5" />
+                                <span className="font-bold">[F5]</span> {__('En Espera')}
                             </Button>
+                        )}
 
-                            {activeTicket.cart.length > 0 && (
-                                <Button
-                                    type="button"
-                                    variant="outline"
-                                    size="sm"
-                                    className="text-xs gap-1 bg-amber-50 dark:bg-amber-950/20 text-amber-600 border-amber-200"
-                                    onClick={() => setIsHoldOpen(true)}
-                                >
-                                    <Pause className="w-3.5 h-3.5" />
-                                    <span className="font-bold">[F5]</span> {__('En Espera')}
-                                </Button>
-                            )}
-
-                            <Button
-                                type="button"
-                                className="bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs gap-1.5 px-4"
-                                disabled={activeTicket.cart.length === 0 || !activeRegister}
-                                onClick={handleOpenPayment}
-                            >
-                                <DollarSign className="w-4 h-4" />
-                                <span className="font-extrabold">[F12]</span> {__('Cobrar')}
-                            </Button>
-                        </div>
+                        <Button
+                            type="button"
+                            className="h-8 bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs gap-1.5 px-3"
+                            disabled={activeTicket.cart.length === 0 || !activeRegister}
+                            onClick={handleOpenPayment}
+                        >
+                            <DollarSign className="w-4 h-4" />
+                            <span className="font-extrabold">[F12]</span> {__('Cobrar')}
+                        </Button>
                     </div>
                 </div>
 
                 {/* Banner Alerta Sin Caja */}
                 {!activeRegister && (
-                    <Alert variant="destructive">
+                    <Alert variant="destructive" className="py-2 shrink-0">
                         <AlertCircle className="h-4 w-4" />
-                        <AlertTitle>{__('Atención: No existe una caja abierta')}</AlertTitle>
-                        <AlertDescription className="flex items-center justify-between">
+                        <AlertTitle className="text-xs font-bold">{__('Atención: No existe una caja abierta')}</AlertTitle>
+                        <AlertDescription className="flex items-center justify-between text-xs">
                             <span>{__('Para procesar cobros e ingresar pagos debe realizar la apertura de su turno de caja.')}</span>
-                            <Button size="sm" variant="outline" className="bg-white text-slate-900 font-bold" onClick={() => router.get('/admin/cajas')}>
+                            <Button size="sm" variant="outline" className="bg-white text-slate-900 font-bold h-7 text-xs" onClick={() => router.get('/admin/cajas')}>
                                 {__('Aperturar Caja')}
                             </Button>
                         </AlertDescription>
@@ -922,7 +907,7 @@ export default function Terminal({
 
                 {/* Bar de Ventas en Espera si existen */}
                 {heldSales.length > 0 && (
-                    <div className="rounded-xl border p-3 bg-amber-50/60 dark:bg-amber-950/20 border-amber-200 dark:border-amber-900 flex items-center justify-between gap-4">
+                    <div className="rounded-xl border p-2 bg-amber-50/60 dark:bg-amber-950/20 border-amber-200 dark:border-amber-900 flex items-center justify-between gap-4 shrink-0">
                         <div className="flex items-center gap-2 text-xs font-bold text-amber-800 dark:text-amber-300">
                             <Pause className="w-4 h-4" />
                             {__('Ventas Retenidas / En Espera')}:
@@ -942,14 +927,14 @@ export default function Terminal({
                 )}
 
                 {/* ===== PESTAÑAS DE TICKETS MÚLTIPLES (TICKET 1, TICKET 2, ETC.) ===== */}
-                <div className="flex items-center justify-between border-b pb-2 gap-2 overflow-x-auto">
+                <div className="flex items-center justify-between border-b pb-1 gap-2 overflow-x-auto shrink-0">
                     <div className="flex items-center gap-1.5">
                         {tickets.map((ticket) => (
                             <div
                                 key={ticket.id}
                                 onClick={() => setActiveTicketId(ticket.id)}
                                 className={cn(
-                                    'flex items-center gap-2 px-4 py-2 rounded-t-lg text-xs font-bold cursor-pointer transition-all border border-b-0',
+                                    'flex items-center gap-2 px-3 py-1.5 rounded-t-lg text-xs font-bold cursor-pointer transition-all border border-b-0',
                                     activeTicketId === ticket.id
                                         ? 'bg-blue-600 text-white border-blue-600 shadow-sm'
                                         : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-700'
@@ -975,28 +960,28 @@ export default function Terminal({
                         ))}
                     </div>
 
-                    <Button type="button" variant="outline" size="sm" onClick={addTicketTab} className="h-8 text-xs font-bold gap-1">
+                    <Button type="button" variant="outline" size="sm" onClick={addTicketTab} className="h-7 text-xs font-bold gap-1">
                         <Plus className="w-3.5 h-3.5" />
                         {__('Nuevo Ticket')}
                     </Button>
                 </div>
 
                 {/* ===== BARRA PRINCIPAL DE ESCÁNER Y BÚSQUEDA RÁPIDA PREDICITVA ===== */}
-                <div className="relative">
-                    <form onSubmit={handleBarcodeSubmit} className="bg-white dark:bg-slate-900 border rounded-xl p-3 shadow-sm flex gap-3 items-center">
+                <div className="relative shrink-0">
+                    <form onSubmit={handleBarcodeSubmit} className="bg-white dark:bg-slate-900 border rounded-xl p-2 shadow-sm flex gap-2.5 items-center">
                         <div className="relative flex-1">
-                            <Barcode className="absolute left-3.5 top-3 h-5 w-5 text-indigo-500" />
+                            <Barcode className="absolute left-3 top-2.5 h-4 w-4 text-indigo-500" />
                             <Input
                                 ref={barcodeInputRef}
                                 value={barcodeInput}
                                 onChange={(e) => setBarcodeInput(e.target.value)}
                                 onKeyDown={handleBarcodeKeyDown}
                                 placeholder={__('Escriba código de barras, nombre de producto o escanee...')}
-                                className="pl-11 h-11 text-base font-mono font-semibold text-slate-900 dark:text-slate-100 bg-slate-50 dark:bg-slate-800/60"
+                                className="pl-9 h-9 text-sm font-mono font-semibold text-slate-900 dark:text-slate-100 bg-slate-50 dark:bg-slate-800/60"
                             />
                         </div>
-                        <Button type="submit" className="h-11 px-6 bg-indigo-600 hover:bg-indigo-700 text-white font-bold gap-2">
-                            <Plus className="w-4 h-4" />
+                        <Button type="submit" className="h-9 px-4 bg-indigo-600 hover:bg-indigo-700 text-white font-bold gap-2 text-xs">
+                            <Plus className="w-3.5 h-3.5" />
                             {__('ENTER - Agregar Producto')}
                         </Button>
                     </form>
@@ -1004,13 +989,13 @@ export default function Terminal({
                     {/* MENÚ DESPLEGABLE PREDICTIVO DE BÚSQUEDA MANUAL */}
                     {barcodeInput.trim().length > 0 && liveSearchResults.length > 0 && (
                         <div className="absolute top-full left-0 right-0 z-50 mt-1 bg-white dark:bg-slate-900 border rounded-xl shadow-2xl overflow-hidden divide-y">
-                            <div className="p-2.5 bg-slate-100/80 dark:bg-slate-800/80 text-xs font-bold text-muted-foreground flex justify-between items-center border-b">
+                            <div className="p-2 bg-slate-100/80 dark:bg-slate-800/80 text-xs font-bold text-muted-foreground flex justify-between items-center border-b">
                                 <span>{__('Resultados Coincidentes')} ({liveSearchResults.length})</span>
                                 <span className="font-mono text-[11px] text-indigo-600 dark:text-indigo-400">
                                     {__('Use teclas ↑ ↓ para navegar, ENTER o Clic para seleccionar')}
                                 </span>
                             </div>
-                            <div className="max-h-[320px] overflow-y-auto divide-y">
+                            <div className="max-h-[300px] overflow-y-auto divide-y">
                                 {liveSearchResults.map((item, idx) => (
                                     <div
                                         key={`${item.tipo}-${item.id}`}
@@ -1021,20 +1006,20 @@ export default function Terminal({
                                         }}
                                         onMouseEnter={() => setSelectedIndex(idx)}
                                         className={cn(
-                                            "p-3.5 flex items-center justify-between gap-4 cursor-pointer transition-colors",
+                                            "p-3 flex items-center justify-between gap-4 cursor-pointer transition-colors",
                                             selectedIndex === idx
                                                 ? "bg-indigo-50 dark:bg-indigo-950/70 border-l-4 border-l-indigo-600"
                                                 : "hover:bg-slate-50 dark:hover:bg-slate-800/60"
                                         )}
                                     >
                                         <div className="flex items-center gap-3 min-w-0">
-                                            <div className="w-9 h-9 rounded-lg bg-indigo-100 dark:bg-indigo-950 text-indigo-600 flex items-center justify-center font-bold shrink-0">
+                                            <div className="w-8 h-8 rounded-lg bg-indigo-100 dark:bg-indigo-950 text-indigo-600 flex items-center justify-center font-bold shrink-0">
                                                 {item.tipo === 'producto' ? <Package className="w-4 h-4" /> : <Wrench className="w-4 h-4" />}
                                             </div>
                                             <div className="min-w-0">
                                                 <div className="flex items-center gap-2 mb-0.5">
-                                                    <span className="font-bold text-base text-slate-900 dark:text-slate-100 truncate">{item.nombre}</span>
-                                                    <span className="font-mono text-xs font-bold text-muted-foreground bg-slate-100 dark:bg-slate-800 px-2 py-0.5 rounded border">
+                                                    <span className="font-bold text-sm text-slate-900 dark:text-slate-100 truncate">{item.nombre}</span>
+                                                    <span className="font-mono text-[11px] font-bold text-muted-foreground bg-slate-100 dark:bg-slate-800 px-1.5 py-0.5 rounded border">
                                                         {item.codigo}
                                                     </span>
                                                 </div>
@@ -1050,7 +1035,7 @@ export default function Terminal({
                                         </div>
 
                                         <div className="text-right shrink-0">
-                                            <span className="font-mono font-black text-lg text-emerald-600 dark:text-emerald-400 block">
+                                            <span className="font-mono font-black text-base text-emerald-600 dark:text-emerald-400 block">
                                                 {currencySymbol}{item.precio.toFixed(2)}
                                             </span>
                                             {valorDolar > 0 && (
@@ -1066,17 +1051,17 @@ export default function Terminal({
                     )}
                 </div>
 
-                {/* ===== PANTALLA COMPLETA 100% ANCHO PARA EL CARRITO ELEVENTA ===== */}
-                <div className="bg-white dark:bg-slate-900 border rounded-xl shadow-sm overflow-hidden flex flex-col flex-1 min-h-[460px]">
-                    <div className="p-4 border-b bg-slate-50/50 dark:bg-slate-800/50 flex items-center justify-between">
-                        <div className="flex items-center gap-2 font-bold text-sm">
+                {/* ===== PANTALLA COMPLETA DURA FLEXIBLE PARA EL CARRITO ELEVENTA ===== */}
+                <div className="bg-white dark:bg-slate-900 border rounded-xl shadow-sm overflow-hidden flex flex-col flex-1 min-h-0">
+                    <div className="p-2.5 border-b bg-slate-50/50 dark:bg-slate-800/50 flex items-center justify-between shrink-0">
+                        <div className="flex items-center gap-2 font-bold text-xs">
                             <Receipt className="w-4 h-4 text-indigo-600" />
                             <span>{activeTicket.name} — {__('Detalle de Artículos')}</span>
                         </div>
 
                         <div className="flex items-center gap-3">
                             {/* Indicador de Cliente Asignado */}
-                            <div className="flex items-center gap-1.5 bg-slate-100 dark:bg-slate-800 px-3 py-1 rounded-full text-xs">
+                            <div className="flex items-center gap-1.5 bg-slate-100 dark:bg-slate-800 px-2.5 py-0.5 rounded-full text-xs">
                                 <User className="w-3.5 h-3.5 text-indigo-500" />
                                 <span className="font-semibold text-slate-800 dark:text-slate-200">{activeTicket.clienteNombre}</span>
                                 {activeTicket.clienteId && (
@@ -1091,7 +1076,7 @@ export default function Terminal({
                             </div>
 
                             {activeTicket.cart.length > 0 && (
-                                <Button type="button" variant="ghost" size="sm" onClick={clearActiveCart} className="text-xs text-rose-500 hover:text-rose-700 h-8">
+                                <Button type="button" variant="ghost" size="sm" onClick={clearActiveCart} className="text-xs text-rose-500 hover:text-rose-700 h-6 px-2">
                                     <Trash2 className="w-3.5 h-3.5 mr-1" />
                                     {__('Vaciar Ticket')}
                                 </Button>
@@ -1099,45 +1084,45 @@ export default function Terminal({
                         </div>
                     </div>
 
-                    {/* TABLA PRINCIPAL DE ELEMENTOS QUE SE EXPANDE VERTICALMENTE */}
-                    <div className="flex-1 overflow-x-auto overflow-y-auto min-h-[350px]">
+                    {/* TABLA PRINCIPAL DE ELEMENTOS QUE SE EXPANDE Y ADAPTA AL ALTO DE LA PANTALLA */}
+                    <div className="flex-1 overflow-x-auto overflow-y-auto min-h-0">
                         <table className="w-full text-left text-sm">
-                            <thead className="bg-slate-100/80 dark:bg-slate-800/80 text-xs font-bold uppercase text-muted-foreground border-b sticky top-0">
+                            <thead className="bg-slate-100/80 dark:bg-slate-800/80 text-xs font-bold uppercase text-muted-foreground border-b sticky top-0 z-10">
                                 <tr>
-                                    <th className="py-3 px-6">{__('Código de Barras')}</th>
-                                    <th className="py-3 px-6">{__('Descripción del Producto')}</th>
-                                    <th className="py-3 px-6 text-right">{__('Precio Venta')}</th>
-                                    <th className="py-3 px-6 text-center">{__('Cant.')}</th>
-                                    <th className="py-3 px-6 text-right">{__('Importe')}</th>
-                                    <th className="py-3 px-6 text-center">{__('Existencia')}</th>
-                                    <th className="py-3 px-6 text-center">{__('Acción')}</th>
+                                    <th className="py-2.5 px-5">{__('Código de Barras')}</th>
+                                    <th className="py-2.5 px-5">{__('Descripción del Producto')}</th>
+                                    <th className="py-2.5 px-5 text-right">{__('Precio Venta')}</th>
+                                    <th className="py-2.5 px-5 text-center">{__('Cant.')}</th>
+                                    <th className="py-2.5 px-5 text-right">{__('Importe')}</th>
+                                    <th className="py-2.5 px-5 text-center">{__('Existencia')}</th>
+                                    <th className="py-2.5 px-5 text-center">{__('Acción')}</th>
                                 </tr>
                             </thead>
                             <tbody className="divide-y font-medium text-slate-800 dark:text-slate-200">
                                 {activeTicket.cart.length > 0 ? (
                                     activeTicket.cart.map((item) => (
                                         <tr key={item.id} className="hover:bg-slate-50/80 dark:hover:bg-slate-800/40 transition-colors">
-                                            <td className="py-3.5 px-6 font-mono text-xs text-muted-foreground">{item.codigo}</td>
-                                            <td className="py-3.5 px-6">
-                                                <span className="font-bold text-base block text-slate-900 dark:text-slate-100">{item.nombre}</span>
-                                                <span className="text-xs text-muted-foreground capitalize">{item.concepto_tipo}</span>
+                                            <td className="py-2.5 px-5 font-mono text-xs text-muted-foreground">{item.codigo}</td>
+                                            <td className="py-2.5 px-5">
+                                                <span className="font-bold text-sm block text-slate-900 dark:text-slate-100">{item.nombre}</span>
+                                                <span className="text-[11px] text-muted-foreground capitalize">{item.concepto_tipo}</span>
                                             </td>
-                                            <td className="py-3.5 px-6 text-right font-mono font-bold text-base">{currencySymbol}{item.precio_unitario.toFixed(2)}</td>
-                                            <td className="py-3.5 px-6">
-                                                <div className="flex items-center justify-center gap-2">
-                                                    <Button type="button" variant="outline" size="icon" className="h-7 w-7" onClick={() => updateQuantity(item.id, -1)}>
-                                                        <Minus className="h-3.5 w-3.5" />
+                                            <td className="py-2.5 px-5 text-right font-mono font-bold text-sm">{currencySymbol}{item.precio_unitario.toFixed(2)}</td>
+                                            <td className="py-2.5 px-5">
+                                                <div className="flex items-center justify-center gap-1.5">
+                                                    <Button type="button" variant="outline" size="icon" className="h-6 w-6" onClick={() => updateQuantity(item.id, -1)}>
+                                                        <Minus className="h-3 w-3" />
                                                     </Button>
-                                                    <span className="w-10 text-center font-mono font-bold text-base">{item.cantidad}</span>
-                                                    <Button type="button" variant="outline" size="icon" className="h-7 w-7" onClick={() => updateQuantity(item.id, 1)}>
-                                                        <Plus className="h-3.5 w-3.5" />
+                                                    <span className="w-8 text-center font-mono font-bold text-sm">{item.cantidad}</span>
+                                                    <Button type="button" variant="outline" size="icon" className="h-6 w-6" onClick={() => updateQuantity(item.id, 1)}>
+                                                        <Plus className="h-3 w-3" />
                                                     </Button>
                                                 </div>
                                             </td>
-                                            <td className="py-3.5 px-6 text-right font-mono font-extrabold text-lg text-indigo-600 dark:text-indigo-400">
+                                            <td className="py-2.5 px-5 text-right font-mono font-extrabold text-base text-indigo-600 dark:text-indigo-400">
                                                 {currencySymbol}{(item.precio_unitario * item.cantidad).toFixed(2)}
                                             </td>
-                                            <td className="py-3.5 px-6 text-center font-mono text-xs">
+                                            <td className="py-2.5 px-5 text-center font-mono text-xs">
                                                 {item.stock !== null ? (
                                                     <Badge variant="outline" className={cn("text-xs font-bold px-2 py-0.5", item.stock > 5 ? "bg-emerald-50 text-emerald-700 border-emerald-200" : "bg-rose-50 text-rose-700 border-rose-200")}>
                                                         {item.stock}
@@ -1146,7 +1131,7 @@ export default function Terminal({
                                                     <span className="text-muted-foreground font-bold">∞</span>
                                                 )}
                                             </td>
-                                            <td className="py-3.5 px-6 text-center">
+                                            <td className="py-2.5 px-5 text-center">
                                                 <button type="button" onClick={() => removeFromCart(item.id)} className="text-rose-500 hover:text-rose-700 transition-colors p-1 rounded hover:bg-rose-50">
                                                     <Trash2 className="w-4 h-4 mx-auto" />
                                                 </button>
@@ -1155,10 +1140,10 @@ export default function Terminal({
                                     ))
                                 ) : (
                                     <tr>
-                                        <td colSpan={7} className="py-20 text-center text-muted-foreground">
-                                            <ShoppingCart className="w-16 h-16 mx-auto mb-3 opacity-20" />
-                                            <p className="font-bold text-lg text-slate-700 dark:text-slate-300">{__('Ticket Vacío')}</p>
-                                            <p className="text-sm text-muted-foreground mt-1 max-w-sm mx-auto">
+                                        <td colSpan={7} className="py-8 text-center text-muted-foreground">
+                                            <ShoppingCart className="w-10 h-10 mx-auto mb-2 opacity-20" />
+                                            <p className="font-bold text-base text-slate-700 dark:text-slate-300">{__('Ticket Vacío')}</p>
+                                            <p className="text-xs text-muted-foreground mt-0.5 max-w-sm mx-auto">
                                                 {__('Ingrese o escanee el código del producto arriba, presione [ENTER] o abra el buscador [F10] para agregar artículos.')}
                                             </p>
                                         </td>
@@ -1169,9 +1154,9 @@ export default function Terminal({
                     </div>
 
                     {/* RESUMEN INFERIOR CON CONVERSIÓN A DÓLARES */}
-                    <div className="p-4 border-t bg-slate-50 dark:bg-slate-950 flex flex-col sm:flex-row items-center justify-between gap-4 mt-auto">
-                        <div className="space-y-1">
-                            <span className="text-sm font-bold text-slate-700 dark:text-slate-300 block">
+                    <div className="p-3 px-4 border-t bg-slate-50 dark:bg-slate-950 flex flex-col sm:flex-row items-center justify-between gap-3 shrink-0">
+                        <div className="space-y-0.5">
+                            <span className="text-xs font-bold text-slate-700 dark:text-slate-300 block">
                                 {totalItemsCount} {__('Productos en la venta actual.')}
                             </span>
                             {activeTicket.descuento > 0 && (
@@ -1181,24 +1166,24 @@ export default function Terminal({
                             )}
                         </div>
 
-                        <div className="flex items-center gap-5">
+                        <div className="flex items-center gap-4">
                             <div className="text-right">
-                                <span className="text-xs font-bold text-muted-foreground uppercase tracking-wider block">
+                                <span className="text-[11px] font-bold text-muted-foreground uppercase tracking-wider block">
                                     {isVenezuela ? __('Total a Pagar en Bolívares (Bs.)') : __('Total a Pagar')}
                                 </span>
                                 <div className="flex items-baseline justify-end gap-2">
                                     {isVenezuela ? (
                                         <>
-                                            <span className="text-3xl font-extrabold font-mono text-emerald-600 dark:text-emerald-400">
+                                            <span className="text-2xl font-extrabold font-mono text-emerald-600 dark:text-emerald-400">
                                                 Bs. {(total * valorDolar).toLocaleString('es-VE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                                             </span>
-                                            <span className="text-xs font-bold font-mono text-indigo-700 dark:text-indigo-300 bg-indigo-50 dark:bg-indigo-950/40 px-2.5 py-1 rounded-lg border border-indigo-200">
+                                            <span className="text-xs font-bold font-mono text-indigo-700 dark:text-indigo-300 bg-indigo-50 dark:bg-indigo-950/40 px-2 py-0.5 rounded-lg border border-indigo-200">
                                                 💵 ${total.toFixed(2)} USD
                                             </span>
                                         </>
                                     ) : (
                                         <>
-                                            <span className="text-3xl font-extrabold font-mono text-indigo-600 dark:text-indigo-400">
+                                            <span className="text-2xl font-extrabold font-mono text-indigo-600 dark:text-indigo-400">
                                                 {currencySymbol}{total.toFixed(2)}
                                             </span>
                                             <span className="text-xs font-bold font-mono text-emerald-700 dark:text-emerald-300 bg-emerald-50 dark:bg-emerald-950/40 px-2 py-0.5 rounded border border-emerald-200">
@@ -1211,11 +1196,11 @@ export default function Terminal({
 
                             <Button
                                 type="button"
-                                className="h-12 px-8 bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-base shadow-md gap-2"
+                                className="h-10 px-6 bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-sm shadow-md gap-2"
                                 disabled={activeTicket.cart.length === 0 || !activeRegister}
                                 onClick={handleOpenPayment}
                             >
-                                <DollarSign className="w-5 h-5" />
+                                <DollarSign className="w-4.5 h-4.5" />
                                 [F12] {__('Cobrar')}
                             </Button>
                         </div>

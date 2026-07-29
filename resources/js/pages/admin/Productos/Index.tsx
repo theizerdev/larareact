@@ -450,11 +450,11 @@ export default function Index({ productos, categorias: categoriasProp, marcas: m
         if (!nombreTarget) return;
 
         const marcaTargetId = selMarcaId !== 'all' ? selMarcaId : (marcas[0]?.id ? String(marcas[0].id) : '');
-        const familiaTargetId = selFamiliaId !== 'all' ? selFamiliaId : (familias[0]?.id ? String(familias[0].id) : '');
+        const familiaTargetId = selFamiliaId !== 'all' ? selFamiliaId : (familias[0]?.id ? String(familias[0].id) : '1');
         const categoriaTargetId = selCategoriaId !== 'all' ? selCategoriaId : (categorias[0]?.id ? String(categorias[0].id) : '');
 
-        if (!marcaTargetId || !familiaTargetId) {
-            notifyError(__('Debes tener seleccionada una marca y una familia para crear el modelo.'));
+        if (!marcaTargetId) {
+            notifyError(__('Debes tener seleccionada una marca para crear el modelo.'));
             return;
         }
 
@@ -895,45 +895,91 @@ export default function Index({ productos, categorias: categoriasProp, marcas: m
 
                         <form onSubmit={handleSubmit} className="flex-1 flex flex-col min-h-0 space-y-4 py-2">
                             <Tabs value={activeTab} onValueChange={setActiveTab} className="flex-1 flex flex-col min-h-0">
-                                <TabsList className="grid grid-cols-6 w-full h-10 mb-3 bg-slate-100 dark:bg-slate-800 p-1 overflow-x-auto">
+                                <TabsList className="grid grid-cols-5 w-full h-10 mb-3 bg-slate-100 dark:bg-slate-800 p-1 overflow-x-auto">
                                     <TabsTrigger value="general" className="text-xs gap-1 data-[state=active]:bg-white dark:data-[state=active]:bg-slate-900 px-2">
                                         <Info className="h-3.5 w-3.5 text-blue-500" />
-                                        {__('1. General')}
-                                    </TabsTrigger>
-                                    <TabsTrigger value="precios" className="text-xs gap-1 data-[state=active]:bg-white dark:data-[state=active]:bg-slate-900 px-2">
-                                        <DollarSign className="h-3.5 w-3.5 text-emerald-500" />
-                                        {__('2. Precios')}
+                                        {__('1. General & Precios')}
                                     </TabsTrigger>
                                     <TabsTrigger value="impuestos" className="text-xs gap-1 data-[state=active]:bg-white dark:data-[state=active]:bg-slate-900 px-2">
                                         <Receipt className="h-3.5 w-3.5 text-indigo-500" />
-                                        {__('3. Impuestos')}
+                                        {__('2. Impuestos')}
                                     </TabsTrigger>
                                     <TabsTrigger value="cfdi" className="text-xs gap-1 data-[state=active]:bg-white dark:data-[state=active]:bg-slate-900 px-2">
                                         <FileCheck className="h-3.5 w-3.5 text-teal-500" />
-                                        {__('4. CFDI / SAT')}
+                                        {__('3. CFDI / SAT')}
                                     </TabsTrigger>
                                     <TabsTrigger value="atributos" className="text-xs gap-1 data-[state=active]:bg-white dark:data-[state=active]:bg-slate-900 px-2">
                                         <SlidersHorizontal className="h-3.5 w-3.5 text-purple-500" />
-                                        {__('5. Atributos')}
+                                        {__('4. Atributos')}
                                     </TabsTrigger>
                                     <TabsTrigger value="ficha" className="text-xs gap-1 data-[state=active]:bg-white dark:data-[state=active]:bg-slate-900 px-2">
                                         <FileText className="h-3.5 w-3.5 text-amber-500" />
-                                        {__('6. Ficha')}
+                                        {__('5. Ficha')}
                                     </TabsTrigger>
                                 </TabsList>
 
                                 <div className="flex-1 overflow-y-auto pr-1 space-y-4">
-                                    {/* PESTAÑA 1: CATÁLOGO, TIPO DE VENTA, INVENTARIO Y GENERAL */}
+                                    {/* PESTAÑA UNIFICADA: GENERAL, PRECIOS, STOCK Y CATÁLOGO */}
                                     <TabsContent value="general" className="space-y-4 m-0">
+                                        {/* 1. IDENTIFICACIÓN BÁSICA: CÓDIGO, NOMBRE DE VARIANTE Y SKU */}
                                         <div className="p-4 rounded-lg border bg-slate-50/50 dark:bg-slate-900/40 space-y-4">
                                             <span className="text-xs font-semibold text-slate-700 dark:text-slate-300 flex items-center gap-1.5">
-                                                <Layers className="h-4 w-4 text-blue-500" />
-                                                {__('Catálogo del Producto & Selección de Modelo')}
+                                                <Package className="h-4 w-4 text-blue-500" />
+                                                {__('Identificación del Producto / Variante')}
                                             </span>
 
-                                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                                {/* Categoría */}
-                                                <div className="space-y-1.5">
+                                            <div className="grid grid-cols-1 md:grid-cols-12 gap-4">
+                                                {/* Código de Barras */}
+                                                <div className="md:col-span-4 space-y-1.5">
+                                                    <Label htmlFor="codigo_barras" className="text-xs font-medium">{__('Código (EAN / UPC / Barras)')}</Label>
+                                                    <Input
+                                                        id="codigo_barras"
+                                                        value={data.codigo_barras}
+                                                        onChange={(e) => setData('codigo_barras', e.target.value)}
+                                                        placeholder="Ej: 779123456789"
+                                                        className="font-mono text-xs"
+                                                    />
+                                                    {errors.codigo_barras && <p className="text-xs text-rose-500">{errors.codigo_barras}</p>}
+                                                </div>
+
+                                                {/* Nombre de Variante */}
+                                                <div className="md:col-span-5 space-y-1.5">
+                                                    <Label htmlFor="nombre_variante" className="text-xs required">{__('Nombre de Variante')}</Label>
+                                                    <Input
+                                                        id="nombre_variante"
+                                                        value={data.nombre_variante}
+                                                        onChange={(e) => setData('nombre_variante', e.target.value)}
+                                                        placeholder="Ej: Galaxy S24 Ultra (12GB / 512GB - Titanium Black)"
+                                                        className="text-xs font-medium"
+                                                    />
+                                                    {errors.nombre_variante && <p className="text-xs text-rose-500">{errors.nombre_variante}</p>}
+                                                </div>
+
+                                                {/* SKU */}
+                                                <div className="md:col-span-3 space-y-1.5">
+                                                    <Label htmlFor="sku" className="text-xs required">{__('SKU (Código Único)')}</Label>
+                                                    <Input
+                                                        id="sku"
+                                                        value={data.sku}
+                                                        onChange={(e) => setData('sku', e.target.value)}
+                                                        placeholder="Ej: SAM-S24U-BLK"
+                                                        className="font-mono text-xs"
+                                                    />
+                                                    {errors.sku && <p className="text-xs text-rose-500">{errors.sku}</p>}
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        {/* 2. CATÁLOGO: CATEGORÍA, MARCA Y MODELO (EN UNA SOLA LÍNEA CON COL-4 CADA UNO) */}
+                                        <div className="p-4 rounded-lg border bg-slate-50/50 dark:bg-slate-900/40 space-y-4">
+                                            <span className="text-xs font-semibold text-slate-700 dark:text-slate-300 flex items-center gap-1.5">
+                                                <Layers className="h-4 w-4 text-indigo-500" />
+                                                {__('Catálogo del Producto (Categoría, Marca y Modelo)')}
+                                            </span>
+
+                                            <div className="grid grid-cols-1 md:grid-cols-12 gap-4">
+                                                {/* Categoría (col-span-4) */}
+                                                <div className="md:col-span-4 space-y-1.5">
                                                     <div className="flex items-center justify-between">
                                                         <Label htmlFor="cat_select" className="text-xs font-medium">{__('Categoría')}</Label>
                                                         <Button
@@ -960,8 +1006,8 @@ export default function Index({ productos, categorias: categoriasProp, marcas: m
                                                     />
                                                 </div>
 
-                                                {/* Marca */}
-                                                <div className="space-y-1.5">
+                                                {/* Marca (col-span-4) */}
+                                                <div className="md:col-span-4 space-y-1.5">
                                                     <div className="flex items-center justify-between">
                                                         <Label htmlFor="marca_select" className="text-xs font-medium">{__('Marca')}</Label>
                                                         <Button
@@ -988,36 +1034,8 @@ export default function Index({ productos, categorias: categoriasProp, marcas: m
                                                     />
                                                 </div>
 
-                                                {/* Familia */}
-                                                <div className="space-y-1.5">
-                                                    <div className="flex items-center justify-between">
-                                                        <Label htmlFor="fam_select" className="text-xs font-medium">{__('Familia de Equipos')}</Label>
-                                                        <Button
-                                                            type="button"
-                                                            variant="link"
-                                                            size="sm"
-                                                            onClick={() => setIsNewFamiliaOpen(true)}
-                                                            className="h-auto p-0 text-[11px] text-blue-600 dark:text-blue-400 gap-1 font-normal"
-                                                        >
-                                                            <Plus className="h-3 w-3" />
-                                                            {__('+ Nueva Familia')}
-                                                        </Button>
-                                                    </div>
-                                                    <SearchableSelect
-                                                        id="fam_select"
-                                                        value={selFamiliaId}
-                                                        onChange={(val) => setSelFamiliaId(val)}
-                                                        options={[
-                                                            { value: 'all', label: __('Todas las familias') },
-                                                            ...filteredFamilias.map((f) => ({ value: String(f.id), label: f.nombre }))
-                                                        ]}
-                                                        placeholder={__('Todas las familias')}
-                                                        searchPlaceholder={__('Buscar familia...')}
-                                                    />
-                                                </div>
-
-                                                {/* Modelo (Obligatorio) */}
-                                                <div className="space-y-1.5">
+                                                {/* Modelo (col-span-4 - Obligatorio) */}
+                                                <div className="md:col-span-4 space-y-1.5">
                                                     <div className="flex items-center justify-between">
                                                         <Label htmlFor="modelo_select" className="text-xs font-semibold text-blue-600 dark:text-blue-400 required">{__('Modelo Exacto')}</Label>
                                                         <Button
@@ -1040,143 +1058,19 @@ export default function Index({ productos, categorias: categoriasProp, marcas: m
                                                             label: m.nombre,
                                                             description: `${m.marca} • ${m.categoria}`
                                                         }))}
-                                                        placeholder={__('Buscar y seleccionar modelo exacto...')}
-                                                        searchPlaceholder={__('Escribe para buscar (Ej: iPhone, S24, Xiaomi)...')}
+                                                        placeholder={__('Buscar y seleccionar modelo...')}
+                                                        searchPlaceholder={__('Escribe para buscar...')}
                                                     />
                                                     {errors.modelo_id && <p className="text-xs text-rose-500">{errors.modelo_id}</p>}
                                                 </div>
                                             </div>
                                         </div>
 
-                                        {/* Modalidad de Venta e Inventario */}
-                                        <div className="p-4 rounded-lg border bg-slate-50/50 dark:bg-slate-900/40 space-y-4">
-                                            <span className="text-xs font-semibold text-slate-700 dark:text-slate-300 flex items-center gap-1.5">
-                                                <Scale className="h-4 w-4 text-purple-500" />
-                                                {__('Modalidad de Venta & Control de Inventario')}
-                                            </span>
-
-                                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                                {/* ¿Cómo se vende? */}
-                                                <div className="space-y-2">
-                                                    <Label htmlFor="tipo_venta" className="required font-medium">{__('¿Cómo se vende?')}</Label>
-                                                    <Select
-                                                        value={data.tipo_venta}
-                                                        onValueChange={(val: any) => setData('tipo_venta', val)}
-                                                    >
-                                                        <SelectTrigger id="tipo_venta" className="w-full">
-                                                            <SelectValue />
-                                                        </SelectTrigger>
-                                                        <SelectContent className="w-[var(--radix-select-trigger-width)]">
-                                                            <SelectItem value="unidad">{__('Por unidad / pza')}</SelectItem>
-                                                            <SelectItem value="granel">{__('A granel (usa decimales)')}</SelectItem>
-                                                            <SelectItem value="paquete">{__('Como paquete / kit')}</SelectItem>
-                                                        </SelectContent>
-                                                    </Select>
-                                                    <p className="text-[11px] text-muted-foreground">
-                                                        {data.tipo_venta === 'granel'
-                                                            ? __('Permite vender cantidades fraccionadas con decimales (Ej: 1.5 kg, 0.25 m).')
-                                                            : (data.tipo_venta === 'paquete'
-                                                                ? __('Se comercializa como un kit o agrupador de productos.')
-                                                                : __('Venta estándar por unidad entera.'))}
-                                                    </p>
-                                                </div>
-
-                                                {/* ¿Maneja Inventario? */}
-                                                <div className="flex items-center justify-between rounded-lg border p-3 bg-background">
-                                                    <div className="pr-2">
-                                                        <Label className="text-xs font-semibold">{__('¿Maneja Inventario / Stock?')}</Label>
-                                                        <p className="text-[11px] text-muted-foreground mt-0.5">
-                                                            {data.usa_inventario
-                                                                ? __('Descuenta stock físico en ventas y genera alertas.')
-                                                                : __('Sin control de stock (Servicios o productos ilimitados).')}
-                                                        </p>
-                                                    </div>
-                                                    <Switch
-                                                        checked={data.usa_inventario}
-                                                        onCheckedChange={(checked) => setData('usa_inventario', checked)}
-                                                    />
-                                                </div>
-                                            </div>
-                                        </div>
-
-                                        {/* Nombre de Variante y SKU */}
-                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                            <div className="space-y-2">
-                                                <Label htmlFor="nombre_variante" className="required">{__('Nombre de Variante')}</Label>
-                                                <Input
-                                                    id="nombre_variante"
-                                                    value={data.nombre_variante}
-                                                    onChange={(e) => setData('nombre_variante', e.target.value)}
-                                                    placeholder="Ej: Galaxy S24 Ultra (12GB / 512GB - Titanium Black)"
-                                                />
-                                                {errors.nombre_variante && <p className="text-xs text-rose-500">{errors.nombre_variante}</p>}
-                                            </div>
-
-                                            <div className="space-y-2">
-                                                <Label htmlFor="sku" className="required">{__('SKU (Código Único de Producto)')}</Label>
-                                                <Input
-                                                    id="sku"
-                                                    value={data.sku}
-                                                    onChange={(e) => setData('sku', e.target.value)}
-                                                    placeholder="Ej: SAM-S24U-12-512-BLK"
-                                                    className="font-mono text-xs"
-                                                />
-                                                {errors.sku && <p className="text-xs text-rose-500">{errors.sku}</p>}
-                                            </div>
-                                        </div>
-
-                                        {/* Código de Barras y Condición */}
-                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                            <div className="space-y-2">
-                                                <Label htmlFor="codigo_barras">{__('Código de Barras (EAN / UPC)')}</Label>
-                                                <Input
-                                                    id="codigo_barras"
-                                                    value={data.codigo_barras}
-                                                    onChange={(e) => setData('codigo_barras', e.target.value)}
-                                                    placeholder="Ej: 779123456789"
-                                                    className="font-mono text-xs"
-                                                />
-                                                {errors.codigo_barras && <p className="text-xs text-rose-500">{errors.codigo_barras}</p>}
-                                            </div>
-
-                                            <div className="space-y-2">
-                                                <Label htmlFor="condicion">{__('Condición del Equipo')}</Label>
-                                                <Select
-                                                    value={data.condicion}
-                                                    onValueChange={(val: any) => setData('condicion', val)}
-                                                >
-                                                    <SelectTrigger id="condicion" className="w-full">
-                                                        <SelectValue />
-                                                    </SelectTrigger>
-                                                    <SelectContent className="w-[var(--radix-select-trigger-width)]">
-                                                        <SelectItem value="nuevo">{__('Nuevo')}</SelectItem>
-                                                        <SelectItem value="usado">{__('Usado')}</SelectItem>
-                                                        <SelectItem value="reacondicionado">{__('Reacondicionado')}</SelectItem>
-                                                        <SelectItem value="repuesto">{__('Para Repuesto')}</SelectItem>
-                                                    </SelectContent>
-                                                </Select>
-                                            </div>
-                                        </div>
-
-                                        {/* Estado Activo */}
-                                        <div className="flex items-center justify-between rounded-lg border p-3">
-                                            <div>
-                                                <Label className="text-sm font-medium">{__('Estado Activo')}</Label>
-                                                <p className="text-xs text-muted-foreground">{__('Habilita este producto para ventas y recepción de servicio.')}</p>
-                                            </div>
-                                            <Switch
-                                                checked={data.estado}
-                                                onCheckedChange={(checked) => setData('estado', checked)}
-                                            />
-                                        </div>
-                                    </TabsContent>
-
-                                    {/* PESTAÑA 2: PRECIOS Y STOCK */}
-                                    <TabsContent value="precios" className="space-y-4 m-0">
+                                        {/* 3. ESTRUCTURA DE PRECIOS Y STOCK */}
                                         <div className="p-4 rounded-lg border bg-slate-50/50 dark:bg-slate-900/40 space-y-4">
                                             <span className="text-xs font-semibold text-slate-700 dark:text-slate-300 flex items-center gap-1.5">
                                                 <DollarSign className="h-4 w-4 text-emerald-500" />
-                                                {__('Estructura de Precios (Costo, Minorista y Mayoreo)')}
+                                                {__('Estructura de Precios & Inventario')}
                                             </span>
 
                                             <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
@@ -1225,50 +1119,103 @@ export default function Index({ productos, categorias: categoriasProp, marcas: m
                                                     {errors.precio_mayoreo && <p className="text-xs text-rose-500">{errors.precio_mayoreo}</p>}
                                                 </div>
                                             </div>
+
+                                            {/* Inventario y Stock */}
+                                            <div className={cn(
+                                                "p-3 rounded-lg border space-y-3 transition-all",
+                                                data.usa_inventario ? "bg-background" : "bg-slate-100/50 opacity-60 pointer-events-none"
+                                            )}>
+                                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                                    <div className="space-y-1.5">
+                                                        <Label htmlFor="stock" className="text-xs required">{__('Stock Actual (Unidades)')}</Label>
+                                                        <Input
+                                                            id="stock"
+                                                            type="number"
+                                                            step={data.tipo_venta === 'granel' ? '0.001' : '1'}
+                                                            min="0"
+                                                            value={data.stock}
+                                                            onChange={(e) => setData('stock', Number(e.target.value))}
+                                                            className="h-9 font-semibold"
+                                                        />
+                                                        {errors.stock && <p className="text-xs text-rose-500">{errors.stock}</p>}
+                                                    </div>
+
+                                                    <div className="space-y-1.5">
+                                                        <Label htmlFor="stock_minimo" className="text-xs required">{__('Stock Mínimo (Alerta)')}</Label>
+                                                        <Input
+                                                            id="stock_minimo"
+                                                            type="number"
+                                                            step={data.tipo_venta === 'granel' ? '0.001' : '1'}
+                                                            min="0"
+                                                            value={data.stock_minimo}
+                                                            onChange={(e) => setData('stock_minimo', Number(e.target.value))}
+                                                            className="h-9"
+                                                        />
+                                                        {errors.stock_minimo && <p className="text-xs text-rose-500">{errors.stock_minimo}</p>}
+                                                    </div>
+                                                </div>
+                                            </div>
                                         </div>
 
-                                        <div className={cn(
-                                            "p-4 rounded-lg border space-y-4 transition-all",
-                                            data.usa_inventario ? "bg-slate-50/50 dark:bg-slate-900/40" : "bg-slate-100/50 opacity-60 pointer-events-none"
-                                        )}>
-                                            <span className="text-xs font-semibold text-slate-700 dark:text-slate-300 flex items-center gap-1.5">
-                                                <Boxes className="h-4 w-4 text-blue-500" />
-                                                {__('Control de Inventario & Stock Físico')}
-                                            </span>
-
-                                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                        {/* 4. MODALIDAD DE VENTA, CONDICIÓN Y ESTADO */}
+                                        <div className="p-4 rounded-lg border bg-slate-50/50 dark:bg-slate-900/40 space-y-4">
+                                            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                                                 <div className="space-y-1.5">
-                                                    <Label htmlFor="stock" className="text-xs required">{__('Stock Actual (Unidades en Sucursal)')}</Label>
-                                                    <Input
-                                                        id="stock"
-                                                        type="number"
-                                                        step={data.tipo_venta === 'granel' ? '0.001' : '1'}
-                                                        min="0"
-                                                        value={data.stock}
-                                                        onChange={(e) => setData('stock', Number(e.target.value))}
-                                                        className="h-9 font-semibold"
-                                                    />
-                                                    {errors.stock && <p className="text-xs text-rose-500">{errors.stock}</p>}
+                                                    <Label htmlFor="tipo_venta" className="text-xs required font-medium">{__('¿Cómo se vende?')}</Label>
+                                                    <Select
+                                                        value={data.tipo_venta}
+                                                        onValueChange={(val: any) => setData('tipo_venta', val)}
+                                                    >
+                                                        <SelectTrigger id="tipo_venta" className="w-full h-9 text-xs">
+                                                            <SelectValue />
+                                                        </SelectTrigger>
+                                                        <SelectContent className="w-[var(--radix-select-trigger-width)]">
+                                                            <SelectItem value="unidad">{__('Por unidad / pza')}</SelectItem>
+                                                            <SelectItem value="granel">{__('A granel (usa decimales)')}</SelectItem>
+                                                            <SelectItem value="paquete">{__('Como paquete / kit')}</SelectItem>
+                                                        </SelectContent>
+                                                    </Select>
                                                 </div>
 
                                                 <div className="space-y-1.5">
-                                                    <Label htmlFor="stock_minimo" className="text-xs required">{__('Stock Mínimo (Límite de Alerta)')}</Label>
-                                                    <Input
-                                                        id="stock_minimo"
-                                                        type="number"
-                                                        step={data.tipo_venta === 'granel' ? '0.001' : '1'}
-                                                        min="0"
-                                                        value={data.stock_minimo}
-                                                        onChange={(e) => setData('stock_minimo', Number(e.target.value))}
-                                                        className="h-9"
-                                                    />
-                                                    {errors.stock_minimo && <p className="text-xs text-rose-500">{errors.stock_minimo}</p>}
+                                                    <Label htmlFor="condicion" className="text-xs font-medium">{__('Condición del Equipo')}</Label>
+                                                    <Select
+                                                        value={data.condicion}
+                                                        onValueChange={(val: any) => setData('condicion', val)}
+                                                    >
+                                                        <SelectTrigger id="condicion" className="w-full h-9 text-xs">
+                                                            <SelectValue />
+                                                        </SelectTrigger>
+                                                        <SelectContent className="w-[var(--radix-select-trigger-width)]">
+                                                            <SelectItem value="nuevo">{__('Nuevo')}</SelectItem>
+                                                            <SelectItem value="usado">{__('Usado')}</SelectItem>
+                                                            <SelectItem value="reacondicionado">{__('Reacondicionado')}</SelectItem>
+                                                            <SelectItem value="repuesto">{__('Para Repuesto')}</SelectItem>
+                                                        </SelectContent>
+                                                    </Select>
+                                                </div>
+
+                                                <div className="grid grid-cols-2 gap-2">
+                                                    <div className="flex items-center justify-between rounded-lg border p-2 bg-background">
+                                                        <Label className="text-[11px] font-semibold">{__('Inventario')}</Label>
+                                                        <Switch
+                                                            checked={data.usa_inventario}
+                                                            onCheckedChange={(checked) => setData('usa_inventario', checked)}
+                                                        />
+                                                    </div>
+                                                    <div className="flex items-center justify-between rounded-lg border p-2 bg-background">
+                                                        <Label className="text-[11px] font-semibold">{__('Activo')}</Label>
+                                                        <Switch
+                                                            checked={data.estado}
+                                                            onCheckedChange={(checked) => setData('estado', checked)}
+                                                        />
+                                                    </div>
                                                 </div>
                                             </div>
                                         </div>
                                     </TabsContent>
 
-                                    {/* PESTAÑA 3: IMPUESTOS (GLOBAL MULTIPAÍS) */}
+                                    {/* PESTAÑA 2: IMPUESTOS (GLOBAL MULTIPAÍS) */}
                                     <TabsContent value="impuestos" className="space-y-4 m-0">
                                         <div className="p-4 rounded-lg border bg-slate-50/50 dark:bg-slate-900/40 space-y-4">
                                             <span className="text-xs font-semibold text-slate-700 dark:text-slate-300 flex items-center gap-1.5">
