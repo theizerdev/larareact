@@ -2,6 +2,7 @@
 
 namespace App\Http\Middleware;
 
+use App\Models\Producto;
 use Illuminate\Http\Request;
 use Inertia\Middleware;
 
@@ -61,6 +62,15 @@ class HandleInertiaRequests extends Middleware
                 ? json_decode(file_get_contents($path) ?: '{}', true)
                 : [],
             'notification' => fn () => $request->session()->pull('notification'),
+            'low_stock_count' => fn () => $request->user()
+                ? Producto::where('empresa_id', $request->user()->empresa_id)
+                    ->where('sucursal_id', $request->user()->sucursal_id)
+                    ->where('usa_inventario', true)
+                    ->where('estado', true)
+                    ->where('stock_minimo', '>', 0)
+                    ->whereColumn('stock', '<=', 'stock_minimo')
+                    ->count()
+                : 0,
         ];
     }
 }

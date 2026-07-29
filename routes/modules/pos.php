@@ -4,6 +4,7 @@ use App\Http\Controllers\Admin\PointOfSale\CashRegisterController;
 use App\Http\Controllers\Admin\PointOfSale\ClienteController;
 use App\Http\Controllers\Admin\PointOfSale\SaleController;
 use App\Http\Controllers\Admin\PointOfSale\ServicioController;
+use App\Http\Controllers\Admin\StockAlertController;
 use Illuminate\Support\Facades\Route;
 
 Route::middleware(['verified'])->group(function () {
@@ -27,4 +28,8 @@ Route::middleware(['verified'])->group(function () {
     // Clientes y Cuentas por Cobrar
     Route::resource('clientes', ClienteController::class)->except(['create', 'edit']);
     Route::post('clientes/{cliente}/abono', [ClienteController::class, 'registrarAbono'])->name('clientes.abono');
+
+    // Alertas de Stock
+    Route::get('stock-alerts', [StockAlertController::class, 'index'])->name('stock-alerts.index');
+    Route::get('stock-alerts/count', [StockAlertController::class, 'count'])->name('stock-alerts.count');
 });

@@ -84,7 +84,17 @@ export default function Terminal({ catalog, activeRegister, currencySymbol = '$'
         { title: __('Terminal POS'), href: '/admin/ventas/terminal' },
     ];
 
-    // F12 shortcut
+    // New client modal
+    const [isNewClientModalOpen, setIsNewClientModalOpen] = useState(false);
+    const [newCliente, setNewCliente] = useState({
+        nombre: '',
+        telefono: '',
+        email: '',
+        direccion: '',
+        limite_credito: 0
+    });
+
+    // Keyboard shortcuts: F6 for new client, F12 for payment
     useEffect(() => {
         const handleKeyDown = (e: KeyboardEvent) => {
             if (e.key === 'F12') {
@@ -92,6 +102,9 @@ export default function Terminal({ catalog, activeRegister, currencySymbol = '$'
                 if (cart.length > 0 && activeRegister) {
                     handleOpenPayment();
                 }
+            } else if (e.key === 'F6') {
+                e.preventDefault();
+                setIsNewClientModalOpen(true);
             }
         };
         window.addEventListener('keydown', handleKeyDown);
@@ -166,6 +179,27 @@ export default function Terminal({ catalog, activeRegister, currencySymbol = '$'
     const removePaymentLine = (idx: number) => setPaymentLines((prev) => prev.filter((_, i) => i !== idx));
     const updatePaymentLine = (idx: number, field: keyof PaymentLine, value: string) => {
         setPaymentLines((prev) => prev.map((pl, i) => i === idx ? { ...pl, [field]: value } : pl));
+    };
+
+    const handleNewClienteSubmit = (e: React.FormEvent) => {
+        e.preventDefault();
+        if (!newCliente.nombre.trim()) {
+            notifyError(__('El nombre del cliente es obligatorio.'));
+            return;
+        }
+        
+        router.post('/admin/clientes', {
+            ...newCliente,
+            estado: true
+        }, {
+            onSuccess: () => {
+                setIsNewClientModalOpen(false);
+                setNewCliente({ nombre: '', telefono: '', email: '', direccion: '', limite_credito: 0 });
+                notifySuccess(__('Cliente registrado exitosamente.'));
+                router.reload(); // Refresh to load new client in list
+            },
+            onError: () => notifyError(__('Error al registrar el cliente.'))
+        });
     };
 
     const handleOpenPayment = useCallback(() => {
@@ -397,22 +431,29 @@ export default function Terminal({ catalog, activeRegister, currencySymbol = '$'
                             </div>
                         </div>
 
-                        {/* Client selector */}
-                        <div className="px-4 py-2 border-b">
-                            <Select value={String(selectedClienteId || '0')} onValueChange={handleSelectCliente}>
-                                <SelectTrigger className="h-8 text-xs">
-                                    <User className="w-3 h-3 mr-1 text-muted-foreground" />
-                                    <SelectValue placeholder={__('Cliente General')} />
-                                </SelectTrigger>
-                                <SelectContent>
-                                    <SelectItem value="0">{__('Cliente General')}</SelectItem>
-                                    {clientes.map((c) => (
-                                        <SelectItem key={c.id} value={String(c.id)}>
-                                            {c.nombre} {c.saldo_pendiente > 0 ? `(${__('Deuda')}: ${currencySymbol}${c.saldo_pendiente.toFixed(2)})` : ''}
-                                        </SelectItem>
-                                    ))}
-                                </SelectContent>
-                            </Select>
+                        {/* Client indicator in cart */}
+                        <div className="px-4 py-2 border-b flex items-center justify-between gap-2">
+                            <div className="flex items-center gap-1.5 text-sm text-muted-foreground flex-1 min-w-0">
+                                <User className="w-3.5 h-3.5 shrink-0" />
+                                <span className="truncate font-medium text-foreground text-xs">
+                                    {clienteNombre}
+                                </span>
+                                {selectedClienteId && (() => {
+                                    const c = clientes.find(x => x.id === selectedClienteId);
+                                    return c && c.saldo_pendiente > 0 ? (
+                                        <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded bg-rose-100 text-rose-700 border border-rose-200 shrink-0">
+                                            Deuda: {currencySymbol}{c.saldo_pendiente.toFixed(2)}
+                                        </span>
+                                    ) : null;
+                                })()}
+                            </div>
+                            <button
+                                type="button"
+                                onClick={() => { setSelectedClienteId(null); setClienteNombre('Cliente General'); setEsCredito(false); }}
+                                className={`text-[10px] text-muted-foreground hover:text-rose-500 transition-colors shrink-0 ${!selectedClienteId ? 'invisible' : ''}`}
+                            >
+                                Limpiar
+                            </button>
                         </div>
 
                         <div className="flex-1 overflow-y-auto p-4 divide-y space-y-2">
@@ -453,10 +494,50 @@ export default function Terminal({ catalog, activeRegister, currencySymbol = '$'
                                     <span className="text-xs uppercase tracking-wider text-muted-foreground block">{__('Total a Pagar')}</span>
                                     <span className="text-2xl font-extrabold font-mono text-emerald-600 dark:text-emerald-400">{currencySymbol}{total.toFixed(2)}</span>
                                 </div>
-                                <Button size="lg" className="bg-emerald-600 hover:bg-emerald-700 text-white font-bold px-6"
-                                    disabled={cart.length === 0 || !activeRegister} onClick={handleOpenPayment}>
-                                    <DollarSign className="mr-2 h-5 w-5" />{__('Cobrar')} (F12)
-                                </Button>
+                                <div className="flex gap-2">
+                                    <Button size="lg" variant="secondary" 
+                                        onClick={() => setIsNewClientModalOpen(true)}>
+                                        <User className="mr-2 h-5 w-5" />{__('Nuevo Cliente')} (F6)
+                                    </Button>
+                                    <Button size="lg" className="bg-emerald-600 hover:bg-emerald-700 text-white font-bold px-6"
+                                        disabled={cart.length === 0 || !activeRegister} onClick={handleOpenPayment}>
+                                        <DollarSign className="mr-2 h-5 w-5" />{__('Cobrar')} (F12)
+                                    </Button>
+                                    <Dialog open={isNewClientModalOpen} onOpenChange={setIsNewClientModalOpen}>
+                                      <DialogContent className="sm:max-w-md">
+                                        <DialogHeader>
+                                          <DialogTitle>{__('Nuevo Cliente')}</DialogTitle>
+                                          <DialogDescription>{__('Complete los datos del cliente.')}</DialogDescription>
+                                        </DialogHeader>
+                                        <form onSubmit={handleNewClienteSubmit} className="space-y-4 py-2">
+                                          <div className="space-y-2">
+                                            <Label htmlFor="clientName">{__('Nombre')}</Label>
+                                            <Input id="clientName" value={newCliente.nombre} onChange={(e) => setNewCliente({ ...newCliente, nombre: e.target.value })} autoFocus />
+                                          </div>
+                                          <div className="space-y-2">
+                                            <Label htmlFor="clientPhone">{__('Teléfono')}</Label>
+                                            <Input id="clientPhone" value={newCliente.telefono} onChange={(e) => setNewCliente({ ...newCliente, telefono: e.target.value })} />
+                                          </div>
+                                          <div className="space-y-2">
+                                            <Label htmlFor="clientEmail">{__('Email')}</Label>
+                                            <Input id="clientEmail" type="email" value={newCliente.email} onChange={(e) => setNewCliente({ ...newCliente, email: e.target.value })} />
+                                          </div>
+                                          <div className="space-y-2">
+                                            <Label htmlFor="clientAddress">{__('Dirección')}</Label>
+                                            <Input id="clientAddress" value={newCliente.direccion} onChange={(e) => setNewCliente({ ...newCliente, direccion: e.target.value })} />
+                                          </div>
+                                          <div className="space-y-2">
+                                            <Label htmlFor="clientCredit">{__('Límite de Crédito')}</Label>
+                                            <Input id="clientCredit" type="number" min="0" value={newCliente.limite_credito} onChange={(e) => setNewCliente({ ...newCliente, limite_credito: parseFloat(e.target.value) || 0 })} />
+                                          </div>
+                                          <DialogFooter className="pt-2">
+                                            <Button type="button" variant="outline" onClick={() => setIsNewClientModalOpen(false)}>{__('Cancelar')}</Button>
+                                            <Button type="submit">{__('Guardar')}</Button>
+                                          </DialogFooter>
+                                        </form>
+                                      </DialogContent>
+                                    </Dialog>
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -473,24 +554,57 @@ export default function Terminal({ catalog, activeRegister, currencySymbol = '$'
                         </DialogHeader>
 
                         <form onSubmit={handleCompleteSale} className="space-y-4 py-2">
+                            {/* Total */}
                             <div className="rounded-lg bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-900 p-4 text-center">
                                 <span className="text-xs font-semibold uppercase text-emerald-700 dark:text-emerald-400">{__('TOTAL A COBRAR')}</span>
                                 <p className="text-3xl font-extrabold font-mono text-emerald-600 dark:text-emerald-300">{currencySymbol}{total.toFixed(2)}</p>
                             </div>
 
-                            {/* Credit toggle */}
-                            {selectedClienteId && (
-                                <div className="flex items-center justify-between rounded-lg border p-3 bg-amber-50/50 dark:bg-amber-950/10">
-                                    <div>
-                                        <p className="text-sm font-semibold">{__('Venta a Crédito (Fiado)')}</p>
-                                        <p className="text-xs text-muted-foreground">{__('El saldo pendiente se cargará a la cuenta del cliente.')}</p>
-                                    </div>
-                                    <label className="relative inline-flex items-center cursor-pointer">
-                                        <input type="checkbox" className="sr-only peer" checked={esCredito} onChange={(e) => setEsCredito(e.target.checked)} />
-                                        <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer dark:bg-gray-700 peer-checked:after:translate-x-full after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-amber-500"></div>
-                                    </label>
+                            {/* ── Cliente selector INSIDE modal ── */}
+                            <div className="space-y-2">
+                                <Label className="font-semibold flex items-center gap-1.5">
+                                    <User className="w-4 h-4" /> {__('Cliente')}
+                                </Label>
+                                <Select value={String(selectedClienteId || '0')} onValueChange={handleSelectCliente}>
+                                    <SelectTrigger>
+                                        <SelectValue placeholder={__('Cliente General')} />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        <SelectItem value="0">{__('Cliente General')}</SelectItem>
+                                        {clientes.map((c) => (
+                                            <SelectItem key={c.id} value={String(c.id)}>
+                                                {c.nombre}
+                                                {c.saldo_pendiente > 0 ? ` · Deuda: ${currencySymbol}${c.saldo_pendiente.toFixed(2)}` : ''}
+                                            </SelectItem>
+                                        ))}
+                                    </SelectContent>
+                                </Select>
+                            </div>
+
+                            {/* ── Credit toggle — always visible ── */}
+                            <div className={`flex items-center justify-between rounded-lg border p-3 transition-colors ${esCredito ? 'bg-amber-50 border-amber-300 dark:bg-amber-950/20 dark:border-amber-700' : 'bg-slate-50 dark:bg-slate-900'}`}>
+                                <div>
+                                    <p className="text-sm font-semibold flex items-center gap-1.5">
+                                        <Wallet className="w-4 h-4 text-amber-600" />
+                                        {__('Venta a Crédito (Fiado)')}
+                                    </p>
+                                    <p className="text-xs text-muted-foreground mt-0.5">
+                                        {selectedClienteId
+                                            ? __('El saldo pendiente se cargará a la cuenta del cliente.')
+                                            : __('Selecciona un cliente para habilitar el crédito.')}
+                                    </p>
                                 </div>
-                            )}
+                                <label className={`relative inline-flex items-center ${!selectedClienteId ? 'opacity-40 cursor-not-allowed' : 'cursor-pointer'}`}>
+                                    <input
+                                        type="checkbox"
+                                        className="sr-only peer"
+                                        checked={esCredito}
+                                        disabled={!selectedClienteId}
+                                        onChange={(e) => setEsCredito(e.target.checked)}
+                                    />
+                                    <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer dark:bg-gray-700 peer-checked:after:translate-x-full after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-amber-500"></div>
+                                </label>
+                            </div>
 
                             {/* Payment Lines */}
                             <div className="space-y-2">

@@ -20,6 +20,7 @@ import {
     X,
     Activity,
     Link2,
+    AlertTriangle,
 } from 'lucide-react';
 import { Building2, GitBranch, Briefcase, Calendar, Smartphone, Wallet } from 'lucide-react';
 import * as React from 'react';
@@ -256,6 +257,8 @@ export default function AdminSaasLayout({
         return userPermissions.includes(permission);
     };
 
+    const lowStockCount = (page.props as any).low_stock_count as number ?? 0;
+
     const [notifications, setNotifications] = React.useState([
         {
             id: '1',
@@ -279,7 +282,7 @@ export default function AdminSaasLayout({
         );
     };
 
-    const unreadCount = notifications.filter((n) => !n.read).length;
+    const unreadCount = notifications.filter((n) => !n.read).length + (lowStockCount > 0 ? 1 : 0);
 
     return (
         <TooltipProvider delayDuration={0}>
@@ -463,6 +466,11 @@ export default function AdminSaasLayout({
                                     title: 'Clientes',
                                     href: '/admin/clientes',
                                     permission: 'clientes.view',
+                                },
+                                {
+                                    title: 'Alertas de Stock',
+                                    href: '/admin/stock-alerts',
+                                    permission: 'ventas.view',
                                 },
                             ].filter(item => hasPermission(item.permission));
 
@@ -856,7 +864,27 @@ export default function AdminSaasLayout({
                                     </div>
                                     <DropdownMenuSeparator />
                                     <div className="max-h-80 overflow-y-auto">
-                                        {notifications.length === 0 ? (
+                                        {/* Low stock alert card */}
+                                        {lowStockCount > 0 && (
+                                            <Link href="/admin/stock-alerts">
+                                                <div className="flex items-start gap-3 px-3 py-3 bg-rose-50 dark:bg-rose-950/30 border-b border-rose-100 dark:border-rose-900 cursor-pointer hover:bg-rose-100/60 dark:hover:bg-rose-950/50 transition-colors">
+                                                    <div className="mt-0.5 size-2 rounded-full bg-rose-500 shrink-0" />
+                                                    <div className="flex-1 space-y-1 min-w-0">
+                                                        <p className="text-sm font-semibold text-rose-700 dark:text-rose-400 flex items-center gap-1.5">
+                                                            <AlertTriangle className="w-3.5 h-3.5 shrink-0" />
+                                                            {__('Stock bajo detectado')}
+                                                        </p>
+                                                        <p className="text-xs text-rose-600/80 dark:text-rose-400/80">
+                                                            {lowStockCount} {lowStockCount === 1 ? __('producto necesita reabastecimiento') : __('productos necesitan reabastecimiento')}
+                                                        </p>
+                                                        <p className="text-xs font-medium text-rose-600 dark:text-rose-400 underline underline-offset-2">
+                                                            {__('Ver alertas de stock →')}
+                                                        </p>
+                                                    </div>
+                                                </div>
+                                            </Link>
+                                        )}
+                                        {notifications.length === 0 && lowStockCount === 0 ? (
                                             <div className="px-3 py-6 text-center text-sm text-muted-foreground">
                                                 {__('No notifications')}
                                             </div>

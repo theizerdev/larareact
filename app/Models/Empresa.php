@@ -39,6 +39,7 @@ class Empresa extends Model
         'api_key',
         'whatsapp_api_key',
         'whatsapp_api_url',
+        'whatsapp_instance',
         'whatsapp_rate_limit',
         'whatsapp_active',
         'whatsapp_phone',
