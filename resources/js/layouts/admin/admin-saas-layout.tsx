@@ -505,7 +505,7 @@ export default function AdminSaasLayout({
                                     permission: 'paises.view',
                                 },
                                 {
-                                    title: 'Configuración de Créditos',
+                                    title: 'Créditos',
                                     href: '/admin/credit-config',
                                     permission: 'credit_config.view',
                                 },
