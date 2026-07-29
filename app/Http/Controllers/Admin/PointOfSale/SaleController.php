@@ -51,6 +51,7 @@ class SaleController extends Controller
                     $p->marca?->nombre,
                     $p->modelo?->nombre,
                     $p->nombre_variante,
+                    $p->codigo_barras,
                 ]);
                 $displayName = implode(' ', $parts) ?: "Producto #{$p->id}";
 
