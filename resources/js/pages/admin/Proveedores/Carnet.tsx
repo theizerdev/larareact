@@ -349,7 +349,7 @@ export default function CarnetProveedorPage({ proveedor }: CarnetProveedorPagePr
                             <img
                                 src="/image/logo/larareact_logo_transparent.webp"
                                 onError={(e) => {
-                                    (e.target as HTMLImageElement).src = "/image/logo/larareact_logo_transparent.png";
+                                    (e.target as HTMLImageElement).src = "/image/logo/larareact_logo_transparent.webp";
                                 }}
                                 alt="Driscoll's Logo"
                                 style={{ height: '72px', maxWidth: '250px', width: 'auto', display: 'block', objectFit: 'contain', backgroundColor: 'transparent' }}

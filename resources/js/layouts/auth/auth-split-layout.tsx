@@ -44,7 +44,7 @@ export default function AuthSplitLayout({
                     >
                         <img
                             src="/image/logo/larareact_logo_transparent.webp"
-                            alt="LaraReact Logo"
+                            alt="Logo"
                             className="h-10 w-auto object-contain"
                         />
                     </Link>
@@ -63,15 +63,15 @@ export default function AuthSplitLayout({
                     {children}
 
                     {/* Certificaciones y Normativas Internacionales */}
-                    <div className="mt-8 pt-6 border-t border-slate-200 dark:border-slate-800 text-center space-y-4">
-                        <p className="text-xs sm:text-sm font-extrabold text-slate-900 dark:text-slate-100 tracking-tight leading-snug">
+                    <div className="mt-6 pt-5 border-t border-slate-200 dark:border-slate-800 text-center space-y-3">
+                        <p className="text-[11px] sm:text-xs font-bold text-slate-800 dark:text-slate-200 tracking-tight whitespace-nowrap overflow-hidden text-ellipsis">
                             Con apego y alineación a políticas y normativas internacionales
                         </p>
-                        <div className="flex items-center justify-between gap-2 pt-2">
-                            <img src="/image/logo/certifications/iso20000.svg" alt="ISO 20000" className="h-14 sm:h-16 w-auto object-contain hover:scale-105 transition-transform shrink-0" />
-                            <img src="/image/logo/certifications/ctpat.svg" alt="CTPAT" className="h-10 sm:h-12 w-auto object-contain hover:scale-105 transition-transform shrink-0" />
-                            <img src="/image/logo/certifications/oea_mexico.svg" alt="OEA México" className="h-10 sm:h-12 w-auto object-contain hover:scale-105 transition-transform shrink-0" />
-                            <img src="/image/logo/certifications/iso27001.svg" alt="ISO 27001" className="h-14 sm:h-16 w-auto object-contain hover:scale-105 transition-transform shrink-0" />
+                        <div className="flex items-center justify-between gap-1.5 pt-1">
+                            <img src="/image/logo/certifications/iso20000.svg" alt="ISO 20000" className="h-11 sm:h-12 w-auto object-contain hover:scale-105 transition-transform shrink-0" />
+                            <img src="/image/logo/certifications/ctpat.svg" alt="CTPAT" className="h-8 sm:h-9 w-auto object-contain hover:scale-105 transition-transform shrink-0" />
+                            <img src="/image/logo/certifications/oea_mexico.svg" alt="OEA México" className="h-8 sm:h-9 w-auto object-contain hover:scale-105 transition-transform shrink-0" />
+                            <img src="/image/logo/certifications/iso27001.svg" alt="ISO 27001" className="h-11 sm:h-12 w-auto object-contain hover:scale-105 transition-transform shrink-0" />
                         </div>
                     </div>
                 </div>
