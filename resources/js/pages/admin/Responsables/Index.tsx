@@ -316,7 +316,7 @@ return;
 
     const columns: ColumnDef<Responsable>[] = [
         {
-            header: 'Responsible',
+            header: __('Responsible'),
             accessorKey: 'nombres',
             className: 'font-medium',
             cell: (resp) => (
@@ -339,7 +339,7 @@ return;
             ),
         },
         {
-            header: 'Contact Info',
+            header: __('Contact Info'),
             cell: (resp) => (
                 <div className="space-y-0.5">
                     {resp.correo && (
@@ -361,7 +361,7 @@ return;
             ),
         },
         {
-            header: 'Department / Position',
+            header: __('Department / Position'),
             cell: (resp) => (
                 <div className="space-y-0.5">
                     <div className="flex items-center gap-1.5 text-xs text-slate-800 dark:text-slate-200">
@@ -376,7 +376,7 @@ return;
             ),
         },
         {
-            header: 'Company / Branch',
+            header: __('Company / Branch'),
             hideOn: 'mobile',
             cell: (resp) => (
                 <div className="space-y-0.5">
@@ -392,7 +392,7 @@ return;
             ),
         },
         {
-            header: 'Assigned User',
+            header: __('Assigned User'),
             hideOn: 'mobile',
             cell: (resp) => (
                 <span className="text-xs font-medium text-muted-foreground">
@@ -401,7 +401,7 @@ return;
             ),
         },
         {
-            header: 'Status',
+            header: __('Status'),
             stopRowClick: true,
             cell: (resp) => (
                 <div className="flex items-center space-x-2">

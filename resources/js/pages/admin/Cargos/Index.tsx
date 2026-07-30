@@ -276,7 +276,7 @@ return;
 
     const columns: ColumnDef<Cargo>[] = [
         {
-            header: 'Position',
+            header: __('Position'),
             accessorKey: 'nombre',
             className: 'font-medium',
             cell: (cargo) => (
@@ -294,7 +294,7 @@ return;
             ),
         },
         {
-            header: 'Department',
+            header: __('Department'),
             accessorKey: 'departamento',
             cell: (cargo) => (
                 <div className="flex items-center gap-1.5 text-xs text-slate-800 dark:text-slate-200">
@@ -304,7 +304,7 @@ return;
             ),
         },
         {
-            header: 'Company / Branch',
+            header: __('Company / Branch'),
             hideOn: 'mobile',
             cell: (cargo) => (
                 <div className="space-y-0.5">
@@ -320,7 +320,7 @@ return;
             ),
         },
         {
-            header: 'Assigned User',
+            header: __('Assigned User'),
             hideOn: 'mobile',
             cell: (cargo) => (
                 <span className="text-xs font-medium text-muted-foreground">
@@ -329,7 +329,7 @@ return;
             ),
         },
         {
-            header: 'Status',
+            header: __('Status'),
             stopRowClick: true,
             cell: (cargo) => (
                 <div className="flex items-center space-x-2">
@@ -349,7 +349,7 @@ return;
             ),
         },
         {
-            header: 'Actions',
+            header: __('Actions'),
             className: 'text-right',
             hideable: false,
             stopRowClick: true,

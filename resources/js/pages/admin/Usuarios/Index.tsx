@@ -277,7 +277,7 @@ return;
 
     const columns: ColumnDef<User>[] = [
         {
-            header: 'User',
+            header: __('User'),
             accessorKey: 'name',
             className: 'font-medium',
             cell: (user) => (
@@ -293,7 +293,7 @@ return;
             ),
         },
         {
-            header: 'Role',
+            header: __('Role'),
             cell: (user) => (
                 <div className="flex flex-wrap gap-1">
                     {user.roles.map((r) => (
@@ -306,7 +306,7 @@ return;
             ),
         },
         {
-            header: 'Company / Branch',
+            header: __('Company / Branch'),
             hideOn: 'mobile',
             cell: (user) => (
                 <div className="space-y-1">
@@ -329,7 +329,7 @@ return;
             ),
         },
         {
-            header: 'Phone',
+            header: __('Phone'),
             hideOn: 'mobile',
             cell: (user) => (
                 <span className="text-xs text-muted-foreground flex items-center gap-1.5">
@@ -339,7 +339,7 @@ return;
             ),
         },
         {
-            header: 'Status',
+            header: __('Status'),
             stopRowClick: true,
             cell: (user) => (
                 <div className="flex items-center space-x-2">

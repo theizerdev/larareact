@@ -325,7 +325,7 @@ return;
 
     const columns: ColumnDef<Departamento>[] = [
         {
-            header: 'Department',
+            header: __('Department'),
             accessorKey: 'nombre',
             className: 'font-medium',
             cell: (dep) => (
@@ -343,7 +343,7 @@ return;
             ),
         },
         {
-            header: 'Company / Branch',
+            header: __('Company / Branch'),
             hideOn: 'mobile',
             cell: (dep) => (
                 <div className="space-y-0.5">
@@ -359,7 +359,7 @@ return;
             ),
         },
         {
-            header: 'Details',
+            header: __('Details'),
             hideOn: 'mobile',
             cell: (dep) => (
                 <div className="space-y-0.5 text-xs text-muted-foreground">
@@ -379,7 +379,7 @@ return;
             ),
         },
         {
-            header: 'System User',
+            header: __('System User'),
             hideOn: 'mobile',
             cell: (dep) => (
                 <span className="text-xs font-medium text-muted-foreground">
@@ -388,7 +388,7 @@ return;
             ),
         },
         {
-            header: 'Status',
+            header: __('Status'),
             stopRowClick: true,
             cell: (dep) => (
                 <div className="flex items-center space-x-2">
