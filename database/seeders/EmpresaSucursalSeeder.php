@@ -17,7 +17,7 @@ class EmpresaSucursalSeeder extends Seeder
         $empresa = Empresa::updateOrCreate([
             'id' => 1,
         ], [
-            'razon_social' => "Driscoll's",
+            'razon_social' => "Driscoll's, Inc.",
             'documento' => 'J-12345678-0',
             'direccion' => "Av. Principal Driscoll's",
             'telefono' => '+52 436 117 4564',
@@ -30,9 +30,9 @@ class EmpresaSucursalSeeder extends Seeder
             'id' => 1,
         ], [
             'empresa_id' => $empresa->id,
-            'nombre' => 'Sucursal Principal',
+            'nombre' => 'Cooler Purépero',
             'telefono' => '+52 436 117 4564',
-            'direccion' => "Oficinas Centrales Driscoll's",
+            'direccion' => "Cooler Purépero, Michoacán",
             'status' => true,
         ]);
     }

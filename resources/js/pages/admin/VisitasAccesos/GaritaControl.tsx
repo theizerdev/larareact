@@ -418,7 +418,7 @@ export default function GaritaControl({
         router.post(`/admin/visitas-accesos/invitaciones/${invitacionId}/canjear`, {}, {
             preserveScroll: true,
             onSuccess: () => {
-                notifySuccess(__('¡Ingreso registrado correctamente en Garita! Se notificó al anfitrión por WhatsApp.'));
+                notifySuccess(__('¡Ingreso registrado correctamente en Caseta! Se notificó al anfitrión por WhatsApp.'));
             },
             onError: () => {
                 notifyError(__('Ocurrió un error al registrar el ingreso. Intente nuevamente.'));
@@ -516,7 +516,7 @@ export default function GaritaControl({
         router.post('/admin/visitas-accesos', payload, {
             preserveScroll: true,
             onSuccess: () => {
-                notifySuccess(__('Ingreso de Empleado registrado correctamente en Garita.'));
+                notifySuccess(__('Ingreso de Empleado registrado correctamente en Caseta.'));
             },
         });
     };
@@ -546,7 +546,7 @@ export default function GaritaControl({
 
     return (
         <>
-            <Head title={__('Control de Garita - Lectura de QR')} />
+            <Head title={__('Control de Caseta - Lectura de QR')} />
 
             <div className="min-h-screen bg-slate-100 text-slate-900 font-sans pb-12">
                 
@@ -660,7 +660,7 @@ export default function GaritaControl({
                                 </div>
                                 <div>
                                     <span className="text-xs font-bold uppercase tracking-wider text-emerald-200 block">
-                                        {isEmpleado ? __('Colaborador / Empleado Driscoll\'s') : isInvitacion ? __('Pre-Anuncio Registrado') : __('Registro de Acceso Garita')}
+                                        {isEmpleado ? __('Colaborador / Empleado Driscoll\'s') : isInvitacion ? __('Pre-Anuncio Registrado') : __('Registro de Acceso Caseta')}
                                     </span>
                                     <h2 className="text-xl font-extrabold tracking-tight">
                                         {isEmpleado ? `${record.nombres} ${record.apellidos}` : isInvitacion ? record.visitante_nombre : (record.empleado ? `${record.empleado.nombres} ${record.empleado.apellidos}` : record.proveedor ? (record.proveedor.razon_social || record.proveedor.nombre_comercial) : (record.productor?.nombre_comercial_rancho || 'Visitante'))}
@@ -1337,7 +1337,7 @@ export default function GaritaControl({
                                                     className="w-full h-16 bg-slate-900 hover:bg-black text-white text-base font-extrabold rounded-2xl shadow-xl gap-2 flex items-center justify-center transition-transform active:scale-[0.98]"
                                                 >
                                                     <LogOut className="w-6 h-6 text-rose-400" />
-                                                    {__('Marcar Salida de Garita')}
+                                                    {__('Marcar Salida de Caseta')}
                                                 </Button>
                                             ) : (
                                                 <Button
@@ -1364,7 +1364,7 @@ export default function GaritaControl({
                                             className="w-full h-16 bg-[#104a29] hover:bg-[#0c371e] text-white text-base font-extrabold rounded-2xl shadow-xl gap-2 flex items-center justify-center transition-transform active:scale-[0.98]"
                                         >
                                             <CheckCircle2 className="w-6 h-6 text-emerald-400" />
-                                            {__('Confirmar Ingreso en Garita (1-Clic)')}
+                                            {__('Confirmar Ingreso en Caseta (1-Clic)')}
                                         </Button>
                                     )}
 
@@ -1375,13 +1375,13 @@ export default function GaritaControl({
                                             className="w-full h-16 bg-slate-900 hover:bg-black text-white text-base font-extrabold rounded-2xl shadow-xl gap-2 flex items-center justify-center transition-transform active:scale-[0.98]"
                                         >
                                             <LogOut className="w-6 h-6 text-rose-400" />
-                                            {__('Marcar Salida de Garita')}
+                                            {__('Marcar Salida de Caseta')}
                                         </Button>
                                     )}
 
                                     {isInvitacion && record.status === 'ingresado' && (
                                         <div className="p-4 bg-emerald-50 text-emerald-800 rounded-2xl text-center text-xs font-bold border border-emerald-300">
-                                            {__('✓ Este visitante ya fue ingresado por Garita.')}
+                                            {__('✓ Este visitante ya fue ingresado por Caseta.')}
                                         </div>
                                     )}
                                 </div>

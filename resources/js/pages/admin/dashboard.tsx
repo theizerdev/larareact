@@ -222,7 +222,7 @@ export default function AdminDashboard({ moduleStats }: Props) {
 
     const modulesList = [
         {
-            name: 'Garita y Accesos',
+            name: 'Caseta y Accesos',
             desc: 'Control de entrada y lectura QR',
             icon: QrCode,
             href: '/admin/visitas-accesos',
@@ -230,7 +230,7 @@ export default function AdminDashboard({ moduleStats }: Props) {
             badgeColor: 'bg-emerald-500/10 text-emerald-500',
         },
         {
-            name: 'Visitas Temporales',
+            name: 'Visitas',
             desc: 'Pases digitales e invitaciones',
             icon: KeyRound,
             href: '/admin/visitas-temporales',
@@ -421,10 +421,10 @@ export default function AdminDashboard({ moduleStats }: Props) {
 
                 {/* Charts Section */}
                 <div className="grid gap-6 lg:grid-cols-2">
-                    {/* Chart 1: Visitas y Accesos en Garita */}
+                    {/* Chart 1: Visitas y Accesos en Caseta */}
                     <SectionCard
-                        title="Visitas y Accesos en Garita"
-                        description="Frecuencia diaria de personas e ingresos registrados en garita"
+                        title="Visitas y Accesos en Caseta"
+                        description="Frecuencia diaria de personas e ingresos registrados en caseta"
                         className="p-4"
                     >
                         <div className="mt-4 h-72 w-full">
@@ -448,9 +448,9 @@ export default function AdminDashboard({ moduleStats }: Props) {
                         </div>
                     </SectionCard>
 
-                    {/* Chart 2: Visitas Temporales */}
+                    {/* Chart 2: Visitas */}
                     <SectionCard
-                        title="Visitas Temporales"
+                        title="Visitas"
                         description="Pases de visita e invitaciones digitales creadas por día"
                         className="p-4"
                     >
@@ -460,7 +460,7 @@ export default function AdminDashboard({ moduleStats }: Props) {
                                     options={getTemporalesChartOptions()}
                                     series={[
                                         {
-                                            name: 'Visitas Temporales',
+                                            name: 'Visitas',
                                             data: statsData.visitas_temporales,
                                         },
                                     ]}
@@ -469,7 +469,7 @@ export default function AdminDashboard({ moduleStats }: Props) {
                                 />
                             ) : (
                                 <div className="flex h-full items-center justify-center text-sm text-muted-foreground">
-                                    Cargando gráfico de visitas temporales...
+                                    Cargando gráfico de visitas...
                                 </div>
                             )}
                         </div>

@@ -439,7 +439,7 @@ export default function PaseDigital({ invitacion }: PaseDigitalProps) {
                                     <FileText className="w-5 h-5" /> Completa tus Datos de Registro e Ingreso
                                 </h2>
                                 <p className="text-xs text-slate-500 mt-1">
-                                    Por favor registre el medio de acceso, fotografías de su documento de identidad, datos del vehículo (si aplica) y acompañantes antes de llegar a la garita.
+                                    Por favor registre el medio de acceso, fotografías de su documento de identidad, datos del vehículo (si aplica) y acompañantes antes de llegar a la caseta.
                                 </p>
                             </div>
 
@@ -481,7 +481,7 @@ export default function PaseDigital({ invitacion }: PaseDigitalProps) {
                                         </div>
                                         <div>
                                             <span className="font-extrabold text-sm block">Acceso Vehicular</span>
-                                            <span className="text-xs text-slate-500">Ingreso con vehículo por la garita principal.</span>
+                                            <span className="text-xs text-slate-500">Ingreso con vehículo por la caseta principal.</span>
                                         </div>
                                     </button>
                                 </div>

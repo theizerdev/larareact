@@ -66,7 +66,7 @@ export default function AutorizarAcceso({ autorizacion }: AutorizarAccesoProps) 
             },
             onSuccess: () => {
                 if (act === 'autorizar') {
-                    notifySuccess('Acceso autorizado correctamente. La garita de seguridad ha sido notificada al instante.');
+                    notifySuccess('Acceso autorizado correctamente. La caseta de seguridad ha sido notificada al instante.');
                 } else {
                     notifyError('Acceso rechazado.');
                 }
@@ -113,7 +113,7 @@ export default function AutorizarAcceso({ autorizacion }: AutorizarAccesoProps) 
                                     ¡Acceso Autorizado Exitosamente!
                                 </h3>
                                 <p className="text-xs text-emerald-700 dark:text-emerald-300">
-                                    El permiso de ingreso fue registrado a las <span className="font-semibold">{autorizacion.autorizado_at}</span>. El personal de seguridad en garita ya cuenta con la aprobación.
+                                    El permiso de ingreso fue registrado a las <span className="font-semibold">{autorizacion.autorizado_at}</span>. El personal de seguridad en caseta ya cuenta con la aprobación.
                                 </p>
                                 {autorizacion.motivo_autorizacion && (
                                     <div className="mt-3 p-3 bg-white dark:bg-slate-900 rounded-xl text-left border text-xs text-slate-700 dark:text-slate-300">
@@ -131,7 +131,7 @@ export default function AutorizarAcceso({ autorizacion }: AutorizarAccesoProps) 
                                     Solicitud de Acceso Rechazada
                                 </h3>
                                 <p className="text-xs text-rose-700 dark:text-rose-300">
-                                    Usted ha denegado el ingreso a esta persona. La garita de seguridad no permitirá el acceso.
+                                    Usted ha denegado el ingreso a esta persona. La caseta de seguridad no permitirá el acceso.
                                 </p>
                             </div>
                         )}

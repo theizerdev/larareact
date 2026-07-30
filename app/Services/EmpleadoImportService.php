@@ -195,8 +195,8 @@ class EmpleadoImportService
         $empresa = ($userEmpresaId ? Empresa::find($userEmpresaId) : null) ?: Empresa::first();
         if (!$empresa) {
             $empresa = Empresa::create([
-                'razon_social' => "Driscoll's",
-                'nombre_comercial' => "Driscoll's",
+                'razon_social' => "Driscoll's, Inc.",
+                'nombre_comercial' => "Driscoll's, Inc.",
                 'status' => true,
             ]);
         }
@@ -205,7 +205,7 @@ class EmpleadoImportService
         $sucursal = ($userSucursalId ? Sucursal::find($userSucursalId) : null) ?: Sucursal::where('empresa_id', $empresaId)->first();
         if (!$sucursal) {
             $sucursal = Sucursal::create([
-                'nombre' => 'Sucursal Principal',
+                'nombre' => 'Cooler Purépero',
                 'empresa_id' => $empresaId,
                 'status' => true,
             ]);
