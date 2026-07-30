@@ -595,7 +595,7 @@ export default function EmpleadosIndexPage({
 
     const columns: ColumnDef<Empleado>[] = [
         {
-            header: 'Employee',
+            header: __('Employee'),
             accessorKey: 'nombres',
             className: 'font-medium',
             cell: (emp) => {
@@ -619,7 +619,7 @@ export default function EmpleadosIndexPage({
             },
         },
         {
-            header: 'Contact Info',
+            header: __('Contact Info'),
             hideOn: 'mobile',
             cell: (emp) => (
                 <div className="space-y-0.5 text-xs">
@@ -642,7 +642,7 @@ export default function EmpleadosIndexPage({
             ),
         },
         {
-            header: 'Department / Position',
+            header: __('Department / Position'),
             hideOn: 'mobile',
             cell: (emp) => (
                 <div className="space-y-0.5 text-xs text-slate-700 dark:text-slate-300">
@@ -660,7 +660,7 @@ export default function EmpleadosIndexPage({
             ),
         },
         {
-            header: 'Responsible / Manager',
+            header: __('Responsible / Manager'),
             hideOn: 'mobile',
             cell: (emp) => {
                 if (!emp.responsable) return <span className="text-xs text-muted-foreground">—</span>;
@@ -679,7 +679,7 @@ export default function EmpleadosIndexPage({
             },
         },
         {
-            header: 'Status',
+            header: __('Status'),
             stopRowClick: true,
             cell: (emp) => (
                 <div className="flex items-center space-x-2">
