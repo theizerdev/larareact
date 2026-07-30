@@ -15,96 +15,63 @@ class DepartamentoDriscollsSeeder extends Seeder
      */
     public function run(): void
     {
-        // 1. Crear o buscar la empresa Driscoll's
-        $empresa = Empresa::firstOrCreate([
-            'razon_social' => "Driscoll's C.A.",
-        ], [
-            'documento' => 'J-45678912-3',
-            'direccion' => 'Torre Driscoll, Calle de las Frutas, Caracas',
-            'telefono' => '+58 212 999 9999',
-            'email' => 'info@driscolls.com',
-            'pais_id' => 20, // Default Venezuela en PaisSeeder
-            'pais_telefono_id' => 20,
-            'status' => true,
-        ]);
+        $empresa = Empresa::first();
+        if (!$empresa) {
+            $empresa = Empresa::create([
+                'razon_social' => "Driscoll's",
+                'nombre_comercial' => "Driscoll's",
+                'status' => true,
+            ]);
+        }
+        $empresaId = $empresa->id;
 
-        // 2. Crear o buscar la sucursal de Driscoll's
-        $sucursal = Sucursal::firstOrCreate([
-            'nombre' => "Sucursal Principal Driscoll's",
-            'empresa_id' => $empresa->id,
-        ], [
-            'direccion' => "Avenida Francisco de Miranda, Edificio Driscoll's, Piso 1",
-            'telefono' => '+58 212 999 9991',
-            'status' => true,
-        ]);
+        $sucursal = Sucursal::where('empresa_id', $empresaId)->first() ?: Sucursal::first();
+        if (!$sucursal) {
+            $sucursal = Sucursal::create([
+                'nombre' => 'Sucursal Principal',
+                'empresa_id' => $empresaId,
+                'status' => true,
+            ]);
+        }
+        $sucursalId = $sucursal->id;
 
-        // 3. Buscar el usuario del sistema asignado (prioridad superadmin)
         $user = User::where('email', 'superadmin@example.com')->first() ?: User::first();
+        $userId = $user ? $user->id : 1;
 
-        // 4. Departamentos a sembrar
-        $departments = [
-            [
-                'nombre' => 'Recursos Humanos',
-                'codigo' => 'DEP-RRHH-01',
-                'responsable' => 'Ana Martínez',
-                'piso' => 'Piso 1',
-                'ubicacion' => 'Ala Oeste, Oficina 102',
-                'descripcion' => 'Gestión de nóminas, contratación de personal y bienestar organizacional.',
-                'latitud' => 10.4900,
-                'longitud' => -66.8800,
-            ],
-            [
-                'nombre' => 'Contabilidad y Finanzas',
-                'codigo' => 'DEP-FIN-01',
-                'responsable' => 'Pedro Pérez',
-                'piso' => 'Piso 2',
-                'ubicacion' => 'Ala Norte, Oficina 205',
-                'descripcion' => 'Control de cuentas por pagar, facturación, auditorías y contabilidad general.',
-                'latitud' => 10.4910,
-                'longitud' => -66.8810,
-            ],
-            [
-                'nombre' => 'Operaciones y Logística',
-                'codigo' => 'DEP-OPS-01',
-                'responsable' => 'Juan Gómez',
-                'piso' => 'Planta Baja',
-                'ubicacion' => 'Muelle A de Despacho',
-                'descripcion' => 'Planificación de la cadena de suministro, control de stocks y distribución.',
-                'latitud' => 10.4920,
-                'longitud' => -66.8820,
-            ],
-            [
-                'nombre' => 'Tecnología y Sistemas',
-                'codigo' => 'DEP-TI-01',
-                'responsable' => 'María Rodríguez',
-                'piso' => 'Piso 3',
-                'ubicacion' => 'Ala Este, Oficina de Sistemas',
-                'descripcion' => 'Mantenimiento de servidores, red local, seguridad informática y soporte.',
-                'latitud' => 10.4930,
-                'longitud' => -66.8830,
-            ],
-            [
-                'nombre' => 'Ventas y Mercadeo',
-                'codigo' => 'DEP-VNT-01',
-                'responsable' => 'Luis García',
-                'piso' => 'Piso 1',
-                'ubicacion' => 'Ala Este, Oficina 105',
-                'descripcion' => 'Atención al cliente, expansión de mercado nacional y estrategias de marca.',
-                'latitud' => 10.4940,
-                'longitud' => -66.8840,
-            ],
+        // Lista única de departamentos
+        $departmentNames = [
+            'Empaque',
+            'Recepcion fruta',
+            'Embarques',
+            'Logistica',
+            'Estimados',
+            'Supply',
+            'Produccion',
+            'Distribucion',
+            'Planeacion de cosecha',
+            'Inocuidad',
+            'MTTO',
+            'Seguridad',
+            'Calidad',
+            'RH',
+            'Vigilancia',
+            'Auxiliar de Limpieza',
+            'Sup Cooler',
         ];
 
-        // 5. Sembrar departamentos en la base de datos
-        foreach ($departments as $dep) {
+        foreach ($departmentNames as $name) {
             Departamento::updateOrCreate([
-                'nombre' => $dep['nombre'],
-                'empresa_id' => $empresa->id,
-                'sucursal_id' => $sucursal->id,
-            ], array_merge($dep, [
-                'user_id' => $user ? $user->id : 1,
+                'nombre' => $name,
+                'empresa_id' => $empresaId,
+                'sucursal_id' => $sucursalId,
+            ], [
+                'nombre' => $name,
+                'descripcion' => "Departamento de {$name}",
+                'empresa_id' => $empresaId,
+                'sucursal_id' => $sucursalId,
+                'user_id' => $userId,
                 'status' => 1,
-            ]));
+            ]);
         }
     }
 }

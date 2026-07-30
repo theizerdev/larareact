@@ -91,6 +91,7 @@ class PermissionSeeder extends Seeder
                 'empleados.create' => 'Crear Empleado',
                 'empleados.edit' => 'Editar Empleado',
                 'empleados.delete' => 'Eliminar Empleado',
+                'empleados.import' => 'Importar Empleados desde Excel',
                 
                 // Módulo: Proveedores
                 'proveedores.view' => 'Ver Proveedores',
@@ -123,6 +124,12 @@ class PermissionSeeder extends Seeder
                 'visitas_temporales.create' => 'Crear Visita Temporal',
                 'visitas_temporales.edit' => 'Editar Visita Temporal',
                 'visitas_temporales.delete' => 'Eliminar Visita Temporal',
+            ],
+
+            // Sector: Importación
+            'importacion' => [
+                // Módulo: Empleados
+                'empleados.import' => 'Importar Empleados desde Excel',
             ],
 
         ];

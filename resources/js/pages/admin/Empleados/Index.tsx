@@ -23,9 +23,11 @@ import {
     Upload,
     Car,
     Send,
+    FileSpreadsheet,
 } from 'lucide-react';
 import React, { useState, useRef, useEffect } from 'react';
 import { Breadcrumbs } from '@/components/breadcrumbs';
+import { ImportWizardModal } from '@/components/admin/empleados/ImportWizardModal';
 import PhoneInputGroup from '../Empresas/Partials/PhoneInputGroup';
 import type { ColumnDef } from '@/components/data-table';
 import { DataTable } from '@/components/data-table';
@@ -381,6 +383,7 @@ export default function EmpleadosIndexPage({
     });
 
     const [isPreRegistroModalOpen, setIsPreRegistroModalOpen] = useState(false);
+    const [isImportModalOpen, setIsImportModalOpen] = useState(false);
     const preRegistroForm = useForm({
         nombres: '',
         apellidos: '',
@@ -751,6 +754,15 @@ export default function EmpleadosIndexPage({
                     colorClassName="bg-indigo-600"
                 >
                     <div className="flex items-center gap-2">
+                        <Button
+                            type="button"
+                            onClick={() => setIsImportModalOpen(true)}
+                            variant="outline"
+                            className="border-emerald-600 text-emerald-600 hover:bg-emerald-600/10 flex items-center gap-1.5"
+                        >
+                            <FileSpreadsheet className="w-4 h-4" />
+                            {__('Importar Excel')}
+                        </Button>
                         <Button
                             type="button"
                             onClick={() => setIsPreRegistroModalOpen(true)}
@@ -1869,6 +1881,12 @@ export default function EmpleadosIndexPage({
                     </form>
                 </DialogContent>
             </Dialog>
+
+            {/* Modal de Importación de Excel Wizard */}
+            <ImportWizardModal
+                open={isImportModalOpen}
+                onOpenChange={setIsImportModalOpen}
+            />
         </>
     );
 }

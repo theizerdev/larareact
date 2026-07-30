@@ -13,8 +13,10 @@ use App\Models\Cargo;
 use App\Models\Pais;
 use App\Models\User;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
+use App\Services\EmpleadoImportService;
 use Inertia\Inertia;
 
 class EmpleadoController extends Controller
@@ -479,4 +481,91 @@ class EmpleadoController extends Controller
             }
         }
     }
+
+    /**
+     * Step 1 & 2: Parse uploaded Excel file and return preview & stats.
+     */
+    public function importPreview(Request $request, EmpleadoImportService $importService)
+    {
+        $request->validate([
+            'file' => 'required|file|mimes:xlsx,xls,csv|max:10240',
+        ], [
+            'file.required' => 'Debe seleccionar un archivo Excel.',
+            'file.mimes' => 'El archivo debe ser formato .xlsx, .xls o .csv.',
+            'file.max' => 'El archivo no debe pesar más de 10 MB.',
+        ]);
+
+        $file = $request->file('file');
+        $result = $importService->parsePreview($file->getPathname());
+
+        if (!$result['success']) {
+            return response()->json($result, 422);
+        }
+
+        return response()->json($result);
+    }
+
+    /**
+     * Step 3: Verify authenticated user password.
+     */
+    public function verifyPassword(Request $request)
+    {
+        $request->validate([
+            'password' => 'required|string',
+        ], [
+            'password.required' => 'La contraseña es requerida.',
+        ]);
+
+        $user = $request->user();
+
+        if (!Hash::check($request->password, $user->password)) {
+            return response()->json([
+                'message' => 'La contraseña ingresada es incorrecta.',
+                'errors' => [
+                    'password' => ['La contraseña ingresada es incorrecta.']
+                ]
+            ], 422);
+        }
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Contraseña verificada correctamente.'
+        ]);
+    }
+
+    /**
+     * Step 4: Execute batch import of verified records.
+     */
+    public function importExecute(Request $request, EmpleadoImportService $importService)
+    {
+        $request->validate([
+            'records' => 'required|array',
+            'duplicate_strategy' => 'required|string|in:update,skip',
+            'password' => 'required|string',
+        ]);
+
+        $user = $request->user();
+
+        if (!Hash::check($request->password, $user->password)) {
+            return response()->json([
+                'message' => 'La contraseña ingresada es incorrecta.'
+            ], 422);
+        }
+
+        $result = $importService->executeImport(
+            $request->records,
+            $user->empresa_id ?: 1,
+            $user->sucursal_id ?: 1,
+            $request->duplicate_strategy
+        );
+
+        if ($result['success']) {
+            activity('empleados')
+                ->causedBy($user)
+                ->log("Se importaron exitosamente {$result['total_processed']} empleados desde Excel ({$result['created']} creados, {$result['updated']} actualizados).");
+        }
+
+        return response()->json($result);
+    }
 }
+
