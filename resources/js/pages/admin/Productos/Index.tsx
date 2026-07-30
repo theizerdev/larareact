@@ -205,9 +205,9 @@ export default function Index({ productos, categorias: categoriasProp, marcas: m
         tipo_venta: 'unidad',
         usa_inventario: true,
         variant_specs: {} as Record<string, string>,
-        precio_compra: '0.00',
-        precio_venta: '0.00',
-        precio_mayoreo: '0.00',
+        precio_compra: '',
+        precio_venta: '',
+        precio_mayoreo: '',
         stock: '' as unknown as number,
         stock_minimo: 2,
         tipo_impuesto: 'gravado',
@@ -310,8 +310,26 @@ export default function Index({ productos, categorias: categoriasProp, marcas: m
         setIsCreateOpen(true);
     };
 
-    const handleSelectModelo = (modeloId: string) => {
-        const mod = modelos.find((m) => String(m.id) === modeloId);
+    const generateSkuSuggestion = (mod: ModeloOption | undefined, nombreProducto: string, codigoBarras?: string) => {
+        const cleanName = (nombreProducto || mod?.nombre || '')
+            .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+            .replace(/[^a-zA-Z0-9\s-]/g, '')
+            .trim()
+            .replace(/\s+/g, '-')
+            .toUpperCase();
+
+        const rawCode = codigoBarras?.trim() || mod?.codigo_modelo || (mod ? `MOD${mod.id}` : '');
+        const cleanCode = rawCode.replace(/[^a-zA-Z0-9]/g, '').toUpperCase();
+
+        if (cleanCode && cleanName) {
+            return `${cleanCode}-${cleanName}`;
+        }
+        return cleanName || cleanCode || 'SKU-PROD';
+    };
+
+    const handleSelectModelo = (modeloId: string, customModelosList?: ModeloOption[]) => {
+        const list = customModelosList || modelos;
+        const mod = list.find((m) => String(m.id) === modeloId);
         if (!mod) return;
 
         setSelCategoriaId(String(mod.categoria_id));
@@ -325,21 +343,14 @@ export default function Index({ productos, categorias: categoriasProp, marcas: m
             nombre += ` (${subSpecs.slice(0, 3).join(' / ')})`;
         }
 
+        const newSku = generateSkuSuggestion(mod, nombre, data.codigo_barras);
+
         setData((prev) => ({
             ...prev,
             modelo_id: modeloId,
             nombre_variante: nombre,
-            sku: prev.sku || generateSkuSuggestion(mod, prev.variant_specs),
+            sku: newSku,
         }));
-    };
-
-    const generateSkuSuggestion = (mod: ModeloOption, specs: Record<string, string>) => {
-        const marcaCode = mod.marca.substring(0, 3).toUpperCase();
-        const modCode = mod.nombre_comercial.replace(/[^a-zA-Z0-9]/g, '').substring(0, 5).toUpperCase();
-        const ramCode = specs['RAM'] ? specs['RAM'].replace(/[^0-9]/g, '') : 'X';
-        const storageCode = specs['Almacenamiento'] ? specs['Almacenamiento'].replace(/[^0-9]/g, '') : 'X';
-
-        return `${marcaCode}-${modCode}-${ramCode}-${storageCode}`;
     };
 
     const handleQuickCreateCategoria = (e: React.FormEvent) => {
@@ -489,7 +500,7 @@ export default function Index({ productos, categorias: categoriasProp, marcas: m
                     const creado = modelosUpdated.find((m) => m.nombre_comercial.toLowerCase() === nombreTarget.toLowerCase())
                         || modelosUpdated[modelosUpdated.length - 1];
                     if (creado) {
-                        handleSelectModelo(String(creado.id));
+                        handleSelectModelo(String(creado.id), modelosUpdated);
                     }
                 },
                 onError: () => notifyError(__('Error al crear el modelo.')),
@@ -500,6 +511,24 @@ export default function Index({ productos, categorias: categoriasProp, marcas: m
 
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
+
+        const pCompra = parseFloat(data.precio_compra);
+        if (isNaN(pCompra) || pCompra <= 0) {
+            notifyError(__('El precio de compra (costo) debe ser un monto válido mayor a 0.00.'));
+            return;
+        }
+
+        const pVenta = parseFloat(data.precio_venta);
+        if (isNaN(pVenta) || pVenta <= 0) {
+            notifyError(__('El precio de venta (minorista) debe ser un monto válido mayor a 0.00.'));
+            return;
+        }
+
+        if (data.precio_mayoreo && parseFloat(data.precio_mayoreo) < 0) {
+            notifyError(__('El precio de mayoreo no puede ser negativo.'));
+            return;
+        }
+
         if (editingProducto) {
             put(`/admin/productos/${editingProducto.id}`, {
                 onSuccess: () => {
@@ -898,7 +927,15 @@ export default function Index({ productos, categorias: categoriasProp, marcas: m
                             </DialogDescription>
                         </DialogHeader>
 
-                        <form onSubmit={handleSubmit} className="flex-1 flex flex-col min-h-0 space-y-4 py-2">
+                        <form
+                            onSubmit={handleSubmit}
+                            onKeyDown={(e) => {
+                                if (e.key === 'Enter' && (e.target as HTMLElement).tagName !== 'TEXTAREA') {
+                                    e.preventDefault();
+                                }
+                            }}
+                            className="flex-1 flex flex-col min-h-0 space-y-4 py-2"
+                        >
                             <Tabs value={activeTab} onValueChange={setActiveTab} className="flex-1 flex flex-col min-h-0">
                                 <TabsList className="grid grid-cols-5 w-full h-10 mb-3 bg-slate-100 dark:bg-slate-800 p-1 overflow-x-auto">
                                     <TabsTrigger value="general" className="text-xs gap-1 data-[state=active]:bg-white dark:data-[state=active]:bg-slate-900 px-2">
@@ -926,56 +963,7 @@ export default function Index({ productos, categorias: categoriasProp, marcas: m
                                 <div className="flex-1 overflow-y-auto pr-1 space-y-4">
                                     {/* PESTAÑA UNIFICADA: GENERAL, PRECIOS, STOCK Y CATÁLOGO */}
                                     <TabsContent value="general" className="space-y-4 m-0">
-                                        {/* 1. IDENTIFICACIÓN BÁSICA: CÓDIGO, NOMBRE DE VARIANTE Y SKU */}
-                                        <div className="p-4 rounded-lg border bg-slate-50/50 dark:bg-slate-900/40 space-y-4">
-                                            <span className="text-xs font-semibold text-slate-700 dark:text-slate-300 flex items-center gap-1.5">
-                                                <Package className="h-4 w-4 text-blue-500" />
-                                                {__('Identificación del Producto / Variante')}
-                                            </span>
-
-                                            <div className="grid grid-cols-1 md:grid-cols-12 gap-4">
-                                                {/* Código de Barras */}
-                                                <div className="md:col-span-4 space-y-1.5">
-                                                    <Label htmlFor="codigo_barras" className="text-xs font-medium">{__('Código (EAN / UPC / Barras)')}</Label>
-                                                    <Input
-                                                        id="codigo_barras"
-                                                        value={data.codigo_barras}
-                                                        onChange={(e) => setData('codigo_barras', e.target.value)}
-                                                        placeholder="Ej: 779123456789"
-                                                        className="font-mono text-xs"
-                                                    />
-                                                    {errors.codigo_barras && <p className="text-xs text-rose-500">{errors.codigo_barras}</p>}
-                                                </div>
-
-                                                {/* Nombre de Variante */}
-                                                <div className="md:col-span-5 space-y-1.5">
-                                                    <Label htmlFor="nombre_variante" className="text-xs required">{__('Nombre de Variante')}</Label>
-                                                    <Input
-                                                        id="nombre_variante"
-                                                        value={data.nombre_variante}
-                                                        onChange={(e) => setData('nombre_variante', e.target.value)}
-                                                        placeholder="Ej: Galaxy S24 Ultra (12GB / 512GB - Titanium Black)"
-                                                        className="text-xs font-medium"
-                                                    />
-                                                    {errors.nombre_variante && <p className="text-xs text-rose-500">{errors.nombre_variante}</p>}
-                                                </div>
-
-                                                {/* SKU */}
-                                                <div className="md:col-span-3 space-y-1.5">
-                                                    <Label htmlFor="sku" className="text-xs required">{__('SKU (Código Único)')}</Label>
-                                                    <Input
-                                                        id="sku"
-                                                        value={data.sku}
-                                                        onChange={(e) => setData('sku', e.target.value)}
-                                                        placeholder="Ej: SAM-S24U-BLK"
-                                                        className="font-mono text-xs"
-                                                    />
-                                                    {errors.sku && <p className="text-xs text-rose-500">{errors.sku}</p>}
-                                                </div>
-                                            </div>
-                                        </div>
-
-                                        {/* 2. CATÁLOGO: CATEGORÍA, MARCA Y MODELO (EN UNA SOLA LÍNEA CON COL-4 CADA UNO) */}
+                                        {/* 1. CATÁLOGO: CATEGORÍA, MARCA Y MODELO (PRIMERO) */}
                                         <div className="p-4 rounded-lg border bg-slate-50/50 dark:bg-slate-900/40 space-y-4">
                                             <span className="text-xs font-semibold text-slate-700 dark:text-slate-300 flex items-center gap-1.5">
                                                 <Layers className="h-4 w-4 text-indigo-500" />
@@ -1071,6 +1059,70 @@ export default function Index({ productos, categorias: categoriasProp, marcas: m
                                             </div>
                                         </div>
 
+                                        {/* 2. IDENTIFICACIÓN DEL PRODUCTO / VARIANTE (LUEGO) */}
+                                        <div className="p-4 rounded-lg border bg-slate-50/50 dark:bg-slate-900/40 space-y-4">
+                                            <span className="text-xs font-semibold text-slate-700 dark:text-slate-300 flex items-center gap-1.5">
+                                                <Package className="h-4 w-4 text-blue-500" />
+                                                {__('Identificación del Producto / Variante')}
+                                            </span>
+
+                                            <div className="grid grid-cols-1 md:grid-cols-12 gap-4">
+                                                {/* Código de Barras */}
+                                                <div className="md:col-span-4 space-y-1.5">
+                                                    <Label htmlFor="codigo_barras" className="text-xs font-medium">{__('Código (EAN / UPC / Barras)')}</Label>
+                                                    <Input
+                                                         id="codigo_barras"
+                                                         value={data.codigo_barras}
+                                                         onChange={(e) => {
+                                                             const val = e.target.value;
+                                                             const mod = modelos.find((m) => String(m.id) === data.modelo_id);
+                                                             setData((prev) => ({
+                                                                 ...prev,
+                                                                 codigo_barras: val,
+                                                                 sku: generateSkuSuggestion(mod, prev.nombre_variante, val),
+                                                             }));
+                                                         }}
+                                                         onKeyDown={(e) => {
+                                                             if (e.key === 'Enter') {
+                                                                 e.preventDefault();
+                                                             }
+                                                         }}
+                                                         placeholder="Ej: 779123456789"
+                                                         className="font-mono text-xs"
+                                                    />
+                                                    {errors.codigo_barras && <p className="text-xs text-rose-500">{errors.codigo_barras}</p>}
+                                                </div>
+
+                                                {/* Nombre del Producto (readOnly) */}
+                                                <div className="md:col-span-5 space-y-1.5">
+                                                    <Label htmlFor="nombre_variante" className="text-xs required">{__('Nombre del Producto')}</Label>
+                                                    <Input
+                                                        id="nombre_variante"
+                                                        value={data.nombre_variante}
+                                                        onChange={(e) => setData('nombre_variante', e.target.value)}
+                                                        placeholder={__('Se genera automáticamente al seleccionar el modelo')}
+                                                        readOnly
+                                                        className="text-xs font-medium bg-slate-100 dark:bg-slate-800 cursor-not-allowed text-slate-700 dark:text-slate-300"
+                                                    />
+                                                    {errors.nombre_variante && <p className="text-xs text-rose-500">{errors.nombre_variante}</p>}
+                                                </div>
+
+                                                {/* SKU (readOnly) */}
+                                                <div className="md:col-span-3 space-y-1.5">
+                                                    <Label htmlFor="sku" className="text-xs required">{__('SKU (Código Único)')}</Label>
+                                                    <Input
+                                                        id="sku"
+                                                        value={data.sku}
+                                                        onChange={(e) => setData('sku', e.target.value)}
+                                                        placeholder={__('Autogenerado')}
+                                                        readOnly
+                                                        className="font-mono text-xs bg-slate-100 dark:bg-slate-800 cursor-not-allowed text-slate-700 dark:text-slate-300"
+                                                    />
+                                                    {errors.sku && <p className="text-xs text-rose-500">{errors.sku}</p>}
+                                                </div>
+                                            </div>
+                                        </div>
+
                                         {/* 3. ESTRUCTURA DE PRECIOS Y STOCK */}
                                         <div className="p-4 rounded-lg border bg-slate-50/50 dark:bg-slate-900/40 space-y-4">
                                             <span className="text-xs font-semibold text-slate-700 dark:text-slate-300 flex items-center gap-1.5">
@@ -1085,7 +1137,8 @@ export default function Index({ productos, categorias: categoriasProp, marcas: m
                                                         id="precio_compra"
                                                         type="number"
                                                         step="0.01"
-                                                        min="0"
+                                                        min="0.01"
+                                                        placeholder="0.00"
                                                         value={data.precio_compra}
                                                         onChange={(e) => setData('precio_compra', e.target.value)}
                                                         className="h-9 text-xs font-medium"
@@ -1099,7 +1152,8 @@ export default function Index({ productos, categorias: categoriasProp, marcas: m
                                                         id="precio_venta"
                                                         type="number"
                                                         step="0.01"
-                                                        min="0"
+                                                        min="0.01"
+                                                        placeholder="0.00"
                                                         value={data.precio_venta}
                                                         onChange={(e) => setData('precio_venta', e.target.value)}
                                                         className="h-9 text-xs font-bold text-emerald-600"
@@ -1414,10 +1468,24 @@ export default function Index({ productos, categorias: categoriasProp, marcas: m
                                     {/* PESTAÑA 5: ATRIBUTOS DE VARIANTE */}
                                     <TabsContent value="atributos" className="space-y-4 m-0">
                                         <SpecEditor
-                                            initialSpecs={data.variant_specs}
-                                            onChange={(specs) => setData('variant_specs', specs)}
-                                            title={__('Atributos de Variante')}
-                                            description={__('Define la RAM, Almacenamiento, Color u otras características específicas de esta variante física.')}
+                                             initialSpecs={data.variant_specs}
+                                             onChange={(specs) => {
+                                                 const mod = modelos.find((m) => String(m.id) === data.modelo_id);
+                                                 let nombre = mod ? mod.nombre : data.nombre_variante;
+                                                 const subSpecs = Object.values(specs || {});
+                                                 if (mod && subSpecs.length > 0) {
+                                                     nombre = `${mod.nombre} (${subSpecs.slice(0, 3).join(' / ')})`;
+                                                 }
+                                                 const newSku = generateSkuSuggestion(mod, nombre, data.codigo_barras);
+                                                 setData((prev) => ({
+                                                     ...prev,
+                                                     variant_specs: specs,
+                                                     nombre_variante: nombre,
+                                                     sku: newSku,
+                                                 }));
+                                             }}
+                                             title={__('Atributos de Variante')}
+                                             description={__('Define la RAM, Almacenamiento, Color u otras características específicas de esta variante física.')}
                                         />
                                     </TabsContent>
 

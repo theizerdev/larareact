@@ -299,8 +299,8 @@ export default function AdminSaasLayout({
                 <aside
                     className={cn(
                         'fixed inset-y-0 left-0 z-50 flex flex-col border-r border-sidebar-border bg-sidebar text-sidebar-foreground transition-all duration-300',
-                        collapsed ? 'lg:w-[72px]' : 'lg:w-64',
-                        mobileMenuOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0',
+                        collapsed ? 'lg:w-0 lg:-translate-x-full lg:opacity-0 lg:pointer-events-none overflow-hidden' : 'lg:w-64 lg:translate-x-0 lg:opacity-100',
+                        mobileMenuOpen ? 'translate-x-0' : '-translate-x-full',
                         'w-64 lg:flex',
                     )}
                 >
@@ -755,7 +755,7 @@ export default function AdminSaasLayout({
                 <div
                     className={cn(
                         'flex flex-1 flex-col transition-all duration-300 min-w-0',
-                        collapsed ? 'lg:pl-[72px]' : 'lg:pl-64',
+                        collapsed ? 'lg:pl-0' : 'lg:pl-64',
                         'pl-0',
                     )}
                 >
@@ -772,8 +772,15 @@ export default function AdminSaasLayout({
                             <Button
                                 variant="ghost"
                                 size="icon"
-                                className="lg:hidden text-muted-foreground hover:bg-accent -ml-2"
-                                onClick={() => setMobileMenuOpen(true)}
+                                className="text-muted-foreground hover:bg-accent -ml-2 flex"
+                                onClick={() => {
+                                    if (typeof window !== 'undefined' && window.innerWidth < 1024) {
+                                        setMobileMenuOpen(!mobileMenuOpen);
+                                    } else {
+                                        setCollapsed(!collapsed);
+                                    }
+                                }}
+                                title={collapsed ? __('Mostrar menú') : __('Ocultar menú')}
                             >
                                 <Menu className="size-5" />
                             </Button>
