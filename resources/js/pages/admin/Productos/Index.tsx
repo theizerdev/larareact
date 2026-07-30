@@ -208,7 +208,7 @@ export default function Index({ productos, categorias: categoriasProp, marcas: m
         precio_compra: '0.00',
         precio_venta: '0.00',
         precio_mayoreo: '0.00',
-        stock: 0,
+        stock: '' as unknown as number,
         stock_minimo: 2,
         tipo_impuesto: 'gravado',
         tasa_iva: '16.00',
@@ -259,6 +259,11 @@ export default function Index({ productos, categorias: categoriasProp, marcas: m
     const handleCreate = () => {
         setEditingProducto(null);
         reset();
+        setData((prev) => ({
+            ...prev,
+            stock: '' as unknown as number,
+            stock_minimo: 2,
+        }));
         setSelCategoriaId('all');
         setSelMarcaId('all');
         setSelFamiliaId('all');
@@ -1127,17 +1132,21 @@ export default function Index({ productos, categorias: categoriasProp, marcas: m
                                             )}>
                                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                                     <div className="space-y-1.5">
-                                                        <Label htmlFor="stock" className="text-xs required">{__('Stock Actual (Unidades)')}</Label>
+                                                        <Label htmlFor="stock" className={cn("text-xs", data.usa_inventario && "required")}>
+                                                            {__('Stock Actual (Cantidad Obligatoria)')}
+                                                        </Label>
                                                         <Input
                                                             id="stock"
                                                             type="number"
                                                             step={data.tipo_venta === 'granel' ? '0.001' : '1'}
                                                             min="0"
-                                                            value={data.stock}
-                                                            onChange={(e) => setData('stock', Number(e.target.value))}
+                                                            required={data.usa_inventario}
+                                                            placeholder={__('Ej: 10')}
+                                                            value={data.stock === '' || data.stock === null || data.stock === undefined ? '' : data.stock}
+                                                            onChange={(e) => setData('stock', e.target.value === '' ? '' as any : Number(e.target.value))}
                                                             className="h-9 font-semibold"
                                                         />
-                                                        {errors.stock && <p className="text-xs text-rose-500">{errors.stock}</p>}
+                                                        {errors.stock && <p className="text-xs text-rose-500 font-semibold">{errors.stock}</p>}
                                                     </div>
 
                                                     <div className="space-y-1.5">

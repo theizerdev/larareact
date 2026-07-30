@@ -135,8 +135,8 @@ class ProductoController extends Controller
             'precio_compra' => 'required|numeric|min:0',
             'precio_venta' => 'required|numeric|min:0',
             'precio_mayoreo' => 'nullable|numeric|min:0',
-            'stock' => 'required|numeric|min:0',
-            'stock_minimo' => 'required|numeric|min:0',
+            'stock' => 'required_if:usa_inventario,true|nullable|numeric|min:0',
+            'stock_minimo' => 'required_if:usa_inventario,true|nullable|numeric|min:0',
             'tipo_impuesto' => 'required|string|in:gravado,exento,tasa_cero',
             'tasa_iva' => 'nullable|numeric|min:0',
             'aplica_impuesto_adicional' => 'boolean',
@@ -150,6 +150,11 @@ class ProductoController extends Controller
             'estado' => 'boolean',
             'empresa_id' => 'nullable|exists:empresas,id',
             'sucursal_id' => 'nullable|exists:sucursales,id',
+        ], [
+            'stock.required' => __('La cantidad actual (stock) es obligatoria.'),
+            'stock.required_if' => __('Debe ingresar la cantidad actual de stock.'),
+            'stock.numeric' => __('La cantidad de stock debe ser un número válido.'),
+            'stock.min' => __('El stock no puede ser negativo.'),
         ]);
 
         $modelo = Modelo::findOrFail($validated['modelo_id']);
@@ -161,6 +166,8 @@ class ProductoController extends Controller
         $validated['sucursal_id'] = $validated['sucursal_id'] ?? 1;
         $validated['precio_mayoreo'] = $validated['precio_mayoreo'] ?? 0;
         $validated['usa_inventario'] = $request->boolean('usa_inventario', true);
+        $validated['stock'] = isset($validated['stock']) ? (float) $validated['stock'] : 0;
+        $validated['stock_minimo'] = isset($validated['stock_minimo']) ? (float) $validated['stock_minimo'] : 0;
         $validated['aplica_impuesto_adicional'] = $request->boolean('aplica_impuesto_adicional', false);
         $validated['aplica_retencion'] = $request->boolean('aplica_retencion', false);
         $validated['precio_incluye_impuestos'] = $request->boolean('precio_incluye_impuestos', true);
@@ -190,8 +197,8 @@ class ProductoController extends Controller
             'precio_compra' => 'required|numeric|min:0',
             'precio_venta' => 'required|numeric|min:0',
             'precio_mayoreo' => 'nullable|numeric|min:0',
-            'stock' => 'required|numeric|min:0',
-            'stock_minimo' => 'required|numeric|min:0',
+            'stock' => 'required_if:usa_inventario,true|nullable|numeric|min:0',
+            'stock_minimo' => 'required_if:usa_inventario,true|nullable|numeric|min:0',
             'tipo_impuesto' => 'required|string|in:gravado,exento,tasa_cero',
             'tasa_iva' => 'nullable|numeric|min:0',
             'aplica_impuesto_adicional' => 'boolean',
@@ -203,6 +210,11 @@ class ProductoController extends Controller
             'clave_sat_unidad' => 'nullable|string|max:20',
             'objeto_impuesto_sat' => 'nullable|string|max:5',
             'estado' => 'boolean',
+        ], [
+            'stock.required' => __('La cantidad actual (stock) es obligatoria.'),
+            'stock.required_if' => __('Debe ingresar la cantidad actual de stock.'),
+            'stock.numeric' => __('La cantidad de stock debe ser un número válido.'),
+            'stock.min' => __('El stock no puede ser negativo.'),
         ]);
 
         $modelo = Modelo::findOrFail($validated['modelo_id']);
@@ -212,6 +224,8 @@ class ProductoController extends Controller
         $validated['categoria_id'] = $modelo->categoria_id;
         $validated['precio_mayoreo'] = $validated['precio_mayoreo'] ?? 0;
         $validated['usa_inventario'] = $request->boolean('usa_inventario', true);
+        $validated['stock'] = isset($validated['stock']) ? (float) $validated['stock'] : 0;
+        $validated['stock_minimo'] = isset($validated['stock_minimo']) ? (float) $validated['stock_minimo'] : 0;
         $validated['aplica_impuesto_adicional'] = $request->boolean('aplica_impuesto_adicional', false);
         $validated['aplica_retencion'] = $request->boolean('aplica_retencion', false);
         $validated['precio_incluye_impuestos'] = $request->boolean('precio_incluye_impuestos', true);
