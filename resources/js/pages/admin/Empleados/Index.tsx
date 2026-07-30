@@ -612,7 +612,7 @@ export default function EmpleadosIndexPage({
                         />
                         <div>
                             <p className="font-semibold text-sm text-slate-800 dark:text-slate-100">{emp.nombres} {emp.apellidos}</p>
-                            <p className="text-xs text-muted-foreground">{__('ID')}: {emp.documento_identidad}</p>
+                            <p className="text-xs text-muted-foreground">CURP: {emp.documento_identidad}</p>
                         </div>
                     </div>
                 );

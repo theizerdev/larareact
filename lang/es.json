@@ -254,7 +254,7 @@
   "INACTIVE": "INACTIVOS",
   "Manage companies, their locations and contact information.": "Administra las empresas, sus ubicaciones e información de contacto.",
   "Complete the company information across the available sections.": "Completa la información de la empresa en las secciones disponibles.",
-  "Search by name, document, email...": "Buscar por nombre, documento, correo...",
+  "Search by name, document, email...": "Buscar por nombre, CURP, correo...",
   "Select a country": "Selecciona un país",
   "None": "Ninguno",
   "The address will be auto-filled when you click on the map...": "La dirección se llenará automáticamente al hacer clic en el mapa...",
