@@ -365,7 +365,7 @@ export default function AdminDashboard({ moduleStats }: Props) {
                         <div className="flex items-start justify-between">
                             <div>
                                 <p className="text-xs font-medium text-muted-foreground">
-                                    Visitas Temporales
+                                    Visitas
                                 </p>
                                 <p className="mt-2 text-2xl font-bold tracking-tight">
                                     {overview.visitas_temporales?.total || 0}
