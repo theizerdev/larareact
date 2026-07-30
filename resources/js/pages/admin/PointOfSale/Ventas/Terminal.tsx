@@ -3,7 +3,7 @@ import {
     ShoppingCart, Search, Plus, Minus, Trash2, CheckCircle2, CreditCard, DollarSign,
     Package, Wrench, User, AlertCircle, Building2, Smartphone, Receipt, Pause,
     Play, X, Wallet, Tag, Barcode, HelpCircle, Layers, FileText, ArrowRight, Eye, RefreshCw,
-    Calculator, ArrowUpRight, ArrowDownLeft, Scale, Printer, Lock, Coins, Edit3, Landmark
+    Calculator, ArrowUpRight, ArrowDownLeft, Scale, Printer, Lock, Coins, Edit3, Landmark, Boxes
 } from 'lucide-react';
 import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { Breadcrumbs } from '@/components/breadcrumbs';
@@ -18,6 +18,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
+import { Switch } from '@/components/ui/switch';
 import { useTranslate } from '@/hooks/use-translate';
 import { cn } from '@/lib/utils';
 import { notifySuccess, notifyError } from '@/utils/notifications';
@@ -37,16 +38,18 @@ interface CatalogItem {
 }
 
 interface TicketItem {
-    id: number;
-    catalog_id: number;
-    tipo: 'producto' | 'servicio';
+    id: number | string;
+    itemable_id?: number | null;
+    concepto_tipo?: 'producto' | 'servicio';
+    tipo?: 'producto' | 'servicio';
     nombre: string;
     codigo: string;
     precio_unitario: number;
-    precio: number;
+    precio?: number;
     cantidad: number;
-    usa_inventario: boolean;
-    stock_disponible: number;
+    usa_inventario?: boolean;
+    stock_disponible?: number;
+    stock?: number | null;
 }
 
 interface CartItem {
@@ -122,6 +125,33 @@ export default function Terminal({
     const pageProps = usePage().props as any;
     const isVenezuela = Boolean(pageProps?.isVenezuela);
     const currencyCode = pageProps?.currencyCode || 'MXN';
+
+    // Local catalog state to allow live stock updates
+    const [localCatalog, setLocalCatalog] = useState<CatalogItem[]>(catalog);
+
+    useEffect(() => {
+        setLocalCatalog(catalog);
+    }, [catalog]);
+
+    // Zero stock modal state
+    const [isZeroStockModalOpen, setIsZeroStockModalOpen] = useState(false);
+    const [zeroStockTargetItem, setZeroStockTargetItem] = useState<CatalogItem | null>(null);
+    const [stockToAddInput, setStockToAddInput] = useState<string>('1');
+    const [isUpdatingStock, setIsUpdatingStock] = useState(false);
+
+    // Form ref for Payment Modal (for F11 shortcut submit)
+    const paymentFormRef = useRef<HTMLFormElement>(null);
+
+    // Ticket printer machine (80mm) settings state
+    const [hasTicketPrinter, setHasTicketPrinter] = useState<boolean>(() => {
+        const saved = localStorage.getItem('pos_has_ticket_printer');
+        return saved !== null ? saved === 'true' : true;
+    });
+
+    const toggleTicketPrinter = (enabled: boolean) => {
+        setHasTicketPrinter(enabled);
+        localStorage.setItem('pos_has_ticket_printer', String(enabled));
+    };
 
     // Valor del Dólar (Exchange Rate) Modal State
     const [isDolarModalOpen, setIsDolarModalOpen] = useState(false);
@@ -309,7 +339,16 @@ export default function Terminal({
 
     // Add Item to Active Ticket Cart
     const addToCart = (item: CatalogItem) => {
+        if (item.tipo === 'producto' && item.stock !== null && item.stock <= 0) {
+            setZeroStockTargetItem(item);
+            setStockToAddInput('1');
+            setIsZeroStockModalOpen(true);
+            return;
+        }
+
         playScanBeep();
+        let shouldShowZeroStockModal = false;
+
         updateActiveTicket((ticket) => {
             const cartId = `${item.tipo}-${item.id}`;
             const idx = ticket.cart.findIndex((ci) => ci.id === cartId);
@@ -317,16 +356,11 @@ export default function Terminal({
             if (idx > -1) {
                 const updatedCart = [...ticket.cart];
                 if (item.stock !== null && updatedCart[idx].cantidad >= item.stock) {
-                    notifyError(__('No hay más stock disponible para este producto.'));
+                    shouldShowZeroStockModal = true;
                     return ticket;
                 }
                 updatedCart[idx] = { ...updatedCart[idx], cantidad: updatedCart[idx].cantidad + 1 };
                 return { ...ticket, cart: updatedCart };
-            }
-
-            if (item.stock !== null && item.stock <= 0) {
-                notifyError(__('El producto no cuenta con stock disponible.'));
-                return ticket;
             }
 
             return {
@@ -346,7 +380,100 @@ export default function Terminal({
                 ],
             };
         });
+
+        if (shouldShowZeroStockModal) {
+            setZeroStockTargetItem(item);
+            setStockToAddInput('1');
+            setIsZeroStockModalOpen(true);
+            return;
+        }
+
         notifySuccess(`${item.nombre} ${__('agregado')}`);
+    };
+
+    // Confirm quick stock addition for product with zero stock
+    const handleConfirmQuickStock = async (e?: React.FormEvent) => {
+        e?.preventDefault();
+        if (!zeroStockTargetItem) return;
+
+        const qtyToAdd = parseFloat(stockToAddInput);
+        if (isNaN(qtyToAdd) || qtyToAdd <= 0) {
+            notifyError(__('Ingrese una cantidad de existencia válida mayor a cero.'));
+            return;
+        }
+
+        setIsUpdatingStock(true);
+        try {
+            const token = (document.querySelector('meta[name="csrf-token"]') as HTMLMetaElement)?.content || '';
+            const res = await fetch(`/admin/productos/${zeroStockTargetItem.id}/quick-stock`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Accept': 'application/json',
+                    'X-CSRF-TOKEN': token,
+                },
+                body: JSON.stringify({ cantidad: qtyToAdd }),
+            });
+
+            const result = await res.json();
+            if (res.ok && result.success) {
+                const newStock = Number(result.stock);
+
+                // Update catalog item stock in state
+                setLocalCatalog((prev) =>
+                    prev.map((it) => (it.id === zeroStockTargetItem.id && it.tipo === 'producto' ? { ...it, stock: newStock } : it))
+                );
+
+                const updatedItem: CatalogItem = {
+                    ...zeroStockTargetItem,
+                    stock: newStock,
+                };
+
+                // Add to active ticket cart
+                updateActiveTicket((ticket) => {
+                    const cartId = `${updatedItem.tipo}-${updatedItem.id}`;
+                    const idx = ticket.cart.findIndex((ci) => ci.id === cartId);
+
+                    if (idx > -1) {
+                        const updatedCart = [...ticket.cart];
+                        updatedCart[idx] = {
+                            ...updatedCart[idx],
+                            cantidad: updatedCart[idx].cantidad + 1,
+                            stock: newStock,
+                        };
+                        return { ...ticket, cart: updatedCart };
+                    }
+
+                    return {
+                        ...ticket,
+                        cart: [
+                            ...ticket.cart,
+                            {
+                                id: cartId,
+                                itemable_id: updatedItem.id,
+                                concepto_tipo: updatedItem.tipo,
+                                nombre: updatedItem.nombre,
+                                codigo: updatedItem.codigo,
+                                precio_unitario: updatedItem.precio,
+                                cantidad: 1,
+                                stock: newStock,
+                            },
+                        ],
+                    };
+                });
+
+                playScanBeep();
+                notifySuccess(`${updatedItem.nombre}: +${qtyToAdd} ${__('existencias añadidas y producto agregado al ticket.')}`);
+                setIsZeroStockModalOpen(false);
+                setZeroStockTargetItem(null);
+            } else {
+                notifyError(result.message || __('Error al actualizar el stock del producto.'));
+            }
+        } catch (error) {
+            notifyError(__('Error de conexión al actualizar la existencia.'));
+        } finally {
+            setIsUpdatingStock(false);
+        }
     };
 
     // Add Miscellaneous / Generic Article
@@ -386,11 +513,11 @@ export default function Terminal({
     const liveSearchResults = useMemo(() => {
         if (!barcodeInput.trim()) return [];
         const query = barcodeInput.trim().toLowerCase();
-        return catalog.filter((item) =>
+        return localCatalog.filter((item) =>
             (item.nombre || '').toLowerCase().includes(query) ||
             (item.codigo || '').toLowerCase().includes(query)
         ).slice(0, 8);
-    }, [catalog, barcodeInput]);
+    }, [localCatalog, barcodeInput]);
 
     const [selectedIndex, setSelectedIndex] = useState<number>(-1);
 
@@ -435,7 +562,7 @@ export default function Terminal({
         }
 
         const code = barcodeInput.trim().toLowerCase();
-        const found = catalog.find((c) => (c.codigo || '').toLowerCase() === code || (c.nombre || '').toLowerCase() === code);
+        const found = localCatalog.find((c) => (c.codigo || '').toLowerCase() === code || (c.nombre || '').toLowerCase() === code);
 
         if (found) {
             addToCart(found);
@@ -589,7 +716,14 @@ export default function Terminal({
                 clearActiveCart();
                 notifySuccess(__('Venta completada exitosamente.'));
                 const flashSale = (page.props as any).flash?.notification?.sale;
-                if (flashSale) setCompletedSale(flashSale);
+                if (flashSale) {
+                    setCompletedSale(flashSale);
+                    if (hasTicketPrinter) {
+                        setTimeout(() => {
+                            window.print();
+                        }, 250);
+                    }
+                }
             },
             onError: () => notifyError(__('Ocurrió un error al procesar la venta.')),
         });
@@ -637,12 +771,14 @@ export default function Terminal({
         );
     };
 
-    // Keyboard Shortcuts (F12: Cobrar, F10: Buscar, F9: Verificador, F8: Corte, INS: Art Vario, F6: Nuevo Cliente, F5: En Espera)
+    // Keyboard Shortcuts (F11/F12: Emitir Ticket y Cobrar, F10: Buscar, F9: Verificador, F8: Corte, INS: Art Vario, F6: Nuevo Cliente, F5: En Espera)
     useEffect(() => {
         const handleKeyDown = (e: KeyboardEvent) => {
-            if (e.key === 'F12') {
+            if (e.key === 'F11' || e.key === 'F12') {
                 e.preventDefault();
-                if (activeTicket.cart.length > 0 && activeRegister) {
+                if (isPaymentModalOpen) {
+                    paymentFormRef.current?.requestSubmit();
+                } else if (activeTicket.cart.length > 0 && activeRegister) {
                     handleOpenPayment();
                 }
             } else if (e.key === 'F10') {
@@ -667,7 +803,7 @@ export default function Terminal({
         };
         window.addEventListener('keydown', handleKeyDown);
         return () => window.removeEventListener('keydown', handleKeyDown);
-    }, [activeTicket.cart, activeRegister, handleOpenPayment]);
+    }, [activeTicket.cart, activeRegister, handleOpenPayment, isPaymentModalOpen]);
 
     // Client selection
     const handleSelectCliente = (clienteIdStr: string) => {
@@ -683,21 +819,21 @@ export default function Terminal({
 
     // Search modal catalog filtering
     const searchModalCatalog = useMemo(() => {
-        return catalog.filter((item) => {
+        return localCatalog.filter((item) => {
             const matchesType = searchTypeFilter === 'all' || item.tipo === searchTypeFilter;
             const query = searchModalQuery.toLowerCase();
             const matchesSearch =
                 (item.nombre || '').toLowerCase().includes(query) || (item.codigo || '').toLowerCase().includes(query);
             return matchesType && matchesSearch;
         });
-    }, [catalog, searchTypeFilter, searchModalQuery]);
+    }, [localCatalog, searchTypeFilter, searchModalQuery]);
 
     // Price verifier lookup
     const handleVerifierSearch = (e: React.FormEvent) => {
         e.preventDefault();
         if (!verifierQuery.trim()) return;
         const q = verifierQuery.trim().toLowerCase();
-        const found = catalog.find((c) => (c.codigo || '').toLowerCase() === q || (c.nombre || '').toLowerCase().includes(q));
+        const found = localCatalog.find((c) => (c.codigo || '').toLowerCase() === q || (c.nombre || '').toLowerCase().includes(q));
         setVerifierItem(found || null);
     };
 
@@ -886,7 +1022,7 @@ export default function Terminal({
                             onClick={handleOpenPayment}
                         >
                             <DollarSign className="w-4 h-4" />
-                            <span className="font-extrabold">[F12]</span> {__('Cobrar')}
+                            <span className="font-extrabold">[F11]</span> {__('Emitir Ticket y Cobrar')}
                         </Button>
                     </div>
                 </div>
@@ -1201,7 +1337,7 @@ export default function Terminal({
                                 onClick={handleOpenPayment}
                             >
                                 <DollarSign className="w-4.5 h-4.5" />
-                                [F12] {__('Cobrar')}
+                                [F11] {__('Emitir Ticket y Cobrar')}
                             </Button>
                         </div>
                     </div>
@@ -1644,7 +1780,7 @@ export default function Terminal({
                             </DialogDescription>
                         </DialogHeader>
 
-                        <form onSubmit={handleCompleteSale} className="space-y-4 py-2">
+                        <form ref={paymentFormRef} onSubmit={handleCompleteSale} className="space-y-4 py-2">
                             <div className="rounded-xl bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-900 p-4 text-center">
                                 <span className="text-xs font-semibold uppercase text-emerald-700 dark:text-emerald-400">
                                     {isVenezuela ? __('TOTAL A PAGAR EN BOLÍVARES (BS.)') : __('TOTAL A COBRAR')}
@@ -2033,24 +2169,106 @@ export default function Terminal({
                     </DialogContent>
                 </Dialog>
 
+                {/* MODAL INGRESO DE EXISTENCIA RÁPIDO PARA PRODUCTO EN CERO */}
+                <Dialog open={isZeroStockModalOpen} onOpenChange={setIsZeroStockModalOpen}>
+                    <DialogContent className="sm:max-w-md">
+                        <DialogHeader>
+                            <DialogTitle className="flex items-center gap-2 text-rose-600 dark:text-rose-400">
+                                <Boxes className="w-5 h-5" />
+                                {__('Producto Sin Existencia')}
+                            </DialogTitle>
+                            <DialogDescription>
+                                {__('Este producto se encuentra actualmente en 0 existencias. Ingrese la cantidad disponible en tienda para agregarlo a la venta.')}
+                            </DialogDescription>
+                        </DialogHeader>
+
+                        {zeroStockTargetItem && (
+                            <form onSubmit={handleConfirmQuickStock} className="space-y-4 py-2">
+                                <div className="p-3 rounded-lg border bg-rose-50/50 dark:bg-rose-950/20 border-rose-200 dark:border-rose-900/50 space-y-1">
+                                    <div className="flex items-center justify-between">
+                                        <span className="font-bold text-sm text-foreground">{zeroStockTargetItem.nombre}</span>
+                                        <Badge variant="outline" className="text-xs font-mono bg-rose-100 dark:bg-rose-900/40 text-rose-700 dark:text-rose-300 border-rose-300">
+                                            Stock: {zeroStockTargetItem.stock}
+                                        </Badge>
+                                    </div>
+                                    <div className="flex items-center gap-3 text-xs text-muted-foreground font-mono">
+                                        <span>SKU: {zeroStockTargetItem.codigo}</span>
+                                        <span>•</span>
+                                        <span className="font-bold text-emerald-600 dark:text-emerald-400">{currencySymbol}{zeroStockTargetItem.precio.toFixed(2)}</span>
+                                    </div>
+                                </div>
+
+                                <div className="space-y-2">
+                                    <Label htmlFor="quickStockQty" className="font-semibold text-xs">
+                                        {__('Cantidad a Añadir al Inventario')}
+                                    </Label>
+                                    <div className="relative">
+                                        <Input
+                                            id="quickStockQty"
+                                            type="number"
+                                            step="1"
+                                            min="1"
+                                            value={stockToAddInput}
+                                            onChange={(e) => setStockToAddInput(e.target.value)}
+                                            className="font-mono text-lg font-bold h-11 pl-9 text-blue-600 dark:text-blue-400"
+                                            placeholder="1"
+                                            autoFocus
+                                            required
+                                        />
+                                        <Plus className="w-4 h-4 absolute left-3 top-3.5 text-muted-foreground pointer-events-none" />
+                                    </div>
+                                    <p className="text-[11px] text-muted-foreground">
+                                        {__('Esta cantidad se sumará al inventario (Kardex) y 1 unidad se colocará de inmediato en la venta actual.')}
+                                    </p>
+                                </div>
+
+                                <DialogFooter className="pt-2 gap-2 sm:gap-0">
+                                    <Button type="button" variant="outline" onClick={() => setIsZeroStockModalOpen(false)}>
+                                        {__('Cancelar')}
+                                    </Button>
+                                    <Button
+                                        type="submit"
+                                        disabled={isUpdatingStock}
+                                        className="bg-emerald-600 hover:bg-emerald-700 text-white font-bold gap-1.5"
+                                    >
+                                        {isUpdatingStock ? (
+                                            <RefreshCw className="w-4 h-4 animate-spin" />
+                                        ) : (
+                                            <CheckCircle2 className="w-4 h-4" />
+                                        )}
+                                        {__('Guardar Existencia y Vender')}
+                                    </Button>
+                                </DialogFooter>
+                            </form>
+                        )}
+                    </DialogContent>
+                </Dialog>
+
                 {/* MODAL TICKET EXITOSO / COMPLETED SALE */}
                 {completedSale && (
                     <Dialog open={!!completedSale} onOpenChange={() => setCompletedSale(null)}>
-                        <DialogContent className="sm:max-w-sm text-center">
+                        <DialogContent className="sm:max-w-md text-center">
                             <DialogHeader>
                                 <DialogTitle className="text-center flex flex-col items-center gap-2">
-                                    <div className="w-12 h-12 rounded-full bg-emerald-100 text-emerald-600 flex items-center justify-center">
+                                    <div className="w-12 h-12 rounded-full bg-emerald-100 dark:bg-emerald-950/60 text-emerald-600 dark:text-emerald-400 flex items-center justify-center">
                                         <CheckCircle2 className="w-7 h-7" />
                                     </div>
-                                    <span>{__('Venta Completada')}</span>
+                                    <span className="text-lg font-bold">{__('Venta Completada')}</span>
                                 </DialogTitle>
-                                <DialogDescription className="text-center font-mono font-bold text-foreground">
+                                <DialogDescription className="text-center font-mono font-bold text-base text-foreground">
                                     {completedSale.codigo_ticket}
                                 </DialogDescription>
                             </DialogHeader>
-                            <div className="py-3 border-y space-y-2 text-sm text-left font-mono">
-                                <div className="flex justify-between"><span className="text-muted-foreground">{__('Cliente')}:</span><span className="font-semibold">{completedSale.cliente_nombre}</span></div>
-                                <div className="flex justify-between text-base font-bold"><span>{__('Total MXN')}:</span><span className="text-emerald-600">{currencySymbol}{Number(completedSale.total).toFixed(2)}</span></div>
+
+                            <div className="py-3 border-y space-y-2 text-sm text-left font-mono bg-slate-50/50 dark:bg-slate-900/40 p-3 rounded-lg">
+                                <div className="flex justify-between text-xs">
+                                    <span className="text-muted-foreground">{__('Cliente')}:</span>
+                                    <span className="font-semibold">{completedSale.cliente_nombre}</span>
+                                </div>
+                                <div className="flex justify-between text-base font-bold">
+                                    <span>{__('Total')}:</span>
+                                    <span className="text-emerald-600 dark:text-emerald-400">{currencySymbol}{Number(completedSale.total).toFixed(2)}</span>
+                                </div>
                                 {valorDolar > 0 && (
                                     <div className="flex justify-between text-xs text-muted-foreground font-semibold">
                                         <span>{__('Equivalente USD')}:</span>
@@ -2058,12 +2276,145 @@ export default function Terminal({
                                     </div>
                                 )}
                             </div>
-                            <DialogFooter className="flex flex-col sm:flex-row gap-2">
-                                <Button variant="outline" className="w-full font-bold" onClick={() => window.print()}>{__('Imprimir Ticket')}</Button>
-                                <Button className="w-full font-bold" onClick={() => setCompletedSale(null)}>{__('Nueva Venta')}</Button>
+
+                            {/* Selector de Impresora Directa vs Modal */}
+                            <div className="flex items-center justify-between p-3 rounded-lg border bg-background text-xs text-left">
+                                <div>
+                                    <span className="font-bold text-foreground flex items-center gap-1.5">
+                                        <Printer className="w-4 h-4 text-blue-500" />
+                                        {__('Máquina Ticketera Térmica (80mm)')}
+                                    </span>
+                                    <p className="text-[11px] text-muted-foreground mt-0.5">
+                                        {hasTicketPrinter
+                                            ? __('Impresión directa enviada a máquina ticketera de 80mm.')
+                                            : __('No se tiene máquina ticketera. Muestra modal para indicar destino/impresora.')}
+                                    </p>
+                                </div>
+                                <Switch
+                                    checked={hasTicketPrinter}
+                                    onCheckedChange={toggleTicketPrinter}
+                                />
+                            </div>
+
+                            <DialogFooter className="flex flex-col sm:flex-row gap-2 pt-2">
+                                <Button variant="outline" className="w-full font-bold gap-1.5" onClick={() => window.print()}>
+                                    <Printer className="w-4 h-4" />
+                                    {hasTicketPrinter ? __('Reimprimir Ticket (80mm)') : __('Imprimir / Seleccionar Impresora')}
+                                </Button>
+                                <Button className="w-full font-bold bg-emerald-600 hover:bg-emerald-700" onClick={() => setCompletedSale(null)}>
+                                    {__('Nueva Venta')}
+                                </Button>
                             </DialogFooter>
                         </DialogContent>
                     </Dialog>
+                )}
+
+                {/* PLANTILLA DE IMPRESIÓN PARA MÁQUINA TICKETERA DE 80MM */}
+                {completedSale && (
+                    <div id="printable-ticket-80mm" className="hidden print:block text-black bg-white font-mono p-2 text-xs w-[80mm] max-w-[80mm] mx-auto">
+                        <style>{`
+                            @media print {
+                                body * {
+                                    visibility: hidden !important;
+                                }
+                                #printable-ticket-80mm, #printable-ticket-80mm * {
+                                    visibility: visible !important;
+                                }
+                                #printable-ticket-80mm {
+                                    position: absolute !important;
+                                    left: 0 !important;
+                                    top: 0 !important;
+                                    width: 80mm !important;
+                                    max-width: 80mm !important;
+                                    margin: 0 !important;
+                                    padding: 4mm !important;
+                                    background: white !important;
+                                    color: black !important;
+                                    font-family: 'Courier New', Courier, monospace !important;
+                                    font-size: 11px !important;
+                                }
+                                @page {
+                                    size: 80mm auto;
+                                    margin: 0;
+                                }
+                            }
+                        `}</style>
+                        <div className="text-center font-bold text-sm uppercase">SERVITEC POS</div>
+                        <div className="text-center text-[10px]">TICKET DE VENTA TÉRMICO 80MM</div>
+                        <div className="border-b border-dashed border-black my-1"></div>
+                        <div className="flex justify-between text-[10px]">
+                            <span>TICKET: {completedSale.codigo_ticket}</span>
+                            <span>{new Date(completedSale.created_at || Date.now()).toLocaleDateString()}</span>
+                        </div>
+                        <div className="text-[10px]">CLIENTE: {completedSale.cliente_nombre || 'Cliente General'}</div>
+                        <div className="text-[10px]">ATENDIÓ: {completedSale.user?.name || 'Cajero POS'}</div>
+                        <div className="border-b border-dashed border-black my-1"></div>
+
+                        {/* Encabezado Tabla */}
+                        <div className="grid grid-cols-12 text-[10px] font-bold border-b border-black pb-0.5">
+                            <span className="col-span-6">CANT/DESCRIPCIÓN</span>
+                            <span className="col-span-3 text-right">P.U.</span>
+                            <span className="col-span-3 text-right">TOTAL</span>
+                        </div>
+
+                        {/* Items */}
+                        {completedSale.items?.map((it: any, idx: number) => (
+                            <div key={idx} className="grid grid-cols-12 text-[10px] py-0.5 border-b border-dotted border-gray-400">
+                                <span className="col-span-6 truncate">{it.cantidad}x {it.nombre}</span>
+                                <span className="col-span-3 text-right">${Number(it.precio_unitario).toFixed(2)}</span>
+                                <span className="col-span-3 text-right font-bold">${Number(it.subtotal).toFixed(2)}</span>
+                            </div>
+                        ))}
+
+                        <div className="border-b border-dashed border-black my-1"></div>
+
+                        {/* Totales */}
+                        <div className="space-y-0.5 text-[10px]">
+                            <div className="flex justify-between">
+                                <span>SUBTOTAL:</span>
+                                <span>${Number(completedSale.subtotal || completedSale.total).toFixed(2)}</span>
+                            </div>
+                            {Number(completedSale.descuento || 0) > 0 && (
+                                <div className="flex justify-between">
+                                    <span>DESCUENTO:</span>
+                                    <span>-${Number(completedSale.descuento).toFixed(2)}</span>
+                                </div>
+                            )}
+                            <div className="flex justify-between text-xs font-bold border-t border-b border-black py-0.5">
+                                <span>TOTAL:</span>
+                                <span>{currencySymbol}{Number(completedSale.total).toFixed(2)}</span>
+                            </div>
+                            {valorDolar > 0 && (
+                                <div className="flex justify-between text-[10px] text-gray-700">
+                                    <span>EQ. USD:</span>
+                                    <span>${(Number(completedSale.total) / valorDolar).toFixed(2)} USD</span>
+                                </div>
+                            )}
+                        </div>
+
+                        <div className="border-b border-dashed border-black my-1"></div>
+
+                        {/* Métodos de Pago */}
+                        <div className="text-[10px] space-y-0.5">
+                            <div className="font-bold">MÉTODOS DE PAGO:</div>
+                            {completedSale.payments?.map((pm: any, pidx: number) => (
+                                <div key={pidx} className="flex justify-between">
+                                    <span className="uppercase">{pm.metodo_pago}:</span>
+                                    <span>${Number(pm.monto).toFixed(2)}</span>
+                                </div>
+                            ))}
+                            {Number(completedSale.cambio || 0) > 0 && (
+                                <div className="flex justify-between font-bold">
+                                    <span>CAMBIO:</span>
+                                    <span>${Number(completedSale.cambio).toFixed(2)}</span>
+                                </div>
+                            )}
+                        </div>
+
+                        <div className="border-b border-dashed border-black my-2"></div>
+                        <div className="text-center text-[10px] font-bold uppercase">¡GRACIAS POR SU COMPRA!</div>
+                        <div className="text-center text-[9px] text-gray-600">Servitec POS - Formato 80mm</div>
+                    </div>
                 )}
             </div>
         </>

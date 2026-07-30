@@ -21,5 +21,6 @@ Route::middleware(['verified'])->group(function () {
     Route::resource('modelos', ModeloController::class)->except(['create', 'edit']);
 
     // Productos / Variantes de Inventario
+    Route::post('productos/{producto}/quick-stock', [ProductoController::class, 'quickStock'])->name('productos.quick-stock');
     Route::resource('productos', ProductoController::class)->except(['create', 'edit']);
 });

@@ -292,4 +292,47 @@ class ProductoController extends Controller
             'message' => __('Producto eliminado correctamente.'),
         ]);
     }
+
+    /**
+     * Quick stock addition from POS terminal when product stock is 0.
+     */
+    public function quickStock(Request $request, Producto $producto)
+    {
+        $validated = $request->validate([
+            'cantidad' => 'required|numeric|gt:0',
+        ]);
+
+        $cantidad = (float) $validated['cantidad'];
+        $stockAnterior = (float) $producto->stock;
+        $stockNuevo = $stockAnterior + $cantidad;
+
+        $producto->update(['stock' => $stockNuevo]);
+
+        if ($producto->usa_inventario) {
+            InventoryMovement::create([
+                'empresa_id' => $producto->empresa_id ?? auth()->user()?->empresa_id,
+                'sucursal_id' => $producto->sucursal_id ?? auth()->user()?->sucursal_id,
+                'producto_id' => $producto->id,
+                'user_id' => auth()->id(),
+                'tipo' => 'entrada',
+                'motivo' => __('Ingreso Rápido en Venta POS'),
+                'cantidad' => $cantidad,
+                'stock_anterior' => $stockAnterior,
+                'stock_nuevo' => $stockNuevo,
+                'costo_unitario' => (float) $producto->precio_compra,
+                'referencia' => 'POS-STOCK-' . $producto->sku,
+                'notas' => __('Ingreso de existencia realizado directamente desde la Terminal POS al intentar vender producto sin stock.'),
+            ]);
+        }
+
+        return response()->json([
+            'success' => true,
+            'message' => __('Stock actualizado correctamente.'),
+            'stock' => $stockNuevo,
+            'producto' => [
+                'id' => $producto->id,
+                'stock' => $stockNuevo,
+            ],
+        ]);
+    }
 }

@@ -261,7 +261,7 @@ export default function Index({ productos, categorias: categoriasProp, marcas: m
         reset();
         setData((prev) => ({
             ...prev,
-            stock: '' as unknown as number,
+            stock: 0,
             stock_minimo: 2,
         }));
         setSelCategoriaId('all');
@@ -1133,7 +1133,7 @@ export default function Index({ productos, categorias: categoriasProp, marcas: m
                                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                                     <div className="space-y-1.5">
                                                         <Label htmlFor="stock" className={cn("text-xs", data.usa_inventario && "required")}>
-                                                            {__('Stock Actual (Cantidad Obligatoria)')}
+                                                            {__('Stock Actual (Permite 0)')}
                                                         </Label>
                                                         <Input
                                                             id="stock"
