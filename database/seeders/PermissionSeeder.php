@@ -99,12 +99,8 @@ class PermissionSeeder extends Seeder
                 'modelos.edit' => 'Editar Modelos',
                 'modelos.delete' => 'Eliminar Modelos',
 
-                // Módulo: Productos
-                // Módulo: Productos
-                'productos.view' => 'Ver Productos',
-                'productos.create' => 'Crear Productos',
-                'productos.edit' => 'Editar Productos',
-                'productos.delete' => 'Eliminar Productos',
+               
+               
             ],
 
             // Sector: Punto de Venta
@@ -137,6 +133,17 @@ class PermissionSeeder extends Seeder
                 'clientes.delete' => 'Eliminar Clientes',
                 'clientes.abono' => 'Registrar Abonos de Crédito',
             ],
+
+            // Sector: Inventario
+            'inventario' => [
+                 // Módulo: Productos
+                'productos.view' => 'Ver Productos',
+                'productos.create' => 'Crear Productos',
+                'productos.edit' => 'Editar Productos',
+                'productos.delete' => 'Eliminar Productos',
+                'inventario.view' => 'Ver Inventario y Kardex',
+                'inventario.adjust' => 'Realizar Ajustes de Stock (Entradas/Salidas)',
+            ],
         ];
 
         foreach ($permissions as $sector => $sectorPermissions) {
@@ -162,6 +169,7 @@ class PermissionSeeder extends Seeder
                     str_starts_with($permission, 'ventas.') => 'ventas',
                     str_starts_with($permission, 'clientes.') => 'clientes',
                     str_starts_with($permission, 'metas.') => 'metas',
+                    str_starts_with($permission, 'inventario.') => 'inventario',
 
                     default => 'general',
                 };

@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use App\Models\Categoria;
 use App\Models\Familia;
+use App\Models\InventoryMovement;
 use App\Models\Marca;
 use App\Models\Modelo;
 use App\Models\Producto;
@@ -172,7 +173,25 @@ class ProductoController extends Controller
         $validated['aplica_retencion'] = $request->boolean('aplica_retencion', false);
         $validated['precio_incluye_impuestos'] = $request->boolean('precio_incluye_impuestos', true);
 
-        Producto::create($validated);
+        $producto = Producto::create($validated);
+
+        // Registrar automáticamente en Kardex el inventario inicial si aplica
+        if ($producto->usa_inventario && $producto->stock > 0) {
+            InventoryMovement::create([
+                'empresa_id' => $producto->empresa_id ?? auth()->user()?->empresa_id,
+                'sucursal_id' => $producto->sucursal_id ?? auth()->user()?->sucursal_id,
+                'producto_id' => $producto->id,
+                'user_id' => auth()->id(),
+                'tipo' => 'entrada',
+                'motivo' => __('Inventario Inicial de Registro'),
+                'cantidad' => (float) $producto->stock,
+                'stock_anterior' => 0,
+                'stock_nuevo' => (float) $producto->stock,
+                'costo_unitario' => (float) $producto->precio_compra,
+                'referencia' => 'ALTA-' . $producto->sku,
+                'notas' => __('Registro de stock inicial al crear el producto en el catálogo.'),
+            ]);
+        }
 
         return back()->with('notification', [
             'type' => 'success',
@@ -230,7 +249,30 @@ class ProductoController extends Controller
         $validated['aplica_retencion'] = $request->boolean('aplica_retencion', false);
         $validated['precio_incluye_impuestos'] = $request->boolean('precio_incluye_impuestos', true);
 
+        $stockAnterior = (float) $producto->stock;
         $producto->update($validated);
+        $stockNuevo = (float) $producto->stock;
+
+        // Registrar en Kardex si hubo un cambio directo en la cantidad de stock
+        if ($producto->usa_inventario && $stockAnterior !== $stockNuevo) {
+            $diferencia = $stockNuevo - $stockAnterior;
+            $tipo = $diferencia > 0 ? 'entrada' : 'salida';
+
+            InventoryMovement::create([
+                'empresa_id' => $producto->empresa_id ?? auth()->user()?->empresa_id,
+                'sucursal_id' => $producto->sucursal_id ?? auth()->user()?->sucursal_id,
+                'producto_id' => $producto->id,
+                'user_id' => auth()->id(),
+                'tipo' => $tipo,
+                'motivo' => __('Ajuste Directo (Edición de Producto)'),
+                'cantidad' => abs($diferencia),
+                'stock_anterior' => $stockAnterior,
+                'stock_nuevo' => $stockNuevo,
+                'costo_unitario' => (float) $producto->precio_compra,
+                'referencia' => 'EDIT-' . $producto->sku,
+                'notas' => __('Modificación manual de cantidad realizada desde el catálogo de productos.'),
+            ]);
+        }
 
         return back()->with('notification', [
             'type' => 'success',

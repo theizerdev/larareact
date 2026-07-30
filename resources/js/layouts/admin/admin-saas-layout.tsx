@@ -22,7 +22,7 @@ import {
     Link2,
     AlertTriangle,
 } from 'lucide-react';
-import { Building2, GitBranch, Briefcase, Calendar, Smartphone, Wallet } from 'lucide-react';
+import { Building2, GitBranch, Briefcase, Calendar, Smartphone, Wallet, Boxes } from 'lucide-react';
 import * as React from 'react';
 import LanguageToggle from '@/components/language-toggle';
 import TemplateCustomizer from '@/components/template-customizer';
@@ -418,11 +418,6 @@ export default function AdminSaasLayout({
                                     href: '/admin/modelos',
                                     permission: 'modelos.view',
                                 },
-                                {
-                                    title: 'Productos / Stock',
-                                    href: '/admin/productos',
-                                    permission: 'modelos.view',
-                                },
                             ].filter(item => hasPermission(item.permission));
 
                             if (equiposItems.length === 0) return null;
@@ -434,6 +429,40 @@ export default function AdminSaasLayout({
                                         icon={Smartphone}
                                         collapsed={collapsed}
                                         items={equiposItems}
+                                    />
+                                </div>
+                            );
+                        })()}
+
+                        {/* Inventario Group */}
+                        {(() => {
+                            const inventarioItems = [
+                                {
+                                    title: 'Productos & Catálogo',
+                                    href: '/admin/productos',
+                                    permission: 'productos.view',
+                                },
+                                {
+                                    title: 'Ajustes de Stock',
+                                    href: '/admin/inventario/ajustes',
+                                    permission: 'inventario.view',
+                                },
+                                {
+                                    title: 'Kardex de Movimientos',
+                                    href: '/admin/inventario/kardex',
+                                    permission: 'inventario.view',
+                                },
+                            ].filter(item => hasPermission(item.permission));
+
+                            if (inventarioItems.length === 0) return null;
+
+                            return (
+                                <div className="pt-2">
+                                    <CollapsibleNavItem
+                                        title="Inventario"
+                                        icon={Boxes}
+                                        collapsed={collapsed}
+                                        items={inventarioItems}
                                     />
                                 </div>
                             );
