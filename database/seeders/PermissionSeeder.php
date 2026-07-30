@@ -126,6 +126,10 @@ class PermissionSeeder extends Seeder
                 'ventas.view' => 'Ver Historial de Ventas',
                 'ventas.anular' => 'Anular Ventas',
 
+                // Módulo: Metas de Ventas
+                'metas.view' => 'Ver Metas de Ventas',
+                'metas.edit' => 'Gestionar Metas de Ventas',
+
                 // Módulo: Clientes / Cuentas por Cobrar
                 'clientes.view' => 'Ver Clientes',
                 'clientes.create' => 'Crear Clientes',
@@ -157,6 +161,7 @@ class PermissionSeeder extends Seeder
                     str_starts_with($permission, 'servicios.') => 'servicios',
                     str_starts_with($permission, 'ventas.') => 'ventas',
                     str_starts_with($permission, 'clientes.') => 'clientes',
+                    str_starts_with($permission, 'metas.') => 'metas',
 
                     default => 'general',
                 };

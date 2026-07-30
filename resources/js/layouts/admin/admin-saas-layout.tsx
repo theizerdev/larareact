@@ -448,6 +448,11 @@ export default function AdminSaasLayout({
                                     permission: 'ventas.terminal',
                                 },
                                 {
+                                    title: 'Metas de Ventas',
+                                    href: '/admin/pos/metas',
+                                    permission: 'metas.view',
+                                },
+                                {
                                     title: 'Historial de Ventas',
                                     href: '/admin/ventas',
                                     permission: 'ventas.view',

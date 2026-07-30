@@ -143,26 +143,34 @@ export default function AdminDashboard({
         router.get('/admin/dashboard', { start_date: startDate, end_date: endDate }, { preserveState: true });
     };
 
+    const formatLocalDate = (d: Date) => {
+        const year = d.getFullYear();
+        const month = String(d.getMonth() + 1).padStart(2, '0');
+        const day = String(d.getDate()).padStart(2, '0');
+        return `${year}-${month}-${day}`;
+    };
+
     const applyQuickRange = (preset: 'today' | 'yesterday' | 'week' | 'month') => {
         const today = new Date();
         let start = new Date();
 
-        if (preset === 'yesterday') {
+        if (preset === 'today') {
+            start = new Date(today);
+        } else if (preset === 'yesterday') {
             start.setDate(today.getDate() - 1);
-            setStartDate(start.toISOString().split('T')[0]);
-            setEndDate(start.toISOString().split('T')[0]);
-            router.get('/admin/dashboard', { start_date: start.toISOString().split('T')[0], end_date: start.toISOString().split('T')[0] }, { preserveState: true });
+            const yestStr = formatLocalDate(start);
+            setStartDate(yestStr);
+            setEndDate(yestStr);
+            router.get('/admin/dashboard', { start_date: yestStr, end_date: yestStr }, { preserveState: true });
             return;
-        }
-
-        if (preset === 'week') {
+        } else if (preset === 'week') {
             start.setDate(today.getDate() - 6);
         } else if (preset === 'month') {
             start.setDate(1);
         }
 
-        const startStr = start.toISOString().split('T')[0];
-        const endStr = today.toISOString().split('T')[0];
+        const startStr = formatLocalDate(start);
+        const endStr = formatLocalDate(today);
         setStartDate(startStr);
         setEndDate(endStr);
         router.get('/admin/dashboard', { start_date: startStr, end_date: endStr }, { preserveState: true });
@@ -393,10 +401,84 @@ export default function AdminDashboard({
 
                 {/* SECCIÓN 3: FILTRO DE FECHAS */}
                 <div className="bg-white dark:bg-slate-900 border rounded-2xl p-5 shadow-xs space-y-4">
-                     <div className="flex items-center gap-2">
+                    <div className="flex flex-wrap items-center justify-between gap-4">
+                        <div className="flex items-center gap-2">
                             <Calendar className="w-5 h-5 text-indigo-600" />
-                            <h3 className="font-bold text-base text-slate-900">{__('Filtro de Período')}</h3>
-                     </div>
+                            <h3 className="font-bold text-base text-slate-900 dark:text-slate-100">{__('Filtro de Período')}</h3>
+                        </div>
+
+                        {/* Botones de Selección Rápida */}
+                        <div className="flex flex-wrap items-center gap-2">
+                            <Button
+                                type="button"
+                                variant="outline"
+                                size="sm"
+                                onClick={() => applyQuickRange('today')}
+                                className="text-xs font-semibold"
+                            >
+                                {__('Hoy')}
+                            </Button>
+                            <Button
+                                type="button"
+                                variant="outline"
+                                size="sm"
+                                onClick={() => applyQuickRange('yesterday')}
+                                className="text-xs font-semibold"
+                            >
+                                {__('Ayer')}
+                            </Button>
+                            <Button
+                                type="button"
+                                variant="outline"
+                                size="sm"
+                                onClick={() => applyQuickRange('week')}
+                                className="text-xs font-semibold"
+                            >
+                                {__('Últimos 7 días')}
+                            </Button>
+                            <Button
+                                type="button"
+                                variant="outline"
+                                size="sm"
+                                onClick={() => applyQuickRange('month')}
+                                className="text-xs font-semibold"
+                            >
+                                {__('Este Mes')}
+                            </Button>
+                        </div>
+                    </div>
+
+                    <form onSubmit={handleFilterSubmit} className="grid grid-cols-1 sm:grid-cols-3 gap-4 items-end pt-3 border-t">
+                        <div className="space-y-1.5">
+                            <Label htmlFor="start_date" className="text-xs font-semibold text-muted-foreground">
+                                {__('Fecha Inicio')}
+                            </Label>
+                            <Input
+                                id="start_date"
+                                type="date"
+                                value={startDate}
+                                onChange={(e) => setStartDate(e.target.value)}
+                            />
+                        </div>
+
+                        <div className="space-y-1.5">
+                            <Label htmlFor="end_date" className="text-xs font-semibold text-muted-foreground">
+                                {__('Fecha Fin')}
+                            </Label>
+                            <Input
+                                id="end_date"
+                                type="date"
+                                value={endDate}
+                                onChange={(e) => setEndDate(e.target.value)}
+                            />
+                        </div>
+
+                        <div>
+                            <Button type="submit" className="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold">
+                                {__('Filtrar Período')}
+                            </Button>
+                        </div>
+                    </form>
                 </div>
 
                 {/* SECCIÓN 4: GRÁFICAS */}
