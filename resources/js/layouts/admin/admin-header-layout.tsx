@@ -75,9 +75,9 @@ function NavLink({
                     ? 'text-foreground hover:bg-accent'
                     : 'text-muted-foreground hover:bg-accent/50 hover:text-foreground',
                 active &&
-                    (mobile
-                        ? 'bg-accent text-foreground'
-                        : 'bg-primary text-primary-foreground shadow-sm hover:bg-primary/90 hover:text-primary-foreground'),
+                (mobile
+                    ? 'bg-accent text-foreground'
+                    : 'bg-primary text-primary-foreground shadow-sm hover:bg-primary/90 hover:text-primary-foreground'),
             )}
         >
             {item.icon && <item.icon className="size-4" />}
@@ -109,7 +109,7 @@ export default function AdminHeaderLayout({
                         >
                             <div className="flex items-center justify-center bg-transparent">
                                 <img
-                                    src={(auth as any)?.user?.empresa?.logo_mini || (auth as any)?.user?.empresa?.logo || "/image/logo/larareact_icon.png"}
+                                    src={(auth as any)?.user?.empresa?.logo_mini || (auth as any)?.user?.empresa?.logo || ""}
                                     alt={(auth as any)?.user?.empresa?.razon_social || "LaraReact Icon"}
                                     className="h-8 w-auto object-contain"
                                 />
