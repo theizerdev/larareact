@@ -223,11 +223,38 @@ export default function Index({ productos, categorias: categoriasProp, marcas: m
         estado: true,
     });
 
+    const handleMarcaSelect = (val: string) => {
+        setSelMarcaId(val);
+        if (val !== 'all') {
+            const brandModels = modelos.filter((m) => String(m.marca_id) === String(val));
+            const hasCurrentCat = brandModels.some((m) => String(m.categoria_id) === String(selCategoriaId));
+            if (!hasCurrentCat) {
+                setSelCategoriaId('all');
+            }
+            const hasCurrentFam = brandModels.some((m) => String(m.familia_id) === String(selFamiliaId));
+            if (!hasCurrentFam) {
+                setSelFamiliaId('all');
+            }
+        }
+    };
+
+    const handleCategoriaSelect = (val: string) => {
+        setSelCategoriaId(val);
+        if (val !== 'all' && selMarcaId !== 'all') {
+            const catModels = modelos.filter(
+                (m) => String(m.categoria_id) === String(val) && String(m.marca_id) === String(selMarcaId)
+            );
+            if (catModels.length === 0) {
+                setSelMarcaId('all');
+            }
+        }
+    };
+
     // Modelos filtrados en cascada según Categoría, Marca y Familia seleccionadas
     const filteredModelos = modelos.filter((m) => {
-        if (selCategoriaId !== 'all' && String(m.categoria_id) !== selCategoriaId) return false;
-        if (selMarcaId !== 'all' && String(m.marca_id) !== selMarcaId) return false;
-        if (selFamiliaId !== 'all' && String(m.familia_id) !== selFamiliaId) return false;
+        if (selMarcaId !== 'all' && String(m.marca_id) !== String(selMarcaId)) return false;
+        if (selCategoriaId !== 'all' && String(m.categoria_id) !== String(selCategoriaId)) return false;
+        if (selFamiliaId !== 'all' && String(m.familia_id) !== String(selFamiliaId)) return false;
         return true;
     });
 
@@ -903,7 +930,15 @@ export default function Index({ productos, categorias: categoriasProp, marcas: m
                 />
 
                 {/* Modal Organizado por PESTAÑAS (TABS) de Creación / Edición de Producto */}
-                <Dialog open={isCreateOpen} onOpenChange={setIsCreateOpen}>
+                <Dialog
+                    open={isCreateOpen}
+                    onOpenChange={(open) => {
+                        if (!open && (isNewCategoriaOpen || isNewMarcaOpen || isNewFamiliaOpen || isNewModeloOpen)) {
+                            return;
+                        }
+                        setIsCreateOpen(open);
+                    }}
+                >
                     <DialogContent
                         className="sm:max-w-4xl max-h-[90vh] flex flex-col"
                         onPointerDownOutside={(e) => {
@@ -989,7 +1024,7 @@ export default function Index({ productos, categorias: categoriasProp, marcas: m
                                                     <SearchableSelect
                                                         id="cat_select"
                                                         value={selCategoriaId}
-                                                        onChange={(val) => setSelCategoriaId(val)}
+                                                        onChange={(val) => handleCategoriaSelect(val)}
                                                         options={[
                                                             { value: 'all', label: __('Todas las categorías') },
                                                             ...categorias.map((c) => ({ value: String(c.id), label: c.nombre }))
@@ -1017,7 +1052,7 @@ export default function Index({ productos, categorias: categoriasProp, marcas: m
                                                     <SearchableSelect
                                                         id="marca_select"
                                                         value={selMarcaId}
-                                                        onChange={(val) => setSelMarcaId(val)}
+                                                        onChange={(val) => handleMarcaSelect(val)}
                                                         options={[
                                                             { value: 'all', label: __('Todas las marcas') },
                                                             ...marcas.map((m) => ({ value: String(m.id), label: m.nombre }))
@@ -1566,7 +1601,7 @@ export default function Index({ productos, categorias: categoriasProp, marcas: m
                                 </div>
                             </div>
                             <DialogFooter>
-                                <Button type="button" variant="outline" onClick={() => setIsNewCategoriaOpen(false)}>{__('Cancelar')}</Button>
+                                <Button type="button" variant="outline" onClick={(e) => { e.stopPropagation(); setIsNewCategoriaOpen(false); }}>{__('Cancelar')}</Button>
                                 <Button type="submit" disabled={isSavingCategoria}>{isSavingCategoria ? __('Guardando...') : __('Crear Categoría')}</Button>
                             </DialogFooter>
                         </form>
@@ -1606,7 +1641,7 @@ export default function Index({ productos, categorias: categoriasProp, marcas: m
                                 </div>
                             </div>
                             <DialogFooter>
-                                <Button type="button" variant="outline" onClick={() => setIsNewMarcaOpen(false)}>{__('Cancelar')}</Button>
+                                <Button type="button" variant="outline" onClick={(e) => { e.stopPropagation(); setIsNewMarcaOpen(false); }}>{__('Cancelar')}</Button>
                                 <Button type="submit" disabled={isSavingMarca}>{isSavingMarca ? __('Guardando...') : __('Crear Marca')}</Button>
                             </DialogFooter>
                         </form>
@@ -1646,7 +1681,7 @@ export default function Index({ productos, categorias: categoriasProp, marcas: m
                                 </div>
                             </div>
                             <DialogFooter>
-                                <Button type="button" variant="outline" onClick={() => setIsNewFamiliaOpen(false)}>{__('Cancelar')}</Button>
+                                <Button type="button" variant="outline" onClick={(e) => { e.stopPropagation(); setIsNewFamiliaOpen(false); }}>{__('Cancelar')}</Button>
                                 <Button type="submit" disabled={isSavingFamilia}>{isSavingFamilia ? __('Guardando...') : __('Crear Familia')}</Button>
                             </DialogFooter>
                         </form>
@@ -1696,7 +1731,7 @@ export default function Index({ productos, categorias: categoriasProp, marcas: m
                                 </div>
                             </div>
                             <DialogFooter>
-                                <Button type="button" variant="outline" onClick={() => setIsNewModeloOpen(false)}>{__('Cancelar')}</Button>
+                                <Button type="button" variant="outline" onClick={(e) => { e.stopPropagation(); setIsNewModeloOpen(false); }}>{__('Cancelar')}</Button>
                                 <Button type="submit" disabled={isSavingModelo}>{isSavingModelo ? __('Guardando...') : __('Crear Modelo')}</Button>
                             </DialogFooter>
                         </form>

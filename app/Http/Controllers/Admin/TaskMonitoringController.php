@@ -7,23 +7,62 @@ use Cron\CronExpression;
 use Illuminate\Console\Scheduling\Schedule;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Artisan;
+use Illuminate\Support\Facades\Log;
 
 class TaskMonitoringController extends Controller
 {
     /**
      * Muestra las tareas programadas en el programador de tareas (Laravel Scheduler).
      */
-    public function index(Schedule $schedule)
+    public function index()
     {
+        // Instancia principal de Schedule vinculada como singleton en el contenedor
+        $schedule = new Schedule();
+        app()->instance(Schedule::class, $schedule);
+        app()->instance('Illuminate\Console\Scheduling\Schedule', $schedule);
+
+        // 1. Cargar eventos definidos en routes/console.php
+        if (file_exists(base_path('routes/console.php'))) {
+            try {
+                require base_path('routes/console.php');
+            } catch (\Throwable $e) {
+                Log::error('Error cargando routes/console.php: '.$e->getMessage());
+            }
+        }
+
+        // 2. Cargar eventos definidos en App\Console\Kernel.php
+        if (class_exists(\App\Console\Kernel::class)) {
+            try {
+                $kernel = app(\App\Console\Kernel::class);
+                $reflection = new \ReflectionClass($kernel);
+
+                if ($reflection->hasMethod('schedule')) {
+                    $method = $reflection->getMethod('schedule');
+                    $method->setAccessible(true);
+                    $method->invoke($kernel, $schedule);
+                }
+            } catch (\Throwable $e) {
+                Log::error('Error invocando App\Console\Kernel schedule: '.$e->getMessage());
+            }
+        }
+
         $tasks = collect($schedule->events())->map(function ($event, $index) {
             // Obtener comando o descripción legible
             $command = $event->command;
 
-            // Si es un comando de Artisan, limpiamos la ruta del binario PHP
-            if (preg_match('/artisan[\'"]?\s+([^\s]+)/', $command, $matches)) {
-                $command = 'artisan '.$matches[1];
+            // Si es un comando de Artisan, limpiamos la ruta del binario PHP conservando argumentos
+            if ($command && preg_match('/artisan[\'"]?\s+(.*)/', $command, $matches)) {
+                $command = 'artisan '.trim($matches[1]);
             } else {
-                $command = $event->description ?: ($event->callback instanceof \Closure ? 'Closure Callback' : 'Command Task');
+                $description = $event->description;
+                if (!$description) {
+                    if (is_object($event->callback)) {
+                        $description = get_class($event->callback);
+                    } else {
+                        $description = $command ?: 'Tarea Programada';
+                    }
+                }
+                $command = (string) $description;
             }
 
             // Traducir o describir expresión cron
@@ -35,7 +74,7 @@ class TaskMonitoringController extends Controller
             try {
                 $cron = new CronExpression($expression);
                 $nextRun = $cron->getNextRunDate()->format('Y-m-d H:i:s');
-            } catch (\Exception $e) {
+            } catch (\Throwable $e) {
                 // Silencioso
             }
 
@@ -46,10 +85,10 @@ class TaskMonitoringController extends Controller
                 'schedule' => $humanReadable,
                 'next_run' => $nextRun,
                 'timezone' => $event->timezone ?? config('app.timezone'),
-                'without_overlapping' => $event->withoutOverlapping,
-                'on_one_server' => $event->onOneServer,
+                'without_overlapping' => (bool) $event->withoutOverlapping,
+                'on_one_server' => (bool) $event->onOneServer,
             ];
-        });
+        })->values();
 
         return inertia('admin/monitoring/tasks/index', [
             'tasks' => $tasks,

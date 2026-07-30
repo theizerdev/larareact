@@ -131,7 +131,6 @@ export default function DatabaseMonitoring({ dbInfo }: PageProps) {
         },
         yaxis: {
             min: 0,
-            max: 120,
             labels: {
                 style: { colors: '#94a3b8' }
             }
@@ -246,7 +245,7 @@ return '0';
                             <HardDrive className="h-5 w-5 text-blue-500" />
                         </CardHeader>
                         <CardContent>
-                            <div className="text-2xl font-bold">{dbInfo.total_size_mb} MB</div>
+                            <div className="text-2xl font-bold">{dbInfo.total_size_mb < 0.01 && dbInfo.total_size_mb > 0 ? '< 0.01' : dbInfo.total_size_mb} MB</div>
                             <p className="text-xs text-muted-foreground mt-1">{__('Occupied storage space')}</p>
                         </CardContent>
                     </Card>
@@ -273,7 +272,7 @@ return '0';
                             </div>
                             <div className="mt-2">
                                 <Progress 
-                                    value={metrics ? (metrics.active_connections / metrics.max_connections) * 100 : 0} 
+                                    value={metrics && metrics.max_connections > 0 ? (metrics.active_connections / metrics.max_connections) * 100 : 0} 
                                     className="h-1.5" 
                                 />
                             </div>
@@ -356,7 +355,7 @@ return '0';
                                                     {t.rows.toLocaleString()}
                                                 </TableCell>
                                                 <TableCell className="text-right tabular-nums text-indigo-600 font-semibold">
-                                                    {t.size_mb.toFixed(2)} MB
+                                                    {t.size_mb < 0.01 && t.size_mb > 0 ? '< 0.01 MB' : `${t.size_mb.toFixed(2)} MB`}
                                                 </TableCell>
                                             </TableRow>
                                         ))}
@@ -387,23 +386,31 @@ return '0';
                                         </TableRow>
                                     </TableHeader>
                                     <TableBody>
-                                        {metrics?.active_processes.map((p, idx) => (
-                                            <TableRow key={idx}>
-                                                <TableCell className="font-mono text-xs">{p.id}</TableCell>
-                                                <TableCell className="font-medium">{p.user}</TableCell>
-                                                <TableCell className="text-muted-foreground text-xs">{p.host}</TableCell>
-                                                <TableCell>
-                                                    <Badge variant={p.command === 'Query' ? 'default' : 'secondary'}>
-                                                        {p.command}
-                                                    </Badge>
-                                                </TableCell>
-                                                <TableCell className="text-right tabular-nums font-mono text-xs">{p.time}</TableCell>
-                                                <TableCell className="text-xs text-slate-600">{p.state || 'idle'}</TableCell>
-                                                <TableCell className="font-mono text-xs max-w-[300px] truncate text-slate-700 dark:text-slate-300" title={p.info}>
-                                                    {p.info || <span className="italic text-muted-foreground">{__('Ninguno')}</span>}
+                                        {metrics?.active_processes && metrics.active_processes.length > 0 ? (
+                                            metrics.active_processes.map((p, idx) => (
+                                                <TableRow key={idx}>
+                                                    <TableCell className="font-mono text-xs">{p.id}</TableCell>
+                                                    <TableCell className="font-medium">{p.user}</TableCell>
+                                                    <TableCell className="text-muted-foreground text-xs">{p.host}</TableCell>
+                                                    <TableCell>
+                                                        <Badge variant={p.command === 'Query' ? 'default' : 'secondary'}>
+                                                            {p.command}
+                                                        </Badge>
+                                                    </TableCell>
+                                                    <TableCell className="text-right tabular-nums font-mono text-xs">{p.time}</TableCell>
+                                                    <TableCell className="text-xs text-slate-600 dark:text-slate-400">{p.state || 'idle'}</TableCell>
+                                                    <TableCell className="font-mono text-xs max-w-[300px] truncate text-slate-700 dark:text-slate-300" title={p.info}>
+                                                        {p.info || <span className="italic text-muted-foreground">{__('Ninguno')}</span>}
+                                                    </TableCell>
+                                                </TableRow>
+                                            ))
+                                        ) : (
+                                            <TableRow>
+                                                <TableCell colSpan={7} className="text-center py-6 text-muted-foreground">
+                                                    {__('No hay procesos activos en este momento.')}
                                                 </TableCell>
                                             </TableRow>
-                                        ))}
+                                        )}
                                     </TableBody>
                                 </Table>
                             </CardContent>
@@ -421,24 +428,32 @@ return '0';
                                 <CardDescription>{__('Alertas de consultas que exceden el tiempo óptimo de respuesta (100ms).')}</CardDescription>
                             </CardHeader>
                             <CardContent>
-                                <div className="space-y-4">
-                                    {metrics?.slow_queries.map((q, idx) => (
-                                        <div key={idx} className="p-4 border rounded-lg bg-red-50/50 dark:bg-red-950/10 flex flex-col md:flex-row md:items-center justify-between gap-4">
-                                            <div className="space-y-1 max-w-[70%]">
-                                                <p className="font-mono text-xs bg-white dark:bg-slate-900 p-2.5 rounded border overflow-x-auto text-red-800 dark:text-red-300">
-                                                    {q.query}
-                                                </p>
-                                                <p className="text-xs text-muted-foreground">{__('Ejecutado a las')} {q.time}</p>
+                                {metrics?.slow_queries && metrics.slow_queries.length > 0 ? (
+                                    <div className="space-y-4">
+                                        {metrics.slow_queries.map((q, idx) => (
+                                            <div key={idx} className="p-4 border rounded-lg bg-red-50/50 dark:bg-red-950/10 flex flex-col md:flex-row md:items-center justify-between gap-4">
+                                                <div className="space-y-1 max-w-[70%]">
+                                                    <p className="font-mono text-xs bg-white dark:bg-slate-900 p-2.5 rounded border overflow-x-auto text-red-800 dark:text-red-300">
+                                                        {q.query}
+                                                    </p>
+                                                    <p className="text-xs text-muted-foreground">{__('Ejecutado a las')} {q.time}</p>
+                                                </div>
+                                                <div className="flex gap-2 self-start md:self-auto items-center">
+                                                    <span className="text-xs text-muted-foreground">{__('Duración:')}</span>
+                                                    <Badge variant="destructive" className="font-mono text-xs">
+                                                        {q.duration}
+                                                    </Badge>
+                                                </div>
                                             </div>
-                                            <div className="flex gap-2 self-start md:self-auto items-center">
-                                                <span className="text-xs text-muted-foreground">{__('Duración:')}</span>
-                                                <Badge variant="destructive" className="font-mono text-xs">
-                                                    {q.duration}
-                                                </Badge>
-                                            </div>
-                                        </div>
-                                    ))}
-                                </div>
+                                        ))}
+                                    </div>
+                                ) : (
+                                    <div className="text-center py-8 text-muted-foreground space-y-2">
+                                        <ShieldAlert className="h-8 w-8 mx-auto text-emerald-500/60" />
+                                        <p className="font-medium text-slate-700 dark:text-slate-300">{__('No se detectaron consultas lentas.')}</p>
+                                        <p className="text-xs text-muted-foreground">{__('El rendimiento de la base de datos se encuentra en niveles óptimos.')}</p>
+                                    </div>
+                                )}
                             </CardContent>
                         </Card>
                     </TabsContent>

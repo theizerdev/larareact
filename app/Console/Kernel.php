@@ -71,19 +71,12 @@ class Kernel extends ConsoleKernel
             });
 
         // Procesar recordatorios de citas cada 15 minutos
-        if (auth()->check()) {
-            $schedule->command('citas:procesar-recordatorios')
-                ->everyFifteenMinutes()
-                ->timezone(auth()->user()->empresa->pais->zona_horaria)
-                ->withoutOverlapping()
-                ->onOneServer();
-        } else {
-            $schedule->command('citas:procesar-recordatorios')
-                ->everyFifteenMinutes()
-                ->timezone('America/Caracas')
-                ->withoutOverlapping()
-                ->onOneServer();
-        }
+        $citasTimezone = optional(optional(optional(auth()->user())->empresa)->pais)->zona_horaria ?? 'America/Caracas';
+        $schedule->command('citas:procesar-recordatorios')
+            ->everyFifteenMinutes()
+            ->timezone($citasTimezone)
+            ->withoutOverlapping()
+            ->onOneServer();
 
         // Procesar confirmaciones cada hora
         $schedule->command('confirmations:process --type=all')
@@ -105,6 +98,11 @@ class Kernel extends ConsoleKernel
             ->everyMinute()
             ->withoutOverlapping()
             ->onOneServer();
+
+        // Limpieza semanal programada de productos e inventario (Empresa en sesión)
+        $schedule->command('empresa:clean-products --force')
+            ->weeklyOn(0, '03:00')
+            ->timezone('America/Caracas');
     }
 
     /**
