@@ -430,7 +430,7 @@ export const ImportWizardModal: React.FC<ImportWizardModalProps> = ({
                             </p>
                             <div className="flex flex-wrap gap-1.5 pt-1">
                                 {[
-                                    'No. Empleado',
+                                    'CURP / No. Empleado',
                                     'Nombre',
                                     'Apellido Paterno',
                                     'Apellido Materno',
@@ -592,7 +592,7 @@ export const ImportWizardModal: React.FC<ImportWizardModalProps> = ({
                                 <thead className="text-[11px] uppercase bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 sticky top-0">
                                     <tr>
                                         <th className="py-2 px-3">Estatus</th>
-                                        <th className="py-2 px-3">No. Empleado</th>
+                                        <th className="py-2 px-3">CURP / No. Empleado</th>
                                         <th className="py-2 px-3">Nombre Completo</th>
                                         <th className="py-2 px-3">Departamento</th>
                                         <th className="py-2 px-3">Teléfono (+52)</th>

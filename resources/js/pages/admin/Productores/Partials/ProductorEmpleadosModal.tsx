@@ -541,7 +541,7 @@ export default function ProductorEmpleadosModal({
                                 />
                             </div>
                             <div>
-                                <Label htmlFor="documento_identidad">{__('RFC / Documento de Identidad')} *</Label>
+                                <Label htmlFor="documento_identidad">{__('CURP')} *</Label>
                                 <Input 
                                     id="documento_identidad"
                                     required 

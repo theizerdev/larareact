@@ -945,7 +945,7 @@ export default function EmpleadosIndexPage({
                                             id="documento_identidad"
                                             value={data.documento_identidad}
                                             onChange={(e) => setData('documento_identidad', e.target.value)}
-                                            placeholder="V-12345678"
+                                            placeholder="ej. ABCD123456EFGHIJ01"
                                         />
                                         {errors.documento_identidad && (
                                             <p className="text-red-500 text-xs mt-1">{errors.documento_identidad}</p>
