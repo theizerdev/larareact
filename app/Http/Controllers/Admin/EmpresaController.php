@@ -70,6 +70,9 @@ class EmpresaController extends Controller
             $empresa = new Empresa($validated);
             $empresa->api_key = Str::random(32);
             $empresa->whatsapp_api_key = Str::random(32);
+            $empresa->subscription_status = 'trial';
+            $empresa->trial_ends_at = now()->addDays(7);
+            $empresa->max_sucursales = 1;
             $empresa->save();
 
             return back()->with('notification', [

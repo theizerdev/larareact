@@ -50,6 +50,11 @@ class Empresa extends Model
         'mapbox_active',
         'google_maps_api_key',
         'google_maps_active',
+        'subscription_status',
+        'trial_ends_at',
+        'subscription_expires_at',
+        'billing_cycle',
+        'max_sucursales',
     ];
 
     protected function casts(): array
@@ -63,8 +68,16 @@ class Empresa extends Model
             'whatsapp_last_connected' => 'datetime',
             'mapbox_active' => 'boolean',
             'google_maps_active' => 'boolean',
+            'trial_ends_at' => 'datetime',
+            'subscription_expires_at' => 'datetime',
+            'max_sucursales' => 'integer',
         ];
     }
+
+    protected $appends = [
+        'dias_restantes_suscripcion',
+        'estado_suscripcion_legible',
+    ];
 
     /**
      * Get the pais that this empresa belongs to.
@@ -72,6 +85,114 @@ class Empresa extends Model
     public function pais(): BelongsTo
     {
         return $this->belongsTo(Pais::class);
+    }
+
+    public function subscriptions()
+    {
+        return $this->hasMany(Subscription::class, 'empresa_id');
+    }
+
+    public function subscriptionPayments()
+    {
+        return $this->hasMany(SubscriptionPayment::class, 'empresa_id');
+    }
+
+    /**
+     * La Empresa ID 1 (Dueña del SaaS) está exenta de control de suscripción.
+     */
+    public function isExemptFromSubscription(): bool
+    {
+        return $this->id === 1;
+    }
+
+    /**
+     * Comprueba si la empresa está en período de prueba gratis (7 días).
+     */
+    public function isOnTrial(): bool
+    {
+        if ($this->isExemptFromSubscription()) {
+            return false;
+        }
+
+        if ($this->subscription_status === 'trial' && $this->trial_ends_at) {
+            return now()->lte($this->trial_ends_at);
+        }
+
+        return false;
+    }
+
+    /**
+     * Comprueba si la empresa tiene una suscripción activa o prueba vigente.
+     */
+    public function hasActiveSubscription(): bool
+    {
+        if ($this->isExemptFromSubscription()) {
+            return true;
+        }
+
+        if ($this->isOnTrial()) {
+            return true;
+        }
+
+        if ($this->subscription_status === 'active' && $this->subscription_expires_at) {
+            return now()->lte($this->subscription_expires_at);
+        }
+
+        return false;
+    }
+
+    /**
+     * Comprueba si la suscripción o prueba ha caducado.
+     */
+    public function isSubscriptionExpired(): bool
+    {
+        return ! $this->hasActiveSubscription();
+    }
+
+    /**
+     * Retorna los días restantes de prueba o suscripción activa.
+     */
+    public function getDiasRestantesSuscripcionAttribute(): int
+    {
+        if ($this->isExemptFromSubscription()) {
+            return 9999;
+        }
+
+        $fechaVencimiento = match ($this->subscription_status) {
+            'trial' => $this->trial_ends_at,
+            'active' => $this->subscription_expires_at,
+            default => null,
+        };
+
+        if (! $fechaVencimiento) {
+            return 0;
+        }
+
+        if (now()->gt($fechaVencimiento)) {
+            return 0;
+        }
+
+        return (int) ceil(now()->diffInDays($fechaVencimiento, false));
+    }
+
+    /**
+     * Retorna el texto legible del estado de suscripción.
+     */
+    public function getEstadoSuscripcionLegibleAttribute(): string
+    {
+        if ($this->isExemptFromSubscription()) {
+            return 'Acceso Ilimitado';
+        }
+
+        if ($this->isOnTrial()) {
+            return 'Prueba Gratis (' . $this->dias_restantes_suscripcion . ' días restantes)';
+        }
+
+        if ($this->hasActiveSubscription()) {
+            return 'Activo (' . $this->dias_restantes_suscripcion . ' días restantes)';
+        }
+
+        return 'Vencida';
     }
 
     /**
@@ -82,3 +203,4 @@ class Empresa extends Model
         return bin2hex(random_bytes(32));
     }
 }
+

@@ -650,6 +650,16 @@ export default function AdminSaasLayout({
                                     href: tasksMonitoringIndex.url(),
                                     permission: 'monitoreo.view',
                                 },
+                                {
+                                    title: 'Suscripción',
+                                    href: '/admin/monitoring/subscription',
+                                    permission: 'monitoreo.view',
+                                },
+                                {
+                                    title: 'Gestión Suscripciones',
+                                    href: '/admin/monitoring/subscription/manage',
+                                    permission: 'monitoreo.view',
+                                },
                             ].filter(item => hasPermission(item.permission));
 
                             if (monitoringItems.length === 0) return null;
@@ -816,6 +826,23 @@ export default function AdminSaasLayout({
                         </div>
 
                         <div className="flex items-center gap-2">
+                            {/* Subscription Status Badge */}
+                            {(() => {
+                                const sub = (props as any).subscription;
+                                if (!sub || sub.is_exempt) return null;
+                                return (
+                                    <Link href="/admin/monitoring/subscription">
+                                        <Badge 
+                                            variant={sub.status === 'active' ? 'default' : sub.on_trial ? 'outline' : 'destructive'} 
+                                            className="gap-1.5 font-semibold text-xs cursor-pointer hover:opacity-90 transition-opacity"
+                                        >
+                                            <Clock className="h-3 w-3" />
+                                            {sub.status_label}
+                                        </Badge>
+                                    </Link>
+                                );
+                            })()}
+
                             {/* Language toggle */}
                             <LanguageToggle />
 

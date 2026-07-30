@@ -87,6 +87,17 @@ class HandleInertiaRequests extends Middleware
                     ->count()
                 : 0,
             'cash_register_alert' => fn () => $this->getCashRegisterAlert($request),
+            'subscription' => fn () => $empresa ? [
+                'is_exempt' => $empresa->isExemptFromSubscription(),
+                'status' => $empresa->subscription_status,
+                'status_label' => $empresa->estado_suscripcion_legible,
+                'days_left' => $empresa->dias_restantes_suscripcion,
+                'on_trial' => $empresa->isOnTrial(),
+                'is_expired' => $empresa->isSubscriptionExpired(),
+                'trial_ends_at' => $empresa->trial_ends_at?->format('Y-m-d H:i:s'),
+                'expires_at' => $empresa->subscription_expires_at?->format('Y-m-d H:i:s'),
+                'max_sucursales' => $empresa->max_sucursales ?? 1,
+            ] : null,
         ];
     }
 
