@@ -58,10 +58,20 @@ class UserController extends Controller
 
         $users = $query->latest()->paginate($perPage)->withQueryString();
 
+        $statsQuery = User::query();
+        if ($currentUser && ! $currentUser->hasRole('Super Administrador') && ! $currentUser->hasRole('super-admin')) {
+            if ($currentUser->empresa_id) {
+                $statsQuery->where('empresa_id', $currentUser->empresa_id);
+            }
+            if ($currentUser->sucursal_id) {
+                $statsQuery->where('sucursal_id', $currentUser->sucursal_id);
+            }
+        }
+
         $stats = [
-            'total' => User::count(),
-            'activos' => User::where('status', 'activo')->count(),
-            'inactivos' => User::where('status', 'inactivos')->count(),
+            'total' => (clone $statsQuery)->count(),
+            'activos' => (clone $statsQuery)->where('status', 'activo')->count(),
+            'inactivos' => (clone $statsQuery)->where('status', 'inactivo')->count(),
         ];
 
         return inertia('admin/Usuarios/Index', [

@@ -88,6 +88,9 @@ class FortifyServiceProvider extends ServiceProvider
 
         Fortify::registerView(fn () => Inertia::render('auth/register', [
             'passwordRules' => Password::defaults()->toPasswordRulesString(),
+            'paises' => \App\Models\Pais::where('activo', true)
+                ->orderBy('nombre', 'asc')
+                ->get(['id', 'nombre', 'codigo_iso2', 'codigo_telefonico']),
         ]));
 
         Fortify::twoFactorChallengeView(fn () => Inertia::render('auth/two-factor-challenge'));

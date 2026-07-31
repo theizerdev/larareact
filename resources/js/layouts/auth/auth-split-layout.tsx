@@ -52,7 +52,7 @@ export default function AuthSplitLayout({
 
             {/* Form panel */}
             <div className="flex flex-col items-center justify-center bg-background p-6 sm:p-12">
-                <div className="w-full max-w-sm">
+                <div className="w-full max-w-md">
                     <Link
                         href={home()}
                         className="mb-8 flex items-center justify-center lg:hidden"
@@ -64,7 +64,7 @@ export default function AuthSplitLayout({
                         />
                     </Link>
 
-                    <div className="mb-8 space-y-2 text-center">
+                    <div className="mb-6 space-y-1 text-center">
                         <h1 className="text-2xl font-semibold tracking-tight">
                             {title}
                         </h1>

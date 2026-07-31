@@ -423,7 +423,7 @@ return;
                     />
                     <StatCard
                         icon={<CheckCircle className="h-6 w-6" />}
-                        title={__('ACTIVE')}
+                        title={__('ACTIVOS')}
                         value={stats.activos}
                         colorClassName="bg-green-100 text-green-600"
                     />
