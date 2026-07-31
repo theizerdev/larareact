@@ -19,7 +19,8 @@ import {
     Minus,
     Receipt,
     ExternalLink,
-    Check
+    Check,
+    Award
 } from 'lucide-react';
 import React, { useState } from 'react';
 import { Breadcrumbs } from '@/components/breadcrumbs';
@@ -155,88 +156,89 @@ export default function SubscriptionIndex({ empresa, plan, opcionesPrecios, pago
     return (
         <>
             <Head title={__('Gestión de Suscripción')} />
-            <div className="space-y-8 pb-10">
+            <div className="space-y-6 pb-12">
                 <Breadcrumbs breadcrumbs={breadcrumbs} />
 
-                {/* Header Premium */}
-                <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-gradient-to-r from-slate-900 via-indigo-950 to-slate-900 p-6 rounded-2xl text-white shadow-xl border border-indigo-500/20 relative overflow-hidden">
-                    <div className="absolute -right-10 -bottom-10 w-60 h-60 bg-indigo-500/10 rounded-full blur-3xl pointer-events-none" />
-                    <div className="relative z-10 space-y-1">
-                        <div className="flex items-center gap-2 text-indigo-400 font-semibold text-xs uppercase tracking-wider">
-                            <Sparkles className="h-4 w-4" />
-                            {__('Plan SaaS Full Access')}
-                        </div>
-                        <h1 className="text-3xl font-extrabold tracking-tight">
-                            {__('Estado del Servicio y Suscripción')}
-                        </h1>
-                        <p className="text-slate-300 text-sm max-w-2xl">
-                            {__('Administra tu plan empresarial, renovaciones, capacidad de sucursales e historial de comprobantes de pago.')}
-                        </p>
-                    </div>
+                {/* Banner Hero Principal */}
+                <div className="relative overflow-hidden rounded-2xl bg-slate-900 p-6 md:p-8 text-white shadow-xl border border-slate-800">
+                    <div className="absolute -right-16 -top-16 h-64 w-64 rounded-full bg-indigo-500/20 blur-3xl pointer-events-none" />
+                    <div className="absolute right-1/3 -bottom-20 h-56 w-56 rounded-full bg-purple-500/15 blur-3xl pointer-events-none" />
 
-                    <div className="relative z-10 flex items-center gap-3">
-                        <Badge 
-                            variant="outline" 
-                            className={`px-4 py-2 text-xs font-bold gap-2 rounded-full backdrop-blur-md border ${
+                    <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-6">
+                        <div className="space-y-2 max-w-2xl">
+                            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-indigo-500/20 text-indigo-300 text-xs font-semibold border border-indigo-500/30 backdrop-blur-md">
+                                <Sparkles className="h-3.5 w-3.5" />
+                                <span>{__('Plan SaaS Full Access')}</span>
+                            </div>
+                            <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight">
+                                {__('Estado del Servicio y Suscripción')}
+                            </h1>
+                            <p className="text-slate-300 text-sm leading-relaxed">
+                                {__('Administra tu plan empresarial, renovaciones, capacidad de sucursales e historial de comprobantes de pago.')}
+                            </p>
+                        </div>
+
+                        <div className="shrink-0 flex items-center gap-3">
+                            <div className={`px-4 py-2.5 rounded-xl text-xs font-bold flex items-center gap-2.5 border backdrop-blur-md shadow-inner ${
                                 empresa.is_exempt 
-                                    ? 'bg-indigo-500/20 text-indigo-300 border-indigo-500/40' 
+                                    ? 'bg-indigo-500/20 text-indigo-200 border-indigo-500/40' 
                                     : empresa.subscription_status === 'active'
-                                    ? 'bg-emerald-500/20 text-emerald-300 border-emerald-500/40'
+                                    ? 'bg-emerald-500/20 text-emerald-200 border-emerald-500/40'
                                     : empresa.subscription_status === 'trial'
-                                    ? 'bg-amber-500/20 text-amber-300 border-amber-500/40'
-                                    : 'bg-rose-500/20 text-rose-300 border-rose-500/40'
-                            }`}
-                        >
-                            <span className={`h-2 w-2 rounded-full animate-pulse ${
-                                empresa.is_exempt ? 'bg-indigo-400' :
-                                empresa.subscription_status === 'active' ? 'bg-emerald-400' :
-                                empresa.subscription_status === 'trial' ? 'bg-amber-400' : 'bg-rose-400'
-                            }`} />
-                            {empresa.estado_legible}
-                        </Badge>
+                                    ? 'bg-amber-500/20 text-amber-200 border-amber-500/40'
+                                    : 'bg-rose-500/20 text-rose-200 border-rose-500/40'
+                            }`}>
+                                <span className={`h-2.5 w-2.5 rounded-full animate-ping ${
+                                    empresa.is_exempt ? 'bg-indigo-400' :
+                                    empresa.subscription_status === 'active' ? 'bg-emerald-400' :
+                                    empresa.subscription_status === 'trial' ? 'bg-amber-400' : 'bg-rose-400'
+                                }`} />
+                                <span>{empresa.estado_legible}</span>
+                            </div>
+                        </div>
                     </div>
                 </div>
 
                 {/* Grid de Estado & Características Incluidas */}
                 <div className="grid gap-6 md:grid-cols-3">
                     {/* Card de Estado Principal */}
-                    <Card className="md:col-span-2 shadow-md border border-slate-200/80 dark:border-slate-800 relative overflow-hidden">
-                        <CardHeader className="border-b bg-slate-50/50 dark:bg-slate-900/50 pb-4">
-                            <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-2">
-                                <div>
+                    <Card className="md:col-span-2 shadow-sm border border-border">
+                        <CardHeader className="border-b bg-muted/30 pb-4">
+                            <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-3">
+                                <div className="space-y-1">
                                     <CardTitle className="text-xl font-bold flex items-center gap-2">
-                                        <Building2 className="h-5 w-5 text-indigo-600 dark:text-indigo-400" />
+                                        <Building2 className="h-5 w-5 text-primary" />
                                         {empresa.razon_social}
                                     </CardTitle>
                                     <CardDescription className="text-xs">
-                                        {__('Plan Actual:')} <span className="font-semibold text-foreground">{plan?.nombre || 'Plan Full SaaS'}</span>
+                                        {__('Plan Actual:')} <span className="font-bold text-foreground">{plan?.nombre || 'Plan Full SaaS'}</span>
                                     </CardDescription>
                                 </div>
-                                <div className="text-right">
-                                    <span className="text-xs text-muted-foreground">{__('Capacidad Autorizada')}</span>
-                                    <p className="text-sm font-extrabold text-indigo-600 dark:text-indigo-400">
+                                <div className="text-left sm:text-right p-2 sm:p-0 rounded-lg bg-primary/5 sm:bg-transparent">
+                                    <span className="text-xs text-muted-foreground font-medium block">{__('Capacidad Autorizada')}</span>
+                                    <p className="text-base font-extrabold text-primary">
                                         {empresa.sucursales_activas} / {empresa.max_sucursales} {__('Sucursal(es)')}
                                     </p>
                                 </div>
                             </div>
                         </CardHeader>
                         <CardContent className="pt-6 space-y-6">
-                            <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-                                <div className="p-3 bg-slate-100/60 dark:bg-slate-900 rounded-xl border">
-                                    <p className="text-[11px] font-semibold text-muted-foreground uppercase">{__('Estado')}</p>
-                                    <p className="text-base font-bold capitalize mt-1 text-slate-800 dark:text-slate-200">
+                            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4">
+                                <div className="p-3.5 rounded-xl border bg-card/60 space-y-1">
+                                    <p className="text-[11px] font-bold text-muted-foreground uppercase tracking-wider">{__('Estado')}</p>
+                                    <p className="text-sm font-bold capitalize text-foreground">
                                         {empresa.is_exempt ? __('Exento (Owner)') : empresa.subscription_status}
                                     </p>
                                 </div>
-                                <div className="p-3 bg-slate-100/60 dark:bg-slate-900 rounded-xl border">
-                                    <p className="text-[11px] font-semibold text-muted-foreground uppercase">{__('Días Restantes')}</p>
-                                    <p className="text-base font-bold mt-1 text-indigo-600 dark:text-indigo-400">
+                                <div className="p-3.5 rounded-xl border bg-card/60 space-y-1">
+                                    <p className="text-[11px] font-bold text-muted-foreground uppercase tracking-wider">{__('Días Restantes')}</p>
+                                    <p className="text-sm font-bold text-primary">
                                         {empresa.is_exempt ? '∞' : `${empresa.dias_restantes} días`}
                                     </p>
                                 </div>
-                                <div className="p-3 bg-slate-100/60 dark:bg-slate-900 rounded-xl border">
-                                    <p className="text-[11px] font-semibold text-muted-foreground uppercase">{__('Vencimiento')}</p>
-                                    <p className="text-xs font-bold mt-1">
+                                <div className="p-3.5 rounded-xl border bg-card/60 space-y-1">
+                                    <p className="text-[11px] font-bold text-muted-foreground uppercase tracking-wider">{__('Vencimiento')}</p>
+                                    <p className="text-xs font-bold text-foreground">
                                         {empresa.is_exempt ? __('Permanente') : (
                                             empresa.subscription_expires_at 
                                                 ? new Date(empresa.subscription_expires_at).toLocaleDateString()
@@ -246,9 +248,9 @@ export default function SubscriptionIndex({ empresa, plan, opcionesPrecios, pago
                                         )}
                                     </p>
                                 </div>
-                                <div className="p-3 bg-slate-100/60 dark:bg-slate-900 rounded-xl border">
-                                    <p className="text-[11px] font-semibold text-muted-foreground uppercase">{__('Sucursales en Uso')}</p>
-                                    <p className="text-base font-bold mt-1 text-emerald-600 dark:text-emerald-400">
+                                <div className="p-3.5 rounded-xl border bg-card/60 space-y-1">
+                                    <p className="text-[11px] font-bold text-muted-foreground uppercase tracking-wider">{__('Sucursales en Uso')}</p>
+                                    <p className="text-sm font-bold text-emerald-600 dark:text-emerald-400">
                                         {empresa.sucursales_activas} {__('activas')}
                                     </p>
                                 </div>
@@ -256,18 +258,18 @@ export default function SubscriptionIndex({ empresa, plan, opcionesPrecios, pago
 
                             {/* Barra de Progreso de Días Restantes */}
                             {!empresa.is_exempt && (
-                                <div className="space-y-1.5 pt-2">
+                                <div className="space-y-2 pt-2">
                                     <div className="flex justify-between text-xs font-semibold">
                                         <span className="text-muted-foreground">{__('Vigencia del Período')}</span>
-                                        <span className={empresa.dias_restantes <= 5 ? 'text-rose-500 font-bold' : 'text-indigo-600'}>
+                                        <span className={empresa.dias_restantes <= 5 ? 'text-destructive font-bold' : 'text-primary font-bold'}>
                                             {empresa.dias_restantes} {__('días restantes')}
                                         </span>
                                     </div>
-                                    <div className="w-full h-2.5 bg-slate-200 dark:bg-slate-800 rounded-full overflow-hidden">
+                                    <div className="w-full h-3 bg-muted rounded-full overflow-hidden p-0.5 border">
                                         <div 
                                             className={`h-full transition-all duration-500 rounded-full ${
-                                                empresa.dias_restantes <= 3 ? 'bg-rose-500' :
-                                                empresa.dias_restantes <= 7 ? 'bg-amber-500' : 'bg-indigo-600'
+                                                empresa.dias_restantes <= 3 ? 'bg-destructive' :
+                                                empresa.dias_restantes <= 7 ? 'bg-amber-500' : 'bg-primary'
                                             }`}
                                             style={{ width: `${progressPercent}%` }}
                                         />
@@ -278,9 +280,9 @@ export default function SubscriptionIndex({ empresa, plan, opcionesPrecios, pago
                     </Card>
 
                     {/* Módulos Incluidos */}
-                    <Card className="shadow-md border border-indigo-100 dark:border-indigo-950/60 bg-gradient-to-br from-white via-indigo-50/20 to-white dark:from-slate-900 dark:to-slate-950">
-                        <CardHeader className="pb-3">
-                            <CardTitle className="text-base font-bold flex items-center gap-2 text-indigo-900 dark:text-indigo-200">
+                    <Card className="shadow-sm border border-border">
+                        <CardHeader className="pb-3 border-b bg-muted/20">
+                            <CardTitle className="text-base font-bold flex items-center gap-2">
                                 <Zap className="h-4 w-4 text-amber-500 fill-amber-500" />
                                 {__('Módulos Incluidos (Plan Full)')}
                             </CardTitle>
@@ -288,8 +290,8 @@ export default function SubscriptionIndex({ empresa, plan, opcionesPrecios, pago
                                 {__('Todo el ecosistema de Servitec a tu disposición:')}
                             </CardDescription>
                         </CardHeader>
-                        <CardContent>
-                            <ul className="space-y-2.5 text-xs">
+                        <CardContent className="pt-4">
+                            <ul className="space-y-3 text-xs">
                                 {[
                                     __('Terminal de Venta POS & Tickets'),
                                     __('Control de Inventario y Kardex'),
@@ -298,11 +300,11 @@ export default function SubscriptionIndex({ empresa, plan, opcionesPrecios, pago
                                     __('Ordenes de Servicios y Equipos'),
                                     __('Integración WhatsApp & Reportes'),
                                 ].map((item, idx) => (
-                                    <li key={idx} className="flex items-center gap-2 font-medium text-slate-700 dark:text-slate-300">
-                                        <span className="h-4 w-4 rounded-full bg-emerald-100 dark:bg-emerald-950 text-emerald-600 dark:text-emerald-400 flex items-center justify-center shrink-0">
-                                            <Check className="h-2.5 w-2.5 stroke-[3]" />
+                                    <li key={idx} className="flex items-center gap-2.5 font-medium text-foreground">
+                                        <span className="h-4 w-4 rounded-full bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 flex items-center justify-center shrink-0">
+                                            <Check className="h-3 w-3 stroke-[3]" />
                                         </span>
-                                        {item}
+                                        <span>{item}</span>
                                     </li>
                                 ))}
                             </ul>
@@ -312,17 +314,17 @@ export default function SubscriptionIndex({ empresa, plan, opcionesPrecios, pago
 
                 {/* Formulario de Renovación / Selección de Período */}
                 {!empresa.is_exempt && (
-                    <Card className="shadow-lg border-2 border-indigo-100 dark:border-indigo-900/60 overflow-hidden">
-                        <CardHeader className="bg-gradient-to-r from-indigo-900/10 via-purple-900/10 to-indigo-900/10 border-b">
+                    <Card className="shadow-md border-2 border-primary/20 overflow-hidden">
+                        <CardHeader className="bg-muted/40 border-b">
                             <div className="flex items-center gap-3">
-                                <div className="p-2.5 bg-indigo-600 text-white rounded-xl shadow-md">
+                                <div className="p-2.5 bg-primary text-primary-foreground rounded-xl shadow-sm">
                                     <Calendar className="h-6 w-6" />
                                 </div>
                                 <div>
                                     <CardTitle className="text-xl font-bold">
                                         {__('Renovar o Ampliar Suscripción')}
                                     </CardTitle>
-                                    <CardDescription>
+                                    <CardDescription className="text-xs sm:text-sm">
                                         {__('Elige la duración de tu plan y ajusta las sucursales requeridas para tu negocio.')}
                                     </CardDescription>
                                 </div>
@@ -332,8 +334,8 @@ export default function SubscriptionIndex({ empresa, plan, opcionesPrecios, pago
                             <form onSubmit={handleSubmitRenewal} className="space-y-8">
                                 {/* 1. Duración del Plan */}
                                 <div className="space-y-3">
-                                    <Label className="text-sm font-bold text-slate-900 dark:text-slate-100 flex items-center gap-2">
-                                        <span className="h-5 w-5 rounded-full bg-indigo-600 text-white text-xs flex items-center justify-center font-bold">1</span>
+                                    <Label className="text-sm font-bold flex items-center gap-2">
+                                        <span className="h-6 w-6 rounded-full bg-primary text-primary-foreground text-xs flex items-center justify-center font-bold">1</span>
                                         {__('Selecciona la Duración del Servicio')}
                                     </Label>
                                     <div className="grid gap-4 sm:grid-cols-3">
@@ -346,31 +348,31 @@ export default function SubscriptionIndex({ empresa, plan, opcionesPrecios, pago
                                                     onClick={() => handleCycleChange(meses)}
                                                     className={`cursor-pointer rounded-2xl border-2 p-5 transition-all relative flex flex-col justify-between ${
                                                         isSelected 
-                                                            ? 'border-indigo-600 bg-indigo-50/50 dark:bg-indigo-950/40 shadow-md ring-2 ring-indigo-600/20'
-                                                            : 'border-slate-200 dark:border-slate-800 hover:border-slate-300 dark:hover:border-slate-700 bg-white dark:bg-slate-900'
+                                                            ? 'border-primary bg-primary/5 shadow-md ring-2 ring-primary/20'
+                                                            : 'border-border hover:border-muted-foreground/30 bg-card'
                                                     }`}
                                                 >
                                                     {meses === 12 && (
-                                                        <Badge className="absolute -top-3 right-4 bg-emerald-600 text-white text-[10px] font-bold px-2.5 py-0.5 shadow">
+                                                        <Badge className="absolute -top-3 right-4 bg-emerald-600 text-white text-[10px] font-bold px-2.5 py-0.5 shadow-sm">
                                                             {__('🔥 Mejor Opción - 20% Dcto')}
                                                         </Badge>
                                                     )}
                                                     {meses === 6 && (
-                                                        <Badge className="absolute -top-3 right-4 bg-blue-600 text-white text-[10px] font-bold px-2.5 py-0.5 shadow">
+                                                        <Badge className="absolute -top-3 right-4 bg-blue-600 text-white text-[10px] font-bold px-2.5 py-0.5 shadow-sm">
                                                             {__('Ahorra 10%')}
                                                         </Badge>
                                                     )}
 
                                                     <div>
-                                                        <span className="text-xs font-semibold text-muted-foreground uppercase">{meses} {__('Meses de Acceso')}</span>
-                                                        <h3 className="text-2xl font-black text-slate-900 dark:text-slate-100 mt-1">
+                                                        <span className="text-xs font-bold text-muted-foreground uppercase">{meses} {__('Meses de Acceso')}</span>
+                                                        <h3 className="text-2xl font-black text-foreground mt-1">
                                                             {currencySymbol}{opt?.subtotal_plan.toFixed(2)}
                                                         </h3>
                                                     </div>
 
                                                     <div className="mt-4 pt-3 border-t text-xs text-muted-foreground flex justify-between items-center">
                                                         <span>{__('Promedio mensual:')}</span>
-                                                        <span className="font-bold text-indigo-600 dark:text-indigo-400">
+                                                        <span className="font-bold text-primary">
                                                             {currencySymbol}{opt?.precio_mensual_promedio.toFixed(2)}/{__('mes')}
                                                         </span>
                                                     </div>
@@ -383,15 +385,15 @@ export default function SubscriptionIndex({ empresa, plan, opcionesPrecios, pago
                                 {/* 2. Selección de Sucursales & Resumen Financiero */}
                                 <div className="grid gap-6 md:grid-cols-2 pt-4 border-t">
                                     <div className="space-y-4">
-                                        <Label className="text-sm font-bold text-slate-900 dark:text-slate-100 flex items-center gap-2">
-                                            <span className="h-5 w-5 rounded-full bg-indigo-600 text-white text-xs flex items-center justify-center font-bold">2</span>
+                                        <Label className="text-sm font-bold flex items-center gap-2">
+                                            <span className="h-6 w-6 rounded-full bg-primary text-primary-foreground text-xs flex items-center justify-center font-bold">2</span>
                                             {__('Cantidad de Sucursales a Contratar')}
                                         </Label>
                                         
-                                        <div className="p-4 bg-slate-50 dark:bg-slate-900 rounded-xl border space-y-3">
+                                        <div className="p-4 bg-muted/30 rounded-xl border space-y-3">
                                             <p className="text-xs text-muted-foreground">
                                                 {__('El plan base incluye 1 sucursal. Cada sucursal adicional suma +')}
-                                                <strong className="text-indigo-600 dark:text-indigo-400">
+                                                <strong className="text-primary font-bold">
                                                     {currencySymbol}{(plan?.precio_sucursal_extra_mensual ?? 10).toFixed(2)}/{__('mes')}
                                                 </strong>.
                                             </p>
@@ -435,11 +437,11 @@ export default function SubscriptionIndex({ empresa, plan, opcionesPrecios, pago
                                     </div>
 
                                     {/* Resumen de Tarifas Sticky Card */}
-                                    <div className="bg-gradient-to-br from-indigo-900 to-slate-900 text-white p-5 rounded-2xl shadow-xl flex flex-col justify-between relative overflow-hidden">
-                                        <div className="space-y-3">
+                                    <div className="bg-slate-900 text-white p-5 rounded-2xl shadow-lg flex flex-col justify-between relative overflow-hidden border border-slate-800">
+                                        <div className="space-y-3 relative z-10">
                                             <div className="flex items-center justify-between">
-                                                <span className="text-xs font-bold uppercase tracking-wider text-indigo-300">{__('Resumen de Inversión')}</span>
-                                                <Badge variant="outline" className="text-[10px] border-indigo-400/30 text-indigo-300">
+                                                <span className="text-xs font-bold uppercase tracking-wider text-slate-300">{__('Resumen de Inversión')}</span>
+                                                <Badge variant="outline" className="text-[10px] border-slate-700 text-slate-300">
                                                     {selectedCycle} {__('Meses')}
                                                 </Badge>
                                             </div>
@@ -458,7 +460,7 @@ export default function SubscriptionIndex({ empresa, plan, opcionesPrecios, pago
                                             </div>
                                         </div>
 
-                                        <div className="pt-4 border-t border-indigo-800/80 mt-4 flex items-baseline justify-between">
+                                        <div className="pt-4 border-t border-slate-800 mt-4 flex items-baseline justify-between relative z-10">
                                             <div>
                                                 <p className="text-xs text-slate-400 font-medium">{__('Total a Transferir:')}</p>
                                                 <p className="text-3xl font-black font-mono text-emerald-400">
@@ -471,8 +473,8 @@ export default function SubscriptionIndex({ empresa, plan, opcionesPrecios, pago
 
                                 {/* 3. Datos del Pago */}
                                 <div className="space-y-4 pt-4 border-t">
-                                    <Label className="text-sm font-bold text-slate-900 dark:text-slate-100 flex items-center gap-2">
-                                        <span className="h-5 w-5 rounded-full bg-indigo-600 text-white text-xs flex items-center justify-center font-bold">3</span>
+                                    <Label className="text-sm font-bold flex items-center gap-2">
+                                        <span className="h-6 w-6 rounded-full bg-primary text-primary-foreground text-xs flex items-center justify-center font-bold">3</span>
                                         {__('Registro del Pago y Comprobante')}
                                     </Label>
 
@@ -483,7 +485,7 @@ export default function SubscriptionIndex({ empresa, plan, opcionesPrecios, pago
                                                 value={data.metodo_pago}
                                                 onValueChange={(val) => setData('metodo_pago', val)}
                                             >
-                                                <SelectTrigger id="metodo_pago" className="mt-1">
+                                                <SelectTrigger id="metodo_pago" className="mt-1 h-10">
                                                     <SelectValue />
                                                 </SelectTrigger>
                                                 <SelectContent>
@@ -502,7 +504,7 @@ export default function SubscriptionIndex({ empresa, plan, opcionesPrecios, pago
                                                 placeholder={__('Ej: 987654321')}
                                                 value={data.referencia_pago}
                                                 onChange={(e) => setData('referencia_pago', e.target.value)}
-                                                className="mt-1"
+                                                className="mt-1 h-10"
                                             />
                                         </div>
 
@@ -513,10 +515,10 @@ export default function SubscriptionIndex({ empresa, plan, opcionesPrecios, pago
                                                 type="file"
                                                 accept="image/*,.pdf"
                                                 onChange={handleFileChange}
-                                                className="mt-1 cursor-pointer"
+                                                className="mt-1 cursor-pointer h-10 pt-1.5"
                                             />
                                             {imagePreviewUrl && (
-                                                <div className="mt-3 p-2 bg-slate-100 dark:bg-slate-900 rounded-lg border w-32 h-32 relative">
+                                                <div className="mt-3 p-2 bg-muted rounded-lg border w-32 h-32 relative">
                                                     <img src={imagePreviewUrl} alt="Preview" className="w-full h-full object-cover rounded" />
                                                 </div>
                                             )}
@@ -528,7 +530,7 @@ export default function SubscriptionIndex({ empresa, plan, opcionesPrecios, pago
                                     type="submit" 
                                     disabled={processing} 
                                     size="lg"
-                                    className="w-full sm:w-auto gap-2 bg-indigo-600 hover:bg-indigo-700 font-bold px-8 shadow-md"
+                                    className="w-full sm:w-auto gap-2 font-bold px-8 shadow-md h-11"
                                 >
                                     <Upload className="h-5 w-5" />
                                     {processing ? __('Enviando...') : __('Enviar Solicitud de Renovación')}
@@ -539,20 +541,20 @@ export default function SubscriptionIndex({ empresa, plan, opcionesPrecios, pago
                 )}
 
                 {/* Historial de Pagos y Solicitudes */}
-                <Card className="shadow-md border border-slate-200/80 dark:border-slate-800">
-                    <CardHeader className="border-b bg-slate-50/50 dark:bg-slate-900/50">
+                <Card className="shadow-sm border border-border">
+                    <CardHeader className="border-b bg-muted/30">
                         <div className="flex items-center gap-3">
-                            <Receipt className="h-5 w-5 text-indigo-600" />
+                            <Receipt className="h-5 w-5 text-primary" />
                             <div>
                                 <CardTitle className="text-lg font-bold">{__('Historial de Renovaciones y Comprobantes')}</CardTitle>
-                                <CardDescription>{__('Seguimiento de pagos enviados y su estado de aprobación.')}</CardDescription>
+                                <CardDescription className="text-xs">{__('Seguimiento de pagos enviados y su estado de aprobación.')}</CardDescription>
                             </div>
                         </div>
                     </CardHeader>
                     <CardContent className="p-0">
                         <Table>
                             <TableHeader>
-                                <TableRow className="bg-slate-50 dark:bg-slate-900">
+                                <TableRow className="bg-muted/50">
                                     <TableHead className="font-bold">{__('Fecha')}</TableHead>
                                     <TableHead className="font-bold">{__('Duración')}</TableHead>
                                     <TableHead className="font-bold">{__('Sucursales')}</TableHead>
@@ -565,13 +567,13 @@ export default function SubscriptionIndex({ empresa, plan, opcionesPrecios, pago
                             </TableHeader>
                             <TableBody>
                                 {pagos.map((pago) => (
-                                    <TableRow key={pago.id} className="hover:bg-slate-50/60 dark:hover:bg-slate-900/40">
+                                    <TableRow key={pago.id} className="hover:bg-muted/40">
                                         <TableCell className="text-xs font-mono font-medium">
                                             {new Date(pago.created_at).toLocaleDateString()}
                                         </TableCell>
                                         <TableCell className="font-semibold text-xs">{pago.ciclo_meses} {__('Meses')}</TableCell>
                                         <TableCell className="text-xs font-medium">{pago.sucursales_contratadas}</TableCell>
-                                        <TableCell className="font-mono font-bold text-xs text-indigo-600 dark:text-indigo-400">
+                                        <TableCell className="font-mono font-bold text-xs text-primary">
                                             {currencySymbol}{pago.monto.toFixed(2)}
                                         </TableCell>
                                         <TableCell className="capitalize text-xs font-medium">{pago.metodo_pago.replace('_', ' ')}</TableCell>
@@ -582,7 +584,7 @@ export default function SubscriptionIndex({ empresa, plan, opcionesPrecios, pago
                                                     size="sm" 
                                                     variant="ghost" 
                                                     onClick={() => setPreviewReceipt(`/storage/${pago.comprobante_path}`)}
-                                                    className="h-7 text-xs gap-1 text-indigo-600 hover:text-indigo-700"
+                                                    className="h-7 text-xs gap-1 text-primary hover:text-primary/80"
                                                 >
                                                     <Eye className="h-3.5 w-3.5" />
                                                     {__('Ver')}
@@ -627,13 +629,13 @@ export default function SubscriptionIndex({ empresa, plan, opcionesPrecios, pago
                 <DialogContent className="max-w-2xl">
                     <DialogHeader>
                         <DialogTitle className="flex items-center gap-2">
-                            <Receipt className="h-5 w-5 text-indigo-600" />
+                            <Receipt className="h-5 w-5 text-primary" />
                             {__('Comprobante de Pago Adjunto')}
                         </DialogTitle>
                     </DialogHeader>
 
                     {previewReceipt && (
-                        <div className="p-2 border rounded-xl bg-slate-100 dark:bg-slate-900 flex items-center justify-center max-h-[70vh] overflow-auto">
+                        <div className="p-2 border rounded-xl bg-muted flex items-center justify-center max-h-[70vh] overflow-auto">
                             {previewReceipt.endsWith('.pdf') ? (
                                 <iframe src={previewReceipt} className="w-full h-96 rounded" title="PDF Comprobante" />
                             ) : (
@@ -648,7 +650,7 @@ export default function SubscriptionIndex({ empresa, plan, opcionesPrecios, pago
                                 href={previewReceipt} 
                                 target="_blank" 
                                 rel="noreferrer" 
-                                className="text-xs font-bold text-indigo-600 hover:underline flex items-center gap-1"
+                                className="text-xs font-bold text-primary hover:underline flex items-center gap-1"
                             >
                                 <ExternalLink className="h-3.5 w-3.5" />
                                 {__('Abrir en ventana nueva')}
