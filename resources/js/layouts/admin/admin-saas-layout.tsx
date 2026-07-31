@@ -255,7 +255,12 @@ export default function AdminSaasLayout({
     const { __ } = useTranslate();
 
     const userPermissions = (auth as any)?.user?.permissions || [];
+    const isSuperAdmin = Boolean(
+        (auth as any)?.user?.is_super_admin ||
+        (auth as any)?.user?.roles?.includes('Super Administrador')
+    );
     const hasPermission = (permission: string) => {
+        if (isSuperAdmin) return true;
         return userPermissions.includes(permission);
     };
 

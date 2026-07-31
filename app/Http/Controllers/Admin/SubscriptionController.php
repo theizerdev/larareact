@@ -219,10 +219,20 @@ class SubscriptionController extends Controller
 
         $plan = SubscriptionPlan::first();
 
+        $stats = [
+            'total_empresas' => $empresas->count(),
+            'activas' => $empresas->where('is_exempt', false)->where('subscription_status', 'active')->count(),
+            'trial' => $empresas->where('is_exempt', false)->where('subscription_status', 'trial')->count(),
+            'vencidas' => $empresas->where('is_exempt', false)->where('subscription_status', 'expired')->count(),
+            'exentas' => $empresas->where('is_exempt', true)->count(),
+            'pagos_pendientes' => $pagosPendientes->count(),
+        ];
+
         return inertia('admin/subscription/manage', [
             'empresas' => $empresas,
             'pagosPendientes' => $pagosPendientes,
             'plan' => $plan,
+            'stats' => $stats,
         ]);
     }
 
