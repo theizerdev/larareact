@@ -146,11 +146,11 @@ export default function DatabaseMonitoring({ dbInfo }: PageProps) {
     ];
 
     // Opciones del gráfico de dona (Distribución de Queries)
-    const donutChartOptions = {
+    const donutChartOptions: any = {
         labels: ['Select', 'Insert', 'Update', 'Delete'],
         colors: ['#3b82f6', '#10b981', '#f59e0b', '#ef4444'],
         legend: {
-            position: 'bottom',
+            position: 'bottom' as const,
             labels: { colors: '#94a3b8' }
         },
         plotOptions: {
@@ -178,7 +178,7 @@ return '0';
             }
         },
         dataLabels: { enabled: false },
-        tooltip: { theme: 'dark' }
+        tooltip: { theme: 'dark' as const }
     };
 
     const donutChartSeries = metrics

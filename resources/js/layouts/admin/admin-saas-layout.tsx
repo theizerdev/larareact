@@ -5,6 +5,7 @@ import {
     ChevronLeft,
     ChevronRight,
     ChevronDown,
+    Clock,
     Home,
     LayoutDashboard,
     LogOut,
@@ -27,6 +28,7 @@ import * as React from 'react';
 import LanguageToggle from '@/components/language-toggle';
 import TemplateCustomizer from '@/components/template-customizer';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import {
     DropdownMenu,
@@ -544,6 +546,16 @@ export default function AdminSaasLayout({
                                     permission: 'credit_config.view',
                                 },
                                 {
+                                    title: 'Suscripción',
+                                    href: '/admin/monitoring/subscription',
+                                    permission: 'subscriptions.view',
+                                },
+                                {
+                                    title: 'Gestión Suscripciones',
+                                    href: '/admin/monitoring/subscription/manage',
+                                    permission: 'subscriptions.manage',
+                                },
+                                {
                                     title: 'Appearance',
                                     href: appearanceEdit().url,
                                     permission: 'empresas.view',
@@ -648,16 +660,6 @@ export default function AdminSaasLayout({
                                 {
                                     title: 'Scheduled Tasks',
                                     href: tasksMonitoringIndex.url(),
-                                    permission: 'monitoreo.view',
-                                },
-                                {
-                                    title: 'Suscripción',
-                                    href: '/admin/monitoring/subscription',
-                                    permission: 'monitoreo.view',
-                                },
-                                {
-                                    title: 'Gestión Suscripciones',
-                                    href: '/admin/monitoring/subscription/manage',
                                     permission: 'monitoreo.view',
                                 },
                             ].filter(item => hasPermission(item.permission));
@@ -828,7 +830,7 @@ export default function AdminSaasLayout({
                         <div className="flex items-center gap-2">
                             {/* Subscription Status Badge */}
                             {(() => {
-                                const sub = (props as any).subscription;
+                                const sub = (page.props as any).subscription;
                                 if (!sub || sub.is_exempt) return null;
                                 return (
                                     <Link href="/admin/monitoring/subscription">

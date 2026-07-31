@@ -59,7 +59,10 @@ class PermissionSeeder extends Seeder
                 // Módulo: Configuración de Créditos
                 'credit_config.view' => 'Ver Configuración de Créditos',
                 'credit_config.edit' => 'Editar Configuración de Créditos',
-                
+
+                // Módulo: Suscripciones
+                'subscriptions.view' => 'Ver Suscripciones',
+                'subscriptions.manage' => 'Gestionar Suscripciones',
             ],
             // Sector: Monitoreo
             'monitoreo' => [
@@ -158,6 +161,7 @@ class PermissionSeeder extends Seeder
                     str_starts_with($permission, 'sucursales.') => 'sucursales',
                     str_starts_with($permission, 'integrations.') => 'integraciones',
                     str_starts_with($permission, 'credit_config.') => 'configuracion_credito',
+                    str_starts_with($permission, 'subscriptions.') => 'suscripciones',
                     str_starts_with($permission, 'monitoreo.') => 'monitoreo',
                     str_starts_with($permission, 'categorias.') => 'categorias',
                     str_starts_with($permission, 'marcas.') => 'marcas',

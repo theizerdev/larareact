@@ -45,6 +45,7 @@ trait PermissionOrganizer
             'roles' => 'Roles',
             'empresas' => 'Empresas',
             'sucursales' => 'Sucursales',
+            'suscripciones' => 'Suscripciones',
 
             default => ucfirst($module)
         };
