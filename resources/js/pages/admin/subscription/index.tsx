@@ -85,11 +85,13 @@ interface PageProps {
     plan: PlanInfo | null;
     opcionesPrecios: Record<number, PlanOption>;
     pagos: PagoItem[];
+    bcvRate?: number;
 }
 
-export default function SubscriptionIndex({ empresa, plan, opcionesPrecios, pagos }: PageProps) {
+export default function SubscriptionIndex({ empresa, plan, opcionesPrecios, pagos, bcvRate = 36.50 }: PageProps) {
     const { __ } = useTranslate();
-    const { currencySymbol = '$' } = usePage().props as any;
+    const pageProps = usePage().props as any;
+    const { currencySymbol = '$', isVenezuela = false } = pageProps;
 
     const [selectedCycle, setSelectedCycle] = useState<number>(12); // 12 meses por defecto para máximo descuento
     const [extraSucursales, setExtraSucursales] = useState<number>(Math.max(1, empresa.sucursales_activas));
@@ -102,6 +104,15 @@ export default function SubscriptionIndex({ empresa, plan, opcionesPrecios, pago
     const sucursalesExtrasCount = Math.max(0, extraSucursales - (plan?.sucursales_incluidas ?? 1));
     const costoExtraSucursales = sucursalesExtrasCount * (plan?.precio_sucursal_extra_mensual ?? 10) * selectedCycle;
     const precioFinalEstimado = (currentOption?.subtotal_plan ?? 0) + costoExtraSucursales;
+
+    // Formateador especial estricto para Venezuela (convierte USD a Bolívares según tasa BCV)
+    const formatPrice = (usdAmount: number) => {
+        if (isVenezuela) {
+            const bsAmount = usdAmount * bcvRate;
+            return `Bs. ${bsAmount.toLocaleString('es-VE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+        }
+        return `${currencySymbol}${usdAmount.toFixed(2)}`;
+    };
 
     const { data, setData, post, processing, errors, reset } = useForm({
         ciclo_meses: selectedCycle,
@@ -366,14 +377,14 @@ export default function SubscriptionIndex({ empresa, plan, opcionesPrecios, pago
                                                     <div>
                                                         <span className="text-xs font-bold text-muted-foreground uppercase">{meses} {__('Meses de Acceso')}</span>
                                                         <h3 className="text-2xl font-black text-foreground mt-1">
-                                                            {currencySymbol}{opt?.subtotal_plan.toFixed(2)}
+                                                            {formatPrice(opt?.subtotal_plan ?? 0)}
                                                         </h3>
                                                     </div>
 
                                                     <div className="mt-4 pt-3 border-t text-xs text-muted-foreground flex justify-between items-center">
                                                         <span>{__('Promedio mensual:')}</span>
                                                         <span className="font-bold text-primary">
-                                                            {currencySymbol}{opt?.precio_mensual_promedio.toFixed(2)}/{__('mes')}
+                                                            {formatPrice(opt?.precio_mensual_promedio ?? 0)}/{__('mes')}
                                                         </span>
                                                     </div>
                                                 </div>
@@ -394,7 +405,7 @@ export default function SubscriptionIndex({ empresa, plan, opcionesPrecios, pago
                                             <p className="text-xs text-muted-foreground">
                                                 {__('El plan base incluye 1 sucursal. Cada sucursal adicional suma +')}
                                                 <strong className="text-primary font-bold">
-                                                    {currencySymbol}{(plan?.precio_sucursal_extra_mensual ?? 10).toFixed(2)}/{__('mes')}
+                                                    {formatPrice(plan?.precio_sucursal_extra_mensual ?? 10)}/{__('mes')}
                                                 </strong>.
                                             </p>
                                             
@@ -441,20 +452,33 @@ export default function SubscriptionIndex({ empresa, plan, opcionesPrecios, pago
                                         <div className="space-y-3 relative z-10">
                                             <div className="flex items-center justify-between">
                                                 <span className="text-xs font-bold uppercase tracking-wider text-slate-300">{__('Resumen de Inversión')}</span>
-                                                <Badge variant="outline" className="text-[10px] border-slate-700 text-slate-300">
-                                                    {selectedCycle} {__('Meses')}
-                                                </Badge>
+                                                <div className="flex items-center gap-2">
+                                                    {isVenezuela && (
+                                                        <Badge variant="outline" className="text-[10px] border-amber-500/40 text-amber-300 bg-amber-500/10">
+                                                            Tasa BCV: Bs. {bcvRate.toFixed(2)} / USD
+                                                        </Badge>
+                                                    )}
+                                                    <Badge variant="outline" className="text-[10px] border-slate-700 text-slate-300">
+                                                        {selectedCycle} {__('Meses')}
+                                                    </Badge>
+                                                </div>
                                             </div>
 
                                             <div className="space-y-1.5 text-xs text-slate-300">
                                                 <div className="flex justify-between">
                                                     <span>Plan Full ({selectedCycle} meses):</span>
-                                                    <span className="font-mono font-semibold">{currencySymbol}{currentOption?.subtotal_plan.toFixed(2)}</span>
+                                                    <span className="font-mono font-semibold">{formatPrice(currentOption?.subtotal_plan ?? 0)}</span>
                                                 </div>
                                                 {sucursalesExtrasCount > 0 && (
                                                     <div className="flex justify-between text-indigo-300">
                                                         <span>{sucursalesExtrasCount} {__('Sucursal(es) Extra')}:</span>
-                                                        <span className="font-mono font-semibold">+{currencySymbol}{costoExtraSucursales.toFixed(2)}</span>
+                                                        <span className="font-mono font-semibold">+{formatPrice(costoExtraSucursales)}</span>
+                                                    </div>
+                                                )}
+                                                {isVenezuela && (
+                                                    <div className="flex justify-between text-slate-400 text-[11px] pt-1 border-t border-slate-800">
+                                                        <span>Equivalente en Dólares USD:</span>
+                                                        <span className="font-mono">${precioFinalEstimado.toFixed(2)} USD</span>
                                                     </div>
                                                 )}
                                             </div>
@@ -462,9 +486,11 @@ export default function SubscriptionIndex({ empresa, plan, opcionesPrecios, pago
 
                                         <div className="pt-4 border-t border-slate-800 mt-4 flex items-baseline justify-between relative z-10">
                                             <div>
-                                                <p className="text-xs text-slate-400 font-medium">{__('Total a Transferir:')}</p>
+                                                <p className="text-xs text-slate-400 font-medium">
+                                                    {isVenezuela ? __('Total a Transferir (Bolívares):') : __('Total a Transferir:')}
+                                                </p>
                                                 <p className="text-3xl font-black font-mono text-emerald-400">
-                                                    {currencySymbol}{precioFinalEstimado.toFixed(2)}
+                                                    {formatPrice(precioFinalEstimado)}
                                                 </p>
                                             </div>
                                         </div>
@@ -574,7 +600,7 @@ export default function SubscriptionIndex({ empresa, plan, opcionesPrecios, pago
                                         <TableCell className="font-semibold text-xs">{pago.ciclo_meses} {__('Meses')}</TableCell>
                                         <TableCell className="text-xs font-medium">{pago.sucursales_contratadas}</TableCell>
                                         <TableCell className="font-mono font-bold text-xs text-primary">
-                                            {currencySymbol}{pago.monto.toFixed(2)}
+                                            {formatPrice(pago.monto)}
                                         </TableCell>
                                         <TableCell className="capitalize text-xs font-medium">{pago.metodo_pago.replace('_', ' ')}</TableCell>
                                         <TableCell className="font-mono text-xs text-muted-foreground">{pago.referencia_pago || '--'}</TableCell>

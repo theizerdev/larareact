@@ -18,7 +18,7 @@ class SubscriptionController extends Controller
     /**
      * Panel principal de Suscripción para la empresa actual.
      */
-    public function index()
+    public function index(\App\Services\BcvRateService $bcvService)
     {
         $user = auth()->user();
         $empresa = $user->empresa;
@@ -38,6 +38,8 @@ class SubscriptionController extends Controller
         $suscripcionActiva = Subscription::where('empresa_id', $empresa->id)
             ->orderBy('id', 'desc')
             ->first();
+
+        $bcvRate = $bcvService->getRate() ?? 36.50; // Tasa por defecto de respaldo si falla el API
 
         // Opciones de cálculo de precios
         $opcionesPrecios = [
@@ -78,6 +80,7 @@ class SubscriptionController extends Controller
             'opcionesPrecios' => $opcionesPrecios,
             'pagos' => $pagos,
             'suscripcionActiva' => $suscripcionActiva,
+            'bcvRate' => $bcvRate,
         ]);
     }
 
