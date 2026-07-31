@@ -749,6 +749,7 @@ class VisitaAccesoController extends Controller
                     ->where('documento_identidad', $search)
                     ->orWhere('documento_identidad', 'like', "%{$search}%")
                     ->orWhereRaw("TRIM(documento_identidad) = ?", [$search])
+                    ->orWhereRaw("LOWER(TRIM(documento_identidad)) = ?", [mb_strtolower($search)])
                     ->orWhere('id', $search)
                     ->orWhereRaw("CONCAT(nombres, ' ', apellidos) LIKE ?", ["%{$search}%"])
                     ->first();
@@ -767,48 +768,192 @@ class VisitaAccesoController extends Controller
                         'acceso_existente' => $accesoExistente,
                     ];
                 } else {
-                    // 2. Buscar en invitaciones (pre-anuncios)
-                    $invitacion = VisitaAccesoInvitacion::query()
-                        ->with(['anfitrion', 'empleado', 'proveedor', 'productor', 'paisTelefono', 'tipoServicio'])
-                        ->where('uuid', $search)
-                        ->orWhere('codigo_invitacion', $search)
-                        ->orWhere('visitante_nombre', 'like', "%{$search}%")
-                        ->orWhere('visitante_documento', $search)
-                        ->orWhere('vehiculo_placa', $search)
+                    // 2. Buscar en Proveedores (por documento_identidad/RFC, ID/PROV_id, Razón Social o Nombre Comercial)
+                    $provId = null;
+                    if (preg_match('/^PROV_(\d+)$/i', $search, $matches)) {
+                        $provId = $matches[1];
+                    }
+
+                    $proveedor = Proveedor::query()
+                        ->with(['pais', 'paisTelefono', 'empresa', 'sucursal', 'empleados', 'vehiculos'])
+                        ->where(function ($q) use ($search, $provId) {
+                            $q->where('documento_identidad', $search)
+                              ->orWhere('documento_identidad', 'like', "%{$search}%")
+                              ->orWhereRaw("TRIM(documento_identidad) = ?", [$search])
+                              ->orWhereRaw("LOWER(TRIM(documento_identidad)) = ?", [mb_strtolower($search)]);
+                            if ($provId) {
+                                $q->orWhere('id', $provId);
+                            }
+                            $q->orWhere('razon_social', 'like', "%{$search}%")
+                              ->orWhere('nombre_comercial', 'like', "%{$search}%");
+                        })
                         ->first();
 
-                    if ($invitacion) {
-                        $resultado = [
-                            'tipo' => 'invitacion',
-                            'data' => $invitacion,
-                        ];
-                    } else {
-                        // 3. Buscar en accesos generales (entradas registradas)
-                        $acceso = VisitaAcceso::query()
-                            ->with([
-                                'empleado', 'proveedor', 'proveedorEmpleado',
-                                'productor', 'productorEmpleado', 'responsable',
-                                'empleadoVehiculo', 'proveedorVehiculo', 'productorVehiculo'
-                            ])
-                            ->where('codigo_visitante', $search)
-                            ->orWhere('visitante_documento', $search)
-                            ->orWhere('vehiculo_placa', $search)
+                    if ($proveedor) {
+                        $accesoExistente = VisitaAcceso::query()
+                            ->with(['proveedor', 'proveedorEmpleado', 'responsable', 'proveedorVehiculo'])
+                            ->where('proveedor_id', $proveedor->id)
+                            ->where('status', 1)
                             ->latest()
                             ->first();
 
-                        if ($acceso) {
-                            if ($acceso->empleado) {
-                                $accesoExistente = ($acceso->status == 1) ? $acceso : null;
+                        $resultado = [
+                            'tipo'             => 'proveedor',
+                            'data'             => $proveedor,
+                            'acceso_existente' => $accesoExistente,
+                        ];
+                    } else {
+                        // 3. Buscar en Empleados de Proveedor (ProveedorEmpleado)
+                        $provEmpId = null;
+                        if (preg_match('/^PROVEMP_(\d+)$/i', $search, $matches)) {
+                            $provEmpId = $matches[1];
+                        }
+
+                        $proveedorEmpleado = ProveedorEmpleado::query()
+                            ->with(['proveedor', 'empresa', 'sucursal'])
+                            ->where(function ($q) use ($search, $provEmpId) {
+                                $q->where('documento_identidad', $search)
+                                  ->orWhere('documento_identidad', 'like', "%{$search}%")
+                                  ->orWhereRaw("TRIM(documento_identidad) = ?", [$search])
+                                  ->orWhereRaw("LOWER(TRIM(documento_identidad)) = ?", [mb_strtolower($search)]);
+                                if ($provEmpId) {
+                                    $q->orWhere('id', $provEmpId);
+                                }
+                                $q->orWhereRaw("CONCAT(nombres, ' ', apellidos) LIKE ?", ["%{$search}%"]);
+                            })
+                            ->first();
+
+                        if ($proveedorEmpleado) {
+                            $accesoExistente = VisitaAcceso::query()
+                                ->with(['proveedor', 'proveedorEmpleado', 'responsable', 'proveedorVehiculo'])
+                                ->where('proveedor_empleado_id', $proveedorEmpleado->id)
+                                ->where('status', 1)
+                                ->latest()
+                                ->first();
+
+                            $resultado = [
+                                'tipo'             => 'proveedor_empleado',
+                                'data'             => $proveedorEmpleado,
+                                'acceso_existente' => $accesoExistente,
+                            ];
+                        } else {
+                            // 4. Buscar en Productores
+                            $prodId = null;
+                            if (preg_match('/^PROD_(\d+)$/i', $search, $matches)) {
+                                $prodId = $matches[1];
+                            }
+
+                            $productor = Productor::query()
+                                ->with(['pais', 'paisTelefono', 'empresa', 'sucursal', 'empleados', 'vehiculos'])
+                                ->where(function ($q) use ($search, $prodId) {
+                                    $q->where('documento_identidad', $search)
+                                      ->orWhere('documento_identidad', 'like', "%{$search}%")
+                                      ->orWhereRaw("TRIM(documento_identidad) = ?", [$search])
+                                      ->orWhereRaw("LOWER(TRIM(documento_identidad)) = ?", [mb_strtolower($search)]);
+                                    if ($prodId) {
+                                        $q->orWhere('id', $prodId);
+                                    }
+                                    $q->orWhere('razon_social', 'like', "%{$search}%")
+                                      ->orWhere('nombre_comercial', 'like', "%{$search}%")
+                                      ->orWhere('razon_social_rancho', 'like', "%{$search}%")
+                                      ->orWhere('nombre_comercial_rancho', 'like', "%{$search}%");
+                                })
+                                ->first();
+
+                            if ($productor) {
+                                $accesoExistente = VisitaAcceso::query()
+                                    ->with(['productor', 'productorEmpleado', 'responsable', 'productorVehiculo'])
+                                    ->where('productor_id', $productor->id)
+                                    ->where('status', 1)
+                                    ->latest()
+                                    ->first();
+
                                 $resultado = [
-                                    'tipo'             => 'empleado',
-                                    'data'             => $acceso->empleado->load(['departamento', 'cargo', 'responsable', 'vehiculos', 'empresa', 'sucursal']),
+                                    'tipo'             => 'productor',
+                                    'data'             => $productor,
                                     'acceso_existente' => $accesoExistente,
                                 ];
                             } else {
-                                $resultado = [
-                                    'tipo' => 'acceso',
-                                    'data' => $acceso,
-                                ];
+                                // 5. Buscar en Empleados de Productor (ProductorEmpleado)
+                                $prodEmpId = null;
+                                if (preg_match('/^PRODEMP_(\d+)$/i', $search, $matches)) {
+                                    $prodEmpId = $matches[1];
+                                }
+
+                                $productorEmpleado = ProductorEmpleado::query()
+                                    ->with(['productor', 'empresa', 'sucursal'])
+                                    ->where(function ($q) use ($search, $prodEmpId) {
+                                        $q->where('documento_identidad', $search)
+                                          ->orWhere('documento_identidad', 'like', "%{$search}%")
+                                          ->orWhereRaw("TRIM(documento_identidad) = ?", [$search])
+                                          ->orWhereRaw("LOWER(TRIM(documento_identidad)) = ?", [mb_strtolower($search)]);
+                                        if ($prodEmpId) {
+                                            $q->orWhere('id', $prodEmpId);
+                                        }
+                                        $q->orWhereRaw("CONCAT(nombres, ' ', apellidos) LIKE ?", ["%{$search}%"]);
+                                    })
+                                    ->first();
+
+                                if ($productorEmpleado) {
+                                    $accesoExistente = VisitaAcceso::query()
+                                        ->with(['productor', 'productorEmpleado', 'responsable', 'productorVehiculo'])
+                                        ->where('productor_empleado_id', $productorEmpleado->id)
+                                        ->where('status', 1)
+                                        ->latest()
+                                        ->first();
+
+                                    $resultado = [
+                                        'tipo'             => 'productor_empleado',
+                                        'data'             => $productorEmpleado,
+                                        'acceso_existente' => $accesoExistente,
+                                    ];
+                                } else {
+                                    // 6. Buscar en invitaciones (pre-anuncios)
+                                    $invitacion = VisitaAccesoInvitacion::query()
+                                        ->with(['anfitrion', 'empleado', 'proveedor', 'productor', 'paisTelefono', 'tipoServicio'])
+                                        ->where('uuid', $search)
+                                        ->orWhere('codigo_invitacion', $search)
+                                        ->orWhere('visitante_nombre', 'like', "%{$search}%")
+                                        ->orWhere('visitante_documento', $search)
+                                        ->orWhere('vehiculo_placa', $search)
+                                        ->first();
+
+                                    if ($invitacion) {
+                                        $resultado = [
+                                            'tipo' => 'invitacion',
+                                            'data' => $invitacion,
+                                        ];
+                                    } else {
+                                        // 7. Buscar en accesos generales (entradas registradas)
+                                        $acceso = VisitaAcceso::query()
+                                            ->with([
+                                                'empleado', 'proveedor', 'proveedorEmpleado',
+                                                'productor', 'productorEmpleado', 'responsable',
+                                                'empleadoVehiculo', 'proveedorVehiculo', 'productorVehiculo'
+                                            ])
+                                            ->where('codigo_visitante', $search)
+                                            ->orWhere('visitante_documento', $search)
+                                            ->orWhere('vehiculo_placa', $search)
+                                            ->latest()
+                                            ->first();
+
+                                        if ($acceso) {
+                                            if ($acceso->empleado) {
+                                                $accesoExistente = ($acceso->status == 1) ? $acceso : null;
+                                                $resultado = [
+                                                    'tipo'             => 'empleado',
+                                                    'data'             => $acceso->empleado->load(['departamento', 'cargo', 'responsable', 'vehiculos', 'empresa', 'sucursal']),
+                                                    'acceso_existente' => $accesoExistente,
+                                                ];
+                                            } else {
+                                                $resultado = [
+                                                    'tipo' => 'acceso',
+                                                    'data' => $acceso,
+                                                ];
+                                            }
+                                        }
+                                    }
+                                }
                             }
                         }
                     }

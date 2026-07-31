@@ -94,6 +94,8 @@ export default function GaritaControl({
     const [medioAcceso, setMedioAcceso] = useState<'peatonal' | 'vehicular'>('peatonal');
     const [selectedVehiculoMode, setSelectedVehiculoMode] = useState<'registrado' | 'nuevo'>('registrado');
     const [empleadoVehiculoId, setEmpleadoVehiculoId] = useState<string>('');
+    const [proveedorVehiculoId, setProveedorVehiculoId] = useState<string>('');
+    const [productorVehiculoId, setProductorVehiculoId] = useState<string>('');
     const [nuevoVehiculoPlaca, setNuevoVehiculoPlaca] = useState<string>('');
     const [nuevoVehiculoMarca, setNuevoVehiculoMarca] = useState<string>('');
     const [nuevoVehiculoModelo, setNuevoVehiculoModelo] = useState<string>('');
@@ -131,7 +133,7 @@ export default function GaritaControl({
 
     // Auto-selección inicial de vehículo y reseteo de acompañantes
     useEffect(() => {
-        if (resultado?.tipo === 'empleado' && resultado?.data) {
+        if (resultado?.data) {
             setAcompanantesList([]);
             setNuevoAcompanante({ nombre: '', documento: '', telefono: '', observacion: '' });
             setIsAcompananteModalOpen(false);
@@ -140,10 +142,14 @@ export default function GaritaControl({
                 setMedioAcceso('vehicular');
                 setSelectedVehiculoMode('registrado');
                 setEmpleadoVehiculoId(String(vehs[0].id));
+                setProveedorVehiculoId(String(vehs[0].id));
+                setProductorVehiculoId(String(vehs[0].id));
             } else {
                 setMedioAcceso('peatonal');
                 setSelectedVehiculoMode('nuevo');
                 setEmpleadoVehiculoId('');
+                setProveedorVehiculoId('');
+                setProductorVehiculoId('');
             }
         }
     }, [resultado]);
@@ -521,9 +527,57 @@ export default function GaritaControl({
         });
     };
 
+    const handleRegistrarIngresoProveedorGarita = (tipoAcceso: 'proveedor' | 'productor') => {
+        playScanBeep();
+        const payload: any = {
+            tipo_acceso: tipoAcceso,
+            medio_acceso: medioAcceso,
+            observaciones: 'Ingreso directo por Garita mediante Gafete Autorizado',
+        };
+
+        if (resultado?.tipo === 'proveedor') {
+            payload.proveedor_id = record.id;
+        } else if (resultado?.tipo === 'proveedor_empleado') {
+            payload.proveedor_id = record.proveedor_id;
+            payload.proveedor_empleado_id = record.id;
+        } else if (resultado?.tipo === 'productor') {
+            payload.productor_id = record.id;
+        } else if (resultado?.tipo === 'productor_empleado') {
+            payload.productor_id = record.productor_id;
+            payload.productor_empleado_id = record.id;
+        }
+
+        if (medioAcceso === 'vehicular') {
+            if (selectedVehiculoMode === 'registrado') {
+                if (proveedorVehiculoId) payload.proveedor_vehiculo_id = proveedorVehiculoId;
+                if (productorVehiculoId) payload.productor_vehiculo_id = productorVehiculoId;
+            } else {
+                payload.vehiculo_placa = nuevoVehiculoPlaca;
+                payload.vehiculo_marca = nuevoVehiculoMarca;
+                payload.vehiculo_modelo = nuevoVehiculoModelo;
+                payload.vehiculo_tipo = nuevoVehiculoTipo;
+                if (nuevoVehiculoFotoFrontal) payload.vehiculo_foto_frontal = nuevoVehiculoFotoFrontal;
+                if (nuevoVehiculoFotoTrasera) payload.vehiculo_foto_trasera = nuevoVehiculoFotoTrasera;
+            }
+        }
+
+        if (acompanantesList.length > 0) {
+            payload.acompanantes = acompanantesList;
+        }
+
+        router.post('/admin/visitas-accesos', payload, {
+            preserveScroll: true,
+            onSuccess: () => {
+                notifySuccess(__('Ingreso registrado correctamente en Caseta.'));
+            },
+        });
+    };
+
     const isInvitacion = resultado?.tipo === 'invitacion';
     const isAcceso = resultado?.tipo === 'acceso';
     const isEmpleado = resultado?.tipo === 'empleado';
+    const isProveedor = resultado?.tipo === 'proveedor' || resultado?.tipo === 'proveedor_empleado';
+    const isProductor = resultado?.tipo === 'productor' || resultado?.tipo === 'productor_empleado';
     const record = resultado?.data;
     const accesoExistente = resultado?.acceso_existente;
 
@@ -652,6 +706,8 @@ export default function GaritaControl({
                         <div className={`p-5 text-white flex flex-wrap items-center justify-between gap-4 ${
                             isInvitacion && record.status === 'pendiente' ? 'bg-[#104a29]' :
                             isAcceso && record.status === 1 ? 'bg-blue-700' :
+                            isProveedor ? 'bg-rose-800' :
+                            isProductor ? 'bg-blue-800' :
                             'bg-slate-800'
                         }`}>
                             <div className="flex items-center gap-3">
@@ -660,19 +716,35 @@ export default function GaritaControl({
                                 </div>
                                 <div>
                                     <span className="text-xs font-bold uppercase tracking-wider text-emerald-200 block">
-                                        {isEmpleado ? __('Colaborador / Empleado Driscoll\'s') : isInvitacion ? __('Pre-Anuncio Registrado') : __('Registro de Acceso Caseta')}
+                                        {isEmpleado ? __('Colaborador / Empleado Driscoll\'s') :
+                                         resultado?.tipo === 'proveedor' ? __('🪪 Gafete Rojo • Proveedor Autorizado') :
+                                         resultado?.tipo === 'proveedor_empleado' ? __('🪪 Gafete Rojo • Empleado de Proveedor') :
+                                         resultado?.tipo === 'productor' ? __('🪪 Gafete Azul • Productor Autorizado') :
+                                         resultado?.tipo === 'productor_empleado' ? __('🪪 Gafete Azul • Empleado de Productor') :
+                                         isInvitacion ? __('Pre-Anuncio Registrado') : __('Registro de Acceso Caseta')}
                                     </span>
                                     <h2 className="text-xl font-extrabold tracking-tight">
-                                        {isEmpleado ? `${record.nombres} ${record.apellidos}` : isInvitacion ? record.visitante_nombre : (record.empleado ? `${record.empleado.nombres} ${record.empleado.apellidos}` : record.proveedor ? (record.proveedor.razon_social || record.proveedor.nombre_comercial) : (record.productor?.nombre_comercial_rancho || 'Visitante'))}
+                                        {isEmpleado ? `${record.nombres} ${record.apellidos}` :
+                                         resultado?.tipo === 'proveedor' ? (record.nombre_comercial || record.razon_social) :
+                                         resultado?.tipo === 'proveedor_empleado' ? `${record.nombres} ${record.apellidos}` :
+                                         resultado?.tipo === 'productor' ? (record.nombre_comercial_rancho || record.nombre_comercial || record.razon_social) :
+                                         resultado?.tipo === 'productor_empleado' ? `${record.nombres} ${record.apellidos}` :
+                                         isInvitacion ? record.visitante_nombre : (record.empleado ? `${record.empleado.nombres} ${record.empleado.apellidos}` : record.proveedor ? (record.proveedor.razon_social || record.proveedor.nombre_comercial) : (record.productor?.nombre_comercial_rancho || 'Visitante'))}
                                     </h2>
                                 </div>
                             </div>
 
                             <div className="flex items-center gap-3">
-                                {isEmpleado && accesoExistente && (
+                                {(isEmpleado || isProveedor || isProductor) && accesoExistente && (
                                     <Badge className="bg-blue-300 text-blue-950 font-extrabold text-xs px-3.5 py-1.5 rounded-full border-0">
                                         <CheckCircle2 className="w-4 h-4 mr-1" />
                                         {__('EN INSTALACIONES (INGRESADO)')}
+                                    </Badge>
+                                )}
+                                {(isProveedor || isProductor) && !accesoExistente && (
+                                    <Badge className="bg-emerald-400 text-emerald-950 font-extrabold text-xs px-3.5 py-1.5 rounded-full border-0">
+                                        <CheckCircle2 className="w-4 h-4 mr-1" />
+                                        {__('GAFETE AUTORIZADO - LISTO PARA INGRESAR')}
                                     </Badge>
                                 )}
                                 {isEmpleado && !accesoExistente && autorizadoHoy && (
@@ -712,7 +784,7 @@ export default function GaritaControl({
                                     </Badge>
                                 )}
                                 <span className="font-mono text-xs font-bold bg-white/10 px-3 py-1 rounded-full border border-white/20">
-                                    N° {isEmpleado ? record.documento_identidad : (isInvitacion ? record.codigo_invitacion : record.codigo_visitante)}
+                                    N° {record.documento_identidad || record.codigo_invitacion || record.codigo_visitante || record.id}
                                 </span>
                             </div>
                         </div>
@@ -742,11 +814,26 @@ export default function GaritaControl({
 
                                     <div className="space-y-1">
                                         <h3 className="font-extrabold text-lg text-slate-900">
-                                            {isEmpleado ? `${record.nombres} ${record.apellidos}` : isInvitacion ? record.visitante_nombre : (record.empleado ? `${record.empleado.nombres} ${record.empleado.apellidos}` : record.proveedor ? record.proveedor.razon_social : record.productor?.nombre_comercial_rancho)}
+                                            {isEmpleado ? `${record.nombres} ${record.apellidos}` :
+                                             resultado?.tipo === 'proveedor' ? (record.nombre_comercial || record.razon_social) :
+                                             resultado?.tipo === 'proveedor_empleado' ? `${record.nombres} ${record.apellidos}` :
+                                             resultado?.tipo === 'productor' ? (record.nombre_comercial_rancho || record.nombre_comercial || record.razon_social) :
+                                             resultado?.tipo === 'productor_empleado' ? `${record.nombres} ${record.apellidos}` :
+                                             isInvitacion ? record.visitante_nombre : (record.empleado ? `${record.empleado.nombres} ${record.empleado.apellidos}` : record.proveedor ? record.proveedor.razon_social : record.productor?.nombre_comercial_rancho)}
                                         </h3>
                                         {isEmpleado && record.departamento && (
                                             <span className="text-xs font-semibold text-emerald-700 block flex items-center justify-center gap-1">
                                                 <Building className="w-3.5 h-3.5 text-emerald-600" /> {record.departamento.nombre}
+                                            </span>
+                                        )}
+                                        {resultado?.tipo === 'proveedor_empleado' && record.proveedor && (
+                                            <span className="text-xs font-semibold text-rose-700 block flex items-center justify-center gap-1">
+                                                <Building className="w-3.5 h-3.5 text-rose-600" /> {record.proveedor.nombre_comercial || record.proveedor.razon_social}
+                                            </span>
+                                        )}
+                                        {resultado?.tipo === 'productor_empleado' && record.productor && (
+                                            <span className="text-xs font-semibold text-blue-700 block flex items-center justify-center gap-1">
+                                                <Building className="w-3.5 h-3.5 text-blue-600" /> {record.productor.nombre_comercial || record.productor.razon_social}
                                             </span>
                                         )}
                                         {!isEmpleado && record.visitante_empresa && (
@@ -804,14 +891,14 @@ export default function GaritaControl({
                                             {medioAcceso === 'vehicular' ? <Car className="w-4 h-4 text-amber-500" /> : <Footprints className="w-4 h-4 text-emerald-600" />}
                                             {__('Medio de Acceso')}
                                         </span>
-                                        {isEmpleado && !accesoExistente && (record.vehiculos?.length || 0) > 0 && (
+                                        {(isEmpleado || isProveedor || isProductor) && !accesoExistente && (record.vehiculos?.length || 0) > 0 && (
                                             <span className="text-[10px] font-bold text-amber-800 bg-amber-100 border border-amber-300 px-2 py-0.5 rounded-full">
                                                 {record.vehiculos.length} {__('Vehículo(s) Registrado(s)')}
                                             </span>
                                         )}
                                     </h4>
 
-                                    {isEmpleado && !accesoExistente ? (
+                                    {(isEmpleado || isProveedor || isProductor) && !accesoExistente ? (
                                         <div className="space-y-4 bg-slate-50 p-4 rounded-3xl border border-slate-200">
                                             {/* Selector de Opciones Peatonal / Vehicular */}
                                             <div className="grid grid-cols-2 gap-2 p-1 bg-slate-200/70 rounded-2xl">
@@ -878,11 +965,15 @@ export default function GaritaControl({
                                                         <div className="space-y-3">
                                                             <div className="space-y-1.5">
                                                                 <label className="text-[11px] font-bold text-slate-600 block">
-                                                                    {__('Seleccionar Vehículo Habitual del Empleado:')}
+                                                                    {__('Seleccionar Vehículo Registrado:')}
                                                                 </label>
                                                                 <select
-                                                                    value={empleadoVehiculoId}
-                                                                    onChange={(e) => setEmpleadoVehiculoId(e.target.value)}
+                                                                    value={isProveedor ? proveedorVehiculoId : isProductor ? productorVehiculoId : empleadoVehiculoId}
+                                                                    onChange={(e) => {
+                                                                        if (isProveedor) setProveedorVehiculoId(e.target.value);
+                                                                        else if (isProductor) setProductorVehiculoId(e.target.value);
+                                                                        else setEmpleadoVehiculoId(e.target.value);
+                                                                    }}
                                                                     className="w-full h-11 bg-white border border-slate-300 rounded-xl px-3 text-xs font-bold text-slate-800 focus:border-amber-500 focus:ring-amber-500 shadow-xs"
                                                                 >
                                                                     {record.vehiculos.map((v: any) => (
@@ -895,7 +986,8 @@ export default function GaritaControl({
 
                                                             {/* Fotos del Vehículo Registrado Seleccionado */}
                                                             {(() => {
-                                                                const selVeh = (record.vehiculos || []).find((v: any) => String(v.id) === String(empleadoVehiculoId)) || (record.vehiculos || [])[0];
+                                                                const activeVehId = isProveedor ? proveedorVehiculoId : isProductor ? productorVehiculoId : empleadoVehiculoId;
+                                                                const selVeh = (record.vehiculos || []).find((v: any) => String(v.id) === String(activeVehId)) || (record.vehiculos || [])[0];
                                                                 if (!selVeh) return null;
                                                                 return (
                                                                     <div className="space-y-2 pt-1">
@@ -1328,7 +1420,7 @@ export default function GaritaControl({
 
                                 {/* BOTÓN DE ACCIÓN 1-CLIC DE GARITA */}
                                 <div className="space-y-3 pt-4 border-t border-slate-200">
-                                    {isEmpleado && (
+                                    {(isEmpleado || isProveedor || isProductor) && (
                                         <>
                                             {accesoExistente ? (
                                                 <Button
@@ -1339,7 +1431,7 @@ export default function GaritaControl({
                                                     <LogOut className="w-6 h-6 text-rose-400" />
                                                     {__('Marcar Salida de Caseta')}
                                                 </Button>
-                                            ) : (
+                                            ) : isEmpleado ? (
                                                 <Button
                                                     type="button"
                                                     disabled={!autorizadoHoy}
@@ -1352,6 +1444,15 @@ export default function GaritaControl({
                                                 >
                                                     <CheckCircle2 className="w-6 h-6 text-emerald-400" />
                                                     {autorizadoHoy ? __('Registrar Ingreso de Empleado (1-Clic)') : __('Requiere Autorización para Ingresar')}
+                                                </Button>
+                                            ) : (
+                                                <Button
+                                                    type="button"
+                                                    onClick={() => handleRegistrarIngresoProveedorGarita(isProductor ? 'productor' : 'proveedor')}
+                                                    className="w-full h-16 bg-[#104a29] hover:bg-[#0c371e] text-white text-base font-extrabold rounded-2xl shadow-xl gap-2 flex items-center justify-center transition-transform active:scale-[0.98]"
+                                                >
+                                                    <CheckCircle2 className="w-6 h-6 text-emerald-400" />
+                                                    {__('Registrar Ingreso de ') + (isProductor ? __('Productor') : __('Proveedor')) + __(' (1-Clic)')}
                                                 </Button>
                                             )}
                                         </>
