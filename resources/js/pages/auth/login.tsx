@@ -1,5 +1,6 @@
+import { useEffect, useState } from 'react';
 import { Form, Head } from '@inertiajs/react';
-import { LoaderCircle } from 'lucide-react';
+import { LoaderCircle, MapPin } from 'lucide-react';
 import PasskeyVerify from '@/components/passkey-verify';
 import PasswordInput from '@/components/password-input';
 import TextLink from '@/components/text-link';
@@ -18,6 +19,31 @@ type Props = {
 };
 
 export default function Login({ status, canResetPassword }: Props) {
+    const [coords, setCoords] = useState<{ latitude: number | null; longitude: number | null }>({
+        latitude: null,
+        longitude: null,
+    });
+    const [geoPermission, setGeoPermission] = useState<string>('prompt');
+
+    useEffect(() => {
+        if ('geolocation' in navigator) {
+            navigator.geolocation.getCurrentPosition(
+                (position) => {
+                    setCoords({
+                        latitude: position.coords.latitude,
+                        longitude: position.coords.longitude,
+                    });
+                    setGeoPermission('granted');
+                },
+                (error) => {
+                    console.warn('Ubicación denegada o no disponible:', error.message);
+                    setGeoPermission('denied');
+                },
+                { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
+            );
+        }
+    }, []);
+
     return (
         <>
             <Head title="Iniciar sesión" />
@@ -37,6 +63,13 @@ export default function Login({ status, canResetPassword }: Props) {
             >
                 {({ processing, errors }) => (
                     <>
+                        {coords.latitude && coords.longitude && (
+                            <>
+                                <input type="hidden" name="latitude" value={coords.latitude} />
+                                <input type="hidden" name="longitude" value={coords.longitude} />
+                            </>
+                        )}
+
                         <div className="grid gap-5">
                             <FormField
                                 label="Correo electrónico"
@@ -111,8 +144,6 @@ export default function Login({ status, canResetPassword }: Props) {
                                 Iniciar sesión
                             </Button>
                         </div>
-
-
                     </>
                 )}
             </Form>

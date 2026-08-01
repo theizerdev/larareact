@@ -16,21 +16,54 @@ class SessionMonitoringController extends Controller
     public function index(Request $request)
     {
         $currentSessionId = $request->session()->getId();
+        $currentUser = $request->user();
 
-        // Obtener todas las sesiones de la base de datos
-        $sessions = DB::table('sessions')
-            ->leftJoin('users', 'sessions.user_id', '=', 'users.id')
-            ->select('sessions.id', 'sessions.user_id', 'sessions.ip_address', 'sessions.user_agent', 'sessions.last_activity', 'users.name as user_name', 'users.email as user_email')
-            ->orderBy('sessions.last_activity', 'desc')
-            ->get();
+        // Obtener solo las sesiones de usuarios autenticados
+        $query = DB::table('sessions')
+            ->join('users', 'sessions.user_id', '=', 'users.id')
+            ->select(
+                'sessions.id',
+                'sessions.user_id',
+                'sessions.ip_address',
+                'sessions.user_agent',
+                'sessions.last_activity',
+                'users.name as user_name',
+                'users.email as user_email',
+                'users.empresa_id',
+                'users.sucursal_id'
+            );
+
+        // Aislamiento Multitenant: Si no es Super Administrador, filtrar por empresa y sucursal
+        if (! $currentUser->hasRole('Super Administrador') && ! $currentUser->hasRole('super-admin')) {
+            if ($currentUser->empresa_id) {
+                $query->where('users.empresa_id', $currentUser->empresa_id);
+            }
+            if ($currentUser->sucursal_id) {
+                $query->where('users.sucursal_id', $currentUser->sucursal_id);
+            }
+        }
+
+        $sessions = $query->orderBy('sessions.last_activity', 'desc')->get();
 
         $formattedSessions = $sessions->map(function ($session) use ($currentSessionId) {
             $agent = UserAgentParser::parse($session->user_agent);
 
-            // Determinar ubicación preliminar de la IP
-            $location = 'Desconocida';
-            if ($session->ip_address === '127.0.0.1' || $session->ip_address === '::1') {
-                $location = 'Localhost (Desarrollo)';
+            $latitude = null;
+            $longitude = null;
+
+            if ($session->user_id) {
+                $lastActivity = DB::table('activity_log')
+                    ->where('causer_type', 'App\\Models\\User')
+                    ->where('causer_id', $session->user_id)
+                    ->where('log_name', 'auth')
+                    ->orderBy('id', 'desc')
+                    ->first();
+
+                if ($lastActivity && ! empty($lastActivity->properties)) {
+                    $props = json_decode($lastActivity->properties, true);
+                    $latitude = $props['latitude'] ?? null;
+                    $longitude = $props['longitude'] ?? null;
+                }
             }
 
             return [
@@ -39,7 +72,8 @@ class SessionMonitoringController extends Controller
                 'user_name' => $session->user_name ?? 'Invitado / Desconectado',
                 'user_email' => $session->user_email,
                 'ip_address' => $session->ip_address,
-                'location' => $location,
+                'latitude' => $latitude,
+                'longitude' => $longitude,
                 'os' => $agent['os'],
                 'browser' => $agent['browser'],
                 'device' => $agent['device'],

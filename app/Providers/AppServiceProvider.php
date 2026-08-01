@@ -31,6 +31,26 @@ class AppServiceProvider extends ServiceProvider
 
         Event::listen(Login::class, function (Login $event) {
             $user = $event->user;
+            $request = request();
+
+            $properties = [
+                'ip' => $request->ip(),
+                'user_agent' => $request->header('User-Agent'),
+                'login_at' => now()->toIso8601String(),
+            ];
+
+            if ($request->filled('latitude') && $request->filled('longitude')) {
+                $properties['latitude'] = $request->input('latitude');
+                $properties['longitude'] = $request->input('longitude');
+            }
+
+            // Guardar registro de actividad de inicio de sesión seguro
+            activity('auth')
+                ->causedBy($user)
+                ->performedOn($user)
+                ->withProperties($properties)
+                ->log('user_logged_in');
+
             if ($user && ($user->hasRole('Administrador') || $user->hasRole('Super Administrador'))) {
                 $hasOpenRegister = CashRegister::where('empresa_id', $user->empresa_id)
                     ->where('status', 'open')
