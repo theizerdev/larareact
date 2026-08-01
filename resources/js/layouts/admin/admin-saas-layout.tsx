@@ -259,8 +259,13 @@ export default function AdminSaasLayout({
         (auth as any)?.user?.is_super_admin ||
         (auth as any)?.user?.roles?.includes('Super Administrador')
     );
+    const userEmpresaId = (auth as any)?.user?.empresa_id;
+
     const hasPermission = (permission: string) => {
         if (isSuperAdmin) return true;
+        if (permission === 'subscriptions.manage' && userEmpresaId !== 1) {
+            return false;
+        }
         return userPermissions.includes(permission);
     };
 

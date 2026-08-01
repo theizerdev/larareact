@@ -18,11 +18,12 @@ class RoleSeeder extends Seeder
         $superAdmin = Role::firstOrCreate(['name' => 'Super Administrador', 'guard_name' => 'web']);
         $superAdmin->syncPermissions(Permission::all());
 
-        // Admin: all except roles/groups management
+        // Admin: all except roles/groups management and SaaS global subscription management
         $admin = Role::firstOrCreate(['name' => 'Administrador', 'guard_name' => 'web']);
         $admin->syncPermissions(
             Permission::where('module', '!=', 'roles')
                 ->where('module', '!=', 'groups')
+                ->where('name', '!=', 'subscriptions.manage')
                 ->get()
         );
 
