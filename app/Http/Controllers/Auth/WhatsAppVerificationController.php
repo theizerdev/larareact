@@ -102,7 +102,8 @@ class WhatsAppVerificationController extends Controller
             . "El equipo de *{$appName}*";
 
         try {
-            $whatsappService = new WhatsAppService($user->empresa_id);
+            // Usar la empresa principal del sistema SaaS (ID 1) para notificaciones y OTPs de registro
+            $whatsappService = new WhatsAppService(1);
             $whatsappService->sendMessage($user->telefono, $message, true);
         } catch (\Throwable $e) {
             \Illuminate\Support\Facades\Log::error('Error reenviando OTP WhatsApp: ' . $e->getMessage());
