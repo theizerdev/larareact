@@ -35,17 +35,25 @@ class DbMonitoringController extends Controller
                 // Información de Tablas (nombre, filas, tamaño)
                 $tables = DB::select('
                     SELECT 
-                        table_name AS name, 
-                        COALESCE(table_rows, 0) AS rows, 
-                        ROUND((COALESCE(data_length, 0) + COALESCE(index_length, 0)) / 1024 / 1024, 3) AS size_mb 
+                        TABLE_NAME AS `name`, 
+                        COALESCE(TABLE_ROWS, 0) AS `rows`, 
+                        ROUND((COALESCE(DATA_LENGTH, 0) + COALESCE(INDEX_LENGTH, 0)) / 1024 / 1024, 4) AS `size_mb` 
                     FROM information_schema.TABLES 
-                    WHERE table_schema = ? AND table_type = \'BASE TABLE\'
-                    ORDER BY (COALESCE(data_length, 0) + COALESCE(index_length, 0)) DESC
-                ', [$dbName]);
+                    WHERE TABLE_SCHEMA = DATABASE() AND TABLE_TYPE = \'BASE TABLE\'
+                    ORDER BY (COALESCE(DATA_LENGTH, 0) + COALESCE(INDEX_LENGTH, 0)) DESC
+                ');
 
                 foreach ($tables as $t) {
                     $sizeMb = (float) ($t->size_mb ?? 0);
                     $rows = (int) ($t->rows ?? 0);
+
+                    // Si rows es 0 o aproximado (InnoDB), hacer COUNT real rápido
+                    try {
+                        $countRes = DB::select("SELECT COUNT(*) as cnt FROM `{$t->name}`");
+                        $rows = (int) ($countRes[0]->cnt ?? $rows);
+                    } catch (\Throwable $e) {
+                        // Keep table_rows if direct count fails
+                    }
 
                     $tablesInfo[] = [
                         'name' => $t->name,
@@ -280,6 +288,236 @@ class DbMonitoringController extends Controller
             'slow_queries' => $slowQueries,
             'active_processes' => $activeProcesses,
         ]);
+    }
+
+    /**
+     * Lista de tablas excluidas del sistema central (pertenecientes al dueño SaaS/Framework).
+     */
+    protected function getExcludedSystemTables(): array
+    {
+        return [
+            'migrations',
+            'failed_jobs',
+            'password_reset_tokens',
+            'personal_access_tokens',
+            'sessions',
+            'cache',
+            'cache_locks',
+            'jobs',
+            'job_batches',
+            'activity_log',
+            'roles',
+            'permissions',
+            'model_has_roles',
+            'model_has_permissions',
+            'role_has_permissions',
+            'telescope_entries',
+            'telescope_entries_tags',
+            'telescope_monitoring',
+        ];
+    }
+
+    /**
+     * Paso 2: Generar vista previa de datos para la exportación de la empresa del usuario.
+     */
+    public function exportPreview(Request $request)
+    {
+        $user = $request->user();
+        $empresaId = $user->empresa_id;
+        $isSuperAdmin = $user->hasRole('Super Administrador') || $user->hasRole('super-admin');
+        $excludedTables = $this->getExcludedSystemTables();
+
+        $allTables = DB::select('
+            SELECT TABLE_NAME AS `name` 
+            FROM information_schema.TABLES 
+            WHERE TABLE_SCHEMA = DATABASE() AND TABLE_TYPE = \'BASE TABLE\'
+        ');
+
+        $previewData = [];
+        $totalExportRows = 0;
+
+        foreach ($allTables as $t) {
+            $tableName = $t->name;
+
+            // Si no es SuperAdmin, omitir tablas del sistema central del SaaS
+            if (! $isSuperAdmin && in_array($tableName, $excludedTables)) {
+                continue;
+            }
+
+            $hasEmpresaId = \Illuminate\Support\Facades\Schema::hasColumn($tableName, 'empresa_id');
+            $query = DB::table($tableName);
+
+            if (! $isSuperAdmin && $empresaId) {
+                if ($tableName === 'empresas') {
+                    $query->where('id', $empresaId);
+                } elseif ($hasEmpresaId) {
+                    $query->where('empresa_id', $empresaId);
+                }
+            }
+
+            $count = (clone $query)->count();
+            $samples = (clone $query)->limit(3)->get();
+
+            $previewData[] = [
+                'table' => $tableName,
+                'is_tenant_filtered' => (! $isSuperAdmin && $empresaId && ($hasEmpresaId || $tableName === 'empresas')),
+                'rows_count' => $count,
+                'sample_records' => $samples,
+            ];
+
+            $totalExportRows += $count;
+        }
+
+        return response()->json([
+            'tables' => $previewData,
+            'total_tables' => count($previewData),
+            'total_rows' => $totalExportRows,
+            'empresa_id' => $empresaId,
+        ]);
+    }
+
+    /**
+     * Paso 3: Confirmación de contraseña del usuario.
+     */
+    public function confirmPassword(Request $request)
+    {
+        $request->validate([
+            'password' => ['required', 'string'],
+        ]);
+
+        $user = $request->user();
+
+        if (! \Illuminate\Support\Facades\Hash::check($request->password, $user->password)) {
+            return response()->json(['valid' => false, 'message' => __('La contraseña ingresada es incorrecta.')], 422);
+        }
+
+        return response()->json(['valid' => true, 'message' => __('Contraseña verificada correctamente.')]);
+    }
+
+    /**
+     * Paso 4: Descarga/Generación de archivo SQL o JSON de exportación.
+     */
+    public function downloadExport(Request $request)
+    {
+        $request->validate([
+            'password' => ['required', 'string'],
+            'include_structure' => ['boolean'],
+            'include_data' => ['boolean'],
+            'add_drop_table' => ['boolean'],
+            'if_not_exists' => ['boolean'],
+        ]);
+
+        $user = $request->user();
+
+        if (! \Illuminate\Support\Facades\Hash::check($request->password, $user->password)) {
+            return response()->json(['message' => __('Verificación de seguridad fallida.')], 403);
+        }
+
+        $empresaId = $user->empresa_id;
+        $isSuperAdmin = $user->hasRole('Super Administrador') || $user->hasRole('super-admin');
+        $excludedTables = $this->getExcludedSystemTables();
+
+        $includeStructure = $request->boolean('include_structure', true);
+        $includeData = $request->boolean('include_data', true);
+        $addDropTable = $request->boolean('add_drop_table', true);
+        $ifNotExists = $request->boolean('if_not_exists', true);
+
+        $allTables = DB::select('
+            SELECT TABLE_NAME AS `name` 
+            FROM information_schema.TABLES 
+            WHERE TABLE_SCHEMA = DATABASE() AND TABLE_TYPE = \'BASE TABLE\'
+        ');
+
+        $tables = array_filter($allTables, function ($t) use ($isSuperAdmin, $excludedTables) {
+            return $isSuperAdmin || ! in_array($t->name, $excludedTables);
+        });
+
+        $filename = 'export_empresa_'.($empresaId ?? 'global').'_'.now()->format('Y_m_d_His').'.sql';
+
+        $headers = [
+            'Content-Type' => 'text/plain; charset=utf-8',
+            'Content-Disposition' => "attachment; filename=\"{$filename}\"",
+        ];
+
+        $callback = function () use ($tables, $empresaId, $isSuperAdmin, $includeStructure, $includeData, $addDropTable, $ifNotExists) {
+            $out = fopen('php://output', 'w');
+
+            fwrite($out, "-- ============================================================\n");
+            fwrite($out, "-- SERVITEC POS BACKUP EXPORT\n");
+            fwrite($out, '-- Empresa ID: '.($empresaId ?? 'Global (SuperAdmin)')."\n");
+            fwrite($out, '-- Fecha: '.now()->toDateTimeString()."\n");
+            fwrite($out, "-- ============================================================\n\n");
+            fwrite($out, "SET FOREIGN_KEY_CHECKS=0;\n\n");
+
+            foreach ($tables as $t) {
+                $tableName = $t->name;
+                $hasEmpresaId = \Illuminate\Support\Facades\Schema::hasColumn($tableName, 'empresa_id');
+
+                if ($includeStructure) {
+                    if ($addDropTable) {
+                        fwrite($out, "DROP TABLE IF EXISTS `{$tableName}`;\n");
+                    }
+
+                    $createTableRes = DB::select("SHOW CREATE TABLE `{$tableName}`");
+                    if (! empty($createTableRes)) {
+                        $createSql = $createTableRes[0]->{'Create Table'} ?? $createTableRes[0]->{'create table'} ?? '';
+                        if ($ifNotExists) {
+                            $createSql = preg_replace('/CREATE TABLE/', 'CREATE TABLE IF NOT EXISTS', $createSql, 1);
+                        }
+                        fwrite($out, $createSql.";\n\n");
+                    }
+                }
+
+                if ($includeData) {
+                    $query = DB::table($tableName);
+                    if (! $isSuperAdmin && $empresaId) {
+                        if ($tableName === 'empresas') {
+                            $query->where('id', $empresaId);
+                        } elseif ($hasEmpresaId) {
+                            $query->where('empresa_id', $empresaId);
+                        }
+                    }
+
+                    // Determinar columna clave para ordenar el chunk
+                    $primaryKey = \Illuminate\Support\Facades\Schema::hasColumn($tableName, 'id') ? 'id' : null;
+                    if (! $primaryKey) {
+                        $columnNames = \Illuminate\Support\Facades\Schema::getColumnListing($tableName);
+                        $primaryKey = $columnNames[0] ?? null;
+                    }
+
+                    if ($primaryKey) {
+                        $query->orderBy($primaryKey);
+                    }
+
+                    $query->chunk(100, function ($rows) use ($out, $tableName) {
+                        foreach ($rows as $row) {
+                            $rowArray = (array) $row;
+                            $columns = array_map(fn ($c) => "`{$c}`", array_keys($rowArray));
+                            $values = array_map(function ($val) {
+                                if (is_null($val)) {
+                                    return 'NULL';
+                                }
+                                if (is_bool($val)) {
+                                    return $val ? '1' : '0';
+                                }
+                                $escaped = addslashes((string) $val);
+
+                                return "'{$escaped}'";
+                            }, array_values($rowArray));
+
+                            $sql = 'INSERT INTO `'.$tableName.'` ('.implode(', ', $columns).') VALUES ('.implode(', ', $values).");\n";
+                            fwrite($out, $sql);
+                        }
+                    });
+                    fwrite($out, "\n");
+                }
+            }
+
+            fwrite($out, "SET FOREIGN_KEY_CHECKS=1;\n");
+            fclose($out);
+        };
+
+        return response()->stream($callback, 200, $headers);
     }
 }
 
