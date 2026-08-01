@@ -24,8 +24,11 @@ Route::post('locale', function (Request $request) {
     return back();
 })->name('locale.update');
 
+use App\Http\Controllers\Admin\SuperAdminDashboardController;
+
 Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('dashboard', [DashboardController::class, 'index'])->name('dashboard');
+    Route::get('superadministrador/dashboard0', [SuperAdminDashboardController::class, 'index'])->name('superadmin.dashboard');
 
     Route::prefix('admin')->name('admin.')->group(function () {
         Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');

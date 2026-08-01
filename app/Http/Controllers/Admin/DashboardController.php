@@ -16,10 +16,17 @@ class DashboardController extends Controller
 {
     public function index(Request $request, CashRegisterService $cashService)
     {
+        $user = auth()->user();
+
+        // Si el usuario es Super Administrador o pertenece a la empresa principal (SaaS Owner ID 1),
+        // ser redirigido directamente al dashboard exclusivo de suscripciones
+        if ($user && ($user->empresa_id === 1 || $user->hasRole('Super Administrador') || $user->hasRole('super-admin'))) {
+            return redirect('/superadministrador/dashboard0');
+        }
+
         $startDate = $request->input('start_date') ? Carbon::parse($request->input('start_date'))->startOfDay() : Carbon::today()->subDays(6)->startOfDay();
         $endDate = $request->input('end_date') ? Carbon::parse($request->input('end_date'))->endOfDay() : Carbon::now()->endOfDay();
 
-        $user = auth()->user();
         $empresa = $user?->empresa;
         if (!$empresa && $user?->empresa_id) {
             $empresa = \App\Models\Empresa::find($user->empresa_id);

@@ -34,6 +34,7 @@ createServer((page) =>
                         pageComponent.layout = (page: any) => <AuthLayout>{page}</AuthLayout>;
                         break;
                     case name.startsWith('admin/'):
+                    case name.startsWith('superadmin/'):
                     case name === 'dashboard':
                     case name.startsWith('settings/'):
                         pageComponent.layout = (page: any) => <AdminLayout>{page}</AdminLayout>;
