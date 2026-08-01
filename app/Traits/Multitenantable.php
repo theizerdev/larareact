@@ -46,12 +46,12 @@ trait Multitenantable
                 return;
             }
 
-            if ($user->empresa_id) {
+            if ($user->empresa_id && \Illuminate\Support\Facades\Schema::hasColumn($table, 'empresa_id')) {
                 $builder->where("{$table}.empresa_id", $user->empresa_id);
             }
 
-            // Solo filtrar por sucursal si el usuario tiene una asignada
-            if ($user->sucursal_id) {
+            // Solo filtrar por sucursal si la tabla no es 'sucursales' y tiene la columna 'sucursal_id'
+            if ($table !== 'sucursales' && $user->sucursal_id && \Illuminate\Support\Facades\Schema::hasColumn($table, 'sucursal_id')) {
                 $builder->where("{$table}.sucursal_id", $user->sucursal_id);
             }
         });

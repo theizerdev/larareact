@@ -19,6 +19,8 @@ class SucursalController extends Controller
         $empresaId = $request->input('empresa_id');
         $perPage = $request->input('perPage', 10);
 
+        $user = $request->user();
+
         $query = Sucursal::with('empresa');
 
         if ($search) {
@@ -39,10 +41,15 @@ class SucursalController extends Controller
 
         $sucursales = $query->orderBy('nombre', 'asc')->paginate($perPage)->withQueryString();
 
+        $statsQuery = Sucursal::query();
+        if ($empresaId) {
+            $statsQuery->where('empresa_id', $empresaId);
+        }
+
         $stats = [
-            'total' => Sucursal::count(),
-            'activos' => Sucursal::where('status', true)->count(),
-            'inactivos' => Sucursal::where('status', false)->count(),
+            'total' => (clone $statsQuery)->count(),
+            'activos' => (clone $statsQuery)->where('status', true)->count(),
+            'inactivos' => (clone $statsQuery)->where('status', false)->count(),
         ];
 
         return inertia('admin/Sucursales/Index', [

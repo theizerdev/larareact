@@ -5,6 +5,7 @@ namespace App\Actions\Fortify;
 use App\Concerns\PasswordValidationRules;
 use App\Concerns\ProfileValidationRules;
 use App\Models\Empresa;
+use App\Models\Sucursal;
 use App\Models\User;
 use App\Services\WhatsAppService;
 use Illuminate\Support\Facades\DB;
@@ -62,7 +63,17 @@ class CreateNewUser implements CreatesNewUsers
                 'max_sucursales' => 1,
             ]);
 
-            // 2. Crear Usuario Administrador asociado a la empresa
+            // 2. Crear Sucursal Principal con los datos de la empresa
+            $sucursal = Sucursal::create([
+                'empresa_id' => $empresa->id,
+                'nombre' => 'Sucursal Principal',
+                'pais_telefono_id' => $paisId,
+                'telefono' => $phone,
+                'direccion' => 'Dirección Principal',
+                'status' => true,
+            ]);
+
+            // 3. Crear Usuario Administrador asociado a la empresa y sucursal
             $user = User::create([
                 'name' => $input['representante_legal'],
                 'email' => $input['email'],
@@ -70,6 +81,7 @@ class CreateNewUser implements CreatesNewUsers
                 'telefono' => $phone,
                 'pais_telefono_id' => $paisId,
                 'empresa_id' => $empresa->id,
+                'sucursal_id' => $sucursal->id,
                 'status' => 'activo',
             ]);
 
