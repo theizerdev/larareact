@@ -25,13 +25,21 @@ Route::post('locale', function (Request $request) {
 })->name('locale.update');
 
 use App\Http\Controllers\Admin\SuperAdminDashboardController;
+use App\Http\Controllers\Auth\WhatsAppVerificationController;
+use App\Http\Middleware\EnsureWhatsAppIsVerified;
 
 Route::middleware(['auth', 'verified'])->group(function () {
-    Route::get('dashboard', [DashboardController::class, 'index'])->name('dashboard');
-    Route::get('superadministrador/dashboard0', [SuperAdminDashboardController::class, 'index'])->name('superadmin.dashboard');
+    Route::get('/verify-whatsapp', [WhatsAppVerificationController::class, 'show'])->name('verify-whatsapp.index');
+    Route::post('/verify-whatsapp/verify', [WhatsAppVerificationController::class, 'verify'])->name('verify-whatsapp.verify');
+    Route::post('/verify-whatsapp/resend', [WhatsAppVerificationController::class, 'resend'])->name('verify-whatsapp.resend');
 
-    Route::prefix('admin')->name('admin.')->group(function () {
-        Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
+    Route::middleware([EnsureWhatsAppIsVerified::class])->group(function () {
+        Route::get('dashboard', [DashboardController::class, 'index'])->name('dashboard');
+        Route::get('superadministrador/dashboard0', [SuperAdminDashboardController::class, 'index'])->name('superadmin.dashboard');
+
+        Route::prefix('admin')->name('admin.')->group(function () {
+            Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
+        });
     });
 });
 

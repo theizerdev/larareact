@@ -231,11 +231,14 @@ class WhatsAppService
     public function sendMessage(string $to, string $message, bool $isWelcome = false)
     {
         try {
+            // Formatear el número: eliminar el '+' inicial y cualquier caracter no numérico (ej. "+58 412-1234567" -> "584121234567")
+            $cleanNumber = preg_replace('/[^0-9]/', '', $to);
+
             $url = "{$this->baseUrl}/api/message/send-text/{$this->instanceName}";
             $response = Http::timeout($this->timeout)
                 ->withHeaders($this->getHeaders())
                 ->post($url, [
-                    'to' => $to,
+                    'to' => $cleanNumber,
                     'message' => $message,
                 ]);
 
@@ -275,12 +278,14 @@ class WhatsAppService
     public function sendMedia(string $to, string $mediaUrl, string $caption = '')
     {
         try {
+            $cleanNumber = preg_replace('/[^0-9]/', '', $to);
+
             $url = "{$this->baseUrl}/api/message/send-media/{$this->instanceName}";
             $response = Http::timeout($this->timeout)
                 ->withHeaders($this->getHeaders())
                 ->post($url, [
-                    'to' => $to,
-                    'url' => $mediaUrl,
+                    'to' => $cleanNumber,
+                    'mediaUrl' => $mediaUrl,
                     'caption' => $caption,
                 ]);
 

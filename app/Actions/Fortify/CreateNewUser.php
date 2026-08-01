@@ -76,9 +76,16 @@ class CreateNewUser implements CreatesNewUsers
             // 3. Sincronizar rol Administrador
             $user->assignRole('Administrador');
 
-            // 4. Enviar notificación de bienvenida por WhatsApp si hay un teléfono registrado
+            // 4. Generar código OTP de 8 dígitos para verificación de WhatsApp
+            $otpCode = str_pad((string) random_int(0, 99999999), 8, '0', STR_PAD_LEFT);
+            $user->forceFill([
+                'whatsapp_otp_code' => $otpCode,
+                'whatsapp_otp_expires_at' => now()->addMinutes(15),
+            ])->save();
+
+            // 5. Enviar notificación de bienvenida y código OTP por WhatsApp si hay un teléfono registrado
             if ($phone) {
-                $this->sendWhatsAppWelcomeMessage($user, $empresa, $phone, $input['password']);
+                $this->sendWhatsAppWelcomeMessage($user, $empresa, $phone, $input['password'], $otpCode);
             }
 
             return $user;
@@ -86,9 +93,9 @@ class CreateNewUser implements CreatesNewUsers
     }
 
     /**
-     * Enviar mensaje profesional de bienvenida vía WhatsApp
+     * Enviar mensaje profesional de bienvenida vía WhatsApp con código OTP de 8 dígitos
      */
-    private function sendWhatsAppWelcomeMessage(User $user, Empresa $empresa, string $phone, string $plainPassword): void
+    private function sendWhatsAppWelcomeMessage(User $user, Empresa $empresa, string $phone, string $plainPassword, string $otpCode): void
     {
         try {
             $appName = config('app.name', 'Servitec');
@@ -96,13 +103,10 @@ class CreateNewUser implements CreatesNewUsers
 
             $message = "✨ *¡Bienvenido a {$appName}!* ✨\n\n"
                 . "Estimado(a) *{$user->name}*,\n\n"
-                . "Nos complace darle la bienvenida a nuestra plataforma. Hemos registrado exitosamente la empresa *{$empresa->razon_social}* con un *Plan de Prueba de 7 días* completamente funcional.\n\n"
-                . "A continuación, le compartimos sus credenciales de acceso:\n"
-                . "🌐 *Portal de Acceso:* {$loginUrl}\n"
-                . "✉️ *Correo Electrónico:* {$user->email}\n"
-                . "🔑 *Contraseña:* {$plainPassword}\n\n"
-                . "Por razones de seguridad, le recomendamos guardar estos datos de forma confidencial.\n\n"
-                . "Estamos a su entera disposición para asistirle en todo momento. ¡Gracias por confiar en nosotros!\n\n"
+                . "Nos complace darle la bienvenida a nuestra plataforma. Hemos registrado exitosamente la empresa *{$empresa->razon_social}* con un *Plan de Prueba de 7 días* (acceso total a todos los módulos).\n\n"
+                . "🔒 *Su código de verificación OTP de 8 dígitos es:* \n"
+                . "👉 *{$otpCode}*\n\n"
+                . "Por razones de seguridad, ingrese este código en la pantalla de verificación para activar el acceso a su cuenta.\n\n"
                 . "Atentamente,\n"
                 . "El equipo de *{$appName}*";
 
