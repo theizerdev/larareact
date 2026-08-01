@@ -9,17 +9,17 @@ export default function AppLogoIcon(props: SVGAttributes<SVGElement>) {
         >
             <defs>
                 <linearGradient
-                    id="laravel-grad"
+                    id="fixsale-navy-grad"
                     x1="0%"
                     y1="0%"
                     x2="100%"
                     y2="100%"
                 >
-                    <stop offset="0%" stopColor="#FF2D20" />
-                    <stop offset="100%" stopColor="#FF754C" />
+                    <stop offset="0%" stopColor="#0B2545" />
+                    <stop offset="100%" stopColor="#134074" />
                 </linearGradient>
                 <linearGradient
-                    id="react-grad"
+                    id="fixsale-cyan-grad"
                     x1="0%"
                     y1="0%"
                     x2="100%"
@@ -29,31 +29,28 @@ export default function AppLogoIcon(props: SVGAttributes<SVGElement>) {
                     <stop offset="100%" stopColor="#4FACFE" />
                 </linearGradient>
             </defs>
+            {/* Background Shield / Rounded Box */}
+            <rect width="90" height="90" x="5" y="5" rx="20" fill="url(#fixsale-navy-grad)" />
+
+            {/* Letter F + X Cross Icon */}
             <path
-                d="M 32 20 L 32 80 L 58 80"
-                stroke="url(#laravel-grad)"
-                strokeWidth="12"
+                d="M 28 26 H 72 M 28 26 V 74 M 28 48 H 60"
+                stroke="#FFFFFF"
+                strokeWidth="9"
                 strokeLinecap="round"
                 strokeLinejoin="round"
                 fill="none"
             />
+            {/* Tech Cross Accent (X Node) */}
             <path
-                d="M 32 20 H 58 C 72 20 72 46 58 46 H 32"
-                stroke="url(#react-grad)"
-                strokeWidth="12"
+                d="M 52 56 L 74 74 M 74 56 L 52 74"
+                stroke="url(#fixsale-cyan-grad)"
+                strokeWidth="7.5"
                 strokeLinecap="round"
-                strokeLinejoin="round"
-                fill="none"
-                opacity="0.95"
-            />
-            <path
-                d="M 45 46 L 68 80"
-                stroke="url(#react-grad)"
-                strokeWidth="12"
-                strokeLinecap="round"
-                strokeLinejoin="round"
                 fill="none"
             />
+            {/* Precision Dot */}
+            <circle cx="74" cy="26" r="4.5" fill="url(#fixsale-cyan-grad)" />
         </svg>
     );
 }

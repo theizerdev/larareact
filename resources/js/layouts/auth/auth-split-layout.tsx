@@ -24,9 +24,9 @@ export default function AuthSplitLayout({
                     className="relative z-10 flex items-center font-semibold"
                 >
                     <img
-                        src="/image/logo/larareact_logo_transparent.png"
-                        alt="LaraReact Logo"
-                        className="h-40 w-auto object-contain"
+                        src="/image/logo/fix_sale_logo.jpg"
+                        alt="Fix Sale Logo"
+                        className="h-20 w-auto object-contain rounded-xl shadow-md"
                     />
                 </Link>
 
@@ -55,13 +55,16 @@ export default function AuthSplitLayout({
                 <div className="w-full max-w-md">
                     <Link
                         href={home()}
-                        className="mb-8 flex items-center justify-center lg:hidden"
+                        className="mb-8 flex flex-col items-center justify-center lg:hidden"
                     >
-                        <img
-                            src="/image/logo/larareact_logo_transparent.png"
-                            alt="LaraReact Logo"
-                            className="h-20 w-auto object-contain"
-                        />
+                        <div className="bg-[#0B2545] text-white px-5 py-2.5 rounded-xl flex items-center justify-center gap-2 border border-blue-400/20 shadow-md">
+                            <span className="font-extrabold tracking-wider text-base text-white">
+                                FIX <span className="text-cyan-400 font-black">+</span> SALE
+                            </span>
+                        </div>
+                        <span className="text-[10px] font-semibold text-muted-foreground tracking-widest uppercase mt-1">
+                            GESTOR INTEGRAL DE VENTAS Y SERVICIOS
+                        </span>
                     </Link>
 
                     <div className="mb-6 space-y-1 text-center">
