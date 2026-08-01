@@ -61,27 +61,13 @@ export default function Register({ passwordRules, paises = [] }: Props) {
                                 </div>
 
                                 <div className="grid gap-2">
-                                    <Label htmlFor="company_document" className="text-sm font-medium">Documento de Identificación / RIF *</Label>
-                                    <Input
-                                        id="company_document"
-                                        name="company_document"
-                                        type="text"
-                                        required
-                                        tabIndex={2}
-                                        placeholder="Ej: J-12345678-9"
-                                        className="h-10"
-                                    />
-                                    <InputError message={errors.company_document} />
-                                </div>
-
-                                <div className="grid gap-2">
                                     <Label htmlFor="representante_legal" className="text-sm font-medium">Representante Legal (Nombre Completo) *</Label>
                                     <Input
                                         id="representante_legal"
                                         name="representante_legal"
                                         type="text"
                                         required
-                                        tabIndex={3}
+                                        tabIndex={2}
                                         placeholder="Ej: Juan Pérez"
                                         className="h-10"
                                     />
@@ -95,7 +81,7 @@ export default function Register({ passwordRules, paises = [] }: Props) {
                                         name="email"
                                         type="email"
                                         required
-                                        tabIndex={4}
+                                        tabIndex={3}
                                         autoComplete="email"
                                         placeholder="contacto@empresa.com"
                                         className="h-10"
@@ -109,7 +95,7 @@ export default function Register({ passwordRules, paises = [] }: Props) {
                                         value={String(paisId)}
                                         onValueChange={(val) => setPaisId(val)}
                                     >
-                                        <SelectTrigger id="pais_id_select" tabIndex={5} className="h-10">
+                                        <SelectTrigger id="pais_id_select" tabIndex={4} className="h-10">
                                             <SelectValue placeholder="Seleccione un país" />
                                         </SelectTrigger>
                                         <SelectContent>
@@ -142,7 +128,7 @@ export default function Register({ passwordRules, paises = [] }: Props) {
                                         id="password"
                                         name="password"
                                         required
-                                        tabIndex={6}
+                                        tabIndex={5}
                                         autoComplete="new-password"
                                         placeholder="Contraseña"
                                         passwordrules={passwordRules}
@@ -156,7 +142,7 @@ export default function Register({ passwordRules, paises = [] }: Props) {
                                         id="password_confirmation"
                                         name="password_confirmation"
                                         required
-                                        tabIndex={7}
+                                        tabIndex={6}
                                         autoComplete="new-password"
                                         placeholder="Repita la contraseña"
                                         passwordrules={passwordRules}
@@ -166,7 +152,7 @@ export default function Register({ passwordRules, paises = [] }: Props) {
 
                                 <div className="p-3 bg-primary/5 rounded-lg border border-primary/20 text-xs text-muted-foreground flex items-start gap-2">
                                     <CheckCircle2 className="w-4 h-4 text-primary shrink-0 mt-0.5" />
-                                    <span>Al registrarse obtendrá <strong>7 días de prueba totalmente gratis</strong> con perfil de <strong>Administrador</strong>.</span>
+                                    <span>Al registrarse obtendrá <strong>7 días de prueba totalmente gratis</strong> con perfil de <strong>Administrador</strong> y acceso completo a <strong>todos los módulos del sistema</strong>.</span>
                                 </div>
 
                                 <Button

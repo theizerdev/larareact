@@ -26,7 +26,7 @@ class CreateNewUser implements CreatesNewUsers
     {
         Validator::make($input, [
             'company_name' => ['required', 'string', 'max:255'],
-            'company_document' => ['required', 'string', 'max:255', 'unique:empresas,documento'],
+            'company_document' => ['nullable', 'string', 'max:255'],
             'representante_legal' => ['required', 'string', 'max:255'],
             'email' => ['required', 'email', 'max:255', 'unique:users,email'],
             'password' => $this->passwordRules(),
@@ -34,8 +34,6 @@ class CreateNewUser implements CreatesNewUsers
             'pais_id' => ['nullable', 'exists:pais,id'],
         ], [
             'company_name.required' => __('El nombre de la empresa es obligatorio.'),
-            'company_document.required' => __('El documento o RIF de la empresa es obligatorio.'),
-            'company_document.unique' => __('Este documento de empresa ya se encuentra registrado.'),
             'representante_legal.required' => __('El nombre del representante legal es obligatorio.'),
             'email.required' => __('El correo electrónico es obligatorio.'),
             'email.unique' => __('Este correo electrónico ya se encuentra registrado.'),
@@ -46,9 +44,11 @@ class CreateNewUser implements CreatesNewUsers
             $paisId = $input['pais_id'] ?? ($input['pais_telefono_id'] ?? null);
 
             // 1. Crear Empresa con plan de prueba de 7 días
+            $documento = !empty($input['company_document']) ? $input['company_document'] : 'S/D-' . Str::upper(Str::random(6));
+
             $empresa = Empresa::create([
                 'razon_social' => $input['company_name'],
-                'documento' => $input['company_document'],
+                'documento' => $documento,
                 'representante_legal' => $input['representante_legal'],
                 'telefono' => $phone,
                 'email' => $input['email'],
