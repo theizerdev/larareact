@@ -10,6 +10,11 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::put('/integrations/mapbox', [IntegrationController::class, 'updateMapbox'])->name('integrations.mapbox.update')->can('integrations.edit');
     Route::put('/integrations/google-maps', [IntegrationController::class, 'updateGoogleMaps'])->name('integrations.google-maps.update')->can('integrations.edit');
 
+    // Payment Gateways Integration Routes (PayPal, MercadoPago, Stripe)
+    Route::put('/integrations/paypal', [IntegrationController::class, 'updatePaypal'])->name('integrations.paypal.update')->can('integrations.edit');
+    Route::put('/integrations/mercadopago', [IntegrationController::class, 'updateMercadoPago'])->name('integrations.mercadopago.update')->can('integrations.edit');
+    Route::put('/integrations/stripe', [IntegrationController::class, 'updateStripe'])->name('integrations.stripe.update')->can('integrations.edit');
+
     // WhatsApp Integration Routes
     Route::get('/integrations/whatsapp', [IntegrationController::class, 'whatsappIndex'])->name('integrations.whatsapp.index')->can('integrations.view');
     Route::get('/integrations/whatsapp/status', [IntegrationController::class, 'whatsappStatus'])->name('integrations.whatsapp.status')->can('integrations.view');

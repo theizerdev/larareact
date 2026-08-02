@@ -34,6 +34,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Textarea } from '@/components/ui/textarea';
 import { useTranslate } from '@/hooks/use-translate';
+import Swal from 'sweetalert2';
+import { PayPalButtonComponent } from '@/components/paypal-button';
 
 interface EmpresaInfo {
     id: number;
@@ -44,6 +46,7 @@ interface EmpresaInfo {
     dias_restantes: number;
     estado_legible: string;
     is_exempt: boolean;
+    billing_cycle?: string | null;
     max_sucursales: number;
     sucursales_activas: number;
 }
@@ -80,30 +83,55 @@ interface PagoItem {
     user?: { name: string };
 }
 
+interface PaymentGatewayInfo {
+    active: boolean;
+    mode: string;
+    client_id?: string;
+    public_key?: string;
+    publishable_key?: string;
+}
+
 interface PageProps {
     empresa: EmpresaInfo;
     plan: PlanInfo | null;
     opcionesPrecios: Record<number, PlanOption>;
     pagos: PagoItem[];
     bcvRate?: number;
+    paymentGateways?: {
+        paypal: PaymentGatewayInfo;
+        mercadopago: PaymentGatewayInfo;
+        stripe: PaymentGatewayInfo;
+    };
 }
 
-export default function SubscriptionIndex({ empresa, plan, opcionesPrecios, pagos, bcvRate = 36.50 }: PageProps) {
+export default function SubscriptionIndex({ empresa, plan, opcionesPrecios, pagos, bcvRate = 36.50, paymentGateways }: PageProps) {
     const { __ } = useTranslate();
     const pageProps = usePage().props as any;
     const { currencySymbol = '$', isVenezuela = false } = pageProps;
 
-    const [selectedCycle, setSelectedCycle] = useState<number>(12); // 12 meses por defecto para máximo descuento
-    const [extraSucursales, setExtraSucursales] = useState<number>(Math.max(1, empresa.sucursales_activas));
+    // Determinar ciclo activo pagado si la empresa ya posee una suscripción activa aprobada
+    const hasActivePaidSubscription = empresa.subscription_status === 'active' && !empresa.is_exempt;
+    const activePaidCycle = empresa.billing_cycle ? parseInt(empresa.billing_cycle.replace('_months', '')) : null;
+
+    const [selectedCycle, setSelectedCycle] = useState<number>(activePaidCycle && [3, 6, 12].includes(activePaidCycle) ? activePaidCycle : 12);
+    const [extraSucursales, setExtraSucursales] = useState<number>(hasActivePaidSubscription ? (empresa.max_sucursales || 1) : Math.max(1, empresa.sucursales_activas));
     const [previewReceipt, setPreviewReceipt] = useState<string | null>(null);
     const [imagePreviewUrl, setImagePreviewUrl] = useState<string | null>(null);
 
     const currentOption = opcionesPrecios[selectedCycle] || opcionesPrecios[12];
-    
-    // Cálculo dinámico de sucursales extras e inversión final
-    const sucursalesExtrasCount = Math.max(0, extraSucursales - (plan?.sucursales_incluidas ?? 1));
-    const costoExtraSucursales = sucursalesExtrasCount * (plan?.precio_sucursal_extra_mensual ?? 10) * selectedCycle;
-    const precioFinalEstimado = (currentOption?.subtotal_plan ?? 0) + costoExtraSucursales;
+
+    // Si la empresa tiene una suscripción pagada activa y aprobada:
+    // - El plan base no se cobra ($0.00).
+    // - Solo se cobran las sucursales adicionales NUEVAS a $10.00 USD cada una por mes.
+    const currentSubtotalPlan = hasActivePaidSubscription ? 0 : (currentOption?.subtotal_plan ?? 0);
+    const sucursalesExtrasCount = hasActivePaidSubscription 
+        ? Math.max(0, extraSucursales - empresa.max_sucursales)
+        : Math.max(0, extraSucursales - (plan?.sucursales_incluidas ?? 1));
+
+    // Si ya posee suscripción activa, cada sucursal extra cuesta únicamente la tarifa mensual ($10.00 USD)
+    const multiplicadorTiempo = hasActivePaidSubscription ? 1 : selectedCycle;
+    const costoExtraSucursales = sucursalesExtrasCount * (plan?.precio_sucursal_extra_mensual ?? 10) * multiplicadorTiempo;
+    const precioFinalEstimado = currentSubtotalPlan + costoExtraSucursales;
 
     // Formateador especial estricto para Venezuela (convierte USD a Bolívares según tasa BCV)
     const formatPrice = (usdAmount: number) => {
@@ -124,6 +152,7 @@ export default function SubscriptionIndex({ empresa, plan, opcionesPrecios, pago
     });
 
     const handleCycleChange = (cycle: number) => {
+        if (hasActivePaidSubscription) return; // Bloqueado si ya tiene suscripción pagada activa
         setSelectedCycle(cycle);
         setData('ciclo_meses', cycle);
     };
@@ -353,22 +382,32 @@ export default function SubscriptionIndex({ empresa, plan, opcionesPrecios, pago
                                         {[3, 6, 12].map((meses) => {
                                             const opt = opcionesPrecios[meses];
                                             const isSelected = selectedCycle === meses;
+                                            const isLocked = hasActivePaidSubscription && !isSelected;
                                             return (
                                                 <div 
                                                     key={meses}
                                                     onClick={() => handleCycleChange(meses)}
-                                                    className={`cursor-pointer rounded-2xl border-2 p-5 transition-all relative flex flex-col justify-between ${
+                                                    className={`rounded-2xl border-2 p-5 transition-all relative flex flex-col justify-between ${
+                                                        isLocked
+                                                            ? 'opacity-50 cursor-not-allowed border-dashed border-border bg-muted/20 grayscale-[30%]'
+                                                            : 'cursor-pointer'
+                                                    } ${
                                                         isSelected 
                                                             ? 'border-primary bg-primary/5 shadow-md ring-2 ring-primary/20'
-                                                            : 'border-border hover:border-muted-foreground/30 bg-card'
+                                                            : !isLocked ? 'border-border hover:border-muted-foreground/30 bg-card' : ''
                                                     }`}
                                                 >
-                                                    {meses === 12 && (
+                                                    {isSelected && hasActivePaidSubscription && (
+                                                        <Badge className="absolute -top-3 right-4 bg-emerald-600 text-white text-[10px] font-bold px-2.5 py-0.5 shadow-sm">
+                                                            {__('✓ Plan Contratado')}
+                                                        </Badge>
+                                                    )}
+                                                    {meses === 12 && !hasActivePaidSubscription && (
                                                         <Badge className="absolute -top-3 right-4 bg-emerald-600 text-white text-[10px] font-bold px-2.5 py-0.5 shadow-sm">
                                                             {__('🔥 Mejor Opción - 20% Dcto')}
                                                         </Badge>
                                                     )}
-                                                    {meses === 6 && (
+                                                    {meses === 6 && !hasActivePaidSubscription && (
                                                         <Badge className="absolute -top-3 right-4 bg-blue-600 text-white text-[10px] font-bold px-2.5 py-0.5 shadow-sm">
                                                             {__('Ahorra 10%')}
                                                         </Badge>
@@ -403,10 +442,11 @@ export default function SubscriptionIndex({ empresa, plan, opcionesPrecios, pago
                                         
                                         <div className="p-4 bg-muted/30 rounded-xl border space-y-3">
                                             <p className="text-xs text-muted-foreground">
-                                                {__('El plan base incluye 1 sucursal. Cada sucursal adicional suma +')}
-                                                <strong className="text-primary font-bold">
-                                                    {formatPrice(plan?.precio_sucursal_extra_mensual ?? 10)}/{__('mes')}
-                                                </strong>.
+                                                {hasActivePaidSubscription ? (
+                                                    <>{__('Actualmente tienes')} <strong className="text-primary font-bold">{empresa.max_sucursales} {__('sucursal(es) autorizada(s)')}</strong>. {__('Cada nueva sucursal adicional suma +')}<strong className="text-primary font-bold">{formatPrice(plan?.precio_sucursal_extra_mensual ?? 10)}/{__('mes')}</strong>.</>
+                                                ) : (
+                                                    <>{__('El plan base incluye 1 sucursal. Cada sucursal adicional suma +')}<strong className="text-primary font-bold">{formatPrice(plan?.precio_sucursal_extra_mensual ?? 10)}/{__('mes')}</strong>.</>
+                                                )}
                                             </p>
                                             
                                             <div className="flex items-center gap-3">
@@ -415,7 +455,7 @@ export default function SubscriptionIndex({ empresa, plan, opcionesPrecios, pago
                                                     variant="outline" 
                                                     size="icon" 
                                                     onClick={() => handleSucursalChange(extraSucursales - 1)}
-                                                    disabled={extraSucursales <= 1}
+                                                    disabled={hasActivePaidSubscription ? extraSucursales <= empresa.max_sucursales : extraSucursales <= 1}
                                                     className="h-10 w-10 rounded-lg"
                                                 >
                                                     <Minus className="h-4 w-4" />
@@ -423,10 +463,10 @@ export default function SubscriptionIndex({ empresa, plan, opcionesPrecios, pago
 
                                                 <Input 
                                                     type="number"
-                                                    min={1}
+                                                    min={hasActivePaidSubscription ? empresa.max_sucursales : 1}
                                                     max={50}
                                                     value={extraSucursales}
-                                                    onChange={(e) => handleSucursalChange(parseInt(e.target.value) || 1)}
+                                                    onChange={(e) => handleSucursalChange(parseInt(e.target.value) || (hasActivePaidSubscription ? empresa.max_sucursales : 1))}
                                                     className="text-center font-bold text-lg h-10 w-24"
                                                 />
 
@@ -441,7 +481,13 @@ export default function SubscriptionIndex({ empresa, plan, opcionesPrecios, pago
                                                 </Button>
 
                                                 <span className="text-xs text-muted-foreground font-medium">
-                                                    {extraSucursales === 1 ? __('1 Sucursal Incluida') : `${extraSucursales - 1} sucursal(es) extra`}
+                                                    {hasActivePaidSubscription ? (
+                                                        sucursalesExtrasCount === 0 
+                                                            ? __('(Sin nuevas sucursales adicionadas)') 
+                                                            : `+${sucursalesExtrasCount} ${__('nueva(s) sucursal(es) extra')}`
+                                                    ) : (
+                                                        extraSucursales === 1 ? __('1 Sucursal Incluida') : `${extraSucursales - 1} sucursal(es) extra`
+                                                    )}
                                                 </span>
                                             </div>
                                         </div>
@@ -467,7 +513,13 @@ export default function SubscriptionIndex({ empresa, plan, opcionesPrecios, pago
                                             <div className="space-y-1.5 text-xs text-slate-300">
                                                 <div className="flex justify-between">
                                                     <span>Plan Full ({selectedCycle} meses):</span>
-                                                    <span className="font-mono font-semibold">{formatPrice(currentOption?.subtotal_plan ?? 0)}</span>
+                                                    <span className="font-mono font-semibold">
+                                                        {hasActivePaidSubscription ? (
+                                                            <span className="text-emerald-400 font-bold">{__('✓ Pagado (Vigente)')}</span>
+                                                        ) : (
+                                                            formatPrice(currentOption?.subtotal_plan ?? 0)
+                                                        )}
+                                                    </span>
                                                 </div>
                                                 {sucursalesExtrasCount > 0 && (
                                                     <div className="flex justify-between text-indigo-300">
@@ -487,7 +539,10 @@ export default function SubscriptionIndex({ empresa, plan, opcionesPrecios, pago
                                         <div className="pt-4 border-t border-slate-800 mt-4 flex items-baseline justify-between relative z-10">
                                             <div>
                                                 <p className="text-xs text-slate-400 font-medium">
-                                                    {isVenezuela ? __('Total a Transferir (Bolívares):') : __('Total a Transferir:')}
+                                                    {hasActivePaidSubscription
+                                                        ? (isVenezuela ? __('Total Sucursales Extras (Bolívares):') : __('Total Sucursales Extras:'))
+                                                        : (isVenezuela ? __('Total a Transferir (Bolívares):') : __('Total a Transferir:'))
+                                                    }
                                                 </p>
                                                 <p className="text-3xl font-black font-mono text-emerald-400">
                                                     {formatPrice(precioFinalEstimado)}
@@ -515,10 +570,19 @@ export default function SubscriptionIndex({ empresa, plan, opcionesPrecios, pago
                                                     <SelectValue />
                                                 </SelectTrigger>
                                                 <SelectContent>
-                                                    <SelectItem value="transferencia">{__('Transferencia Bancaria')}</SelectItem>
-                                                    <SelectItem value="pago_movil">{__('Pago Móvil')}</SelectItem>
-                                                    <SelectItem value="zelle">{__('Zelle')}</SelectItem>
-                                                    <SelectItem value="efectivo">{__('Efectivo / Depósito')}</SelectItem>
+                                                    <SelectItem value="transferencia">{__('Transferencia Bancaria (Manual)')}</SelectItem>
+                                                    <SelectItem value="pago_movil">{__('Pago Móvil (Bolívares)')}</SelectItem>
+                                                    <SelectItem value="zelle">{__('Zelle / Transferencia USD')}</SelectItem>
+                                                    {paymentGateways?.paypal?.active && (
+                                                        <SelectItem value="paypal">💳 {__('PayPal (Checkout en línea)')}</SelectItem>
+                                                    )}
+                                                    {paymentGateways?.mercadopago?.active && (
+                                                        <SelectItem value="mercadopago">⚡ {__('Mercado Pago (Tarjeta / Dinero MP)')}</SelectItem>
+                                                    )}
+                                                    {paymentGateways?.stripe?.active && (
+                                                        <SelectItem value="stripe">🔒 {__('Stripe (Tarjeta de Crédito / Débito)')}</SelectItem>
+                                                    )}
+                                                    <SelectItem value="efectivo">{__('Efectivo / Depósito en Ventanilla')}</SelectItem>
                                                 </SelectContent>
                                             </Select>
                                         </div>
@@ -534,33 +598,88 @@ export default function SubscriptionIndex({ empresa, plan, opcionesPrecios, pago
                                             />
                                         </div>
 
-                                        <div className="sm:col-span-2">
-                                            <Label htmlFor="comprobante" className="text-xs font-semibold">{__('Adjuntar Captura / Comprobante (Imagen o PDF)')}</Label>
-                                            <Input 
-                                                id="comprobante"
-                                                type="file"
-                                                accept="image/*,.pdf"
-                                                onChange={handleFileChange}
-                                                className="mt-1 cursor-pointer h-10 pt-1.5"
-                                            />
-                                            {imagePreviewUrl && (
-                                                <div className="mt-3 p-2 bg-muted rounded-lg border w-32 h-32 relative">
-                                                    <img src={imagePreviewUrl} alt="Preview" className="w-full h-full object-cover rounded" />
+                                        {data.metodo_pago === 'paypal' && (
+                                            <div className="sm:col-span-2 p-5 bg-amber-50/70 dark:bg-amber-950/20 text-slate-900 dark:text-slate-100 rounded-xl border border-amber-200 dark:border-amber-900/40 shadow-sm space-y-4">
+                                                <div className="flex items-center justify-between">
+                                                    <span className="text-xs font-bold uppercase text-amber-700 dark:text-amber-400 flex items-center gap-1.5">
+                                                        <Zap className="h-4 w-4 text-amber-600" />
+                                                        {__('Checkout Directo con PayPal')}
+                                                    </span>
+                                                    <div className="flex items-center gap-2">
+                                                        <Badge className="bg-amber-600 hover:bg-amber-700 text-white font-mono font-bold text-xs">
+                                                            Total: ${precioFinalEstimado.toFixed(2)} USD
+                                                        </Badge>
+                                                        <Badge variant="outline" className="text-[10px] border-amber-300 dark:border-amber-800 text-amber-800 dark:text-amber-300 bg-amber-100/50 dark:bg-amber-950/40">
+                                                            {__('Acreditación Instantánea')}
+                                                        </Badge>
+                                                    </div>
                                                 </div>
-                                            )}
-                                        </div>
+                                                <div className="text-xs text-muted-foreground leading-relaxed flex items-center justify-between border-t border-b border-amber-200/60 dark:border-amber-900/30 py-2 my-1">
+                                                    <span>{__('Plan Seleccionado:')} <strong className="text-slate-800 dark:text-slate-200">{selectedCycle} {__('meses')} ({extraSucursales} {extraSucursales === 1 ? __('sucursal') : __('sucursales')})</strong></span>
+                                                    <span className="font-bold font-mono text-amber-800 dark:text-amber-300 text-sm">${precioFinalEstimado.toFixed(2)} USD</span>
+                                                </div>
+                                                <p className="text-xs text-muted-foreground leading-relaxed">
+                                                    {__('Haz clic en el botón oficial de PayPal a continuación para procesar el cobro exacto de')} <strong>${precioFinalEstimado.toFixed(2)} USD</strong>.
+                                                </p>
+                                                
+                                                {paymentGateways?.paypal?.client_id ? (
+                                                    <PayPalButtonComponent
+                                                        clientId={paymentGateways.paypal.client_id}
+                                                        selectedCycle={selectedCycle}
+                                                        extraSucursales={extraSucursales}
+                                                        __={__}
+                                                    />
+                                                ) : (
+                                                    <div className="p-3 rounded bg-amber-500/20 text-amber-300 text-xs border border-amber-500/30">
+                                                        {__('Las credenciales de PayPal están en configuración. Puedes realizar tu pago por transferencia bancaria o contactar soporte.')}
+                                                    </div>
+                                                )}
+                                            </div>
+                                        )}
+
+                                        {['mercadopago', 'stripe'].includes(data.metodo_pago) && (
+                                            <div className="sm:col-span-2 p-3 bg-sky-50 dark:bg-sky-950/30 text-sky-900 dark:text-sky-300 rounded-lg border border-sky-200 dark:border-sky-900 text-xs flex items-center gap-2">
+                                                <Zap className="h-4 w-4 shrink-0 text-sky-600" />
+                                                <span>{__('Has seleccionado una pasarela de pago en línea. Al enviar la solicitud, serás redirigido o se activará el checkout automático con acreditación instantánea.')}</span>
+                                            </div>
+                                        )}
+
+                                        {data.metodo_pago !== 'paypal' && (
+                                            <div className="sm:col-span-2">
+                                                <Label htmlFor="comprobante" className="text-xs font-semibold">
+                                                    {['mercadopago', 'stripe'].includes(data.metodo_pago) 
+                                                        ? __('Adjuntar Comprobante (Opcional para Pago Online)')
+                                                        : __('Adjuntar Captura / Comprobante (Imagen o PDF)')
+                                                    }
+                                                </Label>
+                                                <Input 
+                                                    id="comprobante"
+                                                    type="file"
+                                                    accept="image/*,.pdf"
+                                                    onChange={handleFileChange}
+                                                    className="mt-1 cursor-pointer h-10 pt-1.5"
+                                                />
+                                                {imagePreviewUrl && (
+                                                    <div className="mt-3 p-2 bg-muted rounded-lg border w-32 h-32 relative">
+                                                        <img src={imagePreviewUrl} alt="Preview" className="w-full h-full object-cover rounded" />
+                                                    </div>
+                                                )}
+                                            </div>
+                                        )}
                                     </div>
                                 </div>
 
-                                <Button 
-                                    type="submit" 
-                                    disabled={processing} 
-                                    size="lg"
-                                    className="w-full sm:w-auto gap-2 font-bold px-8 shadow-md h-11"
-                                >
-                                    <Upload className="h-5 w-5" />
-                                    {processing ? __('Enviando...') : __('Enviar Solicitud de Renovación')}
-                                </Button>
+                                {data.metodo_pago !== 'paypal' && (
+                                    <Button 
+                                        type="submit" 
+                                        disabled={processing} 
+                                        size="lg"
+                                        className="w-full sm:w-auto gap-2 font-bold px-8 shadow-md h-11"
+                                    >
+                                        <Upload className="h-5 w-5" />
+                                        {processing ? __('Enviando...') : __('Enviar Solicitud de Renovación')}
+                                    </Button>
+                                )}
                             </form>
                         </CardContent>
                     </Card>

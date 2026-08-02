@@ -12,12 +12,14 @@ class CheckSubscriptionStatus
      * Rutas exentas del bloqueo por suscripción vencida.
      */
     protected array $exceptRoutes = [
-        'subscription.expired',
-        'subscription.index',
-        'subscription.renew',
-        'subscription.manage',
-        'subscription.approve',
-        'subscription.reject',
+        'admin.subscription.expired',
+        'admin.subscription.index',
+        'admin.subscription.renew',
+        'admin.subscription.manage',
+        'admin.subscription.approve',
+        'admin.subscription.reject',
+        'admin.subscription.paypal.create-order',
+        'admin.subscription.paypal.capture-order',
         'logout',
     ];
 
@@ -48,7 +50,7 @@ class CheckSubscriptionStatus
         }
 
         // También verificar por sufijos o prefijos de suscripción
-        if ($request->is('subscription/*') || $request->is('admin/subscription/*') || $request->is('logout')) {
+        if ($request->is('subscription/*') || $request->is('admin/subscription/*') || $request->is('admin/monitoring/subscription*') || $request->is('logout')) {
             return $next($request);
         }
 
@@ -58,11 +60,11 @@ class CheckSubscriptionStatus
                 return response()->json([
                     'error' => 'Suscripción Vencida',
                     'message' => 'El período de prueba o suscripción de su empresa ha caducado.',
-                    'redirect' => route('subscription.expired'),
+                    'redirect' => route('admin.subscription.expired'),
                 ], Response::HTTP_PAYMENT_REQUIRED);
             }
 
-            return redirect()->route('subscription.expired');
+            return redirect()->route('admin.subscription.expired');
         }
 
         return $next($request);

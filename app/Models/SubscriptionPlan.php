@@ -52,7 +52,7 @@ class SubscriptionPlan extends Model
         };
 
         $sucursalesExtra = max(0, $totalSucursales - $this->sucursales_incluidas);
-        $costoSucursalesExtra = $sucursalesExtra * $this->precio_sucursal_extra_mensual * $meses;
+        $costoSucursalesExtra = $sucursalesExtra * $this->precio_sucursal_extra_mensual;
 
         return round($basePrice + $costoSucursalesExtra, 2);
     }

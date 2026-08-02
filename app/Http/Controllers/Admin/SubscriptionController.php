@@ -63,6 +63,26 @@ class SubscriptionController extends Controller
             ],
         ];
 
+        // Obtener la configuración activa de pasarelas de pago de la plataforma (Empresa ID 1 / Dueño del SaaS)
+        $masterEmpresa = Empresa::find(1) ?? $empresa;
+        $paymentGateways = [
+            'paypal' => [
+                'active' => (bool) $masterEmpresa->paypal_active,
+                'mode' => $masterEmpresa->paypal_mode ?? 'sandbox',
+                'client_id' => $masterEmpresa->paypal_client_id ?? '',
+            ],
+            'mercadopago' => [
+                'active' => (bool) $masterEmpresa->mercadopago_active,
+                'mode' => $masterEmpresa->mercadopago_mode ?? 'sandbox',
+                'public_key' => $masterEmpresa->mercadopago_public_key ?? '',
+            ],
+            'stripe' => [
+                'active' => (bool) $masterEmpresa->stripe_active,
+                'mode' => $masterEmpresa->stripe_mode ?? 'test',
+                'publishable_key' => $masterEmpresa->stripe_publishable_key ?? '',
+            ],
+        ];
+
         return inertia('admin/subscription/index', [
             'empresa' => [
                 'id' => $empresa->id,
@@ -73,6 +93,7 @@ class SubscriptionController extends Controller
                 'dias_restantes' => $empresa->dias_restantes_suscripcion,
                 'estado_legible' => $empresa->estado_suscripcion_legible,
                 'is_exempt' => $empresa->isExemptFromSubscription(),
+                'billing_cycle' => $empresa->billing_cycle,
                 'max_sucursales' => $empresa->max_sucursales ?? 1,
                 'sucursales_activas' => $totalSucursales,
             ],
@@ -81,13 +102,14 @@ class SubscriptionController extends Controller
             'pagos' => $pagos,
             'suscripcionActiva' => $suscripcionActiva,
             'bcvRate' => $bcvRate,
+            'paymentGateways' => $paymentGateways,
         ]);
     }
 
     /**
      * Vista de bloqueo por suscripción vencida.
      */
-    public function expired()
+    public function expired(\App\Services\BcvRateService $bcvService)
     {
         $user = auth()->user();
         $empresa = $user?->empresa;
@@ -99,18 +121,45 @@ class SubscriptionController extends Controller
         $plan = SubscriptionPlan::first();
         $totalSucursales = $empresa ? $empresa->sucursales()->count() : 1;
 
+        $bcvRate = $bcvService->getRate() ?? 36.50;
+
         $opcionesPrecios = [
             3 => [
                 'meses' => 3,
+                'subtotal_plan' => $plan?->precio_3_meses ?? 89.00,
+                'precio_mensual_promedio' => round(($plan?->precio_3_meses ?? 89.00) / 3, 2),
                 'total' => $plan ? $plan->calcularPrecio(3, max(1, $totalSucursales)) : 89.00,
             ],
             6 => [
                 'meses' => 6,
+                'subtotal_plan' => $plan?->precio_6_meses ?? 159.00,
+                'precio_mensual_promedio' => round(($plan?->precio_6_meses ?? 159.00) / 6, 2),
                 'total' => $plan ? $plan->calcularPrecio(6, max(1, $totalSucursales)) : 159.00,
             ],
             12 => [
                 'meses' => 12,
+                'subtotal_plan' => $plan?->precio_12_meses ?? 288.00,
+                'precio_mensual_promedio' => round(($plan?->precio_12_meses ?? 288.00) / 12, 2),
                 'total' => $plan ? $plan->calcularPrecio(12, max(1, $totalSucursales)) : 288.00,
+            ],
+        ];
+
+        $masterEmpresa = Empresa::find(1) ?? $empresa;
+        $paymentGateways = [
+            'paypal' => [
+                'active' => (bool) $masterEmpresa?->paypal_active,
+                'mode' => $masterEmpresa?->paypal_mode ?? 'sandbox',
+                'client_id' => $masterEmpresa?->paypal_client_id ?? '',
+            ],
+            'mercadopago' => [
+                'active' => (bool) $masterEmpresa?->mercadopago_active,
+                'mode' => $masterEmpresa?->mercadopago_mode ?? 'sandbox',
+                'public_key' => $masterEmpresa?->mercadopago_public_key ?? '',
+            ],
+            'stripe' => [
+                'active' => (bool) $masterEmpresa?->stripe_active,
+                'mode' => $masterEmpresa?->stripe_mode ?? 'test',
+                'publishable_key' => $masterEmpresa?->stripe_publishable_key ?? '',
             ],
         ];
 
@@ -121,11 +170,17 @@ class SubscriptionController extends Controller
                 'subscription_status' => $empresa->subscription_status,
                 'trial_ends_at' => $empresa->trial_ends_at?->format('Y-m-d H:i:s'),
                 'subscription_expires_at' => $empresa->subscription_expires_at?->format('Y-m-d H:i:s'),
+                'dias_restantes' => $empresa->dias_restantes_suscripcion,
+                'estado_legible' => $empresa->estado_suscripcion_legible,
+                'is_exempt' => $empresa->isExemptFromSubscription(),
+                'billing_cycle' => $empresa->billing_cycle,
                 'max_sucursales' => $empresa->max_sucursales ?? 1,
                 'sucursales_activas' => $totalSucursales,
             ] : null,
             'plan' => $plan,
             'opcionesPrecios' => $opcionesPrecios,
+            'bcvRate' => $bcvRate,
+            'paymentGateways' => $paymentGateways,
         ]);
     }
 
@@ -154,9 +209,16 @@ class SubscriptionController extends Controller
         }
 
         $plan = SubscriptionPlan::first();
-        $montoCalculado = $plan
-            ? $plan->calcularPrecio((int) $request->ciclo_meses, (int) $request->sucursales_contratadas)
-            : 89.00;
+        $hasActivePaidSubscription = $empresa->subscription_status === 'active' && ! $empresa->isExemptFromSubscription();
+
+        if ($hasActivePaidSubscription && $plan) {
+            $sucursalesExtra = max(0, (int) $request->sucursales_contratadas - ($empresa->max_sucursales ?? 1));
+            $montoCalculado = round($sucursalesExtra * $plan->precio_sucursal_extra_mensual, 2);
+        } else {
+            $montoCalculado = $plan
+                ? $plan->calcularPrecio((int) $request->ciclo_meses, (int) $request->sucursales_contratadas)
+                : 89.00;
+        }
 
         $comprobantePath = null;
         if ($request->hasFile('comprobante')) {
@@ -180,6 +242,191 @@ class SubscriptionController extends Controller
             'type' => 'success',
             'message' => 'Solicitud de renovación enviada con éxito. El administrador verificará su pago a la brevedad.',
         ]);
+    }
+
+    /**
+     * Crear orden de PayPal en la API.
+     */
+    public function createPaypalOrder(Request $request)
+    {
+       
+        $request->validate([
+            'ciclo_meses' => 'required|integer|in:3,6,12',
+            'sucursales_contratadas' => 'required|integer|min:1',
+        ]);
+
+        $empresa = $request->user()->empresa;
+        $plan = SubscriptionPlan::firstOrCreate(
+            ['nombre' => 'Plan Full'],
+            [
+                'descripcion' => 'Acceso completo a todos los módulos operativos del sistema (Ventas, Inventario, Caja, Clientes, Créditos, Servicios). Excluye monitoreo e integraciones.',
+                'precio_3_meses' => 89.00,
+                'precio_6_meses' => 159.00,
+                'precio_12_meses' => 288.00,
+                'precio_sucursal_extra_mensual' => 10.00,
+                'sucursales_incluidas' => 1,
+                'modulos_incluidos' => ['ventas', 'cajas', 'inventarios', 'productos', 'servicios', 'clientes', 'creditos', 'metas_ventas'],
+                'activo' => true,
+            ]
+        );
+        $hasActivePaidSubscription = $empresa->subscription_status === 'active' && ! $empresa->isExemptFromSubscription();
+        $basePrice = $hasActivePaidSubscription ? 0.0 : null;
+
+        if ($hasActivePaidSubscription) {
+            $sucursalesExtra = max(0, (int) $request->sucursales_contratadas - ($empresa->max_sucursales ?? 1));
+            $monto = round($sucursalesExtra * $plan->precio_sucursal_extra_mensual, 2);
+        } else {
+            $monto = $plan->calcularPrecio((int) $request->ciclo_meses, (int) $request->sucursales_contratadas);
+        }
+
+        $masterEmpresa = Empresa::find(1) ?? $empresa;
+        $clientId = $masterEmpresa->paypal_client_id;
+        $clientSecret = $masterEmpresa->paypal_client_secret;
+        $isLive = $masterEmpresa->paypal_mode === 'live';
+        $baseUrl = $isLive ? 'https://api-m.paypal.com' : 'https://api-m.sandbox.paypal.com';
+
+        // Obtener Access Token de PayPal
+        $response = \Illuminate\Support\Facades\Http::withBasicAuth($clientId, $clientSecret)
+            ->asForm()
+            ->post("{$baseUrl}/v1/oauth2/token", [
+                'grant_type' => 'client_credentials',
+            ]);
+
+        if (! $response->successful()) {
+            return response()->json(['error' => 'No se pudo autenticar con PayPal API.'], 500);
+        }
+
+        $accessToken = $response->json()['access_token'];
+
+        // Crear Orden PayPal
+        $orderResponse = \Illuminate\Support\Facades\Http::withToken($accessToken)
+            ->post("{$baseUrl}/v2/checkout/orders", [
+                'intent' => 'CAPTURE',
+                'purchase_units' => [
+                    [
+                        'amount' => [
+                            'currency_code' => 'USD',
+                            'value' => number_format($monto, 2, '.', ''),
+                        ],
+                        'description' => "Renovación Suscripción Fix Sale - {$request->ciclo_meses} meses ({$empresa->razon_social})",
+                    ],
+                ],
+            ]);
+
+        return response()->json($orderResponse->json(), $orderResponse->status());
+    }
+
+    /**
+     * Capturar orden de PayPal completada y activar la suscripción inmediatamente.
+     */
+    public function capturePaypalOrder(Request $request, $orderId)
+    {
+        $request->validate([
+            'ciclo_meses' => 'required|integer|in:3,6,12',
+            'sucursales_contratadas' => 'required|integer|min:1',
+        ]);
+
+        $empresa = $request->user()->empresa;
+        $masterEmpresa = Empresa::find(1) ?? $empresa;
+        $clientId = $masterEmpresa->paypal_client_id;
+        $clientSecret = $masterEmpresa->paypal_client_secret;
+        $isLive = $masterEmpresa->paypal_mode === 'live';
+        $baseUrl = $isLive ? 'https://api-m.paypal.com' : 'https://api-m.sandbox.paypal.com';
+
+        // Obtener Access Token
+        $response = \Illuminate\Support\Facades\Http::withBasicAuth($clientId, $clientSecret)
+            ->asForm()
+            ->post("{$baseUrl}/v1/oauth2/token", [
+                'grant_type' => 'client_credentials',
+            ]);
+
+        if (! $response->successful()) {
+            return response()->json(['error' => 'No se pudo autenticar con PayPal API.'], 500);
+        }
+
+        $accessToken = $response->json()['access_token'];
+
+        // Capturar Orden
+        $captureResponse = \Illuminate\Support\Facades\Http::withToken($accessToken)
+            ->withBody('{}', 'application/json')
+            ->post("{$baseUrl}/v2/checkout/orders/{$orderId}/capture");
+
+        $data = $captureResponse->json();
+
+        if ($captureResponse->successful() && isset($data['status']) && $data['status'] === 'COMPLETED') {
+            $transactionId = $data['purchase_units'][0]['payments']['captures'][0]['id'] ?? $orderId;
+            $plan = SubscriptionPlan::firstOrCreate(
+                ['nombre' => 'Plan Full'],
+                [
+                    'descripcion' => 'Acceso completo a todos los módulos operativos del sistema (Ventas, Inventario, Caja, Clientes, Créditos, Servicios). Excluye monitoreo e integraciones.',
+                    'precio_3_meses' => 89.00,
+                    'precio_6_meses' => 159.00,
+                    'precio_12_meses' => 288.00,
+                    'precio_sucursal_extra_mensual' => 10.00,
+                    'sucursales_incluidas' => 1,
+                    'modulos_incluidos' => ['ventas', 'cajas', 'inventarios', 'productos', 'servicios', 'clientes', 'creditos', 'metas_ventas'],
+                    'activo' => true,
+                ]
+            );
+            $hasActivePaidSubscription = $empresa->subscription_status === 'active' && ! $empresa->isExemptFromSubscription();
+            if ($hasActivePaidSubscription) {
+                $sucursalesExtra = max(0, (int) $request->sucursales_contratadas - ($empresa->max_sucursales ?? 1));
+                $monto = round($sucursalesExtra * $plan->precio_sucursal_extra_mensual, 2);
+            } else {
+                $monto = $plan->calcularPrecio((int) $request->ciclo_meses, (int) $request->sucursales_contratadas);
+            }
+
+            // Extender fecha de expiración solo si NO tenía una suscripción activa previa (ej. primer pago o renovación por expiración)
+            if ($hasActivePaidSubscription) {
+                $nuevaFechaExpiracion = $empresa->subscription_expires_at;
+            } else {
+                $baseDate = now();
+                if ($empresa->subscription_expires_at && $empresa->subscription_expires_at->isFuture()) {
+                    $baseDate = $empresa->subscription_expires_at->copy();
+                } elseif ($empresa->trial_ends_at && $empresa->trial_ends_at->isFuture()) {
+                    $baseDate = $empresa->trial_ends_at->copy();
+                }
+                $nuevaFechaExpiracion = $baseDate->addMonths((int) $request->ciclo_meses);
+            }
+
+            $empresa->update([
+                'subscription_status' => 'active',
+                'subscription_expires_at' => $nuevaFechaExpiracion,
+                'max_sucursales' => max($empresa->max_sucursales ?? 1, (int) $request->sucursales_contratadas),
+                'billing_cycle' => (string) $request->ciclo_meses,
+            ]);
+
+            // Crear el registro de la Suscripción
+            $subscription = Subscription::create([
+                'empresa_id' => $empresa->id,
+                'plan_id' => $plan->id,
+                'nombre_plan' => $plan->nombre,
+                'ciclo_meses' => (int) $request->ciclo_meses,
+                'max_sucursales' => (int) $request->sucursales_contratadas,
+                'monto_total' => $monto,
+                'fecha_inicio' => now(),
+                'fecha_vencimiento' => $nuevaFechaExpiracion,
+                'estado' => 'active',
+            ]);
+
+            // Registrar Pago Aprobado enlazando subscription_id
+            SubscriptionPayment::create([
+                'subscription_id' => $subscription->id,
+                'empresa_id' => $empresa->id,
+                'user_id' => auth()->id(),
+                'monto' => $monto,
+                'ciclo_meses' => (int) $request->ciclo_meses,
+                'sucursales_contratadas' => (int) $request->sucursales_contratadas,
+                'metodo_pago' => 'paypal',
+                'referencia_pago' => $transactionId,
+                'estado' => 'approved',
+                'aprobado_por' => auth()->id(),
+                'aprobado_at' => now(),
+                'notas' => 'Pago automático procesado exitosamente vía PayPal SDK Checkout.',
+            ]);
+        }
+
+        return response()->json($data, $captureResponse->status());
     }
 
     /**
@@ -211,7 +458,7 @@ class SubscriptionController extends Controller
                     'estado_legible' => $emp->estado_suscripcion_legible,
                     'is_exempt' => $emp->isExemptFromSubscription(),
                     'max_sucursales' => $emp->max_sucursales ?? 1,
-                    'total_sucursales' => $emp->sucursales_count,
+                    'total_sucursales' => $emp->sucursales_count ?? 1,
                 ];
             });
 
@@ -252,21 +499,23 @@ class SubscriptionController extends Controller
         try {
             DB::beginTransaction();
 
-            $payment->update([
-                'estado' => 'approved',
-                'aprobado_por' => $user->id,
-                'aprobado_at' => now(),
-            ]);
-
             $empresa = $payment->empresa;
             $meses = $payment->ciclo_meses;
 
-            // Calcular nueva fecha de vencimiento
-            $baseDate = ($empresa->subscription_expires_at && $empresa->subscription_expires_at->isFuture())
-                ? $empresa->subscription_expires_at
-                : now();
+            $hasActivePaidSubscription = $empresa->subscription_status === 'active' && ! $empresa->isExemptFromSubscription();
 
-            $nuevaFechaVencimiento = $baseDate->copy()->addMonths($meses);
+            // Extender vigencia solo si NO tenía una suscripción activa previa (ej. primer pago o renovación por expiración)
+            if ($hasActivePaidSubscription) {
+                $nuevaFechaVencimiento = $empresa->subscription_expires_at ?? now()->addMonths($meses);
+            } else {
+                $baseDate = now();
+                if ($empresa->subscription_expires_at && $empresa->subscription_expires_at->isFuture()) {
+                    $baseDate = $empresa->subscription_expires_at->copy();
+                } elseif ($empresa->trial_ends_at && $empresa->trial_ends_at->isFuture()) {
+                    $baseDate = $empresa->trial_ends_at->copy();
+                }
+                $nuevaFechaVencimiento = $baseDate->addMonths($meses);
+            }
 
             $empresa->update([
                 'subscription_status' => 'active',
@@ -276,7 +525,7 @@ class SubscriptionController extends Controller
             ]);
 
             // Registrar suscripción activa
-            Subscription::create([
+            $subscription = Subscription::create([
                 'empresa_id' => $empresa->id,
                 'plan_id' => SubscriptionPlan::first()?->id,
                 'nombre_plan' => 'Plan Full',
@@ -286,6 +535,13 @@ class SubscriptionController extends Controller
                 'fecha_inicio' => now(),
                 'fecha_vencimiento' => $nuevaFechaVencimiento,
                 'estado' => 'active',
+            ]);
+
+            $payment->update([
+                'subscription_id' => $subscription->id,
+                'estado' => 'approved',
+                'aprobado_por' => $user->id,
+                'aprobado_at' => now(),
             ]);
 
             DB::commit();

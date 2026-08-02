@@ -33,13 +33,32 @@ class IntegrationController extends Controller
             $whatsappConnected = (bool) $status['isConnected'];
         }
 
+        // Comprobar si el usuario es SuperAdmin o pertenece a la Empresa 1 (Dueño del SaaS)
+        $user = $request->user();
+        $isSuperAdmin = $user->hasRole('Super Administrador') || $user->hasRole('super-admin') || $empresa->id === 1;
+
         return inertia('admin/integrations/index', [
+            'is_super_admin' => $isSuperAdmin,
             'mapbox_api_key' => $empresa->mapbox_api_key,
             'mapbox_active' => (bool) $empresa->mapbox_active,
             'google_maps_api_key' => $empresa->google_maps_api_key,
             'google_maps_active' => (bool) $empresa->google_maps_active,
             'whatsapp_active' => (bool) $empresa->whatsapp_active,
             'whatsapp_connected' => $whatsappConnected,
+            // Pasarelas de Pago Globales SaaS
+            'paypal_active' => (bool) $empresa->paypal_active,
+            'paypal_mode' => $empresa->paypal_mode ?? 'sandbox',
+            'paypal_client_id' => $empresa->paypal_client_id ?? '',
+            'paypal_client_secret' => $empresa->paypal_client_secret ?? '',
+            'mercadopago_active' => (bool) $empresa->mercadopago_active,
+            'mercadopago_mode' => $empresa->mercadopago_mode ?? 'sandbox',
+            'mercadopago_public_key' => $empresa->mercadopago_public_key ?? '',
+            'mercadopago_access_token' => $empresa->mercadopago_access_token ?? '',
+            'stripe_active' => (bool) $empresa->stripe_active,
+            'stripe_mode' => $empresa->stripe_mode ?? 'test',
+            'stripe_publishable_key' => $empresa->stripe_publishable_key ?? '',
+            'stripe_secret_key' => $empresa->stripe_secret_key ?? '',
+            'stripe_webhook_secret' => $empresa->stripe_webhook_secret ?? '',
         ]);
     }
 
@@ -492,5 +511,93 @@ class IntegrationController extends Controller
         if (! empty($updateData)) {
             $empresa->update($updateData);
         }
+    }
+
+    /**
+     * Actualiza la configuración de la pasarela PayPal.
+     */
+    public function updatePaypal(Request $request)
+    {
+        $empresa = $request->user()->empresa;
+
+        if (! $empresa) {
+            return back()->with('notification', [
+                'type' => 'error',
+                'message' => __('No active company associated with your user.'),
+            ]);
+        }
+
+        $validated = $request->validate([
+            'paypal_active' => 'required|boolean',
+            'paypal_mode' => 'required|in:sandbox,live',
+            'paypal_client_id' => 'nullable|string|max:255',
+            'paypal_client_secret' => 'nullable|string',
+        ]);
+
+        $empresa->update($validated);
+
+        return back()->with('notification', [
+            'type' => 'success',
+            'message' => __('PayPal integration settings updated successfully.'),
+        ]);
+    }
+
+    /**
+     * Actualiza la configuración de la pasarela Mercado Pago.
+     */
+    public function updateMercadoPago(Request $request)
+    {
+        $empresa = $request->user()->empresa;
+
+        if (! $empresa) {
+            return back()->with('notification', [
+                'type' => 'error',
+                'message' => __('No active company associated with your user.'),
+            ]);
+        }
+
+        $validated = $request->validate([
+            'mercadopago_active' => 'required|boolean',
+            'mercadopago_mode' => 'required|in:sandbox,live',
+            'mercadopago_public_key' => 'nullable|string|max:255',
+            'mercadopago_access_token' => 'nullable|string',
+        ]);
+
+        $empresa->update($validated);
+
+        return back()->with('notification', [
+            'type' => 'success',
+            'message' => __('Mercado Pago integration settings updated successfully.'),
+        ]);
+    }
+
+    /**
+     * Actualiza la configuración de la pasarela Stripe.
+     */
+    public function updateStripe(Request $request)
+    {
+        $empresa = $request->user()->empresa;
+
+        if (! $empresa) {
+            return back()->with('notification', [
+                'type' => 'error',
+                'message' => __('No active company associated with your user.'),
+            ]);
+        }
+
+        $validated = $request->validate([
+            'stripe_active' => 'required|boolean',
+            'stripe_mode' => 'required|in:test,live',
+            'stripe_publishable_key' => 'nullable|string|max:255',
+            'stripe_secret_key' => 'nullable|string',
+            'stripe_webhook_secret' => 'nullable|string',
+        ]);
+
+        $empresa->update($validated);
+
+        return back()->with('notification', [
+            'type' => 'success',
+            'message' => __('Stripe integration settings updated successfully.'),
+        ]);
     }
 }

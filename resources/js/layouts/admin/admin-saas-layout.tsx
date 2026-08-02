@@ -22,6 +22,7 @@ import {
     Activity,
     Link2,
     AlertTriangle,
+    CreditCard,
 } from 'lucide-react';
 import { Building2, GitBranch, Briefcase, Calendar, Smartphone, Wallet, Boxes } from 'lucide-react';
 import * as React from 'react';
@@ -260,6 +261,7 @@ export default function AdminSaasLayout({
         (auth as any)?.user?.roles?.includes('Super Administrador')
     );
     const userEmpresaId = (auth as any)?.user?.empresa_id;
+    const isSubscriptionExpiredPage = page.url.includes('/subscription/expired') || ((auth as any)?.user?.empresa?.subscription_status === 'expired' && !(auth as any)?.user?.empresa?.is_exempt);
 
     const hasPermission = (permission: string) => {
         if (isSuperAdmin) return true;
@@ -366,22 +368,26 @@ export default function AdminSaasLayout({
                     </div>
 
                     {/* Search */}
-                    <div className="px-3 py-4">
-                        <div className="relative">
-                            <Search className="absolute top-1/2 left-3 size-4 -translate-y-1/2 text-sidebar-foreground/50" />
-                            <Input
-                                type="search"
-                                placeholder={collapsed ? '' : 'Buscar...'}
-                                className={cn(
-                                    'h-9 border-sidebar-border bg-sidebar-accent/30 pl-9 text-sm text-sidebar-foreground placeholder:text-sidebar-foreground/50 focus-visible:ring-primary',
-                                    collapsed && 'w-full pl-9',
-                                )}
-                            />
+                    {!isSubscriptionExpiredPage && (
+                        <div className="px-3 py-4">
+                            <div className="relative">
+                                <Search className="absolute top-1/2 left-3 size-4 -translate-y-1/2 text-sidebar-foreground/50" />
+                                <Input
+                                    type="search"
+                                    placeholder={collapsed ? '' : 'Buscar...'}
+                                    className={cn(
+                                        'h-9 border-sidebar-border bg-sidebar-accent/30 pl-9 text-sm text-sidebar-foreground placeholder:text-sidebar-foreground/50 focus-visible:ring-primary',
+                                        collapsed && 'w-full pl-9',
+                                    )}
+                                />
+                            </div>
                         </div>
-                    </div>
+                    )}
 
                     {/* Navigation */}
                     <nav className="flex-1 min-h-0 overflow-y-auto overflow-x-hidden custom-scrollbar space-y-1 px-3 py-2">
+                        {!isSubscriptionExpiredPage && (
+                        <>
                         <p
                             className={cn(
                                 'px-3 pb-2 text-xs font-semibold tracking-wider text-slate-500 uppercase transition-opacity duration-300',
@@ -405,8 +411,6 @@ export default function AdminSaasLayout({
                                 />
                             ))
                         }
-
-
                         {/* Equipos Group */}
                         {(() => {
                             const equiposItems = [
@@ -687,6 +691,8 @@ export default function AdminSaasLayout({
                                 </div>
                             );
                         })()}
+                        </>
+                        )}
                     </nav>
 
                     {/* Bottom section */}
