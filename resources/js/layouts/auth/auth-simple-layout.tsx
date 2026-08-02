@@ -17,7 +17,7 @@ export default function AuthSimpleLayout({
                             className="flex flex-col items-center gap-1 font-medium"
                         >
                             <img
-                                src="/image/logo/fix_sale_logo.jpg"
+                                src="/image/logo/larareact_logo_transparent.png"
                                 alt="Fix Sale Logo"
                                 className="h-16 w-auto object-contain rounded-xl shadow-sm"
                             />

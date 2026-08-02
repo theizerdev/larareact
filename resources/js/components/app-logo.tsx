@@ -23,12 +23,12 @@ export default function AppLogo() {
                 )}
             </div>
             <div className="ml-2 grid flex-1 text-left text-sm">
-                <span className="mb-0.5 truncate leading-tight font-bold text-black dark:text-white">
+                <span className="mb-0.5 truncate leading-tight font-bold text-foreground">
                     {companyName ? (
                         companyName
                     ) : (
                         <div className="flex flex-col">
-                            <span className="font-extrabold tracking-wide text-xs text-[#0B2545] dark:text-white uppercase flex items-center gap-1">
+                            <span className="font-extrabold tracking-wide text-xs text-slate-900 dark:text-white uppercase flex items-center gap-1">
                                 FIX <span className="text-cyan-500 font-black">+</span> SALE
                             </span>
                             <span className="text-[9px] font-semibold text-muted-foreground tracking-widest uppercase">

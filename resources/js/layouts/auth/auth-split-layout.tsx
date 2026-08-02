@@ -13,34 +13,47 @@ export default function AuthSplitLayout({
     return (
         <div className="relative grid min-h-svh w-full lg:grid-cols-2">
             {/* Visual panel */}
-            <div className="relative hidden flex-col justify-between overflow-hidden bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 p-12 text-white lg:flex">
-                <div className="absolute inset-0 opacity-20">
-                    <div className="absolute -top-1/4 -left-1/4 h-[600px] w-[600px] rounded-full bg-indigo-500/30 blur-3xl" />
-                    <div className="absolute -right-1/4 -bottom-1/4 h-[500px] w-[500px] rounded-full bg-violet-500/20 blur-3xl" />
-                </div>
+            <div className="relative hidden flex-col justify-between overflow-hidden bg-slate-950 p-12 text-white lg:flex border-r border-slate-800">
+                {/* Tech background layers */}
+                <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-indigo-900/40 via-slate-950 to-slate-950 opacity-90" />
+
+                {/* Tech Grid Pattern */}
+                <div
+                    className="absolute inset-0 opacity-15 pointer-events-none"
+                    style={{
+                        backgroundImage: `radial-gradient(rgba(255, 255, 255, 0.25) 1px, transparent 1px), linear-gradient(to right, rgba(255, 255, 255, 0.05) 1px, transparent 1px), linear-gradient(to bottom, rgba(255, 255, 255, 0.05) 1px, transparent 1px)`,
+                        backgroundSize: '30px 30px, 30px 30px, 30px 30px'
+                    }}
+                />
+
+                {/* Ambient glowing tech orbs */}
+                <div className="absolute -top-24 -left-24 h-[500px] w-[500px] rounded-full bg-cyan-500/20 blur-[120px] pointer-events-none" />
+                <div className="absolute bottom-10 right-10 h-[400px] w-[400px] rounded-full bg-indigo-600/25 blur-[100px] pointer-events-none" />
 
                 <Link
                     href={home()}
-                    className="relative z-10 flex items-center font-semibold"
+                    className="relative z-10 flex items-center font-semibold py-2"
                 >
-                    <img
-                        src="/image/logo/fix_sale_logo.jpg"
-                        alt="Fix Sale Logo"
-                        className="h-20 w-auto object-contain rounded-xl shadow-md"
-                    />
+                    <div className="relative group">
+                        <div className="absolute -inset-4 rounded-3xl bg-gradient-to-r from-cyan-500/20 via-indigo-500/20 to-blue-600/20 blur-xl opacity-75 group-hover:opacity-100 transition duration-500" />
+                        <img
+                            src="/image/logo/larareact_logo_transparent.png"
+                            alt="Fix Sale Logo"
+                            className="relative h-44 w-auto max-w-full object-contain brightness-0 invert drop-shadow-[0_10px_25px_rgba(255,255,255,0.45)] transition-transform duration-300 group-hover:scale-105"
+                        />
+                    </div>
                 </Link>
 
                 <div className="relative z-10 max-w-md">
-                    <div className="mb-6 inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-4 py-1.5 text-sm backdrop-blur-sm">
-                        <ShieldCheck className="size-4 text-emerald-400" />
-                        <span>Seguro, rápido y confiable</span>
+                    <div className="mb-6 inline-flex items-center gap-2 rounded-full border border-cyan-500/30 bg-cyan-500/10 px-4 py-1.5 text-sm backdrop-blur-md">
+                        <ShieldCheck className="size-4 text-cyan-400" />
+                        <span className="font-medium text-cyan-200">Controla. Vende. Crece.</span>
                     </div>
                     <h2 className="text-3xl leading-tight font-semibold tracking-tight text-balance">
-                        La base perfecta para construir sistemas profesionales.
+                        Gestión integral de ventas, inventario y soporte técnico.
                     </h2>
                     <p className="mt-4 text-base text-balance text-white/70">
-                        Diseño moderno, componentes reutilizables y una
-                        experiencia de usuario refinada desde el primer día.
+                        Administra tu punto de venta (POS), órdenes de servicio técnico, facturación y sucursales desde una sola plataforma en la nube.
                     </p>
                 </div>
 

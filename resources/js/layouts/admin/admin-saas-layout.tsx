@@ -350,7 +350,7 @@ export default function AdminSaasLayout({
                             </div>
                             <span
                                 className={cn(
-                                    'text-base font-semibold whitespace-nowrap text-white transition-opacity duration-300',
+                                    'text-base font-semibold whitespace-nowrap text-sidebar-foreground transition-opacity duration-300',
                                     collapsed && 'opacity-0',
                                 )}
                             >
