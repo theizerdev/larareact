@@ -79,6 +79,13 @@ interface Empresa {
     logo_mini?: string | null;
 }
 
+interface SucursalLimitInfo {
+    max_sucursales: number;
+    total_creadas: number;
+    is_exempt: boolean;
+    can_add_sucursal: boolean;
+}
+
 interface Sucursal {
     id: number;
     empresa_id: number;
@@ -99,6 +106,7 @@ interface SucursalesPageProps {
         activos: number;
         inactivos: number;
     };
+    sucursalLimitInfo?: SucursalLimitInfo;
     empresas: Empresa[];
     paises: Pais[];
     filters: {
@@ -125,7 +133,7 @@ const initialForm = {
 // ─── Página principal ──────────────────────────────────────────────────────────
 
 export default function SucursalesIndexPage({
-    auth, sucursales, stats, empresas, paises, filters,
+    auth, sucursales, stats, sucursalLimitInfo, empresas, paises, filters,
 }: SucursalesPageProps) {
     const { __ } = useTranslate();
 
@@ -192,8 +200,15 @@ export default function SucursalesIndexPage({
     // ── Handlers ───────────────────────────────────────────────────────────────
 
     const handleCreateClick = () => {
+        if (sucursalLimitInfo && !sucursalLimitInfo.can_add_sucursal) {
+            notifyError(__(`Límite alcanzado: Tu suscripción actual permite un máximo de ${sucursalLimitInfo.max_sucursales} sucursal(es). Ve a Suscripciones para ampliar tu capacidad.`));
+            return;
+        }
         setEditingSucursal(null);
         reset();
+        if (empresas.length > 0) {
+            setData('empresa_id', empresas[0].id);
+        }
         setActiveTab('general');
         setIsModalOpen(true);
     };
@@ -402,14 +417,18 @@ return;
                     description={__('Manage company branches, their locations and contact information.')}
                     colorClassName="bg-violet-600"
                 >
-                    <Button onClick={handleCreateClick}>
+                    <Button 
+                        onClick={handleCreateClick}
+                        variant={sucursalLimitInfo && !sucursalLimitInfo.can_add_sucursal ? 'outline' : 'default'}
+                        className={sucursalLimitInfo && !sucursalLimitInfo.can_add_sucursal ? 'border-amber-500/50 text-amber-600 dark:text-amber-400' : ''}
+                    >
                         <Plus className="mr-2 h-4 w-4" />
                         {__('New Branch')}
                     </Button>
                 </ModuleHeader>
 
                 {/* Stat Cards */}
-                <div className="grid grid-cols-1 gap-6 md:grid-cols-3">
+                <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-4">
                     <StatCard
                         icon={<GitBranch className="h-6 w-6" />}
                         title={__('TOTAL BRANCHES')}
@@ -428,6 +447,21 @@ return;
                         value={stats.inactivos}
                         colorClassName="bg-red-100 text-red-600"
                     />
+                    {sucursalLimitInfo && !sucursalLimitInfo.is_exempt ? (
+                        <StatCard
+                            icon={<Building2 className="h-6 w-6" />}
+                            title={__('CAPACIDAD AUTORIZADA')}
+                            value={`${sucursalLimitInfo.total_creadas} / ${sucursalLimitInfo.max_sucursales}`}
+                            colorClassName="bg-amber-100 text-amber-600 dark:bg-amber-950/40 dark:text-amber-400"
+                        />
+                    ) : (
+                        <StatCard
+                            icon={<Building2 className="h-6 w-6" />}
+                            title={__('CAPACIDAD AUTORIZADA')}
+                            value={__('Ilimitado (SaaS)')}
+                            colorClassName="bg-blue-100 text-blue-600 dark:bg-blue-950/40 dark:text-blue-400"
+                        />
+                    )}
                 </div>
 
                 {/* Filtros */}
@@ -531,40 +565,41 @@ return;
                             {/* ══ Tab 1: General ══════════════════════════════════════════════════ */}
                             <TabsContent value="general" className="space-y-4">
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-
                                     {/* Empresa */}
-                                    <div className="md:col-span-2">
-                                        <Label htmlFor="empresa_id">{__('Company')} *</Label>
-                                        <Select
-                                            value={String(data.empresa_id)}
-                                            onValueChange={(v) => setData('empresa_id', v)}
-                                        >
-                                            <SelectTrigger id="empresa_id">
-                                                <SelectValue placeholder={__('Select a company')} />
-                                            </SelectTrigger>
-                                            <SelectContent>
-                                                {empresas.map((emp) => (
-                                                    <SelectItem key={emp.id} value={String(emp.id)}>
-                                                        <div className="flex items-center gap-2">
-                                                            {emp.logo_mini || emp.logo ? (
-                                                                <img
-                                                                    src={emp.logo_mini || emp.logo || ''}
-                                                                    alt={emp.razon_social}
-                                                                    className="w-4 h-4 rounded object-cover"
-                                                                />
-                                                            ) : (
-                                                                <Building2 className="w-4 h-4 text-muted-foreground" />
-                                                            )}
-                                                            {emp.razon_social}
-                                                        </div>
-                                                    </SelectItem>
-                                                ))}
-                                            </SelectContent>
-                                        </Select>
-                                        {errors.empresa_id && (
-                                            <p className="text-red-500 text-xs mt-1">{errors.empresa_id}</p>
-                                        )}
-                                    </div>
+                                    {empresas.length > 1 && (
+                                        <div className="md:col-span-2">
+                                            <Label htmlFor="empresa_id">{__('Company')} *</Label>
+                                            <Select
+                                                value={String(data.empresa_id)}
+                                                onValueChange={(v) => setData('empresa_id', v)}
+                                            >
+                                                <SelectTrigger id="empresa_id">
+                                                    <SelectValue placeholder={__('Select a company')} />
+                                                </SelectTrigger>
+                                                <SelectContent>
+                                                    {empresas.map((emp) => (
+                                                        <SelectItem key={emp.id} value={String(emp.id)}>
+                                                            <div className="flex items-center gap-2">
+                                                                {emp.logo_mini || emp.logo ? (
+                                                                    <img
+                                                                        src={emp.logo_mini || emp.logo || ''}
+                                                                        alt={emp.razon_social}
+                                                                        className="w-4 h-4 rounded object-cover"
+                                                                    />
+                                                                ) : (
+                                                                    <Building2 className="w-4 h-4 text-muted-foreground" />
+                                                                )}
+                                                                {emp.razon_social}
+                                                            </div>
+                                                        </SelectItem>
+                                                    ))}
+                                                </SelectContent>
+                                            </Select>
+                                            {errors.empresa_id && (
+                                                <p className="text-red-500 text-xs mt-1">{errors.empresa_id}</p>
+                                            )}
+                                        </div>
+                                    )}
 
                                     {/* Nombre */}
                                     <div className="md:col-span-2">

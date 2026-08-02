@@ -12,10 +12,12 @@ trait Multitenantable
         static::creating(function ($model) {
             if (auth()->check()) {
                 $user = auth()->user();
-                if (! $model->empresa_id && $user->empresa_id) {
+                $table = $model->getTable();
+
+                if ($table !== 'empresas' && ! $model->empresa_id && $user->empresa_id && \Illuminate\Support\Facades\Schema::hasColumn($table, 'empresa_id')) {
                     $model->empresa_id = $user->empresa_id;
                 }
-                if (! $model->sucursal_id && $user->sucursal_id) {
+                if ($table !== 'sucursales' && ! $model->sucursal_id && $user->sucursal_id && \Illuminate\Support\Facades\Schema::hasColumn($table, 'sucursal_id')) {
                     $model->sucursal_id = $user->sucursal_id;
                 }
             }
@@ -44,6 +46,10 @@ trait Multitenantable
             // Si se consulta la propia tabla users, evitar que un usuario no pueda loguearse o auto-consultarse
             if ($table === 'users') {
                 return;
+            }
+
+            if ($table === 'empresas' && $user->empresa_id) {
+                $builder->where('empresas.id', $user->empresa_id);
             }
 
             if ($user->empresa_id && \Illuminate\Support\Facades\Schema::hasColumn($table, 'empresa_id')) {

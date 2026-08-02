@@ -52,9 +52,22 @@ class SucursalController extends Controller
             'inactivos' => (clone $statsQuery)->where('status', false)->count(),
         ];
 
+        $userEmpresa = $user?->empresa;
+        $totalEmpresaSucursales = $userEmpresa ? Sucursal::where('empresa_id', $userEmpresa->id)->count() : 0;
+        $maxAllowedSucursales = $userEmpresa?->max_sucursales ?? 1;
+        $isExempt = $userEmpresa?->isExemptFromSubscription() ?? false;
+
+        $sucursalLimitInfo = [
+            'max_sucursales' => $maxAllowedSucursales,
+            'total_creadas' => $totalEmpresaSucursales,
+            'is_exempt' => $isExempt,
+            'can_add_sucursal' => $isExempt || ($totalEmpresaSucursales < $maxAllowedSucursales),
+        ];
+
         return inertia('admin/Sucursales/Index', [
             'sucursales' => $sucursales,
             'stats' => $stats,
+            'sucursalLimitInfo' => $sucursalLimitInfo,
             'empresas' => Empresa::where('status', true)
                 ->orderBy('razon_social', 'asc')
                 ->get(['id', 'razon_social', 'logo_mini', 'logo']),
@@ -77,6 +90,19 @@ class SucursalController extends Controller
             'longitud' => 'nullable|numeric',
             'status' => 'boolean',
         ]);
+
+        $empresa = Empresa::find($validated['empresa_id']);
+        if ($empresa && ! $empresa->isExemptFromSubscription()) {
+            $currentCount = Sucursal::where('empresa_id', $empresa->id)->count();
+            $maxAllowed = $empresa->max_sucursales ?? 1;
+
+            if ($currentCount >= $maxAllowed) {
+                return back()->with('notification', [
+                    'type' => 'error',
+                    'message' => __("Límite de sucursales alcanzado. Tu plan actual permite un máximo de {$maxAllowed} sucursal(es). Para agregar más, actualiza tu suscripción."),
+                ]);
+            }
+        }
 
         try {
             Sucursal::create($validated);
