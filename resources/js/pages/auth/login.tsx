@@ -147,6 +147,13 @@ export default function Login({ status, canResetPassword }: Props) {
                     </>
                 )}
             </Form>
+
+            <div className="mt-6 text-center text-sm text-muted-foreground border-t pt-4">
+                <span>¿Aún no tienes una cuenta en la plataforma? </span>
+                <TextLink href={register()} className="font-bold text-primary underline underline-offset-4">
+                    Regístrate gratis
+                </TextLink>
+            </div>
         </>
     );
 }
