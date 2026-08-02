@@ -574,7 +574,12 @@ export default function AdminSaasLayout({
                                     href: appearanceEdit().url,
                                     permission: 'empresas.view',
                                 },
-                            ].filter(item => hasPermission(item.permission));
+                            ].filter(item => {
+                                if (item.superAdminOnly) {
+                                    return isSuperAdmin || auth?.user?.empresa_id === 1;
+                                }
+                                return hasPermission(item.permission);
+                            });
 
                             if (settingsItems.length === 0) return null;
 

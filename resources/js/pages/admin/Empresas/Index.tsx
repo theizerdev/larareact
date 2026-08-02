@@ -435,10 +435,12 @@ formData.append('logo_mini', logoMiniFile);
                     description={__('Manage companies, their locations and contact information.')}
                     colorClassName="bg-indigo-600"
                 >
-                    <Button onClick={handleCreateClick}>
-                        <Plus className="mr-2 h-4 w-4" />
-                        {__('New Company')}
-                    </Button>
+                    {(auth.user?.roles?.some(r => r.name === 'Super Administrador' || r.name === 'super-admin') || auth.user?.empresa_id === 1) && (
+                        <Button onClick={handleCreateClick}>
+                            <Plus className="mr-2 h-4 w-4" />
+                            {__('New Company')}
+                        </Button>
+                    )}
                 </ModuleHeader>
 
                 {/* Stat Cards */}

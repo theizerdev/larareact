@@ -64,7 +64,7 @@ class SubscriptionController extends Controller
         ];
 
         // Obtener la configuración activa de pasarelas de pago de la plataforma (Empresa ID 1 / Dueño del SaaS)
-        $masterEmpresa = Empresa::find(1) ?? $empresa;
+        $masterEmpresa = Empresa::withoutGlobalScopes()->find(1) ?? $empresa;
         $paymentGateways = [
             'paypal' => [
                 'active' => (bool) $masterEmpresa->paypal_active,
@@ -144,7 +144,7 @@ class SubscriptionController extends Controller
             ],
         ];
 
-        $masterEmpresa = Empresa::find(1) ?? $empresa;
+        $masterEmpresa = Empresa::withoutGlobalScopes()->find(1) ?? $empresa;
         $paymentGateways = [
             'paypal' => [
                 'active' => (bool) $masterEmpresa?->paypal_active,
@@ -279,7 +279,7 @@ class SubscriptionController extends Controller
             $monto = $plan->calcularPrecio((int) $request->ciclo_meses, (int) $request->sucursales_contratadas);
         }
 
-        $masterEmpresa = Empresa::find(1) ?? $empresa;
+        $masterEmpresa = Empresa::withoutGlobalScopes()->find(1) ?? $empresa;
         $clientId = $masterEmpresa->paypal_client_id;
         $clientSecret = $masterEmpresa->paypal_client_secret;
         $isLive = $masterEmpresa->paypal_mode === 'live';
@@ -327,7 +327,7 @@ class SubscriptionController extends Controller
         ]);
 
         $empresa = $request->user()->empresa;
-        $masterEmpresa = Empresa::find(1) ?? $empresa;
+        $masterEmpresa = Empresa::withoutGlobalScopes()->find(1) ?? $empresa;
         $clientId = $masterEmpresa->paypal_client_id;
         $clientSecret = $masterEmpresa->paypal_client_secret;
         $isLive = $masterEmpresa->paypal_mode === 'live';

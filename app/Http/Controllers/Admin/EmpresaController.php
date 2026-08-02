@@ -53,6 +53,13 @@ class EmpresaController extends Controller
 
     public function store(Request $request)
     {
+        $user = $request->user();
+        if (! $user || (! $user->hasRole('Super Administrador') && ! $user->hasRole('super-admin'))) {
+            return back()->with('notification', [
+                'type' => 'error',
+                'message' => __('No tienes permisos para registrar nuevas empresas en la plataforma.'),
+            ]);
+        }
         $validated = $request->validate([
             'razon_social' => 'required|string|max:255',
             'documento' => 'required|string|max:255|unique:empresas,documento',
