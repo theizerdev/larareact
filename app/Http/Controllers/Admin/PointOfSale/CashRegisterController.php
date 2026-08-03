@@ -69,9 +69,7 @@ class CashRegisterController extends Controller
 
         $cajas = $query->orderBy('opened_at', 'desc')->paginate($perPage)->withQueryString();
 
-        $activeRegister = CashRegister::where('user_id', auth()->id())
-            ->where('status', 'open')
-            ->first();
+        $activeRegister = CashRegister::getActiveRegister();
 
         return inertia('admin/PointOfSale/CashRegisters/Index', [
             'cajas' => $cajas,
@@ -83,14 +81,12 @@ class CashRegisterController extends Controller
 
     public function store(Request $request, CashRegisterService $service)
     {
-        $existingOpen = CashRegister::where('user_id', auth()->id())
-            ->where('status', 'open')
-            ->exists();
+        $existingOpen = CashRegister::hasOpenRegister();
 
         if ($existingOpen) {
             return back()->with('notification', [
                 'type' => 'error',
-                'message' => __('Ya tiene una caja abierta actualmente.'),
+                'message' => __('Ya existe una caja abierta para su empresa y sucursal actualmente.'),
             ]);
         }
 

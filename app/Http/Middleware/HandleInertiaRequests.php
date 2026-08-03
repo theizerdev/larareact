@@ -115,9 +115,7 @@ class HandleInertiaRequests extends Middleware
             return null;
         }
 
-        $hasOpenRegister = \App\Models\CashRegister::where('empresa_id', $user->empresa_id)
-            ->where('status', 'open')
-            ->exists();
+        $hasOpenRegister = \App\Models\CashRegister::hasOpenRegister($user);
 
         if (! $hasOpenRegister) {
             return [

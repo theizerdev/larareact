@@ -39,9 +39,7 @@ class SaleController extends Controller
 
     public function terminal(CashRegisterService $cashService)
     {
-        $activeRegister = CashRegister::where('user_id', auth()->id())
-            ->where('status', 'open')
-            ->first();
+        $activeRegister = CashRegister::getActiveRegister();
 
         $registerSummary = null;
         if ($activeRegister) {

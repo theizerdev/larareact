@@ -159,9 +159,7 @@ class ClienteController extends Controller
         $cliente->decrement('saldo_pendiente', $monto);
 
         // Register inflow in active cash register
-        $cashRegister = CashRegister::where('user_id', auth()->id())
-            ->where('status', 'open')
-            ->first();
+        $cashRegister = CashRegister::getActiveRegister();
 
         if ($cashRegister && $monto > 0) {
             $cashService->addMovement(

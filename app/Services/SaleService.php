@@ -26,9 +26,7 @@ class SaleService
         return DB::transaction(function () use ($data, $userId) {
             $user = User::find($userId);
 
-            $cashRegister = CashRegister::where('user_id', $userId)
-                ->where('status', 'open')
-                ->first();
+            $cashRegister = CashRegister::getActiveRegister($user);
 
             // Generate unique ticket code
             $lastSale = Sale::orderBy('id', 'desc')->first();

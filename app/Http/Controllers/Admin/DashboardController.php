@@ -39,9 +39,7 @@ class DashboardController extends Controller
         $valorDolar = (float) ($empresa?->valor_dolar ?? 20.0);
 
         // Active Cash Register of User
-        $activeRegister = CashRegister::where('user_id', auth()->id())
-            ->where('status', 'open')
-            ->first();
+        $activeRegister = CashRegister::getActiveRegister();
 
         $registerSummary = null;
         if ($activeRegister) {

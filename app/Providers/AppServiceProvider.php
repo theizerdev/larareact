@@ -52,9 +52,7 @@ class AppServiceProvider extends ServiceProvider
                 ->log('user_logged_in');
 
             if ($user && ($user->hasRole('Administrador') || $user->hasRole('Super Administrador'))) {
-                $hasOpenRegister = CashRegister::where('empresa_id', $user->empresa_id)
-                    ->where('status', 'open')
-                    ->exists();
+                $hasOpenRegister = CashRegister::hasOpenRegister($user);
 
                 if (! $hasOpenRegister) {
                     session()->flash('notification', [
