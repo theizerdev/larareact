@@ -518,6 +518,11 @@ export default function AdminSaasLayout({
                                     permission: 'clientes.view',
                                 },
                                 {
+                                    title: 'Proveedores',
+                                    href: '/admin/proveedores',
+                                    permission: 'ventas.view',
+                                },
+                                {
                                     title: 'Alertas de Stock',
                                     href: '/admin/stock-alerts',
                                     permission: 'ventas.view',
