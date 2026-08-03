@@ -487,11 +487,8 @@ class VisitaAccesoController extends Controller
                 if ($prov) {
                     $razon     = trim($prov->razon_social ?? '');
                     $comercial = trim($prov->nombre_comercial ?? '');
-                    $nombreCompleto = ($razon && $comercial && strtolower($razon) !== strtolower($comercial))
-                        ? "{$razon} ({$comercial})"
-                        : ($razon ?: $comercial);
 
-                    $validated['visitante_nombre']   = $nombreCompleto;
+                    $validated['visitante_nombre']   = $razon ?: $comercial;
                     $validated['visitante_empresa']  = $comercial ?: $razon;
                     $validated['visitante_telefono'] = $prov->telefono;
                     $validated['pais_telefono_id']   = $prov->pais_telefono_id;
@@ -503,11 +500,8 @@ class VisitaAccesoController extends Controller
                 if ($prod) {
                     $razon     = trim($prod->razon_social_rancho ?: ($prod->razon_social ?? ''));
                     $comercial = trim($prod->nombre_comercial_rancho ?: ($prod->nombre_comercial ?? ''));
-                    $nombreCompleto = ($razon && $comercial && strtolower($razon) !== strtolower($comercial))
-                        ? "{$razon} ({$comercial})"
-                        : ($razon ?: $comercial);
 
-                    $validated['visitante_nombre']   = $nombreCompleto;
+                    $validated['visitante_nombre']   = $razon ?: $comercial;
                     $validated['visitante_empresa']  = $comercial ?: $razon;
                     $validated['visitante_telefono'] = $prod->telefono;
                     $validated['pais_telefono_id']   = $prod->pais_telefono_id;

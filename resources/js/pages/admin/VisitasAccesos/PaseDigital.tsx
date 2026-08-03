@@ -1,22 +1,22 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { Head, useForm } from '@inertiajs/react';
-import { 
-    ShieldCheck, 
-    Calendar, 
-    Clock, 
-    User, 
-    Building, 
-    Car, 
+import {
+    ShieldCheck,
+    Calendar,
+    Clock,
+    User,
+    Building,
+    Car,
     Footprints,
-    CheckCircle2, 
-    XCircle, 
-    Camera, 
-    Upload, 
-    Plus, 
-    Trash2, 
-    Users, 
-    FileText, 
-    Check, 
+    CheckCircle2,
+    XCircle,
+    Camera,
+    Upload,
+    Plus,
+    Trash2,
+    Users,
+    FileText,
+    Check,
     Edit3,
     AlertCircle,
     RefreshCw,
@@ -251,6 +251,30 @@ export default function PaseDigital({ invitacion }: PaseDigitalProps) {
     const isPending = invitacion.status === 'pendiente';
     const isIngresado = invitacion.status === 'ingresado';
 
+    // Razón Social limpia para la empresa / visitante
+    const nombreVisitante = (() => {
+        if (invitacion.tipo_acceso === 'proveedor' && invitacion.proveedor?.razon_social) {
+            return invitacion.proveedor.razon_social;
+        }
+        if (invitacion.tipo_acceso === 'productor') {
+            if (invitacion.productor?.razon_social) return invitacion.productor.razon_social;
+            if (invitacion.productor?.razon_social_rancho) return invitacion.productor.razon_social_rancho;
+        }
+        if (invitacion.visitante_nombre) {
+            return invitacion.visitante_nombre.replace(/\s*\([^)]*\)$/, '');
+        }
+        return 'Visitante';
+    })();
+
+    const formatImageUrl = (url: string | null | undefined): string | null => {
+        if (!url) return null;
+        if (url.startsWith('data:') || url.startsWith('blob:') || url.startsWith('http://') || url.startsWith('https://')) {
+            return url;
+        }
+        const cleanUrl = url.replace(/^\/?(storage\/)+/, '');
+        return `/storage/${cleanUrl}`;
+    };
+
     // Vista activa: 'registro' vs 'pase'
     const [activeView, setActiveView] = useState<'registro' | 'pase'>(
         invitacion.datos_acceso_completados ? 'pase' : 'registro'
@@ -311,7 +335,7 @@ export default function PaseDigital({ invitacion }: PaseDigitalProps) {
             <Head title={`Pase Digital N° ${invitacion.codigo_invitacion} - Driscoll's`} />
 
             <div className="min-h-screen bg-slate-50 dark:bg-slate-950 text-slate-800 dark:text-slate-100 flex flex-col font-sans">
-                
+
                 {/* Header Público Estilo Pre-Registro */}
                 <header className="bg-[#104a29] text-white border-b border-emerald-800 sticky top-0 z-40 px-6 py-4 shadow-md">
                     <div className="max-w-4xl mx-auto flex items-center justify-between">
@@ -335,13 +359,11 @@ export default function PaseDigital({ invitacion }: PaseDigitalProps) {
                             <button
                                 type="button"
                                 onClick={() => setActiveView('registro')}
-                                className={`flex items-center gap-2 transition-colors cursor-pointer ${
-                                    activeView === 'registro' ? 'text-[#104a29] dark:text-emerald-400' : 'hover:text-slate-800'
-                                }`}
+                                className={`flex items-center gap-2 transition-colors cursor-pointer ${activeView === 'registro' ? 'text-[#104a29] dark:text-emerald-400' : 'hover:text-slate-800'
+                                    }`}
                             >
-                                <span className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-extrabold ${
-                                    activeView === 'registro' ? 'bg-[#104a29] text-white' : 'bg-slate-200 dark:bg-slate-800 text-slate-600'
-                                }`}>1</span>
+                                <span className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-extrabold ${activeView === 'registro' ? 'bg-[#104a29] text-white' : 'bg-slate-200 dark:bg-slate-800 text-slate-600'
+                                    }`}>1</span>
                                 <span>1. Registro de Datos e Identificación</span>
                                 {invitacion.datos_acceso_completados && (
                                     <Check className="w-4 h-4 text-emerald-600 font-bold" />
@@ -353,21 +375,19 @@ export default function PaseDigital({ invitacion }: PaseDigitalProps) {
                             <button
                                 type="button"
                                 onClick={() => setActiveView('pase')}
-                                className={`flex items-center gap-2 transition-colors cursor-pointer ${
-                                    activeView === 'pase' ? 'text-[#104a29] dark:text-emerald-400' : 'hover:text-slate-800'
-                                }`}
+                                className={`flex items-center gap-2 transition-colors cursor-pointer ${activeView === 'pase' ? 'text-[#104a29] dark:text-emerald-400' : 'hover:text-slate-800'
+                                    }`}
                             >
-                                <span className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-extrabold ${
-                                    activeView === 'pase' ? 'bg-[#104a29] text-white' : 'bg-slate-200 dark:bg-slate-800 text-slate-600'
-                                }`}>2</span>
+                                <span className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-extrabold ${activeView === 'pase' ? 'bg-[#104a29] text-white' : 'bg-slate-200 dark:bg-slate-800 text-slate-600'
+                                    }`}>2</span>
                                 <span>2. Pase Digital QR</span>
                             </button>
                         </div>
 
                         {/* Line Indicator */}
                         <div className="w-full bg-slate-200 dark:bg-slate-800 h-2 rounded-full mt-2.5 overflow-hidden">
-                            <div 
-                                className="bg-[#104a29] dark:bg-emerald-400 h-full transition-all duration-300" 
+                            <div
+                                className="bg-[#104a29] dark:bg-emerald-400 h-full transition-all duration-300"
                                 style={{ width: activeView === 'registro' ? '50%' : '100%' }}
                             ></div>
                         </div>
@@ -382,11 +402,11 @@ export default function PaseDigital({ invitacion }: PaseDigitalProps) {
                         <div className="flex items-center gap-4 flex-1">
                             {invitacion.foto_carnet || data.foto_carnet ? (
                                 <div className="w-16 h-16 rounded-2xl overflow-hidden border-2 border-emerald-500 shadow-md shrink-0">
-                                    <img src={(data.foto_carnet || invitacion.foto_carnet || '').startsWith('data:') ? (data.foto_carnet || invitacion.foto_carnet) : `/storage/${data.foto_carnet || invitacion.foto_carnet}`} alt="Carnet" className="w-full h-full object-cover" />
+                                    <img src={formatImageUrl(data.foto_carnet || invitacion.foto_carnet)!} alt="Carnet" className="w-full h-full object-cover" />
                                 </div>
                             ) : (
                                 <div className="w-16 h-16 rounded-2xl bg-emerald-100 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 flex items-center justify-center font-extrabold text-xl shrink-0">
-                                    {invitacion.visitante_nombre?.[0] || 'V'}
+                                    {nombreVisitante?.[0] || 'V'}
                                 </div>
                             )}
 
@@ -395,9 +415,9 @@ export default function PaseDigital({ invitacion }: PaseDigitalProps) {
                                     Visitante Registrado
                                 </span>
                                 <h1 className="text-xl font-extrabold text-slate-900 dark:text-slate-100">
-                                    {invitacion.visitante_nombre}
+                                    {nombreVisitante}
                                 </h1>
-                                {invitacion.visitante_empresa && (
+                                {invitacion.visitante_empresa && invitacion.visitante_empresa !== nombreVisitante && (
                                     <p className="text-xs text-slate-500 font-medium flex items-center gap-1.5">
                                         <Building className="w-3.5 h-3.5 text-emerald-600" />
                                         Empresa: <span className="font-bold text-slate-700 dark:text-slate-300">{invitacion.visitante_empresa}</span>
@@ -433,7 +453,7 @@ export default function PaseDigital({ invitacion }: PaseDigitalProps) {
                     ═══════════════════════════════════════════════════════════ */}
                     {activeView === 'registro' && (
                         <form onSubmit={handleSubmitDatos} className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl p-6 sm:p-8 shadow-sm space-y-8">
-                            
+
                             <div className="border-b border-slate-200 dark:border-slate-800 pb-4">
                                 <h2 className="text-lg font-extrabold text-[#104a29] dark:text-emerald-400 flex items-center gap-2">
                                     <FileText className="w-5 h-5" /> Completa tus Datos de Registro e Ingreso
@@ -452,11 +472,10 @@ export default function PaseDigital({ invitacion }: PaseDigitalProps) {
                                     <button
                                         type="button"
                                         onClick={() => setData('medio_acceso', 'peatonal')}
-                                        className={`flex items-center justify-start gap-4 p-5 rounded-2xl border-2 text-left transition-all ${
-                                            data.medio_acceso === 'peatonal'
+                                        className={`flex items-center justify-start gap-4 p-5 rounded-2xl border-2 text-left transition-all ${data.medio_acceso === 'peatonal'
                                                 ? 'border-emerald-600 bg-emerald-50 dark:bg-emerald-950/40 text-emerald-900 dark:text-emerald-300 shadow-sm'
                                                 : 'border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900 text-slate-600 dark:text-slate-400 hover:border-slate-300'
-                                        }`}
+                                            }`}
                                     >
                                         <div className={`p-3 rounded-xl ${data.medio_acceso === 'peatonal' ? 'bg-emerald-600 text-white' : 'bg-slate-200 dark:bg-slate-800 text-slate-600'}`}>
                                             <Footprints className="w-6 h-6" />
@@ -470,11 +489,10 @@ export default function PaseDigital({ invitacion }: PaseDigitalProps) {
                                     <button
                                         type="button"
                                         onClick={() => setData('medio_acceso', 'vehicular')}
-                                        className={`flex items-center justify-start gap-4 p-5 rounded-2xl border-2 text-left transition-all ${
-                                            data.medio_acceso === 'vehicular'
+                                        className={`flex items-center justify-start gap-4 p-5 rounded-2xl border-2 text-left transition-all ${data.medio_acceso === 'vehicular'
                                                 ? 'border-amber-500 bg-amber-50 dark:bg-amber-950/40 text-amber-900 dark:text-amber-300 shadow-sm'
                                                 : 'border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900 text-slate-600 dark:text-slate-400 hover:border-slate-300'
-                                        }`}
+                                            }`}
                                     >
                                         <div className={`p-3 rounded-xl ${data.medio_acceso === 'vehicular' ? 'bg-amber-500 text-white' : 'bg-slate-200 dark:bg-slate-800 text-slate-600'}`}>
                                             <Car className="w-6 h-6" />
@@ -805,18 +823,16 @@ export default function PaseDigital({ invitacion }: PaseDigitalProps) {
                                                         key={emp.id}
                                                         type="button"
                                                         onClick={toggleEmp}
-                                                        className={`p-3.5 rounded-2xl border transition-all text-left flex items-center justify-between gap-3 cursor-pointer ${
-                                                            isSelected
+                                                        className={`p-3.5 rounded-2xl border transition-all text-left flex items-center justify-between gap-3 cursor-pointer ${isSelected
                                                                 ? 'bg-emerald-600 text-white border-emerald-700 shadow-md ring-2 ring-emerald-400'
                                                                 : 'bg-white dark:bg-slate-900 text-slate-800 dark:text-slate-200 border-slate-200 dark:border-slate-800 hover:border-emerald-400'
-                                                        }`}
+                                                            }`}
                                                     >
                                                         <div className="flex items-center gap-3 min-w-0">
-                                                            <div className={`w-9 h-9 rounded-full flex items-center justify-center shrink-0 overflow-hidden font-bold text-xs ${
-                                                                isSelected ? 'bg-emerald-700 text-white' : 'bg-slate-100 dark:bg-slate-800 text-slate-600'
-                                                            }`}>
-                                                                {emp.foto_carnet || emp.foto_empleado ? (
-                                                                    <img src={emp.foto_carnet || emp.foto_empleado} alt="" className="w-full h-full object-cover" />
+                                                            <div className={`w-9 h-9 rounded-full flex items-center justify-center shrink-0 overflow-hidden font-bold text-xs ${isSelected ? 'bg-emerald-700 text-white' : 'bg-slate-100 dark:bg-slate-800 text-slate-600'
+                                                                }`}>
+                                                                {formatImageUrl(emp.foto_carnet || emp.foto_empleado || emp.foto) ? (
+                                                                    <img src={formatImageUrl(emp.foto_carnet || emp.foto_empleado || emp.foto)!} alt={nombreEmp} className="w-full h-full object-cover" />
                                                                 ) : (
                                                                     <User className="w-4 h-4" />
                                                                 )}
@@ -828,9 +844,8 @@ export default function PaseDigital({ invitacion }: PaseDigitalProps) {
                                                                 </div>
                                                             </div>
                                                         </div>
-                                                        <div className={`w-6 h-6 rounded-full flex items-center justify-center shrink-0 border ${
-                                                            isSelected ? 'bg-white text-emerald-700 border-white' : 'border-slate-300 dark:border-slate-700 text-slate-400'
-                                                        }`}>
+                                                        <div className={`w-6 h-6 rounded-full flex items-center justify-center shrink-0 border ${isSelected ? 'bg-white text-emerald-700 border-white' : 'border-slate-300 dark:border-slate-700 text-slate-400'
+                                                            }`}>
                                                             {isSelected ? <Check className="w-4 h-4 font-bold" /> : <Plus className="w-3.5 h-3.5" />}
                                                         </div>
                                                     </button>
@@ -906,13 +921,13 @@ export default function PaseDigital({ invitacion }: PaseDigitalProps) {
                     ═══════════════════════════════════════════════════════════ */}
                     {activeView === 'pase' && (
                         <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl p-6 sm:p-8 shadow-sm space-y-8">
-                            
+
                             {invitacion.datos_acceso_completados ? (
                                 <div className="text-center space-y-6">
                                     <div className="relative inline-block p-6 bg-white dark:bg-slate-800 rounded-3xl shadow-xl border-2 border-emerald-500/30">
-                                        <img 
-                                            src={qrUrl} 
-                                            alt="Código QR de Acceso" 
+                                        <img
+                                            src={qrUrl}
+                                            alt="Código QR de Acceso"
                                             className="w-64 h-64 mx-auto object-contain rounded-2xl"
                                         />
                                         {isIngresado && (
