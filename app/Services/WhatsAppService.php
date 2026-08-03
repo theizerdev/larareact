@@ -3,6 +3,7 @@
 namespace App\Services;
 
 use App\Models\Empresa;
+use App\Models\Pais;
 use Illuminate\Http\Client\ConnectionException;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
@@ -226,13 +227,73 @@ class WhatsAppService
     }
 
     /**
+     * Formatea el número de teléfono asegurando el código de país.
+     */
+    public function formatPhoneNumber(string $phone, ?int $paisId = null): string
+    {
+        $clean = preg_replace('/[^0-9]/', '', $phone);
+
+        if (empty($clean)) {
+            return '';
+        }
+
+        if (str_starts_with($clean, '0')) {
+            $clean = substr($clean, 1);
+        }
+
+        $codigoPais = null;
+
+        if ($paisId) {
+            $pais = Pais::find($paisId);
+            if ($pais && $pais->codigo_telefonico) {
+                $codigoPais = preg_replace('/[^0-9]/', '', $pais->codigo_telefonico);
+            }
+        }
+
+        if (! $codigoPais && $this->companyId) {
+            $empresa = Empresa::with(['pais', 'paisTelefono'])->find($this->companyId);
+            if ($empresa) {
+                $paisModel = $empresa->paisTelefono ?? $empresa->pais;
+                if ($paisModel && $paisModel->codigo_telefonico) {
+                    $codigoPais = preg_replace('/[^0-9]/', '', $paisModel->codigo_telefonico);
+                }
+            }
+        }
+
+        if (! $codigoPais) {
+            $codigoPais = '52'; // Predeterminado a México (+52)
+        }
+
+        if (strlen($clean) <= 10) {
+            $clean = $codigoPais.$clean;
+        } elseif (! str_starts_with($clean, $codigoPais)) {
+            if ($codigoPais === '52' && strlen($clean) === 11 && str_starts_with($clean, '1')) {
+                $clean = '52'.$clean;
+            } else {
+                $codigosComunes = ['52', '58', '57', '1', '34', '54', '56', '51', '593', '502', '503', '504', '505', '506', '507', '591', '595', '598'];
+                $tieneCodigo = false;
+                foreach ($codigosComunes as $code) {
+                    if (str_starts_with($clean, $code) && strlen($clean) >= (strlen($code) + 8)) {
+                        $tieneCodigo = true;
+                        break;
+                    }
+                }
+                if (! $tieneCodigo) {
+                    $clean = $codigoPais.$clean;
+                }
+            }
+        }
+
+        return $clean;
+    }
+
+    /**
      * Enviar mensaje de texto
      */
-    public function sendMessage(string $to, string $message, bool $isWelcome = false)
+    public function sendMessage(string $to, string $message, bool $isWelcome = false, ?int $paisId = null)
     {
         try {
-            // Formatear el número: eliminar el '+' inicial y cualquier caracter no numérico (ej. "+58 412-1234567" -> "584121234567")
-            $cleanNumber = preg_replace('/[^0-9]/', '', $to);
+            $cleanNumber = $this->formatPhoneNumber($to, $paisId);
 
             $url = "{$this->baseUrl}/api/message/send-text/{$this->instanceName}";
             $response = Http::timeout($this->timeout)
@@ -246,7 +307,7 @@ class WhatsAppService
                 Log::info('WhatsApp mensaje enviado', [
                     'company_id' => $this->companyId,
                     'instance' => $this->instanceName,
-                    'to' => $to,
+                    'to' => $cleanNumber,
                 ]);
 
                 return $response->json();
@@ -254,7 +315,7 @@ class WhatsAppService
                 Log::error('WhatsApp Send Message Failed', [
                     'company_id' => $this->companyId,
                     'instance' => $this->instanceName,
-                    'to' => $to,
+                    'to' => $cleanNumber,
                     'status' => $response->status(),
                     'body' => $response->body(),
                 ]);
@@ -275,10 +336,10 @@ class WhatsAppService
     /**
      * Enviar documento o imagen vía URL
      */
-    public function sendMedia(string $to, string $mediaUrl, string $caption = '')
+    public function sendMedia(string $to, string $mediaUrl, string $caption = '', ?int $paisId = null)
     {
         try {
-            $cleanNumber = preg_replace('/[^0-9]/', '', $to);
+            $cleanNumber = $this->formatPhoneNumber($to, $paisId);
 
             $url = "{$this->baseUrl}/api/message/send-media/{$this->instanceName}";
             $response = Http::timeout($this->timeout)

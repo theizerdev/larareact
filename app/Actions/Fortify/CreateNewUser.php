@@ -124,7 +124,7 @@ class CreateNewUser implements CreatesNewUsers
 
             // Usar la empresa principal del SaaS (ID 1) para notificaciones del sistema de registro
             $whatsappService = new WhatsAppService(1);
-            $whatsappService->sendMessage($phone, $message, true);
+            $whatsappService->sendMessage($phone, $message, true, $user->pais_telefono_id ?? $empresa->pais_id);
         } catch (\Throwable $e) {
             Log::error("Error al enviar mensaje de bienvenida WhatsApp a {$phone}: " . $e->getMessage());
         }
