@@ -346,7 +346,7 @@ export default function Index({ sales, currencySymbol = '$', empresa, filters }:
 
                                 {/* TITLE & METADATA */}
                                 <div className="text-center font-extrabold text-slate-800 text-sm tracking-wide uppercase">
-                                    COMPROBANTE DE VENTA (80MM)
+                                    COMPROBANTE DE VENTA
                                 </div>
 
                                 <div className="grid grid-cols-2 text-[11px] gap-y-1 text-slate-600 bg-slate-50 p-2.5 rounded-lg font-mono">
@@ -412,18 +412,9 @@ export default function Index({ sales, currencySymbol = '$', empresa, filters }:
                                     )}
                                 </div>
 
-                                {/* CÓDIGO QR Y CÓDIGO DE BARRAS */}
+                                {/* CÓDIGO QR PARA VALIDACIÓN */}
                                 <div className="pt-2 flex flex-col items-center justify-center space-y-2 border-t border-dashed border-gray-300">
                                     {renderTicketQRCode(selectedSale.codigo_ticket, Number(selectedSale.total))}
-                                    
-                                    <div className="text-center space-y-0.5">
-                                        <div className="inline-block font-mono tracking-widest text-base font-black bg-slate-100 px-3 py-1 rounded border border-slate-300">
-                                            |||||||||||||||||||||||||||||
-                                        </div>
-                                        <div className="text-[10px] font-mono text-slate-500 font-bold">
-                                            {selectedSale.codigo_ticket}
-                                        </div>
-                                    </div>
                                 </div>
 
                                 <div className="border-b border-dashed border-gray-300 my-2"></div>
@@ -431,14 +422,14 @@ export default function Index({ sales, currencySymbol = '$', empresa, filters }:
                                     ¡GRACIAS POR SU COMPRA!
                                 </div>
                                 <div className="text-center text-[10px] text-slate-400">
-                                    {empresa?.razon_social || 'Servitec POS'} - Formato Ticket 80mm
+                                    {empresa?.razon_social || 'Servitec POS'} - Comprobante de Venta
                                 </div>
                             </div>
 
                             <DialogFooter className="flex flex-col sm:flex-row gap-2 pt-2">
                                 <Button variant="outline" className="w-full font-bold gap-1.5" onClick={() => window.print()}>
                                     <Printer className="w-4 h-4 text-blue-600" />
-                                    {__('Imprimir Ticket (80mm)')}
+                                    {__('Imprimir Comprobante')}
                                 </Button>
                                 <Button variant="secondary" className="w-full font-bold" onClick={() => setSelectedSale(null)}>
                                     {__('Cerrar')}
@@ -506,7 +497,7 @@ export default function Index({ sales, currencySymbol = '$', empresa, filters }:
                         )}
 
                         <div className="border-b border-dashed border-black my-1"></div>
-                        <div className="text-center font-bold uppercase text-[10px]">COMPROBANTE DE VENTA TÉRMICO (80MM)</div>
+                        <div className="text-center font-bold uppercase text-[10px]">COMPROBANTE DE VENTA</div>
                         <div className="flex justify-between text-[10px] font-mono mt-1">
                             <span>TICKET: {selectedSale.codigo_ticket}</span>
                             <span>{new Date(selectedSale.created_at).toLocaleDateString()}</span>
@@ -582,17 +573,9 @@ export default function Index({ sales, currencySymbol = '$', empresa, filters }:
                             <div className="text-[8px] font-mono text-gray-600 mt-0.5">ESCANEAR PARA VALIDAR</div>
                         </div>
 
-                        {/* BARCODE */}
-                        <div className="text-center pt-1">
-                            <div className="inline-block font-mono text-xs tracking-widest font-bold">
-                                |||||||||||||||||||||||||||||
-                            </div>
-                            <div className="text-[9px] font-mono text-gray-600">{selectedSale.codigo_ticket}</div>
-                        </div>
-
                         <div className="border-b border-dashed border-black my-1"></div>
                         <div className="text-center text-[10px] font-bold uppercase">¡GRACIAS POR SU COMPRA!</div>
-                        <div className="text-center text-[9px] text-gray-600">{empresa?.razon_social || 'Servitec POS'} - Ticket 80mm</div>
+                        <div className="text-center text-[9px] text-gray-600">{empresa?.razon_social || 'Servitec POS'} - Comprobante de Venta</div>
                     </div>
                 )}
             </div>

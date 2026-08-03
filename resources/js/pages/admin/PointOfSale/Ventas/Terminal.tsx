@@ -2413,16 +2413,6 @@ export default function Terminal({
                                         )}
                                     </div>
 
-                                    {/* BARCODE RECEIPT */}
-                                    <div className="text-center pt-2 space-y-1">
-                                        <div className="inline-block font-mono tracking-widest text-lg font-black bg-slate-100 px-4 py-1.5 rounded border border-slate-300">
-                                            |||||||||||||||||||||||||||||
-                                        </div>
-                                        <div className="text-[10px] font-mono text-slate-500 font-bold">
-                                            {completedSale.codigo_ticket}
-                                        </div>
-                                    </div>
-
                                     <div className="border-b border-dashed border-gray-300 my-2"></div>
                                     <div className="text-center text-xs font-bold text-slate-700 uppercase">
                                         {ticketFooterMsg}
@@ -2699,14 +2689,6 @@ export default function Terminal({
                                     <span>${Number(completedSale.cambio).toFixed(2)}</span>
                                 </div>
                             )}
-                        </div>
-
-                        {/* BARCODE */}
-                        <div className="text-center pt-2">
-                            <div className="inline-block font-mono text-sm tracking-widest font-bold">
-                                |||||||||||||||||||||||||||||
-                            </div>
-                            <div className="text-[9px] font-mono text-gray-600">{completedSale.codigo_ticket}</div>
                         </div>
 
                         <div className="border-b border-dashed border-black my-1"></div>
