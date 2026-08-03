@@ -26,7 +26,9 @@ import {
     ChevronRight,
     Building2,
     Info,
-    Phone
+    Phone,
+    SwitchCamera,
+    Scan
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -166,20 +168,62 @@ interface CameraWidgetProps {
     onCapture: (base64Data: string) => void;
     onCancel: () => void;
     title: string;
+    faceGuide?: boolean;
 }
 
-function CameraWidget({ onCapture, onCancel, title }: CameraWidgetProps) {
+function CameraWidget({ onCapture, onCancel, title, faceGuide = false }: CameraWidgetProps) {
     const videoRef = useRef<HTMLVideoElement>(null);
+    const canvasRef = useRef<HTMLCanvasElement>(null);
     const [stream, setStream] = useState<MediaStream | null>(null);
     const [error, setError] = useState<string | null>(null);
     const [captured, setCaptured] = useState<string | null>(null);
+    const [facingMode, setFacingMode] = useState<'environment' | 'user'>(faceGuide ? 'user' : 'environment');
+    const [hasMultipleCameras, setHasMultipleCameras] = useState(false);
 
-    const startCamera = async () => {
+    // Face guide state
+    const [faceStatus, setFaceStatus] = useState<'searching' | 'detected' | 'countdown' | 'idle'>('idle');
+    const [countdown, setCountdown] = useState(3);
+    const faceDetectorRef = useRef<any>(null);
+    const detectionIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+    const countdownIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+    const faceStableCountRef = useRef(0);
+
+    // Detectar si el dispositivo tiene más de una cámara
+    useEffect(() => {
+        navigator.mediaDevices.enumerateDevices().then(devices => {
+            const videoInputs = devices.filter(d => d.kind === 'videoinput');
+            setHasMultipleCameras(videoInputs.length > 1);
+        }).catch(() => setHasMultipleCameras(false));
+    }, []);
+
+    // Inicializar FaceDetector si está disponible
+    useEffect(() => {
+        if (faceGuide && 'FaceDetector' in window) {
+            try {
+                faceDetectorRef.current = new (window as any).FaceDetector({ fastMode: true, maxDetectedFaces: 1 });
+            } catch {
+                faceDetectorRef.current = null;
+            }
+        }
+        return () => {
+            if (detectionIntervalRef.current) clearInterval(detectionIntervalRef.current);
+            if (countdownIntervalRef.current) clearInterval(countdownIntervalRef.current);
+        };
+    }, [faceGuide]);
+
+    const startCamera = async (mode: 'environment' | 'user' = facingMode) => {
+        if (stream) {
+            stream.getTracks().forEach(track => track.stop());
+        }
         setError(null);
         setCaptured(null);
+        setFaceStatus(faceGuide ? 'searching' : 'idle');
+        setCountdown(3);
+        faceStableCountRef.current = 0;
+        if (countdownIntervalRef.current) { clearInterval(countdownIntervalRef.current); countdownIntervalRef.current = null; }
         try {
             const mediaStream = await navigator.mediaDevices.getUserMedia({
-                video: { width: 640, height: 480, facingMode: 'environment' }
+                video: { width: 640, height: 480, facingMode: mode }
             });
             setStream(mediaStream);
             if (videoRef.current) {
@@ -192,10 +236,18 @@ function CameraWidget({ onCapture, onCancel, title }: CameraWidgetProps) {
     };
 
     const stopCamera = () => {
+        if (detectionIntervalRef.current) { clearInterval(detectionIntervalRef.current); detectionIntervalRef.current = null; }
+        if (countdownIntervalRef.current) { clearInterval(countdownIntervalRef.current); countdownIntervalRef.current = null; }
         if (stream) {
             stream.getTracks().forEach(track => track.stop());
             setStream(null);
         }
+    };
+
+    const flipCamera = () => {
+        const newMode = facingMode === 'environment' ? 'user' : 'environment';
+        setFacingMode(newMode);
+        startCamera(newMode);
     };
 
     const capture = () => {
@@ -213,21 +265,111 @@ function CameraWidget({ onCapture, onCancel, title }: CameraWidgetProps) {
         }
     };
 
+    // Detección de rostro con FaceDetector API
+    useEffect(() => {
+        if (!faceGuide || !stream || captured) return;
+
+        if (faceDetectorRef.current && videoRef.current) {
+            setFaceStatus('searching');
+
+            detectionIntervalRef.current = setInterval(async () => {
+                if (!videoRef.current || videoRef.current.readyState < 2) return;
+                try {
+                    const faces = await faceDetectorRef.current.detect(videoRef.current);
+                    if (faces.length > 0) {
+                        const face = faces[0];
+                        const vw = videoRef.current.videoWidth;
+                        const vh = videoRef.current.videoHeight;
+                        // Verificar que el rostro está razonablemente centrado y es lo suficientemente grande
+                        const faceCenterX = face.boundingBox.x + face.boundingBox.width / 2;
+                        const faceCenterY = face.boundingBox.y + face.boundingBox.height / 2;
+                        const iscenteredX = Math.abs(faceCenterX - vw / 2) < vw * 0.2;
+                        const iscenteredY = Math.abs(faceCenterY - vh / 2) < vh * 0.25;
+                        const isBigEnough = face.boundingBox.width > vw * 0.2 && face.boundingBox.height > vh * 0.2;
+
+                        if (iscenteredX && iscenteredY && isBigEnough) {
+                            faceStableCountRef.current++;
+                            if (faceStableCountRef.current >= 3) {
+                                setFaceStatus('countdown');
+                            } else {
+                                setFaceStatus('detected');
+                            }
+                        } else {
+                            faceStableCountRef.current = Math.max(0, faceStableCountRef.current - 1);
+                            setFaceStatus('detected');
+                        }
+                    } else {
+                        faceStableCountRef.current = 0;
+                        setFaceStatus('searching');
+                    }
+                } catch {
+                    // Si falla la detección, no hacemos nada
+                }
+            }, 400);
+        } else if (faceGuide) {
+            // Fallback: sin FaceDetector API, solo mostrar guía visual sin auto-captura
+            setFaceStatus('searching');
+        }
+
+        return () => {
+            if (detectionIntervalRef.current) { clearInterval(detectionIntervalRef.current); detectionIntervalRef.current = null; }
+        };
+    }, [faceGuide, stream, captured]);
+
+    // Countdown para auto-captura
+    useEffect(() => {
+        if (faceStatus === 'countdown' && !captured) {
+            setCountdown(3);
+            countdownIntervalRef.current = setInterval(() => {
+                setCountdown(prev => {
+                    if (prev <= 1) {
+                        if (countdownIntervalRef.current) clearInterval(countdownIntervalRef.current);
+                        // Auto-captura
+                        capture();
+                        return 0;
+                    }
+                    return prev - 1;
+                });
+            }, 1000);
+        } else {
+            if (countdownIntervalRef.current) { clearInterval(countdownIntervalRef.current); countdownIntervalRef.current = null; }
+        }
+        return () => {
+            if (countdownIntervalRef.current) { clearInterval(countdownIntervalRef.current); countdownIntervalRef.current = null; }
+        };
+    }, [faceStatus, captured]);
+
     useEffect(() => {
         startCamera();
         return () => stopCamera();
     }, []);
 
+    // Colores dinámicos del óvalo según estado
+    const guideColor = faceStatus === 'countdown' ? 'rgba(16, 185, 129, 0.9)' : faceStatus === 'detected' ? 'rgba(250, 204, 21, 0.7)' : 'rgba(148, 163, 184, 0.5)';
+    const guideGlow = faceStatus === 'countdown' ? '0 0 30px rgba(16, 185, 129, 0.5)' : faceStatus === 'detected' ? '0 0 20px rgba(250, 204, 21, 0.3)' : 'none';
+
     return (
-        <div className="fixed inset-0 z-50 bg-black/85 backdrop-blur-xs flex flex-col items-center justify-center p-4">
+        <div className="fixed inset-0 z-[60] bg-black/85 backdrop-blur-xs flex flex-col items-center justify-center p-4">
             <div className="bg-slate-900 border border-slate-700 rounded-3xl p-5 w-full max-w-md flex flex-col items-center gap-4 text-white shadow-2xl">
                 <div className="flex items-center justify-between w-full border-b border-slate-800 pb-3">
                     <span className="text-sm font-bold text-emerald-400 flex items-center gap-2">
                         <Camera className="w-5 h-5" /> {title}
                     </span>
-                    <button type="button" onClick={() => { stopCamera(); onCancel(); }} className="text-slate-400 hover:text-white p-1">
-                        <X className="w-5 h-5" />
-                    </button>
+                    <div className="flex items-center gap-1">
+                        {hasMultipleCameras && !captured && (
+                            <button
+                                type="button"
+                                onClick={flipCamera}
+                                title={facingMode === 'environment' ? 'Cambiar a cámara frontal' : 'Cambiar a cámara trasera'}
+                                className="text-slate-400 hover:text-emerald-400 p-1.5 rounded-lg hover:bg-slate-800 transition-colors"
+                            >
+                                <SwitchCamera className="w-5 h-5" />
+                            </button>
+                        )}
+                        <button type="button" onClick={() => { stopCamera(); onCancel(); }} className="text-slate-400 hover:text-white p-1">
+                            <X className="w-5 h-5" />
+                        </button>
+                    </div>
                 </div>
 
                 {error ? (
@@ -238,13 +380,95 @@ function CameraWidget({ onCapture, onCancel, title }: CameraWidgetProps) {
                 ) : !captured ? (
                     <div className="relative w-full aspect-[4/3] bg-black rounded-2xl overflow-hidden border border-slate-800 flex items-center justify-center">
                         <video ref={videoRef} autoPlay playsInline muted className="w-full h-full object-cover" />
+                        <canvas ref={canvasRef} className="hidden" />
+
+                        {/* ── Face Guide Overlay ── */}
+                        {faceGuide && (
+                            <>
+                                {/* Máscara oscura con recorte oval transparente */}
+                                <svg className="absolute inset-0 w-full h-full pointer-events-none" viewBox="0 0 400 300" preserveAspectRatio="xMidYMid slice">
+                                    <defs>
+                                        <mask id="faceMask">
+                                            <rect width="400" height="300" fill="white" />
+                                            <ellipse cx="200" cy="138" rx="72" ry="95" fill="black" />
+                                        </mask>
+                                    </defs>
+                                    <rect width="400" height="300" fill="rgba(0,0,0,0.55)" mask="url(#faceMask)" />
+                                    {/* Borde del óvalo */}
+                                    <ellipse
+                                        cx="200" cy="138" rx="72" ry="95"
+                                        fill="none"
+                                        stroke={guideColor}
+                                        strokeWidth="2.5"
+                                        strokeDasharray={faceStatus === 'searching' ? '8 4' : 'none'}
+                                        style={{ filter: guideGlow !== 'none' ? `drop-shadow(${guideGlow})` : undefined, transition: 'stroke 0.3s, filter 0.3s' }}
+                                    >
+                                        {faceStatus === 'searching' && (
+                                            <animateTransform attributeName="transform" type="rotate" from="0 200 138" to="360 200 138" dur="8s" repeatCount="indefinite" />
+                                        )}
+                                    </ellipse>
+                                    {/* Marcadores de esquina */}
+                                    {faceStatus !== 'countdown' && (
+                                        <>
+                                            <line x1="200" y1="38" x2="200" y2="48" stroke={guideColor} strokeWidth="2" strokeLinecap="round" />
+                                            <line x1="200" y1="228" x2="200" y2="238" stroke={guideColor} strokeWidth="2" strokeLinecap="round" />
+                                            <line x1="123" y1="138" x2="133" y2="138" stroke={guideColor} strokeWidth="2" strokeLinecap="round" />
+                                            <line x1="267" y1="138" x2="277" y2="138" stroke={guideColor} strokeWidth="2" strokeLinecap="round" />
+                                        </>
+                                    )}
+                                </svg>
+
+                                {/* Status badge */}
+                                <div className="absolute bottom-14 left-1/2 -translate-x-1/2 pointer-events-none">
+                                    {faceStatus === 'searching' && (
+                                        <div className="bg-black/70 backdrop-blur-sm rounded-full px-4 py-2 flex items-center gap-2 animate-pulse">
+                                            <Scan className="w-4 h-4 text-slate-400" />
+                                            <span className="text-[11px] font-bold text-slate-300">Coloque su rostro dentro del óvalo</span>
+                                        </div>
+                                    )}
+                                    {faceStatus === 'detected' && (
+                                        <div className="bg-black/70 backdrop-blur-sm rounded-full px-4 py-2 flex items-center gap-2">
+                                            <User className="w-4 h-4 text-yellow-400" />
+                                            <span className="text-[11px] font-bold text-yellow-300">Rostro detectado — mantenga la posición</span>
+                                        </div>
+                                    )}
+                                    {faceStatus === 'countdown' && (
+                                        <div className="bg-emerald-600/90 backdrop-blur-sm rounded-full px-5 py-2.5 flex items-center gap-2 shadow-lg shadow-emerald-500/30">
+                                            <Camera className="w-4 h-4 text-white" />
+                                            <span className="text-xs font-extrabold text-white">Capturando en {countdown}...</span>
+                                        </div>
+                                    )}
+                                </div>
+
+                                {/* Countdown number overlay */}
+                                {faceStatus === 'countdown' && (
+                                    <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+                                        <span className="text-7xl font-black text-white/80 drop-shadow-[0_4px_20px_rgba(16,185,129,0.6)] animate-pulse">
+                                            {countdown}
+                                        </span>
+                                    </div>
+                                )}
+                            </>
+                        )}
+
+                        {/* Botón de voltear cámara flotante */}
+                        {hasMultipleCameras && (
+                            <button
+                                type="button"
+                                onClick={flipCamera}
+                                title={facingMode === 'environment' ? 'Cambiar a cámara frontal' : 'Cambiar a cámara trasera'}
+                                className="absolute top-3 right-3 bg-black/60 hover:bg-black/80 text-white p-2.5 rounded-full shadow-lg transition-all active:scale-90"
+                            >
+                                <SwitchCamera className="w-5 h-5" />
+                            </button>
+                        )}
                         <button
                             type="button"
                             onClick={capture}
                             className="absolute bottom-4 bg-emerald-600 hover:bg-emerald-700 text-white shadow-lg rounded-full px-6 py-3 text-xs font-extrabold flex items-center gap-2 transition-transform active:scale-95"
                         >
                             <Camera className="w-4 h-4" />
-                            Tomar Fotografía
+                            {faceGuide ? 'Capturar Manualmente' : 'Tomar Fotografía'}
                         </button>
                     </div>
                 ) : (
@@ -1182,258 +1406,276 @@ export default function PaseDigital({ invitacion }: PaseDigitalProps) {
                 </footer>
             </div>
 
-            {/* ── Modal de Registro de Acompañante ── */}
-            {isAcompananteModalOpen && (
-                <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-xs flex items-center justify-center p-4 overflow-y-auto">
-                    <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl p-6 sm:p-8 w-full max-w-2xl max-h-[90vh] overflow-y-auto space-y-6 shadow-2xl my-auto">
-                        {/* Header Modal */}
-                        <div className="flex items-center justify-between border-b border-slate-200 dark:border-slate-800 pb-4">
-                            <div>
-                                <h3 className="text-lg font-extrabold text-[#104a29] dark:text-emerald-400 flex items-center gap-2">
-                                    <Users className="w-5 h-5" /> Registro Completo de Acompañante
-                                </h3>
-                                <p className="text-xs text-slate-500 mt-1">
-                                    Ingrese la información personal, identificación y fotografías del acompañante no registrado.
-                                </p>
+            {/* ── Modal de Registro de Acompañante (Radix UI Dialog) ── */}
+            <Dialog open={isAcompananteModalOpen} onOpenChange={setIsAcompananteModalOpen}>
+                <DialogContent className="sm:max-w-2xl max-h-[90vh] overflow-y-auto rounded-3xl p-6 sm:p-8 border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-2xl [&>button[data-slot=dialog-close]]:hidden">
+                    {/* Header */}
+                    <DialogHeader className="border-b border-slate-200 dark:border-slate-800 pb-4">
+                        <DialogTitle className="text-lg font-extrabold text-[#104a29] dark:text-emerald-400 flex items-center gap-2">
+                            <Users className="w-5 h-5" /> Registro Completo de Acompañante
+                        </DialogTitle>
+                        <DialogDescription className="text-xs text-slate-500 mt-1">
+                            Ingrese la información personal, identificación y fotografías del acompañante no registrado.
+                        </DialogDescription>
+                    </DialogHeader>
+
+                    {/* Modal Body */}
+                    <form onSubmit={handleAddAcompanante} className="space-y-6 text-xs">
+
+                        {/* Section 1: Datos Personales */}
+                        <div className="space-y-4">
+                            <span className="font-extrabold text-slate-700 dark:text-slate-300 uppercase tracking-wider block">
+                                1. Datos Personales
+                            </span>
+
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                <div className="space-y-1.5">
+                                    <Label className="font-bold text-slate-700 dark:text-slate-300">
+                                        Nombres <span className="text-rose-500">*</span>
+                                    </Label>
+                                    <Input
+                                        type="text"
+                                        required
+                                        placeholder="Ej: Juan Antonio"
+                                        value={nuevoAcompanante.nombres}
+                                        onChange={(e) => setNuevoAcompanante(prev => ({ ...prev, nombres: e.target.value }))}
+                                        className="w-full h-auto p-3 rounded-xl border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900"
+                                    />
+                                </div>
+
+                                <div className="space-y-1.5">
+                                    <Label className="font-bold text-slate-700 dark:text-slate-300">
+                                        Apellidos <span className="text-rose-500">*</span>
+                                    </Label>
+                                    <Input
+                                        type="text"
+                                        required
+                                        placeholder="Ej: Pérez Gómez"
+                                        value={nuevoAcompanante.apellidos}
+                                        onChange={(e) => setNuevoAcompanante(prev => ({ ...prev, apellidos: e.target.value }))}
+                                        className="w-full h-auto p-3 rounded-xl border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900"
+                                    />
+                                </div>
                             </div>
-                            <button
-                                type="button"
-                                onClick={() => setIsAcompananteModalOpen(false)}
-                                className="text-slate-400 hover:text-slate-600 dark:hover:text-white p-2 rounded-full hover:bg-slate-100 dark:hover:bg-slate-800"
-                            >
-                                <X className="w-5 h-5" />
-                            </button>
+
+                            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                                <div className="space-y-1.5">
+                                    <Label className="font-bold text-slate-700 dark:text-slate-300">
+                                        CURP / Documento ID
+                                    </Label>
+                                    <Input
+                                        type="text"
+                                        placeholder="Ej: PEGJ900101HDF..."
+                                        value={nuevoAcompanante.curp}
+                                        onChange={(e) => setNuevoAcompanante(prev => ({ ...prev, curp: e.target.value.toUpperCase(), documento: e.target.value.toUpperCase() }))}
+                                        className="w-full h-auto p-3 rounded-xl border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 font-mono uppercase"
+                                    />
+                                </div>
+
+                                <div className="space-y-1.5">
+                                    <Label className="font-bold text-slate-700 dark:text-slate-300">Género</Label>
+                                    <Select
+                                        value={nuevoAcompanante.genero || undefined}
+                                        onValueChange={(value) => setNuevoAcompanante(prev => ({ ...prev, genero: value }))}
+                                    >
+                                        <SelectTrigger className="w-full h-auto p-3 rounded-xl border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900">
+                                            <SelectValue placeholder="Seleccione género..." />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                            <SelectItem value="Masculino">Masculino</SelectItem>
+                                            <SelectItem value="Femenino">Femenino</SelectItem>
+                                            <SelectItem value="Otro">Otro / Prefiero no decir</SelectItem>
+                                        </SelectContent>
+                                    </Select>
+                                </div>
+
+                                <div className="space-y-1.5">
+                                    <Label className="font-bold text-slate-700 dark:text-slate-300">Fecha de Nacimiento</Label>
+                                    <Input
+                                        type="date"
+                                        value={nuevoAcompanante.fecha_nacimiento || ''}
+                                        onChange={(e) => handleAcompananteFechaChange(e.target.value)}
+                                        className="w-full h-auto p-3 rounded-xl border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900"
+                                    />
+                                </div>
+                            </div>
+
+                            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                                <div className="space-y-1.5">
+                                    <Label className="font-bold text-slate-700 dark:text-slate-300">Edad (Años)</Label>
+                                    <Input
+                                        type="number"
+                                        placeholder="Ej: 30"
+                                        value={nuevoAcompanante.edad || ''}
+                                        onChange={(e) => setNuevoAcompanante(prev => ({ ...prev, edad: e.target.value }))}
+                                        className="w-full h-auto p-3 rounded-xl border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 font-mono"
+                                    />
+                                </div>
+
+                                <div className="space-y-1.5">
+                                    <Label className="font-bold text-slate-700 dark:text-slate-300">Correo Electrónico</Label>
+                                    <Input
+                                        type="email"
+                                        placeholder="ejemplo@correo.com"
+                                        value={nuevoAcompanante.correo}
+                                        onChange={(e) => setNuevoAcompanante(prev => ({ ...prev, correo: e.target.value }))}
+                                        className="w-full h-auto p-3 rounded-xl border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900"
+                                    />
+                                </div>
+
+                                <div className="space-y-1.5">
+                                    <Label className="font-bold text-slate-700 dark:text-slate-300">Cargo (Solo si aplica)</Label>
+                                    <Input
+                                        type="text"
+                                        placeholder="Ej: Asistente, Técnico..."
+                                        value={nuevoAcompanante.cargo}
+                                        onChange={(e) => setNuevoAcompanante(prev => ({ ...prev, cargo: e.target.value }))}
+                                        className="w-full h-auto p-3 rounded-xl border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900"
+                                    />
+                                </div>
+                            </div>
                         </div>
 
-                        {/* Modal Body */}
-                        <form onSubmit={handleAddAcompanante} className="space-y-6 text-xs">
+                        {/* Section 2: Fotografía Tipo Carnet (Rostro) */}
+                        <div className="space-y-3 pt-4 border-t border-slate-200 dark:border-slate-800">
+                            <Label className="font-extrabold text-slate-700 dark:text-slate-300 uppercase tracking-wider block">
+                                2. Fotografía Tipo Carnet (Rostro del Acompañante)
+                            </Label>
 
-                            {/* Section 1: Datos Personales */}
-                            <div className="space-y-4">
-                                <span className="font-extrabold text-slate-700 dark:text-slate-300 uppercase tracking-wider block">
-                                    1. Datos Personales
-                                </span>
-
-                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                                    <div className="space-y-1.5">
-                                        <label className="font-bold text-slate-700 dark:text-slate-300">
-                                            Nombres <span className="text-rose-500">*</span>
-                                        </label>
-                                        <input
-                                            type="text"
-                                            required
-                                            placeholder="Ej: Juan Antonio"
-                                            value={nuevoAcompanante.nombres}
-                                            onChange={(e) => setNuevoAcompanante(prev => ({ ...prev, nombres: e.target.value }))}
-                                            className="w-full p-3 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900"
-                                        />
+                            <div className="flex items-center gap-4 p-4 rounded-2xl bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800">
+                                {nuevoAcompanante.foto_carnet ? (
+                                    <div className="relative w-20 h-20 rounded-xl overflow-hidden border-2 border-emerald-500 shrink-0">
+                                        <img src={formatImageUrl(nuevoAcompanante.foto_carnet)!} alt="Foto Carnet" className="w-full h-full object-cover" />
+                                        <Button type="button" variant="destructive" size="icon" onClick={() => setNuevoAcompanante(prev => ({ ...prev, foto_carnet: '' }))} className="absolute top-1 right-1 h-5 w-5 rounded-full shadow-md">
+                                            <X className="w-3 h-3" />
+                                        </Button>
                                     </div>
-
-                                    <div className="space-y-1.5">
-                                        <label className="font-bold text-slate-700 dark:text-slate-300">
-                                            Apellidos <span className="text-rose-500">*</span>
-                                        </label>
-                                        <input
-                                            type="text"
-                                            required
-                                            placeholder="Ej: Pérez Gómez"
-                                            value={nuevoAcompanante.apellidos}
-                                            onChange={(e) => setNuevoAcompanante(prev => ({ ...prev, apellidos: e.target.value }))}
-                                            className="w-full p-3 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900"
-                                        />
+                                ) : (
+                                    <div className="w-20 h-20 rounded-xl bg-slate-200 dark:bg-slate-800 flex items-center justify-center text-slate-400 shrink-0">
+                                        <User className="w-8 h-8" />
                                     </div>
-                                </div>
+                                )}
 
-                                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                                    <div className="space-y-1.5">
-                                        <label className="font-bold text-slate-700 dark:text-slate-300">
-                                            CURP / Documento ID
-                                        </label>
-                                        <input
-                                            type="text"
-                                            placeholder="Ej: PEGJ900101HDF..."
-                                            value={nuevoAcompanante.curp}
-                                            onChange={(e) => setNuevoAcompanante(prev => ({ ...prev, curp: e.target.value.toUpperCase(), documento: e.target.value.toUpperCase() }))}
-                                            className="w-full p-3 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 font-mono uppercase"
-                                        />
-                                    </div>
-
-                                    <div className="space-y-1.5">
-                                        <label className="font-bold text-slate-700 dark:text-slate-300">Género</label>
-                                        <select
-                                            value={nuevoAcompanante.genero}
-                                            onChange={(e) => setNuevoAcompanante(prev => ({ ...prev, genero: e.target.value }))}
-                                            className="w-full p-3 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900"
+                                <div className="space-y-2 flex-1">
+                                    <span className="font-bold text-slate-800 dark:text-slate-200 block text-xs">Foto del Rostro del Acompañante</span>
+                                    <div className="flex gap-2">
+                                        <Button
+                                            type="button"
+                                            onClick={() => setActiveCameraField('ac_foto_carnet')}
+                                            className="px-3 py-2 h-auto bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl font-bold text-xs shadow-xs"
                                         >
-                                            <option value="">Seleccione género...</option>
-                                            <option value="Masculino">Masculino</option>
-                                            <option value="Femenino">Femenino</option>
-                                            <option value="Otro">Otro / Prefiero no decir</option>
-                                        </select>
-                                    </div>
-
-                                    <div className="space-y-1.5">
-                                        <label className="font-bold text-slate-700 dark:text-slate-300">Fecha de Nacimiento</label>
-                                        <input
-                                            type="date"
-                                            value={nuevoAcompanante.fecha_nacimiento || ''}
-                                            onChange={(e) => handleAcompananteFechaChange(e.target.value)}
-                                            className="w-full p-3 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900"
-                                        />
-                                    </div>
-                                </div>
-
-                                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                                    <div className="space-y-1.5">
-                                        <label className="font-bold text-slate-700 dark:text-slate-300">Edad (Años)</label>
-                                        <input
-                                            type="number"
-                                            placeholder="Ej: 30"
-                                            value={nuevoAcompanante.edad || ''}
-                                            onChange={(e) => setNuevoAcompanante(prev => ({ ...prev, edad: e.target.value }))}
-                                            className="w-full p-3 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 font-mono"
-                                        />
-                                    </div>
-
-                                    <div className="space-y-1.5">
-                                        <label className="font-bold text-slate-700 dark:text-slate-300">Correo Electrónico</label>
-                                        <input
-                                            type="email"
-                                            placeholder="ejemplo@correo.com"
-                                            value={nuevoAcompanante.correo}
-                                            onChange={(e) => setNuevoAcompanante(prev => ({ ...prev, correo: e.target.value }))}
-                                            className="w-full p-3 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900"
-                                        />
-                                    </div>
-
-                                    <div className="space-y-1.5">
-                                        <label className="font-bold text-slate-700 dark:text-slate-300">Cargo (Solo si aplica)</label>
-                                        <input
-                                            type="text"
-                                            placeholder="Ej: Asistente, Técnico..."
-                                            value={nuevoAcompanante.cargo}
-                                            onChange={(e) => setNuevoAcompanante(prev => ({ ...prev, cargo: e.target.value }))}
-                                            className="w-full p-3 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900"
-                                        />
-                                    </div>
-                                </div>
-                            </div>
-
-                            {/* Section 2: Fotografía Tipo Carnet (Rostro) */}
-                            <div className="space-y-3 pt-4 border-t border-slate-200 dark:border-slate-800">
-                                <label className="font-extrabold text-slate-700 dark:text-slate-300 uppercase tracking-wider block">
-                                    2. Fotografía Tipo Carnet (Rostro del Acompañante)
-                                </label>
-
-                                <div className="flex items-center gap-4 p-4 rounded-2xl bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800">
-                                    {nuevoAcompanante.foto_carnet ? (
-                                        <div className="relative w-20 h-20 rounded-xl overflow-hidden border-2 border-emerald-500 shrink-0">
-                                            <img src={formatImageUrl(nuevoAcompanante.foto_carnet)!} alt="Foto Carnet" className="w-full h-full object-cover" />
-                                            <button type="button" onClick={() => setNuevoAcompanante(prev => ({ ...prev, foto_carnet: '' }))} className="absolute top-1 right-1 bg-rose-600 text-white rounded-full p-1 shadow-md hover:bg-rose-700">
-                                                <X className="w-3 h-3" />
-                                            </button>
-                                        </div>
-                                    ) : (
-                                        <div className="w-20 h-20 rounded-xl bg-slate-200 dark:bg-slate-800 flex items-center justify-center text-slate-400 shrink-0">
-                                            <User className="w-8 h-8" />
-                                        </div>
-                                    )}
-
-                                    <div className="space-y-2 flex-1">
-                                        <span className="font-bold text-slate-800 dark:text-slate-200 block text-xs">Foto del Rostro del Acompañante</span>
-                                        <div className="flex gap-2">
-                                            <button
-                                                type="button"
-                                                onClick={() => setActiveCameraField('ac_foto_carnet')}
-                                                className="px-3 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl font-bold text-xs flex items-center gap-1.5 shadow-xs"
-                                            >
-                                                <Camera className="w-3.5 h-3.5" /> Cámara
-                                            </button>
-                                            <label className="px-3 py-2 bg-slate-200 dark:bg-slate-800 text-slate-700 dark:text-slate-300 rounded-xl font-bold text-xs cursor-pointer hover:bg-slate-300 flex items-center gap-1.5">
+                                            <Camera className="w-3.5 h-3.5" /> Cámara
+                                        </Button>
+                                        <Button type="button" variant="secondary" asChild className="px-3 py-2 h-auto rounded-xl font-bold text-xs cursor-pointer">
+                                            <label>
                                                 <Upload className="w-3.5 h-3.5" /> Subir
                                                 <input type="file" accept="image/*" className="hidden" onChange={(e) => handleAcompananteFileUpload(e, 'foto_carnet')} />
                                             </label>
-                                        </div>
+                                        </Button>
                                     </div>
                                 </div>
                             </div>
+                        </div>
 
-                            {/* Section 3: Fotografías del Documento de Identidad */}
-                            <div className="space-y-3 pt-4 border-t border-slate-200 dark:border-slate-800">
-                                <label className="font-extrabold text-slate-700 dark:text-slate-300 uppercase tracking-wider block">
-                                    3. Fotografías del Documento de Identidad (INE / Cédula / Pasaporte)
-                                </label>
+                        {/* Section 3: Fotografías del Documento de Identidad */}
+                        <div className="space-y-3 pt-4 border-t border-slate-200 dark:border-slate-800">
+                            <Label className="font-extrabold text-slate-700 dark:text-slate-300 uppercase tracking-wider block">
+                                3. Fotografías del Documento de Identidad (INE / Cédula / Pasaporte)
+                            </Label>
 
-                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                                    {/* Frontal Documento */}
-                                    <div className="space-y-2">
-                                        <span className="font-bold text-slate-600 dark:text-slate-400 block text-[11px]">Foto Frontal</span>
-                                        <div className="flex flex-col items-center justify-center border border-dashed border-slate-300 dark:border-slate-700 rounded-2xl p-4 bg-slate-50 dark:bg-slate-950 min-h-[130px] relative">
-                                            {nuevoAcompanante.doc_foto_frontal ? (
-                                                <div className="relative w-full aspect-[16/10] rounded-xl overflow-hidden shadow-sm">
-                                                    <img src={formatImageUrl(nuevoAcompanante.doc_foto_frontal)!} alt="Doc Frontal" className="w-full h-full object-cover" />
-                                                    <button type="button" onClick={() => setNuevoAcompanante(prev => ({ ...prev, doc_foto_frontal: '' }))} className="absolute top-1.5 right-1.5 bg-rose-600 text-white rounded-full p-1 shadow-md hover:bg-rose-700"><X className="w-3 h-3" /></button>
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                {/* Frontal Documento */}
+                                <div className="space-y-2">
+                                    <Label className="font-bold text-slate-600 dark:text-slate-400 text-[11px]">Foto Frontal</Label>
+                                    <div className="flex flex-col items-center justify-center border border-dashed border-slate-300 dark:border-slate-700 rounded-2xl p-4 bg-slate-50 dark:bg-slate-950 min-h-[130px] relative">
+                                        {nuevoAcompanante.doc_foto_frontal ? (
+                                            <div className="relative w-full aspect-[16/10] rounded-xl overflow-hidden shadow-sm">
+                                                <img src={formatImageUrl(nuevoAcompanante.doc_foto_frontal)!} alt="Doc Frontal" className="w-full h-full object-cover" />
+                                                <Button type="button" variant="destructive" size="icon" onClick={() => setNuevoAcompanante(prev => ({ ...prev, doc_foto_frontal: '' }))} className="absolute top-1.5 right-1.5 h-5 w-5 rounded-full shadow-md">
+                                                    <X className="w-3 h-3" />
+                                                </Button>
+                                            </div>
+                                        ) : (
+                                            <div className="flex flex-col items-center gap-2">
+                                                <FileText className="w-6 h-6 text-slate-400" />
+                                                <div className="flex gap-2">
+                                                    <Button type="button" onClick={() => setActiveCameraField('ac_doc_foto_frontal')} className="px-3 py-1.5 h-auto bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg font-bold text-[11px]">
+                                                        <Camera className="w-3 h-3" /> Cámara
+                                                    </Button>
+                                                    <Button type="button" variant="secondary" asChild className="px-3 py-1.5 h-auto rounded-lg font-bold text-[11px] cursor-pointer">
+                                                        <label>
+                                                            <Upload className="w-3 h-3" /> Archivo
+                                                            <input type="file" accept="image/*" className="hidden" onChange={(e) => handleAcompananteFileUpload(e, 'doc_foto_frontal')} />
+                                                        </label>
+                                                    </Button>
                                                 </div>
-                                            ) : (
-                                                <div className="flex flex-col items-center gap-2">
-                                                    <FileText className="w-6 h-6 text-slate-400" />
-                                                    <div className="flex gap-2">
-                                                        <button type="button" onClick={() => setActiveCameraField('ac_doc_foto_frontal')} className="px-3 py-1.5 bg-emerald-600 text-white rounded-lg font-bold text-[11px] flex items-center gap-1"><Camera className="w-3 h-3" /> Cámara</button>
-                                                        <label className="px-3 py-1.5 bg-slate-200 dark:bg-slate-800 text-slate-700 dark:text-slate-300 rounded-lg font-bold text-[11px] cursor-pointer flex items-center gap-1"><Upload className="w-3 h-3" /> Archivo <input type="file" accept="image/*" className="hidden" onChange={(e) => handleAcompananteFileUpload(e, 'doc_foto_frontal')} /></label>
-                                                    </div>
-                                                </div>
-                                            )}
-                                        </div>
+                                            </div>
+                                        )}
                                     </div>
+                                </div>
 
-                                    {/* Reverso Documento */}
-                                    <div className="space-y-2">
-                                        <span className="font-bold text-slate-600 dark:text-slate-400 block text-[11px]">Foto Reverso</span>
-                                        <div className="flex flex-col items-center justify-center border border-dashed border-slate-300 dark:border-slate-700 rounded-2xl p-4 bg-slate-50 dark:bg-slate-950 min-h-[130px] relative">
-                                            {nuevoAcompanante.doc_foto_trasera ? (
-                                                <div className="relative w-full aspect-[16/10] rounded-xl overflow-hidden shadow-sm">
-                                                    <img src={formatImageUrl(nuevoAcompanante.doc_foto_trasera)!} alt="Doc Trasero" className="w-full h-full object-cover" />
-                                                    <button type="button" onClick={() => setNuevoAcompanante(prev => ({ ...prev, doc_foto_trasera: '' }))} className="absolute top-1.5 right-1.5 bg-rose-600 text-white rounded-full p-1 shadow-md hover:bg-rose-700"><X className="w-3 h-3" /></button>
+                                {/* Reverso Documento */}
+                                <div className="space-y-2">
+                                    <Label className="font-bold text-slate-600 dark:text-slate-400 text-[11px]">Foto Reverso</Label>
+                                    <div className="flex flex-col items-center justify-center border border-dashed border-slate-300 dark:border-slate-700 rounded-2xl p-4 bg-slate-50 dark:bg-slate-950 min-h-[130px] relative">
+                                        {nuevoAcompanante.doc_foto_trasera ? (
+                                            <div className="relative w-full aspect-[16/10] rounded-xl overflow-hidden shadow-sm">
+                                                <img src={formatImageUrl(nuevoAcompanante.doc_foto_trasera)!} alt="Doc Trasero" className="w-full h-full object-cover" />
+                                                <Button type="button" variant="destructive" size="icon" onClick={() => setNuevoAcompanante(prev => ({ ...prev, doc_foto_trasera: '' }))} className="absolute top-1.5 right-1.5 h-5 w-5 rounded-full shadow-md">
+                                                    <X className="w-3 h-3" />
+                                                </Button>
+                                            </div>
+                                        ) : (
+                                            <div className="flex flex-col items-center gap-2">
+                                                <FileText className="w-6 h-6 text-slate-400" />
+                                                <div className="flex gap-2">
+                                                    <Button type="button" onClick={() => setActiveCameraField('ac_doc_foto_trasera')} className="px-3 py-1.5 h-auto bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg font-bold text-[11px]">
+                                                        <Camera className="w-3 h-3" /> Cámara
+                                                    </Button>
+                                                    <Button type="button" variant="secondary" asChild className="px-3 py-1.5 h-auto rounded-lg font-bold text-[11px] cursor-pointer">
+                                                        <label>
+                                                            <Upload className="w-3 h-3" /> Archivo
+                                                            <input type="file" accept="image/*" className="hidden" onChange={(e) => handleAcompananteFileUpload(e, 'doc_foto_trasera')} />
+                                                        </label>
+                                                    </Button>
                                                 </div>
-                                            ) : (
-                                                <div className="flex flex-col items-center gap-2">
-                                                    <FileText className="w-6 h-6 text-slate-400" />
-                                                    <div className="flex gap-2">
-                                                        <button type="button" onClick={() => setActiveCameraField('ac_doc_foto_trasera')} className="px-3 py-1.5 bg-emerald-600 text-white rounded-lg font-bold text-[11px] flex items-center gap-1"><Camera className="w-3 h-3" /> Cámara</button>
-                                                        <label className="px-3 py-1.5 bg-slate-200 dark:bg-slate-800 text-slate-700 dark:text-slate-300 rounded-lg font-bold text-[11px] cursor-pointer flex items-center gap-1"><Upload className="w-3 h-3" /> Archivo <input type="file" accept="image/*" className="hidden" onChange={(e) => handleAcompananteFileUpload(e, 'doc_foto_trasera')} /></label>
-                                                    </div>
-                                                </div>
-                                            )}
-                                        </div>
+                                            </div>
+                                        )}
                                     </div>
                                 </div>
                             </div>
+                        </div>
 
-                            {/* Footer Modal Action Buttons */}
-                            <div className="flex items-center justify-end gap-3 pt-4 border-t border-slate-200 dark:border-slate-800">
-                                <button
-                                    type="button"
-                                    onClick={() => setIsAcompananteModalOpen(false)}
-                                    className="px-5 py-3 rounded-xl border border-slate-300 dark:border-slate-700 text-slate-700 dark:text-slate-300 font-bold hover:bg-slate-100 dark:hover:bg-slate-800"
-                                >
-                                    Cancelar
-                                </button>
-                                <button
-                                    type="submit"
-                                    className="px-6 py-3 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold flex items-center gap-2 shadow-md"
-                                >
-                                    <Plus className="w-4 h-4" /> Agregar Acompañante
-                                </button>
-                            </div>
-                        </form>
-                    </div>
-                </div>
-            )}
+                        {/* Footer Modal Action Buttons */}
+                        <DialogFooter className="pt-4 border-t border-slate-200 dark:border-slate-800 gap-3">
+                            <Button
+                                type="button"
+                                variant="outline"
+                                onClick={() => setIsAcompananteModalOpen(false)}
+                                className="px-5 py-3 h-auto rounded-xl border-slate-300 dark:border-slate-700 text-slate-700 dark:text-slate-300 font-bold hover:bg-slate-100 dark:hover:bg-slate-800"
+                            >
+                                Cancelar
+                            </Button>
+                            <Button
+                                type="submit"
+                                className="px-6 py-3 h-auto rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold shadow-md"
+                            >
+                                <Plus className="w-4 h-4" /> Agregar Acompañante
+                            </Button>
+                        </DialogFooter>
+                    </form>
+                </DialogContent>
+            </Dialog>
 
             {/* Camera Widget Overlay */}
             {activeCameraField && (
                 <CameraWidget
-                    title={`Capturar Fotografía`}
+                    title={
+                        activeCameraField === 'foto_carnet' || activeCameraField === 'ac_foto_carnet'
+                            ? 'Fotografía del Rostro'
+                            : 'Capturar Fotografía'
+                    }
+                    faceGuide={activeCameraField === 'foto_carnet' || activeCameraField === 'ac_foto_carnet'}
                     onCapture={(base64) => {
                         if (activeCameraField.startsWith('ac_')) {
                             const field = activeCameraField.replace('ac_', '');
