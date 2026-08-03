@@ -169,9 +169,10 @@ interface CameraWidgetProps {
     onCancel: () => void;
     title: string;
     faceGuide?: boolean;
+    docGuide?: boolean;
 }
 
-function CameraWidget({ onCapture, onCancel, title, faceGuide = false }: CameraWidgetProps) {
+function CameraWidget({ onCapture, onCancel, title, faceGuide = false, docGuide = false }: CameraWidgetProps) {
     const videoRef = useRef<HTMLVideoElement>(null);
     const canvasRef = useRef<HTMLCanvasElement>(null);
     const [stream, setStream] = useState<MediaStream | null>(null);
@@ -180,8 +181,11 @@ function CameraWidget({ onCapture, onCancel, title, faceGuide = false }: CameraW
     const [facingMode, setFacingMode] = useState<'environment' | 'user'>(faceGuide ? 'user' : 'environment');
     const [hasMultipleCameras, setHasMultipleCameras] = useState(false);
 
-    // Face guide state
+    // Face & Document guide state
     const [faceStatus, setFaceStatus] = useState<'searching' | 'detected' | 'countdown' | 'idle'>('idle');
+    const [docCorners, setDocCorners] = useState<{ tl: boolean; tr: boolean; bl: boolean; br: boolean }>({
+        tl: false, tr: false, bl: false, br: false
+    });
     const [countdown, setCountdown] = useState(3);
     const faceDetectorRef = useRef<any>(null);
     const detectionIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
@@ -217,7 +221,8 @@ function CameraWidget({ onCapture, onCancel, title, faceGuide = false }: CameraW
         }
         setError(null);
         setCaptured(null);
-        setFaceStatus(faceGuide ? 'searching' : 'idle');
+        setFaceStatus((faceGuide || docGuide) ? 'searching' : 'idle');
+        setDocCorners({ tl: false, tr: false, bl: false, br: false });
         setCountdown(3);
         faceStableCountRef.current = 0;
         if (countdownIntervalRef.current) { clearInterval(countdownIntervalRef.current); countdownIntervalRef.current = null; }
@@ -280,7 +285,6 @@ function CameraWidget({ onCapture, onCancel, title, faceGuide = false }: CameraW
                         const face = faces[0];
                         const vw = videoRef.current.videoWidth;
                         const vh = videoRef.current.videoHeight;
-                        // Verificar que el rostro está razonablemente centrado y es lo suficientemente grande
                         const faceCenterX = face.boundingBox.x + face.boundingBox.width / 2;
                         const faceCenterY = face.boundingBox.y + face.boundingBox.height / 2;
                         const iscenteredX = Math.abs(faceCenterX - vw / 2) < vw * 0.2;
@@ -303,11 +307,10 @@ function CameraWidget({ onCapture, onCancel, title, faceGuide = false }: CameraW
                         setFaceStatus('searching');
                     }
                 } catch {
-                    // Si falla la detección, no hacemos nada
+                    // Ignorar errores en frame individual
                 }
             }, 400);
         } else if (faceGuide) {
-            // Fallback: sin FaceDetector API, solo mostrar guía visual sin auto-captura
             setFaceStatus('searching');
         }
 
@@ -315,6 +318,80 @@ function CameraWidget({ onCapture, onCancel, title, faceGuide = false }: CameraW
             if (detectionIntervalRef.current) { clearInterval(detectionIntervalRef.current); detectionIntervalRef.current = null; }
         };
     }, [faceGuide, stream, captured]);
+
+    // Detección de alineación de documento y 4 esquinas para docGuide
+    useEffect(() => {
+        if (!docGuide || !stream || captured) return;
+
+        setFaceStatus('searching');
+
+        detectionIntervalRef.current = setInterval(() => {
+            if (!videoRef.current || videoRef.current.readyState < 2) return;
+            const video = videoRef.current;
+
+            let canvas = canvasRef.current;
+            if (!canvas) return;
+            canvas.width = 160;
+            canvas.height = 120;
+            const ctx = canvas.getContext('2d');
+            if (!ctx) return;
+
+            ctx.drawImage(video, 0, 0, 160, 120);
+
+            // Muestreo de contraste/luminosidad en cada una de las 4 esquinas del documento
+            const getRegionVariance = (rx: number, ry: number, rw: number, rh: number) => {
+                try {
+                    const imgData = ctx.getImageData(rx, ry, rw, rh);
+                    const pixels = imgData.data;
+                    let sum = 0;
+                    let count = 0;
+                    for (let i = 0; i < pixels.length; i += 4) {
+                        const lum = 0.299 * pixels[i] + 0.587 * pixels[i + 1] + 0.114 * pixels[i + 2];
+                        sum += lum;
+                        count++;
+                    }
+                    const mean = sum / count;
+                    let variance = 0;
+                    for (let i = 0; i < pixels.length; i += 4) {
+                        const lum = 0.299 * pixels[i] + 0.587 * pixels[i + 1] + 0.114 * pixels[i + 2];
+                        variance += (lum - mean) * (lum - mean);
+                    }
+                    return Math.sqrt(variance / count);
+                } catch {
+                    return 0;
+                }
+            };
+
+            const tlVar = getRegionVariance(15, 18, 22, 22);
+            const trVar = getRegionVariance(123, 18, 22, 22);
+            const blVar = getRegionVariance(15, 80, 22, 22);
+            const brVar = getRegionVariance(123, 80, 22, 22);
+
+            const threshold = 16;
+            const newTL = tlVar > threshold;
+            const newTR = trVar > threshold;
+            const newBL = blVar > threshold;
+            const newBR = brVar > threshold;
+
+            setDocCorners({ tl: newTL, tr: newTR, bl: newBL, br: newBR });
+
+            const countGreen = (newTL ? 1 : 0) + (newTR ? 1 : 0) + (newBL ? 1 : 0) + (newBR ? 1 : 0);
+
+            if (countGreen === 4) {
+                faceStableCountRef.current++;
+                if (faceStableCountRef.current >= 2) {
+                    setFaceStatus('countdown');
+                }
+            } else {
+                faceStableCountRef.current = 0;
+                setFaceStatus('searching');
+            }
+        }, 300);
+
+        return () => {
+            if (detectionIntervalRef.current) { clearInterval(detectionIntervalRef.current); detectionIntervalRef.current = null; }
+        };
+    }, [docGuide, stream, captured]);
 
     // Countdown para auto-captura
     useEffect(() => {
@@ -451,6 +528,99 @@ function CameraWidget({ onCapture, onCancel, title, faceGuide = false }: CameraW
                             </>
                         )}
 
+                        {/* ── Document ID Guide Overlay with 4 Corner Markers (Esquineros) ── */}
+                        {docGuide && (
+                            <>
+                                {/* Máscara oscura con recorte rectangular */}
+                                <svg className="absolute inset-0 w-full h-full pointer-events-none" viewBox="0 0 400 300" preserveAspectRatio="xMidYMid slice">
+                                    <defs>
+                                        <mask id="docMask">
+                                            <rect width="400" height="300" fill="white" />
+                                            <rect x="45" y="50" width="310" height="200" rx="16" fill="black" />
+                                        </mask>
+                                    </defs>
+                                    <rect width="400" height="300" fill="rgba(0,0,0,0.65)" mask="url(#docMask)" />
+
+                                    {/* Rectángulo de referencia guias punteadas */}
+                                    <rect x="45" y="50" width="310" height="200" rx="16" fill="none" stroke="rgba(255,255,255,0.25)" strokeWidth="1.5" strokeDasharray="6 4" />
+
+                                    {/* ── 4 ESQUINEROS (L-shaped brackets) ── */}
+                                    {/* Superior Izquierda (TL) */}
+                                    <path
+                                        d="M 45 85 L 45 50 L 80 50"
+                                        fill="none"
+                                        stroke={docCorners.tl ? '#10B981' : '#F59E0B'}
+                                        strokeWidth="4"
+                                        strokeLinecap="round"
+                                        strokeLinejoin="round"
+                                        style={{ filter: docCorners.tl ? 'drop-shadow(0 0 10px #10B981)' : undefined, transition: 'stroke 0.25s, filter 0.25s' }}
+                                    />
+                                    {/* Superior Derecha (TR) */}
+                                    <path
+                                        d="M 320 50 L 355 50 L 355 85"
+                                        fill="none"
+                                        stroke={docCorners.tr ? '#10B981' : '#F59E0B'}
+                                        strokeWidth="4"
+                                        strokeLinecap="round"
+                                        strokeLinejoin="round"
+                                        style={{ filter: docCorners.tr ? 'drop-shadow(0 0 10px #10B981)' : undefined, transition: 'stroke 0.25s, filter 0.25s' }}
+                                    />
+                                    {/* Inferior Izquierda (BL) */}
+                                    <path
+                                        d="M 45 215 L 45 250 L 80 250"
+                                        fill="none"
+                                        stroke={docCorners.bl ? '#10B981' : '#F59E0B'}
+                                        strokeWidth="4"
+                                        strokeLinecap="round"
+                                        strokeLinejoin="round"
+                                        style={{ filter: docCorners.bl ? 'drop-shadow(0 0 10px #10B981)' : undefined, transition: 'stroke 0.25s, filter 0.25s' }}
+                                    />
+                                    {/* Inferior Derecha (BR) */}
+                                    <path
+                                        d="M 320 250 L 355 250 L 355 215"
+                                        fill="none"
+                                        stroke={docCorners.br ? '#10B981' : '#F59E0B'}
+                                        strokeWidth="4"
+                                        strokeLinecap="round"
+                                        strokeLinejoin="round"
+                                        style={{ filter: docCorners.br ? 'drop-shadow(0 0 10px #10B981)' : undefined, transition: 'stroke 0.25s, filter 0.25s' }}
+                                    />
+
+                                    {/* Indicadores en los esquineros cuando están verdes */}
+                                    <circle cx="58" cy="63" r="6" fill={docCorners.tl ? '#10B981' : '#F59E0B'} opacity={docCorners.tl ? 1 : 0.5} />
+                                    <circle cx="342" cy="63" r="6" fill={docCorners.tr ? '#10B981' : '#F59E0B'} opacity={docCorners.tr ? 1 : 0.5} />
+                                    <circle cx="58" cy="237" r="6" fill={docCorners.bl ? '#10B981' : '#F59E0B'} opacity={docCorners.bl ? 1 : 0.5} />
+                                    <circle cx="342" cy="237" r="6" fill={docCorners.br ? '#10B981' : '#F59E0B'} opacity={docCorners.br ? 1 : 0.5} />
+                                </svg>
+
+                                {/* Status badge */}
+                                <div className="absolute bottom-14 left-1/2 -translate-x-1/2 pointer-events-none">
+                                    {faceStatus !== 'countdown' ? (
+                                        <div className="bg-black/75 backdrop-blur-sm rounded-full px-4 py-2 flex items-center gap-2 border border-slate-700 shadow-md">
+                                            <FileText className="w-4 h-4 text-emerald-400" />
+                                            <span className="text-[11px] font-bold text-slate-200">
+                                                {`Alinee la credencial — Esquinas: ${(docCorners.tl ? 1 : 0) + (docCorners.tr ? 1 : 0) + (docCorners.bl ? 1 : 0) + (docCorners.br ? 1 : 0)} / 4`}
+                                            </span>
+                                        </div>
+                                    ) : (
+                                        <div className="bg-emerald-600/90 backdrop-blur-sm rounded-full px-5 py-2.5 flex items-center gap-2 shadow-lg shadow-emerald-500/30">
+                                            <Camera className="w-4 h-4 text-white" />
+                                            <span className="text-xs font-extrabold text-white">¡Documento Alineado! Capturando en {countdown}...</span>
+                                        </div>
+                                    )}
+                                </div>
+
+                                {/* Countdown number overlay */}
+                                {faceStatus === 'countdown' && (
+                                    <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+                                        <span className="text-7xl font-black text-emerald-400 drop-shadow-[0_4px_25px_rgba(16,185,129,0.8)] animate-pulse">
+                                            {countdown}
+                                        </span>
+                                    </div>
+                                )}
+                            </>
+                        )}
+
                         {/* Botón de voltear cámara flotante */}
                         {hasMultipleCameras && (
                             <button
@@ -468,7 +638,7 @@ function CameraWidget({ onCapture, onCancel, title, faceGuide = false }: CameraW
                             className="absolute bottom-4 bg-emerald-600 hover:bg-emerald-700 text-white shadow-lg rounded-full px-6 py-3 text-xs font-extrabold flex items-center gap-2 transition-transform active:scale-95"
                         >
                             <Camera className="w-4 h-4" />
-                            {faceGuide ? 'Capturar Manualmente' : 'Tomar Fotografía'}
+                            {(faceGuide || docGuide) ? 'Capturar Manualmente' : 'Tomar Fotografía'}
                         </button>
                     </div>
                 ) : (
@@ -1673,9 +1843,14 @@ export default function PaseDigital({ invitacion }: PaseDigitalProps) {
                     title={
                         activeCameraField === 'foto_carnet' || activeCameraField === 'ac_foto_carnet'
                             ? 'Fotografía del Rostro'
+                            : activeCameraField.includes('doc_foto')
+                            ? activeCameraField.includes('frontal')
+                                ? 'Fotografía Frontal del Documento'
+                                : 'Fotografía Reverso del Documento'
                             : 'Capturar Fotografía'
                     }
                     faceGuide={activeCameraField === 'foto_carnet' || activeCameraField === 'ac_foto_carnet'}
+                    docGuide={activeCameraField.includes('doc_foto')}
                     onCapture={(base64) => {
                         if (activeCameraField.startsWith('ac_')) {
                             const field = activeCameraField.replace('ac_', '');
