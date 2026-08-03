@@ -198,9 +198,20 @@ class SaleController extends Controller
 
         $sales = $query->orderBy('created_at', 'desc')->paginate($perPage)->withQueryString();
 
+        $user = auth()->user();
+        $empresa = $user?->empresa;
+
         return inertia('admin/PointOfSale/Ventas/Index', [
             'sales' => $sales,
             'currencySymbol' => $this->getCurrencySymbol(),
+            'empresa' => $empresa ? [
+                'razon_social' => $empresa->razon_social,
+                'documento' => $empresa->documento,
+                'telefono' => $empresa->telefono,
+                'email' => $empresa->email,
+                'direccion' => $empresa->direccion,
+                'logo' => $empresa->logo ? "/storage/{$empresa->logo}" : '/image/logo/larareact_logo_transparent.png',
+            ] : null,
             'filters' => $request->only(['search', 'status', 'perPage']),
         ]);
     }

@@ -3,7 +3,7 @@ import {
     ShoppingCart, Search, Plus, Minus, Trash2, CheckCircle2, CreditCard, DollarSign,
     Package, Wrench, User, AlertCircle, Building2, Smartphone, Receipt, Pause,
     Play, X, Wallet, Tag, Barcode, HelpCircle, Layers, FileText, ArrowRight, Eye, RefreshCw,
-    Calculator, ArrowUpRight, ArrowDownLeft, Scale, Printer, Lock, Coins, Edit3, Landmark, Boxes
+    Calculator, ArrowUpRight, ArrowDownLeft, Scale, Settings, Printer, Lock, Coins, Edit3, Landmark, Boxes
 } from 'lucide-react';
 import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { Breadcrumbs } from '@/components/breadcrumbs';
@@ -142,15 +142,42 @@ export default function Terminal({
     // Form ref for Payment Modal (for F11 shortcut submit)
     const paymentFormRef = useRef<HTMLFormElement>(null);
 
-    // Ticket printer machine (80mm) settings state
+    // Ticket printer machine settings state
     const [hasTicketPrinter, setHasTicketPrinter] = useState<boolean>(() => {
         const saved = localStorage.getItem('pos_has_ticket_printer');
         return saved !== null ? saved === 'true' : true;
     });
 
+    // Thermal Printer Configuration States (Paper Size, Auto Print, Custom Header & Footer)
+    const [printerPaperSize, setPrinterPaperSize] = useState<'80mm' | '58mm'>(() => {
+        return (localStorage.getItem('pos_printer_paper_size') as '80mm' | '58mm') || '80mm';
+    });
+    const [autoPrintOnSale, setAutoPrintOnSale] = useState<boolean>(() => {
+        const saved = localStorage.getItem('pos_auto_print_on_sale');
+        return saved !== null ? saved === 'true' : true;
+    });
+    const [ticketHeaderMsg, setTicketHeaderMsg] = useState<string>(() => {
+        return localStorage.getItem('pos_ticket_header_msg') || '';
+    });
+    const [ticketFooterMsg, setTicketFooterMsg] = useState<string>(() => {
+        return localStorage.getItem('pos_ticket_footer_msg') || '¡GRACIAS POR SU COMPRA!';
+    });
+    const [isPrinterConfigOpen, setIsPrinterConfigOpen] = useState(false);
+
     const toggleTicketPrinter = (enabled: boolean) => {
         setHasTicketPrinter(enabled);
         localStorage.setItem('pos_has_ticket_printer', String(enabled));
+    };
+
+    const handleSavePrinterConfig = (e: React.FormEvent) => {
+        e.preventDefault();
+        localStorage.setItem('pos_has_ticket_printer', String(hasTicketPrinter));
+        localStorage.setItem('pos_printer_paper_size', printerPaperSize);
+        localStorage.setItem('pos_auto_print_on_sale', String(autoPrintOnSale));
+        localStorage.setItem('pos_ticket_header_msg', ticketHeaderMsg);
+        localStorage.setItem('pos_ticket_footer_msg', ticketFooterMsg);
+        setIsPrinterConfigOpen(false);
+        notifySuccess(__('Configuración de máquina ticketera guardada exitosamente.'));
     };
 
     // Valor del Dólar (Exchange Rate) Modal State
@@ -718,7 +745,7 @@ export default function Terminal({
                 const flashSale = (page.props as any).flash?.notification?.sale;
                 if (flashSale) {
                     setCompletedSale(flashSale);
-                    if (hasTicketPrinter) {
+                    if (hasTicketPrinter && autoPrintOnSale) {
                         setTimeout(() => {
                             window.print();
                         }, 250);
@@ -927,6 +954,20 @@ export default function Terminal({
                             <Coins className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
                             <span>$1 USD = ${valorDolar.toFixed(2)} MXN</span>
                             <Edit3 className="w-3 h-3 ml-0.5 opacity-70" />
+                        </Button>
+
+                        {/* MÓDULO CONFIGURACIÓN DE IMPRESORA TÉRMICA */}
+                        <Button
+                            type="button"
+                            variant="outline"
+                            size="sm"
+                            className="h-8 text-xs gap-1.5 bg-blue-50 dark:bg-blue-950/60 text-blue-800 dark:text-blue-300 border border-blue-300 dark:border-blue-700 font-extrabold shadow-sm hover:bg-blue-100 dark:hover:bg-blue-900/60 transition-all"
+                            onClick={() => setIsPrinterConfigOpen(true)}
+                            title={__('Configuración de máquina ticketera térmica')}
+                        >
+                            <Printer className="w-3.5 h-3.5 text-blue-600 dark:text-blue-400" />
+                            <span>{hasTicketPrinter ? `Impresora (${printerPaperSize})` : __('Sin Impresora')}</span>
+                            <Settings className="w-3 h-3 ml-0.5 opacity-70" />
                         </Button>
                     </div>
 
@@ -1485,11 +1526,11 @@ export default function Terminal({
                                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs font-medium">
                                         {Object.entries(activeRegisterSummary.by_payment_method).map(([method, val]) => {
                                             const label = method === 'efectivo' ? __('Efectivo (MXN)') :
-                                                          method === 'dolar' ? __('💵 Dólares (USD)') :
-                                                          method === 'transferencia' ? __('Transferencia') :
-                                                          method === 'tarjeta' ? __('Tarjeta') :
-                                                          method === 'credito' ? __('Venta a Crédito (Fiado)') :
-                                                          method.replace('_', ' ');
+                                                method === 'dolar' ? __('💵 Dólares (USD)') :
+                                                    method === 'transferencia' ? __('Transferencia') :
+                                                        method === 'tarjeta' ? __('Tarjeta') :
+                                                            method === 'credito' ? __('Venta a Crédito (Fiado)') :
+                                                                method.replace('_', ' ');
                                             const netVal = val.net;
                                             const usdVal = valorDolar > 0 ? netVal / valorDolar : 0;
 
@@ -2244,64 +2285,179 @@ export default function Terminal({
                     </DialogContent>
                 </Dialog>
 
-                {/* MODAL TICKET EXITOSO / COMPLETED SALE */}
+                {/* MODAL TICKET EXITOSO / COMPLETED SALE CON VISTA PREVIA DEL TICKET */}
                 {completedSale && (
                     <Dialog open={!!completedSale} onOpenChange={() => setCompletedSale(null)}>
-                        <DialogContent className="sm:max-w-md text-center">
+                        <DialogContent className="sm:max-w-md max-h-[90vh] overflow-y-auto">
                             <DialogHeader>
-                                <DialogTitle className="text-center flex flex-col items-center gap-2">
-                                    <div className="w-12 h-12 rounded-full bg-emerald-100 dark:bg-emerald-950/60 text-emerald-600 dark:text-emerald-400 flex items-center justify-center">
-                                        <CheckCircle2 className="w-7 h-7" />
+                                <DialogTitle className="text-center flex flex-col items-center gap-1.5">
+                                    <div className="w-11 h-11 rounded-full bg-emerald-100 dark:bg-emerald-950/60 text-emerald-600 dark:text-emerald-400 flex items-center justify-center">
+                                        <CheckCircle2 className="w-6 h-6" />
                                     </div>
-                                    <span className="text-lg font-bold">{__('Venta Completada')}</span>
+                                    <span className="text-lg font-bold">{__('¡Venta Registrada Exitosamente!')}</span>
                                 </DialogTitle>
-                                <DialogDescription className="text-center font-mono font-bold text-base text-foreground">
+                                <DialogDescription className="text-center font-mono font-bold text-sm text-foreground">
                                     {completedSale.codigo_ticket}
                                 </DialogDescription>
                             </DialogHeader>
 
-                            <div className="py-3 border-y space-y-2 text-sm text-left font-mono bg-slate-50/50 dark:bg-slate-900/40 p-3 rounded-lg">
-                                <div className="flex justify-between text-xs">
-                                    <span className="text-muted-foreground">{__('Cliente')}:</span>
-                                    <span className="font-semibold">{completedSale.cliente_nombre}</span>
-                                </div>
-                                <div className="flex justify-between text-base font-bold">
-                                    <span>{__('Total')}:</span>
-                                    <span className="text-emerald-600 dark:text-emerald-400">{currencySymbol}{Number(completedSale.total).toFixed(2)}</span>
-                                </div>
-                                {valorDolar > 0 && (
-                                    <div className="flex justify-between text-xs text-muted-foreground font-semibold">
-                                        <span>{__('Equivalente USD')}:</span>
-                                        <span>${(Number(completedSale.total) / valorDolar).toFixed(2)} USD</span>
-                                    </div>
-                                )}
-                            </div>
-
-                            {/* Selector de Impresora Directa vs Modal */}
-                            <div className="flex items-center justify-between p-3 rounded-lg border bg-background text-xs text-left">
-                                <div>
-                                    <span className="font-bold text-foreground flex items-center gap-1.5">
-                                        <Printer className="w-4 h-4 text-blue-500" />
-                                        {__('Máquina Ticketera Térmica (80mm)')}
+                            {/* VISTA PREVIA DEL TICKET (DISEÑO CORPORATIVO LARA-REACT POS) */}
+                            <div className="space-y-3">
+                                <div className="text-xs font-bold text-muted-foreground uppercase tracking-wider flex items-center justify-between">
+                                    <span className="flex items-center gap-1.5">
+                                        <Receipt className="w-4 h-4 text-blue-500" />
+                                        {__('Comprobante de Venta')} ({printerPaperSize})
                                     </span>
-                                    <p className="text-[11px] text-muted-foreground mt-0.5">
-                                        {hasTicketPrinter
-                                            ? __('Impresión directa enviada a máquina ticketera de 80mm.')
-                                            : __('No se tiene máquina ticketera. Muestra modal para indicar destino/impresora.')}
-                                    </p>
+                                    <span className="text-[11px] font-mono text-emerald-600 dark:text-emerald-400 font-bold bg-emerald-50 dark:bg-emerald-950 px-2 py-0.5 rounded border border-emerald-200 dark:border-emerald-800">
+                                        {completedSale.codigo_ticket}
+                                    </span>
                                 </div>
-                                <Switch
-                                    checked={hasTicketPrinter}
-                                    onCheckedChange={toggleTicketPrinter}
-                                />
+
+                                {/* TICKET CONTAINER WITH MATCHING DESIGN */}
+                                <div className="border border-gray-300 dark:border-gray-700 bg-white text-slate-900 p-5 rounded-2xl font-sans text-xs shadow-md space-y-3">
+                                    {/* LOGO & BUSINESS HEADER */}
+                                    <div className="text-center space-y-1">
+                                        <div className="flex items-center justify-center gap-2">
+                                            <div className="h-9 w-9 rounded-xl bg-gradient-to-tr from-blue-600 to-indigo-600 text-white flex items-center justify-center font-black text-lg shadow-sm">
+                                                FS
+                                            </div>
+                                            <span className="text-2xl font-black tracking-tight text-slate-900">
+                                                Fix<span className="text-[#FF5722]">Sale</span>
+                                            </span>
+                                        </div>
+                                        <div className="text-sm font-semibold text-slate-700">
+                                            Servitec POS & Servicios
+                                        </div>
+                                        {ticketHeaderMsg ? (
+                                            <div className="text-[11px] text-slate-500">{ticketHeaderMsg}</div>
+                                        ) : (
+                                            <div className="text-[11px] text-slate-500">
+                                                Tel: +58 (0414) 123-4567 | Email: soporte@servitec.com
+                                            </div>
+                                        )}
+                                    </div>
+
+                                    <div className="border-b border-dashed border-gray-300 my-2"></div>
+
+                                    {/* TITLE & TICKET METADATA */}
+                                    <div className="text-center font-extrabold text-slate-800 text-sm tracking-wide uppercase">
+                                        COMPROBANTE DE VENTA
+                                    </div>
+
+                                    <div className="grid grid-cols-2 text-[11px] gap-y-1 text-slate-600 bg-slate-50 p-2.5 rounded-lg font-mono">
+                                        <div><strong>N° Ticket:</strong> {completedSale.codigo_ticket}</div>
+                                        <div className="text-right"><strong>Fecha:</strong> {new Date(completedSale.created_at || Date.now()).toLocaleDateString()}</div>
+                                        <div><strong>Cliente:</strong> {completedSale.cliente_nombre || 'Cliente General'}</div>
+                                        <div className="text-right"><strong>Atendido por:</strong> {completedSale.user?.name || 'Cajero POS'}</div>
+                                    </div>
+
+                                    {/* ITEMS TABLE */}
+                                    <div className="space-y-1 my-2">
+                                        <div className="grid grid-cols-12 text-[10px] font-bold text-slate-500 uppercase bg-slate-100 p-1.5 rounded">
+                                            <span className="col-span-1">#</span>
+                                            <span className="col-span-5">CONCEPTO</span>
+                                            <span className="col-span-2 text-center">CANT</span>
+                                            <span className="col-span-2 text-right">P.U.</span>
+                                            <span className="col-span-2 text-right">TOTAL</span>
+                                        </div>
+                                        {completedSale.items?.map((it: any, idx: number) => (
+                                            <div key={idx} className="grid grid-cols-12 text-[11px] py-1.5 border-b border-gray-100 items-center">
+                                                <span className="col-span-1 text-slate-400 font-mono text-[10px]">{idx + 1}</span>
+                                                <span className="col-span-5 font-medium truncate text-slate-800">{it.nombre}</span>
+                                                <span className="col-span-2 text-center font-mono text-slate-600">{it.cantidad} {it.cantidad > 1 ? 'pcs' : 'pc'}</span>
+                                                <span className="col-span-2 text-right font-mono text-slate-600">${Number(it.precio_unitario).toFixed(2)}</span>
+                                                <span className="col-span-2 text-right font-mono font-bold text-slate-900">${Number(it.subtotal).toFixed(2)}</span>
+                                            </div>
+                                        ))}
+                                    </div>
+
+                                    {/* SUMMARY TOTALS */}
+                                    <div className="space-y-1 text-xs pt-1">
+                                        <div className="flex justify-between text-slate-600">
+                                            <span>Subtotal Items ({completedSale.items?.length || 0}):</span>
+                                            <span className="font-mono font-medium">${Number(completedSale.subtotal || completedSale.total).toFixed(2)}</span>
+                                        </div>
+                                        {Number(completedSale.descuento || 0) > 0 && (
+                                            <div className="flex justify-between text-rose-600 font-medium">
+                                                <span>Descuento Aplicado:</span>
+                                                <span className="font-mono">-${Number(completedSale.descuento).toFixed(2)}</span>
+                                            </div>
+                                        )}
+                                        <div className="flex justify-between text-base font-black border-t-2 border-slate-900 pt-1 text-slate-900">
+                                            <span>TOTAL A PAGAR:</span>
+                                            <span className="font-mono text-emerald-600">{currencySymbol}{Number(completedSale.total).toFixed(2)}</span>
+                                        </div>
+                                        {valorDolar > 0 && (
+                                            <div className="flex justify-between text-xs font-semibold text-emerald-700 bg-emerald-50 p-1.5 rounded">
+                                                <span>Equivalente en USD ($):</span>
+                                                <span className="font-mono">${(Number(completedSale.total) / valorDolar).toFixed(2)} USD</span>
+                                            </div>
+                                        )}
+                                    </div>
+
+                                    {/* PAYMENT SUMMARY BOX */}
+                                    <div className="bg-slate-50 border border-slate-200 rounded-lg p-2.5 space-y-1 text-xs font-mono">
+                                        <div className="flex justify-between text-slate-600 font-bold border-b border-slate-200 pb-1">
+                                            <span>MONTO PAGADO</span>
+                                            <span>SALDO / CAMBIO</span>
+                                        </div>
+                                        <div className="flex justify-between font-bold text-sm text-slate-800 pt-0.5">
+                                            <span>${Number(totalPaid || completedSale.total).toFixed(2)}</span>
+                                            <span className="text-blue-600">${Number(completedSale.cambio || 0).toFixed(2)}</span>
+                                        </div>
+                                        {completedSale.payments && completedSale.payments.length > 0 && (
+                                            <div className="pt-1 text-[10px] text-slate-500 border-t border-slate-200 mt-1">
+                                                <span className="font-semibold text-slate-700">Forma de Pago: </span>
+                                                {completedSale.payments.map((pm: any) => `${pm.metodo_pago.toUpperCase()}: $${Number(pm.monto).toFixed(2)}`).join(' | ')}
+                                            </div>
+                                        )}
+                                    </div>
+
+                                    {/* BARCODE RECEIPT */}
+                                    <div className="text-center pt-2 space-y-1">
+                                        <div className="inline-block font-mono tracking-widest text-lg font-black bg-slate-100 px-4 py-1.5 rounded border border-slate-300">
+                                            |||||||||||||||||||||||||||||
+                                        </div>
+                                        <div className="text-[10px] font-mono text-slate-500 font-bold">
+                                            {completedSale.codigo_ticket}
+                                        </div>
+                                    </div>
+
+                                    <div className="border-b border-dashed border-gray-300 my-2"></div>
+                                    <div className="text-center text-xs font-bold text-slate-700 uppercase">
+                                        {ticketFooterMsg}
+                                    </div>
+                                    <div className="text-center text-[10px] text-slate-400">
+                                        ¡Gracias por preferir a Servitec!
+                                    </div>
+                                </div>
+
+                                {/* Control rápido de ticketera */}
+                                <div className="flex items-center justify-between p-3 rounded-lg border bg-background text-xs text-left">
+                                    <div>
+                                        <span className="font-bold text-foreground flex items-center gap-1.5">
+                                            <Printer className="w-4 h-4 text-blue-500" />
+                                            {__('Modo Impresora Ticketera Térmica')} ({printerPaperSize})
+                                        </span>
+                                        <p className="text-[11px] text-muted-foreground mt-0.5">
+                                            {hasTicketPrinter
+                                                ? __('Impresión directa optimizada para ticketera.')
+                                                : __('Ticketera desactivada. Se abre diálogo de impresión/PDF del sistema.')}
+                                        </p>
+                                    </div>
+                                    <Switch
+                                        checked={hasTicketPrinter}
+                                        onCheckedChange={toggleTicketPrinter}
+                                    />
+                                </div>
                             </div>
 
                             <DialogFooter className="flex flex-col sm:flex-row gap-2 pt-2">
                                 <Button variant="outline" className="w-full font-bold gap-1.5" onClick={() => window.print()}>
-                                    <Printer className="w-4 h-4" />
-                                    {hasTicketPrinter ? __('Reimprimir Ticket (80mm)') : __('Imprimir / Seleccionar Impresora')}
+                                    <Printer className="w-4 h-4 text-blue-600" />
+                                    {hasTicketPrinter ? `${__('Imprimir Ticket')} (${printerPaperSize})` : __('Imprimir / Guardar PDF')}
                                 </Button>
-                                <Button className="w-full font-bold bg-emerald-600 hover:bg-emerald-700" onClick={() => setCompletedSale(null)}>
+                                <Button className="w-full font-bold bg-emerald-600 hover:bg-emerald-700 text-white" onClick={() => setCompletedSale(null)}>
                                     {__('Nueva Venta')}
                                 </Button>
                             </DialogFooter>
@@ -2309,40 +2465,170 @@ export default function Terminal({
                     </Dialog>
                 )}
 
-                {/* PLANTILLA DE IMPRESIÓN PARA MÁQUINA TICKETERA DE 80MM */}
+                {/* MODAL DE CONFIGURACIÓN DE IMPRESORA TÉRMICA */}
+                <Dialog open={isPrinterConfigOpen} onOpenChange={setIsPrinterConfigOpen}>
+                    <DialogContent className="sm:max-w-lg">
+                        <DialogHeader>
+                            <DialogTitle className="flex items-center gap-2">
+                                <Printer className="w-5 h-5 text-blue-600" />
+                                {__('Configuración de Máquina Ticketera Térmica')}
+                            </DialogTitle>
+                            <DialogDescription>
+                                {__('Ajusta el comportamiento de impresión automática, tamaño de papel térmico (80mm / 58mm) y mensajes del ticket.')}
+                            </DialogDescription>
+                        </DialogHeader>
+
+                        <form onSubmit={handleSavePrinterConfig} className="space-y-4 py-2">
+                            {/* Interruptor de Habilitar Impresora Térmica */}
+                            <div className="flex items-center justify-between p-3 rounded-lg border bg-slate-50 dark:bg-slate-900">
+                                <div className="space-y-0.5">
+                                    <Label className="text-sm font-bold flex items-center gap-1.5">
+                                        <Printer className="w-4 h-4 text-blue-500" />
+                                        {__('Habilitar Máquina Ticketera')}
+                                    </Label>
+                                    <p className="text-xs text-muted-foreground">
+                                        {__('Si está desactivado, el sistema usará el diálogo estándar de impresión del sistema.')}
+                                    </p>
+                                </div>
+                                <Switch
+                                    checked={hasTicketPrinter}
+                                    onCheckedChange={setHasTicketPrinter}
+                                />
+                            </div>
+
+                            {/* Tamaño de Papel Térmico */}
+                            <div className="space-y-2">
+                                <Label className="text-sm font-bold">{__('Ancho de Papel Térmico')}</Label>
+                                <div className="grid grid-cols-2 gap-3">
+                                    <button
+                                        type="button"
+                                        className={`p-3 rounded-lg border text-left transition-all ${printerPaperSize === '80mm'
+                                            ? 'border-blue-600 bg-blue-50 dark:bg-blue-950/60 ring-2 ring-blue-500/20 font-bold'
+                                            : 'border-gray-200 dark:border-gray-800 hover:bg-slate-50'
+                                            }`}
+                                        onClick={() => setPrinterPaperSize('80mm')}
+                                    >
+                                        <div className="text-sm font-bold flex items-center justify-between">
+                                            <span>80 mm</span>
+                                            <span className="text-xs text-blue-600 font-semibold">(Estándar POS)</span>
+                                        </div>
+                                        <p className="text-xs text-muted-foreground mt-1">
+                                            {__('Impresoras térmicas de caja registradora grandes.')}
+                                        </p>
+                                    </button>
+
+                                    <button
+                                        type="button"
+                                        className={`p-3 rounded-lg border text-left transition-all ${printerPaperSize === '58mm'
+                                            ? 'border-blue-600 bg-blue-50 dark:bg-blue-950/60 ring-2 ring-blue-500/20 font-bold'
+                                            : 'border-gray-200 dark:border-gray-800 hover:bg-slate-50'
+                                            }`}
+                                        onClick={() => setPrinterPaperSize('58mm')}
+                                    >
+                                        <div className="text-sm font-bold flex items-center justify-between">
+                                            <span>58 mm</span>
+                                            <span className="text-xs text-emerald-600 font-semibold">(Portátil / Mini)</span>
+                                        </div>
+                                        <p className="text-xs text-muted-foreground mt-1">
+                                            {__('Impresoras térmicas de bolsillo o ticketera estrecha.')}
+                                        </p>
+                                    </button>
+                                </div>
+                            </div>
+
+                            {/* Impresión Automática al Cobrar */}
+                            <div className="flex items-center justify-between p-3 rounded-lg border">
+                                <div className="space-y-0.5">
+                                    <Label className="text-sm font-semibold">
+                                        {__('Impresión Automática al Completar Venta')}
+                                    </Label>
+                                    <p className="text-xs text-muted-foreground">
+                                        {__('Abre la orden de impresión inmediatamente tras confirmar el cobro.')}
+                                    </p>
+                                </div>
+                                <Switch
+                                    checked={autoPrintOnSale}
+                                    onCheckedChange={setAutoPrintOnSale}
+                                />
+                            </div>
+
+                            {/* Mensaje de Encabezado Personalizado */}
+                            <div className="space-y-1">
+                                <Label className="text-xs font-semibold">{__('Mensaje / Nota en Encabezado (Opcional)')}</Label>
+                                <Input
+                                    placeholder={__('Ej. RIF: J-12345678-9 | Tel: (0414) 123-4567')}
+                                    value={ticketHeaderMsg}
+                                    onChange={(e) => setTicketHeaderMsg(e.target.value)}
+                                    className="text-xs"
+                                />
+                            </div>
+
+                            {/* Mensaje de Pie de Página Personalizado */}
+                            <div className="space-y-1">
+                                <Label className="text-xs font-semibold">{__('Pie de Página / Agradecimiento')}</Label>
+                                <Input
+                                    placeholder={__('Ej. ¡GRACIAS POR SU COMPRA! / No se aceptan devoluciones.')}
+                                    value={ticketFooterMsg}
+                                    onChange={(e) => setTicketFooterMsg(e.target.value)}
+                                    className="text-xs"
+                                />
+                            </div>
+
+                            <DialogFooter className="gap-2 pt-2">
+                                <Button type="button" variant="outline" onClick={() => setIsPrinterConfigOpen(false)}>
+                                    {__('Cancelar')}
+                                </Button>
+                                <Button type="submit" className="bg-blue-600 hover:bg-blue-700 font-bold">
+                                    {__('Guardar Configuración')}
+                                </Button>
+                            </DialogFooter>
+                        </form>
+                    </DialogContent>
+                </Dialog>
+
+                {/* PLANTILLA DE IMPRESIÓN OFICIAL TÉRMICA (@media print) */}
                 {completedSale && (
-                    <div id="printable-ticket-80mm" className="hidden print:block text-black bg-white font-mono p-2 text-xs w-[80mm] max-w-[80mm] mx-auto">
+                    <div
+                        id="printable-ticket-thermal"
+                        className={`hidden print:block text-black bg-white font-mono p-2 text-xs mx-auto ${printerPaperSize === '58mm' ? 'w-[58mm] max-w-[58mm]' : 'w-[80mm] max-w-[80mm]'
+                            }`}
+                    >
                         <style>{`
                             @media print {
                                 body * {
                                     visibility: hidden !important;
                                 }
-                                #printable-ticket-80mm, #printable-ticket-80mm * {
+                                #printable-ticket-thermal, #printable-ticket-thermal * {
                                     visibility: visible !important;
                                 }
-                                #printable-ticket-80mm {
+                                #printable-ticket-thermal {
                                     position: absolute !important;
                                     left: 0 !important;
                                     top: 0 !important;
-                                    width: 80mm !important;
-                                    max-width: 80mm !important;
+                                    width: ${printerPaperSize === '58mm' ? '58mm' : '80mm'} !important;
+                                    max-width: ${printerPaperSize === '58mm' ? '58mm' : '80mm'} !important;
                                     margin: 0 !important;
-                                    padding: 4mm !important;
+                                    padding: ${printerPaperSize === '58mm' ? '2mm' : '4mm'} !important;
                                     background: white !important;
                                     color: black !important;
-                                    font-family: 'Courier New', Courier, monospace !important;
-                                    font-size: 11px !important;
+                                    font-family: Arial, sans-serif !important;
+                                    font-size: ${printerPaperSize === '58mm' ? '9px' : '11px'} !important;
                                 }
                                 @page {
-                                    size: 80mm auto;
+                                    size: ${printerPaperSize === '58mm' ? '58mm' : '80mm'} auto;
                                     margin: 0;
                                 }
                             }
                         `}</style>
-                        <div className="text-center font-bold text-sm uppercase">SERVITEC POS</div>
-                        <div className="text-center text-[10px]">TICKET DE VENTA TÉRMICO 80MM</div>
+                        <div className="text-center font-extrabold text-sm tracking-tight">FixSale - Servitec POS</div>
+                        {ticketHeaderMsg && (
+                            <div className="text-center text-[9px] text-gray-700 mt-0.5">
+                                {ticketHeaderMsg}
+                            </div>
+                        )}
                         <div className="border-b border-dashed border-black my-1"></div>
-                        <div className="flex justify-between text-[10px]">
+                        <div className="text-center font-bold uppercase text-[10px]">COMPROBANTE DE VENTA</div>
+                        <div className="flex justify-between text-[10px] font-mono mt-1">
                             <span>TICKET: {completedSale.codigo_ticket}</span>
                             <span>{new Date(completedSale.created_at || Date.now()).toLocaleDateString()}</span>
                         </div>
@@ -2352,17 +2638,21 @@ export default function Terminal({
 
                         {/* Encabezado Tabla */}
                         <div className="grid grid-cols-12 text-[10px] font-bold border-b border-black pb-0.5">
-                            <span className="col-span-6">CANT/DESCRIPCIÓN</span>
-                            <span className="col-span-3 text-right">P.U.</span>
-                            <span className="col-span-3 text-right">TOTAL</span>
+                            <span className="col-span-1">#</span>
+                            <span className="col-span-5">DESCRIPCIÓN</span>
+                            <span className="col-span-2 text-center">CANT</span>
+                            <span className="col-span-2 text-right">P.U.</span>
+                            <span className="col-span-2 text-right">TOTAL</span>
                         </div>
 
                         {/* Items */}
                         {completedSale.items?.map((it: any, idx: number) => (
                             <div key={idx} className="grid grid-cols-12 text-[10px] py-0.5 border-b border-dotted border-gray-400">
-                                <span className="col-span-6 truncate">{it.cantidad}x {it.nombre}</span>
-                                <span className="col-span-3 text-right">${Number(it.precio_unitario).toFixed(2)}</span>
-                                <span className="col-span-3 text-right font-bold">${Number(it.subtotal).toFixed(2)}</span>
+                                <span className="col-span-1">{idx + 1}</span>
+                                <span className="col-span-5 truncate">{it.nombre}</span>
+                                <span className="col-span-2 text-center">{it.cantidad}</span>
+                                <span className="col-span-2 text-right">${Number(it.precio_unitario).toFixed(2)}</span>
+                                <span className="col-span-2 text-right font-bold">${Number(it.subtotal).toFixed(2)}</span>
                             </div>
                         ))}
 
@@ -2381,12 +2671,12 @@ export default function Terminal({
                                 </div>
                             )}
                             <div className="flex justify-between text-xs font-bold border-t border-b border-black py-0.5">
-                                <span>TOTAL:</span>
+                                <span>TOTAL A PAGAR:</span>
                                 <span>{currencySymbol}{Number(completedSale.total).toFixed(2)}</span>
                             </div>
                             {valorDolar > 0 && (
-                                <div className="flex justify-between text-[10px] text-gray-700">
-                                    <span>EQ. USD:</span>
+                                <div className="flex justify-between text-[10px] text-gray-700 font-semibold">
+                                    <span>EQ. USD ($):</span>
                                     <span>${(Number(completedSale.total) / valorDolar).toFixed(2)} USD</span>
                                 </div>
                             )}
@@ -2396,7 +2686,7 @@ export default function Terminal({
 
                         {/* Métodos de Pago */}
                         <div className="text-[10px] space-y-0.5">
-                            <div className="font-bold">MÉTODOS DE PAGO:</div>
+                            <div className="font-bold">PAGADO CON:</div>
                             {completedSale.payments?.map((pm: any, pidx: number) => (
                                 <div key={pidx} className="flex justify-between">
                                     <span className="uppercase">{pm.metodo_pago}:</span>
@@ -2411,9 +2701,17 @@ export default function Terminal({
                             )}
                         </div>
 
-                        <div className="border-b border-dashed border-black my-2"></div>
-                        <div className="text-center text-[10px] font-bold uppercase">¡GRACIAS POR SU COMPRA!</div>
-                        <div className="text-center text-[9px] text-gray-600">Servitec POS - Formato 80mm</div>
+                        {/* BARCODE */}
+                        <div className="text-center pt-2">
+                            <div className="inline-block font-mono text-sm tracking-widest font-bold">
+                                |||||||||||||||||||||||||||||
+                            </div>
+                            <div className="text-[9px] font-mono text-gray-600">{completedSale.codigo_ticket}</div>
+                        </div>
+
+                        <div className="border-b border-dashed border-black my-1"></div>
+                        <div className="text-center text-[10px] font-bold uppercase">{ticketFooterMsg}</div>
+                        <div className="text-center text-[9px] text-gray-600">Servitec POS - Formato {printerPaperSize}</div>
                     </div>
                 )}
             </div>
