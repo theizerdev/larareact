@@ -1,5 +1,5 @@
 import React from 'react';
-import MapboxMap from '@/components/mapbox-map';
+import LeafletMap from '@/components/leaflet-map';
 
 interface MapComponentProps {
     center: [number, number];
@@ -20,7 +20,7 @@ const MapComponent: React.FC<MapComponentProps> = ({
 
     return (
         <div className="w-full h-80 min-h-[320px] rounded-lg overflow-hidden border">
-            <MapboxMap
+            <LeafletMap
                 lat={lat}
                 lng={lng}
                 zoom={zoom}

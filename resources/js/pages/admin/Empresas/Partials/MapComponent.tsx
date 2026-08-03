@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import MapboxMap from '@/components/mapbox-map';
+import LeafletMap from '@/components/leaflet-map';
 
 interface MapComponentProps {
     center: [number, number];
@@ -43,7 +43,7 @@ const EmpresaMapComponent: React.FC<MapComponentProps> = ({
 
     return (
         <div className="relative w-full h-full" style={{ minHeight: '320px' }}>
-            <MapboxMap
+            <LeafletMap
                 lat={lat}
                 lng={lng}
                 zoom={zoom}

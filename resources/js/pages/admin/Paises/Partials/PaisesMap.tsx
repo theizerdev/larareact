@@ -1,5 +1,5 @@
 import React from 'react';
-import MapboxMap from '@/components/mapbox-map';
+import LeafletMap from '@/components/leaflet-map';
 
 interface Pais {
     id: number;
@@ -25,7 +25,7 @@ export function PaisesMap({ paises }: PaisesMapProps) {
 
     return (
         <div className="rounded-lg border overflow-hidden h-96">
-            <MapboxMap 
+            <LeafletMap 
                 lat={20} 
                 lng={0} 
                 zoom={2} 

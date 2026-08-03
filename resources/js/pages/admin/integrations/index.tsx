@@ -197,6 +197,51 @@ export default function Integrations({
                 </div>
 
                 <div className="grid gap-6 md:grid-cols-2">
+                    {/* Leaflet.js Integration (Default & Free) */}
+                    <Card className="shadow-sm border-t-4 border-t-emerald-500 flex flex-col justify-between">
+                        <CardHeader>
+                            <div className="flex items-center justify-between">
+                                <div className="flex items-center gap-2">
+                                    <div className="p-2 rounded bg-emerald-50 dark:bg-emerald-950/20 text-emerald-600">
+                                        <Map className="h-5 w-5" />
+                                    </div>
+                                    <div>
+                                        <CardTitle>{__('Leaflet.js / OpenStreetMap')}</CardTitle>
+                                        <CardDescription>{__('Open source interactive map engine. Free and no API key required.')}</CardDescription>
+                                    </div>
+                                </div>
+                                <Badge className="bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300">
+                                    {__('Active (Default)')}
+                                </Badge>
+                            </div>
+                        </CardHeader>
+                        <CardContent className="space-y-4 text-sm text-slate-600 dark:text-slate-400">
+                            <p>
+                                {__('Leaflet.js is integrated and activated as the default map viewer for selecting locations of branches, companies, countries, and clients.')}
+                            </p>
+                            <div className="rounded-md bg-slate-50 dark:bg-slate-900 p-3 border space-y-1.5 text-xs text-slate-500 dark:text-slate-400">
+                                <div className="flex items-center gap-1.5 font-medium text-slate-700 dark:text-slate-300">
+                                    <ShieldCheck className="h-4 w-4 text-emerald-500" />
+                                    <span>{__('Leaflet.js Features')}</span>
+                                </div>
+                                <ul className="list-disc list-inside space-y-1">
+                                    <li>{__('Tile providers: OpenStreetMap & CartoDB (Light / Dark Mode)')}</li>
+                                    <li>{__('Free reverse geocoding via Nominatim OSM')}</li>
+                                    <li>{__('Unlimited requests and zero API costs')}</li>
+                                </ul>
+                            </div>
+                        </CardContent>
+                        <CardFooter className="border-t bg-slate-50/50 dark:bg-slate-900/10 px-6 py-4 flex justify-between">
+                            <span className="text-xs text-emerald-600 font-semibold">{__('100% Operational')}</span>
+                            <Link href="/admin/integrations/map">
+                                <Button variant="outline" size="sm" className="gap-2 border-emerald-200 text-emerald-700 hover:bg-emerald-50 hover:text-emerald-800 dark:border-emerald-900/50 dark:text-emerald-400">
+                                    <Map className="h-4 w-4" />
+                                    {__('View Routes')}
+                                </Button>
+                            </Link>
+                        </CardFooter>
+                    </Card>
+
                     {/* Mapbox Integration */}
                     <Card className="shadow-sm border-t-4 border-t-indigo-600 flex flex-col justify-between">
                         <CardHeader>
