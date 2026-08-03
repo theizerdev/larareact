@@ -836,7 +836,7 @@ class VisitaAccesoController extends Controller
                         }
 
                         $proveedorEmpleado = ProveedorEmpleado::query()
-                            ->with(['proveedor', 'empresa', 'sucursal'])
+                            ->with(['proveedor.empleados', 'empresa', 'sucursal'])
                             ->where(function ($q) use ($search, $provEmpId) {
                                 $q->where('documento_identidad', $search)
                                   ->orWhere('documento_identidad', 'like', "%{$search}%")
@@ -907,7 +907,7 @@ class VisitaAccesoController extends Controller
                                 }
 
                                 $productorEmpleado = ProductorEmpleado::query()
-                                    ->with(['productor', 'empresa', 'sucursal'])
+                                    ->with(['productor.empleados', 'empresa', 'sucursal'])
                                     ->where(function ($q) use ($search, $prodEmpId) {
                                         $q->where('documento_identidad', $search)
                                           ->orWhere('documento_identidad', 'like', "%{$search}%")
@@ -936,7 +936,7 @@ class VisitaAccesoController extends Controller
                                 } else {
                                     // 6. Buscar en invitaciones (pre-anuncios)
                                     $invitacion = VisitaAccesoInvitacion::query()
-                                        ->with(['anfitrion', 'empleado', 'proveedor', 'productor', 'paisTelefono', 'tipoServicio'])
+                                        ->with(['anfitrion', 'empleado', 'proveedor.empleados', 'productor.empleados', 'proveedorEmpleado.proveedor.empleados', 'productorEmpleado.productor.empleados', 'paisTelefono', 'tipoServicio'])
                                         ->where('uuid', $search)
                                         ->orWhere('codigo_invitacion', $search)
                                         ->orWhere('visitante_nombre', 'like', "%{$search}%")
