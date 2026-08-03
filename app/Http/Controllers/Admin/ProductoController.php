@@ -168,8 +168,8 @@ class ProductoController extends Controller
         $validated['marca_id'] = $modelo->marca_id;
         $validated['familia_id'] = $modelo->familia_id;
         $validated['categoria_id'] = $modelo->categoria_id;
-        $validated['empresa_id'] = $validated['empresa_id'] ?? 1;
-        $validated['sucursal_id'] = $validated['sucursal_id'] ?? 1;
+        $validated['empresa_id'] = $validated['empresa_id'] ?? auth()->user()->empresa_id;
+        $validated['sucursal_id'] = $validated['sucursal_id'] ?? auth()->user()->sucursal_id;
         $validated['precio_mayoreo'] = $validated['precio_mayoreo'] ?? 0;
         $validated['usa_inventario'] = $request->boolean('usa_inventario', true);
         $validated['stock'] = isset($validated['stock']) ? (float) $validated['stock'] : 0;
