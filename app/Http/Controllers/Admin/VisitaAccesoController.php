@@ -118,6 +118,13 @@ class VisitaAccesoController extends Controller
 
         $accesos = $query->latest('id')->paginate($request->perPage ?? 10)->withQueryString();
 
+        $accesos->getCollection()->transform(function ($acceso) {
+            if (!empty($acceso->acompanantes)) {
+                $acceso->acompanantes = $this->enrichAcompanantes($acceso->acompanantes);
+            }
+            return $acceso;
+        });
+
         $visitasEsperadas = VisitaAccesoInvitacion::query()
             ->with(['anfitrion', 'empleado', 'proveedor', 'productor', 'proveedorEmpleado', 'productorEmpleado', 'paisTelefono', 'tipoServicio'])
             ->whereDate('fecha_estimada', '>=', now()->toDateString())
@@ -376,6 +383,42 @@ class VisitaAccesoController extends Controller
         Storage::disk('public')->put($filename, $data);
 
         return Storage::url($filename);
+    }
+
+    private function enrichAcompanantes(?array $acompanantes): ?array
+    {
+        if (empty($acompanantes) || !is_array($acompanantes)) {
+            return $acompanantes;
+        }
+
+        $enriched = [];
+        foreach ($acompanantes as $ac) {
+            $doc = $ac['curp'] ?? $ac['documento'] ?? $ac['documento_identidad'] ?? null;
+            if ($doc) {
+                $emp = \App\Models\ProveedorEmpleado::where('documento_identidad', $doc)->first();
+                if (!$emp) {
+                    $emp = \App\Models\ProductorEmpleado::where('documento_identidad', $doc)->first();
+                }
+                if (!$emp) {
+                    $emp = \App\Models\Empleado::where('documento_identidad', $doc)->first();
+                }
+                if ($emp) {
+                    $ac['nombres']          = !empty($ac['nombres']) ? $ac['nombres'] : $emp->nombres;
+                    $ac['apellidos']        = !empty($ac['apellidos']) ? $ac['apellidos'] : $emp->apellidos;
+                    $ac['nombre']           = !empty($ac['nombre']) ? $ac['nombre'] : trim("{$emp->nombres} {$emp->apellidos}");
+                    $ac['genero']           = !empty($ac['genero']) ? $ac['genero'] : ($emp->genero ?? null);
+                    $ac['fecha_nacimiento'] = !empty($ac['fecha_nacimiento']) ? $ac['fecha_nacimiento'] : ($emp->fecha_nacimiento ? (is_string($emp->fecha_nacimiento) ? $emp->fecha_nacimiento : $emp->fecha_nacimiento->format('Y-m-d')) : null);
+                    $ac['edad']             = !empty($ac['edad']) ? $ac['edad'] : ($emp->edad ?? null);
+                    $ac['correo']           = !empty($ac['correo']) ? $ac['correo'] : ($emp->correo ?? $emp->email ?? null);
+                    $ac['cargo']            = !empty($ac['cargo']) ? $ac['cargo'] : ($emp->cargo ?? null);
+                    $ac['foto_carnet']      = !empty($ac['foto_carnet']) ? $ac['foto_carnet'] : ($emp->foto_carnet ?? $emp->foto_empleado ?? null);
+                    $ac['doc_foto_frontal'] = !empty($ac['doc_foto_frontal']) ? $ac['doc_foto_frontal'] : ($emp->documento_frontal ?? $emp->foto_documento ?? null);
+                    $ac['doc_foto_trasera'] = !empty($ac['doc_foto_trasera']) ? $ac['doc_foto_trasera'] : ($emp->documento_reverso ?? null);
+                }
+            }
+            $enriched[] = $ac;
+        }
+        return $enriched;
     }
 
     public function solicitarAutorizacionWhatsapp(Request $request)
@@ -1001,6 +1044,10 @@ class VisitaAccesoController extends Controller
 
         \App\Services\RegionalConfigurationService::setRegionalConfiguration();
         $timezone = config('app.timezone', 'America/Mexico_City');
+
+        if ($resultado && isset($resultado['data']) && isset($resultado['data']->acompanantes)) {
+            $resultado['data']->acompanantes = $this->enrichAcompanantes($resultado['data']->acompanantes);
+        }
 
         return Inertia::render('admin/VisitasAccesos/GaritaControl', [
             'searchQuery'      => $search,
