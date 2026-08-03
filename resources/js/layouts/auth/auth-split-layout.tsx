@@ -35,11 +35,11 @@ export default function AuthSplitLayout({
                     className="relative z-10 flex items-center font-semibold py-2"
                 >
                     <div className="relative group">
-                        <div className="absolute -inset-4 rounded-3xl bg-gradient-to-r from-cyan-500/20 via-indigo-500/20 to-blue-600/20 blur-xl opacity-75 group-hover:opacity-100 transition duration-500" />
+                        <div className="absolute" />
                         <img
-                            src="/image/logo/larareact_logo_transparent.png"
+                            src="/image/logo/larareact_logo_white_1785725468786.png"
                             alt="Fix Sale Logo"
-                            className="relative h-44 w-auto max-w-full object-contain brightness-0 invert drop-shadow-[0_10px_25px_rgba(255,255,255,0.45)] transition-transform duration-300 group-hover:scale-105"
+                            className="relative h-44 w-auto max-w-full object-contain transition-transform duration-300 group-hover:scale-105"
                         />
                     </div>
                 </Link>
