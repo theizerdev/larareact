@@ -576,6 +576,19 @@ function CameraWidget({ onCapture, onCancel, title, faceGuide = false, docGuide 
     );
 }
 
+const getAgeFromBirthdate = (birthdateStr?: string | null) => {
+    if (!birthdateStr) return null;
+    const birthDate = new Date(birthdateStr);
+    if (isNaN(birthDate.getTime())) return null;
+    const today = new Date();
+    let age = today.getFullYear() - birthDate.getFullYear();
+    const m = today.getMonth() - birthDate.getMonth();
+    if (m < 0 || (m === 0 && today.getDate() < birthDate.getDate())) {
+        age--;
+    }
+    return age > 0 && age < 120 ? age : null;
+};
+
 export default function GaritaControl({
     searchQuery = '',
     resultado = null,
@@ -2312,9 +2325,18 @@ export default function GaritaControl({
                             setAcompanantesList([
                                 ...acompanantesList,
                                 {
+                                    ...nuevoAcompanante,
                                     nombre: fullNombre,
+                                    nombres: nuevoAcompanante.nombres || fullNombre,
+                                    apellidos: nuevoAcompanante.apellidos || '',
+                                    curp: docIdentidad,
                                     documento: docIdentidad,
-                                    telefono: nuevoAcompanante.correo || '',
+                                    genero: nuevoAcompanante.genero || '',
+                                    fecha_nacimiento: nuevoAcompanante.fecha_nacimiento || '',
+                                    edad: nuevoAcompanante.edad || '',
+                                    correo: nuevoAcompanante.correo || '',
+                                    cargo: nuevoAcompanante.cargo || '',
+                                    telefono: nuevoAcompanante.correo || nuevoAcompanante.telefono || '',
                                     observacion: nuevoAcompanante.cargo || nuevoAcompanante.observacion || 'Acompañante registrado',
                                     foto_carnet: nuevoAcompanante.foto_carnet || undefined,
                                     doc_foto_frontal: nuevoAcompanante.doc_foto_frontal || undefined,
@@ -2738,40 +2760,45 @@ export default function GaritaControl({
                             </div>
 
                             {/* Datos Registrados */}
-                            <div className="grid grid-cols-2 gap-3 text-xs bg-slate-50 p-4 rounded-2xl border border-slate-200">
-                                <div>
-                                    <span className="text-slate-400 font-bold block text-[10px] uppercase tracking-wider">{__('Documento / ID')}</span>
-                                    <span className="font-mono font-bold text-slate-800">
-                                        {selectedAcompananteDetail.documento || selectedAcompananteDetail.documento_identidad || selectedAcompananteDetail.curp || '-'}
-                                    </span>
-                                </div>
-                                <div>
-                                    <span className="text-slate-400 font-bold block text-[10px] uppercase tracking-wider">{__('Teléfono')}</span>
-                                    <span className="font-medium text-slate-800">
-                                        {selectedAcompananteDetail.telefono || selectedAcompananteDetail.telefono_contacto || '-'}
-                                    </span>
-                                </div>
-                                {selectedAcompananteDetail.correo && (
-                                    <div className="col-span-2">
-                                        <span className="text-slate-400 font-bold block text-[10px] uppercase tracking-wider">{__('Correo Electrónico')}</span>
-                                        <span className="font-medium text-slate-800">{selectedAcompananteDetail.correo}</span>
+                            {(() => {
+                                const generoVal = selectedAcompananteDetail.genero || selectedAcompananteDetail.sexo || selectedAcompananteDetail.gender || null;
+                                const fechaNacVal = selectedAcompananteDetail.fecha_nacimiento || selectedAcompananteDetail.fecha_nac || selectedAcompananteDetail.nacimiento || null;
+                                const edadCalculada = selectedAcompananteDetail.edad || getAgeFromBirthdate(fechaNacVal);
+                                const correoVal = selectedAcompananteDetail.correo || selectedAcompananteDetail.email || (selectedAcompananteDetail.telefono && selectedAcompananteDetail.telefono.includes('@') ? selectedAcompananteDetail.telefono : null) || null;
+
+                                return (
+                                    <div className="grid grid-cols-2 gap-3 text-xs bg-slate-50 p-4 rounded-2xl border border-slate-200">
+                                        <div>
+                                            <span className="text-slate-400 font-bold block text-[10px] uppercase tracking-wider">{__('Documento / ID')}</span>
+                                            <span className="font-mono font-bold text-slate-800">
+                                                {selectedAcompananteDetail.documento || selectedAcompananteDetail.documento_identidad || selectedAcompananteDetail.curp || '-'}
+                                            </span>
+                                        </div>
+                                        <div>
+                                            <span className="text-slate-400 font-bold block text-[10px] uppercase tracking-wider">{__('Teléfono')}</span>
+                                            <span className="font-medium text-slate-800">
+                                                {selectedAcompananteDetail.telefono || selectedAcompananteDetail.telefono_contacto || '-'}
+                                            </span>
+                                        </div>
+                                        <div>
+                                            <span className="text-slate-400 font-bold block text-[10px] uppercase tracking-wider">{__('Correo Electrónico')}</span>
+                                            <span className="font-medium text-slate-800 truncate block">{correoVal || '-'}</span>
+                                        </div>
+                                        <div>
+                                            <span className="text-slate-400 font-bold block text-[10px] uppercase tracking-wider">{__('Género')}</span>
+                                            <span className="font-medium text-slate-800 capitalize">{generoVal ? __(generoVal) : '-'}</span>
+                                        </div>
+                                        <div>
+                                            <span className="text-slate-400 font-bold block text-[10px] uppercase tracking-wider">{__('Fecha Nacimiento')}</span>
+                                            <span className="font-medium text-slate-800 font-mono">{fechaNacVal || '-'}</span>
+                                        </div>
+                                        <div>
+                                            <span className="text-slate-400 font-bold block text-[10px] uppercase tracking-wider">{__('Edad')}</span>
+                                            <span className="font-medium text-slate-800">{edadCalculada ? `${edadCalculada} ${__('años')}` : '-'}</span>
+                                        </div>
                                     </div>
-                                )}
-                                {selectedAcompananteDetail.genero && (
-                                    <div>
-                                        <span className="text-slate-400 font-bold block text-[10px] uppercase tracking-wider">{__('Género')}</span>
-                                        <span className="font-medium text-slate-800">{selectedAcompananteDetail.genero}</span>
-                                    </div>
-                                )}
-                                {(selectedAcompananteDetail.fecha_nacimiento || selectedAcompananteDetail.edad) && (
-                                    <div>
-                                        <span className="text-slate-400 font-bold block text-[10px] uppercase tracking-wider">{__('Edad / Nacimiento')}</span>
-                                        <span className="font-medium text-slate-800">
-                                            {selectedAcompananteDetail.edad ? `${selectedAcompananteDetail.edad} años` : selectedAcompananteDetail.fecha_nacimiento}
-                                        </span>
-                                    </div>
-                                )}
-                            </div>
+                                );
+                            })()}
 
                             {/* Documentos Adjuntos (Frontal / Trasero) */}
                             <div className="space-y-3">

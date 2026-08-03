@@ -73,6 +73,27 @@ import { notifySuccess, notifyError } from '@/utils/notifications';
 import { useTranslate } from '@/hooks/use-translate';
 import { cleanParams } from '@/lib/utils';
 
+const formatImageUrl = (url?: string | null) => {
+    if (!url) return null;
+    if (url.startsWith('data:image/') || url.startsWith('http://') || url.startsWith('https://')) return url;
+    if (url.startsWith('/storage/')) return url;
+    if (url.startsWith('storage/')) return `/${url}`;
+    return `/storage/${url.replace(/^\/+/, '')}`;
+};
+
+const getAgeFromBirthdate = (birthdateStr?: string | null) => {
+    if (!birthdateStr) return null;
+    const birthDate = new Date(birthdateStr);
+    if (isNaN(birthDate.getTime())) return null;
+    const today = new Date();
+    let age = today.getFullYear() - birthDate.getFullYear();
+    const m = today.getMonth() - birthDate.getMonth();
+    if (m < 0 || (m === 0 && today.getDate() < birthDate.getDate())) {
+        age--;
+    }
+    return age > 0 && age < 120 ? age : null;
+};
+
 interface VisitaAcceso {
     id: number;
     codigo_visitante: number;
@@ -401,6 +422,7 @@ export default function Index({
 
     // Modal de Detalle Completo de Acceso
     const [selectedAccesoDetail, setSelectedAccesoDetail] = useState<VisitaAcceso | null>(null);
+    const [selectedAcompananteDetail, setSelectedAcompananteDetail] = useState<any | null>(null);
 
     // Acompañantes en el vehículo
     const [acompanantesList, setAcompanantesList] = useState<any[]>([]);
@@ -1938,30 +1960,97 @@ export default function Index({
                                             3. {__('Acompañantes Registrados')} ({selectedAccesoDetail.acompanantes.length})
                                         </h4>
 
-                                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                             {selectedAccesoDetail.acompanantes.map((ac: any, idx: number) => {
                                                 const nombreCompleto = ac.nombre || `${ac.nombres || ''} ${ac.apellidos || ''}`.trim() || `Acompañante #${idx + 1}`;
-                                                const docIdentidad = ac.documento || ac.documento_identidad || 'N/A';
+                                                const docIdentidad = ac.curp || ac.documento || ac.documento_identidad || 'N/A';
                                                 const deptoCargo = ac.departamento ? `Depto: ${ac.departamento}` : (ac.cargo ? `Cargo: ${ac.cargo}` : null);
 
+                                                const fotoRostro = formatImageUrl(ac.foto_carnet || ac.foto_empleado || ac.foto || ac.foto_rostro);
+                                                const docFrontal = formatImageUrl(ac.doc_foto_frontal || ac.documento_frontal || ac.foto_documento);
+                                                const docTrasero = formatImageUrl(ac.doc_foto_trasera || ac.documento_trasero);
+
                                                 return (
-                                                    <div key={idx} className="p-3 border rounded-xl bg-slate-50 dark:bg-slate-800/40 flex items-center gap-3">
-                                                        <div className="w-10 h-10 rounded-full border border-emerald-300 bg-emerald-100 dark:bg-emerald-950 text-emerald-700 dark:text-emerald-300 font-bold flex items-center justify-center text-xs shrink-0 overflow-hidden">
-                                                            {ac.foto_empleado ? (
-                                                                <img src={ac.foto_empleado} alt="" className="w-full h-full object-cover" />
-                                                            ) : (
-                                                                <User className="w-5 h-5 text-emerald-600 dark:text-emerald-400" />
-                                                            )}
-                                                        </div>
-                                                        <div className="space-y-0.5 flex-1 min-w-0">
-                                                            <div className="font-bold text-sm text-slate-800 dark:text-slate-200 truncate">
-                                                                {nombreCompleto}
+                                                    <div
+                                                        key={idx}
+                                                        className="p-4 border rounded-2xl bg-slate-50 dark:bg-slate-800/50 hover:bg-slate-100/80 transition-all flex flex-col gap-3 shadow-xs"
+                                                    >
+                                                        <div className="flex items-start justify-between gap-3">
+                                                            <div className="flex items-center gap-3 min-w-0">
+                                                                {/* Foto Carnet / Rostro */}
+                                                                {fotoRostro ? (
+                                                                    <div
+                                                                        className="w-14 h-14 rounded-2xl overflow-hidden border-2 border-emerald-500 bg-white shadow-xs shrink-0 cursor-pointer group relative"
+                                                                        onClick={() => setActiveImageModal(fotoRostro)}
+                                                                        title={__('Ver fotografía de rostro')}
+                                                                    >
+                                                                        <img src={fotoRostro} alt={nombreCompleto} className="w-full h-full object-cover group-hover:scale-110 transition-transform" />
+                                                                    </div>
+                                                                ) : (
+                                                                    <div className="w-14 h-14 rounded-2xl border border-slate-300 bg-slate-200 dark:bg-slate-700 flex items-center justify-center text-slate-400 shrink-0">
+                                                                        <User className="w-7 h-7" />
+                                                                    </div>
+                                                                )}
+
+                                                                <div className="min-w-0 flex-1">
+                                                                    <h5 className="font-extrabold text-sm text-slate-900 dark:text-slate-100 truncate">
+                                                                        {nombreCompleto}
+                                                                    </h5>
+                                                                    <p className="text-xs text-slate-500 font-mono mt-0.5">
+                                                                        Doc: <span className="font-bold text-slate-700 dark:text-slate-300">{docIdentidad}</span>
+                                                                    </p>
+                                                                    {deptoCargo && (
+                                                                        <p className="text-[11px] text-emerald-700 dark:text-emerald-400 font-medium truncate mt-0.5">
+                                                                            {deptoCargo}
+                                                                        </p>
+                                                                    )}
+                                                                </div>
                                                             </div>
-                                                            <div className="text-[11px] text-slate-500 font-mono">
-                                                                Doc: <span className="font-bold text-slate-700 dark:text-slate-300">{docIdentidad}</span>
-                                                                {deptoCargo && <span className="ml-1 text-slate-400 font-sans">| {deptoCargo}</span>}
-                                                            </div>
+
+                                                            <Button
+                                                                type="button"
+                                                                variant="outline"
+                                                                size="sm"
+                                                                onClick={() => setSelectedAcompananteDetail(ac)}
+                                                                className="h-8 px-2.5 text-xs font-bold text-emerald-700 border-emerald-300 hover:bg-emerald-50 shrink-0"
+                                                            >
+                                                                <Eye className="w-3.5 h-3.5 mr-1" />
+                                                                {__('Ver')}
+                                                            </Button>
                                                         </div>
+
+                                                        {/* Miniaturas de Fotografías del Documento de Identidad */}
+                                                        {(docFrontal || docTrasero) && (
+                                                            <div className="pt-2 border-t border-slate-200/80 dark:border-slate-700/60 flex items-center gap-3">
+                                                                <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">
+                                                                    {__('Documento:')}
+                                                                </span>
+                                                                <div className="flex gap-2">
+                                                                    {docFrontal && (
+                                                                        <button
+                                                                            type="button"
+                                                                            onClick={() => setActiveImageModal(docFrontal)}
+                                                                            className="relative h-10 w-16 rounded-lg overflow-hidden border border-slate-300 bg-white shadow-2xs hover:opacity-90 group"
+                                                                            title={__('Ver documento frontal')}
+                                                                        >
+                                                                            <img src={docFrontal} alt="Frontal" className="w-full h-full object-cover group-hover:scale-105 transition-transform" />
+                                                                            <span className="absolute bottom-0 inset-x-0 bg-black/60 text-white text-[8px] text-center font-mono">FRENTE</span>
+                                                                        </button>
+                                                                    )}
+                                                                    {docTrasero && (
+                                                                        <button
+                                                                            type="button"
+                                                                            onClick={() => setActiveImageModal(docTrasero)}
+                                                                            className="relative h-10 w-16 rounded-lg overflow-hidden border border-slate-300 bg-white shadow-2xs hover:opacity-90 group"
+                                                                            title={__('Ver documento trasero')}
+                                                                        >
+                                                                            <img src={docTrasero} alt="Trasero" className="w-full h-full object-cover group-hover:scale-105 transition-transform" />
+                                                                            <span className="absolute bottom-0 inset-x-0 bg-black/60 text-white text-[8px] text-center font-mono">REVERSO</span>
+                                                                        </button>
+                                                                    )}
+                                                                </div>
+                                                            </div>
+                                                        )}
                                                     </div>
                                                 );
                                             })}
@@ -2013,44 +2102,81 @@ export default function Index({
                     </DialogContent>
                 </Dialog>
 
-                {/* MODAL PARA VER ACOMPAÑANTES DE UN ACCESO REGISTRADO (SOLO LISTA) */}
+                {/* MODAL PARA VER ACOMPAÑANTES DE UN ACCESO REGISTRADO (LISTA CON FOTOS) */}
                 <Dialog open={!!selectedItemForAcompanantes} onOpenChange={() => setSelectedItemForAcompanantes(null)}>
-                    <DialogContent className="max-w-xl">
+                    <DialogContent className="max-w-2xl">
                         <DialogHeader>
                             <DialogTitle className="flex items-center gap-2 text-lg font-bold">
                                 <Users className="w-5 h-5 text-emerald-600" />
-                                {__('Empleados Acompañantes en el Vehículo')}
+                                {__('Empleados y Personal Acompañante')}
                             </DialogTitle>
                         </DialogHeader>
 
                         {selectedItemForAcompanantes?.acompanantes && (
-                            <div className="space-y-3 my-2 max-h-96 overflow-y-auto">
+                            <div className="space-y-3 my-2 max-h-[70vh] overflow-y-auto pr-1">
                                 <p className="text-xs text-muted-foreground">
-                                    Vehículo N° <span className="font-mono font-bold text-slate-800 dark:text-slate-200">{selectedItemForAcompanantes.codigo_visitante}</span> ({selectedItemForAcompanantes.vehiculo_placa || 'Sin placa'})
+                                    Acceso N° <span className="font-mono font-bold text-slate-800 dark:text-slate-200">{selectedItemForAcompanantes.codigo_visitante}</span> ({selectedItemForAcompanantes.vehiculo_placa || 'Peatonal'})
                                 </p>
-                                <div className="divide-y border rounded-xl bg-slate-50 dark:bg-slate-900/50">
+                                <div className="grid grid-cols-1 gap-3">
                                     {selectedItemForAcompanantes.acompanantes.map((ac: any, idx: number) => {
                                         const nombreCompleto = ac.nombre || `${ac.nombres || ''} ${ac.apellidos || ''}`.trim() || `Acompañante #${idx + 1}`;
-                                        const docIdentidad = ac.documento || ac.documento_identidad || 'N/A';
+                                        const docIdentidad = ac.curp || ac.documento || ac.documento_identidad || 'N/A';
+                                        const fotoRostro = formatImageUrl(ac.foto_carnet || ac.foto_empleado || ac.foto || ac.foto_rostro);
+                                        const docFrontal = formatImageUrl(ac.doc_foto_frontal || ac.documento_frontal || ac.foto_documento);
+                                        const docTrasero = formatImageUrl(ac.doc_foto_trasera || ac.documento_trasero);
+
                                         return (
-                                            <div key={idx} className="p-3.5 flex items-start gap-3">
-                                                <div className="w-10 h-10 rounded-full border border-emerald-300 bg-emerald-100 dark:bg-emerald-950 text-emerald-700 dark:text-emerald-300 font-bold flex items-center justify-center shrink-0 overflow-hidden text-xs">
-                                                    {ac.foto_empleado ? (
-                                                        <img src={ac.foto_empleado} alt="" className="w-full h-full object-cover" />
+                                            <div key={idx} className="p-3.5 border rounded-2xl bg-slate-50 dark:bg-slate-800/40 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+                                                <div className="flex items-center gap-3 min-w-0">
+                                                    {fotoRostro ? (
+                                                        <div
+                                                            className="w-14 h-14 rounded-2xl overflow-hidden border-2 border-emerald-500 bg-white shadow-xs shrink-0 cursor-pointer group"
+                                                            onClick={() => setActiveImageModal(fotoRostro)}
+                                                            title={__('Ampliar fotografía de rostro')}
+                                                        >
+                                                            <img src={fotoRostro} alt="" className="w-full h-full object-cover group-hover:scale-110 transition-transform" />
+                                                        </div>
                                                     ) : (
-                                                        <User className="w-5 h-5 text-emerald-600 dark:text-emerald-400" />
+                                                        <div className="w-14 h-14 rounded-2xl border border-slate-300 bg-slate-200 dark:bg-slate-700 flex items-center justify-center text-slate-400 shrink-0">
+                                                            <User className="w-7 h-7" />
+                                                        </div>
                                                     )}
-                                                </div>
-                                                <div className="flex-1 space-y-1">
-                                                    <div className="font-bold text-sm text-slate-800 dark:text-slate-200">
-                                                        {nombreCompleto}
+                                                    <div className="min-w-0 flex-1 space-y-0.5">
+                                                        <div className="font-extrabold text-sm text-slate-800 dark:text-slate-200">
+                                                            {nombreCompleto}
+                                                        </div>
+                                                        <div className="text-xs text-slate-500 font-mono">
+                                                            Doc: <span className="font-bold text-slate-700 dark:text-slate-300">{docIdentidad}</span>
+                                                            {ac.cargo && <span className="ml-1.5 font-sans text-emerald-600 font-medium">• {ac.cargo}</span>}
+                                                            {ac.departamento && <span className="ml-1 font-sans text-slate-400">| Depto: {ac.departamento}</span>}
+                                                        </div>
+                                                        {ac.jornada_laboral && renderHorarioJornada(ac.jornada_laboral, nombreCompleto, docIdentidad, true)}
                                                     </div>
-                                                    <div className="text-xs text-slate-500 font-mono">
-                                                        Doc: <span className="font-bold text-slate-700 dark:text-slate-300">{docIdentidad}</span>
-                                                        {ac.departamento && <span className="ml-1 font-sans text-slate-400">| Depto: {ac.departamento}</span>}
-                                                    </div>
-                                                    {ac.jornada_laboral && renderHorarioJornada(ac.jornada_laboral, nombreCompleto, docIdentidad, true)}
                                                 </div>
+
+                                                {/* Miniaturas de Documentos */}
+                                                {(docFrontal || docTrasero) && (
+                                                    <div className="flex gap-2 shrink-0">
+                                                        {docFrontal && (
+                                                            <div
+                                                                className="w-12 h-12 rounded-xl overflow-hidden border border-slate-300 bg-white cursor-pointer hover:opacity-90 shadow-2xs"
+                                                                onClick={() => setActiveImageModal(docFrontal)}
+                                                                title={__('Documento Frontal')}
+                                                            >
+                                                                <img src={docFrontal} alt="Doc Frontal" className="w-full h-full object-cover" />
+                                                            </div>
+                                                        )}
+                                                        {docTrasero && (
+                                                            <div
+                                                                className="w-12 h-12 rounded-xl overflow-hidden border border-slate-300 bg-white cursor-pointer hover:opacity-90 shadow-2xs"
+                                                                onClick={() => setActiveImageModal(docTrasero)}
+                                                                title={__('Documento Reverso')}
+                                                            >
+                                                                <img src={docTrasero} alt="Doc Trasero" className="w-full h-full object-cover" />
+                                                            </div>
+                                                        )}
+                                                    </div>
+                                                )}
                                             </div>
                                         );
                                     })}
@@ -3280,6 +3406,158 @@ export default function Index({
                                 {__('Guardar Acompañante')}
                             </Button>
                         </DialogFooter>
+                    </DialogContent>
+                </Dialog>
+
+                {/* MODAL DE DETALLE COMPLETO DE ACOMPAÑANTE */}
+                <Dialog open={Boolean(selectedAcompananteDetail)} onOpenChange={(open) => { if (!open) setSelectedAcompananteDetail(null); }}>
+                    <DialogContent className="max-w-lg bg-white dark:bg-slate-900 rounded-3xl p-6 shadow-2xl border border-slate-100 dark:border-slate-800 text-slate-900 dark:text-slate-100 max-h-[90vh] overflow-y-auto">
+                        <DialogHeader className="space-y-1 text-left border-b border-slate-100 dark:border-slate-800 pb-4">
+                            <div className="flex items-center justify-between">
+                                <DialogTitle className="text-lg font-black flex items-center gap-2">
+                                    <Users className="w-5 h-5 text-emerald-600" />
+                                    {__('Detalle del Acompañante')}
+                                </DialogTitle>
+                                <Badge className="bg-emerald-100 text-emerald-900 border-emerald-300 font-bold text-[10px] uppercase">
+                                    {__('Información Registrada')}
+                                </Badge>
+                            </div>
+                            <DialogDescription className="text-xs text-slate-500">
+                                {__('Datos personales y fotografías adjuntas del acompañante')}
+                            </DialogDescription>
+                        </DialogHeader>
+
+                        {selectedAcompananteDetail && (() => {
+                            const fotoRostro = formatImageUrl(selectedAcompananteDetail.foto_carnet || selectedAcompananteDetail.foto_empleado || selectedAcompananteDetail.foto || selectedAcompananteDetail.foto_rostro);
+                            const docFrontal = formatImageUrl(selectedAcompananteDetail.doc_foto_frontal || selectedAcompananteDetail.documento_frontal || selectedAcompananteDetail.foto_documento);
+                            const docTrasero = formatImageUrl(selectedAcompananteDetail.doc_foto_trasera || selectedAcompananteDetail.documento_trasero);
+
+                            const generoVal = selectedAcompananteDetail.genero || selectedAcompananteDetail.sexo || selectedAcompananteDetail.gender || null;
+                            const fechaNacVal = selectedAcompananteDetail.fecha_nacimiento || selectedAcompananteDetail.fecha_nac || selectedAcompananteDetail.nacimiento || null;
+                            const edadCalculada = selectedAcompananteDetail.edad || getAgeFromBirthdate(fechaNacVal);
+                            const correoVal = selectedAcompananteDetail.correo || selectedAcompananteDetail.email || (selectedAcompananteDetail.telefono && selectedAcompananteDetail.telefono.includes('@') ? selectedAcompananteDetail.telefono : null) || null;
+                            const cargoVal = selectedAcompananteDetail.cargo || selectedAcompananteDetail.observacion || selectedAcompananteDetail.departamento || null;
+
+                            return (
+                            <div className="space-y-5 pt-2">
+                                {/* Rostro Carnet Principal */}
+                                <div className="flex items-center gap-4 p-4 rounded-2xl bg-emerald-50/70 dark:bg-emerald-950/30 border border-emerald-200/70 dark:border-emerald-900/60">
+                                    {fotoRostro ? (
+                                        <div
+                                            className="w-20 h-20 rounded-2xl overflow-hidden border-2 border-emerald-500 bg-white shadow-md shrink-0 cursor-pointer group"
+                                            onClick={() => setActiveImageModal(fotoRostro)}
+                                        >
+                                            <img
+                                                src={fotoRostro}
+                                                alt="Rostro Acompañante"
+                                                className="w-full h-full object-cover group-hover:scale-105 transition-transform"
+                                            />
+                                        </div>
+                                    ) : (
+                                        <div className="w-20 h-20 rounded-2xl bg-slate-200 dark:bg-slate-800 border flex items-center justify-center text-slate-400 shrink-0">
+                                            <User className="w-10 h-10" />
+                                        </div>
+                                    )}
+                                    <div className="space-y-1 min-w-0">
+                                        <h4 className="text-base font-extrabold text-slate-900 dark:text-slate-100 truncate">
+                                            {selectedAcompananteDetail.nombre || `${selectedAcompananteDetail.nombres || ''} ${selectedAcompananteDetail.apellidos || ''}`.trim() || 'Acompañante'}
+                                        </h4>
+                                        <p className="text-xs font-mono text-slate-500">
+                                            Doc/CURP: <span className="font-bold text-slate-800 dark:text-slate-200">{selectedAcompananteDetail.curp || selectedAcompananteDetail.documento || selectedAcompananteDetail.documento_identidad || 'N/A'}</span>
+                                        </p>
+                                        {cargoVal && (
+                                            <Badge className="bg-emerald-600 text-white text-[10px]">
+                                                {cargoVal}
+                                            </Badge>
+                                        )}
+                                    </div>
+                                </div>
+
+                                {/* Grid de Datos Personales */}
+                                <div className="grid grid-cols-2 gap-3 text-xs bg-slate-50 dark:bg-slate-800/40 p-4 rounded-2xl border border-slate-200/80 dark:border-slate-700/60">
+                                    <div>
+                                        <span className="text-slate-400 block font-medium text-[11px]">{__('Género')}</span>
+                                        <span className="font-bold text-slate-800 dark:text-slate-200 capitalize">
+                                            {generoVal ? __(generoVal) : __('No especificado')}
+                                        </span>
+                                    </div>
+                                    <div>
+                                        <span className="text-slate-400 block font-medium text-[11px]">{__('Edad')}</span>
+                                        <span className="font-bold text-slate-800 dark:text-slate-200">
+                                            {edadCalculada ? `${edadCalculada} ${__('años')}` : 'N/A'}
+                                        </span>
+                                    </div>
+                                    <div>
+                                        <span className="text-slate-400 block font-medium text-[11px]">{__('Fecha Nacimiento')}</span>
+                                        <span className="font-bold text-slate-800 dark:text-slate-200 font-mono">
+                                            {fechaNacVal || 'N/A'}
+                                        </span>
+                                    </div>
+                                    <div>
+                                        <span className="text-slate-400 block font-medium text-[11px]">{__('Correo Electrónico')}</span>
+                                        <span className="font-bold text-slate-800 dark:text-slate-200 truncate block">
+                                            {correoVal || 'N/A'}
+                                        </span>
+                                    </div>
+                                </div>
+
+                                {/* Fotografías de Documentos adjuntos */}
+                                <div className="space-y-2">
+                                    <Label className="font-extrabold text-slate-700 dark:text-slate-300 text-xs uppercase tracking-wider block">
+                                        {__('Fotografías del Documento de Identidad')}
+                                    </Label>
+
+                                    <div className="grid grid-cols-2 gap-3">
+                                        <div className="space-y-1">
+                                            <span className="text-[11px] text-slate-500 font-medium block">{__('Foto Frontal')}</span>
+                                            {docFrontal ? (
+                                                <div
+                                                    className="w-full aspect-[16/10] rounded-xl overflow-hidden border border-slate-300 bg-slate-100 cursor-pointer shadow-xs group"
+                                                    onClick={() => setActiveImageModal(docFrontal)}
+                                                >
+                                                    <img
+                                                        src={docFrontal}
+                                                        alt="Doc Frontal"
+                                                        className="w-full h-full object-cover group-hover:scale-105 transition-transform"
+                                                    />
+                                                </div>
+                                            ) : (
+                                                <div className="w-full aspect-[16/10] rounded-xl bg-slate-100 dark:bg-slate-800 border flex items-center justify-center text-slate-400 text-xs italic">
+                                                    {__('Sin foto frontal')}
+                                                </div>
+                                            )}
+                                        </div>
+
+                                        <div className="space-y-1">
+                                            <span className="text-[11px] text-slate-500 font-medium block">{__('Foto Reverso')}</span>
+                                            {docTrasero ? (
+                                                <div
+                                                    className="w-full aspect-[16/10] rounded-xl overflow-hidden border border-slate-300 bg-slate-100 cursor-pointer shadow-xs group"
+                                                    onClick={() => setActiveImageModal(docTrasero)}
+                                                >
+                                                    <img
+                                                        src={docTrasero}
+                                                        alt="Doc Reverso"
+                                                        className="w-full h-full object-cover group-hover:scale-105 transition-transform"
+                                                    />
+                                                </div>
+                                            ) : (
+                                                <div className="w-full aspect-[16/10] rounded-xl bg-slate-100 dark:bg-slate-800 border flex items-center justify-center text-slate-400 text-xs italic">
+                                                    {__('Sin foto reverso')}
+                                                </div>
+                                            )}
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <DialogFooter className="pt-3 border-t border-slate-100 dark:border-slate-800">
+                                    <Button type="button" variant="outline" onClick={() => setSelectedAcompananteDetail(null)} className="w-full rounded-xl">
+                                        {__('Cerrar')}
+                                    </Button>
+                                </DialogFooter>
+                            </div>
+                            );
+                        })()}
                     </DialogContent>
                 </Dialog>
 
