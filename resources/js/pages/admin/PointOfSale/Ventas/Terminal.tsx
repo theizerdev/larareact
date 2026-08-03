@@ -3,7 +3,7 @@ import {
     ShoppingCart, Search, Plus, Minus, Trash2, CheckCircle2, CreditCard, DollarSign,
     Package, Wrench, User, AlertCircle, Building2, Smartphone, Receipt, Pause,
     Play, X, Wallet, Tag, Barcode, HelpCircle, Layers, FileText, ArrowRight, Eye, RefreshCw,
-    Calculator, ArrowUpRight, ArrowDownLeft, Scale, Settings, Printer, Lock, Coins, Edit3, Landmark, Boxes
+    Calculator, ArrowUpRight, ArrowDownLeft, Scale, Settings, Printer, Lock, Coins, Edit3, Landmark, Boxes, History
 } from 'lucide-react';
 import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { Breadcrumbs } from '@/components/breadcrumbs';
@@ -229,6 +229,33 @@ export default function Terminal({
         setIsPrinterConfigOpen(false);
         notifySuccess(__('Configuración de máquina ticketera guardada exitosamente.'));
     };
+
+    // Ultimas Ventas (F4) State & Fetch
+    const [isRecentSalesOpen, setIsRecentSalesOpen] = useState(false);
+    const [recentSales, setRecentSales] = useState<any[]>([]);
+    const [isLoadingRecentSales, setIsLoadingRecentSales] = useState(false);
+
+    const fetchRecentSales = async () => {
+        setIsLoadingRecentSales(true);
+        try {
+            const res = await fetch('/admin/ventas?perPage=10', {
+                headers: { 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest' },
+            });
+            const data = await res.json();
+            if (data?.sales?.data) {
+                setRecentSales(data.sales.data);
+            }
+        } catch {
+            // Silencioso
+        } finally {
+            setIsLoadingRecentSales(false);
+        }
+    };
+
+    const handleOpenRecentSales = useCallback(() => {
+        setIsRecentSalesOpen(true);
+        fetchRecentSales();
+    }, []);
 
     // Valor del Dólar (Exchange Rate) Modal State
     const [isDolarModalOpen, setIsDolarModalOpen] = useState(false);
@@ -893,11 +920,14 @@ export default function Terminal({
             } else if (e.key === 'F5') {
                 e.preventDefault();
                 if (activeTicket.cart.length > 0) setIsHoldOpen(true);
+            } else if (e.key === 'F4' || e.code === 'F4') {
+                e.preventDefault();
+                handleOpenRecentSales();
             }
         };
         window.addEventListener('keydown', handleKeyDown);
         return () => window.removeEventListener('keydown', handleKeyDown);
-    }, [activeTicket.cart, activeRegister, handleOpenPayment, isPaymentModalOpen]);
+    }, [activeTicket.cart, activeRegister, handleOpenPayment, isPaymentModalOpen, handleOpenRecentSales]);
 
     // Client selection
     const handleSelectCliente = (clienteIdStr: string) => {
@@ -1082,6 +1112,17 @@ export default function Terminal({
                         >
                             <User className="w-3.5 h-3.5 text-purple-500" />
                             <span className="font-bold">[F6]</span> {__('Cliente')}
+                        </Button>
+
+                        <Button
+                            type="button"
+                            variant="outline"
+                            size="sm"
+                            className="h-8 text-xs gap-1 bg-blue-50 dark:bg-blue-950/40 text-blue-700 dark:text-blue-300 border-blue-200"
+                            onClick={handleOpenRecentSales}
+                        >
+                            <History className="w-3.5 h-3.5 text-blue-600" />
+                            <span className="font-bold">[F4]</span> {__('Últimas Ventas')}
                         </Button>
 
                         {activeRegister && (
@@ -2553,6 +2594,78 @@ export default function Terminal({
                         </DialogContent>
                     </Dialog>
                 )}
+
+                {/* MODAL ÚLTIMAS VENTAS (F4) */}
+                <Dialog open={isRecentSalesOpen} onOpenChange={setIsRecentSalesOpen}>
+                    <DialogContent className="sm:max-w-2xl max-h-[85vh] flex flex-col">
+                        <DialogHeader>
+                            <DialogTitle className="flex items-center gap-2 text-blue-600">
+                                <History className="w-5 h-5" />
+                                {__('Historial de Últimas Ventas (F4)')}
+                            </DialogTitle>
+                            <DialogDescription>
+                                {__('Consulte las ventas recientes procesadas en el sistema para reimprimir tickets o revisar detalles.')}
+                            </DialogDescription>
+                        </DialogHeader>
+
+                        <div className="flex-1 overflow-y-auto border rounded-xl divide-y my-2">
+                            {isLoadingRecentSales ? (
+                                <div className="p-8 text-center text-xs text-muted-foreground">
+                                    <RefreshCw className="w-6 h-6 animate-spin mx-auto mb-2 text-blue-600" />
+                                    {__('Cargando ventas recientes...')}
+                                </div>
+                            ) : recentSales.length > 0 ? (
+                                <table className="w-full text-left text-xs">
+                                    <thead className="bg-slate-100 dark:bg-slate-800 text-[11px] uppercase font-bold text-slate-600 dark:text-slate-300">
+                                        <tr>
+                                            <th className="p-2.5">Ticket</th>
+                                            <th className="p-2.5">Fecha</th>
+                                            <th className="p-2.5">Cliente</th>
+                                            <th className="p-2.5 text-right">Total</th>
+                                            <th className="p-2.5 text-center">Acciones</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody className="divide-y font-mono">
+                                        {recentSales.map((sale) => (
+                                            <tr key={sale.id} className="hover:bg-slate-50 dark:hover:bg-slate-800/60 transition-colors">
+                                                <td className="p-2.5 font-bold text-blue-600 dark:text-blue-400">{sale.codigo_ticket}</td>
+                                                <td className="p-2.5 text-slate-500">{new Date(sale.created_at).toLocaleDateString()}</td>
+                                                <td className="p-2.5 font-sans font-medium">{sale.cliente_nombre || 'Cliente General'}</td>
+                                                <td className="p-2.5 text-right font-bold text-emerald-600 font-mono">${Number(sale.total).toFixed(2)}</td>
+                                                <td className="p-2.5 text-center font-sans">
+                                                    <Button
+                                                        type="button"
+                                                        variant="outline"
+                                                        size="sm"
+                                                        className="h-7 text-xs font-bold gap-1 text-blue-600 border-blue-200 hover:bg-blue-50"
+                                                        onClick={() => {
+                                                            setCompletedSale(sale);
+                                                            setIsRecentSalesOpen(false);
+                                                        }}
+                                                    >
+                                                        <Printer className="w-3.5 h-3.5" />
+                                                        {__('Ver / Imprimir Ticket')}
+                                                    </Button>
+                                                </td>
+                                            </tr>
+                                        ))}
+                                    </tbody>
+                                </table>
+                            ) : (
+                                <div className="p-8 text-center text-xs text-muted-foreground">
+                                    <Receipt className="w-8 h-8 mx-auto mb-2 opacity-30" />
+                                    {__('No se encontraron ventas recientes.')}
+                                </div>
+                            )}
+                        </div>
+
+                        <DialogFooter>
+                            <Button type="button" variant="outline" onClick={() => setIsRecentSalesOpen(false)}>
+                                {__('Cerrar')}
+                            </Button>
+                        </DialogFooter>
+                    </DialogContent>
+                </Dialog>
 
                 {/* MODAL DE CONFIGURACIÓN DE IMPRESORA TÉRMICA */}
                 <Dialog open={isPrinterConfigOpen} onOpenChange={setIsPrinterConfigOpen}>

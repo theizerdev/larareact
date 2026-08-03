@@ -231,6 +231,12 @@ class SaleController extends Controller
 
         $sales = $query->orderBy('created_at', 'desc')->paginate($perPage)->withQueryString();
 
+        if ($request->wantsJson()) {
+            return response()->json([
+                'sales' => $sales,
+            ]);
+        }
+
         $user = auth()->user();
         $empresa = $user?->empresa;
 
