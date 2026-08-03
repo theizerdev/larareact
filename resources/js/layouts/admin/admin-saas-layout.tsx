@@ -273,22 +273,7 @@ export default function AdminSaasLayout({
 
     const lowStockCount = (page.props as any).low_stock_count as number ?? 0;
 
-    const [notifications, setNotifications] = React.useState([
-        {
-            id: '1',
-            title: 'Welcome to the system',
-            message: 'Your account has been created successfully.',
-            time: 'A few minutes ago',
-            read: false,
-        },
-        {
-            id: '2',
-            title: 'Update completed',
-            message: 'The system has been updated successfully.',
-            time: '2 hours ago',
-            read: false,
-        },
-    ]);
+    const [notifications, setNotifications] = React.useState<any[]>([]);
 
     const markAsRead = (id: string) => {
         setNotifications((prev) =>
