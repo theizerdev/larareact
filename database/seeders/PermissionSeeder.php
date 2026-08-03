@@ -135,6 +135,12 @@ class PermissionSeeder extends Seeder
                 'clientes.edit' => 'Editar Clientes',
                 'clientes.delete' => 'Eliminar Clientes',
                 'clientes.abono' => 'Registrar Abonos de Crédito',
+
+                // Módulo: Proveedores
+                'proveedores.view' => 'Ver Proveedores',
+                'proveedores.create' => 'Crear Proveedores',
+                'proveedores.edit' => 'Editar Proveedores',
+                'proveedores.delete' => 'Eliminar Proveedores',
             ],
 
             // Sector: Inventario
@@ -172,6 +178,7 @@ class PermissionSeeder extends Seeder
                     str_starts_with($permission, 'servicios.') => 'servicios',
                     str_starts_with($permission, 'ventas.') => 'ventas',
                     str_starts_with($permission, 'clientes.') => 'clientes',
+                    str_starts_with($permission, 'proveedores.') => 'proveedores',
                     str_starts_with($permission, 'metas.') => 'metas',
                     str_starts_with($permission, 'inventario.') => 'inventario',
 

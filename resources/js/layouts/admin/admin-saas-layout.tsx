@@ -520,7 +520,7 @@ export default function AdminSaasLayout({
                                 {
                                     title: 'Proveedores',
                                     href: '/admin/proveedores',
-                                    permission: 'ventas.view',
+                                    permission: 'proveedores.view',
                                 },
                                 {
                                     title: 'Alertas de Stock',
