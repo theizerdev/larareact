@@ -227,7 +227,7 @@ class PaisSeeder extends Seeder
                 'nombre' => 'México',
                 'codigo_iso2' => 'MX',
                 'codigo_iso3' => 'MEX',
-                'codigo_telefonico' => '+52',
+                'codigo_telefonico' => '+521',
                 'moneda_principal' => 'MXN',
                 'idioma_principal' => 'es',
                 'continente' => 'América del Norte',
