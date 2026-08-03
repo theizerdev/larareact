@@ -2761,10 +2761,22 @@ export default function GaritaControl({
 
                             {/* Datos Registrados */}
                             {(() => {
-                                const generoVal = selectedAcompananteDetail.genero || selectedAcompananteDetail.sexo || selectedAcompananteDetail.gender || null;
-                                const fechaNacVal = selectedAcompananteDetail.fecha_nacimiento || selectedAcompananteDetail.fecha_nac || selectedAcompananteDetail.nacimiento || null;
-                                const edadCalculada = selectedAcompananteDetail.edad || getAgeFromBirthdate(fechaNacVal);
-                                const correoVal = selectedAcompananteDetail.correo || selectedAcompananteDetail.email || (selectedAcompananteDetail.telefono && selectedAcompananteDetail.telefono.includes('@') ? selectedAcompananteDetail.telefono : null) || null;
+                                const matchDoc = selectedAcompananteDetail.curp || selectedAcompananteDetail.documento || selectedAcompananteDetail.documento_identidad;
+                                const matchedEmp = (() => {
+                                    if (!matchDoc || !resultado?.data) return null;
+                                    const cleanDoc = String(matchDoc).trim().toLowerCase();
+                                    const provEmps = resultado.data.proveedor?.empleados || resultado.data.empleados || [];
+                                    let found = provEmps.find((e: any) => String(e.documento_identidad || e.curp || '').trim().toLowerCase() === cleanDoc);
+                                    if (found) return found;
+                                    const prodEmps = resultado.data.productor?.empleados || [];
+                                    found = prodEmps.find((e: any) => String(e.documento_identidad || e.curp || '').trim().toLowerCase() === cleanDoc);
+                                    return found || null;
+                                })();
+
+                                const generoVal = selectedAcompananteDetail.genero || selectedAcompananteDetail.sexo || selectedAcompananteDetail.gender || matchedEmp?.genero || matchedEmp?.sexo || null;
+                                const fechaNacVal = selectedAcompananteDetail.fecha_nacimiento || selectedAcompananteDetail.fecha_nac || selectedAcompananteDetail.nacimiento || matchedEmp?.fecha_nacimiento || matchedEmp?.fecha_nac || null;
+                                const edadCalculada = selectedAcompananteDetail.edad || matchedEmp?.edad || getAgeFromBirthdate(fechaNacVal);
+                                const correoVal = selectedAcompananteDetail.correo || selectedAcompananteDetail.email || matchedEmp?.correo || matchedEmp?.email || (selectedAcompananteDetail.telefono && selectedAcompananteDetail.telefono.includes('@') ? selectedAcompananteDetail.telefono : null) || null;
 
                                 return (
                                     <div className="grid grid-cols-2 gap-3 text-xs bg-slate-50 p-4 rounded-2xl border border-slate-200">

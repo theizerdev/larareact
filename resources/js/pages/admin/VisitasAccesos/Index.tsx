@@ -3428,15 +3428,29 @@ export default function Index({
                         </DialogHeader>
 
                         {selectedAcompananteDetail && (() => {
-                            const fotoRostro = formatImageUrl(selectedAcompananteDetail.foto_carnet || selectedAcompananteDetail.foto_empleado || selectedAcompananteDetail.foto || selectedAcompananteDetail.foto_rostro);
-                            const docFrontal = formatImageUrl(selectedAcompananteDetail.doc_foto_frontal || selectedAcompananteDetail.documento_frontal || selectedAcompananteDetail.foto_documento);
-                            const docTrasero = formatImageUrl(selectedAcompananteDetail.doc_foto_trasera || selectedAcompananteDetail.documento_trasero);
+                            const matchDoc = selectedAcompananteDetail.curp || selectedAcompananteDetail.documento || selectedAcompananteDetail.documento_identidad;
 
-                            const generoVal = selectedAcompananteDetail.genero || selectedAcompananteDetail.sexo || selectedAcompananteDetail.gender || null;
-                            const fechaNacVal = selectedAcompananteDetail.fecha_nacimiento || selectedAcompananteDetail.fecha_nac || selectedAcompananteDetail.nacimiento || null;
-                            const edadCalculada = selectedAcompananteDetail.edad || getAgeFromBirthdate(fechaNacVal);
-                            const correoVal = selectedAcompananteDetail.correo || selectedAcompananteDetail.email || (selectedAcompananteDetail.telefono && selectedAcompananteDetail.telefono.includes('@') ? selectedAcompananteDetail.telefono : null) || null;
-                            const cargoVal = selectedAcompananteDetail.cargo || selectedAcompananteDetail.observacion || selectedAcompananteDetail.departamento || null;
+                            const matchedEmp = (() => {
+                                if (!matchDoc) return null;
+                                const cleanDoc = String(matchDoc).trim().toLowerCase();
+                                const provEmps = selectedAccesoDetail?.proveedor?.empleados || selectedAccesoDetail?.proveedor?.proveedor_empleados || [];
+                                let found = provEmps.find((e: any) => String(e.documento_identidad || e.curp || '').trim().toLowerCase() === cleanDoc);
+                                if (found) return found;
+
+                                const prodEmps = selectedAccesoDetail?.productor?.empleados || selectedAccesoDetail?.productor?.productor_empleados || [];
+                                found = prodEmps.find((e: any) => String(e.documento_identidad || e.curp || '').trim().toLowerCase() === cleanDoc);
+                                return found || null;
+                            })();
+
+                            const fotoRostro = formatImageUrl(selectedAcompananteDetail.foto_carnet || selectedAcompananteDetail.foto_empleado || selectedAcompananteDetail.foto || selectedAcompananteDetail.foto_rostro || matchedEmp?.foto_carnet || matchedEmp?.foto_empleado);
+                            const docFrontal = formatImageUrl(selectedAcompananteDetail.doc_foto_frontal || selectedAcompananteDetail.documento_frontal || selectedAcompananteDetail.foto_documento || matchedEmp?.documento_frontal || matchedEmp?.doc_foto_frontal);
+                            const docTrasero = formatImageUrl(selectedAcompananteDetail.doc_foto_trasera || selectedAcompananteDetail.documento_trasero || matchedEmp?.documento_reverso || matchedEmp?.doc_foto_trasera);
+
+                            const generoVal = selectedAcompananteDetail.genero || selectedAcompananteDetail.sexo || selectedAcompananteDetail.gender || matchedEmp?.genero || matchedEmp?.sexo || null;
+                            const fechaNacVal = selectedAcompananteDetail.fecha_nacimiento || selectedAcompananteDetail.fecha_nac || selectedAcompananteDetail.nacimiento || matchedEmp?.fecha_nacimiento || matchedEmp?.fecha_nac || null;
+                            const edadCalculada = selectedAcompananteDetail.edad || matchedEmp?.edad || getAgeFromBirthdate(fechaNacVal);
+                            const correoVal = selectedAcompananteDetail.correo || selectedAcompananteDetail.email || matchedEmp?.correo || matchedEmp?.email || (selectedAcompananteDetail.telefono && selectedAcompananteDetail.telefono.includes('@') ? selectedAcompananteDetail.telefono : null) || null;
+                            const cargoVal = selectedAcompananteDetail.cargo || matchedEmp?.cargo || selectedAcompananteDetail.observacion || selectedAcompananteDetail.departamento || null;
 
                             return (
                             <div className="space-y-5 pt-2">
