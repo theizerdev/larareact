@@ -44,8 +44,9 @@ export default function LeafletMap({
         if (!mapContainerRef.current) return;
 
         // Valid fallback coordinates
-        const initialLat = Number.isFinite(lat) && lat !== 0 ? lat : 10.4806; // Default Caracas if 0
-        const initialLng = Number.isFinite(lng) && lng !== 0 ? lng : -66.9036;
+        const hasValidCoords = Number.isFinite(lat) && Number.isFinite(lng) && (lat !== 0 || lng !== 0);
+        const initialLat = hasValidCoords ? lat : 10.4806; // Default Caracas if 0/null
+        const initialLng = hasValidCoords ? lng : -66.9036;
 
         // Initialize Leaflet Map
         const map = L.map(mapContainerRef.current, {
@@ -81,8 +82,8 @@ export default function LeafletMap({
 
         mapInstanceRef.current = map;
 
-        // Add main marker if lat/lng are provided
-        if (Number.isFinite(lat) && Number.isFinite(lng)) {
+        // Add main marker
+        if (hasValidCoords) {
             const mainMarker = L.marker([lat, lng], {
                 draggable: interactive && !!onChange
             }).addTo(map);
@@ -92,14 +93,32 @@ export default function LeafletMap({
                     const pos = mainMarker.getLatLng();
                     onChange(pos.lat, pos.lng);
                 });
-
-                map.on('click', (e: L.LeafletMouseEvent) => {
-                    mainMarker.setLatLng(e.latlng);
-                    onChange(e.latlng.lat, e.latlng.lng);
-                });
             }
-
             mainMarkerRef.current = mainMarker;
+        }
+
+        // Always register click event if interactive and onChange is provided
+        if (interactive && onChange) {
+            map.on('click', (e: L.LeafletMouseEvent) => {
+                const { lat: clickedLat, lng: clickedLng } = e.latlng;
+                
+                if (mainMarkerRef.current) {
+                    mainMarkerRef.current.setLatLng(e.latlng);
+                } else {
+                    const newMarker = L.marker(e.latlng, {
+                        draggable: true
+                    }).addTo(map);
+
+                    newMarker.on('dragend', () => {
+                        const pos = newMarker.getLatLng();
+                        onChange(pos.lat, pos.lng);
+                    });
+
+                    mainMarkerRef.current = newMarker;
+                }
+
+                onChange(clickedLat, clickedLng);
+            });
         }
 
         // Add additional markers if provided
@@ -130,7 +149,9 @@ export default function LeafletMap({
     useEffect(() => {
         if (!mapInstanceRef.current) return;
 
-        if (Number.isFinite(lat) && Number.isFinite(lng)) {
+        const hasValidCoords = Number.isFinite(lat) && Number.isFinite(lng) && (lat !== 0 || lng !== 0);
+
+        if (hasValidCoords) {
             if (mainMarkerRef.current) {
                 const currentPos = mainMarkerRef.current.getLatLng();
                 if (Math.abs(currentPos.lat - lat) > 0.0001 || Math.abs(currentPos.lng - lng) > 0.0001) {
@@ -158,11 +179,9 @@ export default function LeafletMap({
     useEffect(() => {
         if (!mapInstanceRef.current) return;
 
-        // Clear previous extra markers
         extraMarkersRef.current.forEach(m => m.remove());
         extraMarkersRef.current = [];
 
-        // Add new extra markers
         markers.forEach((m) => {
             if (Number.isFinite(m.lat) && Number.isFinite(m.lng)) {
                 const marker = L.marker([m.lat, m.lng]).addTo(mapInstanceRef.current!);
