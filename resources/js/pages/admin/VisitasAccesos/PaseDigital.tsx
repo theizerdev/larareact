@@ -1496,23 +1496,27 @@ export default function PaseDigital({ invitacion }: PaseDigitalProps) {
                                                 const email = ac.correo || (ac as any).email;
 
                                                 return (
-                                                    <div key={idx} className="p-4 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-xs flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 text-xs">
+                                                    <Card key={idx} className="p-4 bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 shadow-xs flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 text-xs">
                                                         <div className="flex items-center gap-3.5 min-w-0 flex-1">
-                                                            <div className="relative group w-12 h-12 rounded-2xl overflow-hidden bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 flex items-center justify-center shrink-0 font-bold text-xs">
-                                                                {formatImageUrl(foto) ? (
-                                                                    <img src={formatImageUrl(foto)!} alt={ac.nombre} className="w-full h-full object-cover" />
-                                                                ) : (
-                                                                    <User className="w-6 h-6 text-slate-400" />
-                                                                )}
+                                                            <div className="relative group w-12 h-12 shrink-0">
+                                                                <Avatar className="w-12 h-12 rounded-2xl overflow-hidden bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 font-bold text-xs">
+                                                                    {formatImageUrl(foto) && (
+                                                                        <AvatarImage src={formatImageUrl(foto)!} alt={ac.nombre} className="object-cover" />
+                                                                    )}
+                                                                    <AvatarFallback className="bg-slate-100 dark:bg-slate-800 text-slate-400">
+                                                                        <User className="w-6 h-6 text-slate-400" />
+                                                                    </AvatarFallback>
+                                                                </Avatar>
                                                                 {!foto && (
-                                                                    <button
+                                                                    <Button
                                                                         type="button"
+                                                                        size="icon"
                                                                         onClick={() => setActiveCameraField(`ac_list_foto_carnet_idx_${idx}`)}
-                                                                        className="absolute inset-0 bg-emerald-600/85 hover:bg-emerald-600 text-white flex items-center justify-center text-[10px] font-bold transition-opacity"
+                                                                        className="absolute inset-0 w-full h-full rounded-2xl bg-emerald-600/85 hover:bg-emerald-600 text-white flex items-center justify-center transition-opacity"
                                                                         title="Tomar fotografía del rostro"
                                                                     >
                                                                         <Camera className="w-4 h-4" />
-                                                                    </button>
+                                                                    </Button>
                                                                 )}
                                                             </div>
 
@@ -1522,9 +1526,9 @@ export default function PaseDigital({ invitacion }: PaseDigitalProps) {
                                                                 </div>
                                                                 <div className="flex flex-wrap items-center gap-2 text-[11px] text-slate-500">
                                                                     {curpDoc && (
-                                                                        <span className="font-mono bg-slate-100 dark:bg-slate-800 px-2 py-0.5 rounded border border-slate-200 dark:border-slate-700">
+                                                                        <Badge variant="outline" className="font-mono bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border-slate-200 dark:border-slate-700">
                                                                             CURP/Doc: {curpDoc}
-                                                                        </span>
+                                                                        </Badge>
                                                                     )}
                                                                     {ac.genero && <span className="font-medium">Género: {ac.genero}</span>}
                                                                     {ac.edad && <span className="font-medium">Edad: {ac.edad} años</span>}
@@ -1537,93 +1541,98 @@ export default function PaseDigital({ invitacion }: PaseDigitalProps) {
                                                                     {/* Rostro faltante */}
                                                                     {!foto && (
                                                                         <div className="flex items-center gap-1">
-                                                                            <button
+                                                                            <Button
                                                                                 type="button"
+                                                                                variant="outline"
+                                                                                size="sm"
                                                                                 onClick={() => setActiveCameraField(`ac_list_foto_carnet_idx_${idx}`)}
-                                                                                className="text-[10px] bg-emerald-50 hover:bg-emerald-100 dark:bg-emerald-950/50 text-emerald-700 dark:text-emerald-300 px-2.5 py-1 rounded-full font-bold border border-emerald-300 flex items-center gap-1 transition-colors cursor-pointer"
+                                                                                className="h-7 text-[10px] bg-emerald-50 hover:bg-emerald-100 dark:bg-emerald-950/50 text-emerald-700 dark:text-emerald-300 border-emerald-300 font-bold rounded-full px-2.5"
                                                                             >
-                                                                                <Camera className="w-3 h-3 text-emerald-600" /> + Foto Rostro
-                                                                            </button>
-                                                                            <label className="text-[10px] bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 text-slate-600 dark:text-slate-300 px-2 py-1 rounded-full font-bold border border-slate-300 cursor-pointer flex items-center gap-1 transition-colors">
+                                                                                <Camera className="w-3 h-3 text-emerald-600 mr-1" /> + Foto Rostro
+                                                                            </Button>
+                                                                            <Label className="h-7 text-[10px] bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 text-slate-600 dark:text-slate-300 px-2 rounded-full font-bold border border-slate-300 cursor-pointer flex items-center justify-center transition-colors">
                                                                                 <Upload className="w-3 h-3" />
                                                                                 <input type="file" accept="image/*" className="hidden" onChange={(e) => handleAcompananteListFileUpload(e, idx, 'foto_carnet')} />
-                                                                            </label>
+                                                                            </Label>
                                                                         </div>
                                                                     )}
 
                                                                     {/* Doc Frontal */}
                                                                     {docFrontal ? (
-                                                                        <span className="text-[10px] bg-emerald-50 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 px-2.5 py-1 rounded-full font-bold border border-emerald-200 flex items-center gap-1">
+                                                                        <Badge variant="outline" className="text-[10px] bg-emerald-50 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 border-emerald-200 font-bold rounded-full px-2.5 py-0.5">
                                                                             ✓ Doc. Frontal
-                                                                        </span>
+                                                                        </Badge>
                                                                     ) : (
                                                                         <div className="flex items-center gap-1">
-                                                                            <button
+                                                                            <Button
                                                                                 type="button"
+                                                                                variant="outline"
+                                                                                size="sm"
                                                                                 onClick={() => setActiveCameraField(`ac_list_doc_foto_frontal_idx_${idx}`)}
-                                                                                className="text-[10px] bg-amber-50 hover:bg-amber-100 dark:bg-amber-950/50 text-amber-700 dark:text-amber-300 px-2.5 py-1 rounded-full font-bold border border-amber-300 flex items-center gap-1 transition-colors cursor-pointer"
+                                                                                className="h-7 text-[10px] bg-amber-50 hover:bg-amber-100 dark:bg-amber-950/50 text-amber-700 dark:text-amber-300 border-amber-300 font-bold rounded-full px-2.5"
                                                                                 title="Tomar foto frontal del documento"
                                                                             >
-                                                                                <Camera className="w-3 h-3 text-amber-600" /> + Doc. Frontal
-                                                                            </button>
-                                                                            <label className="text-[10px] bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 text-slate-600 dark:text-slate-300 px-2 py-1 rounded-full font-bold border border-slate-300 cursor-pointer flex items-center gap-1 transition-colors">
+                                                                                <Camera className="w-3 h-3 text-amber-600 mr-1" /> + Doc. Frontal
+                                                                            </Button>
+                                                                            <Label className="h-7 text-[10px] bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 text-slate-600 dark:text-slate-300 px-2 rounded-full font-bold border border-slate-300 cursor-pointer flex items-center justify-center transition-colors">
                                                                                 <Upload className="w-3 h-3" />
                                                                                 <input type="file" accept="image/*" className="hidden" onChange={(e) => handleAcompananteListFileUpload(e, idx, 'doc_foto_frontal')} />
-                                                                            </label>
+                                                                            </Label>
                                                                         </div>
                                                                     )}
 
                                                                     {/* Doc Reverso */}
                                                                     {docTrasera ? (
-                                                                        <span className="text-[10px] bg-emerald-50 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 px-2.5 py-1 rounded-full font-bold border border-emerald-200 flex items-center gap-1">
+                                                                        <Badge variant="outline" className="text-[10px] bg-emerald-50 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 border-emerald-200 font-bold rounded-full px-2.5 py-0.5">
                                                                             ✓ Doc. Reverso
-                                                                        </span>
+                                                                        </Badge>
                                                                     ) : (
                                                                         <div className="flex items-center gap-1">
-                                                                            <button
+                                                                            <Button
                                                                                 type="button"
+                                                                                variant="outline"
+                                                                                size="sm"
                                                                                 onClick={() => setActiveCameraField(`ac_list_doc_foto_trasera_idx_${idx}`)}
-                                                                                className="text-[10px] bg-amber-50 hover:bg-amber-100 dark:bg-amber-950/50 text-amber-700 dark:text-amber-300 px-2.5 py-1 rounded-full font-bold border border-amber-300 flex items-center gap-1 transition-colors cursor-pointer"
+                                                                                className="h-7 text-[10px] bg-amber-50 hover:bg-amber-100 dark:bg-amber-950/50 text-amber-700 dark:text-amber-300 border-amber-300 font-bold rounded-full px-2.5"
                                                                                 title="Tomar foto trasera del documento"
                                                                             >
-                                                                                <Camera className="w-3 h-3 text-amber-600" /> + Doc. Reverso
-                                                                            </button>
-                                                                            <label className="text-[10px] bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 text-slate-600 dark:text-slate-300 px-2 py-1 rounded-full font-bold border border-slate-300 cursor-pointer flex items-center gap-1 transition-colors">
+                                                                                <Camera className="w-3 h-3 text-amber-600 mr-1" /> + Doc. Reverso
+                                                                            </Button>
+                                                                            <Label className="h-7 text-[10px] bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 text-slate-600 dark:text-slate-300 px-2 rounded-full font-bold border border-slate-300 cursor-pointer flex items-center justify-center transition-colors">
                                                                                 <Upload className="w-3 h-3" />
                                                                                 <input type="file" accept="image/*" className="hidden" onChange={(e) => handleAcompananteListFileUpload(e, idx, 'doc_foto_trasera')} />
-                                                                            </label>
+                                                                            </Label>
                                                                         </div>
                                                                     )}
                                                                 </div>
                                                             </div>
                                                         </div>
 
-                                                        <button
+                                                        <Button
                                                             type="button"
-                                                            onClick={() => handleRemoveAcompanante(idx)}
-                                                            className="text-rose-500 hover:text-rose-700 p-2 rounded-xl hover:bg-rose-50 dark:hover:bg-rose-950/20 transition-colors self-end sm:self-center shrink-0"
-                                                            title="Eliminar acompañante"
+                                                            variant="ghost"
+                                                            size="icon"
+                                                            onClick={() => setData('acompanantes', data.acompanantes.filter((_, i) => i !== idx))}
+                                                            className="text-slate-400 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/50 h-8 w-8 shrink-0"
                                                         >
-                                                            <Trash2 className="w-4.5 h-4.5" />
-                                                        </button>
-                                                    </div>
+                                                            <Trash2 className="w-4 h-4" />
+                                                        </Button>
+                                                    </Card>
                                                 );
                                             })}
                                         </div>
                                     )}
-                                </div>
-                            </div>
 
                             {/* Botón de Enviar */}
                             <div className="pt-4 border-t border-slate-200 dark:border-slate-800">
-                                <button
+                                <Button
                                     type="submit"
                                     disabled={processing}
-                                    className="w-full bg-[#104a29] hover:bg-[#0c371e] text-white text-sm font-extrabold py-4 px-6 rounded-2xl shadow-xl transition-transform active:scale-[0.99] flex items-center justify-center gap-2"
+                                    className="w-full bg-[#104a29] hover:bg-[#0c371e] text-white text-sm font-extrabold py-6 rounded-2xl shadow-xl transition-transform active:scale-[0.99] flex items-center justify-center gap-2 cursor-pointer"
                                 >
                                     <CheckCircle2 className="w-5 h-5" />
                                     {processing ? 'Guardando Registro...' : 'Confirmar Datos y Activar Mi Pase QR'}
-                                </button>
+                                </Button>
                             </div>
                         </form>
                     )}
