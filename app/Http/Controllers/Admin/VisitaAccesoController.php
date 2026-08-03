@@ -548,6 +548,13 @@ class VisitaAccesoController extends Controller
 
         $user = $request->user();
 
+        if ($request->has('acompanantes')) {
+            $invitacion->update([
+                'acompanantes' => $request->input('acompanantes'),
+            ]);
+            $invitacion->refresh();
+        }
+
         // Convertir invitacion en VisitaAcceso preservando datos y fotos del visitante particular
         $tipoAcceso = $invitacion->tipo_acceso ?: ($invitacion->proveedor_id ? 'proveedor' : ($invitacion->productor_id ? 'productor' : ($invitacion->empleado_id ? 'empleado' : 'visitante')));
 

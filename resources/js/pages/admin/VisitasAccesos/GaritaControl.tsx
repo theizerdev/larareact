@@ -30,7 +30,8 @@ import {
     Shield,
     AlertTriangle,
     MessageSquare,
-    CheckCircle
+    CheckCircle,
+    Eye
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -106,6 +107,7 @@ export default function GaritaControl({
     // Estado para Acompañantes en Ingreso de Empleados por Garita
     const [acompanantesList, setAcompanantesList] = useState<Array<{ nombre: string; documento?: string; telefono?: string; observacion?: string }>>([]);
     const [isAcompananteModalOpen, setIsAcompananteModalOpen] = useState(false);
+    const [selectedAcompananteDetail, setSelectedAcompananteDetail] = useState<any | null>(null);
     const [nuevoAcompanante, setNuevoAcompanante] = useState({
         nombre: '',
         documento: '',
@@ -134,7 +136,17 @@ export default function GaritaControl({
     // Auto-selección inicial de vehículo y reseteo de acompañantes
     useEffect(() => {
         if (resultado?.data) {
-            setAcompanantesList([]);
+            const rawAcompanantes = resultado.data.acompanantes || [];
+            const formattedAcompanantes = Array.isArray(rawAcompanantes)
+                ? rawAcompanantes.map((ac: any) => ({
+                    nombre: ac.nombre || `${ac.nombres || ''} ${ac.apellidos || ''}`.trim() || 'Acompañante',
+                    documento: ac.documento || ac.documento_identidad || ac.curp || '',
+                    telefono: ac.telefono || ac.telefono_contacto || ac.correo || '',
+                    observacion: ac.observacion || ac.cargo || '',
+                    ...ac,
+                }))
+                : [];
+            setAcompanantesList(formattedAcompanantes);
             setNuevoAcompanante({ nombre: '', documento: '', telefono: '', observacion: '' });
             setIsAcompananteModalOpen(false);
             const vehs = resultado.data.vehiculos || [];
@@ -421,7 +433,11 @@ export default function GaritaControl({
     // Confirmar ingreso oficial en Garita (1-Clic)
     const handleConfirmIngreso = (invitacionId: number) => {
         playScanBeep();
-        router.post(`/admin/visitas-accesos/invitaciones/${invitacionId}/canjear`, {}, {
+        const payload: any = {};
+        if (acompanantesList.length > 0) {
+            payload.acompanantes = acompanantesList;
+        }
+        router.post(`/admin/visitas-accesos/invitaciones/${invitacionId}/canjear`, payload, {
             preserveScroll: true,
             onSuccess: () => {
                 notifySuccess(__('¡Ingreso registrado correctamente en Caseta! Se notificó al anfitrión por WhatsApp.'));
@@ -1262,27 +1278,55 @@ export default function GaritaControl({
                                             {/* Listado de Acompañantes Añadidos */}
                                             {acompanantesList.length > 0 ? (
                                                 <div className="space-y-2 pt-1">
-                                                    {acompanantesList.map((ac: any, idx: number) => (
-                                                        <div key={idx} className="p-3 rounded-2xl bg-white border border-slate-200 text-xs flex items-center justify-between shadow-2xs">
-                                                            <div className="space-y-0.5">
-                                                                <div className="font-bold text-slate-900 flex items-center gap-2">
-                                                                    <span>{ac.nombre}</span>
-                                                                    {ac.observacion && <span className="text-[10px] font-medium bg-slate-100 text-slate-600 px-2 py-0.5 rounded-md">{ac.observacion}</span>}
+                                                    {acompanantesList.map((ac: any, idx: number) => {
+                                                        const nameToShow = ac.nombre || `${ac.nombres || ''} ${ac.apellidos || ''}`.trim() || `Acompañante #${idx + 1}`;
+                                                        const docToShow = ac.documento || ac.documento_identidad || ac.curp || '';
+                                                        const faceImg = formatImageUrl(ac.foto_carnet || ac.doc_foto_frontal);
+                                                        return (
+                                                            <div 
+                                                                key={idx} 
+                                                                onClick={() => setSelectedAcompananteDetail(ac)}
+                                                                className="p-3 rounded-2xl bg-white border border-slate-200 text-xs flex items-center justify-between shadow-2xs hover:border-emerald-500 hover:shadow-md transition-all cursor-pointer group"
+                                                            >
+                                                                <div className="flex items-center gap-3">
+                                                                    {faceImg ? (
+                                                                        <div className="w-10 h-10 rounded-xl overflow-hidden border border-emerald-500/40 shrink-0 bg-slate-100">
+                                                                            <img src={faceImg} alt={nameToShow} className="w-full h-full object-cover group-hover:scale-105 transition-transform" />
+                                                                        </div>
+                                                                    ) : (
+                                                                        <div className="w-10 h-10 rounded-xl bg-emerald-50 border border-emerald-200 flex items-center justify-center text-emerald-700 font-bold shrink-0">
+                                                                            <User className="w-5 h-5" />
+                                                                        </div>
+                                                                    )}
+                                                                    <div className="space-y-0.5">
+                                                                        <div className="font-bold text-slate-900 flex items-center gap-2">
+                                                                            <span className="group-hover:text-emerald-700 transition-colors">{nameToShow}</span>
+                                                                            {(ac.observacion || ac.cargo) && <span className="text-[10px] font-medium bg-slate-100 text-slate-600 px-2 py-0.5 rounded-md">{ac.observacion || ac.cargo}</span>}
+                                                                        </div>
+                                                                        <div className="flex items-center gap-3 text-[11px] text-slate-500 font-mono">
+                                                                            {docToShow && <span>Doc: {docToShow}</span>}
+                                                                            {ac.telefono && <span>Tel: {ac.telefono}</span>}
+                                                                        </div>
+                                                                    </div>
                                                                 </div>
-                                                                <div className="flex items-center gap-3 text-[11px] text-slate-500 font-mono">
-                                                                    {ac.documento && <span>Doc: {ac.documento}</span>}
-                                                                    {ac.telefono && <span>Tel: {ac.telefono}</span>}
+                                                                <div className="flex items-center gap-2">
+                                                                    <span className="text-[10px] font-bold text-emerald-600 opacity-0 group-hover:opacity-100 transition-opacity flex items-center gap-1">
+                                                                        <Eye className="w-3.5 h-3.5" /> {__('Ver detalle')}
+                                                                    </span>
+                                                                    <button
+                                                                        type="button"
+                                                                        onClick={(e) => {
+                                                                            e.stopPropagation();
+                                                                            setAcompanantesList(acompanantesList.filter((_, i) => i !== idx));
+                                                                        }}
+                                                                        className="text-red-500 hover:text-red-700 hover:bg-red-50 font-bold text-xs p-1.5 rounded-xl transition-colors"
+                                                                    >
+                                                                        <X className="w-4 h-4" />
+                                                                    </button>
                                                                 </div>
                                                             </div>
-                                                            <button
-                                                                type="button"
-                                                                onClick={() => setAcompanantesList(acompanantesList.filter((_, i) => i !== idx))}
-                                                                className="text-red-500 hover:text-red-700 hover:bg-red-50 font-bold text-xs p-1.5 rounded-xl transition-colors"
-                                                            >
-                                                                <X className="w-4 h-4" />
-                                                            </button>
-                                                        </div>
-                                                    ))}
+                                                        );
+                                                    })}
                                                 </div>
                                             ) : (
                                                 <div className="p-4 rounded-2xl bg-white/70 border border-dashed border-slate-300 text-xs text-slate-400 text-center italic">
@@ -1290,15 +1334,36 @@ export default function GaritaControl({
                                                 </div>
                                             )}
                                         </div>
-                                    ) : (record.acompanantes && record.acompanantes.length > 0) || (accesoExistente?.acompanantes && accesoExistente.acompanantes.length > 0) ? (
+                                    ) : (record?.acompanantes && record.acompanantes.length > 0) || (accesoExistente?.acompanantes && accesoExistente.acompanantes.length > 0) ? (
                                         <div className="space-y-1.5 max-h-48 overflow-y-auto pr-1">
-                                            {(record.acompanantes || accesoExistente.acompanantes).map((ac: any, idx: number) => {
+                                            {(record?.acompanantes || accesoExistente?.acompanantes || []).map((ac: any, idx: number) => {
                                                 const nombreCompleto = ac.nombre || `${ac.nombres || ''} ${ac.apellidos || ''}`.trim() || `Acompañante #${idx + 1}`;
-                                                const docIdentidad = ac.documento || ac.documento_identidad || null;
+                                                const docIdentidad = ac.documento || ac.documento_identidad || ac.curp || null;
+                                                const faceImg = formatImageUrl(ac.foto_carnet || ac.doc_foto_frontal);
                                                 return (
-                                                    <div key={idx} className="p-3 rounded-2xl bg-slate-50 border border-slate-200 text-xs flex items-center justify-between text-slate-800">
-                                                        <span className="font-bold">{nombreCompleto}</span>
-                                                        {docIdentidad && <span className="font-mono text-slate-500 text-[11px]">Doc: {docIdentidad}</span>}
+                                                    <div 
+                                                        key={idx} 
+                                                        onClick={() => setSelectedAcompananteDetail(ac)}
+                                                        className="p-3 rounded-2xl bg-slate-50 border border-slate-200 text-xs flex items-center justify-between text-slate-800 hover:bg-white hover:border-emerald-500 hover:shadow-md transition-all cursor-pointer group"
+                                                    >
+                                                        <div className="flex items-center gap-3">
+                                                            {faceImg ? (
+                                                                <div className="w-10 h-10 rounded-xl overflow-hidden border border-emerald-500/40 shrink-0 bg-slate-100">
+                                                                    <img src={faceImg} alt={nombreCompleto} className="w-full h-full object-cover group-hover:scale-105 transition-transform" />
+                                                                </div>
+                                                            ) : (
+                                                                <div className="w-10 h-10 rounded-xl bg-emerald-50 border border-emerald-200 flex items-center justify-center text-emerald-700 font-bold shrink-0">
+                                                                    <User className="w-5 h-5" />
+                                                                </div>
+                                                            )}
+                                                            <div className="space-y-0.5">
+                                                                <span className="font-bold block group-hover:text-emerald-700 transition-colors">{nombreCompleto}</span>
+                                                                {docIdentidad && <span className="font-mono text-slate-500 text-[11px] block">Doc: {docIdentidad}</span>}
+                                                            </div>
+                                                        </div>
+                                                        <span className="text-[10px] font-bold text-emerald-600 opacity-0 group-hover:opacity-100 transition-opacity flex items-center gap-1">
+                                                            <Eye className="w-3.5 h-3.5" /> {__('Ver detalle')}
+                                                        </span>
                                                     </div>
                                                 );
                                             })}
@@ -1711,6 +1776,157 @@ export default function GaritaControl({
                         >
                             <Check className="w-4 h-4" />
                             {__('Guardar Acompañante')}
+                        </Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
+
+            {/* Modal de Detalle Completo de Acompañante */}
+            <Dialog open={Boolean(selectedAcompananteDetail)} onOpenChange={(open) => { if (!open) setSelectedAcompananteDetail(null); }}>
+                <DialogContent className="max-w-lg bg-white rounded-3xl p-6 shadow-2xl border border-slate-100 text-slate-900 max-h-[90vh] overflow-y-auto">
+                    <DialogHeader className="space-y-1 text-left border-b border-slate-100 pb-4">
+                        <div className="flex items-center justify-between">
+                            <DialogTitle className="text-lg font-black text-slate-900 flex items-center gap-2">
+                                <Users className="w-5 h-5 text-emerald-600" />
+                                {__('Detalle del Acompañante')}
+                            </DialogTitle>
+                            <Badge className="bg-emerald-100 text-emerald-900 border-emerald-300 font-bold text-[10px] uppercase">
+                                {__('Información Registrada')}
+                            </Badge>
+                        </div>
+                    </DialogHeader>
+
+                    {selectedAcompananteDetail && (
+                        <div className="space-y-6 py-3">
+                            {/* Rostro del Acompañante */}
+                            <div className="bg-slate-50 p-5 rounded-3xl border border-slate-200 text-center space-y-3">
+                                <span className="text-[11px] font-extrabold text-slate-500 uppercase tracking-wider block">
+                                    {__('Fotografía del Acompañante')}
+                                </span>
+
+                                {formatImageUrl(selectedAcompananteDetail.foto_carnet || selectedAcompananteDetail.doc_foto_frontal) ? (
+                                    <div 
+                                        className="relative w-32 h-32 mx-auto rounded-3xl overflow-hidden border-4 border-emerald-600 shadow-md group cursor-pointer"
+                                        onClick={() => setActiveImageModal(formatImageUrl(selectedAcompananteDetail.foto_carnet || selectedAcompananteDetail.doc_foto_frontal)!)}
+                                    >
+                                        <img 
+                                            src={formatImageUrl(selectedAcompananteDetail.foto_carnet || selectedAcompananteDetail.doc_foto_frontal)!} 
+                                            alt="Fotografía" 
+                                            className="w-full h-full object-cover group-hover:scale-105 transition-transform" 
+                                        />
+                                        <div className="absolute inset-0 bg-black/30 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center text-white">
+                                            <Maximize2 className="w-6 h-6" />
+                                        </div>
+                                    </div>
+                                ) : (
+                                    <div className="w-32 h-32 mx-auto rounded-3xl bg-slate-200 border-4 border-slate-300 flex items-center justify-center text-slate-400">
+                                        <User className="w-16 h-16" />
+                                    </div>
+                                )}
+
+                                <div className="space-y-0.5">
+                                    <h3 className="font-extrabold text-base text-slate-900">
+                                        {selectedAcompananteDetail.nombre || `${selectedAcompananteDetail.nombres || ''} ${selectedAcompananteDetail.apellidos || ''}`.trim() || 'Acompañante'}
+                                    </h3>
+                                    {(selectedAcompananteDetail.observacion || selectedAcompananteDetail.cargo) && (
+                                        <span className="text-xs font-semibold text-emerald-700 bg-emerald-50 px-2.5 py-0.5 rounded-full inline-block">
+                                            {selectedAcompananteDetail.observacion || selectedAcompananteDetail.cargo}
+                                        </span>
+                                    )}
+                                </div>
+                            </div>
+
+                            {/* Datos Registrados */}
+                            <div className="grid grid-cols-2 gap-3 text-xs bg-slate-50 p-4 rounded-2xl border border-slate-200">
+                                <div>
+                                    <span className="text-slate-400 font-bold block text-[10px] uppercase tracking-wider">{__('Documento / ID')}</span>
+                                    <span className="font-mono font-bold text-slate-800">
+                                        {selectedAcompananteDetail.documento || selectedAcompananteDetail.documento_identidad || selectedAcompananteDetail.curp || '-'}
+                                    </span>
+                                </div>
+                                <div>
+                                    <span className="text-slate-400 font-bold block text-[10px] uppercase tracking-wider">{__('Teléfono')}</span>
+                                    <span className="font-medium text-slate-800">
+                                        {selectedAcompananteDetail.telefono || selectedAcompananteDetail.telefono_contacto || '-'}
+                                    </span>
+                                </div>
+                                {selectedAcompananteDetail.correo && (
+                                    <div className="col-span-2">
+                                        <span className="text-slate-400 font-bold block text-[10px] uppercase tracking-wider">{__('Correo Electrónico')}</span>
+                                        <span className="font-medium text-slate-800">{selectedAcompananteDetail.correo}</span>
+                                    </div>
+                                )}
+                                {selectedAcompananteDetail.genero && (
+                                    <div>
+                                        <span className="text-slate-400 font-bold block text-[10px] uppercase tracking-wider">{__('Género')}</span>
+                                        <span className="font-medium text-slate-800">{selectedAcompananteDetail.genero}</span>
+                                    </div>
+                                )}
+                                {(selectedAcompananteDetail.fecha_nacimiento || selectedAcompananteDetail.edad) && (
+                                    <div>
+                                        <span className="text-slate-400 font-bold block text-[10px] uppercase tracking-wider">{__('Edad / Nacimiento')}</span>
+                                        <span className="font-medium text-slate-800">
+                                            {selectedAcompananteDetail.edad ? `${selectedAcompananteDetail.edad} años` : selectedAcompananteDetail.fecha_nacimiento}
+                                        </span>
+                                    </div>
+                                )}
+                            </div>
+
+                            {/* Documentos Adjuntos (Frontal / Trasero) */}
+                            <div className="space-y-3">
+                                <h4 className="text-xs font-extrabold uppercase tracking-wider text-slate-500 flex items-center gap-1.5">
+                                    <FileText className="w-4 h-4 text-emerald-600" /> {__('Documentos de Identidad Adjuntos')}
+                                </h4>
+                                <div className="grid grid-cols-2 gap-3">
+                                    <div className="space-y-1 text-center">
+                                        <span className="text-[11px] font-bold text-slate-500">{__('Doc. Frontal')}</span>
+                                        {formatImageUrl(selectedAcompananteDetail.doc_foto_frontal) ? (
+                                            <div 
+                                                className="w-full aspect-[4/3] rounded-2xl overflow-hidden border border-slate-300 cursor-pointer group relative" 
+                                                onClick={() => setActiveImageModal(formatImageUrl(selectedAcompananteDetail.doc_foto_frontal)!)}
+                                            >
+                                                <img src={formatImageUrl(selectedAcompananteDetail.doc_foto_frontal)!} alt="Doc Frontal" className="w-full h-full object-cover group-hover:scale-105 transition-transform" />
+                                                <div className="absolute inset-0 bg-black/30 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center text-white">
+                                                    <Maximize2 className="w-5 h-5" />
+                                                </div>
+                                            </div>
+                                        ) : (
+                                            <div className="w-full aspect-[4/3] rounded-2xl bg-slate-100 border border-dashed flex items-center justify-center text-slate-400 text-xs font-medium">
+                                                {__('No adjunto')}
+                                            </div>
+                                        )}
+                                    </div>
+
+                                    <div className="space-y-1 text-center">
+                                        <span className="text-[11px] font-bold text-slate-500">{__('Doc. Trasero')}</span>
+                                        {formatImageUrl(selectedAcompananteDetail.doc_foto_trasera) ? (
+                                            <div 
+                                                className="w-full aspect-[4/3] rounded-2xl overflow-hidden border border-slate-300 cursor-pointer group relative" 
+                                                onClick={() => setActiveImageModal(formatImageUrl(selectedAcompananteDetail.doc_foto_trasera)!)}
+                                            >
+                                                <img src={formatImageUrl(selectedAcompananteDetail.doc_foto_trasera)!} alt="Doc Trasero" className="w-full h-full object-cover group-hover:scale-105 transition-transform" />
+                                                <div className="absolute inset-0 bg-black/30 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center text-white">
+                                                    <Maximize2 className="w-5 h-5" />
+                                                </div>
+                                            </div>
+                                        ) : (
+                                            <div className="w-full aspect-[4/3] rounded-2xl bg-slate-100 border border-dashed flex items-center justify-center text-slate-400 text-xs font-medium">
+                                                {__('No adjunto')}
+                                            </div>
+                                        )}
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    )}
+
+                    <DialogFooter className="pt-3 border-t border-slate-100">
+                        <Button
+                            type="button"
+                            onClick={() => setSelectedAcompananteDetail(null)}
+                            className="w-full h-11 text-xs font-bold rounded-2xl bg-slate-900 hover:bg-black text-white shadow-md"
+                        >
+                            {__('Cerrar')}
                         </Button>
                     </DialogFooter>
                 </DialogContent>
