@@ -1367,6 +1367,10 @@ export default function PaseDigital({ invitacion }: PaseDigitalProps) {
                                                                 </div>
                                                             )}
                                                         </Card>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </CardContent>
                                     </Card>
                                 );
                             })()}
@@ -1622,6 +1626,8 @@ export default function PaseDigital({ invitacion }: PaseDigitalProps) {
                                             })}
                                         </div>
                                     )}
+                                </div>
+                            </div>
 
                             {/* Botón de Enviar */}
                             <div className="pt-4 border-t border-slate-200 dark:border-slate-800">
