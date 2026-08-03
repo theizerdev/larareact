@@ -328,7 +328,7 @@ export default function Index({ sales, currencySymbol = '$', empresa, filters }:
                                     </div>
                                     {empresa?.documento && (
                                         <div className="text-[11px] font-mono text-slate-600">
-                                            RIF / Doc: {empresa.documento}
+                                            {empresa.documento}
                                         </div>
                                     )}
                                     <div className="text-[11px] text-slate-500">
@@ -487,7 +487,7 @@ export default function Index({ sales, currencySymbol = '$', empresa, filters }:
                             <div className="text-center font-bold text-xs uppercase">{empresa.razon_social}</div>
                         )}
                         {empresa?.documento && (
-                            <div className="text-center text-[9px] font-mono">RIF / RUC: {empresa.documento}</div>
+                            <div className="text-center text-[9px] font-mono">{empresa.documento}</div>
                         )}
                         <div className="text-center text-[9px] text-gray-700">
                             {empresa?.telefono ? `Tel: ${empresa.telefono}` : ''} {empresa?.email ? `| ${empresa.email}` : ''}
@@ -522,7 +522,7 @@ export default function Index({ sales, currencySymbol = '$', empresa, filters }:
                                 <span className="col-span-5 truncate">{item.nombre}</span>
                                 <span className="col-span-2 text-center">{item.cantidad}</span>
                                 <span className="col-span-2 text-right">${Number(item.precio_unitario).toFixed(2)}</span>
-                                <span className="col-span-2 text-right font-bold">${Number(item.subtotal).toFixed(2)}</span>
+                                <span className="col-span-2 text-right font-bold">${Number(item.subtotal ?? (item.cantidad * item.precio_unitario) ?? 0).toFixed(2)}</span>
                             </div>
                         ))}
 

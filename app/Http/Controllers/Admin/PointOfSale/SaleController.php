@@ -124,6 +124,14 @@ class SaleController extends Controller
             'valorDolar' => $valorDolar,
             'heldSales' => $heldSales,
             'clientes' => $clientes,
+            'empresa' => $empresa ? [
+                'razon_social' => $empresa->razon_social,
+                'documento' => $empresa->documento,
+                'telefono' => $empresa->telefono,
+                'email' => $empresa->email,
+                'direccion' => $empresa->direccion,
+                'logo' => $empresa->logo ? "/storage/{$empresa->logo}" : '/image/logo/larareact_logo_transparent.png',
+            ] : null,
         ]);
     }
 
