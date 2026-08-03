@@ -597,6 +597,57 @@ export default function GaritaControl({
     const record = resultado?.data;
     const accesoExistente = resultado?.acceso_existente;
 
+    const formatVisitorHeaderAndCompany = (rec: any, isInv: boolean, resTipo: string | undefined) => {
+        if (!rec) return { primaryTitle: 'Visitante', companySubtitle: '' };
+
+        // 1. Caso Colaborador / Empleado directo o Empleado de Contratista
+        if (rec.nombres && rec.apellidos) {
+            const name = `${rec.nombres} ${rec.apellidos}`.trim();
+            const comp = rec.departamento?.nombre || 
+                         rec.proveedor?.nombre_comercial || rec.proveedor?.razon_social || 
+                         rec.productor?.nombre_comercial_rancho || rec.productor?.razon_social || 
+                         rec.visitante_empresa || '';
+            return { primaryTitle: name, companySubtitle: comp };
+        }
+
+        // 2. Para Proveedores, Productores o Invitaciones Particulares
+        let rawTitle = rec.visitante_nombre || 
+                       rec.nombre_comercial_rancho || 
+                       rec.nombre_comercial || 
+                       rec.razon_social || 
+                       (rec.proveedor ? (rec.proveedor.nombre_comercial || rec.proveedor.razon_social) : '') ||
+                       (rec.productor ? (rec.productor.nombre_comercial_rancho || rec.productor.razon_social) : '') ||
+                       'Visitante';
+
+        let rawCompany = rec.visitante_empresa || 
+                         rec.proveedor?.nombre_comercial || rec.proveedor?.razon_social || 
+                         rec.productor?.nombre_comercial_rancho || rec.productor?.razon_social || '';
+
+        // Si rawTitle tiene el patrón de texto "Nombre Principal (Nombre Comercial)"
+        const match = rawTitle.match(/^(.*?)\s*\((.*?)\)$/);
+        if (match) {
+            const legalName = match[1].trim();
+            const commercialName = match[2].trim();
+
+            rawTitle = legalName;
+            if (!rawCompany || rawCompany.toLowerCase() === commercialName.toLowerCase() || rawCompany.toLowerCase() === legalName.toLowerCase()) {
+                rawCompany = commercialName;
+            }
+        }
+
+        // Evitar redundancia si el título y la empresa son idénticos
+        if (rawTitle.toLowerCase() === rawCompany.toLowerCase()) {
+            rawCompany = '';
+        }
+
+        return {
+            primaryTitle: rawTitle,
+            companySubtitle: rawCompany
+        };
+    };
+
+    const visitorInfo = formatVisitorHeaderAndCompany(record, isInvitacion, resultado?.tipo);
+
     // Validación de Jornada Laboral de Empleado para hoy
     const diasSemana = ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'];
     const hoyNombre = diasSemana[new Date().getDay()];
@@ -739,14 +790,16 @@ export default function GaritaControl({
                                          resultado?.tipo === 'productor_empleado' ? __('🪪 Gafete Azul • Empleado de Productor') :
                                          isInvitacion ? __('Pre-Anuncio Registrado') : __('Registro de Acceso Caseta')}
                                     </span>
-                                    <h2 className="text-xl font-extrabold tracking-tight">
-                                        {isEmpleado ? `${record.nombres} ${record.apellidos}` :
-                                         resultado?.tipo === 'proveedor' ? (record.nombre_comercial || record.razon_social) :
-                                         resultado?.tipo === 'proveedor_empleado' ? `${record.nombres} ${record.apellidos}` :
-                                         resultado?.tipo === 'productor' ? (record.nombre_comercial_rancho || record.nombre_comercial || record.razon_social) :
-                                         resultado?.tipo === 'productor_empleado' ? `${record.nombres} ${record.apellidos}` :
-                                         isInvitacion ? record.visitante_nombre : (record.empleado ? `${record.empleado.nombres} ${record.empleado.apellidos}` : record.proveedor ? (record.proveedor.razon_social || record.proveedor.nombre_comercial) : (record.productor?.nombre_comercial_rancho || 'Visitante'))}
-                                    </h2>
+                                    <div className="flex flex-wrap items-center gap-2">
+                                        <h2 className="text-xl font-extrabold tracking-tight text-white">
+                                            {visitorInfo.primaryTitle}
+                                        </h2>
+                                        {visitorInfo.companySubtitle && (
+                                            <Badge className="bg-emerald-400/20 text-emerald-100 border border-emerald-300/30 font-semibold text-xs px-2.5 py-0.5 rounded-full">
+                                                {visitorInfo.companySubtitle}
+                                            </Badge>
+                                        )}
+                                    </div>
                                 </div>
                             </div>
 
@@ -828,37 +881,20 @@ export default function GaritaControl({
                                         </div>
                                     )}
 
-                                    <div className="space-y-1">
-                                        <h3 className="font-extrabold text-lg text-slate-900">
-                                            {isEmpleado ? `${record.nombres} ${record.apellidos}` :
-                                             resultado?.tipo === 'proveedor' ? (record.nombre_comercial || record.razon_social) :
-                                             resultado?.tipo === 'proveedor_empleado' ? `${record.nombres} ${record.apellidos}` :
-                                             resultado?.tipo === 'productor' ? (record.nombre_comercial_rancho || record.nombre_comercial || record.razon_social) :
-                                             resultado?.tipo === 'productor_empleado' ? `${record.nombres} ${record.apellidos}` :
-                                             isInvitacion ? record.visitante_nombre : (record.empleado ? `${record.empleado.nombres} ${record.empleado.apellidos}` : record.proveedor ? record.proveedor.razon_social : record.productor?.nombre_comercial_rancho)}
+                                    <div className="space-y-2">
+                                        <h3 className="font-extrabold text-lg text-slate-900 leading-snug">
+                                            {visitorInfo.primaryTitle}
                                         </h3>
-                                        {isEmpleado && record.departamento && (
-                                            <span className="text-xs font-semibold text-emerald-700 block flex items-center justify-center gap-1">
-                                                <Building className="w-3.5 h-3.5 text-emerald-600" /> {record.departamento.nombre}
+
+                                        {visitorInfo.companySubtitle && (
+                                            <span className="inline-flex items-center justify-center gap-1.5 px-3 py-1 bg-emerald-50 text-emerald-800 border border-emerald-200/80 rounded-full text-xs font-bold shadow-2xs">
+                                                <Building className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
+                                                {visitorInfo.companySubtitle}
                                             </span>
                                         )}
-                                        {resultado?.tipo === 'proveedor_empleado' && record.proveedor && (
-                                            <span className="text-xs font-semibold text-rose-700 block flex items-center justify-center gap-1">
-                                                <Building className="w-3.5 h-3.5 text-rose-600" /> {record.proveedor.nombre_comercial || record.proveedor.razon_social}
-                                            </span>
-                                        )}
-                                        {resultado?.tipo === 'productor_empleado' && record.productor && (
-                                            <span className="text-xs font-semibold text-blue-700 block flex items-center justify-center gap-1">
-                                                <Building className="w-3.5 h-3.5 text-blue-600" /> {record.productor.nombre_comercial || record.productor.razon_social}
-                                            </span>
-                                        )}
-                                        {!isEmpleado && record.visitante_empresa && (
-                                            <span className="text-xs font-semibold text-slate-600 block flex items-center justify-center gap-1">
-                                                <Building className="w-3.5 h-3.5 text-emerald-600" /> {record.visitante_empresa}
-                                            </span>
-                                        )}
+
                                         {(record.documento_identidad || record.visitante_documento) && (
-                                            <span className="text-xs font-mono text-slate-500 block">
+                                            <span className="text-xs font-mono text-slate-500 block pt-0.5">
                                                 Doc ID: {record.documento_identidad || record.visitante_documento}
                                             </span>
                                         )}
