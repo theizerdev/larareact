@@ -33,7 +33,8 @@ import {
     CheckCircle,
     Eye,
     Upload,
-    Plus
+    Plus,
+    Scan
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -54,6 +55,8 @@ import {
     DialogFooter,
     DialogHeader,
     DialogTitle,
+    DialogPortal,
+    DialogOverlay,
 } from '@/components/ui/dialog';
 import { ModuleHeader } from '@/components/module-header';
 import { notifySuccess, notifyError } from '@/utils/notifications';
@@ -90,6 +93,489 @@ interface GaritaProps {
     timezone?: string;
 }
 
+// ── Widget de Cámara en vivo ──
+interface CameraWidgetProps {
+    onCapture: (base64Data: string) => void;
+    onCancel: () => void;
+    title: string;
+    faceGuide?: boolean;
+    docGuide?: boolean;
+}
+
+function CameraWidget({ onCapture, onCancel, title, faceGuide = false, docGuide = false }: CameraWidgetProps) {
+    const videoRef = useRef<HTMLVideoElement>(null);
+    const canvasRef = useRef<HTMLCanvasElement>(null);
+    const [stream, setStream] = useState<MediaStream | null>(null);
+    const [error, setError] = useState<string | null>(null);
+    const [captured, setCaptured] = useState<string | null>(null);
+    const [facingMode, setFacingMode] = useState<'environment' | 'user'>(faceGuide ? 'user' : 'environment');
+    const [hasMultipleCameras, setHasMultipleCameras] = useState(false);
+
+    // Face & Document guide state
+    const [faceStatus, setFaceStatus] = useState<'searching' | 'detected' | 'countdown' | 'idle'>('idle');
+    const [docCorners, setDocCorners] = useState<{ tl: boolean; tr: boolean; bl: boolean; br: boolean }>({
+        tl: false, tr: false, bl: false, br: false
+    });
+    const [countdown, setCountdown] = useState(3);
+    const faceDetectorRef = useRef<any>(null);
+    const detectionIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+    const countdownIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+    const faceStableCountRef = useRef(0);
+
+    useEffect(() => {
+        navigator.mediaDevices.enumerateDevices().then(devices => {
+            const videoInputs = devices.filter(d => d.kind === 'videoinput');
+            setHasMultipleCameras(videoInputs.length > 1);
+        }).catch(() => setHasMultipleCameras(false));
+    }, []);
+
+    useEffect(() => {
+        if (faceGuide && 'FaceDetector' in window) {
+            try {
+                faceDetectorRef.current = new (window as any).FaceDetector({ fastMode: true, maxDetectedFaces: 1 });
+            } catch {
+                faceDetectorRef.current = null;
+            }
+        }
+        return () => {
+            if (detectionIntervalRef.current) clearInterval(detectionIntervalRef.current);
+            if (countdownIntervalRef.current) clearInterval(countdownIntervalRef.current);
+        };
+    }, [faceGuide]);
+
+    const startCamera = async (mode: 'environment' | 'user' = facingMode) => {
+        if (stream) {
+            stream.getTracks().forEach(track => track.stop());
+        }
+        setError(null);
+        setCaptured(null);
+        setFaceStatus((faceGuide || docGuide) ? 'searching' : 'idle');
+        setDocCorners({ tl: false, tr: false, bl: false, br: false });
+        setCountdown(3);
+        faceStableCountRef.current = 0;
+        if (countdownIntervalRef.current) { clearInterval(countdownIntervalRef.current); countdownIntervalRef.current = null; }
+        try {
+            const mediaStream = await navigator.mediaDevices.getUserMedia({
+                video: { width: 640, height: 480, facingMode: mode }
+            });
+            setStream(mediaStream);
+            if (videoRef.current) {
+                videoRef.current.srcObject = mediaStream;
+            }
+        } catch (err) {
+            console.error(err);
+            setError('Sin acceso a la cámara. Por favor active los permisos del navegador.');
+        }
+    };
+
+    const stopCamera = () => {
+        if (detectionIntervalRef.current) { clearInterval(detectionIntervalRef.current); detectionIntervalRef.current = null; }
+        if (countdownIntervalRef.current) { clearInterval(countdownIntervalRef.current); countdownIntervalRef.current = null; }
+        if (stream) {
+            stream.getTracks().forEach(track => track.stop());
+            setStream(null);
+        }
+    };
+
+    const flipCamera = () => {
+        const newMode = facingMode === 'environment' ? 'user' : 'environment';
+        setFacingMode(newMode);
+        startCamera(newMode);
+    };
+
+    const capture = () => {
+        if (videoRef.current) {
+            const canvas = document.createElement('canvas');
+            canvas.width = videoRef.current.videoWidth || 640;
+            canvas.height = videoRef.current.videoHeight || 480;
+            const ctx = canvas.getContext('2d');
+            if (ctx) {
+                ctx.drawImage(videoRef.current, 0, 0, canvas.width, canvas.height);
+                const base64 = canvas.toDataURL('image/jpeg');
+                setCaptured(base64);
+                stopCamera();
+            }
+        }
+    };
+
+    useEffect(() => {
+        if (!faceGuide || !stream || captured) return;
+
+        if (faceDetectorRef.current && videoRef.current) {
+            setFaceStatus('searching');
+
+            detectionIntervalRef.current = setInterval(async () => {
+                if (!videoRef.current || videoRef.current.readyState < 2) return;
+                try {
+                    const faces = await faceDetectorRef.current.detect(videoRef.current);
+                    if (faces.length > 0) {
+                        const face = faces[0];
+                        const vw = videoRef.current.videoWidth;
+                        const vh = videoRef.current.videoHeight;
+                        const faceCenterX = face.boundingBox.x + face.boundingBox.width / 2;
+                        const faceCenterY = face.boundingBox.y + face.boundingBox.height / 2;
+                        const iscenteredX = Math.abs(faceCenterX - vw / 2) < vw * 0.2;
+                        const iscenteredY = Math.abs(faceCenterY - vh / 2) < vh * 0.25;
+                        const isBigEnough = face.boundingBox.width > vw * 0.2 && face.boundingBox.height > vh * 0.2;
+
+                        if (iscenteredX && iscenteredY && isBigEnough) {
+                            faceStableCountRef.current++;
+                            if (faceStableCountRef.current >= 3) {
+                                setFaceStatus('countdown');
+                            } else {
+                                setFaceStatus('detected');
+                            }
+                        } else {
+                            faceStableCountRef.current = Math.max(0, faceStableCountRef.current - 1);
+                            setFaceStatus('detected');
+                        }
+                    } else {
+                        faceStableCountRef.current = 0;
+                        setFaceStatus('searching');
+                    }
+                } catch {
+                }
+            }, 400);
+        } else if (faceGuide) {
+            setFaceStatus('searching');
+        }
+
+        return () => {
+            if (detectionIntervalRef.current) { clearInterval(detectionIntervalRef.current); detectionIntervalRef.current = null; }
+        };
+    }, [faceGuide, stream, captured]);
+
+    useEffect(() => {
+        if (!docGuide || !stream || captured) return;
+
+        setFaceStatus('searching');
+
+        detectionIntervalRef.current = setInterval(() => {
+            if (!videoRef.current || videoRef.current.readyState < 2) return;
+            const video = videoRef.current;
+
+            let canvas = canvasRef.current;
+            if (!canvas) return;
+            canvas.width = 160;
+            canvas.height = 120;
+            const ctx = canvas.getContext('2d');
+            if (!ctx) return;
+
+            ctx.drawImage(video, 0, 0, 160, 120);
+
+            const getRegionVariance = (rx: number, ry: number, rw: number, rh: number) => {
+                try {
+                    const imgData = ctx.getImageData(rx, ry, rw, rh);
+                    const pixels = imgData.data;
+                    let sum = 0;
+                    let count = 0;
+                    for (let i = 0; i < pixels.length; i += 4) {
+                        const lum = 0.299 * pixels[i] + 0.587 * pixels[i + 1] + 0.114 * pixels[i + 2];
+                        sum += lum;
+                        count++;
+                    }
+                    const mean = sum / count;
+                    let variance = 0;
+                    for (let i = 0; i < pixels.length; i += 4) {
+                        const lum = 0.299 * pixels[i] + 0.587 * pixels[i + 1] + 0.114 * pixels[i + 2];
+                        variance += (lum - mean) * (lum - mean);
+                    }
+                    return Math.sqrt(variance / count);
+                } catch {
+                    return 0;
+                }
+            };
+
+            const tlVar = getRegionVariance(15, 18, 22, 22);
+            const trVar = getRegionVariance(123, 18, 22, 22);
+            const blVar = getRegionVariance(15, 80, 22, 22);
+            const brVar = getRegionVariance(123, 80, 22, 22);
+
+            const threshold = 16;
+            const newTL = tlVar > threshold;
+            const newTR = trVar > threshold;
+            const newBL = blVar > threshold;
+            const newBR = brVar > threshold;
+
+            setDocCorners({ tl: newTL, tr: newTR, bl: newBL, br: newBR });
+
+            const countGreen = (newTL ? 1 : 0) + (newTR ? 1 : 0) + (newBL ? 1 : 0) + (newBR ? 1 : 0);
+
+            if (countGreen === 4) {
+                faceStableCountRef.current++;
+                if (faceStableCountRef.current >= 2) {
+                    setFaceStatus('countdown');
+                }
+            } else {
+                faceStableCountRef.current = 0;
+                setFaceStatus('searching');
+            }
+        }, 300);
+
+        return () => {
+            if (detectionIntervalRef.current) { clearInterval(detectionIntervalRef.current); detectionIntervalRef.current = null; }
+        };
+    }, [docGuide, stream, captured]);
+
+    useEffect(() => {
+        if (faceStatus === 'countdown' && !captured) {
+            setCountdown(3);
+            countdownIntervalRef.current = setInterval(() => {
+                setCountdown(prev => {
+                    if (prev <= 1) {
+                        if (countdownIntervalRef.current) clearInterval(countdownIntervalRef.current);
+                        capture();
+                        return 0;
+                    }
+                    return prev - 1;
+                });
+            }, 1000);
+        } else {
+            if (countdownIntervalRef.current) { clearInterval(countdownIntervalRef.current); countdownIntervalRef.current = null; }
+        }
+        return () => {
+            if (countdownIntervalRef.current) { clearInterval(countdownIntervalRef.current); countdownIntervalRef.current = null; }
+        };
+    }, [faceStatus, captured]);
+
+    useEffect(() => {
+        startCamera();
+        return () => stopCamera();
+    }, []);
+
+    const guideColor = faceStatus === 'countdown' ? 'rgba(16, 185, 129, 0.9)' : faceStatus === 'detected' ? 'rgba(250, 204, 21, 0.7)' : 'rgba(148, 163, 184, 0.5)';
+    const guideGlow = faceStatus === 'countdown' ? '0 0 30px rgba(16, 185, 129, 0.5)' : faceStatus === 'detected' ? '0 0 20px rgba(250, 204, 21, 0.3)' : 'none';
+    const cornersCount = (docCorners.tl ? 1 : 0) + (docCorners.tr ? 1 : 0) + (docCorners.bl ? 1 : 0) + (docCorners.br ? 1 : 0);
+
+    return (
+        <Dialog open={true} onOpenChange={(open) => { if (!open) { stopCamera(); onCancel(); } }}>
+            <DialogPortal>
+                <DialogOverlay className="fixed inset-0 z-[60] bg-black/85 backdrop-blur-xs flex items-center justify-center p-4 animate-in fade-in" />
+                <DialogContent className="fixed z-[61] top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-slate-900 border border-slate-700 rounded-3xl p-5 w-full max-w-md flex flex-col items-center gap-4 text-white shadow-2xl [&>button]:hidden">
+                    <DialogHeader className="w-full flex flex-row items-center justify-between border-b border-slate-800 pb-3 space-y-0">
+                        <DialogTitle className="text-sm font-bold text-emerald-400 flex items-center gap-2">
+                            <Camera className="w-5 h-5" /> {title}
+                        </DialogTitle>
+                        <div className="flex items-center gap-1">
+                            {hasMultipleCameras && !captured && (
+                                <button
+                                    type="button"
+                                    onClick={flipCamera}
+                                    title={facingMode === 'environment' ? 'Cambiar a cámara frontal' : 'Cambiar a cámara trasera'}
+                                    className="text-slate-400 hover:text-emerald-400 p-1.5 rounded-lg hover:bg-slate-800 transition-colors"
+                                >
+                                    <SwitchCamera className="w-5 h-5" />
+                                </button>
+                            )}
+                            <button type="button" onClick={() => { stopCamera(); onCancel(); }} className="text-slate-400 hover:text-white p-1">
+                                <X className="w-5 h-5" />
+                            </button>
+                        </div>
+                    </DialogHeader>
+
+                    {error && (
+                        <div className="text-rose-400 text-xs text-center p-6 space-y-2">
+                            <AlertCircle className="w-8 h-8 mx-auto" />
+                            <p>{error}</p>
+                        </div>
+                    )}
+
+                    {!error && !captured && (
+                        <div className="relative w-full aspect-[4/3] bg-black rounded-2xl overflow-hidden border border-slate-800 flex items-center justify-center">
+                            <video ref={videoRef} autoPlay playsInline muted className="w-full h-full object-cover" />
+                            <canvas ref={canvasRef} className="hidden" />
+
+                            {faceGuide && (
+                                <>
+                                    <svg className="absolute inset-0 w-full h-full pointer-events-none" viewBox="0 0 400 300" preserveAspectRatio="xMidYMid slice">
+                                        <defs>
+                                            <mask id="faceMask">
+                                                <rect width="400" height="300" fill="white" />
+                                                <rect x="65" y="25" width="270" height="250" rx="24" fill="black" />
+                                            </mask>
+                                        </defs>
+                                        <rect width="400" height="300" fill="rgba(0,0,0,0.55)" mask="url(#faceMask)" />
+                                        <rect
+                                            x="65" y="25" width="270" height="250" rx="24"
+                                            fill="none"
+                                            stroke={guideColor}
+                                            strokeWidth="2.5"
+                                            strokeDasharray={faceStatus === 'searching' ? '8 4' : 'none'}
+                                            style={{ filter: guideGlow !== 'none' ? `drop-shadow(${guideGlow})` : undefined, transition: 'stroke 0.3s, filter 0.3s' }}
+                                        />
+                                        {faceStatus !== 'countdown' && (
+                                            <>
+                                                <line x1="200" y1="25" x2="200" y2="35" stroke={guideColor} strokeWidth="2" strokeLinecap="round" />
+                                                <line x1="200" y1="265" x2="200" y2="275" stroke={guideColor} strokeWidth="2" strokeLinecap="round" />
+                                                <line x1="65" y1="150" x2="75" y2="150" stroke={guideColor} strokeWidth="2" strokeLinecap="round" />
+                                                <line x1="325" y1="150" x2="335" y2="150" stroke={guideColor} strokeWidth="2" strokeLinecap="round" />
+                                            </>
+                                        )}
+                                    </svg>
+
+                                    <div className="absolute bottom-14 left-1/2 -translate-x-1/2 pointer-events-none">
+                                        {faceStatus === 'searching' && (
+                                            <div className="bg-black/70 backdrop-blur-sm rounded-full px-4 py-2 flex items-center gap-2 animate-pulse">
+                                                <Scan className="w-4 h-4 text-slate-400" />
+                                                <span className="text-[11px] font-bold text-slate-300">Coloque su rostro dentro del marco</span>
+                                            </div>
+                                        )}
+                                        {faceStatus === 'detected' && (
+                                            <div className="bg-black/70 backdrop-blur-sm rounded-full px-4 py-2 flex items-center gap-2">
+                                                <User className="w-4 h-4 text-yellow-400" />
+                                                <span className="text-[11px] font-bold text-yellow-300">Rostro detectado — mantenga la posición</span>
+                                            </div>
+                                        )}
+                                        {faceStatus === 'countdown' && (
+                                            <div className="bg-emerald-600/90 backdrop-blur-sm rounded-full px-5 py-2.5 flex items-center gap-2 shadow-lg shadow-emerald-500/30">
+                                                <Camera className="w-4 h-4 text-white" />
+                                                <span className="text-xs font-extrabold text-white">Capturando en {countdown}...</span>
+                                            </div>
+                                        )}
+                                    </div>
+
+                                    {faceStatus === 'countdown' && (
+                                        <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+                                            <span className="text-7xl font-black text-white/80 drop-shadow-[0_4px_20px_rgba(16,185,129,0.6)] animate-pulse">
+                                                {countdown}
+                                            </span>
+                                        </div>
+                                    )}
+                                </>
+                            )}
+
+                            {docGuide && (
+                                <>
+                                    <svg className="absolute inset-0 w-full h-full pointer-events-none" viewBox="0 0 400 300" preserveAspectRatio="xMidYMid slice">
+                                        <defs>
+                                            <mask id="docMask">
+                                                <rect width="400" height="300" fill="white" />
+                                                <rect x="45" y="50" width="310" height="200" rx="16" fill="black" />
+                                            </mask>
+                                        </defs>
+                                        <rect width="400" height="300" fill="rgba(0,0,0,0.65)" mask="url(#docMask)" />
+
+                                        <rect x="45" y="50" width="310" height="200" rx="16" fill="none" stroke="rgba(255,255,255,0.25)" strokeWidth="1.5" strokeDasharray="6 4" />
+
+                                        <path
+                                            d="M 45 85 L 45 50 L 80 50"
+                                            fill="none"
+                                            stroke={docCorners.tl ? '#10B981' : '#F59E0B'}
+                                            strokeWidth="4"
+                                            strokeLinecap="round"
+                                            strokeLinejoin="round"
+                                            style={{ filter: docCorners.tl ? 'drop-shadow(0 0 10px #10B981)' : undefined, transition: 'stroke 0.25s, filter 0.25s' }}
+                                        />
+                                        <path
+                                            d="M 320 50 L 355 50 L 355 85"
+                                            fill="none"
+                                            stroke={docCorners.tr ? '#10B981' : '#F59E0B'}
+                                            strokeWidth="4"
+                                            strokeLinecap="round"
+                                            strokeLinejoin="round"
+                                            style={{ filter: docCorners.tr ? 'drop-shadow(0 0 10px #10B981)' : undefined, transition: 'stroke 0.25s, filter 0.25s' }}
+                                        />
+                                        <path
+                                            d="M 45 215 L 45 250 L 80 250"
+                                            fill="none"
+                                            stroke={docCorners.bl ? '#10B981' : '#F59E0B'}
+                                            strokeWidth="4"
+                                            strokeLinecap="round"
+                                            strokeLinejoin="round"
+                                            style={{ filter: docCorners.bl ? 'drop-shadow(0 0 10px #10B981)' : undefined, transition: 'stroke 0.25s, filter 0.25s' }}
+                                        />
+                                        <path
+                                            d="M 320 250 L 355 250 L 355 215"
+                                            fill="none"
+                                            stroke={docCorners.br ? '#10B981' : '#F59E0B'}
+                                            strokeWidth="4"
+                                            strokeLinecap="round"
+                                            strokeLinejoin="round"
+                                            style={{ filter: docCorners.br ? 'drop-shadow(0 0 10px #10B981)' : undefined, transition: 'stroke 0.25s, filter 0.25s' }}
+                                        />
+
+                                        <circle cx="58" cy="63" r="6" fill={docCorners.tl ? '#10B981' : '#F59E0B'} opacity={docCorners.tl ? 1 : 0.5} />
+                                        <circle cx="342" cy="63" r="6" fill={docCorners.tr ? '#10B981' : '#F59E0B'} opacity={docCorners.tr ? 1 : 0.5} />
+                                        <circle cx="58" cy="237" r="6" fill={docCorners.bl ? '#10B981' : '#F59E0B'} opacity={docCorners.bl ? 1 : 0.5} />
+                                        <circle cx="342" cy="237" r="6" fill={docCorners.br ? '#10B981' : '#F59E0B'} opacity={docCorners.br ? 1 : 0.5} />
+                                    </svg>
+
+                                    <div className="absolute bottom-14 left-1/2 -translate-x-1/2 pointer-events-none">
+                                        {faceStatus !== 'countdown' ? (
+                                            <div className="bg-black/75 backdrop-blur-sm rounded-full px-4 py-2 flex items-center gap-2 border border-slate-700 shadow-md">
+                                                <FileText className="w-4 h-4 text-emerald-400" />
+                                                <span className="text-[11px] font-bold text-slate-200">
+                                                    Alinee la credencial — Esquinas: {cornersCount} / 4
+                                                </span>
+                                            </div>
+                                        ) : (
+                                            <div className="bg-emerald-600/90 backdrop-blur-sm rounded-full px-5 py-2.5 flex items-center gap-2 shadow-lg shadow-emerald-500/30">
+                                                <Camera className="w-4 h-4 text-white" />
+                                                <span className="text-xs font-extrabold text-white">¡Documento Alineado! Capturando en {countdown}...</span>
+                                            </div>
+                                        )}
+                                    </div>
+
+                                    {faceStatus === 'countdown' && (
+                                        <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+                                            <span className="text-7xl font-black text-emerald-400 drop-shadow-[0_4px_25px_rgba(16,185,129,0.8)] animate-pulse">
+                                                {countdown}
+                                            </span>
+                                        </div>
+                                    )}
+                                </>
+                            )}
+
+                            {hasMultipleCameras && (
+                                <button
+                                    type="button"
+                                    onClick={flipCamera}
+                                    title={facingMode === 'environment' ? 'Cambiar a cámara frontal' : 'Cambiar a cámara trasera'}
+                                    className="absolute top-3 right-3 bg-black/60 hover:bg-black/80 text-white p-2.5 rounded-full shadow-lg transition-all active:scale-90"
+                                >
+                                    <SwitchCamera className="w-5 h-5" />
+                                </button>
+                            )}
+                            <button
+                                type="button"
+                                onClick={capture}
+                                className="absolute bottom-4 bg-emerald-600 hover:bg-emerald-700 text-white shadow-lg rounded-full px-6 py-3 text-xs font-extrabold flex items-center gap-2 transition-transform active:scale-95"
+                            >
+                                <Camera className="w-4 h-4" />
+                                {(faceGuide || docGuide) ? 'Capturar Manualmente' : 'Tomar Fotografía'}
+                            </button>
+                        </div>
+                    )}
+
+                    {!error && captured && (
+                        <div className="flex flex-col items-center gap-4 w-full">
+                            <div className="w-full aspect-[4/3] rounded-2xl overflow-hidden border-2 border-emerald-500 shadow-md">
+                                <img src={captured} alt="Captura preview" className="w-full h-full object-cover" />
+                            </div>
+                            <div className="flex gap-3 w-full">
+                                <button
+                                    type="button"
+                                    onClick={() => startCamera()}
+                                    className="flex-1 py-3 px-4 rounded-xl border border-slate-700 bg-slate-800 text-xs font-bold hover:bg-slate-700 flex items-center justify-center gap-2"
+                                >
+                                    <RefreshCw className="w-4 h-4" /> Repetir Foto
+                                </button>
+                                <button
+                                    type="button"
+                                    onClick={() => { stopCamera(); if (captured) onCapture(captured); }}
+                                    className="flex-1 py-3 px-4 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-extrabold flex items-center justify-center gap-2"
+                                >
+                                    <Check className="w-4 h-4" /> Usar Foto
+                                </button>
+                            </div>
+                        </div>
+                    )}
+                </DialogContent>
+            </DialogPortal>
+        </Dialog>
+    );
+}
+
 export default function GaritaControl({
     searchQuery = '',
     resultado = null,
@@ -108,6 +594,7 @@ export default function GaritaControl({
     const [cameraError, setCameraError] = useState<string | null>(null);
     const [currentTime, setCurrentTime] = useState<string>('');
     const [activeImageModal, setActiveImageModal] = useState<string | null>(null);
+    const [activeCameraField, setActiveCameraField] = useState<string | null>(null);
 
     // Estado para Autorización en Tiempo Real vía WhatsApp (Garita Empleados)
     const [activeAuthToken, setActiveAuthToken] = useState<string | null>(null);
@@ -2058,11 +2545,12 @@ export default function GaritaControl({
                                 <div className="space-y-2 flex-1">
                                     <span className="font-bold text-slate-800 block text-xs">{__('Foto del Rostro del Acompañante')}</span>
                                     <div className="flex gap-2">
-                                        <Button type="button" variant="secondary" asChild className="px-3 py-2 h-auto bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl font-bold text-xs cursor-pointer shadow-xs">
-                                            <label>
-                                                <Camera className="w-3.5 h-3.5 mr-1 inline" /> {__('Cámara')}
-                                                <input type="file" accept="image/*" capture="environment" className="hidden" onChange={(e) => handleAcompananteFileUpload(e, 'foto_carnet')} />
-                                            </label>
+                                        <Button
+                                            type="button"
+                                            onClick={() => setActiveCameraField('ac_foto_carnet')}
+                                            className="px-3 py-2 h-auto bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl font-bold text-xs shadow-xs"
+                                        >
+                                            <Camera className="w-3.5 h-3.5 mr-1" /> {__('Cámara')}
                                         </Button>
                                         <Button type="button" variant="secondary" asChild className="px-3 py-2 h-auto rounded-xl font-bold text-xs cursor-pointer">
                                             <label>
@@ -2097,11 +2585,12 @@ export default function GaritaControl({
                                             <div className="flex flex-col items-center gap-2">
                                                 <FileText className="w-6 h-6 text-slate-400" />
                                                 <div className="flex gap-2">
-                                                    <Button type="button" variant="secondary" asChild className="px-3 py-1.5 h-auto bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg font-bold text-[11px] cursor-pointer">
-                                                        <label>
-                                                            <Camera className="w-3 h-3 mr-1 inline" /> {__('Cámara')}
-                                                            <input type="file" accept="image/*" capture="environment" className="hidden" onChange={(e) => handleAcompananteFileUpload(e, 'doc_foto_frontal')} />
-                                                        </label>
+                                                    <Button
+                                                        type="button"
+                                                        onClick={() => setActiveCameraField('ac_doc_foto_frontal')}
+                                                        className="px-3 py-1.5 h-auto bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg font-bold text-[11px]"
+                                                    >
+                                                        <Camera className="w-3 h-3 mr-1" /> {__('Cámara')}
                                                     </Button>
                                                     <Button type="button" variant="secondary" asChild className="px-3 py-1.5 h-auto rounded-lg font-bold text-[11px] cursor-pointer">
                                                         <label>
@@ -2130,11 +2619,12 @@ export default function GaritaControl({
                                             <div className="flex flex-col items-center gap-2">
                                                 <FileText className="w-6 h-6 text-slate-400" />
                                                 <div className="flex gap-2">
-                                                    <Button type="button" variant="secondary" asChild className="px-3 py-1.5 h-auto bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg font-bold text-[11px] cursor-pointer">
-                                                        <label>
-                                                            <Camera className="w-3 h-3 mr-1 inline" /> {__('Cámara')}
-                                                            <input type="file" accept="image/*" capture="environment" className="hidden" onChange={(e) => handleAcompananteFileUpload(e, 'doc_foto_trasera')} />
-                                                        </label>
+                                                    <Button
+                                                        type="button"
+                                                        onClick={() => setActiveCameraField('ac_doc_foto_trasera')}
+                                                        className="px-3 py-1.5 h-auto bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg font-bold text-[11px]"
+                                                    >
+                                                        <Camera className="w-3 h-3 mr-1" /> {__('Cámara')}
                                                     </Button>
                                                     <Button type="button" variant="secondary" asChild className="px-3 py-1.5 h-auto rounded-lg font-bold text-[11px] cursor-pointer">
                                                         <label>
@@ -2167,6 +2657,27 @@ export default function GaritaControl({
                                 <Plus className="w-4 h-4" /> {__('Agregar Acompañante')}
                             </Button>
                         </DialogFooter>
+
+                        {/* Camera Widget Overlay inside Modal for Acompañantes */}
+                        {activeCameraField && activeCameraField.startsWith('ac_') && (
+                            <CameraWidget
+                                title={
+                                    activeCameraField === 'ac_foto_carnet'
+                                        ? __('Fotografía del Rostro del Acompañante')
+                                        : activeCameraField.includes('frontal')
+                                        ? __('Fotografía Frontal del Documento del Acompañante')
+                                        : __('Fotografía Reverso del Documento del Acompañante')
+                                }
+                                faceGuide={activeCameraField === 'ac_foto_carnet'}
+                                docGuide={activeCameraField.includes('doc_foto')}
+                                onCapture={(base64) => {
+                                    const field = activeCameraField.replace('ac_', '') as 'foto_carnet' | 'doc_foto_frontal' | 'doc_foto_trasera';
+                                    setNuevoAcompanante(prev => ({ ...prev, [field]: base64 }));
+                                    setActiveCameraField(null);
+                                }}
+                                onCancel={() => setActiveCameraField(null)}
+                            />
+                        )}
                     </form>
                 </DialogContent>
             </Dialog>
