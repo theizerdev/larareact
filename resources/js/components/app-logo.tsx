@@ -9,18 +9,12 @@ export default function AppLogo() {
 
     return (
         <>
-            <div className="flex aspect-square size-8 items-center justify-center rounded-md bg-transparent">
-                {companyLogo && !companyLogo.includes('larareact_icon') ? (
-                    <img
-                        src={companyLogo}
-                        alt={companyName || "Fix Sale"}
-                        className="size-8 object-contain"
-                    />
-                ) : (
-                    <div className="size-8 rounded-lg bg-[#0B2545] flex items-center justify-center font-extrabold text-white text-xs border border-blue-400/30">
-                        F<span className="text-cyan-400">X</span>
-                    </div>
-                )}
+            <div className="flex shrink-0 items-center justify-center bg-transparent">
+                <img
+                    src={companyLogo}
+                    alt={companyName || "Fix Sale"}
+                    className="size-8 object-contain [[data-sidebar=dark]_&]:brightness-0 [[data-sidebar=dark]_&]:invert dark:brightness-0 dark:invert"
+                />
             </div>
             <div className="ml-2 grid flex-1 text-left text-sm">
                 <span className="mb-0.5 truncate leading-tight font-bold text-foreground">
