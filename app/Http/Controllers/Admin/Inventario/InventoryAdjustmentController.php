@@ -50,10 +50,20 @@ class InventoryAdjustmentController extends Controller
             ->with(['marca', 'modelo', 'categoria'])
             ->get()
             ->map(function ($p) {
+                $marcaNombre = trim((string) $p->marca?->nombre);
+                $modeloNombre = trim((string) ($p->modelo?->nombre_comercial ?? $p->modelo?->nombre));
+                $variante = trim((string) $p->nombre_variante);
+                $codigoBarras = trim((string) $p->codigo_barras);
+
+                if ($marcaNombre !== '' && $modeloNombre !== '' && str_starts_with(strtolower($modeloNombre), strtolower($marcaNombre))) {
+                    $marcaNombre = '';
+                }
+
                 $parts = array_filter([
-                    $p->marca?->nombre,
-                    $p->modelo?->nombre_comercial ?? $p->modelo?->nombre,
-                    $p->nombre_variante,
+                    $marcaNombre,
+                    $modeloNombre,
+                    $variante,
+                    $codigoBarras,
                 ]);
                 $displayName = implode(' ', $parts) ?: "Producto #{$p->id}";
 

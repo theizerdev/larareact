@@ -68,13 +68,38 @@ class SaleController extends Controller
             ->with(['marca', 'modelo'])
             ->get()
             ->map(function ($p) {
-                $parts = array_filter([
-                    $p->marca?->nombre,
-                    $p->modelo?->nombre,
-                    $p->nombre_variante,
-                    $p->codigo_barras,
-                ]);
-                $displayName = implode(' ', $parts) ?: "Producto #{$p->id}";
+                $marcaNombre = trim((string) $p->marca?->nombre);
+                $modeloNombre = trim((string) ($p->modelo?->nombre_comercial ?? $p->modelo?->nombre));
+                $variante = trim((string) $p->nombre_variante);
+                $codigoBarras = trim((string) $p->codigo_barras);
+
+                // Si nombre_variante ya está definido de forma descriptiva
+                if ($variante !== '') {
+                    $displayName = $variante;
+                    // Si variante ya incluye el código de barras al final o no lo tiene, agregarlo opcionalmente si no existe
+                    if ($codigoBarras !== '' && !str_contains($displayName, $codigoBarras)) {
+                        $displayName .= " {$codigoBarras}";
+                    }
+                } else {
+                    if ($marcaNombre !== '' && $modeloNombre !== '' && str_starts_with(strtolower($modeloNombre), strtolower($marcaNombre))) {
+                        $marcaNombre = '';
+                    }
+
+                    $parts = array_filter([
+                        $marcaNombre,
+                        $modeloNombre,
+                        $codigoBarras,
+                    ]);
+                    $displayName = implode(' ', $parts) ?: "Producto #{$p->id}";
+                }
+
+                // Limpiar duplicaciones dobles del tipo 'Apple Apple'
+                if ($marcaNombre !== '') {
+                    $doubleBrand = "{$marcaNombre} {$marcaNombre}";
+                    if (str_starts_with(strtolower($displayName), strtolower($doubleBrand))) {
+                        $displayName = substr($displayName, strlen($marcaNombre) + 1);
+                    }
+                }
 
                 return [
                     'id' => $p->id,
