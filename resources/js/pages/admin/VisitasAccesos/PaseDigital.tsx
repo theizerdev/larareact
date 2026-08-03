@@ -28,10 +28,40 @@ import {
     Info,
     Phone
 } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Badge } from '@/components/ui/badge';
+import {
+    Dialog,
+    DialogContent,
+    DialogHeader,
+    DialogTitle,
+    DialogDescription,
+    DialogFooter,
+} from '@/components/ui/dialog';
+import {
+    Select,
+    SelectContent,
+    SelectItem,
+    SelectTrigger,
+    SelectValue,
+} from '@/components/ui/select';
 
 interface Acompanante {
+    nombres?: string;
+    apellidos?: string;
     nombre: string;
+    curp?: string;
     documento?: string;
+    genero?: string;
+    fecha_nacimiento?: string;
+    edad?: number | string;
+    correo?: string;
+    cargo?: string;
+    foto_carnet?: string;
+    doc_foto_frontal?: string;
+    doc_foto_trasera?: string;
 }
 
 interface PaseDigitalProps {
@@ -297,12 +327,94 @@ export default function PaseDigital({ invitacion }: PaseDigitalProps) {
         acompanantes: (invitacion.acompanantes || []) as Acompanante[],
     });
 
-    const [nuevoAcompanante, setNuevoAcompanante] = useState<Acompanante>({ nombre: '', documento: '' });
+    const [isAcompananteModalOpen, setIsAcompananteModalOpen] = useState(false);
+    const [nuevoAcompanante, setNuevoAcompanante] = useState<Acompanante>({
+        nombres: '',
+        apellidos: '',
+        nombre: '',
+        curp: '',
+        documento: '',
+        genero: '',
+        fecha_nacimiento: '',
+        edad: '',
+        correo: '',
+        cargo: '',
+        foto_carnet: '',
+        doc_foto_frontal: '',
+        doc_foto_trasera: '',
+    });
 
-    const handleAddAcompanante = () => {
-        if (!nuevoAcompanante.nombre.trim()) return;
-        setData('acompanantes', [...data.acompanantes, { ...nuevoAcompanante }]);
-        setNuevoAcompanante({ nombre: '', documento: '' });
+    const handleAcompananteFileUpload = (e: React.ChangeEvent<HTMLInputElement>, field: string) => {
+        const file = e.target.files?.[0];
+        if (file) {
+            const reader = new FileReader();
+            reader.onloadend = () => {
+                setNuevoAcompanante(prev => ({ ...prev, [field]: reader.result as string }));
+            };
+            reader.readAsDataURL(file);
+        }
+    };
+
+    const handleAcompananteFechaChange = (fechaStr: string) => {
+        let age: string | number = '';
+        if (fechaStr) {
+            const birthDate = new Date(fechaStr);
+            const today = new Date();
+            let calcAge = today.getFullYear() - birthDate.getFullYear();
+            const m = today.getMonth() - birthDate.getMonth();
+            if (m < 0 || (m === 0 && today.getDate() < birthDate.getDate())) {
+                calcAge--;
+            }
+            if (calcAge >= 0 && !isNaN(calcAge)) {
+                age = calcAge;
+            }
+        }
+        setNuevoAcompanante(prev => ({
+            ...prev,
+            fecha_nacimiento: fechaStr,
+            edad: age !== '' ? age : prev.edad,
+        }));
+    };
+
+    const handleAddAcompanante = (e?: React.FormEvent) => {
+        if (e) e.preventDefault();
+        const nombres = (nuevoAcompanante.nombres || '').trim();
+        const apellidos = (nuevoAcompanante.apellidos || '').trim();
+        const nombreCompleto = `${nombres} ${apellidos}`.trim() || (nuevoAcompanante.nombre || '').trim();
+
+        if (!nombreCompleto) {
+            alert('Por favor ingrese los nombres y apellidos del acompañante.');
+            return;
+        }
+
+        const item: Acompanante = {
+            ...nuevoAcompanante,
+            nombres: nombres || nombreCompleto,
+            apellidos: apellidos,
+            nombre: nombreCompleto,
+            documento: nuevoAcompanante.curp || nuevoAcompanante.documento || '',
+            curp: nuevoAcompanante.curp || nuevoAcompanante.documento || '',
+        };
+
+        setData('acompanantes', [...data.acompanantes, item]);
+
+        // Reset state
+        setNuevoAcompanante({
+            nombres: '',
+            apellidos: '',
+            nombre: '',
+            curp: '',
+            documento: '',
+            genero: '',
+            fecha_nacimiento: '',
+            edad: '',
+            correo: '',
+            cargo: '',
+            foto_carnet: '',
+            doc_foto_frontal: '',
+            doc_foto_trasera: '',
+        });
+        setIsAcompananteModalOpen(false);
     };
 
     const handleRemoveAcompanante = (index: number) => {
@@ -855,45 +967,70 @@ export default function PaseDigital({ invitacion }: PaseDigitalProps) {
                                     </div>
                                 )}
 
-                                <div className="space-y-3">
-                                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                                        <div className="sm:col-span-2">
-                                            <input
-                                                type="text"
-                                                placeholder="Nombre Completo del Acompañante"
-                                                value={nuevoAcompanante.nombre}
-                                                onChange={(e) => setNuevoAcompanante(prev => ({ ...prev, nombre: e.target.value }))}
-                                                className="w-full text-xs p-3 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900"
-                                            />
+                                <div className="space-y-4">
+                                    <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 p-4 rounded-2xl bg-emerald-50/60 dark:bg-emerald-950/30 border border-emerald-200 dark:border-emerald-900/60">
+                                        <div>
+                                            <span className="font-extrabold text-xs text-emerald-900 dark:text-emerald-300 block">¿Ingresa con un acompañante no registrado?</span>
+                                            <span className="text-[11px] text-slate-500">Registre los datos completos, identificación y fotografías del acompañante.</span>
                                         </div>
-                                        <div className="flex gap-2">
-                                            <input
-                                                type="text"
-                                                placeholder="Documento ID (opcional)"
-                                                value={nuevoAcompanante.documento}
-                                                onChange={(e) => setNuevoAcompanante(prev => ({ ...prev, documento: e.target.value }))}
-                                                className="w-full text-xs p-3 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 font-mono"
-                                            />
-                                            <button
-                                                type="button"
-                                                onClick={handleAddAcompanante}
-                                                className="bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs px-4 rounded-xl flex items-center justify-center shrink-0 shadow-xs"
-                                            >
-                                                <Plus className="w-5 h-5" />
-                                            </button>
-                                        </div>
+                                        <button
+                                            type="button"
+                                            onClick={() => setIsAcompananteModalOpen(true)}
+                                            className="px-4 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold text-xs rounded-xl flex items-center gap-2 shadow-sm shrink-0 transition-transform active:scale-95"
+                                        >
+                                            <Plus className="w-4 h-4" /> Registrar Nuevo Acompañante
+                                        </button>
                                     </div>
 
                                     {data.acompanantes.length > 0 && (
-                                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-2">
+                                        <div className="grid grid-cols-1 gap-3 pt-2">
                                             {data.acompanantes.map((ac, idx) => (
-                                                <div key={idx} className="flex items-center justify-between p-3 rounded-2xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-xs">
-                                                    <div className="flex flex-col">
-                                                        <span className="font-extrabold text-slate-800 dark:text-slate-200">{ac.nombre}</span>
-                                                        {ac.documento && <span className="text-[11px] text-slate-500 font-mono">Doc: {ac.documento}</span>}
+                                                <div key={idx} className="p-4 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-xs flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 text-xs">
+                                                    <div className="flex items-center gap-3.5 min-w-0">
+                                                        <div className="w-12 h-12 rounded-2xl overflow-hidden bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 flex items-center justify-center shrink-0 font-bold text-xs">
+                                                            {formatImageUrl(ac.foto_carnet) ? (
+                                                                <img src={formatImageUrl(ac.foto_carnet)!} alt={ac.nombre} className="w-full h-full object-cover" />
+                                                            ) : (
+                                                                <User className="w-6 h-6 text-slate-400" />
+                                                            )}
+                                                        </div>
+                                                        <div className="space-y-1 min-w-0">
+                                                            <div className="font-extrabold text-slate-900 dark:text-slate-100 text-sm truncate">
+                                                                {ac.nombre || `${ac.nombres || ''} ${ac.apellidos || ''}`.trim()}
+                                                            </div>
+                                                            <div className="flex flex-wrap items-center gap-2 text-[11px] text-slate-500">
+                                                                {(ac.curp || ac.documento) && (
+                                                                    <span className="font-mono bg-slate-100 dark:bg-slate-800 px-2 py-0.5 rounded border border-slate-200 dark:border-slate-700">
+                                                                        CURP/Doc: {ac.curp || ac.documento}
+                                                                    </span>
+                                                                )}
+                                                                {ac.genero && <span className="font-medium">Género: {ac.genero}</span>}
+                                                                {ac.edad && <span className="font-medium">Edad: {ac.edad} años</span>}
+                                                                {ac.cargo && <span className="font-medium text-emerald-600 dark:text-emerald-400">| Cargo: {ac.cargo}</span>}
+                                                            </div>
+                                                            {ac.correo && <div className="text-[11px] text-slate-400">Correo: {ac.correo}</div>}
+                                                            <div className="flex items-center gap-2 pt-0.5">
+                                                                {ac.doc_foto_frontal && (
+                                                                    <span className="text-[10px] bg-emerald-50 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 px-2 py-0.5 rounded-full font-bold border border-emerald-200">
+                                                                        ✓ Doc. Frontal
+                                                                    </span>
+                                                                )}
+                                                                {ac.doc_foto_trasera && (
+                                                                    <span className="text-[10px] bg-emerald-50 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 px-2 py-0.5 rounded-full font-bold border border-emerald-200">
+                                                                        ✓ Doc. Reverso
+                                                                    </span>
+                                                                )}
+                                                            </div>
+                                                        </div>
                                                     </div>
-                                                    <button type="button" onClick={() => handleRemoveAcompanante(idx)} className="text-rose-500 hover:text-rose-700 p-1.5 rounded-lg hover:bg-rose-50 dark:hover:bg-rose-950/20">
-                                                        <Trash2 className="w-4 h-4" />
+
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => handleRemoveAcompanante(idx)}
+                                                        className="text-rose-500 hover:text-rose-700 p-2 rounded-xl hover:bg-rose-50 dark:hover:bg-rose-950/20 transition-colors self-end sm:self-center"
+                                                        title="Eliminar acompañante"
+                                                    >
+                                                        <Trash2 className="w-4.5 h-4.5" />
                                                     </button>
                                                 </div>
                                             ))}
@@ -1045,12 +1182,265 @@ export default function PaseDigital({ invitacion }: PaseDigitalProps) {
                 </footer>
             </div>
 
+            {/* ── Modal de Registro de Acompañante ── */}
+            {isAcompananteModalOpen && (
+                <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-xs flex items-center justify-center p-4 overflow-y-auto">
+                    <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl p-6 sm:p-8 w-full max-w-2xl max-h-[90vh] overflow-y-auto space-y-6 shadow-2xl my-auto">
+                        {/* Header Modal */}
+                        <div className="flex items-center justify-between border-b border-slate-200 dark:border-slate-800 pb-4">
+                            <div>
+                                <h3 className="text-lg font-extrabold text-[#104a29] dark:text-emerald-400 flex items-center gap-2">
+                                    <Users className="w-5 h-5" /> Registro Completo de Acompañante
+                                </h3>
+                                <p className="text-xs text-slate-500 mt-1">
+                                    Ingrese la información personal, identificación y fotografías del acompañante no registrado.
+                                </p>
+                            </div>
+                            <button
+                                type="button"
+                                onClick={() => setIsAcompananteModalOpen(false)}
+                                className="text-slate-400 hover:text-slate-600 dark:hover:text-white p-2 rounded-full hover:bg-slate-100 dark:hover:bg-slate-800"
+                            >
+                                <X className="w-5 h-5" />
+                            </button>
+                        </div>
+
+                        {/* Modal Body */}
+                        <form onSubmit={handleAddAcompanante} className="space-y-6 text-xs">
+
+                            {/* Section 1: Datos Personales */}
+                            <div className="space-y-4">
+                                <span className="font-extrabold text-slate-700 dark:text-slate-300 uppercase tracking-wider block">
+                                    1. Datos Personales
+                                </span>
+
+                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                    <div className="space-y-1.5">
+                                        <label className="font-bold text-slate-700 dark:text-slate-300">
+                                            Nombres <span className="text-rose-500">*</span>
+                                        </label>
+                                        <input
+                                            type="text"
+                                            required
+                                            placeholder="Ej: Juan Antonio"
+                                            value={nuevoAcompanante.nombres}
+                                            onChange={(e) => setNuevoAcompanante(prev => ({ ...prev, nombres: e.target.value }))}
+                                            className="w-full p-3 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900"
+                                        />
+                                    </div>
+
+                                    <div className="space-y-1.5">
+                                        <label className="font-bold text-slate-700 dark:text-slate-300">
+                                            Apellidos <span className="text-rose-500">*</span>
+                                        </label>
+                                        <input
+                                            type="text"
+                                            required
+                                            placeholder="Ej: Pérez Gómez"
+                                            value={nuevoAcompanante.apellidos}
+                                            onChange={(e) => setNuevoAcompanante(prev => ({ ...prev, apellidos: e.target.value }))}
+                                            className="w-full p-3 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900"
+                                        />
+                                    </div>
+                                </div>
+
+                                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                                    <div className="space-y-1.5">
+                                        <label className="font-bold text-slate-700 dark:text-slate-300">
+                                            CURP / Documento ID
+                                        </label>
+                                        <input
+                                            type="text"
+                                            placeholder="Ej: PEGJ900101HDF..."
+                                            value={nuevoAcompanante.curp}
+                                            onChange={(e) => setNuevoAcompanante(prev => ({ ...prev, curp: e.target.value.toUpperCase(), documento: e.target.value.toUpperCase() }))}
+                                            className="w-full p-3 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 font-mono uppercase"
+                                        />
+                                    </div>
+
+                                    <div className="space-y-1.5">
+                                        <label className="font-bold text-slate-700 dark:text-slate-300">Género</label>
+                                        <select
+                                            value={nuevoAcompanante.genero}
+                                            onChange={(e) => setNuevoAcompanante(prev => ({ ...prev, genero: e.target.value }))}
+                                            className="w-full p-3 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900"
+                                        >
+                                            <option value="">Seleccione género...</option>
+                                            <option value="Masculino">Masculino</option>
+                                            <option value="Femenino">Femenino</option>
+                                            <option value="Otro">Otro / Prefiero no decir</option>
+                                        </select>
+                                    </div>
+
+                                    <div className="space-y-1.5">
+                                        <label className="font-bold text-slate-700 dark:text-slate-300">Fecha de Nacimiento</label>
+                                        <input
+                                            type="date"
+                                            value={nuevoAcompanante.fecha_nacimiento || ''}
+                                            onChange={(e) => handleAcompananteFechaChange(e.target.value)}
+                                            className="w-full p-3 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900"
+                                        />
+                                    </div>
+                                </div>
+
+                                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                                    <div className="space-y-1.5">
+                                        <label className="font-bold text-slate-700 dark:text-slate-300">Edad (Años)</label>
+                                        <input
+                                            type="number"
+                                            placeholder="Ej: 30"
+                                            value={nuevoAcompanante.edad || ''}
+                                            onChange={(e) => setNuevoAcompanante(prev => ({ ...prev, edad: e.target.value }))}
+                                            className="w-full p-3 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 font-mono"
+                                        />
+                                    </div>
+
+                                    <div className="space-y-1.5">
+                                        <label className="font-bold text-slate-700 dark:text-slate-300">Correo Electrónico</label>
+                                        <input
+                                            type="email"
+                                            placeholder="ejemplo@correo.com"
+                                            value={nuevoAcompanante.correo}
+                                            onChange={(e) => setNuevoAcompanante(prev => ({ ...prev, correo: e.target.value }))}
+                                            className="w-full p-3 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900"
+                                        />
+                                    </div>
+
+                                    <div className="space-y-1.5">
+                                        <label className="font-bold text-slate-700 dark:text-slate-300">Cargo (Solo si aplica)</label>
+                                        <input
+                                            type="text"
+                                            placeholder="Ej: Asistente, Técnico..."
+                                            value={nuevoAcompanante.cargo}
+                                            onChange={(e) => setNuevoAcompanante(prev => ({ ...prev, cargo: e.target.value }))}
+                                            className="w-full p-3 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900"
+                                        />
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* Section 2: Fotografía Tipo Carnet (Rostro) */}
+                            <div className="space-y-3 pt-4 border-t border-slate-200 dark:border-slate-800">
+                                <label className="font-extrabold text-slate-700 dark:text-slate-300 uppercase tracking-wider block">
+                                    2. Fotografía Tipo Carnet (Rostro del Acompañante)
+                                </label>
+
+                                <div className="flex items-center gap-4 p-4 rounded-2xl bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800">
+                                    {nuevoAcompanante.foto_carnet ? (
+                                        <div className="relative w-20 h-20 rounded-xl overflow-hidden border-2 border-emerald-500 shrink-0">
+                                            <img src={formatImageUrl(nuevoAcompanante.foto_carnet)!} alt="Foto Carnet" className="w-full h-full object-cover" />
+                                            <button type="button" onClick={() => setNuevoAcompanante(prev => ({ ...prev, foto_carnet: '' }))} className="absolute top-1 right-1 bg-rose-600 text-white rounded-full p-1 shadow-md hover:bg-rose-700">
+                                                <X className="w-3 h-3" />
+                                            </button>
+                                        </div>
+                                    ) : (
+                                        <div className="w-20 h-20 rounded-xl bg-slate-200 dark:bg-slate-800 flex items-center justify-center text-slate-400 shrink-0">
+                                            <User className="w-8 h-8" />
+                                        </div>
+                                    )}
+
+                                    <div className="space-y-2 flex-1">
+                                        <span className="font-bold text-slate-800 dark:text-slate-200 block text-xs">Foto del Rostro del Acompañante</span>
+                                        <div className="flex gap-2">
+                                            <button
+                                                type="button"
+                                                onClick={() => setActiveCameraField('ac_foto_carnet')}
+                                                className="px-3 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl font-bold text-xs flex items-center gap-1.5 shadow-xs"
+                                            >
+                                                <Camera className="w-3.5 h-3.5" /> Cámara
+                                            </button>
+                                            <label className="px-3 py-2 bg-slate-200 dark:bg-slate-800 text-slate-700 dark:text-slate-300 rounded-xl font-bold text-xs cursor-pointer hover:bg-slate-300 flex items-center gap-1.5">
+                                                <Upload className="w-3.5 h-3.5" /> Subir
+                                                <input type="file" accept="image/*" className="hidden" onChange={(e) => handleAcompananteFileUpload(e, 'foto_carnet')} />
+                                            </label>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* Section 3: Fotografías del Documento de Identidad */}
+                            <div className="space-y-3 pt-4 border-t border-slate-200 dark:border-slate-800">
+                                <label className="font-extrabold text-slate-700 dark:text-slate-300 uppercase tracking-wider block">
+                                    3. Fotografías del Documento de Identidad (INE / Cédula / Pasaporte)
+                                </label>
+
+                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                    {/* Frontal Documento */}
+                                    <div className="space-y-2">
+                                        <span className="font-bold text-slate-600 dark:text-slate-400 block text-[11px]">Foto Frontal</span>
+                                        <div className="flex flex-col items-center justify-center border border-dashed border-slate-300 dark:border-slate-700 rounded-2xl p-4 bg-slate-50 dark:bg-slate-950 min-h-[130px] relative">
+                                            {nuevoAcompanante.doc_foto_frontal ? (
+                                                <div className="relative w-full aspect-[16/10] rounded-xl overflow-hidden shadow-sm">
+                                                    <img src={formatImageUrl(nuevoAcompanante.doc_foto_frontal)!} alt="Doc Frontal" className="w-full h-full object-cover" />
+                                                    <button type="button" onClick={() => setNuevoAcompanante(prev => ({ ...prev, doc_foto_frontal: '' }))} className="absolute top-1.5 right-1.5 bg-rose-600 text-white rounded-full p-1 shadow-md hover:bg-rose-700"><X className="w-3 h-3" /></button>
+                                                </div>
+                                            ) : (
+                                                <div className="flex flex-col items-center gap-2">
+                                                    <FileText className="w-6 h-6 text-slate-400" />
+                                                    <div className="flex gap-2">
+                                                        <button type="button" onClick={() => setActiveCameraField('ac_doc_foto_frontal')} className="px-3 py-1.5 bg-emerald-600 text-white rounded-lg font-bold text-[11px] flex items-center gap-1"><Camera className="w-3 h-3" /> Cámara</button>
+                                                        <label className="px-3 py-1.5 bg-slate-200 dark:bg-slate-800 text-slate-700 dark:text-slate-300 rounded-lg font-bold text-[11px] cursor-pointer flex items-center gap-1"><Upload className="w-3 h-3" /> Archivo <input type="file" accept="image/*" className="hidden" onChange={(e) => handleAcompananteFileUpload(e, 'doc_foto_frontal')} /></label>
+                                                    </div>
+                                                </div>
+                                            )}
+                                        </div>
+                                    </div>
+
+                                    {/* Reverso Documento */}
+                                    <div className="space-y-2">
+                                        <span className="font-bold text-slate-600 dark:text-slate-400 block text-[11px]">Foto Reverso</span>
+                                        <div className="flex flex-col items-center justify-center border border-dashed border-slate-300 dark:border-slate-700 rounded-2xl p-4 bg-slate-50 dark:bg-slate-950 min-h-[130px] relative">
+                                            {nuevoAcompanante.doc_foto_trasera ? (
+                                                <div className="relative w-full aspect-[16/10] rounded-xl overflow-hidden shadow-sm">
+                                                    <img src={formatImageUrl(nuevoAcompanante.doc_foto_trasera)!} alt="Doc Trasero" className="w-full h-full object-cover" />
+                                                    <button type="button" onClick={() => setNuevoAcompanante(prev => ({ ...prev, doc_foto_trasera: '' }))} className="absolute top-1.5 right-1.5 bg-rose-600 text-white rounded-full p-1 shadow-md hover:bg-rose-700"><X className="w-3 h-3" /></button>
+                                                </div>
+                                            ) : (
+                                                <div className="flex flex-col items-center gap-2">
+                                                    <FileText className="w-6 h-6 text-slate-400" />
+                                                    <div className="flex gap-2">
+                                                        <button type="button" onClick={() => setActiveCameraField('ac_doc_foto_trasera')} className="px-3 py-1.5 bg-emerald-600 text-white rounded-lg font-bold text-[11px] flex items-center gap-1"><Camera className="w-3 h-3" /> Cámara</button>
+                                                        <label className="px-3 py-1.5 bg-slate-200 dark:bg-slate-800 text-slate-700 dark:text-slate-300 rounded-lg font-bold text-[11px] cursor-pointer flex items-center gap-1"><Upload className="w-3 h-3" /> Archivo <input type="file" accept="image/*" className="hidden" onChange={(e) => handleAcompananteFileUpload(e, 'doc_foto_trasera')} /></label>
+                                                    </div>
+                                                </div>
+                                            )}
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* Footer Modal Action Buttons */}
+                            <div className="flex items-center justify-end gap-3 pt-4 border-t border-slate-200 dark:border-slate-800">
+                                <button
+                                    type="button"
+                                    onClick={() => setIsAcompananteModalOpen(false)}
+                                    className="px-5 py-3 rounded-xl border border-slate-300 dark:border-slate-700 text-slate-700 dark:text-slate-300 font-bold hover:bg-slate-100 dark:hover:bg-slate-800"
+                                >
+                                    Cancelar
+                                </button>
+                                <button
+                                    type="submit"
+                                    className="px-6 py-3 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold flex items-center gap-2 shadow-md"
+                                >
+                                    <Plus className="w-4 h-4" /> Agregar Acompañante
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            )}
+
             {/* Camera Widget Overlay */}
             {activeCameraField && (
                 <CameraWidget
                     title={`Capturar Fotografía`}
                     onCapture={(base64) => {
-                        setData(activeCameraField as any, base64);
+                        if (activeCameraField.startsWith('ac_')) {
+                            const field = activeCameraField.replace('ac_', '');
+                            setNuevoAcompanante(prev => ({ ...prev, [field]: base64 }));
+                        } else {
+                            setData(activeCameraField as any, base64);
+                        }
                         setActiveCameraField(null);
                     }}
                     onCancel={() => setActiveCameraField(null)}

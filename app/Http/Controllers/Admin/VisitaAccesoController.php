@@ -664,9 +664,20 @@ class VisitaAccesoController extends Controller
             'vehiculo_foto_frontal'=> 'nullable|string',
             'vehiculo_foto_trasera'=> 'nullable|string',
             // Acompañantes
-            'acompanantes'         => 'nullable|array|max:10',
-            'acompanantes.*.nombre'    => 'required_with:acompanantes|string|max:200',
-            'acompanantes.*.documento' => 'nullable|string|max:100',
+            'acompanantes'                         => 'nullable|array|max:10',
+            'acompanantes.*.nombres'               => 'nullable|string|max:150',
+            'acompanantes.*.apellidos'             => 'nullable|string|max:150',
+            'acompanantes.*.nombre'                => 'nullable|string|max:250',
+            'acompanantes.*.curp'                  => 'nullable|string|max:50',
+            'acompanantes.*.documento'             => 'nullable|string|max:100',
+            'acompanantes.*.genero'                => 'nullable|string|max:20',
+            'acompanantes.*.fecha_nacimiento'      => 'nullable|string',
+            'acompanantes.*.edad'                  => 'nullable',
+            'acompanantes.*.correo'                => 'nullable|string|max:150',
+            'acompanantes.*.cargo'                 => 'nullable|string|max:100',
+            'acompanantes.*.foto_carnet'           => 'nullable|string',
+            'acompanantes.*.doc_foto_frontal'      => 'nullable|string',
+            'acompanantes.*.doc_foto_trasera'      => 'nullable|string',
         ]);
 
         // Guardar fotos de documentos en storage si son base64
@@ -685,6 +696,20 @@ class VisitaAccesoController extends Controller
         $validated['doc_foto_trasera']      = $savePhoto($validated['doc_foto_trasera']      ?? null, $folder, 'doc_trasera');
         $validated['vehiculo_foto_frontal'] = $savePhoto($validated['vehiculo_foto_frontal'] ?? null, $folder, 'vehiculo_frontal');
         $validated['vehiculo_foto_trasera'] = $savePhoto($validated['vehiculo_foto_trasera'] ?? null, $folder, 'vehiculo_trasera');
+
+        if (!empty($validated['acompanantes']) && is_array($validated['acompanantes'])) {
+            foreach ($validated['acompanantes'] as $idx => &$ac) {
+                if (!empty($ac['foto_carnet'])) {
+                    $ac['foto_carnet'] = $savePhoto($ac['foto_carnet'], "{$folder}/acompanantes/ac_{$idx}", 'foto_carnet');
+                }
+                if (!empty($ac['doc_foto_frontal'])) {
+                    $ac['doc_foto_frontal'] = $savePhoto($ac['doc_foto_frontal'], "{$folder}/acompanantes/ac_{$idx}", 'doc_frontal');
+                }
+                if (!empty($ac['doc_foto_trasera'])) {
+                    $ac['doc_foto_trasera'] = $savePhoto($ac['doc_foto_trasera'], "{$folder}/acompanantes/ac_{$idx}", 'doc_trasera');
+                }
+            }
+        }
 
         if ($validated['medio_acceso'] === 'peatonal') {
             $validated['vehiculo_marca']       = null;
