@@ -135,33 +135,38 @@ class PermissionSeeder extends Seeder
                 'clientes.edit' => 'Editar Clientes',
                 'clientes.delete' => 'Eliminar Clientes',
                 'clientes.abono' => 'Registrar Abonos de Crédito',
-
-                // Módulo: Proveedores
-                'proveedores.view' => 'Ver Proveedores',
-                'proveedores.create' => 'Crear Proveedores',
-                'proveedores.edit' => 'Editar Proveedores',
-                'proveedores.delete' => 'Eliminar Proveedores',
-            ],
-
-            // Sector: Compras
-            'compras' => [
-                'compras.view' => 'Ver Compras',
-                'compras.create' => 'Registrar Compras',
-                'compras.show' => 'Ver Detalle de Compra',
-                'compras.cancel' => 'Anular Compra',
-                'compras.cxp' => 'Gestionar Cuentas por Pagar',
-                'compras.cxp.pay' => 'Registrar Abonos a Proveedores',
             ],
 
             // Sector: Inventario
             'inventario' => [
-                 // Módulo: Productos
+                // Módulo: Productos
                 'productos.view' => 'Ver Productos',
                 'productos.create' => 'Crear Productos',
                 'productos.edit' => 'Editar Productos',
                 'productos.delete' => 'Eliminar Productos',
                 'inventario.view' => 'Ver Inventario y Kardex',
                 'inventario.adjust' => 'Realizar Ajustes de Stock (Entradas/Salidas)',
+            ],
+
+            // Sector: Administración
+            'administracion' => [
+                // Módulo: Fondo Mensual
+                'fondo_mensual.view' => 'Ver Fondo Mensual y Dashboard',
+                'fondo_mensual.close' => 'Realizar Cierre de Mes Operativo',
+
+                // Módulo: Proveedores
+                'proveedores.view' => 'Ver Proveedores',
+                'proveedores.create' => 'Crear Proveedores',
+                'proveedores.edit' => 'Editar Proveedores',
+                'proveedores.delete' => 'Eliminar Proveedores',
+
+                // Módulo: Compras
+                'compras.view' => 'Ver Compras',
+                'compras.create' => 'Registrar Compras',
+                'compras.show' => 'Ver Detalle de Compra',
+                'compras.cancel' => 'Anular Compra',
+                'compras.cxp' => 'Gestionar Cuentas por Pagar',
+                'compras.cxp.pay' => 'Registrar Abonos a Proveedores',
             ],
         ];
 
@@ -190,6 +195,7 @@ class PermissionSeeder extends Seeder
                     str_starts_with($permission, 'clientes.') => 'clientes',
                     str_starts_with($permission, 'proveedores.') => 'proveedores',
                     str_starts_with($permission, 'compras.') => 'compras',
+                    str_starts_with($permission, 'fondo_mensual.') => 'fondo_mensual',
                     str_starts_with($permission, 'metas.') => 'metas',
                     str_starts_with($permission, 'inventario.') => 'inventario',
 

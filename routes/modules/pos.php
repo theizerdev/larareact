@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\Admin\MonthlyFundController;
 use App\Http\Controllers\Admin\PointOfSale\CashRegisterController;
 use App\Http\Controllers\Admin\PointOfSale\ClienteController;
 use App\Http\Controllers\Admin\PointOfSale\GoalController;
@@ -45,6 +46,10 @@ Route::middleware(['verified'])->group(function () {
     Route::get('compras/{compra}', [PurchaseController::class, 'show'])->name('compras.show');
     Route::post('compras/{compra}/pagos', [PurchaseController::class, 'storePayment'])->name('compras.store-payment');
     Route::post('compras/{compra}/cancel', [PurchaseController::class, 'cancel'])->name('compras.cancel');
+
+    // Fondo Mensual & Cierre de Mes (Sector Administración)
+    Route::get('fondo-mensual', [MonthlyFundController::class, 'index'])->name('fondo-mensual.index');
+    Route::post('fondo-mensual/cerrar', [MonthlyFundController::class, 'closeMonth'])->name('fondo-mensual.cerrar');
 
     // Alertas de Stock
     Route::get('stock-alerts', [StockAlertController::class, 'index'])->name('stock-alerts.index');

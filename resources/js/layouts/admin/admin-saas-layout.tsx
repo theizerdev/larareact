@@ -527,6 +527,11 @@ export default function AdminSaasLayout({
                         {(() => {
                             const adminItems = [
                                 {
+                                    title: 'Fondo de Mes',
+                                    href: '/admin/fondo-mensual',
+                                    permission: 'fondo_mensual.view',
+                                },
+                                {
                                     title: 'Proveedores',
                                     href: '/admin/proveedores',
                                     permission: 'proveedores.view',
