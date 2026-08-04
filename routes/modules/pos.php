@@ -3,6 +3,7 @@
 use App\Http\Controllers\Admin\PointOfSale\CashRegisterController;
 use App\Http\Controllers\Admin\PointOfSale\ClienteController;
 use App\Http\Controllers\Admin\PointOfSale\GoalController;
+use App\Http\Controllers\Admin\PointOfSale\PurchaseController;
 use App\Http\Controllers\Admin\PointOfSale\SaleController;
 use App\Http\Controllers\Admin\PointOfSale\ServicioController;
 use App\Http\Controllers\Admin\StockAlertController;
@@ -35,6 +36,12 @@ Route::middleware(['verified'])->group(function () {
     // Clientes y Cuentas por Cobrar
     Route::resource('clientes', ClienteController::class)->except(['create', 'edit']);
     Route::post('clientes/{cliente}/abono', [ClienteController::class, 'registrarAbono'])->name('clientes.abono');
+
+    // Sector Compras & Cuentas por Pagar (CxP)
+    Route::get('cuentas-por-pagar', [PurchaseController::class, 'accountsPayable'])->name('compras.cxp');
+    Route::post('compras/{compra}/pagos', [PurchaseController::class, 'storePayment'])->name('compras.store-payment');
+    Route::post('compras/{compra}/cancel', [PurchaseController::class, 'cancel'])->name('compras.cancel');
+    Route::resource('compras', PurchaseController::class)->only(['index', 'create', 'store', 'show']);
 
     // Alertas de Stock
     Route::get('stock-alerts', [StockAlertController::class, 'index'])->name('stock-alerts.index');

@@ -503,11 +503,6 @@ export default function AdminSaasLayout({
                                     permission: 'clientes.view',
                                 },
                                 {
-                                    title: 'Proveedores',
-                                    href: '/admin/proveedores',
-                                    permission: 'proveedores.view',
-                                },
-                                {
                                     title: 'Alertas de Stock',
                                     href: '/admin/stock-alerts',
                                     permission: 'ventas.view',
@@ -523,6 +518,40 @@ export default function AdminSaasLayout({
                                         icon={Wallet}
                                         collapsed={collapsed}
                                         items={posItems}
+                                    />
+                                </div>
+                            );
+                        })()}
+
+                        {/* Administración Group */}
+                        {(() => {
+                            const adminItems = [
+                                {
+                                    title: 'Proveedores',
+                                    href: '/admin/proveedores',
+                                    permission: 'proveedores.view',
+                                },
+                                {
+                                    title: 'Compras de Insumos',
+                                    href: '/admin/compras',
+                                    permission: 'compras.view',
+                                },
+                                {
+                                    title: 'Cuentas por Pagar (CxP)',
+                                    href: '/admin/cuentas-por-pagar',
+                                    permission: 'compras.cxp',
+                                },
+                            ].filter(item => hasPermission(item.permission));
+
+                            if (adminItems.length === 0) return null;
+
+                            return (
+                                <div className="pt-2">
+                                    <CollapsibleNavItem
+                                        title="Administración"
+                                        icon={Briefcase}
+                                        collapsed={collapsed}
+                                        items={adminItems}
                                     />
                                 </div>
                             );

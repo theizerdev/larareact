@@ -143,6 +143,16 @@ class PermissionSeeder extends Seeder
                 'proveedores.delete' => 'Eliminar Proveedores',
             ],
 
+            // Sector: Compras
+            'compras' => [
+                'compras.view' => 'Ver Compras',
+                'compras.create' => 'Registrar Compras',
+                'compras.show' => 'Ver Detalle de Compra',
+                'compras.cancel' => 'Anular Compra',
+                'compras.cxp' => 'Gestionar Cuentas por Pagar',
+                'compras.cxp.pay' => 'Registrar Abonos a Proveedores',
+            ],
+
             // Sector: Inventario
             'inventario' => [
                  // Módulo: Productos
@@ -179,6 +189,7 @@ class PermissionSeeder extends Seeder
                     str_starts_with($permission, 'ventas.') => 'ventas',
                     str_starts_with($permission, 'clientes.') => 'clientes',
                     str_starts_with($permission, 'proveedores.') => 'proveedores',
+                    str_starts_with($permission, 'compras.') => 'compras',
                     str_starts_with($permission, 'metas.') => 'metas',
                     str_starts_with($permission, 'inventario.') => 'inventario',
 
