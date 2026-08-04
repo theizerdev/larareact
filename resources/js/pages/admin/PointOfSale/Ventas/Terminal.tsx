@@ -860,12 +860,13 @@ export default function Terminal({
             return;
         }
 
-        router.post(`/admin/cajas/${activeRegister.id}/movements`, movementForm, {
+        router.post(`/admin/cajas/${activeRegister.id}/movement`, movementForm, {
+            preserveScroll: true,
             onSuccess: () => {
                 setIsMovementModalOpen(false);
                 setMovementForm({ type: 'outflow', concepto: 'Gasto Rápido', metodo_pago: 'efectivo', amount: '', description: '' });
                 notifySuccess(__('Movimiento de dinero registrado.'));
-                router.reload();
+                router.reload({ only: ['activeRegisterSummary', 'activeRegister'] });
             },
             onError: () => notifyError(__('Error al registrar el movimiento.')),
         });

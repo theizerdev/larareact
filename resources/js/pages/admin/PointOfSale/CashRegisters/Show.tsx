@@ -1,4 +1,4 @@
-import { Head, useForm, router } from '@inertiajs/react';
+import { Head, useForm, router, usePage } from '@inertiajs/react';
 import {
     Wallet,
     ArrowUpCircle,
@@ -105,6 +105,8 @@ interface Props {
 
 export default function Show({ caja, summary }: Props) {
     const { __ } = useTranslate();
+    const pageProps = usePage().props as any;
+    const empresa = pageProps?.empresa;
     const [isMovementOpen, setIsMovementOpen] = useState(false);
     const [isCloseOpen, setIsCloseOpen] = useState(false);
     const [countedAmount, setCountedAmount] = useState('');
@@ -889,55 +891,166 @@ export default function Show({ caja, summary }: Props) {
                 </Dialog>
             </div>
 
-            {/* FORMATO TICKET DE IMPRESIÓN PARA TICKETERA POS */}
-            <div className="hidden print:block font-mono text-xs p-4 max-w-xs mx-auto space-y-4">
-                <div className="text-center border-b pb-2">
-                    <h2 className="text-base font-bold uppercase">{__('Comprobante de Arqueo de Caja')}</h2>
-                    <p>Caja #{caja.id}</p>
-                    <p>{new Date().toLocaleString()}</p>
+            {/* FORMATO TICKET DE IMPRESIÓN PARA TICKETERA POS (80MM / ARQUEO CORTE Z) */}
+            <div id="printable-arqueo-ticket" className="hidden print:block text-black bg-white font-mono p-2 text-xs w-[80mm] max-w-[80mm] mx-auto">
+                <style>{`
+                    @media print {
+                        body * {
+                            visibility: hidden !important;
+                        }
+                        #printable-arqueo-ticket, #printable-arqueo-ticket * {
+                            visibility: visible !important;
+                        }
+                        #printable-arqueo-ticket {
+                            position: absolute !important;
+                            left: 0 !important;
+                            top: 0 !important;
+                            width: 80mm !important;
+                            max-width: 80mm !important;
+                            margin: 0 !important;
+                            padding: 4mm !important;
+                            background: white !important;
+                            color: black !important;
+                            font-family: 'Courier New', Courier, monospace, sans-serif !important;
+                            font-size: 11px !important;
+                        }
+                        @page {
+                            size: 80mm auto;
+                            margin: 0;
+                        }
+                    }
+                `}</style>
+
+                {/* LOGO O ENCABEZADO DE EMPRESA */}
+                <div className="text-center mb-1">
+                    {empresa?.logo ? (
+                        <img
+                            src={empresa.logo}
+                            alt={empresa.razon_social || 'Logo'}
+                            className="h-10 max-w-[160px] mx-auto object-contain mb-1"
+                        />
+                    ) : (
+                        <div className="font-black text-sm uppercase">{empresa?.razon_social || 'Servitec POS'}</div>
+                    )}
                 </div>
 
-                <div className="space-y-1">
-                    <p><strong>{__('Cajero')}:</strong> {caja.user?.name}</p>
-                    <p><strong>{__('Apertura')}:</strong> {new Date(caja.opened_at).toLocaleString()}</p>
-                    <p><strong>{__('Estado')}:</strong> {caja.status.toUpperCase()}</p>
-                    {caja.closed_at && <p><strong>{__('Cierre')}:</strong> {new Date(caja.closed_at).toLocaleString()}</p>}
+                {empresa?.razon_social && (
+                    <div className="text-center font-bold text-[10px] uppercase">{empresa.razon_social}</div>
+                )}
+                {empresa?.documento && (
+                    <div className="text-center text-[9px] font-mono">{empresa.documento}</div>
+                )}
+                <div className="text-center text-[9px] text-gray-700">
+                    {empresa?.telefono ? `Tel: ${empresa.telefono}` : ''} {empresa?.email ? ` | ${empresa.email}` : ''}
                 </div>
+                {empresa?.direccion && (
+                    <div className="text-center text-[8px] text-gray-600">{empresa.direccion}</div>
+                )}
 
-                <div className="border-t border-b py-2 space-y-1">
+                <div className="border-b border-dashed border-black my-1"></div>
+                <div className="text-center font-bold uppercase text-[11px] tracking-wider">
+                    {caja.status === 'closed' ? __('COMPROBANTE DE CORTE Z') : __('ARQUEO PARCIAL DE CAJA')}
+                </div>
+                <div className="border-b border-dashed border-black my-1"></div>
+
+                <div className="space-y-0.5 text-[10px]">
                     <div className="flex justify-between">
-                        <span>{__('Fondo Inicial')}:</span>
+                        <span>CAJA #:</span>
+                        <span className="font-bold">#{caja.id}</span>
+                    </div>
+                    <div className="flex justify-between">
+                        <span>CAJERO:</span>
+                        <span>{caja.user?.name}</span>
+                    </div>
+                    <div className="flex justify-between">
+                        <span>APERTURA:</span>
+                        <span>{new Date(caja.opened_at).toLocaleString()}</span>
+                    </div>
+                    {caja.closed_at && (
+                        <div className="flex justify-between">
+                            <span>CIERRE:</span>
+                            <span>{new Date(caja.closed_at).toLocaleString()}</span>
+                        </div>
+                    )}
+                    <div className="flex justify-between">
+                        <span>FECHA IMPRESIÓN:</span>
+                        <span>{new Date().toLocaleString()}</span>
+                    </div>
+                </div>
+
+                <div className="border-b border-dashed border-black my-1"></div>
+                <div className="text-center font-bold text-[10px] uppercase">{__('RESUMEN DE FLUJO')}</div>
+                <div className="border-b border-dashed border-black my-1"></div>
+
+                <div className="space-y-1 text-[10px]">
+                    <div className="flex justify-between">
+                        <span>Fondo Inicial:</span>
                         <span>{currencySymbol}{(caja.opening_amount ?? 0).toFixed(2)}</span>
                     </div>
                     <div className="flex justify-between">
-                        <span>{__('Total Ingresos')}:</span>
+                        <span>Total Ingresos (+):</span>
                         <span>+{currencySymbol}{(summary.inflows ?? 0).toFixed(2)}</span>
                     </div>
                     <div className="flex justify-between">
-                        <span>{__('Total Egresos')}:</span>
+                        <span>Total Salidas (-):</span>
                         <span>-{currencySymbol}{(summary.outflows ?? 0).toFixed(2)}</span>
                     </div>
-                    <div className="flex justify-between font-bold border-t pt-1">
-                        <span>{__('Saldo Esperado')}:</span>
+                    <div className="flex justify-between font-bold border-t border-dotted border-black pt-1">
+                        <span>Dinero Esperado:</span>
                         <span>{currencySymbol}{(expectedAmount ?? 0).toFixed(2)}</span>
                     </div>
-                    {caja.counted_amount !== null && (
-                        <div className="flex justify-between font-bold">
-                            <span>{__('Monto Contado')}:</span>
-                            <span>{currencySymbol}{caja.counted_amount.toFixed(2)}</span>
-                        </div>
-                    )}
-                    {caja.difference !== null && (
-                        <div className="flex justify-between font-bold">
-                            <span>{__('Diferencia')}:</span>
-                            <span>{currencySymbol}{caja.difference.toFixed(2)}</span>
-                        </div>
-                    )}
                 </div>
 
-                <div className="text-center pt-4">
-                    <p>___________________________</p>
-                    <p className="mt-1">{__('Firma del Cajero')}</p>
+                {/* DESGLOSE POR FORMA DE PAGO */}
+                {summary.by_payment_method && Object.keys(summary.by_payment_method).length > 0 && (
+                    <>
+                        <div className="border-b border-dashed border-black my-1"></div>
+                        <div className="text-center font-bold text-[10px] uppercase">{__('DESGLOSE FORMAS DE PAGO')}</div>
+                        <div className="border-b border-dashed border-black my-1"></div>
+                        <div className="space-y-1 text-[10px]">
+                            {Object.entries(summary.by_payment_method).map(([method, val]) => (
+                                <div key={method} className="flex justify-between">
+                                    <span className="capitalize">{formatMetodoPagoLabel(method)}:</span>
+                                    <span className="font-mono font-bold">{currencySymbol}{val.net.toFixed(2)}</span>
+                                </div>
+                            ))}
+                        </div>
+                    </>
+                )}
+
+                {/* RESULTADO DEL ARQUEO DE CIERRE */}
+                {caja.status === 'closed' && (
+                    <>
+                        <div className="border-b border-dashed border-black my-1"></div>
+                        <div className="text-center font-bold text-[10px] uppercase">{__('RESULTADO DEL ARQUEO')}</div>
+                        <div className="border-b border-dashed border-black my-1"></div>
+                        <div className="space-y-1 text-[10px]">
+                            <div className="flex justify-between">
+                                <span>Esperado Sistema:</span>
+                                <span>{currencySymbol}{(caja.expected_amount ?? expectedAmount).toFixed(2)}</span>
+                            </div>
+                            <div className="flex justify-between font-bold">
+                                <span>Total Contado:</span>
+                                <span>{currencySymbol}{(caja.counted_amount ?? 0).toFixed(2)}</span>
+                            </div>
+                            <div className="flex justify-between font-bold">
+                                <span>Diferencia:</span>
+                                <span>
+                                    {(caja.difference ?? 0) >= 0 ? '+' : ''}{currencySymbol}{(caja.difference ?? 0).toFixed(2)}
+                                </span>
+                            </div>
+                        </div>
+                    </>
+                )}
+
+                <div className="border-b border-dashed border-black my-2"></div>
+
+                <div className="text-center text-[10px] space-y-4 pt-2">
+                    <div>
+                        <p>_____________________________________</p>
+                        <p className="mt-1 font-bold">{__('Firma Cajero')}: {caja.user?.name}</p>
+                    </div>
+                    <p className="text-[9px] italic">{__('Comprobante generado desde Servitec POS')}</p>
                 </div>
             </div>
         </>
