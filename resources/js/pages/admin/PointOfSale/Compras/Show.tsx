@@ -116,29 +116,30 @@ export default function ComprasShow({ compra, currencySymbol, empresa }: Props) 
 
             <div className="space-y-6 print:hidden">
                 <ModuleHeader
+                    icon={<FileText className="h-6 w-6 text-white" />}
                     title={`${__('Comprobante de Compra')} #${compra.codigo_compra}`}
                     description={`${__('Fecha de emisión')}: ${new Date(compra.fecha_emision).toLocaleDateString()}`}
-                    action={
-                        <div className="flex flex-wrap gap-2">
-                            <Link href="/admin/compras">
-                                <Button variant="outline" className="gap-2">
-                                    <ArrowLeft className="w-4 h-4" />
-                                    {__('Volver')}
-                                </Button>
-                            </Link>
-                            <Button variant="outline" onClick={handlePrint} className="gap-2">
-                                <Printer className="w-4 h-4" />
-                                {__('Imprimir')}
+                    colorClassName="bg-indigo-600"
+                >
+                    <div className="flex flex-wrap gap-2">
+                        <Link href="/admin/compras">
+                            <Button variant="outline" className="gap-2 text-slate-900 bg-white hover:bg-slate-100">
+                                <ArrowLeft className="w-4 h-4" />
+                                {__('Volver')}
                             </Button>
-                            {compra.status === 'completada' && (
-                                <Button variant="destructive" onClick={handleCancel} className="gap-2 font-bold">
-                                    <Ban className="w-4 h-4" />
-                                    {__('Anular Compra')}
-                                </Button>
-                            )}
-                        </div>
-                    }
-                />
+                        </Link>
+                        <Button variant="outline" onClick={handlePrint} className="gap-2 text-slate-900 bg-white hover:bg-slate-100">
+                            <Printer className="w-4 h-4" />
+                            {__('Imprimir')}
+                        </Button>
+                        {compra.status === 'completada' && (
+                            <Button variant="destructive" onClick={handleCancel} className="gap-2 font-bold">
+                                <Ban className="w-4 h-4" />
+                                {__('Anular Compra')}
+                            </Button>
+                        )}
+                    </div>
+                </ModuleHeader>
 
                 {/* Resumen */}
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">

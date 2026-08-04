@@ -117,7 +117,7 @@ class PurchaseController extends Controller
                 ];
             });
 
-        $sucursales = Sucursal::where('estado', true)
+        $sucursales = Sucursal::where('status', true)
             ->select('id', 'nombre')
             ->get();
 

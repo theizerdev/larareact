@@ -137,25 +137,26 @@ export default function ComprasIndex({ compras, proveedores, filters, stats, cur
                 <Breadcrumbs breadcrumbs={breadcrumbs} />
 
                 <ModuleHeader
+                    icon={<ShoppingBag className="h-6 w-6 text-white" />}
                     title={__('Gestión de Compras de Insumos y Stock')}
                     description={__('Controle el abastecimiento de mercancía, entradas a almacén y cuentas por pagar.')}
-                    action={
-                        <div className="flex flex-wrap gap-2">
-                            <Link href="/admin/cuentas-por-pagar">
-                                <Button variant="outline" className="gap-2 font-semibold">
-                                    <CreditCard className="w-4 h-4 text-indigo-600 dark:text-indigo-400" />
-                                    {__('Cuentas por Pagar (CxP)')}
-                                </Button>
-                            </Link>
-                            <Link href="/admin/compras/crear">
-                                <Button className="bg-indigo-600 hover:bg-indigo-700 text-white font-bold gap-2 shadow-sm">
-                                    <Plus className="w-4 h-4" />
-                                    {__('Nueva Compra')}
-                                </Button>
-                            </Link>
-                        </div>
-                    }
-                />
+                    colorClassName="bg-indigo-600"
+                >
+                    <div className="flex flex-wrap gap-2">
+                        <Link href="/admin/cuentas-por-pagar">
+                            <Button variant="outline" className="gap-2 font-semibold text-slate-900 bg-white hover:bg-slate-100">
+                                <CreditCard className="w-4 h-4 text-indigo-600" />
+                                {__('Cuentas por Pagar (CxP)')}
+                            </Button>
+                        </Link>
+                        <Link href="/admin/compras/crear">
+                            <Button className="bg-emerald-600 hover:bg-emerald-700 text-white font-bold gap-2 shadow-sm">
+                                <Plus className="w-4 h-4" />
+                                {__('Nueva Compra')}
+                            </Button>
+                        </Link>
+                    </div>
+                </ModuleHeader>
 
                 {/* StatCards */}
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">

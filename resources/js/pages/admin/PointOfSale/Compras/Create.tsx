@@ -222,17 +222,18 @@ export default function ComprasCreate({ proveedores, productos, sucursales, acti
 
             <form onSubmit={handleSubmit} className="space-y-6">
                 <ModuleHeader
+                    icon={<ShoppingBag className="h-6 w-6 text-white" />}
                     title={__('Registrar Nueva Compra de Insumos')}
                     description={__('Ingrese la factura de mercancía para abastecer inventario y generar la orden de compra.')}
-                    action={
-                        <Link href="/admin/compras">
-                            <Button variant="outline" className="gap-2">
-                                <ArrowLeft className="w-4 h-4" />
-                                {__('Volver al Historial')}
-                            </Button>
-                        </Link>
-                    }
-                />
+                    colorClassName="bg-indigo-600"
+                >
+                    <Link href="/admin/compras">
+                        <Button variant="outline" className="gap-2 text-slate-900 bg-white hover:bg-slate-100">
+                            <ArrowLeft className="w-4 h-4" />
+                            {__('Volver al Historial')}
+                        </Button>
+                    </Link>
+                </ModuleHeader>
 
                 <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
                     {/* Columna Principal - Formulario e Ítems */}

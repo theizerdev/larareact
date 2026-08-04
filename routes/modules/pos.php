@@ -39,9 +39,12 @@ Route::middleware(['verified'])->group(function () {
 
     // Sector Compras & Cuentas por Pagar (CxP)
     Route::get('cuentas-por-pagar', [PurchaseController::class, 'accountsPayable'])->name('compras.cxp');
+    Route::get('compras', [PurchaseController::class, 'index'])->name('compras.index');
+    Route::get('compras/crear', [PurchaseController::class, 'create'])->name('compras.create');
+    Route::post('compras', [PurchaseController::class, 'store'])->name('compras.store');
+    Route::get('compras/{compra}', [PurchaseController::class, 'show'])->name('compras.show');
     Route::post('compras/{compra}/pagos', [PurchaseController::class, 'storePayment'])->name('compras.store-payment');
     Route::post('compras/{compra}/cancel', [PurchaseController::class, 'cancel'])->name('compras.cancel');
-    Route::resource('compras', PurchaseController::class)->only(['index', 'create', 'store', 'show']);
 
     // Alertas de Stock
     Route::get('stock-alerts', [StockAlertController::class, 'index'])->name('stock-alerts.index');

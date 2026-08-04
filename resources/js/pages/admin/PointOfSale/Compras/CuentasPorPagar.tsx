@@ -158,17 +158,18 @@ export default function CuentasPorPagar({ cuentas, proveedores, activeRegister, 
             <div className="space-y-6">
                 <Breadcrumbs breadcrumbs={breadcrumbs} />
                 <ModuleHeader
+                    icon={<CreditCard className="h-6 w-6 text-white" />}
                     title={__('Cuentas por Pagar a Proveedores (CxP)')}
                     description={__('Gestione los créditos pendientes con proveedores y registre los abonos o liquidaciones.')}
-                    action={
-                        <Link href="/admin/compras">
-                            <Button variant="outline" className="gap-2">
-                                <ArrowLeft className="w-4 h-4" />
-                                {__('Volver a Compras')}
-                            </Button>
-                        </Link>
-                    }
-                />
+                    colorClassName="bg-indigo-600"
+                >
+                    <Link href="/admin/compras">
+                        <Button variant="outline" className="gap-2 text-slate-900 bg-white hover:bg-slate-100">
+                            <ArrowLeft className="w-4 h-4" />
+                            {__('Volver a Compras')}
+                        </Button>
+                    </Link>
+                </ModuleHeader>
 
                 {/* StatCard */}
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
