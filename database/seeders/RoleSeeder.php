@@ -14,53 +14,84 @@ class RoleSeeder extends Seeder
      */
     public function run(): void
     {
-        // Super-admin: all permissions (bypassed via Gate::before)
+        // Super-admin: all permissions
         $superAdmin = Role::firstOrCreate(['name' => 'Super Administrador', 'guard_name' => 'web']);
         $superAdmin->syncPermissions(Permission::all());
 
-        // Admin: all except roles/groups management and SaaS global subscription management
+        // Admin: all except roles management and SaaS global subscription management
         $admin = Role::firstOrCreate(['name' => 'Administrador', 'guard_name' => 'web']);
         $admin->syncPermissions(
             Permission::where('module', '!=', 'roles')
-                ->where('module', '!=', 'groups')
                 ->where('name', '!=', 'subscriptions.manage')
                 ->get()
         );
 
-        // Editor: view all + edit content
+        // Encargado: Full operational and administration permissions
+        $encargado = Role::firstOrCreate(['name' => 'encargado', 'guard_name' => 'web']);
+        $encargado->syncPermissions(
+            Permission::whereIn('sector', ['equipos', 'inventario', 'punto_de_venta', 'administracion'])
+                ->orWhereIn('name', [
+                    'dashboard.view',
+                    'users.view',
+                    'users.create',
+                    'users.edit',
+                    'paises.view',
+                    'empresas.view',
+                    'sucursales.view',
+                    'credit_config.view',
+                ])->get()
+        );
+
+        // Operador: Technical & Operational access (Equipos, Productos, Inventario, Servicios, Clientes)
         $operador = Role::firstOrCreate(['name' => 'operador', 'guard_name' => 'web']);
         $operador->syncPermissions(
             Permission::whereIn('name', [
                 'dashboard.view',
-                'users.view',
-                'users.edit',
+                'categorias.view',
+                'marcas.view',
+                'familias.view',
+                'modelos.view',
+                'productos.view',
+                'productos.create',
+                'productos.edit',
+                'inventario.view',
+                'servicios.view',
+                'servicios.create',
+                'servicios.edit',
+                'clientes.view',
+                'clientes.create',
+                'ventas.view',
             ])->get()
         );
 
-        // Editor: view all + edit content
-        $encargado = Role::firstOrCreate(['name' => 'encargado', 'guard_name' => 'web']);
-        $encargado->syncPermissions(
+        // Cajero: POS Cash Register, Terminal & Customer management
+        $cajero = Role::firstOrCreate(['name' => 'Cajero', 'guard_name' => 'web']);
+        $cajero->syncPermissions(
             Permission::whereIn('name', [
                 'dashboard.view',
-                'users.view',
-                'users.edit',
+                'ventas.terminal',
+                'ventas.view',
+                'cajas.view',
+                'cajas.create',
+                'cajas.edit',
+                'cajas.close',
+                'servicios.view',
+                'productos.view',
+                'clientes.view',
+                'clientes.create',
+                'clientes.edit',
+                'clientes.abono',
             ])->get()
         );
 
-        // Viewer: only view permissions
+        // Viewer: Read-only access across all modules
         $viewer = Role::firstOrCreate(['name' => 'viewer', 'guard_name' => 'web']);
         $viewer->syncPermissions(
             Permission::where('name', 'like', '%.view')->get()
         );
 
-        // Cliente: storefront customers
+        // Cliente: Storefront customer role
         $cliente = Role::firstOrCreate(['name' => 'cliente', 'guard_name' => 'web']);
-
-        // Cajero: POS Cash Register management
-        $cajero = Role::firstOrCreate(['name' => 'Cajero', 'guard_name' => 'web']);
-        $cajero->syncPermissions(
-            Permission::where('module', 'cajas')->orWhere('name', 'dashboard.view')->get()
-        );
 
         // Reset cached roles and permissions
         app()[PermissionRegistrar::class]->forgetCachedPermissions();

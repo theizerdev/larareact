@@ -56,7 +56,6 @@ import { useTranslate } from '@/hooks/use-translate';
 import { notifySuccess, notifyError } from '@/utils/notifications';
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
-import { Checkbox } from '@/components/ui/checkbox';
 import PhoneInputGroup from '../Empresas/Partials/PhoneInputGroup';
 
 // ─── Interfaces ───────────────────────────────────────────────────────────────
@@ -710,29 +709,29 @@ return;
                                 {errors.status && <p className="text-red-500 text-xs mt-1">{errors.status}</p>}
                             </div>
 
-                            {/* Roles */}
+                            {/* Rol (Único) */}
                             <div className="md:col-span-2 border-t pt-4 mt-2">
-                                <Label className="font-bold flex items-center gap-1.5 mb-3">
+                                <Label htmlFor="role_select" className="font-bold flex items-center gap-1.5 mb-2">
                                     <ShieldAlert className="w-4 h-4 text-slate-500" />
-                                    {__('Assign Roles')}
+                                    {__('Rol de Usuario')} *
                                 </Label>
-                                <div className="grid grid-cols-2 gap-3 bg-muted/40 p-4 rounded-lg border">
-                                    {roles.map((r) => (
-                                        <div key={r.id} className="flex items-center space-x-2">
-                                            <Checkbox
-                                                id={`role-check-${r.id}`}
-                                                checked={data.roles.includes(r.name)}
-                                                onCheckedChange={(checked) => handleRoleChange(r.name, !!checked)}
-                                            />
-                                            <Label
-                                                htmlFor={`role-check-${r.id}`}
-                                                className="text-xs font-medium leading-none cursor-pointer select-none capitalize"
-                                            >
-                                                {r.name}
-                                            </Label>
-                                        </div>
-                                    ))}
-                                </div>
+                                <Select
+                                    value={data.roles[0] || ''}
+                                    onValueChange={(val) => setData('roles', val ? [val] : [])}
+                                >
+                                    <SelectTrigger id="role_select" className="w-full">
+                                        <SelectValue placeholder={__('Seleccione un rol...')} />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        {roles
+                                            .filter((r) => !['Super Administrador', 'super-admin', 'Super Admin'].includes(r.name))
+                                            .map((r) => (
+                                                <SelectItem key={r.id} value={r.name}>
+                                                    <span className="capitalize">{r.name}</span>
+                                                </SelectItem>
+                                            ))}
+                                    </SelectContent>
+                                </Select>
                                 {errors.roles && <p className="text-red-500 text-xs mt-1">{errors.roles}</p>}
                             </div>
                         </div>

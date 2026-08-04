@@ -80,7 +80,9 @@ class UserController extends Controller
         return inertia('admin/Usuarios/Index', [
             'users' => $users,
             'stats' => $stats,
-            'roles' => Role::all(['id', 'name']),
+            'roles' => Role::whereNotIn('name', ['Super Administrador', 'super-admin', 'Super Admin'])
+                ->orderBy('name')
+                ->get(['id', 'name']),
             'empresas' => Empresa::where('status', true)->orderBy('razon_social')->get(['id', 'razon_social']),
             'sucursales' => Sucursal::where('status', true)->orderBy('nombre')->get(['id', 'nombre', 'empresa_id']),
             'paises' => Pais::where('activo', true)

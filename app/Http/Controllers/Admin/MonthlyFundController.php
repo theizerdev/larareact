@@ -90,8 +90,6 @@ class MonthlyFundController extends Controller
                 $q->where('year', $selectedYear)->where('month', $selectedMonth);
                 if ($selectedSucursal !== 'all') {
                     $q->where('sucursal_id', $selectedSucursal);
-                } else {
-                    $q->whereNull('sucursal_id');
                 }
             });
 
