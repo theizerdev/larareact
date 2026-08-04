@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\CashMovement;
 use App\Models\CashRegister;
 use App\Models\CierreMensual;
+use App\Models\Compra;
 use App\Models\Empresa;
 use App\Models\Pais;
 use App\Models\Sucursal;
@@ -82,6 +83,21 @@ class MonthlyFundController extends Controller
 
         $cierreSnapshot = $cierreSnapshotQuery->first();
 
+        // 2b. Total de compras que usaron fondo en el período seleccionado
+        $fondosUsadosQuery = Compra::where('usar_fondo_mes', true)
+            ->where('status', '!=', 'anulada')
+            ->whereHas('cierreMensual', function ($q) use ($selectedYear, $selectedMonth, $selectedSucursal) {
+                $q->where('year', $selectedYear)->where('month', $selectedMonth);
+                if ($selectedSucursal !== 'all') {
+                    $q->where('sucursal_id', $selectedSucursal);
+                } else {
+                    $q->whereNull('sucursal_id');
+                }
+            });
+
+        $totalFondosUsados = (float) $fondosUsadosQuery->sum('total');
+        $saldoRealDisponible = $saldoNetoMes - $totalFondosUsados;
+
         // 3. Generar Datos para ApexChart 1: Evolución Anual Enero a Diciembre
         $monthsName = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'];
         $annualInflows = [];
@@ -156,7 +172,21 @@ class MonthlyFundController extends Controller
             $cierresHistoricosQuery->where('sucursal_id', $selectedSucursal);
         }
 
-        $cierresHistoricos = $cierresHistoricosQuery->get();
+        $cierresHistoricos = $cierresHistoricosQuery
+            ->withCount(['compras' => fn ($q) => $q->where('status', '!=', 'anulada')])
+            ->with([
+                'user',
+                'sucursal',
+                'compras' => fn ($q) => $q
+                    ->with([
+                        'proveedor:id,razon_social',
+                        'pagos:id,compra_id,metodo_pago',
+                    ])
+                    ->select('id', 'cierre_mensual_id', 'codigo_compra', 'proveedor_id', 'total', 'tipo_pago', 'fecha_emision', 'status')
+                    ->where('status', '!=', 'anulada')
+                    ->orderBy('created_at', 'desc'),
+            ])
+            ->get();
 
         return inertia('admin/FondoMensual/Index', [
             'sucursales' => $sucursales,
@@ -167,14 +197,16 @@ class MonthlyFundController extends Controller
 
             'currentMonthStats' => [
                 'cajas_cerradas_cant' => $cajasCerradas->count(),
-                'inflows' => $inflows,
-                'outflows' => $outflows,
-                'saldo_neto' => $saldoNetoMes,
-                'fondos_apertura' => $fondosAperturaSum,
-                'prev_month_net' => $prevNet,
-                'percentage_change' => round($percentageChange, 1),
-                'is_closed' => (bool) ($cierreSnapshot && $cierreSnapshot->status === 'cerrado'),
-                'snapshot' => $cierreSnapshot,
+                'inflows'             => $inflows,
+                'outflows'            => $outflows,
+                'saldo_neto'          => $saldoNetoMes,
+                'saldo_real'          => $saldoRealDisponible,
+                'total_fondos_usados' => $totalFondosUsados,
+                'fondos_apertura'     => $fondosAperturaSum,
+                'prev_month_net'      => $prevNet,
+                'percentage_change'   => round($percentageChange, 1),
+                'is_closed'           => (bool) ($cierreSnapshot && $cierreSnapshot->status === 'cerrado'),
+                'snapshot'            => $cierreSnapshot,
             ],
 
             'annualChartData' => [

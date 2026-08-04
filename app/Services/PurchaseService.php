@@ -57,6 +57,8 @@ class PurchaseService
                 'sucursal_id' => $sucursalId,
                 'proveedor_id' => $data['proveedor_id'],
                 'user_id' => $userId,
+                'cierre_mensual_id' => ! empty($data['usar_fondo_mes']) ? ($data['cierre_mensual_id'] ?? null) : null,
+                'usar_fondo_mes' => ! empty($data['usar_fondo_mes']),
                 'codigo_compra' => $codigoCompra,
                 'numero_factura' => $data['numero_factura'] ?? null,
                 'numero_control' => $data['numero_control'] ?? null,
@@ -110,17 +112,18 @@ class PurchaseService
 
                     // Movimiento de Kardex
                     InventoryMovement::create([
-                        'empresa_id' => $empresaId,
-                        'sucursal_id' => $sucursalId,
-                        'producto_id' => $producto->id,
-                        'user_id' => $userId,
-                        'type' => 'entrada_compra',
-                        'quantity' => $cant,
-                        'previous_stock' => $oldStock,
-                        'new_stock' => $newStock,
-                        'reference_type' => Compra::class,
-                        'reference_id' => $compra->id,
-                        'notes' => "Compra #{$compra->codigo_compra} - Factura {$compra->numero_factura}",
+                        'empresa_id'    => $empresaId,
+                        'sucursal_id'   => $sucursalId,
+                        'producto_id'   => $producto->id,
+                        'user_id'       => $userId,
+                        'tipo'          => 'entrada',
+                        'motivo'        => 'entrada_compra',
+                        'cantidad'      => $cant,
+                        'stock_anterior' => $oldStock,
+                        'stock_nuevo'   => $newStock,
+                        'referencia'    => "Compra #{$compra->codigo_compra}",
+                        'costo_unitario' => $costo,
+                        'notas'         => "Factura {$compra->numero_factura}",
                     ]);
                 }
             }
@@ -152,6 +155,15 @@ class PurchaseService
                         $userId
                     );
                 }
+
+                // Descontar del Fondo de Mes si estuvo activado
+                if (! empty($data['usar_fondo_mes']) && ! empty($data['cierre_mensual_id'])) {
+                    $cierre = \App\Models\CierreMensual::find($data['cierre_mensual_id']);
+                    if ($cierre) {
+                        $cierre->increment('total_egresos', $initialPayment);
+                        $cierre->decrement('saldo_neto', $initialPayment);
+                    }
+                }
             }
 
             return $compra;
@@ -179,17 +191,17 @@ class PurchaseService
                     $producto->update(['stock' => $newStock]);
 
                     InventoryMovement::create([
-                        'empresa_id' => $compra->empresa_id,
-                        'sucursal_id' => $compra->sucursal_id,
-                        'producto_id' => $producto->id,
-                        'user_id' => $userId,
-                        'type' => 'anulacion_compra',
-                        'quantity' => -(float) $item->cantidad,
-                        'previous_stock' => $oldStock,
-                        'new_stock' => $newStock,
-                        'reference_type' => Compra::class,
-                        'reference_id' => $compra->id,
-                        'notes' => "Anulación de Compra #{$compra->codigo_compra}",
+                        'empresa_id'    => $compra->empresa_id,
+                        'sucursal_id'   => $compra->sucursal_id,
+                        'producto_id'   => $producto->id,
+                        'user_id'       => $userId,
+                        'tipo'          => 'salida',
+                        'motivo'        => 'anulacion_compra',
+                        'cantidad'      => -(float) $item->cantidad,
+                        'stock_anterior' => $oldStock,
+                        'stock_nuevo'   => $newStock,
+                        'referencia'    => "Anulación Compra #{$compra->codigo_compra}",
+                        'notas'         => "Compra anulada - revertido ingreso de stock",
                     ]);
                 }
             }

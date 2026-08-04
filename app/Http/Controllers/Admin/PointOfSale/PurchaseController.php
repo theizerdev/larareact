@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Admin\PointOfSale;
 
 use App\Http\Controllers\Controller;
 use App\Models\CashRegister;
+use App\Models\CierreMensual;
 use App\Models\Compra;
 use App\Models\Empresa;
 use App\Models\Pais;
@@ -43,44 +44,44 @@ class PurchaseController extends Controller
             ->orderBy('created_at', 'desc');
 
         if ($request->filled('search')) {
-            $search = trim($request->search);
+            $search = $request->search;
             $query->where(function ($q) use ($search) {
                 $q->where('codigo_compra', 'like', "%{$search}%")
                     ->orWhere('numero_factura', 'like', "%{$search}%")
-                    ->orWhereHas('proveedor', function ($pq) use ($search) {
-                        $pq->where('razon_social', 'like', "%{$search}%")
-                            ->orWhere('nombre_comercial', 'like', "%{$search}%");
-                    });
+                    ->orWhereHas('proveedor', fn ($p) => $p->where('razon_social', 'like', "%{$search}%"));
             });
-        }
-
-        if ($request->filled('proveedor_id')) {
-            $query->where('proveedor_id', $request->proveedor_id);
-        }
-
-        if ($request->filled('tipo_pago')) {
-            $query->where('tipo_pago', $request->tipo_pago);
         }
 
         if ($request->filled('status')) {
             $query->where('status', $request->status);
         }
 
+        if ($request->filled('tipo_pago')) {
+            $query->where('tipo_pago', $request->tipo_pago);
+        }
+
         $compras = $query->paginate(15)->withQueryString();
-        $proveedores = Proveedor::where('estado', true)->select('id', 'razon_social', 'nombre_comercial')->get();
 
         $stats = [
-            'total_compras' => (float) Compra::where('status', 'completada')->sum('total'),
-            'compras_mes' => (float) Compra::where('status', 'completada')->whereMonth('fecha_emision', now()->month)->sum('total'),
-            'total_cxp_pendiente' => (float) Compra::where('status', 'completada')->where('saldo_pendiente', '>', 0)->sum('saldo_pendiente'),
-            'cantidad_compras' => Compra::count(),
+            'total_compras'       => (float) Compra::where('status', 'completada')->sum('total'),
+            'compras_mes'         => (float) Compra::where('status', 'completada')
+                                        ->whereYear('created_at', now()->year)
+                                        ->whereMonth('created_at', now()->month)
+                                        ->sum('total'),
+            'total_cxp_pendiente' => (float) Compra::where('status', 'completada')->sum('saldo_pendiente'),
+            'cantidad_compras'    => Compra::count(),
+            'compras_contado'     => (float) Compra::where('status', 'completada')->where('tipo_pago', 'contado')->sum('total'),
+            'compras_credito'     => (float) Compra::where('status', 'completada')->where('tipo_pago', 'credito')->sum('total'),
+            'deuda_pendiente'     => (float) Compra::where('status', 'completada')->sum('saldo_pendiente'),
         ];
 
+        $proveedores = Proveedor::orderBy('razon_social')->select('id', 'razon_social', 'nombre_comercial')->get();
+
         return inertia('admin/PointOfSale/Compras/Index', [
-            'compras' => $compras,
-            'proveedores' => $proveedores,
-            'filters' => $request->only(['search', 'proveedor_id', 'tipo_pago', 'status']),
-            'stats' => $stats,
+            'compras'        => $compras,
+            'proveedores'    => $proveedores,
+            'stats'          => $stats,
+            'filters'        => $request->only(['search', 'status', 'tipo_pago', 'proveedor_id']),
             'currencySymbol' => $this->getCurrencySymbol(),
         ]);
     }
@@ -123,11 +124,34 @@ class PurchaseController extends Controller
 
         $activeRegister = CashRegister::getActiveRegister($user);
 
+        // Fondos Mensuales Disponibles
+        $fondosMensuales = CierreMensual::orderBy('year', 'desc')
+            ->orderBy('month', 'desc')
+            ->get()
+            ->map(function ($c) {
+                $monthNames = [
+                    1 => 'Enero', 2 => 'Febrero', 3 => 'Marzo', 4 => 'Abril',
+                    5 => 'Mayo', 6 => 'Junio', 7 => 'Julio', 8 => 'Agosto',
+                    9 => 'Septiembre', 10 => 'Octubre', 11 => 'Noviembre', 12 => 'Diciembre',
+                ];
+                $name = $monthNames[$c->month] ?? "Mes {$c->month}";
+
+                return [
+                    'id' => $c->id,
+                    'year' => $c->year,
+                    'month' => $c->month,
+                    'sucursal_nombre' => $c->sucursal?->nombre ?? 'Todas',
+                    'label' => "Fondo de {$name} {$c->year} (Disponible: {$this->getCurrencySymbol()}" . number_format($c->saldo_neto, 2) . ")",
+                    'saldo_disponible' => (float) $c->saldo_neto,
+                ];
+            });
+
         return inertia('admin/PointOfSale/Compras/Create', [
             'proveedores' => $proveedores,
             'productos' => $productos,
             'sucursales' => $sucursales,
             'activeRegister' => $activeRegister,
+            'fondosMensuales' => $fondosMensuales,
             'currencySymbol' => $this->getCurrencySymbol(),
             'valorDolar' => $valorDolar,
         ]);
@@ -148,6 +172,8 @@ class PurchaseController extends Controller
             'metodo_pago' => 'nullable|string',
             'referencia_pago' => 'nullable|string',
             'pagar_con_caja' => 'nullable|boolean',
+            'usar_fondo_mes' => 'nullable|boolean',
+            'cierre_mensual_id' => 'nullable|exists:cierres_mensuales,id',
             'notas' => 'nullable|string',
             'items' => 'required|array|min:1',
             'items.*.producto_id' => 'required|exists:productos,id',
@@ -160,7 +186,7 @@ class PurchaseController extends Controller
 
         $compra = $purchaseService->createPurchase($validated, auth()->id());
 
-        return redirect()->route('compras.show', $compra->id)
+        return redirect()->route('admin.compras.show', $compra->id)
             ->with('success', "Compra #{$compra->codigo_compra} registrada exitosamente.");
     }
 
@@ -170,24 +196,42 @@ class PurchaseController extends Controller
             'proveedor',
             'user',
             'sucursal',
-            'items.producto',
+            'items.producto.marca',
+            'items.producto.modelo',
             'pagos.user',
             'pagos.cashRegister',
         ]);
 
-        $user = auth()->user();
+        // Calcular nombre display de cada producto (igual que en create())
+        $compra->items->each(function ($item) {
+            if ($item->producto) {
+                $p = $item->producto;
+                $marcaNombre  = trim((string) $p->marca?->nombre);
+                $modeloNombre = trim((string) ($p->modelo?->nombre_comercial ?? $p->modelo?->nombre));
+                $variante     = trim((string) $p->nombre_variante);
+                $codigo       = trim((string) $p->codigo_barras);
+
+                $displayName = $variante !== ''
+                    ? $variante
+                    : implode(' ', array_filter([$marcaNombre, $modeloNombre, $codigo]));
+
+                $p->nombre = $displayName ?: "Producto #{$p->id}";
+            }
+        });
+
+        $user    = auth()->user();
         $empresa = $user?->empresa;
 
         return inertia('admin/PointOfSale/Compras/Show', [
-            'compra' => $compra,
+            'compra'         => $compra,
             'currencySymbol' => $this->getCurrencySymbol(),
-            'empresa' => $empresa ? [
+            'empresa'        => $empresa ? [
                 'razon_social' => $empresa->razon_social,
-                'documento' => $empresa->documento,
-                'telefono' => $empresa->telefono,
-                'email' => $empresa->email,
-                'direccion' => $empresa->direccion,
-                'logo' => $empresa->logo ? "/storage/{$empresa->logo}" : '/image/logo/larareact_logo_transparent.png',
+                'documento'    => $empresa->documento,
+                'telefono'     => $empresa->telefono,
+                'email'        => $empresa->email,
+                'direccion'    => $empresa->direccion,
+                'logo'         => $empresa->logo ? "/storage/{$empresa->logo}" : '/image/logo/larareact_logo_transparent.png',
             ] : null,
         ]);
     }

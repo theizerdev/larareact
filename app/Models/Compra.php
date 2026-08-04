@@ -19,6 +19,8 @@ class Compra extends Model
         'sucursal_id',
         'proveedor_id',
         'user_id',
+        'cierre_mensual_id',
+        'usar_fondo_mes',
         'codigo_compra',
         'numero_factura',
         'numero_control',
@@ -38,6 +40,7 @@ class Compra extends Model
     protected $casts = [
         'fecha_emision' => 'date',
         'fecha_vencimiento' => 'date',
+        'usar_fondo_mes' => 'boolean',
         'subtotal' => 'float',
         'impuesto' => 'float',
         'descuento' => 'float',
@@ -64,6 +67,11 @@ class Compra extends Model
     public function user(): BelongsTo
     {
         return $this->belongsTo(User::class, 'user_id');
+    }
+
+    public function cierreMensual(): BelongsTo
+    {
+        return $this->belongsTo(CierreMensual::class, 'cierre_mensual_id');
     }
 
     public function items(): HasMany

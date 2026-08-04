@@ -16,6 +16,9 @@ import {
     Tag,
     AlertCircle,
     Wallet,
+    Layers,
+    ChevronDown,
+    TrendingDown,
 } from 'lucide-react';
 import { Breadcrumbs } from '@/components/breadcrumbs';
 import { ModuleHeader } from '@/components/module-header';
@@ -65,16 +68,26 @@ interface SelectedItem {
     nuevo_precio_venta: number;
 }
 
+interface FondoMensualOption {
+    id: number;
+    year: number;
+    month: number;
+    sucursal_nombre: string;
+    label: string;
+    saldo_disponible: number;
+}
+
 interface Props {
     proveedores: Proveedor[];
     productos: Producto[];
     sucursales: Sucursal[];
     activeRegister: any | null;
+    fondosMensuales?: FondoMensualOption[];
     currencySymbol: string;
     valorDolar: number;
 }
 
-export default function ComprasCreate({ proveedores, productos, sucursales, activeRegister, currencySymbol, valorDolar }: Props) {
+export default function ComprasCreate({ proveedores, productos, sucursales, activeRegister, fondosMensuales = [], currencySymbol, valorDolar }: Props) {
     const { __ } = useTranslate();
 
     const [proveedorId, setProveedorId] = useState<string>('');
@@ -89,6 +102,8 @@ export default function ComprasCreate({ proveedores, productos, sucursales, acti
     const [metodoPago, setMetodoPago] = useState('efectivo');
     const [referenciaPago, setReferenciaPago] = useState('');
     const [pagarConCaja, setPagarConCaja] = useState(!!activeRegister);
+    const [usarFondoMes, setUsarFondoMes] = useState(false);
+    const [cierreMensualId, setCierreMensualId] = useState<string>('');
     const [notas, setNotas] = useState('');
 
     const [productSearch, setProductSearch] = useState('');
@@ -160,6 +175,16 @@ export default function ComprasCreate({ proveedores, productos, sucursales, acti
     const initialPayNum = tipoPago === 'contado' ? totalGlobal : (parseFloat(montoInicial) || 0);
     const saldoPendienteGlobal = Math.max(0, totalGlobal - initialPayNum);
 
+    const selectedFondo = useMemo(() => {
+        if (!cierreMensualId || !fondosMensuales) return null;
+        return fondosMensuales.find((f) => f.id.toString() === cierreMensualId) || null;
+    }, [cierreMensualId, fondosMensuales]);
+
+    const saldoRestanteFondo = useMemo(() => {
+        if (!selectedFondo) return 0;
+        return selectedFondo.saldo_disponible - initialPayNum;
+    }, [selectedFondo, initialPayNum]);
+
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
         if (!proveedorId) {
@@ -168,6 +193,14 @@ export default function ComprasCreate({ proveedores, productos, sucursales, acti
         }
         if (items.length === 0) {
             notifyError(__('Debe agregar al menos un producto a la compra.'));
+            return;
+        }
+        if (usarFondoMes && !cierreMensualId) {
+            notifyError(__('Seleccione el mes del fondo a utilizar.'));
+            return;
+        }
+        if (usarFondoMes && selectedFondo && selectedFondo.saldo_disponible < initialPayNum) {
+            notifyError(__('El saldo disponible del fondo seleccionado es insuficiente para cubrir este pago.'));
             return;
         }
 
@@ -186,6 +219,8 @@ export default function ComprasCreate({ proveedores, productos, sucursales, acti
             metodo_pago: metodoPago,
             referencia_pago: referenciaPago,
             pagar_con_caja: pagarConCaja,
+            usar_fondo_mes: usarFondoMes,
+            cierre_mensual_id: usarFondoMes && cierreMensualId ? parseInt(cierreMensualId) : null,
             notas: notas,
             items: items.map((i) => ({
                 producto_id: i.producto_id,
@@ -601,6 +636,125 @@ export default function ComprasCreate({ proveedores, productos, sucursales, acti
                                                 ⚠️ No hay caja abierta. El egreso no afectará turno POS.
                                             </p>
                                         )}
+
+                                        {/* ── Usar Fondo de Mes ── */}
+                                        <div className="border-t pt-2 mt-1">
+                                            <div className="flex items-center gap-2">
+                                                <input
+                                                    type="checkbox"
+                                                    id="chk-fondo"
+                                                    checked={usarFondoMes}
+                                                    onChange={(e) => {
+                                                        setUsarFondoMes(e.target.checked);
+                                                        if (!e.target.checked) setCierreMensualId('');
+                                                    }}
+                                                    disabled={fondosMensuales.length === 0}
+                                                    className="rounded text-violet-600 focus:ring-violet-500 h-4 w-4"
+                                                />
+                                                <label htmlFor="chk-fondo" className="text-xs font-medium text-slate-800 dark:text-slate-200 flex items-center gap-1.5">
+                                                    <Layers className="w-3.5 h-3.5 text-violet-500" />
+                                                    {__('Usar fondo de mes')}
+                                                </label>
+                                                {fondosMensuales.length === 0 && (
+                                                    <span className="text-[10px] text-slate-400 italic">{__('(Sin fondos disponibles)')}</span>
+                                                )}
+                                            </div>
+
+                                            {usarFondoMes && fondosMensuales.length > 0 && (
+                                                <div className="mt-3 rounded-lg border border-violet-200 dark:border-violet-800 bg-violet-50 dark:bg-violet-950/30 p-3 space-y-3 animate-in fade-in duration-200">
+                                                    {/* Selector de mes */}
+                                                    <div className="space-y-1">
+                                                        <Label className="text-xs font-semibold text-violet-700 dark:text-violet-300 flex items-center gap-1">
+                                                            <ChevronDown className="w-3 h-3" />
+                                                            {__('Seleccionar mes del fondo')}
+                                                        </Label>
+                                                        <Select value={cierreMensualId} onValueChange={setCierreMensualId}>
+                                                            <SelectTrigger className="h-8 text-xs border-violet-300 dark:border-violet-700 focus:ring-violet-500">
+                                                                <SelectValue placeholder={__('Elige el mes...')} />
+                                                            </SelectTrigger>
+                                                            <SelectContent>
+                                                                {fondosMensuales.map((f) => (
+                                                                    <SelectItem
+                                                                        key={f.id}
+                                                                        value={f.id.toString()}
+                                                                        disabled={f.saldo_disponible <= 0}
+                                                                    >
+                                                                        <span className="flex items-center justify-between gap-3 w-full">
+                                                                            <span>{f.label}</span>
+                                                                            {f.saldo_disponible <= 0 && (
+                                                                                <span className="text-[10px] text-rose-500 font-semibold">{__('Sin saldo')}</span>
+                                                                            )}
+                                                                        </span>
+                                                                    </SelectItem>
+                                                                ))}
+                                                            </SelectContent>
+                                                        </Select>
+                                                    </div>
+
+                                                    {/* Panel de saldo cuando hay un mes seleccionado */}
+                                                    {selectedFondo && (
+                                                        <div className="space-y-2">
+                                                            {/* Barra de progreso */}
+                                                            <div className="space-y-1">
+                                                                <div className="flex justify-between text-[10px] text-slate-500 dark:text-slate-400">
+                                                                    <span>{__('Saldo disponible')}</span>
+                                                                    <span className="font-mono font-bold">{currencySymbol}{selectedFondo.saldo_disponible.toFixed(2)}</span>
+                                                                </div>
+                                                                <div className="w-full bg-slate-200 dark:bg-slate-700 rounded-full h-2 overflow-hidden">
+                                                                    <div
+                                                                        className={`h-2 rounded-full transition-all duration-300 ${
+                                                                            initialPayNum > selectedFondo.saldo_disponible
+                                                                                ? 'bg-rose-500'
+                                                                                : 'bg-violet-500'
+                                                                        }`}
+                                                                        style={{
+                                                                            width: `${Math.min(100, selectedFondo.saldo_disponible > 0 ? (initialPayNum / selectedFondo.saldo_disponible) * 100 : 100)}%`,
+                                                                        }}
+                                                                    />
+                                                                </div>
+                                                                <div className="flex justify-between text-[10px] text-slate-500 dark:text-slate-400">
+                                                                    <span>{__('A descontar')}</span>
+                                                                    <span className={`font-mono font-bold ${
+                                                                        initialPayNum > selectedFondo.saldo_disponible ? 'text-rose-600' : 'text-violet-600'
+                                                                    }`}>{currencySymbol}{initialPayNum.toFixed(2)}</span>
+                                                                </div>
+                                                            </div>
+
+                                                            {/* Resultado */}
+                                                            {initialPayNum <= selectedFondo.saldo_disponible ? (
+                                                                <div className="flex items-center gap-2 rounded-md bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800 p-2">
+                                                                    <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+                                                                    <div className="text-[11px]">
+                                                                        <span className="text-emerald-700 dark:text-emerald-400 font-semibold">{__('Fondo suficiente.')}</span>
+                                                                        {' '}
+                                                                        <span className="text-slate-600 dark:text-slate-400">
+                                                                            {__('Saldo restante')}:{' '}
+                                                                            <span className="font-mono font-bold">{currencySymbol}{saldoRestanteFondo.toFixed(2)}</span>
+                                                                        </span>
+                                                                    </div>
+                                                                </div>
+                                                            ) : (
+                                                                <div className="flex items-center gap-2 rounded-md bg-rose-50 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-800 p-2">
+                                                                    <AlertCircle className="w-4 h-4 text-rose-600 shrink-0" />
+                                                                    <div className="text-[11px] text-rose-700 dark:text-rose-400">
+                                                                        <span className="font-semibold">{__('Saldo insuficiente.')}</span>
+                                                                        {' '}
+                                                                        {__('Faltan')}:{' '}
+                                                                        <span className="font-mono font-bold">{currencySymbol}{Math.abs(saldoRestanteFondo).toFixed(2)}</span>
+                                                                    </div>
+                                                                </div>
+                                                            )}
+
+                                                            {/* Detalle del mes */}
+                                                            <div className="text-[10px] text-slate-500 dark:text-slate-400 flex items-center gap-1">
+                                                                <TrendingDown className="w-3 h-3 text-violet-400" />
+                                                                <span>{selectedFondo.sucursal_nombre} — {selectedFondo.month}/{selectedFondo.year}</span>
+                                                            </div>
+                                                        </div>
+                                                    )}
+                                                </div>
+                                            )}
+                                        </div>
                                     </div>
                                 )}
                             </div>

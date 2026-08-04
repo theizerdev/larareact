@@ -26,7 +26,13 @@ import {
     CreditCard,
     Zap,
     Clock,
+    ChevronDown,
+    ChevronUp,
+    ShoppingBag,
+    ExternalLink,
+    Receipt,
 } from 'lucide-react';
+import { Link } from '@inertiajs/react';
 import { Breadcrumbs } from '@/components/breadcrumbs';
 import { ModuleHeader } from '@/components/module-header';
 import { Button } from '@/components/ui/button';
@@ -52,6 +58,17 @@ interface Sucursal {
     nombre: string;
 }
 
+interface CompraEnFondo {
+    id: number;
+    codigo_compra: string;
+    proveedor?: { razon_social: string };
+    total: number;
+    tipo_pago: string;
+    fecha_emision: string;
+    status: string;
+    pagos?: { metodo_pago: string }[];
+}
+
 interface CierreSnapshot {
     id: number;
     year: number;
@@ -66,6 +83,8 @@ interface CierreSnapshot {
     notas?: string;
     user?: { name: string };
     sucursal?: { nombre: string };
+    compras?: CompraEnFondo[];
+    compras_count?: number;
 }
 
 interface Props {
@@ -79,6 +98,8 @@ interface Props {
         inflows: number;
         outflows: number;
         saldo_neto: number;
+        saldo_real: number;
+        total_fondos_usados: number;
         fondos_apertura: number;
         prev_month_net: number;
         percentage_change: number;
@@ -113,6 +134,9 @@ export default function Index({
     const [isCloseModalOpen, setIsCloseModalOpen] = useState(false);
     const [chartType, setChartType] = useState<'bar' | 'area'>('bar');
     const [selectedSnapshotDetails, setSelectedSnapshotDetails] = useState<CierreSnapshot | null>(null);
+    const [expandedRowId, setExpandedRowId] = useState<number | null>(null);
+
+    const toggleRow = (id: number) => setExpandedRowId(prev => prev === id ? null : id);
 
     const breadcrumbs = [
         { title: __('Administración'), href: '/admin/proveedores' },
@@ -406,22 +430,35 @@ export default function Index({
                                     </span>
                                 </div>
                                 <div className="text-2xl font-extrabold text-white mt-2">
-                                    {currencySymbol} {currentMonthStats.saldo_neto.toLocaleString('es-ES', { minimumFractionDigits: 2 })}
+                                    {currencySymbol} {currentMonthStats.saldo_real.toLocaleString('es-ES', { minimumFractionDigits: 2 })}
                                 </div>
-                                <div className="flex items-center text-xs mt-2 text-slate-400">
-                                    {currentMonthStats.percentage_change >= 0 ? (
-                                        <span className="text-emerald-400 font-semibold flex items-center gap-0.5 mr-1.5">
-                                            <ArrowUpRight className="w-3.5 h-3.5" />
-                                            +{currentMonthStats.percentage_change}%
-                                        </span>
-                                    ) : (
-                                        <span className="text-rose-400 font-semibold flex items-center gap-0.5 mr-1.5">
-                                            <ArrowDownRight className="w-3.5 h-3.5" />
-                                            {currentMonthStats.percentage_change}%
-                                        </span>
-                                    )}
-                                    <span>{__('vs mes anterior')}</span>
-                                </div>
+                                {currentMonthStats.total_fondos_usados > 0 ? (
+                                    <div className="mt-2 space-y-0.5">
+                                        <div className="flex items-center justify-between text-[11px] text-slate-400">
+                                            <span>{__('Bruto de cajas')}</span>
+                                            <span className="font-mono">{currencySymbol} {currentMonthStats.saldo_neto.toLocaleString('es-ES', { minimumFractionDigits: 2 })}</span>
+                                        </div>
+                                        <div className="flex items-center justify-between text-[11px] text-rose-400">
+                                            <span className="flex items-center gap-1"><ArrowDownRight className="w-3 h-3" />{__('Fondos usados')}</span>
+                                            <span className="font-mono font-semibold">-{currencySymbol} {currentMonthStats.total_fondos_usados.toLocaleString('es-ES', { minimumFractionDigits: 2 })}</span>
+                                        </div>
+                                    </div>
+                                ) : (
+                                    <div className="flex items-center text-xs mt-2 text-slate-400">
+                                        {currentMonthStats.percentage_change >= 0 ? (
+                                            <span className="text-emerald-400 font-semibold flex items-center gap-0.5 mr-1.5">
+                                                <ArrowUpRight className="w-3.5 h-3.5" />
+                                                +{currentMonthStats.percentage_change}%
+                                            </span>
+                                        ) : (
+                                            <span className="text-rose-400 font-semibold flex items-center gap-0.5 mr-1.5">
+                                                <ArrowDownRight className="w-3.5 h-3.5" />
+                                                {currentMonthStats.percentage_change}%
+                                            </span>
+                                        )}
+                                        <span>{__('vs mes anterior')}</span>
+                                    </div>
+                                )}
                             </div>
 
                             {/* Ingresos Totales */}
@@ -600,6 +637,7 @@ export default function Index({
                                 <table className="w-full text-sm text-left">
                                     <thead className="bg-slate-50 dark:bg-slate-800/80 text-slate-700 dark:text-slate-300 font-semibold border-b border-slate-200 dark:border-slate-800">
                                         <tr>
+                                            <th className="p-3.5 w-8"></th>
                                             <th className="p-3.5">{__('Año/Mes')}</th>
                                             <th className="p-3.5">{__('Sucursal')}</th>
                                             <th className="p-3.5">{__('Fecha Cierre')}</th>
@@ -608,44 +646,177 @@ export default function Index({
                                             <th className="p-3.5">{__('Saldo Neto')}</th>
                                             <th className="p-3.5">{__('Fondo Próx. Mes')}</th>
                                             <th className="p-3.5">{__('Utilidad/Retiro')}</th>
+                                            <th className="p-3.5">{__('Compras del Fondo')}</th>
                                             <th className="p-3.5">{__('Cerrado Por')}</th>
                                         </tr>
                                     </thead>
                                     <tbody className="divide-y divide-slate-200 dark:divide-slate-800">
-                                        {cierresHistoricos.map((c) => (
-                                            <tr key={c.id} className="hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors">
-                                                <td className="p-3.5 font-bold text-indigo-600 dark:text-indigo-400">
-                                                    <span className="px-2.5 py-1 rounded-md bg-indigo-50 dark:bg-indigo-950/60 border border-indigo-200 dark:border-indigo-800 text-xs">
-                                                        {c.year} - {c.month.toString().padStart(2, '0')}
-                                                    </span>
-                                                </td>
-                                                <td className="p-3.5 font-medium">{c.sucursal?.nombre || __('Todas (Empresa)')}</td>
-                                                <td className="p-3.5 text-slate-500 text-xs">
-                                                    {new Date(c.fecha_cierre).toLocaleString()}
-                                                </td>
-                                                <td className="p-3.5 text-emerald-600 font-medium">
-                                                    {currencySymbol} {c.total_ingresos.toLocaleString('es-ES', { minimumFractionDigits: 2 })}
-                                                </td>
-                                                <td className="p-3.5 text-rose-600 font-medium">
-                                                    {currencySymbol} {c.total_egresos.toLocaleString('es-ES', { minimumFractionDigits: 2 })}
-                                                </td>
-                                                <td className="p-3.5 font-extrabold text-slate-900 dark:text-white">
-                                                    {currencySymbol} {c.saldo_neto.toLocaleString('es-ES', { minimumFractionDigits: 2 })}
-                                                </td>
-                                                <td className="p-3.5 text-blue-600 dark:text-blue-400 font-semibold">
-                                                    {currencySymbol} {c.fondo_siguiente_mes.toLocaleString('es-ES', { minimumFractionDigits: 2 })}
-                                                </td>
-                                                <td className="p-3.5 text-purple-600 dark:text-purple-400 font-semibold">
-                                                    {currencySymbol} {c.retiro_utilidad.toLocaleString('es-ES', { minimumFractionDigits: 2 })}
-                                                </td>
-                                                <td className="p-3.5 text-slate-500 text-xs flex items-center gap-1.5">
-                                                    <div className="w-6 h-6 rounded-full bg-slate-200 dark:bg-slate-700 flex items-center justify-center font-bold text-slate-700 dark:text-slate-300 text-[10px]">
-                                                        {c.user?.name ? c.user.name.charAt(0).toUpperCase() : 'U'}
-                                                    </div>
-                                                    {c.user?.name || '-'}
-                                                </td>
-                                            </tr>
-                                        ))}
+                                        {cierresHistoricos.map((c) => {
+                                            const isExpanded = expandedRowId === c.id;
+                                            const comprasCount = c.compras_count ?? 0;
+                                            const totalDescontado = (c.compras ?? []).reduce((s, cp) => s + cp.total, 0);
+
+                                            return (
+                                                <React.Fragment key={c.id}>
+                                                    {/* Fila principal */}
+                                                    <tr
+                                                        className={`transition-colors cursor-pointer ${
+                                                            isExpanded
+                                                                ? 'bg-violet-50 dark:bg-violet-950/20'
+                                                                : 'hover:bg-slate-50 dark:hover:bg-slate-800/50'
+                                                        }`}
+                                                        onClick={() => toggleRow(c.id)}
+                                                    >
+                                                        {/* Chevron */}
+                                                        <td className="p-3.5 text-slate-400">
+                                                            {isExpanded
+                                                                ? <ChevronUp className="w-4 h-4 text-violet-500" />
+                                                                : <ChevronDown className="w-4 h-4" />
+                                                            }
+                                                        </td>
+                                                        <td className="p-3.5 font-bold text-indigo-600 dark:text-indigo-400">
+                                                            <span className="px-2.5 py-1 rounded-md bg-indigo-50 dark:bg-indigo-950/60 border border-indigo-200 dark:border-indigo-800 text-xs">
+                                                                {c.year} - {c.month.toString().padStart(2, '0')}
+                                                            </span>
+                                                        </td>
+                                                        <td className="p-3.5 font-medium">{c.sucursal?.nombre || __('Todas (Empresa)')}</td>
+                                                        <td className="p-3.5 text-slate-500 text-xs">
+                                                            {new Date(c.fecha_cierre).toLocaleString()}
+                                                        </td>
+                                                        <td className="p-3.5 text-emerald-600 font-medium">
+                                                            {currencySymbol} {c.total_ingresos.toLocaleString('es-ES', { minimumFractionDigits: 2 })}
+                                                        </td>
+                                                        <td className="p-3.5 text-rose-600 font-medium">
+                                                            {currencySymbol} {c.total_egresos.toLocaleString('es-ES', { minimumFractionDigits: 2 })}
+                                                        </td>
+                                                        <td className="p-3.5 font-extrabold text-slate-900 dark:text-white">
+                                                            {currencySymbol} {c.saldo_neto.toLocaleString('es-ES', { minimumFractionDigits: 2 })}
+                                                        </td>
+                                                        <td className="p-3.5 text-blue-600 dark:text-blue-400 font-semibold">
+                                                            {currencySymbol} {c.fondo_siguiente_mes.toLocaleString('es-ES', { minimumFractionDigits: 2 })}
+                                                        </td>
+                                                        <td className="p-3.5 text-purple-600 dark:text-purple-400 font-semibold">
+                                                            {currencySymbol} {c.retiro_utilidad.toLocaleString('es-ES', { minimumFractionDigits: 2 })}
+                                                        </td>
+                                                        {/* Compras del fondo */}
+                                                        <td className="p-3.5">
+                                                            {comprasCount > 0 ? (
+                                                                <span className="inline-flex items-center gap-1.5 px-2 py-1 rounded-full bg-violet-100 dark:bg-violet-900/40 text-violet-700 dark:text-violet-300 text-xs font-semibold border border-violet-200 dark:border-violet-700">
+                                                                    <ShoppingBag className="w-3 h-3" />
+                                                                    {comprasCount} {__('compra(s)')}
+                                                                    {' — '}
+                                                                    {currencySymbol} {totalDescontado.toLocaleString('es-ES', { minimumFractionDigits: 2 })}
+                                                                </span>
+                                                            ) : (
+                                                                <span className="text-xs text-slate-400 italic">{__('Sin movimientos')}</span>
+                                                            )}
+                                                        </td>
+                                                        <td className="p-3.5 text-slate-500 text-xs">
+                                                            <div className="flex items-center gap-1.5">
+                                                                <div className="w-6 h-6 rounded-full bg-slate-200 dark:bg-slate-700 flex items-center justify-center font-bold text-slate-700 dark:text-slate-300 text-[10px]">
+                                                                    {c.user?.name ? c.user.name.charAt(0).toUpperCase() : 'U'}
+                                                                </div>
+                                                                {c.user?.name || '-'}
+                                                            </div>
+                                                        </td>
+                                                    </tr>
+
+                                                    {/* Sub-panel de compras (accordion) */}
+                                                    {isExpanded && (
+                                                        <tr>
+                                                            <td colSpan={11} className="p-0">
+                                                                <div className="bg-violet-50/70 dark:bg-violet-950/20 border-t border-b border-violet-200 dark:border-violet-800 px-6 py-4">
+                                                                    {/* Cabecera del sub-panel */}
+                                                                    <div className="flex items-center justify-between mb-3">
+                                                                        <h4 className="text-sm font-bold text-violet-800 dark:text-violet-200 flex items-center gap-2">
+                                                                            <Receipt className="w-4 h-4 text-violet-500" />
+                                                                            {__('Compras descontadas de este fondo')}
+                                                                            <span className="ml-1 text-xs font-normal text-slate-500">({monthNames[c.month - 1]} {c.year})</span>
+                                                                        </h4>
+                                                                        {comprasCount > 0 && (
+                                                                            <div className="flex items-center gap-4 text-xs text-slate-600 dark:text-slate-400">
+                                                                                <span>
+                                                                                    {__('Total descontado')}:{' '}
+                                                                                    <span className="font-bold text-rose-600">{currencySymbol} {totalDescontado.toLocaleString('es-ES', { minimumFractionDigits: 2 })}</span>
+                                                                                </span>
+                                                                                <span>
+                                                                                    {__('Saldo restante')}:{' '}
+                                                                                    <span className={`font-bold ${ c.saldo_neto - totalDescontado >= 0 ? 'text-emerald-600' : 'text-rose-600'}`}>
+                                                                                        {currencySymbol} {(c.saldo_neto - totalDescontado).toLocaleString('es-ES', { minimumFractionDigits: 2 })}
+                                                                                    </span>
+                                                                                </span>
+                                                                            </div>
+                                                                        )}
+                                                                    </div>
+
+                                                                    {(c.compras ?? []).length === 0 ? (
+                                                                        <div className="text-center py-6 text-slate-400 dark:text-slate-500">
+                                                                            <ShoppingBag className="w-8 h-8 mx-auto mb-2 opacity-30" />
+                                                                            <p className="text-xs">{__('No hay compras registradas contra este fondo.')}</p>
+                                                                        </div>
+                                                                    ) : (
+                                                                        <div className="overflow-x-auto rounded-lg border border-violet-200 dark:border-violet-800">
+                                                                            <table className="w-full text-xs">
+                                                                                <thead className="bg-violet-100 dark:bg-violet-900/40 text-violet-800 dark:text-violet-200 font-semibold">
+                                                                                    <tr>
+                                                                                        <th className="p-2.5 text-left">{__('Código')}</th>
+                                                                                        <th className="p-2.5 text-left">{__('Proveedor')}</th>
+                                                                                        <th className="p-2.5 text-left">{__('Fecha')}</th>
+                                                                                        <th className="p-2.5 text-left">{__('Método de Pago')}</th>
+                                                                                        <th className="p-2.5 text-right">{__('Total')}</th>
+                                                                                        <th className="p-2.5 text-center">{__('Acción')}</th>
+                                                                                    </tr>
+                                                                                </thead>
+                                                                                <tbody className="divide-y divide-violet-100 dark:divide-violet-900/40 bg-white dark:bg-slate-900">
+                                                                                    {(c.compras ?? []).map((cp) => (
+                                                                                        <tr key={cp.id} className="hover:bg-violet-50 dark:hover:bg-violet-950/20 transition-colors">
+                                                                                            <td className="p-2.5 font-mono font-bold text-indigo-600 dark:text-indigo-400">
+                                                                                                {cp.codigo_compra}
+                                                                                            </td>
+                                                                                            <td className="p-2.5 text-slate-700 dark:text-slate-300">
+                                                                                                {cp.proveedor?.razon_social || '-'}
+                                                                                            </td>
+                                                                                            <td className="p-2.5 text-slate-500">
+                                                                                                {new Date(cp.fecha_emision).toLocaleDateString()}
+                                                                                            </td>
+                                                                                            <td className="p-2.5">
+                                                                                                <div className="flex flex-wrap gap-1">
+                                                                                                    {(cp.pagos ?? []).length > 0
+                                                                                                        ? [...new Set((cp.pagos ?? []).map(pg => pg.metodo_pago))].map((mp, i) => (
+                                                                                                            <span key={i} className="px-1.5 py-0.5 rounded bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 capitalize text-[10px]">
+                                                                                                                {mp}
+                                                                                                            </span>
+                                                                                                        ))
+                                                                                                        : <span className="text-slate-400 italic">{cp.tipo_pago}</span>
+                                                                                                    }
+                                                                                                </div>
+                                                                                            </td>
+                                                                                            <td className="p-2.5 text-right font-mono font-bold text-rose-600 dark:text-rose-400">
+                                                                                                -{currencySymbol} {cp.total.toLocaleString('es-ES', { minimumFractionDigits: 2 })}
+                                                                                            </td>
+                                                                                            <td className="p-2.5 text-center">
+                                                                                                <Link
+                                                                                                    href={`/admin/compras/${cp.id}`}
+                                                                                                    onClick={(e) => e.stopPropagation()}
+                                                                                                    className="inline-flex items-center gap-1 text-indigo-600 dark:text-indigo-400 hover:text-indigo-800 dark:hover:text-indigo-200 font-medium transition-colors"
+                                                                                                >
+                                                                                                    <ExternalLink className="w-3.5 h-3.5" />
+                                                                                                    {__('Ver')}
+                                                                                                </Link>
+                                                                                            </td>
+                                                                                        </tr>
+                                                                                    ))}
+                                                                                </tbody>
+                                                                            </table>
+                                                                        </div>
+                                                                    )}
+                                                                </div>
+                                                            </td>
+                                                        </tr>
+                                                    )}
+                                                </React.Fragment>
+                                            );
+                                        })}
                                     </tbody>
                                 </table>
                             </div>
