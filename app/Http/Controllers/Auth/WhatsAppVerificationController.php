@@ -7,6 +7,7 @@ use App\Models\User;
 use App\Services\WhatsAppService;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Log;
 
 class WhatsAppVerificationController extends Controller
 {
@@ -24,6 +25,15 @@ class WhatsAppVerificationController extends Controller
         // Si ya fue verificado o no tiene número de teléfono, permitir continuar
         if ($user->whatsapp_verified_at || empty($user->telefono)) {
             return redirect()->route('dashboard');
+        }
+
+        // Si no tiene código OTP o ya expiró, generar y enviar uno automáticamente
+        if (
+            empty($user->whatsapp_otp_code) ||
+            ! $user->whatsapp_otp_expires_at ||
+            Carbon::now()->isAfter($user->whatsapp_otp_expires_at)
+        ) {
+            $this->sendOtpCode($user);
         }
 
         return inertia('auth/verify-whatsapp', [
@@ -84,6 +94,20 @@ class WhatsAppVerificationController extends Controller
             return back()->withErrors(['code' => __('No se encontró un número de teléfono válido.')]);
         }
 
+        $sent = $this->sendOtpCode($user);
+
+        if (! $sent) {
+            return back()->with('status', __('Se intentó enviar el código OTP de 8 dígitos a su WhatsApp. Si no lo recibe, verifique su número de teléfono.'));
+        }
+
+        return back()->with('status', __('Se ha enviado un nuevo código OTP de 8 dígitos a su WhatsApp.'));
+    }
+
+    /**
+     * Genera, guarda y envía un nuevo código OTP de 8 dígitos al usuario por WhatsApp.
+     */
+    private function sendOtpCode(User $user): bool
+    {
         $otpCode = str_pad((string) random_int(0, 99999999), 8, '0', STR_PAD_LEFT);
         $expiresAt = Carbon::now()->addMinutes(15);
 
@@ -91,6 +115,12 @@ class WhatsAppVerificationController extends Controller
             'whatsapp_otp_code' => $otpCode,
             'whatsapp_otp_expires_at' => $expiresAt,
         ])->save();
+
+        $formattedPhone = $this->formatPhoneNumber($user);
+        if (empty($formattedPhone)) {
+            Log::warning("No se pudo enviar OTP WhatsApp al usuario {$user->id}: teléfono inválido.");
+            return false;
+        }
 
         $appName = config('app.name', 'Servitec');
         $message = "🔒 *Código de Verificación {$appName}*\n\n"
@@ -102,13 +132,51 @@ class WhatsAppVerificationController extends Controller
             . "El equipo de *{$appName}*";
 
         try {
-            // Usar la empresa principal del sistema SaaS (ID 1) para notificaciones y OTPs de registro
+            // Usar siempre la empresa principal del sistema SaaS (ID 1) para la verificación de usuarios
             $whatsappService = new WhatsAppService(1);
-            $whatsappService->sendMessage($user->telefono, $message, true, $user->pais_telefono_id);
+
+            Log::info("Enviando OTP WhatsApp a {$formattedPhone} (Usuario ID: {$user->id}, Código: {$otpCode})");
+            $response = $whatsappService->sendMessage($formattedPhone, $message, true);
+
+            return ! empty($response);
         } catch (\Throwable $e) {
-            \Illuminate\Support\Facades\Log::error('Error reenviando OTP WhatsApp: ' . $e->getMessage());
+            Log::error("Error al enviar OTP WhatsApp a {$formattedPhone}: " . $e->getMessage());
+            return false;
+        }
+    }
+
+    /**
+     * Formatea el número de teléfono agregando el código telefónico del país si es necesario.
+     */
+    private function formatPhoneNumber(User $user): string
+    {
+        $phone = trim($user->telefono ?? '');
+        if (empty($phone)) {
+            return '';
         }
 
-        return back()->with('status', __('Se ha enviado un nuevo código OTP de 8 dígitos a su WhatsApp.'));
+        // Si ya incluye '+' al inicio, eliminar caracteres no numéricos y retornar
+        if (str_starts_with($phone, '+')) {
+            return preg_replace('/[^0-9]/', '', $phone);
+        }
+
+        // Obtener el código de país asociado
+        $user->loadMissing('paisTelefono');
+        $codigoPais = $user->paisTelefono?->codigo_telefonico ?? '';
+
+        if (! empty($codigoPais)) {
+            $cleanCodigo = preg_replace('/[^0-9]/', '', $codigoPais);
+            $cleanPhone = preg_replace('/[^0-9]/', '', $phone);
+            $cleanPhone = ltrim($cleanPhone, '0');
+
+            // Si el teléfono ya comienza con el código del país, usarlo directamente
+            if (! str_starts_with($cleanPhone, $cleanCodigo)) {
+                return $cleanCodigo . $cleanPhone;
+            }
+            return $cleanPhone;
+        }
+
+        return preg_replace('/[^0-9]/', '', $phone);
     }
 }
+

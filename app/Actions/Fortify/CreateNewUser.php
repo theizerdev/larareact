@@ -5,6 +5,7 @@ namespace App\Actions\Fortify;
 use App\Concerns\PasswordValidationRules;
 use App\Concerns\ProfileValidationRules;
 use App\Models\Empresa;
+use App\Models\Pais;
 use App\Models\Sucursal;
 use App\Models\User;
 use App\Services\WhatsAppService;
@@ -113,6 +114,21 @@ class CreateNewUser implements CreatesNewUsers
             $appName = config('app.name', 'Servitec');
             $loginUrl = route('login');
 
+            $formattedPhone = trim($phone);
+            if ($user->pais_telefono_id) {
+                $pais = Pais::find($user->pais_telefono_id);
+                if ($pais && ! empty($pais->codigo_telefonico)) {
+                    $cleanCodigo = preg_replace('/[^0-9]/', '', $pais->codigo_telefonico);
+                    $cleanPhone = preg_replace('/[^0-9]/', '', $formattedPhone);
+                    $cleanPhone = ltrim($cleanPhone, '0');
+                    if (! str_starts_with($cleanPhone, $cleanCodigo)) {
+                        $formattedPhone = $cleanCodigo . $cleanPhone;
+                    } else {
+                        $formattedPhone = $cleanPhone;
+                    }
+                }
+            }
+
             $message = "✨ *¡Bienvenido a {$appName}!* ✨\n\n"
                 . "Estimado(a) *{$user->name}*,\n\n"
                 . "Nos complace darle la bienvenida a nuestra plataforma. Hemos registrado exitosamente la empresa *{$empresa->razon_social}* con un *Plan de Prueba de 7 días* (acceso total a todos los módulos).\n\n"
@@ -124,10 +140,11 @@ class CreateNewUser implements CreatesNewUsers
 
             // Usar la empresa principal del SaaS (ID 1) para notificaciones del sistema de registro
             $whatsappService = new WhatsAppService(1);
-            $whatsappService->sendMessage($phone, $message, true, $user->pais_telefono_id ?? $empresa->pais_id);
+            $whatsappService->sendMessage($formattedPhone, $message, true);
         } catch (\Throwable $e) {
             Log::error("Error al enviar mensaje de bienvenida WhatsApp a {$phone}: " . $e->getMessage());
         }
     }
 }
+
 
