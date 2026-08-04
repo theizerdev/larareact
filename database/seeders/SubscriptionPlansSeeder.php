@@ -28,6 +28,7 @@ class SubscriptionPlansSeeder extends Seeder
                     'productos',
                     'servicios',
                     'clientes',
+                    'proveedores',
                     'creditos',
                     'metas_ventas',
                 ],
