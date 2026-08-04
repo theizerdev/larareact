@@ -741,8 +741,8 @@ export default function Index({
                                                                                 </span>
                                                                                 <span>
                                                                                     {__('Saldo restante')}:{' '}
-                                                                                    <span className={`font-bold ${ c.saldo_neto - totalDescontado >= 0 ? 'text-emerald-600' : 'text-rose-600'}`}>
-                                                                                        {currencySymbol} {(c.saldo_neto - totalDescontado).toLocaleString('es-ES', { minimumFractionDigits: 2 })}
+                                                                                    <span className={`font-bold ${c.saldo_neto >= 0 ? 'text-emerald-600' : 'text-rose-600'}`}>
+                                                                                        {currencySymbol} {c.saldo_neto.toLocaleString('es-ES', { minimumFractionDigits: 2 })}
                                                                                     </span>
                                                                                 </span>
                                                                             </div>
