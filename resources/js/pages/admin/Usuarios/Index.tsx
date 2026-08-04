@@ -11,6 +11,7 @@ import {
     Building2,
     GitBranch,
     ShieldAlert,
+    ShieldCheck,
     Phone,
 } from 'lucide-react';
 import React, { useState, useMemo } from 'react';
@@ -97,6 +98,8 @@ interface User {
     sucursal?: Sucursal | null;
     roles: Role[];
     pais_telefono?: Pais | null;
+    whatsapp_verified_at?: string | null;
+    email_verified_at?: string | null;
 }
 
 interface UsersPageProps {
@@ -106,6 +109,7 @@ interface UsersPageProps {
         total: number;
         activos: number;
         inactivos: number;
+        verificados: number;
     };
     roles: Role[];
     empresas: Empresa[];
@@ -116,6 +120,7 @@ interface UsersPageProps {
         status?: string;
         role?: string;
         empresa_id?: string;
+        sucursal_id?: string;
         perPage?: string;
     };
 }
@@ -154,6 +159,7 @@ export default function UsersIndexPage({
     const [statusFilter, setStatusFilter] = useState(filters.status || '');
     const [roleFilter, setRoleFilter] = useState(filters.role || '');
     const [empresaFilter, setEmpresaFilter] = useState(filters.empresa_id || '');
+    const [sucursalFilter, setSucursalFilter] = useState(filters.sucursal_id || '');
     const [perPageFilter, setPerPageFilter] = useState(filters.perPage || '10');
 
     // Navigation indicators
@@ -176,6 +182,7 @@ export default function UsersIndexPage({
                     status: statusFilter,
                     role: roleFilter,
                     empresa_id: empresaFilter,
+                    sucursal_id: sucursalFilter,
                     perPage: perPageFilter,
                 }),
                 { preserveState: true, preserveScroll: true }
@@ -183,7 +190,7 @@ export default function UsersIndexPage({
         }, 300);
 
         return () => clearTimeout(timer);
-    }, [searchTerm, statusFilter, roleFilter, empresaFilter, perPageFilter]);
+    }, [searchTerm, statusFilter, roleFilter, empresaFilter, sucursalFilter, perPageFilter]);
 
     // Formulario Inertia
     const { data, setData, post, put, processing, errors, reset } = useForm(initialForm);
@@ -286,7 +293,12 @@ return;
                         {user.name.split(' ').map((n) => n[0]).join('').substring(0, 2).toUpperCase()}
                     </div>
                     <div>
-                        <p className="font-medium text-sm leading-none">{user.name}</p>
+                        <div className="flex items-center gap-1.5">
+                            <p className="font-medium text-sm leading-none">{user.name}</p>
+                            {(user.whatsapp_verified_at || user.email_verified_at) && (
+                                <ShieldCheck className="w-3.5 h-3.5 text-blue-500 shrink-0" title={__('Verified User')} />
+                            )}
+                        </div>
                         <p className="text-xs text-muted-foreground mt-1">{user.email}</p>
                     </div>
                 </div>
@@ -414,7 +426,7 @@ return;
                 </ModuleHeader>
 
                 {/* Stat Cards */}
-                <div className="grid grid-cols-1 gap-6 md:grid-cols-3">
+                <div className="grid grid-cols-1 gap-6 md:grid-cols-4">
                     <StatCard
                         icon={<UserIcon className="h-6 w-6" />}
                         title={__('TOTAL USERS')}
@@ -428,8 +440,14 @@ return;
                         colorClassName="bg-green-100 text-green-600"
                     />
                     <StatCard
+                        icon={<ShieldCheck className="h-6 w-6" />}
+                        title={__('VERIFICADOS')}
+                        value={stats.verificados ?? 0}
+                        colorClassName="bg-blue-100 text-blue-600 dark:bg-blue-950/40 dark:text-blue-400"
+                    />
+                    <StatCard
                         icon={<XCircle className="h-6 w-6" />}
-                        title={__('INACTIVE')}
+                        title={__('INACTIVOS')}
                         value={stats.inactivos}
                         colorClassName="bg-red-100 text-red-600"
                     />
@@ -471,6 +489,21 @@ return;
                                     {empresas.map((emp) => (
                                         <SelectItem key={emp.id} value={String(emp.id)}>
                                             {emp.razon_social}
+                                        </SelectItem>
+                                    ))}
+                                </SelectContent>
+                            </Select>
+                        </FilterField>
+                        <FilterField label={__('Branch')}>
+                            <Select value={sucursalFilter} onValueChange={setSucursalFilter}>
+                                <SelectTrigger className="w-full md:w-48">
+                                    <SelectValue placeholder={__('All branches')} />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    <SelectItem value="">{__('All branches')}</SelectItem>
+                                    {sucursales.map((suc) => (
+                                        <SelectItem key={suc.id} value={String(suc.id)}>
+                                            {suc.nombre}
                                         </SelectItem>
                                     ))}
                                 </SelectContent>

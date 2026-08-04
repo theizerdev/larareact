@@ -826,7 +826,7 @@ export default function Index({ productos, categorias: categoriasProp, marcas: m
                 ...modelos.map((m) => ({ label: m.nombre, value: String(m.id) })),
             ],
             value: modeloFilter,
-            onChange: (val) => setModeloFilter(val),
+            onChange: (val) => { setModeloFilter(val); handleFilter(); },
         },
         {
             name: 'condicion',
@@ -840,7 +840,7 @@ export default function Index({ productos, categorias: categoriasProp, marcas: m
                 { label: __('Para Repuesto'), value: 'repuesto' },
             ],
             value: condicionFilter,
-            onChange: (val) => setCondicionFilter(val),
+            onChange: (val) => { setCondicionFilter(val); handleFilter(); },
         },
     ];
 
@@ -910,7 +910,7 @@ export default function Index({ productos, categorias: categoriasProp, marcas: m
                     fields={filterFields}
                     searchPlaceholder={__('Buscar por SKU, nombre, código de barras o modelo...')}
                     searchValue={searchTerm}
-                    onSearchChange={setSearchTerm}
+                    onSearchChange={(value) => { setSearchTerm(value); handleFilter(); }}
                     onFilter={handleFilter}
                     onClear={handleClearFilters}
                 />
@@ -1106,24 +1106,24 @@ export default function Index({ productos, categorias: categoriasProp, marcas: m
                                                 <div className="md:col-span-4 space-y-1.5">
                                                     <Label htmlFor="codigo_barras" className="text-xs font-medium">{__('Código (EAN / UPC / Barras)')}</Label>
                                                     <Input
-                                                         id="codigo_barras"
-                                                         value={data.codigo_barras}
-                                                         onChange={(e) => {
-                                                             const val = e.target.value;
-                                                             const mod = modelos.find((m) => String(m.id) === data.modelo_id);
-                                                             setData((prev) => ({
-                                                                 ...prev,
-                                                                 codigo_barras: val,
-                                                                 sku: generateSkuSuggestion(mod, prev.nombre_variante, val),
-                                                             }));
-                                                         }}
-                                                         onKeyDown={(e) => {
-                                                             if (e.key === 'Enter') {
-                                                                 e.preventDefault();
-                                                             }
-                                                         }}
-                                                         placeholder="Ej: 779123456789"
-                                                         className="font-mono text-xs"
+                                                        id="codigo_barras"
+                                                        value={data.codigo_barras}
+                                                        onChange={(e) => {
+                                                            const val = e.target.value;
+                                                            const mod = modelos.find((m) => String(m.id) === data.modelo_id);
+                                                            setData((prev) => ({
+                                                                ...prev,
+                                                                codigo_barras: val,
+                                                                sku: generateSkuSuggestion(mod, prev.nombre_variante, val),
+                                                            }));
+                                                        }}
+                                                        onKeyDown={(e) => {
+                                                            if (e.key === 'Enter') {
+                                                                e.preventDefault();
+                                                            }
+                                                        }}
+                                                        placeholder="Ej: 779123456789"
+                                                        className="font-mono text-xs"
                                                     />
                                                     {errors.codigo_barras && <p className="text-xs text-rose-500">{errors.codigo_barras}</p>}
                                                 </div>
@@ -1503,24 +1503,24 @@ export default function Index({ productos, categorias: categoriasProp, marcas: m
                                     {/* PESTAÑA 5: ATRIBUTOS DE VARIANTE */}
                                     <TabsContent value="atributos" className="space-y-4 m-0">
                                         <SpecEditor
-                                             initialSpecs={data.variant_specs}
-                                             onChange={(specs) => {
-                                                 const mod = modelos.find((m) => String(m.id) === data.modelo_id);
-                                                 let nombre = mod ? mod.nombre : data.nombre_variante;
-                                                 const subSpecs = Object.values(specs || {});
-                                                 if (mod && subSpecs.length > 0) {
-                                                     nombre = `${mod.nombre} (${subSpecs.slice(0, 3).join(' / ')})`;
-                                                 }
-                                                 const newSku = generateSkuSuggestion(mod, nombre, data.codigo_barras);
-                                                 setData((prev) => ({
-                                                     ...prev,
-                                                     variant_specs: specs,
-                                                     nombre_variante: nombre,
-                                                     sku: newSku,
-                                                 }));
-                                             }}
-                                             title={__('Atributos de Variante')}
-                                             description={__('Define la RAM, Almacenamiento, Color u otras características específicas de esta variante física.')}
+                                            initialSpecs={data.variant_specs}
+                                            onChange={(specs) => {
+                                                const mod = modelos.find((m) => String(m.id) === data.modelo_id);
+                                                let nombre = mod ? mod.nombre : data.nombre_variante;
+                                                const subSpecs = Object.values(specs || {});
+                                                if (mod && subSpecs.length > 0) {
+                                                    nombre = `${mod.nombre} (${subSpecs.slice(0, 3).join(' / ')})`;
+                                                }
+                                                const newSku = generateSkuSuggestion(mod, nombre, data.codigo_barras);
+                                                setData((prev) => ({
+                                                    ...prev,
+                                                    variant_specs: specs,
+                                                    nombre_variante: nombre,
+                                                    sku: newSku,
+                                                }));
+                                            }}
+                                            title={__('Atributos de Variante')}
+                                            description={__('Define la RAM, Almacenamiento, Color u otras características específicas de esta variante física.')}
                                         />
                                     </TabsContent>
 

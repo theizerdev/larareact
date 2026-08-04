@@ -25,8 +25,8 @@ class IntegrationController extends Controller
             ]);
         }
 
-        // Obtener el estado actual de WhatsApp
-        $whatsappService = new WhatsAppService($empresa);
+        // Obtener el estado actual de WhatsApp propio
+        $whatsappService = WhatsAppService::forCompanyOwn($empresa);
         $status = $whatsappService->getStatus();
         $whatsappConnected = false;
         if ($status && isset($status['isConnected'])) {
@@ -180,7 +180,7 @@ class IntegrationController extends Controller
             ]);
         }
 
-        $whatsappService = new WhatsAppService($empresa);
+        $whatsappService = WhatsAppService::forCompanyOwn($empresa);
         $status = $whatsappService->getStatus();
 
         // Sincronizar estado local en DB con estado en vivo
@@ -224,7 +224,7 @@ class IntegrationController extends Controller
             return response()->json(['success' => false, 'error' => 'No active company found.'], 404);
         }
 
-        $whatsappService = new WhatsAppService($empresa);
+        $whatsappService = WhatsAppService::forCompanyOwn($empresa);
         $status = $whatsappService->getStatus();
 
         // Sincronizar estado local en DB con estado en vivo
@@ -270,7 +270,7 @@ class IntegrationController extends Controller
 
         // Si la integración está activa, conectamos la instancia para crearla en el servidor y obtener su token UUID
         if ($validated['whatsapp_active']) {
-            $whatsappService = new WhatsAppService($empresa);
+            $whatsappService = WhatsAppService::forCompanyOwn($empresa);
             $result = $whatsappService->connect();
             if ($result) {
                 $token = $result['instance']['token'] ?? $result['token'] ?? null;
@@ -365,7 +365,7 @@ class IntegrationController extends Controller
             ]);
         }
 
-        $whatsappService = new WhatsAppService($empresa);
+        $whatsappService = WhatsAppService::forCompanyOwn($empresa);
         $result = $whatsappService->connect();
 
         if ($result && (isset($result['instance']) || isset($result['message']) || (isset($result['success']) && $result['success']))) {
@@ -402,7 +402,7 @@ class IntegrationController extends Controller
             ]);
         }
 
-        $whatsappService = new WhatsAppService($empresa);
+        $whatsappService = WhatsAppService::forCompanyOwn($empresa);
         $whatsappService->disconnect();
 
         // Limpiar estado en la base de datos de empresa local
@@ -431,7 +431,7 @@ class IntegrationController extends Controller
             ]);
         }
 
-        $whatsappService = new WhatsAppService($empresa);
+        $whatsappService = WhatsAppService::forCompanyOwn($empresa);
         $whatsappService->reconnect();
 
         return back()->with('notification', [

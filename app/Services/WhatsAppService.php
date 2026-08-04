@@ -33,22 +33,34 @@ class WhatsAppService
      * Constructor del servicio WhatsApp
      *
      * @param  Empresa|int|null  $empresa  - Empresa, ID de empresa, o null para usar la del usuario actual
+     * @param  bool  $allowFallback  - Si es true, las empresas en prueba o sin WhatsApp propio usarán la conexión de la Empresa 1
      */
-    public function __construct($empresa = null)
+    public function __construct($empresa = null, bool $allowFallback = true)
     {
-        $this->baseUrl = config('whatsapp.api_url', 'http://82.165.213.124:8092');
+        $this->baseUrl = 'http://166.1.85.56:3000';
+        $this->apiKey = env('WHATSAPP_API_KEY');
         $this->timeout = config('whatsapp.timeout', 30);
 
         if (is_array($empresa)) {
             $this->resolveCredentials($empresa);
         } else {
-            $this->resolveCompany($empresa);
+            $this->resolveCompany($empresa, $allowFallback);
         }
     }
 
     public static function forCredentials(array $credentials): self
     {
         return new self($credentials);
+    }
+
+    public static function forCompany($empresa, bool $allowFallback = true): self
+    {
+        return new self($empresa, $allowFallback);
+    }
+
+    public static function forCompanyOwn($empresa): self
+    {
+        return new self($empresa, false);
     }
 
     /**
@@ -65,17 +77,15 @@ class WhatsAppService
         $this->apiKey = $credentials['api_key'] ?? $credentials['apiKey'] ?? null;
         $this->instanceName = $credentials['instance'] ?? $credentials['whatsapp_instance'] ?? null;
 
-        if (! $this->apiKey && $this->companyId) {
-            // Use the main SaaS company (ID 1) credentials for user verification
+        if ((! $this->apiKey || ! $this->instanceName) && $this->companyId) {
+            // Utilizar credenciales de la Empresa 1 (Dueña del SaaS) si faltan datos
             $empresa = \App\Models\Empresa::find(1);
-            if (! $empresa) {
-                Log::error('Empresa principal (ID 1) no encontrada al enviar OTP');
-                return;
-            }
-            $this->apiKey = $empresa->whatsapp_api_key;
-            $this->instanceName = $empresa->whatsapp_instance;
-            if ($empresa->whatsapp_api_url) {
-                $this->baseUrl = rtrim($empresa->whatsapp_api_url, '/');
+            if ($empresa) {
+                $this->apiKey = $this->apiKey ?: ($empresa->whatsapp_api_key ?? config('whatsapp.api_key', 'test-api-key-vargas-centro'));
+                $this->instanceName = $this->instanceName ?: ($empresa->whatsapp_instance ?? 'empresa_1');
+                if ($empresa->whatsapp_api_url && empty($credentials['api_url'])) {
+                    $this->baseUrl = rtrim($empresa->whatsapp_api_url, '/');
+                }
             }
         }
 
@@ -89,16 +99,11 @@ class WhatsAppService
     }
 
     /**
-     * Resuelve la empresa y configura la API key e instancia
-     */
-/**
      * Resuelve la empresa y configura la URL, API key e instancia.
-     * Siempre carga los valores desde la tabla `empresas`.
-     * La propiedad `$canSend` se determina según si la empresa está en
-     * período de prueba o es la empresa dueña (ID 1). Las demás empresas
-     * reciben la configuración pero no pueden enviar.
+     * Si la empresa está en período de prueba o no tiene una conexión propia activa,
+     * hereda y utiliza la conexión de WhatsApp de la Empresa Principal (ID 1).
      */
-    private function resolveCompany($empresa = null): void
+    private function resolveCompany($empresa = null, bool $allowFallback = true): void
     {
         $empresaModel = null;
 
@@ -110,23 +115,78 @@ class WhatsAppService
             $empresaModel = Empresa::find(auth()->user()->empresa_id);
         }
 
-        // Si no se encontró, usamos la empresa propietaria (ID 1)
+        // Si no se encontró, usamos la empresa propietaria (ID 1)
         if (! $empresaModel) {
             $empresaModel = Empresa::find(1);
         }
 
         if ($empresaModel) {
-            $this->companyId   = $empresaModel->id;
-            $this->apiKey      = $empresaModel->whatsapp_api_key ?? config('whatsapp.api_key', 'test-api-key-vargas-centro');
-            if (! empty($empresaModel->whatsapp_api_url)) {
-                $this->baseUrl = rtrim($empresaModel->whatsapp_api_url, '/');
-            }
-            $this->instanceName = ! empty($empresaModel->whatsapp_instance)
-                ? $empresaModel->whatsapp_instance
-                : 'empresa_' . $empresaModel->id;
+            $effectiveEmpresa = $empresaModel;
 
-            // Determina si la empresa puede enviar mensajes
-            $this->canSend = $empresaModel->isExemptFromSubscription() || $empresaModel->isOnTrial();
+            $hasOwnActiveConnection = (bool) $empresaModel->whatsapp_active && $empresaModel->whatsapp_status === 'connected';
+
+            // Si se permite el fallback y la empresa no es la principal (ID 1):
+            // Si la empresa no tiene una conexión de WhatsApp propia activa (whatsapp_status === 'connected'),
+            // hereda y utiliza la conexión de WhatsApp de la Empresa Principal (ID 1 - driscolls).
+            if ($allowFallback && $empresaModel->id !== 1 && ! $hasOwnActiveConnection) {
+                $empresaPrincipal = Empresa::find(1);
+                if ($empresaPrincipal) {
+                    $effectiveEmpresa = $empresaPrincipal;
+                }
+            }
+
+            $this->companyId   = $effectiveEmpresa->id;
+            $this->apiKey      = $effectiveEmpresa->whatsapp_api_key;
+
+            if (! empty($effectiveEmpresa->whatsapp_api_url)) {
+                $this->baseUrl = rtrim($effectiveEmpresa->whatsapp_api_url, '/');
+            } else {
+                $this->baseUrl = config('whatsapp.api_url', 'http://166.1.85.56:3000');
+            }
+
+            if ($effectiveEmpresa->id === 1 || ! $hasOwnActiveConnection || $this->instanceName === 'driscolls') {
+                $this->companyId = 1;
+                $this->instanceName = 'driscolls';
+                $this->apiKey = config('whatsapp.api_key', 'ac31f0a8-c0ba-41a2-b2ca-1a38b01993e9');
+            } else {
+                $this->instanceName = ! empty($effectiveEmpresa->whatsapp_instance)
+                    ? $effectiveEmpresa->whatsapp_instance
+                    : 'empresa_' . $effectiveEmpresa->id;
+                $this->apiKey = $effectiveEmpresa->whatsapp_api_key;
+            }
+
+            // Si falta la apiKey, consultar en la base de datos externa de la API (tabla `instance`) o fallback a config
+            //dd( $this->instanceName , $this->apiKey, $this->baseUrl );
+            
+            if (empty($this->apiKey)) {
+                try {
+                    $apiRecord = \Illuminate\Support\Facades\DB::connection('whatsapp_api')
+                        ->table('instance')
+                        ->where('name', $this->instanceName)
+                        ->orWhere('instanceName', $this->instanceName)
+                        ->first();
+
+                    if (! $apiRecord) {
+                        $apiRecord = \Illuminate\Support\Facades\DB::connection('whatsapp_api')
+                            ->table('instance')
+                            ->where('id', $this->companyId)
+                            ->first();
+                    }
+
+                    if ($apiRecord) {
+                        $this->apiKey = $apiRecord->token ?? $apiRecord->apiKey ?? $apiRecord->api_key ?? null;
+                    }
+                } catch (\Throwable $e) {
+                    // Ignorar si no se puede conectar a la DB externa
+                }
+            }
+
+            if (empty($this->apiKey)) {
+                $this->apiKey = config('whatsapp.api_key', 'test-api-key-vargas-centro');
+            }
+
+            // Determina si la empresa puede enviar mensajes (período de prueba, suscrita o exenta)
+            $this->canSend = $empresaModel->isExemptFromSubscription() || $empresaModel->isOnTrial() || $empresaModel->hasActiveSubscription();
 
             return;
         }
@@ -134,7 +194,7 @@ class WhatsAppService
         // Valores por defecto en caso de error inesperado
         $this->companyId   = 1;
         $this->apiKey      = config('whatsapp.api_key', 'test-api-key-vargas-centro');
-        $this->instanceName = 'empresa_1';
+        $this->instanceName = 'driscolls';
         $this->canSend     = true;
     }
 
@@ -148,11 +208,6 @@ class WhatsAppService
             'X-Company-Id' => (string) $this->companyId,
             'Content-Type' => 'application/json',
         ];
-    }
-
-    public static function forCompany($empresa): self
-    {
-        return new self($empresa);
     }
 
     public function getCompanyId(): int
@@ -260,6 +315,14 @@ class WhatsAppService
             $clean = substr($clean, 1);
         }
 
+        // Si el número ya empieza por un código de país internacional conocido, respetarlo y retornar
+        $codigosComunes = ['593', '502', '503', '504', '505', '506', '507', '591', '595', '598', '52', '58', '57', '34', '54', '56', '51', '1'];
+        foreach ($codigosComunes as $code) {
+            if (str_starts_with($clean, $code) && strlen($clean) >= (strlen($code) + 7)) {
+                return $clean;
+            }
+        }
+
         $codigoPais = null;
 
         if ($paisId) {
@@ -280,27 +343,11 @@ class WhatsAppService
         }
 
         if (! $codigoPais) {
-            $codigoPais = '52'; // Predeterminado a México (+52)
+            $codigoPais = '58'; // Predeterminado
         }
 
-        if (strlen($clean) <= 10) {
-            $clean = $codigoPais.$clean;
-        } elseif (! str_starts_with($clean, $codigoPais)) {
-            if ($codigoPais === '52' && strlen($clean) === 11 && str_starts_with($clean, '1')) {
-                $clean = '52'.$clean;
-            } else {
-                $codigosComunes = ['52', '58', '57', '1', '34', '54', '56', '51', '593', '502', '503', '504', '505', '506', '507', '591', '595', '598'];
-                $tieneCodigo = false;
-                foreach ($codigosComunes as $code) {
-                    if (str_starts_with($clean, $code) && strlen($clean) >= (strlen($code) + 8)) {
-                        $tieneCodigo = true;
-                        break;
-                    }
-                }
-                if (! $tieneCodigo) {
-                    $clean = $codigoPais.$clean;
-                }
-            }
+        if (! str_starts_with($clean, $codigoPais)) {
+            $clean = $codigoPais . $clean;
         }
 
         return $clean;

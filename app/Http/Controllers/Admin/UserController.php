@@ -21,6 +21,7 @@ class UserController extends Controller
         $status = $request->input('status');
         $roleName = $request->input('role');
         $empresaId = $request->input('empresa_id');
+        $sucursalId = $request->input('sucursal_id');
         $perPage = $request->input('perPage', 10);
 
         $query = User::with(['empresa', 'sucursal', 'roles', 'paisTelefono']);
@@ -29,9 +30,6 @@ class UserController extends Controller
         if ($currentUser && ! $currentUser->hasRole('Super Administrador') && ! $currentUser->hasRole('super-admin')) {
             if ($currentUser->empresa_id) {
                 $query->where('empresa_id', $currentUser->empresa_id);
-            }
-            if ($currentUser->sucursal_id) {
-                $query->where('sucursal_id', $currentUser->sucursal_id);
             }
         }
 
@@ -48,8 +46,12 @@ class UserController extends Controller
             $query->where('status', $status);
         }
 
-        if ($empresaId) {
+        if ($empresaId && ($currentUser->hasRole('Super Administrador') || $currentUser->hasRole('super-admin'))) {
             $query->where('empresa_id', $empresaId);
+        }
+
+        if ($sucursalId) {
+            $query->where('sucursal_id', $sucursalId);
         }
 
         if ($roleName) {
@@ -63,15 +65,16 @@ class UserController extends Controller
             if ($currentUser->empresa_id) {
                 $statsQuery->where('empresa_id', $currentUser->empresa_id);
             }
-            if ($currentUser->sucursal_id) {
-                $statsQuery->where('sucursal_id', $currentUser->sucursal_id);
-            }
         }
 
         $stats = [
             'total' => (clone $statsQuery)->count(),
             'activos' => (clone $statsQuery)->where('status', 'activo')->count(),
             'inactivos' => (clone $statsQuery)->where('status', 'inactivo')->count(),
+            'verificados' => (clone $statsQuery)->where(function ($q) {
+                $q->whereNotNull('whatsapp_verified_at')
+                  ->orWhereNotNull('email_verified_at');
+            })->count(),
         ];
 
         return inertia('admin/Usuarios/Index', [
@@ -83,7 +86,7 @@ class UserController extends Controller
             'paises' => Pais::where('activo', true)
                 ->orderBy('nombre')
                 ->get(['id', 'nombre', 'codigo_iso2', 'codigo_telefonico']),
-            'filters' => $request->only(['search', 'status', 'role', 'empresa_id', 'perPage']),
+            'filters' => $request->only(['search', 'status', 'role', 'empresa_id', 'sucursal_id', 'perPage']),
         ]);
     }
 

@@ -132,20 +132,10 @@ class WhatsAppVerificationController extends Controller
             . "El equipo de *{$appName}*";
 
         try {
-            // Use the main SaaS company (ID 1) credentials for user verification
-            $empresa = \App\Models\Empresa::find(1);
-            
-            if (! $empresa) {
-                Log::error('Empresa principal (ID 1) no encontrada al enviar OTP');
-                return false;
-            }
-            $creds = [
-                'empresa_id' => $empresa->id,
-                'api_url'    => $empresa->whatsapp_api_url,
-                'api_key'    => $empresa->whatsapp_api_key,
-                'instance'   => $empresa->whatsapp_instance,
-            ];
-            $whatsappService = \App\Services\WhatsAppService::forCredentials($creds);
+            // Instanciar WhatsAppService para la empresa del usuario.
+            // Si la empresa está en período de prueba o no tiene WhatsApp propio activo,
+            // automáticamente utilizará la conexión de WhatsApp de la Empresa Principal (ID 1).
+            $whatsappService = new WhatsAppService($user->empresa_id ?? 1);
 
             Log::info("Enviando OTP WhatsApp a {$formattedPhone} (Usuario ID: {$user->id}, Código: {$otpCode})");
             $response = $whatsappService->sendMessage($formattedPhone, $message, true);
@@ -167,28 +157,30 @@ class WhatsAppVerificationController extends Controller
             return '';
         }
 
-        // Si ya incluye '+' al inicio, eliminar caracteres no numéricos y retornar
-        if (str_starts_with($phone, '+')) {
-            return preg_replace('/[^0-9]/', '', $phone);
+        $cleanPhone = preg_replace('/[^0-9]/', '', $phone);
+        if (str_starts_with($cleanPhone, '0')) {
+            $cleanPhone = substr($cleanPhone, 1);
         }
 
-        // Obtener el código de país asociado
+        // Si ya incluye algún código de país conocido al inicio, retornar el número limpio
+        $codigosComunes = ['593', '502', '503', '504', '505', '506', '507', '591', '595', '598', '52', '58', '57', '34', '54', '56', '51', '1'];
+        foreach ($codigosComunes as $code) {
+            if (str_starts_with($cleanPhone, $code) && strlen($cleanPhone) >= (strlen($code) + 7)) {
+                return $cleanPhone;
+            }
+        }
+
         $user->loadMissing('paisTelefono');
         $codigoPais = $user->paisTelefono?->codigo_telefonico ?? '';
 
         if (! empty($codigoPais)) {
             $cleanCodigo = preg_replace('/[^0-9]/', '', $codigoPais);
-            $cleanPhone = preg_replace('/[^0-9]/', '', $phone);
-            $cleanPhone = ltrim($cleanPhone, '0');
-
-            // Si el teléfono ya comienza con el código del país, usarlo directamente
             if (! str_starts_with($cleanPhone, $cleanCodigo)) {
                 return $cleanCodigo . $cleanPhone;
             }
-            return $cleanPhone;
         }
 
-        return preg_replace('/[^0-9]/', '', $phone);
+        return $cleanPhone;
     }
 }
 
