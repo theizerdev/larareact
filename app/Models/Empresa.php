@@ -6,6 +6,7 @@ use App\Traits\HasSpanishActivityLog;
 use App\Traits\Multitenantable;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use App\Models\Pais;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Spatie\Activitylog\LogOptions;
 use Spatie\Activitylog\Traits\LogsActivity;
@@ -103,6 +104,14 @@ class Empresa extends Model
     public function pais(): BelongsTo
     {
         return $this->belongsTo(Pais::class);
+    }
+
+    /**
+     * Country used for telephone code (paisTelefono)
+     */
+    public function paisTelefono(): BelongsTo
+    {
+        return $this->belongsTo(Pais::class, 'pais_telefono_id');
     }
 
     public function sucursales(): HasMany

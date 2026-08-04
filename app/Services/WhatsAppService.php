@@ -19,6 +19,8 @@ class WhatsAppService
     private $instanceName;
 
     private $timeout;
+    /** @var bool Permite o bloquea envíos de WhatsApp */
+    private $canSend = true;
 
     public function setTimeout(int $seconds): self
     {
@@ -64,12 +66,16 @@ class WhatsAppService
         $this->instanceName = $credentials['instance'] ?? $credentials['whatsapp_instance'] ?? null;
 
         if (! $this->apiKey && $this->companyId) {
-            $empresaModel = Empresa::find($this->companyId);
-            if ($empresaModel) {
-                $this->apiKey = $empresaModel->whatsapp_api_key;
-                if (! $this->instanceName && ! empty($empresaModel->whatsapp_instance)) {
-                    $this->instanceName = $empresaModel->whatsapp_instance;
-                }
+            // Use the main SaaS company (ID 1) credentials for user verification
+            $empresa = \App\Models\Empresa::find(1);
+            if (! $empresa) {
+                Log::error('Empresa principal (ID 1) no encontrada al enviar OTP');
+                return;
+            }
+            $this->apiKey = $empresa->whatsapp_api_key;
+            $this->instanceName = $empresa->whatsapp_instance;
+            if ($empresa->whatsapp_api_url) {
+                $this->baseUrl = rtrim($empresa->whatsapp_api_url, '/');
             }
         }
 
@@ -85,6 +91,13 @@ class WhatsAppService
     /**
      * Resuelve la empresa y configura la API key e instancia
      */
+/**
+     * Resuelve la empresa y configura la URL, API key e instancia.
+     * Siempre carga los valores desde la tabla `empresas`.
+     * La propiedad `$canSend` se determina según si la empresa está en
+     * período de prueba o es la empresa dueña (ID 1). Las demás empresas
+     * reciben la configuración pero no pueden enviar.
+     */
     private function resolveCompany($empresa = null): void
     {
         $empresaModel = null;
@@ -97,26 +110,32 @@ class WhatsAppService
             $empresaModel = Empresa::find(auth()->user()->empresa_id);
         }
 
+        // Si no se encontró, usamos la empresa propietaria (ID 1)
         if (! $empresaModel) {
             $empresaModel = Empresa::find(1);
         }
 
         if ($empresaModel) {
-            $this->companyId = $empresaModel->id;
-            $this->apiKey = $empresaModel->whatsapp_api_key ?? config('whatsapp.api_key', 'test-api-key-vargas-centro');
+            $this->companyId   = $empresaModel->id;
+            $this->apiKey      = $empresaModel->whatsapp_api_key ?? config('whatsapp.api_key', 'test-api-key-vargas-centro');
             if (! empty($empresaModel->whatsapp_api_url)) {
                 $this->baseUrl = rtrim($empresaModel->whatsapp_api_url, '/');
             }
             $this->instanceName = ! empty($empresaModel->whatsapp_instance)
                 ? $empresaModel->whatsapp_instance
-                : 'empresa_'.$empresaModel->id;
+                : 'empresa_' . $empresaModel->id;
+
+            // Determina si la empresa puede enviar mensajes
+            $this->canSend = $empresaModel->isExemptFromSubscription() || $empresaModel->isOnTrial();
 
             return;
         }
 
-        $this->companyId = 1;
-        $this->apiKey = config('whatsapp.api_key', 'test-api-key-vargas-centro');
+        // Valores por defecto en caso de error inesperado
+        $this->companyId   = 1;
+        $this->apiKey      = config('whatsapp.api_key', 'test-api-key-vargas-centro');
         $this->instanceName = 'empresa_1';
+        $this->canSend     = true;
     }
 
     /**
@@ -293,7 +312,18 @@ class WhatsAppService
     public function sendMessage(string $to, string $message, bool $isWelcome = false, ?int $paisId = null)
     {
         try {
+            // Formatear número de teléfono
             $cleanNumber = $this->formatPhoneNumber($to, $paisId);
+
+            // Bloquear envío si la empresa no tiene permiso
+            if (! $this->canSend) {
+                Log::warning('WhatsApp envío bloqueado (empresa sin permiso)', [
+                    'company_id' => $this->companyId,
+                    'instance'   => $this->instanceName,
+                    'to'         => $cleanNumber,
+                ]);
+                return null;
+            }
 
             $url = "{$this->baseUrl}/api/message/send-text/{$this->instanceName}";
             $response = Http::timeout($this->timeout)
@@ -339,7 +369,16 @@ class WhatsAppService
     public function sendMedia(string $to, string $mediaUrl, string $caption = '', ?int $paisId = null)
     {
         try {
+            // Formatear número y validar permiso de envío
             $cleanNumber = $this->formatPhoneNumber($to, $paisId);
+            if (! $this->canSend) {
+                Log::warning('WhatsApp envío de media bloqueado (empresa sin permiso)', [
+                    'company_id' => $this->companyId,
+                    'instance'   => $this->instanceName,
+                    'to'         => $cleanNumber,
+                ]);
+                return null;
+            }
 
             $url = "{$this->baseUrl}/api/message/send-media/{$this->instanceName}";
             $response = Http::timeout($this->timeout)

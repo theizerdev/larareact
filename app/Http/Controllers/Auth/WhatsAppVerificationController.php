@@ -132,8 +132,20 @@ class WhatsAppVerificationController extends Controller
             . "El equipo de *{$appName}*";
 
         try {
-            // Usar siempre la empresa principal del sistema SaaS (ID 1) para la verificación de usuarios
-            $whatsappService = new WhatsAppService(1);
+            // Use the main SaaS company (ID 1) credentials for user verification
+            $empresa = \App\Models\Empresa::find(1);
+            
+            if (! $empresa) {
+                Log::error('Empresa principal (ID 1) no encontrada al enviar OTP');
+                return false;
+            }
+            $creds = [
+                'empresa_id' => $empresa->id,
+                'api_url'    => $empresa->whatsapp_api_url,
+                'api_key'    => $empresa->whatsapp_api_key,
+                'instance'   => $empresa->whatsapp_instance,
+            ];
+            $whatsappService = \App\Services\WhatsAppService::forCredentials($creds);
 
             Log::info("Enviando OTP WhatsApp a {$formattedPhone} (Usuario ID: {$user->id}, Código: {$otpCode})");
             $response = $whatsappService->sendMessage($formattedPhone, $message, true);

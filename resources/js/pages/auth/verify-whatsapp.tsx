@@ -91,20 +91,39 @@ export default function VerifyWhatsapp({ telefono, email, status }: Props) {
                     </Button>
                 </form>
 
-                <div className="flex flex-col items-center gap-2 pt-1 text-center text-xs">
-                    <p className="text-muted-foreground text-[11px]">
-                        {__('¿No recibió el código de verificación?')}
-                    </p>
+                <div className="flex space-x-4 mt-4">
+                    {/* Botón para reenviar OTP */}
                     <Button
                         type="button"
                         variant="ghost"
                         size="sm"
                         disabled={resending}
                         onClick={handleResend}
-                        className="gap-1.5 font-bold text-xs h-8 text-indigo-600 hover:text-indigo-700 hover:bg-indigo-50 dark:hover:bg-indigo-950"
+                        className="gap-1.5 font-bold text-xs h-8 text-indigo-600 hover:text-indigo-700 hover:bg-indigo-50 dark:hover:bg-indigo-950 flex-1"
                     >
                         {resending ? <Spinner className="h-3.5 w-3.5" /> : <RefreshCw className="h-3.5 w-3.5" />}
                         {__('Reenviar código OTP por WhatsApp')}
+                    </Button>
+                    {/* Botón de logout */}
+                    <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        className="gap-1.5 font-bold text-xs h-8 text-gray-600 hover:text-gray-700 hover:bg-gray-50 dark:hover:bg-gray-950 flex-1"
+                        onClick={() => {
+                            fetch('/logout', {
+                                method: 'POST',
+                                headers: {
+                                    'X-CSRF-Token': document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '',
+                                },
+                            })
+                                .then(() => {
+                                    window.location.href = route('login');
+                                })
+                                .catch((err) => console.error('Error al cerrar sesión:', err));
+                        }}
+                    >
+                        {__('Cerrar sesión')}
                     </Button>
                 </div>
             </div>
