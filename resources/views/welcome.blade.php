@@ -4,7 +4,30 @@
         <meta charset="utf-8">
         <meta name="viewport" content="width=device-width, initial-scale=1">
 
-        <title>{{ config('app.name', 'Laravel') }}</title>
+        <title>{{ config('app.name', 'SERVITEC') }} | Sistema de Punto de Venta, Inventario y Servicio Técnico</title>
+        <meta name="description" content="SERVITEC es el sistema integral de Punto de Venta (POS), Control de Inventario, Gestión de Servicio Técnico, Facturación y Automatización WhatsApp para empresas y talleres.">
+        <meta name="keywords" content="SERVITEC, FixSale, punto de venta, POS, control de inventario, servicio tecnico, gestion de talleres, facturacion, automatizacion whatsapp, software de ventas, administracion de negocios">
+        <meta name="author" content="SERVITEC">
+        <meta name="robots" content="index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1">
+        <meta name="googlebot" content="index, follow">
+        <meta name="theme-color" content="#0f172a">
+        <link rel="canonical" href="{{ url()->current() }}">
+
+        <!-- Open Graph / Facebook / WhatsApp -->
+        <meta property="og:type" content="website">
+        <meta property="og:url" content="{{ url()->current() }}">
+        <meta property="og:site_name" content="{{ config('app.name', 'SERVITEC') }}">
+        <meta property="og:title" content="{{ config('app.name', 'SERVITEC') }} | Sistema de Punto de Venta, Inventario y Servicio Técnico">
+        <meta property="og:description" content="Gestión inteligente de ventas, inventario, órdenes de servicio técnico y automatización por WhatsApp para tu empresa.">
+        <meta property="og:image" content="{{ url('/image/logo/2.png') }}">
+        <meta property="og:image:alt" content="SERVITEC Logo">
+
+        <!-- Twitter Card -->
+        <meta name="twitter:card" content="summary_large_image">
+        <meta name="twitter:url" content="{{ url()->current() }}">
+        <meta name="twitter:title" content="{{ config('app.name', 'SERVITEC') }} | Sistema de Punto de Venta, Inventario y Servicio Técnico">
+        <meta name="twitter:description" content="Gestión inteligente de ventas, inventario, órdenes de servicio técnico y automatización por WhatsApp para tu empresa.">
+        <meta name="twitter:image" content="{{ url('/image/logo/2.png') }}">
 
         @fonts
 

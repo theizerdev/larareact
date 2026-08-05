@@ -131,7 +131,19 @@ export default function Welcome() {
 
     return (
         <>
-            <Head title={__('FixSale | Punto de Venta, Inventario y Automatización WhatsApp')} />
+            <Head>
+                <title>{__('FixSale | Punto de Venta, Inventario y Automatización WhatsApp')}</title>
+                <meta name="description" content={__('Plataforma integral de Punto de Venta (POS), Control de Inventario, Gestión de Servicio Técnico y Automatización por WhatsApp. Potencia la gestión y ventas de tu empresa.')} />
+                <meta name="keywords" content="FixSale, SERVITEC, punto de venta, pos, inventario, servicio tecnico, taller, whatsapp automatizacion, facturacion, gestion comercial" />
+                <meta property="og:title" content={__('FixSale | Punto de Venta, Inventario y Automatización WhatsApp')} />
+                <meta property="og:description" content={__('Plataforma integral de Punto de Venta (POS), Control de Inventario, Gestión de Servicio Técnico y Automatización por WhatsApp.')} />
+                <meta property="og:type" content="website" />
+                <meta property="og:image" content="/image/logo/2.png" />
+                <meta name="twitter:card" content="summary_large_image" />
+                <meta name="twitter:title" content={__('FixSale | Punto de Venta, Inventario y Automatización WhatsApp')} />
+                <meta name="twitter:description" content={__('Plataforma integral de Punto de Venta (POS), Control de Inventario, Gestión de Servicio Técnico y Automatización por WhatsApp.')} />
+                <meta name="twitter:image" content="/image/logo/2.png" />
+            </Head>
 
             {/* ─── PRELOADER CON ISOTIPO MINI FIXSALE (2.PNG) ────────────────────────── */}
             <PagePreloader logoPath="/image/logo/2.png" durationMs={1100} slogan={__('Controla. Vende. Crece.')} />
