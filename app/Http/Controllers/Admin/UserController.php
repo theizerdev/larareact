@@ -5,11 +5,13 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Admin\StoreUserRequest;
 use App\Http\Requests\Admin\UpdateUserRequest;
+use App\Http\Resources\UserResource;
 use App\Models\Empresa;
 use App\Models\Pais;
 use App\Models\Sucursal;
 use App\Models\User;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Validation\Rule;
@@ -19,6 +21,8 @@ class UserController extends Controller
 {
     public function index(Request $request)
     {
+        Gate::authorize('viewAny', User::class);
+
         $search = $request->input('search');
         $status = $request->input('status');
         $roleName = $request->input('role');
@@ -80,7 +84,7 @@ class UserController extends Controller
         ];
 
         return inertia('admin/Usuarios/Index', [
-            'users' => $users,
+            'users' => UserResource::collection($users),
             'stats' => $stats,
             'roles' => Role::whereNotIn('name', ['Super Administrador', 'super-admin', 'Super Admin'])
                 ->orderBy('name')

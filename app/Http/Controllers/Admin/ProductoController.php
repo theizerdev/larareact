@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Admin\StoreProductoRequest;
 use App\Http\Requests\Admin\UpdateProductoRequest;
+use App\Http\Resources\ProductoResource;
 use App\Models\Categoria;
 use App\Models\Familia;
 use App\Models\Marca;
@@ -12,6 +13,7 @@ use App\Models\Modelo;
 use App\Models\Producto;
 use App\Services\InventoryService;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Gate;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -26,6 +28,8 @@ class ProductoController extends Controller
      */
     public function index(Request $request): Response
     {
+        Gate::authorize('viewAny', Producto::class);
+
         $query = Producto::with([
             'categoria',
             'marca',
@@ -110,7 +114,7 @@ class ProductoController extends Controller
         $valorInventario = Producto::selectRaw('SUM(stock * precio_venta) as total')->value('total') ?? 0;
 
         return Inertia::render('admin/Productos/Index', [
-            'productos' => $productos,
+            'productos' => ProductoResource::collection($productos),
             'categorias' => $categorias,
             'marcas' => $marcas,
             'familias' => $familias,

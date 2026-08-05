@@ -5,10 +5,12 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Admin\StoreEmpresaRequest;
 use App\Http\Requests\Admin\UpdateEmpresaRequest;
+use App\Http\Resources\EmpresaResource;
 use App\Models\Empresa;
 use App\Models\Pais;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
 
@@ -16,6 +18,8 @@ class EmpresaController extends Controller
 {
     public function index(Request $request)
     {
+        Gate::authorize('viewAny', Empresa::class);
+
         $search = $request->input('search');
         $status = $request->input('status');
         $perPage = $request->input('perPage', 10);
@@ -44,7 +48,7 @@ class EmpresaController extends Controller
         ];
 
         return inertia('admin/Empresas/Index', [
-            'empresas' => $empresas,
+            'empresas' => EmpresaResource::collection($empresas),
             'stats' => $stats,
             'paises' => Pais::where('activo', true)
                 ->orderBy('nombre', 'asc')
