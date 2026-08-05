@@ -72,6 +72,17 @@ export default function WhatsAppIntegration({
     const [liveStatusState, setLiveStatusState] = useState<LiveStatus | null>(live_status);
     const [isPolling, setIsPolling] = useState(false);
     const [sendingMsg, setSendingMsg] = useState(false);
+    const [lastPolled, setLastPolled] = useState<Date | null>(null);
+    const [manualCheckLoading, setManualCheckLoading] = useState(false);
+
+    // Ref para evitar stale closure dentro de setInterval
+    const liveStatusRef = useRef<LiveStatus | null>(live_status);
+    useEffect(() => {
+        liveStatusRef.current = liveStatusState;
+    }, [liveStatusState]);
+
+    // Ref para poder cancelar el intervalo desde dentro del callback
+    const intervalRef = useRef<NodeJS.Timeout | null>(null);
 
     // Formulario de configuración
     const configForm = useForm({
@@ -88,17 +99,28 @@ export default function WhatsAppIntegration({
         phoneNumber: '',
         message: __('Hello! This is a test message from the WhatsApp integration panel.'),
     });
-
     // Polling del estado de WhatsApp
     useEffect(() => {
-        let intervalId: NodeJS.Timeout;
+        // Limpiar intervalo previo
+        if (intervalRef.current) {
+            clearInterval(intervalRef.current);
+            intervalRef.current = null;
+        }
 
-        // Solo hacemos polling si la integración está activa y no está completamente conectada con éxito
-        const shouldPoll = whatsapp_active && (!liveStatusState?.isConnected || liveStatusState?.connectionState === 'connecting' || liveStatusState?.connectionState === 'qr_ready');
+        const isQrActive = liveStatusState?.connectionState === 'qr_ready'
+            || Boolean(liveStatusState?.qrCode)
+            || liveStatusState?.connectionState === 'connecting';
+
+        const shouldPoll = whatsapp_active
+            && (!liveStatusState?.isConnected || isQrActive);
+
+        // Más rápido cuando el QR está activo (1.5 s), más lento en otros estados (4 s)
+        const pollIntervalMs = isQrActive ? 1500 : 4000;
 
         if (shouldPoll) {
             setIsPolling(true);
-            intervalId = setInterval(async () => {
+
+            const tick = async () => {
                 try {
                     const response = await fetch('/admin/integrations/whatsapp/status');
 
@@ -106,10 +128,20 @@ export default function WhatsAppIntegration({
                         const data = await response.json();
 
                         if (data.success) {
-                            setLiveStatusState(data.status);
+                            // Leer ref ANTES del setState para evitar el valor stale
+                            const wasConnected = liveStatusRef.current?.isConnected;
 
-                            // Si se conectó exitosamente durante el polling, recargar la página para actualizar props
-                            if (data.status?.isConnected && !liveStatusState?.isConnected) {
+                            setLiveStatusState(data.status);
+                            setLastPolled(new Date());
+
+                            if (data.status?.isConnected && !wasConnected) {
+                                // Detener polling de inmediato
+                                if (intervalRef.current) {
+                                    clearInterval(intervalRef.current);
+                                    intervalRef.current = null;
+                                }
+                                setIsPolling(false);
+
                                 Swal.fire({
                                     title: __('Connected!'),
                                     text: __('WhatsApp has been successfully linked.'),
@@ -124,17 +156,54 @@ export default function WhatsAppIntegration({
                 } catch (error) {
                     console.error('Error polling status:', error);
                 }
-            }, 3000);
+            };
+
+            // Primera llamada inmediata, luego el intervalo
+            tick();
+            intervalRef.current = setInterval(tick, pollIntervalMs);
         } else {
             setIsPolling(false);
         }
 
         return () => {
-            if (intervalId) {
-clearInterval(intervalId);
-}
+            if (intervalRef.current) {
+                clearInterval(intervalRef.current);
+                intervalRef.current = null;
+            }
         };
     }, [whatsapp_active, liveStatusState?.isConnected, liveStatusState?.connectionState]);
+
+    /** Comprobación manual inmediata (botón "Verificar ahora") */
+    const handleManualRefresh = async () => {
+        setManualCheckLoading(true);
+        try {
+            const response = await fetch('/admin/integrations/whatsapp/status');
+            if (response.ok) {
+                const data = await response.json();
+                if (data.success) {
+                    const wasConnected = liveStatusRef.current?.isConnected;
+                    setLiveStatusState(data.status);
+                    setLastPolled(new Date());
+
+                    if (data.status?.isConnected && !wasConnected) {
+                        Swal.fire({
+                            title: __('Connected!'),
+                            text: __('WhatsApp has been successfully linked.'),
+                            icon: 'success',
+                            timer: 3000,
+                            showConfirmButton: false,
+                        });
+                        router.reload({ only: ['whatsapp_phone', 'whatsapp_status'] });
+                    }
+                }
+            }
+        } catch (e) {
+            console.error('Manual refresh error:', e);
+        } finally {
+            setManualCheckLoading(false);
+        }
+    };
+
 
     const handleSaveConfig = (e: React.FormEvent) => {
         e.preventDefault();
@@ -981,9 +1050,26 @@ return '';
                                             )}
                                         </div>
 
-                                        <div className="text-xs text-muted-foreground flex items-center justify-center gap-1.5">
-                                            <span className="w-2.5 h-2.5 rounded-full bg-amber-500 animate-ping"></span>
-                                            <span>{__('Waiting for phone scan...')}</span>
+                                        <div className="flex flex-wrap items-center justify-center gap-3">
+                                            <div className="text-xs text-muted-foreground flex items-center gap-1.5">
+                                                <span className="w-2.5 h-2.5 rounded-full bg-amber-500 animate-ping"></span>
+                                                <span>{__('Waiting for phone scan...')}</span>
+                                                {lastPolled && (
+                                                    <span className="opacity-60">
+                                                        · {__('Checked')} {Math.round((Date.now() - lastPolled.getTime()) / 1000)}s {__('ago')}
+                                                    </span>
+                                                )}
+                                            </div>
+                                            <Button
+                                                variant="outline"
+                                                size="sm"
+                                                className="gap-1.5 h-7 text-xs"
+                                                onClick={handleManualRefresh}
+                                                disabled={manualCheckLoading}
+                                            >
+                                                <RefreshCw className={`h-3 w-3 ${manualCheckLoading ? 'animate-spin' : ''}`} />
+                                                {__('Check Now')}
+                                            </Button>
                                         </div>
 
                                         <Button variant="ghost" onClick={handleDisconnect} className="text-rose-600 hover:text-rose-700 hover:bg-rose-50 dark:hover:bg-rose-950/20 text-xs">
