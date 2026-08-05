@@ -41,9 +41,7 @@ class RoleController extends Controller
                             'empresa_id' => $empresaId,
                         ]);
                         $adminRole->syncPermissions(
-                            Permission::where('module', '!=', 'roles')
-                                ->where('name', '!=', 'subscriptions.manage')
-                                ->get()
+                            Permission::where('name', '!=', 'subscriptions.manage')->get()
                         );
                         if ($user && ! $user->hasRole('Administrador')) {
                             $user->assignRole($adminRole);

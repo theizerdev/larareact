@@ -95,7 +95,7 @@ class CreateNewUser implements CreatesNewUsers
                 'empresa_id' => $empresa->id,
             ]);
 
-            $permissions = \Spatie\Permission\Models\Permission::all();
+            $permissions = \Spatie\Permission\Models\Permission::where('name', '!=', 'subscriptions.manage')->get();
             $adminRole->syncPermissions($permissions);
 
             $user->assignRole($adminRole);
