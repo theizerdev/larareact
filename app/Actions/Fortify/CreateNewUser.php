@@ -68,6 +68,21 @@ class CreateNewUser implements CreatesNewUsers
                 'whatsapp_instance' => $documento,
             ]);
 
+            $trialPlan = \App\Models\SubscriptionPlan::where('nombre', 'like', '%Prueba%')->first()
+                ?? \App\Models\SubscriptionPlan::first();
+
+            \App\Models\Subscription::create([
+                'empresa_id' => $empresa->id,
+                'plan_id' => $trialPlan?->id,
+                'nombre_plan' => $trialPlan?->nombre ?? 'Plan Prueba (7 días)',
+                'ciclo_meses' => 0,
+                'max_sucursales' => 1,
+                'monto_total' => 0.00,
+                'fecha_inicio' => now(),
+                'fecha_vencimiento' => now()->addDays(7),
+                'estado' => 'trial',
+            ]);
+
             try {
                 \App\Services\WhatsAppService::forCompany($empresa)->createInstance();
             } catch (\Throwable $e) {

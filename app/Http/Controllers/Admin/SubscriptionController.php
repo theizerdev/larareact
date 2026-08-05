@@ -27,15 +27,17 @@ class SubscriptionController extends Controller
             abort(404, 'Empresa no encontrada.');
         }
 
-        $plan = SubscriptionPlan::first();
+        $planes = SubscriptionPlan::where('activo', true)->get();
+        $plan = $planes->first();
         $totalSucursales = $empresa->sucursales()->count();
 
         $pagos = SubscriptionPayment::where('empresa_id', $empresa->id)
-            ->with(['user', 'aprobador'])
+            ->with(['user', 'aprobador', 'plan'])
             ->orderBy('created_at', 'desc')
             ->get();
 
         $suscripcionActiva = Subscription::where('empresa_id', $empresa->id)
+            ->with('plan')
             ->orderBy('id', 'desc')
             ->first();
 
@@ -98,6 +100,7 @@ class SubscriptionController extends Controller
                 'sucursales_activas' => $totalSucursales,
             ],
             'plan' => $plan,
+            'planes' => $planes,
             'opcionesPrecios' => $opcionesPrecios,
             'pagos' => $pagos,
             'suscripcionActiva' => $suscripcionActiva,
@@ -190,6 +193,7 @@ class SubscriptionController extends Controller
     public function renew(Request $request)
     {
         $request->validate([
+            'plan_id' => 'nullable|exists:subscription_plans,id',
             'ciclo_meses' => 'required|integer|in:3,6,12',
             'sucursales_contratadas' => 'required|integer|min:1',
             'metodo_pago' => 'required|string',
@@ -208,7 +212,7 @@ class SubscriptionController extends Controller
             ]);
         }
 
-        $plan = SubscriptionPlan::first();
+        $plan = $request->plan_id ? SubscriptionPlan::find($request->plan_id) : SubscriptionPlan::first();
         $hasActivePaidSubscription = $empresa->subscription_status === 'active' && ! $empresa->isExemptFromSubscription();
 
         if ($hasActivePaidSubscription && $plan) {
@@ -227,6 +231,7 @@ class SubscriptionController extends Controller
 
         SubscriptionPayment::create([
             'empresa_id' => $empresa->id,
+            'plan_id' => $plan?->id,
             'user_id' => $user->id,
             'monto' => $montoCalculado,
             'ciclo_meses' => (int) $request->ciclo_meses,
@@ -355,25 +360,14 @@ class SubscriptionController extends Controller
 
         if ($captureResponse->successful() && isset($data['status']) && $data['status'] === 'COMPLETED') {
             $transactionId = $data['purchase_units'][0]['payments']['captures'][0]['id'] ?? $orderId;
-            $plan = SubscriptionPlan::firstOrCreate(
-                ['nombre' => 'Plan Full'],
-                [
-                    'descripcion' => 'Acceso completo a todos los módulos operativos del sistema (Ventas, Inventario, Caja, Clientes, Créditos, Servicios). Excluye monitoreo e integraciones.',
-                    'precio_3_meses' => 89.00,
-                    'precio_6_meses' => 159.00,
-                    'precio_12_meses' => 288.00,
-                    'precio_sucursal_extra_mensual' => 10.00,
-                    'sucursales_incluidas' => 1,
-                    'modulos_incluidos' => ['ventas', 'cajas', 'inventarios', 'productos', 'servicios', 'clientes', 'creditos', 'metas_ventas'],
-                    'activo' => true,
-                ]
-            );
+            $planId = $request->input('plan_id');
+            $plan = $planId ? SubscriptionPlan::find($planId) : SubscriptionPlan::first();
             $hasActivePaidSubscription = $empresa->subscription_status === 'active' && ! $empresa->isExemptFromSubscription();
             if ($hasActivePaidSubscription) {
                 $sucursalesExtra = max(0, (int) $request->sucursales_contratadas - ($empresa->max_sucursales ?? 1));
-                $monto = round($sucursalesExtra * $plan->precio_sucursal_extra_mensual, 2);
+                $monto = round($sucursalesExtra * ($plan?->precio_sucursal_extra_mensual ?? 10.00), 2);
             } else {
-                $monto = $plan->calcularPrecio((int) $request->ciclo_meses, (int) $request->sucursales_contratadas);
+                $monto = $plan ? $plan->calcularPrecio((int) $request->ciclo_meses, (int) $request->sucursales_contratadas) : 89.00;
             }
 
             // Extender fecha de expiración solo si NO tenía una suscripción activa previa (ej. primer pago o renovación por expiración)
@@ -399,8 +393,8 @@ class SubscriptionController extends Controller
             // Crear el registro de la Suscripción
             $subscription = Subscription::create([
                 'empresa_id' => $empresa->id,
-                'plan_id' => $plan->id,
-                'nombre_plan' => $plan->nombre,
+                'plan_id' => $plan?->id,
+                'nombre_plan' => $plan?->nombre ?? 'Plan Profesional',
                 'ciclo_meses' => (int) $request->ciclo_meses,
                 'max_sucursales' => (int) $request->sucursales_contratadas,
                 'monto_total' => $monto,
@@ -409,9 +403,10 @@ class SubscriptionController extends Controller
                 'estado' => 'active',
             ]);
 
-            // Registrar Pago Aprobado enlazando subscription_id
+            // Registrar Pago Aprobado enlazando subscription_id y plan_id
             SubscriptionPayment::create([
                 'subscription_id' => $subscription->id,
+                'plan_id' => $plan?->id,
                 'empresa_id' => $empresa->id,
                 'user_id' => auth()->id(),
                 'monto' => $monto,
@@ -462,12 +457,12 @@ class SubscriptionController extends Controller
                 ];
             });
 
-        $pagosPendientes = SubscriptionPayment::with(['empresa', 'user'])
+        $pagosPendientes = SubscriptionPayment::with(['empresa', 'user', 'plan'])
             ->where('estado', 'pending')
             ->orderBy('created_at', 'desc')
             ->get();
 
-        $plan = SubscriptionPlan::first();
+        $planes = SubscriptionPlan::where('activo', true)->get();
 
         $stats = [
             'total_empresas' => $empresas->count(),
@@ -481,7 +476,8 @@ class SubscriptionController extends Controller
         return inertia('admin/subscription/manage', [
             'empresas' => $empresas,
             'pagosPendientes' => $pagosPendientes,
-            'plan' => $plan,
+            'plan' => $planes->first(),
+            'planes' => $planes,
             'stats' => $stats,
         ]);
     }
@@ -524,11 +520,13 @@ class SubscriptionController extends Controller
                 'max_sucursales' => max($empresa->max_sucursales ?? 1, $payment->sucursales_contratadas),
             ]);
 
+            $plan = $payment->plan ?? ($payment->plan_id ? SubscriptionPlan::find($payment->plan_id) : SubscriptionPlan::first());
+
             // Registrar suscripción activa
             $subscription = Subscription::create([
                 'empresa_id' => $empresa->id,
-                'plan_id' => SubscriptionPlan::first()?->id,
-                'nombre_plan' => 'Plan Full',
+                'plan_id' => $plan?->id,
+                'nombre_plan' => $plan?->nombre ?? 'Plan Profesional',
                 'ciclo_meses' => $meses,
                 'max_sucursales' => $payment->sucursales_contratadas,
                 'monto_total' => $payment->monto,
@@ -539,6 +537,7 @@ class SubscriptionController extends Controller
 
             $payment->update([
                 'subscription_id' => $subscription->id,
+                'plan_id' => $plan?->id,
                 'estado' => 'approved',
                 'aprobado_por' => $user->id,
                 'aprobado_at' => now(),

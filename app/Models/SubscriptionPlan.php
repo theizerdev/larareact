@@ -39,6 +39,11 @@ class SubscriptionPlan extends Model
         return $this->hasMany(Subscription::class, 'plan_id');
     }
 
+    public function payments(): HasMany
+    {
+        return $this->hasMany(SubscriptionPayment::class, 'plan_id');
+    }
+
     /**
      * Calcula el precio total estimado para un número de meses y sucursales.
      */
