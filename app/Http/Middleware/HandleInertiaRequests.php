@@ -113,6 +113,10 @@ class HandleInertiaRequests extends Middleware
                     ->count()
                 : 0,
             'cash_register_alert' => fn () => $this->getCashRegisterAlert($request),
+            'whatsapp_needs_scan' => fn () => $empresa
+                && (bool) $empresa->whatsapp_active
+                && $empresa->whatsapp_status !== 'connected',
+
             'subscription' => fn () => $empresa ? [
                 'is_exempt' => $empresa->isExemptFromSubscription(),
                 'status' => $empresa->subscription_status,

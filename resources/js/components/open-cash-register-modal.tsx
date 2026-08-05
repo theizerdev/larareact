@@ -66,12 +66,33 @@ export function OpenCashRegisterModal() {
                 setIsOpen(false);
                 reset();
                 notifySuccess(__('Caja aperturada exitosamente.'));
+
+                // Redirigir a WhatsApp si la integración está activa pero sin sesión
+                const needsScan = Boolean((pageProps as any)?.whatsapp_needs_scan);
+                if (needsScan) {
+                    import('sweetalert2').then(({ default: Swal }) => {
+                        Swal.fire({
+                            title: __('¡Caja aperturada!'),
+                            html: `<p class="text-sm text-slate-600">${__('Tu integración de WhatsApp aún no tiene una sesión activa.')}<br/>${__('Escanea el código QR para comenzar a enviar mensajes.')}</p>`,
+                            icon: 'info',
+                            showCancelButton: true,
+                            confirmButtonText: __('Ir a WhatsApp →'),
+                            cancelButtonText: __('Después'),
+                            confirmButtonColor: '#059669',
+                        }).then((result) => {
+                            if (result.isConfirmed) {
+                                window.location.href = '/admin/integrations/whatsapp';
+                            }
+                        });
+                    });
+                }
             },
             onError: () => {
                 notifyError(__('Ocurrió un error al aperturar la caja.'));
             },
         });
     };
+
 
     if (!alert?.show) return null;
 

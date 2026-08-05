@@ -1021,5 +1021,11 @@
 
   "Check Now": "Check Now",
   "Checked": "Checked",
-  "ago": "ago"
+  "ago": "ago",
+
+  "¡Caja aperturada!": "Cash Register Opened!",
+  "Tu integración de WhatsApp aún no tiene una sesión activa.": "Your WhatsApp integration does not have an active session yet.",
+  "Escanea el código QR para comenzar a enviar mensajes.": "Scan the QR code to start sending messages.",
+  "Ir a WhatsApp →": "Go to WhatsApp →",
+  "Después": "Later"
 }

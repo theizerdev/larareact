@@ -1546,5 +1546,11 @@
 
   "Check Now": "Verificar ahora",
   "Checked": "Verificado",
-  "ago": "hace"
+  "ago": "hace",
+
+  "¡Caja aperturada!": "¡Caja aperturada!",
+  "Tu integración de WhatsApp aún no tiene una sesión activa.": "Tu integración de WhatsApp aún no tiene una sesión activa.",
+  "Escanea el código QR para comenzar a enviar mensajes.": "Escanea el código QR para comenzar a enviar mensajes.",
+  "Ir a WhatsApp →": "Ir a WhatsApp →",
+  "Después": "Después"
 }
