@@ -7,11 +7,27 @@ use App\Models\User;
 class UserPolicy
 {
     /**
+     * Perform pre-authorization checks.
+     */
+    public function before(User $user, string $ability): ?bool
+    {
+        if ($user->id === 1
+            || $user->hasRole('Super Administrador')
+            || $user->hasRole('super-admin')
+            || $user->hasRole('Super Admin')
+        ) {
+            return true;
+        }
+
+        return null;
+    }
+
+    /**
      * Determine whether the user can view any models.
      */
     public function viewAny(User $user): bool
     {
-        return $user->hasRole('Super Administrador') || $user->hasRole('super-admin') || $user->can('users.index');
+        return $user->hasRole('Administrador') || $user->can('users.index') || $user->can('usuarios.index');
     }
 
     /**
@@ -19,10 +35,6 @@ class UserPolicy
      */
     public function view(User $user, User $model): bool
     {
-        if ($user->hasRole('Super Administrador') || $user->hasRole('super-admin')) {
-            return true;
-        }
-
         return $user->empresa_id === $model->empresa_id;
     }
 
@@ -39,10 +51,6 @@ class UserPolicy
      */
     public function update(User $user, User $model): bool
     {
-        if ($user->hasRole('Super Administrador') || $user->hasRole('super-admin')) {
-            return true;
-        }
-
         return $user->empresa_id === $model->empresa_id;
     }
 
@@ -53,10 +61,6 @@ class UserPolicy
     {
         if ($user->id === $model->id) {
             return false;
-        }
-
-        if ($user->hasRole('Super Administrador') || $user->hasRole('super-admin')) {
-            return true;
         }
 
         return $user->empresa_id === $model->empresa_id;

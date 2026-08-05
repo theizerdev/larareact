@@ -29,6 +29,24 @@ class AppServiceProvider extends ServiceProvider
     {
         $this->configureDefaults();
 
+        // Grant Super Administrador global bypass on all policies and gate checks
+        \Illuminate\Support\Facades\Gate::before(function ($user, $ability) {
+            if ($user->id === 1
+                || $user->hasRole('Super Administrador')
+                || $user->hasRole('super-admin')
+                || $user->hasRole('Super Admin')
+                || \Illuminate\Support\Facades\DB::table('model_has_roles')
+                    ->join('roles', 'roles.id', '=', 'model_has_roles.role_id')
+                    ->where('model_has_roles.model_id', $user->id)
+                    ->whereIn('roles.name', ['Super Administrador', 'super-admin', 'Super Admin'])
+                    ->exists()
+            ) {
+                return true;
+            }
+
+            return null;
+        });
+
         Event::listen(Login::class, function (Login $event) {
             $user = $event->user;
             $request = request();
