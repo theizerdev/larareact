@@ -429,14 +429,14 @@ export default function TestimoniosIndex({ testimonios = [] }: Props) {
                 </Card>
             </div>
 
-            {/* Modal Formulario Radix UI Dialog */}
+            {/* Modal Formulario Radix UI Dialog Responsive */}
             <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
-                <DialogContent className="max-w-lg">
+                <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto p-4 sm:p-6">
                     <DialogHeader>
-                        <DialogTitle className="text-xl font-bold text-[#08264e]">
+                        <DialogTitle className="text-lg sm:text-xl font-bold text-[#08264e]">
                             {editingItem ? __('Editar Testimonio') : __('Nuevo Testimonio')}
                         </DialogTitle>
-                        <DialogDescription>
+                        <DialogDescription className="text-xs">
                             {__('Ingresa la información del cliente y la opinión para mostrar en la landing page.')}
                         </DialogDescription>
                     </DialogHeader>
@@ -465,7 +465,8 @@ export default function TestimoniosIndex({ testimonios = [] }: Props) {
                             />
                         </div>
 
-                        <div className="grid grid-cols-2 gap-4">
+                        {/* Responsive Grid: 1 Columna en Mobile, 2 en Desktop */}
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                             {/* Ubicación */}
                             <div className="space-y-1.5">
                                 <Label htmlFor="ubicacion" className="font-bold text-xs">{__('Ubicación')}</Label>
@@ -484,7 +485,7 @@ export default function TestimoniosIndex({ testimonios = [] }: Props) {
                                     value={String(data.calificacion)}
                                     onValueChange={(val) => setData('calificacion', Number(val))}
                                 >
-                                    <SelectTrigger>
+                                    <SelectTrigger className="w-full">
                                         <SelectValue placeholder={__('Selecciona estrellas')} />
                                     </SelectTrigger>
                                     <SelectContent>
@@ -514,7 +515,7 @@ export default function TestimoniosIndex({ testimonios = [] }: Props) {
                                     placeholder={__('Ej. /5.png o /storage/empresas/...')}
                                     value={data.avatar}
                                     onChange={(e) => setData('avatar', e.target.value)}
-                                    className="flex-1"
+                                    className="flex-1 min-w-0"
                                 />
                             </div>
                         </div>
@@ -545,7 +546,7 @@ export default function TestimoniosIndex({ testimonios = [] }: Props) {
                         </div>
 
                         {/* Radix Switches Adicionales */}
-                        <div className="flex items-center gap-8 pt-2">
+                        <div className="flex flex-col sm:flex-row sm:items-center gap-4 sm:gap-8 pt-2">
                             <div className="flex items-center gap-2">
                                 <Switch
                                     id="destacado"
@@ -565,11 +566,11 @@ export default function TestimoniosIndex({ testimonios = [] }: Props) {
                             </div>
                         </div>
 
-                        <DialogFooter className="pt-4">
-                            <Button type="button" variant="outline" onClick={() => setIsModalOpen(false)}>
+                        <DialogFooter className="flex flex-col-reverse sm:flex-row gap-2 pt-4">
+                            <Button type="button" variant="outline" onClick={() => setIsModalOpen(false)} className="w-full sm:w-auto">
                                 {__('Cancelar')}
                             </Button>
-                            <Button type="submit" disabled={processing} className="bg-[#ff5a00] hover:bg-orange-600 font-bold">
+                            <Button type="submit" disabled={processing} className="w-full sm:w-auto bg-[#ff5a00] hover:bg-orange-600 font-bold">
                                 {editingItem ? __('Guardar Cambios') : __('Crear Testimonio')}
                             </Button>
                         </DialogFooter>
