@@ -23,7 +23,7 @@ class DatabaseSeeder extends Seeder
             RoleSeeder::class,
             EmpresaSeeder::class,
             SucursalSeeder::class,
-            Empresa9DashboardSeeder::class,
+            //Empresa9DashboardSeeder::class,
             UsersSeeder::class,
             SubscriptionPlansSeeder::class,
             TestimonioSeeder::class,
