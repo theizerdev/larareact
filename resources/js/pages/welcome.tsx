@@ -22,6 +22,9 @@ import {
     Mail,
     Clock,
     Loader2,
+    Star,
+    Quote,
+    TrendingUp,
 } from 'lucide-react';
 import React, { useState } from 'react';
 import { useTranslate } from '@/hooks/use-translate';
@@ -167,6 +170,9 @@ export default function Welcome() {
                             </a>
                             <a href="#pricing" className="hover:text-[#ff5a00] transition-colors">
                                 {__('Planes')}
+                            </a>
+                            <a href="#testimonials" className="hover:text-[#ff5a00] transition-colors">
+                                {__('Testimonios')}
                             </a>
                             <a href="#faq" className="hover:text-[#ff5a00] transition-colors">
                                 {__('FAQ')}
@@ -709,6 +715,110 @@ export default function Welcome() {
                                 </Link>
                             </div>
 
+                        </div>
+                    </div>
+                </section>
+
+                {/* ─── SECCIÓN DE CASOS DE ÉXITO & TESTIMONIOS ────────────────────────────── */}
+                <section id="testimonials" className="py-20 bg-gradient-to-b from-white to-slate-50 border-t border-slate-200">
+                    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-16">
+                        {/* Encabezado */}
+                        <div className="text-center space-y-4 max-w-3xl mx-auto">
+                            <span className="inline-flex items-center gap-2 text-xs font-bold font-mono uppercase tracking-widest text-emerald-700 bg-emerald-50 border border-emerald-200 px-3.5 py-1.5 rounded-full shadow-sm">
+                                <Star className="w-3.5 h-3.5 text-amber-500 fill-amber-500" />
+                                {__('Casos de Éxito & Opiniones')}
+                            </span>
+                            <h2 className="text-3xl sm:text-5xl font-black text-[#08264e] tracking-tight leading-tight">
+                                {__('Comercios que impulsan sus ventas con FixSale')}
+                            </h2>
+                            <p className="text-slate-600 text-base sm:text-lg">
+                                {__('Conoce cómo emprendedores y negocios reales eliminaron descuadres de caja, agilizaron el cobro y optimizaron sus inventarios.')}
+                            </p>
+                        </div>
+
+                        {/* Grid de Testimonios Dinámico desde Base de Datos */}
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-8 items-stretch">
+                            {((pageProps.testimonios && pageProps.testimonios.length > 0)
+                                ? pageProps.testimonios
+                                : [
+                                    {
+                                        nombre_cliente: 'Carlos Eduardo Mendoza',
+                                        empresa_cargo: 'Gerente General - Mendoza Tech & Repuestos S.A.',
+                                        ubicacion: 'Caracas, Venezuela',
+                                        avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80',
+                                        comentario: __('Antes perdíamos hasta 2 horas diarias cuadrando la caja en dólares y bolívares al cierre del día. Con FixSale, la tasa BCV se actualiza sola y los cierres Z se realizan en 30 segundos.'),
+                                        calificacion: 5,
+                                        metrica_destacada: __('Ahorro de 12 hrs/semana en administración'),
+                                    },
+                                    {
+                                        nombre_cliente: 'María Gabriela Rivas',
+                                        empresa_cargo: 'Propietaria - Minimarket El Samán',
+                                        ubicacion: 'Valencia, Venezuela',
+                                        avatar: 'https://images.unsplash.com/photo-1580489944761-15a19d654956?w=150&auto=format&fit=crop&q=80',
+                                        comentario: __('El punto de venta POS es ultrarrápido. Mis cajeros usan los atajos de teclado y la búsqueda por código de barras sin demoras. La auditoría de caja nos dio 100% de tranquilidad con el inventario.'),
+                                        calificacion: 5,
+                                        metrica_destacada: __('+35% velocidad en atención al cliente'),
+                                    },
+                                    {
+                                        nombre_cliente: 'Alejandro Torres',
+                                        empresa_cargo: 'Fundador - FixMobile Express',
+                                        ubicacion: 'Barquisimeto, Venezuela',
+                                        avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150&auto=format&fit=crop&q=80',
+                                        comentario: __('Gestionar el inventario, ventas a crédito y recibir las alertas de stock directamente en el sistema nos permitió expandir el negocio. El soporte técnico por WhatsApp responde inmediato.'),
+                                        calificacion: 5,
+                                        metrica_destacada: __('Expansión a 3 sucursales en 8 meses'),
+                                    },
+                                ]
+                            ).map((item: any, idx: number) => (
+                                <div
+                                    key={item.id || idx}
+                                    className="bg-white border border-slate-200 rounded-3xl p-8 shadow-lg hover:shadow-2xl transition-all flex flex-col justify-between space-y-6 relative group"
+                                >
+                                    <Quote className="w-10 h-10 text-slate-100 absolute top-6 right-6 transition-colors group-hover:text-orange-100 pointer-events-none" />
+
+                                    <div className="space-y-4 relative z-10">
+                                        {/* Estrellas */}
+                                        <div className="flex items-center gap-1">
+                                            {[...Array(item.calificacion || 5)].map((_, i) => (
+                                                <Star key={i} className="w-4 h-4 text-amber-400 fill-amber-400" />
+                                            ))}
+                                        </div>
+
+                                        {/* Texto Reseña */}
+                                        <p className="text-slate-700 text-sm leading-relaxed italic">
+                                            "{item.comentario}"
+                                        </p>
+
+                                        {/* Metric Pill */}
+                                        {item.metrica_destacada && (
+                                            <div className="inline-flex items-center gap-2 bg-emerald-50 border border-emerald-200 px-3 py-1 rounded-full text-emerald-800 text-[11px] font-bold">
+                                                <TrendingUp className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
+                                                <span>{item.metrica_destacada}</span>
+                                            </div>
+                                        )}
+                                    </div>
+
+                                    {/* Perfil Autor */}
+                                    <div className="flex items-center gap-3.5 border-t border-slate-100 pt-5 relative z-10">
+                                        {item.avatar ? (
+                                            <img
+                                                src={item.avatar}
+                                                alt={item.nombre_cliente}
+                                                className="w-11 h-11 rounded-full object-cover border-2 border-[#ff5a00]/30 shadow-sm"
+                                            />
+                                        ) : (
+                                            <div className="w-11 h-11 rounded-full bg-[#08264e] text-white flex items-center justify-center font-bold text-sm border-2 border-[#ff5a00]/30 shadow-sm">
+                                                {item.nombre_cliente?.charAt(0) || 'U'}
+                                            </div>
+                                        )}
+                                        <div>
+                                            <h4 className="text-sm font-bold text-[#08264e] leading-snug">{item.nombre_cliente}</h4>
+                                            {item.empresa_cargo && <p className="text-xs text-slate-500 font-medium">{item.empresa_cargo}</p>}
+                                            {item.ubicacion && <span className="text-[10px] text-slate-400 font-mono block mt-0.5">{item.ubicacion}</span>}
+                                        </div>
+                                    </div>
+                                </div>
+                            ))}
                         </div>
                     </div>
                 </section>

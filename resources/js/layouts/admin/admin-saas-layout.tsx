@@ -23,6 +23,8 @@ import {
     Link2,
     AlertTriangle,
     CreditCard,
+    Star,
+    MessageSquare,
 } from 'lucide-react';
 import { Building2, GitBranch, Briefcase, Calendar, Smartphone, Wallet, Boxes } from 'lucide-react';
 import * as React from 'react';
@@ -548,6 +550,11 @@ export default function AdminSaasLayout({
                                     title: 'Cuentas por Pagar (CxP)',
                                     href: '/admin/cuentas-por-pagar',
                                     permission: 'compras.cxp',
+                                },
+                                {
+                                    title: 'Testimonios & Reseñas',
+                                    href: '/admin/testimonios',
+                                    permission: 'dashboard.view',
                                 },
                             ].filter(item => hasPermission(item.permission));
 

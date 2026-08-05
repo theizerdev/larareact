@@ -6,8 +6,21 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 
 use App\Http\Controllers\ContactController;
+use App\Http\Controllers\Admin\TestimonioController;
+use App\Models\Testimonio;
+use Inertia\Inertia;
 
-Route::inertia('/', 'welcome')->name('home');
+Route::get('/', function () {
+    $testimonios = Testimonio::where('activo', true)
+        ->orderBy('destacado', 'desc')
+        ->orderBy('orden', 'asc')
+        ->get();
+
+    return Inertia::render('welcome', [
+        'testimonios' => $testimonios,
+    ]);
+})->name('home');
+
 Route::post('/contact-request', [ContactController::class, 'send'])->name('contact.send');
 
 Route::middleware(['guest'])->group(function () {
@@ -42,6 +55,9 @@ Route::middleware(['auth', 'verified'])->group(function () {
 
         Route::prefix('admin')->name('admin.')->group(function () {
             Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
+            Route::resource('testimonios', TestimonioController::class)->except(['create', 'edit', 'show']);
+            Route::patch('testimonios/{testimonio}/toggle-status', [TestimonioController::class, 'toggleStatus'])->name('testimonios.toggle-status');
+            Route::patch('testimonios/{testimonio}/toggle-featured', [TestimonioController::class, 'toggleFeatured'])->name('testimonios.toggle-featured');
         });
     });
 });

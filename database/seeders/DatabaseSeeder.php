@@ -26,6 +26,7 @@ class DatabaseSeeder extends Seeder
             Empresa9DashboardSeeder::class,
             UsersSeeder::class,
             SubscriptionPlansSeeder::class,
+            TestimonioSeeder::class,
         ]);
     }
 }
