@@ -880,7 +880,7 @@ export default function Welcome() {
                 <section id="contact" className="py-20 bg-slate-100/70 border-t border-slate-200 relative overflow-hidden">
                     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
                         <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 items-center">
-                            
+
                             {/* Columna Izquierda: Información de Asesoría */}
                             <div className="lg:col-span-5 space-y-6">
                                 <div className="inline-flex items-center gap-2 bg-blue-50 border border-blue-200 px-3.5 py-1.5 rounded-full text-[#08264e] text-xs font-extrabold tracking-wide uppercase shadow-sm">
@@ -929,16 +929,14 @@ export default function Welcome() {
 
                                     {submitFeedback && (
                                         <div
-                                            className={`p-4 rounded-xl text-xs font-bold flex items-center gap-3 border ${
-                                                submitFeedback.type === 'success'
-                                                    ? 'bg-emerald-50 text-emerald-800 border-emerald-200'
-                                                    : 'bg-rose-50 text-rose-800 border-rose-200'
-                                            }`}
+                                            className={`p-4 rounded-xl text-xs font-bold flex items-center gap-3 border ${submitFeedback.type === 'success'
+                                                ? 'bg-emerald-50 text-emerald-800 border-emerald-200'
+                                                : 'bg-rose-50 text-rose-800 border-rose-200'
+                                                }`}
                                         >
                                             <CheckCircle2
-                                                className={`w-5 h-5 shrink-0 ${
-                                                    submitFeedback.type === 'success' ? 'text-emerald-600' : 'text-rose-600'
-                                                }`}
+                                                className={`w-5 h-5 shrink-0 ${submitFeedback.type === 'success' ? 'text-emerald-600' : 'text-rose-600'
+                                                    }`}
                                             />
                                             <span>{submitFeedback.message}</span>
                                         </div>

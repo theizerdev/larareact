@@ -4,7 +4,7 @@ export default function AppLogo() {
     const { auth } = usePage().props as any;
     const logoMini = auth?.user?.empresa?.logo_mini;
     const logo = auth?.user?.empresa?.logo;
-    const companyLogo = logoMini || logo || "/image/logo/larareact_icon.png";
+    const companyLogo = logoMini || logo || "/image/logo/2.png";
     const companyName = auth?.user?.empresa?.razon_social;
 
     return (

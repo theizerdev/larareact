@@ -47,7 +47,7 @@
                 }
             }
             if (!$favicon) {
-                $favicon = '/image/logo/larareact_icon.png';
+                $favicon = '/image/logo/2.png';
             }
         @endphp
         <link rel="icon" href="{{ $favicon }}" type="image/png">

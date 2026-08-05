@@ -333,7 +333,7 @@ export default function AdminSaasLayout({
                         >
                             <div className="flex shrink-0 items-center justify-center bg-transparent">
                                 <img
-                                    src={(auth as any)?.user?.empresa?.logo_mini || (auth as any)?.user?.empresa?.logo || "/image/logo/larareact_icon.png"}
+                                    src={(auth as any)?.user?.empresa?.logo_mini || (auth as any)?.user?.empresa?.logo || "/image/logo/2.png"}
                                     alt={(auth as any)?.user?.empresa?.razon_social || "Fix Sale Icon"}
                                     className="h-8 w-auto object-contain [[data-sidebar=dark]_&]:brightness-0 [[data-sidebar=dark]_&]:invert dark:brightness-0 dark:invert"
                                 />
@@ -377,360 +377,360 @@ export default function AdminSaasLayout({
                     {/* Navigation */}
                     <nav className="flex-1 min-h-0 overflow-y-auto overflow-x-hidden custom-scrollbar space-y-1 px-3 py-2">
                         {!isSubscriptionExpiredPage && (
-                        <>
-                        <p
-                            className={cn(
-                                'px-3 pb-2 text-xs font-semibold tracking-wider text-slate-500 uppercase transition-opacity duration-300',
-                                collapsed && 'opacity-0',
-                            )}
-                        >
-                            {__('Platform')}
-                        </p>
-                        {mainNavItems
-                            .filter(item => {
-                                if (item.title === 'Dashboard') {
-                                    return hasPermission('dashboard.view');
+                            <>
+                                <p
+                                    className={cn(
+                                        'px-3 pb-2 text-xs font-semibold tracking-wider text-slate-500 uppercase transition-opacity duration-300',
+                                        collapsed && 'opacity-0',
+                                    )}
+                                >
+                                    {__('Platform')}
+                                </p>
+                                {mainNavItems
+                                    .filter(item => {
+                                        if (item.title === 'Dashboard') {
+                                            return hasPermission('dashboard.view');
+                                        }
+                                        return true;
+                                    })
+                                    .map((item) => (
+                                        <NavItem
+                                            key={item.title}
+                                            item={item}
+                                            collapsed={collapsed}
+                                        />
+                                    ))
                                 }
-                                return true;
-                            })
-                            .map((item) => (
-                                <NavItem
-                                    key={item.title}
-                                    item={item}
-                                    collapsed={collapsed}
-                                />
-                            ))
-                        }
-                        {/* Equipos Group */}
-                        {(() => {
-                            const equiposItems = [
-                                {
-                                    title: 'Categorías',
-                                    href: '/admin/categorias',
-                                    permission: 'categorias.view',
-                                },
-                                {
-                                    title: 'Marcas',
-                                    href: '/admin/marcas',
-                                    permission: 'marcas.view',
-                                },
-                                {
-                                    title: 'Familias',
-                                    href: '/admin/familias',
-                                    permission: 'familias.view',
-                                },
-                                {
-                                    title: 'Modelos',
-                                    href: '/admin/modelos',
-                                    permission: 'modelos.view',
-                                },
-                            ].filter(item => hasPermission(item.permission));
+                                {/* Equipos Group */}
+                                {(() => {
+                                    const equiposItems = [
+                                        {
+                                            title: 'Categorías',
+                                            href: '/admin/categorias',
+                                            permission: 'categorias.view',
+                                        },
+                                        {
+                                            title: 'Marcas',
+                                            href: '/admin/marcas',
+                                            permission: 'marcas.view',
+                                        },
+                                        {
+                                            title: 'Familias',
+                                            href: '/admin/familias',
+                                            permission: 'familias.view',
+                                        },
+                                        {
+                                            title: 'Modelos',
+                                            href: '/admin/modelos',
+                                            permission: 'modelos.view',
+                                        },
+                                    ].filter(item => hasPermission(item.permission));
 
-                            if (equiposItems.length === 0) return null;
+                                    if (equiposItems.length === 0) return null;
 
-                            return (
-                                <div className="pt-2">
-                                    <CollapsibleNavItem
-                                        title="Equipos"
-                                        icon={Smartphone}
-                                        collapsed={collapsed}
-                                        items={equiposItems}
-                                    />
-                                </div>
-                            );
-                        })()}
+                                    return (
+                                        <div className="pt-2">
+                                            <CollapsibleNavItem
+                                                title="Equipos"
+                                                icon={Smartphone}
+                                                collapsed={collapsed}
+                                                items={equiposItems}
+                                            />
+                                        </div>
+                                    );
+                                })()}
 
-                        {/* Inventario Group */}
-                        {(() => {
-                            const inventarioItems = [
-                                {
-                                    title: 'Productos & Catálogo',
-                                    href: '/admin/productos',
-                                    permission: 'productos.view',
-                                },
-                                {
-                                    title: 'Ajustes de Stock',
-                                    href: '/admin/inventario/ajustes',
-                                    permission: 'inventario.view',
-                                },
-                                {
-                                    title: 'Kardex de Movimientos',
-                                    href: '/admin/inventario/kardex',
-                                    permission: 'inventario.view',
-                                },
-                            ].filter(item => hasPermission(item.permission));
+                                {/* Inventario Group */}
+                                {(() => {
+                                    const inventarioItems = [
+                                        {
+                                            title: 'Productos & Catálogo',
+                                            href: '/admin/productos',
+                                            permission: 'productos.view',
+                                        },
+                                        {
+                                            title: 'Ajustes de Stock',
+                                            href: '/admin/inventario/ajustes',
+                                            permission: 'inventario.view',
+                                        },
+                                        {
+                                            title: 'Kardex de Movimientos',
+                                            href: '/admin/inventario/kardex',
+                                            permission: 'inventario.view',
+                                        },
+                                    ].filter(item => hasPermission(item.permission));
 
-                            if (inventarioItems.length === 0) return null;
+                                    if (inventarioItems.length === 0) return null;
 
-                            return (
-                                <div className="pt-2">
-                                    <CollapsibleNavItem
-                                        title="Inventario"
-                                        icon={Boxes}
-                                        collapsed={collapsed}
-                                        items={inventarioItems}
-                                    />
-                                </div>
-                            );
-                        })()}
+                                    return (
+                                        <div className="pt-2">
+                                            <CollapsibleNavItem
+                                                title="Inventario"
+                                                icon={Boxes}
+                                                collapsed={collapsed}
+                                                items={inventarioItems}
+                                            />
+                                        </div>
+                                    );
+                                })()}
 
-                        {/* Punto de Venta Group */}
-                        {(() => {
-                            const posItems = [
-                                {
-                                    title: 'Terminal POS',
-                                    href: '/admin/ventas/terminal',
-                                    permission: 'ventas.terminal',
-                                },
-                                {
-                                    title: 'Metas de Ventas',
-                                    href: '/admin/pos/metas',
-                                    permission: 'metas.view',
-                                },
-                                {
-                                    title: 'Historial de Ventas',
-                                    href: '/admin/ventas',
-                                    permission: 'ventas.view',
-                                },
-                                {
-                                    title: 'Flujo de Caja',
-                                    href: '/admin/cajas',
-                                    permission: 'cajas.view',
-                                },
-                                {
-                                    title: 'Servicios',
-                                    href: '/admin/servicios',
-                                    permission: 'servicios.view',
-                                },
-                                {
-                                    title: 'Clientes',
-                                    href: '/admin/clientes',
-                                    permission: 'clientes.view',
-                                },
-                                {
-                                    title: 'Alertas de Stock',
-                                    href: '/admin/stock-alerts',
-                                    permission: 'ventas.view',
-                                },
-                            ].filter(item => hasPermission(item.permission));
+                                {/* Punto de Venta Group */}
+                                {(() => {
+                                    const posItems = [
+                                        {
+                                            title: 'Terminal POS',
+                                            href: '/admin/ventas/terminal',
+                                            permission: 'ventas.terminal',
+                                        },
+                                        {
+                                            title: 'Metas de Ventas',
+                                            href: '/admin/pos/metas',
+                                            permission: 'metas.view',
+                                        },
+                                        {
+                                            title: 'Historial de Ventas',
+                                            href: '/admin/ventas',
+                                            permission: 'ventas.view',
+                                        },
+                                        {
+                                            title: 'Flujo de Caja',
+                                            href: '/admin/cajas',
+                                            permission: 'cajas.view',
+                                        },
+                                        {
+                                            title: 'Servicios',
+                                            href: '/admin/servicios',
+                                            permission: 'servicios.view',
+                                        },
+                                        {
+                                            title: 'Clientes',
+                                            href: '/admin/clientes',
+                                            permission: 'clientes.view',
+                                        },
+                                        {
+                                            title: 'Alertas de Stock',
+                                            href: '/admin/stock-alerts',
+                                            permission: 'ventas.view',
+                                        },
+                                    ].filter(item => hasPermission(item.permission));
 
-                            if (posItems.length === 0) return null;
+                                    if (posItems.length === 0) return null;
 
-                            return (
-                                <div className="pt-2">
-                                    <CollapsibleNavItem
-                                        title="Punto de Venta"
-                                        icon={Wallet}
-                                        collapsed={collapsed}
-                                        items={posItems}
-                                    />
-                                </div>
-                            );
-                        })()}
+                                    return (
+                                        <div className="pt-2">
+                                            <CollapsibleNavItem
+                                                title="Punto de Venta"
+                                                icon={Wallet}
+                                                collapsed={collapsed}
+                                                items={posItems}
+                                            />
+                                        </div>
+                                    );
+                                })()}
 
-                        {/* Administración Group */}
-                        {(() => {
-                            const adminItems = [
-                                {
-                                    title: 'Fondo de Mes',
-                                    href: '/admin/fondo-mensual',
-                                    permission: 'fondo_mensual.view',
-                                },
-                                {
-                                    title: 'Proveedores',
-                                    href: '/admin/proveedores',
-                                    permission: 'proveedores.view',
-                                },
-                                {
-                                    title: 'Compras de Insumos',
-                                    href: '/admin/compras',
-                                    permission: 'compras.view',
-                                },
-                                {
-                                    title: 'Cuentas por Pagar (CxP)',
-                                    href: '/admin/cuentas-por-pagar',
-                                    permission: 'compras.cxp',
-                                },
-                                {
-                                    title: 'Testimonios & Reseñas',
-                                    href: '/admin/testimonios',
-                                    permission: 'dashboard.view',
-                                },
-                            ].filter(item => hasPermission(item.permission));
+                                {/* Administración Group */}
+                                {(() => {
+                                    const adminItems = [
+                                        {
+                                            title: 'Fondo de Mes',
+                                            href: '/admin/fondo-mensual',
+                                            permission: 'fondo_mensual.view',
+                                        },
+                                        {
+                                            title: 'Proveedores',
+                                            href: '/admin/proveedores',
+                                            permission: 'proveedores.view',
+                                        },
+                                        {
+                                            title: 'Compras de Insumos',
+                                            href: '/admin/compras',
+                                            permission: 'compras.view',
+                                        },
+                                        {
+                                            title: 'Cuentas por Pagar (CxP)',
+                                            href: '/admin/cuentas-por-pagar',
+                                            permission: 'compras.cxp',
+                                        },
+                                        {
+                                            title: 'Testimonios & Reseñas',
+                                            href: '/admin/testimonios',
+                                            permission: 'dashboard.view',
+                                        },
+                                    ].filter(item => hasPermission(item.permission));
 
-                            if (adminItems.length === 0) return null;
+                                    if (adminItems.length === 0) return null;
 
-                            return (
-                                <div className="pt-2">
-                                    <CollapsibleNavItem
-                                        title="Administración"
-                                        icon={Briefcase}
-                                        collapsed={collapsed}
-                                        items={adminItems}
-                                    />
-                                </div>
-                            );
-                        })()}
-                        {(() => {
-                            const settingsItems = [
-                                {
-                                    title: 'Companies',
-                                    href: empresasIndex.url(),
-                                    permission: 'empresas.view',
-                                },
-                                {
-                                    title: 'Branches',
-                                    href: sucursalesIndex.url(),
-                                    permission: 'sucursales.view',
-                                },
-                                {
-                                    title: 'Countries',
-                                    href: paisesIndex.url(),
-                                    permission: 'paises.view',
-                                },
-                                {
-                                    title: 'Créditos',
-                                    href: '/admin/credit-config',
-                                    permission: 'credit_config.view',
-                                },
-                                {
-                                    title: 'Suscripción',
-                                    href: '/admin/monitoring/subscription',
-                                    permission: 'subscriptions.view',
-                                },
-                                {
-                                    title: 'Gestión Suscripciones',
-                                    href: '/admin/monitoring/subscription/manage',
-                                    permission: 'subscriptions.manage',
-                                },
-                                {
-                                    title: 'Appearance',
-                                    href: appearanceEdit().url,
-                                    permission: 'empresas.view',
-                                },
-                            ].filter(item => {
-                                if (item.superAdminOnly) {
-                                    return isSuperAdmin || auth?.user?.empresa_id === 1;
-                                }
-                                return hasPermission(item.permission);
-                            });
+                                    return (
+                                        <div className="pt-2">
+                                            <CollapsibleNavItem
+                                                title="Administración"
+                                                icon={Briefcase}
+                                                collapsed={collapsed}
+                                                items={adminItems}
+                                            />
+                                        </div>
+                                    );
+                                })()}
+                                {(() => {
+                                    const settingsItems = [
+                                        {
+                                            title: 'Companies',
+                                            href: empresasIndex.url(),
+                                            permission: 'empresas.view',
+                                        },
+                                        {
+                                            title: 'Branches',
+                                            href: sucursalesIndex.url(),
+                                            permission: 'sucursales.view',
+                                        },
+                                        {
+                                            title: 'Countries',
+                                            href: paisesIndex.url(),
+                                            permission: 'paises.view',
+                                        },
+                                        {
+                                            title: 'Créditos',
+                                            href: '/admin/credit-config',
+                                            permission: 'credit_config.view',
+                                        },
+                                        {
+                                            title: 'Suscripción',
+                                            href: '/admin/monitoring/subscription',
+                                            permission: 'subscriptions.view',
+                                        },
+                                        {
+                                            title: 'Gestión Suscripciones',
+                                            href: '/admin/monitoring/subscription/manage',
+                                            permission: 'subscriptions.manage',
+                                        },
+                                        {
+                                            title: 'Appearance',
+                                            href: appearanceEdit().url,
+                                            permission: 'empresas.view',
+                                        },
+                                    ].filter(item => {
+                                        if (item.superAdminOnly) {
+                                            return isSuperAdmin || auth?.user?.empresa_id === 1;
+                                        }
+                                        return hasPermission(item.permission);
+                                    });
 
-                            if (settingsItems.length === 0) return null;
+                                    if (settingsItems.length === 0) return null;
 
-                            return (
-                                <div className="pt-2">
-                                    <CollapsibleNavItem
-                                        title="Settings"
-                                        icon={Settings}
-                                        collapsed={collapsed}
-                                        items={settingsItems}
-                                    />
-                                </div>
-                            );
-                        })()}
+                                    return (
+                                        <div className="pt-2">
+                                            <CollapsibleNavItem
+                                                title="Settings"
+                                                icon={Settings}
+                                                collapsed={collapsed}
+                                                items={settingsItems}
+                                            />
+                                        </div>
+                                    );
+                                })()}
 
-                        {/* Integrations Group */}
-                        {(() => {
-                            const integrationsItems = [
-                                {
-                                    title: 'Catalog',
-                                    href: integrationsIndex.url(),
-                                    permission: 'integrations.view',
-                                },
-                            ].filter(item => hasPermission(item.permission));
+                                {/* Integrations Group */}
+                                {(() => {
+                                    const integrationsItems = [
+                                        {
+                                            title: 'Catalog',
+                                            href: integrationsIndex.url(),
+                                            permission: 'integrations.view',
+                                        },
+                                    ].filter(item => hasPermission(item.permission));
 
-                            if (integrationsItems.length === 0) return null;
+                                    if (integrationsItems.length === 0) return null;
 
-                            return (
-                                <div className="pt-2">
-                                    <CollapsibleNavItem
-                                        title="Integrations"
-                                        icon={Link2}
-                                        collapsed={collapsed}
-                                        items={integrationsItems}
-                                    />
-                                </div>
-                            );
-                        })()}
+                                    return (
+                                        <div className="pt-2">
+                                            <CollapsibleNavItem
+                                                title="Integrations"
+                                                icon={Link2}
+                                                collapsed={collapsed}
+                                                items={integrationsItems}
+                                            />
+                                        </div>
+                                    );
+                                })()}
 
-                        {/* Security Group */}
-                        {(() => {
-                            const securityItems = [
-                                {
-                                    title: 'Users',
-                                    href: usuariosIndex.url(),
-                                    permission: 'users.view',
-                                },
-                                {
-                                    title: 'Roles',
-                                    href: rolesIndex.url(),
-                                    permission: 'roles.view',
-                                },
-                            ].filter(item => hasPermission(item.permission));
+                                {/* Security Group */}
+                                {(() => {
+                                    const securityItems = [
+                                        {
+                                            title: 'Users',
+                                            href: usuariosIndex.url(),
+                                            permission: 'users.view',
+                                        },
+                                        {
+                                            title: 'Roles',
+                                            href: rolesIndex.url(),
+                                            permission: 'roles.view',
+                                        },
+                                    ].filter(item => hasPermission(item.permission));
 
-                            if (securityItems.length === 0) return null;
+                                    if (securityItems.length === 0) return null;
 
-                            return (
-                                <div className="pt-2">
-                                    <CollapsibleNavItem
-                                        title="Security"
-                                        icon={Shield}
-                                        collapsed={collapsed}
-                                        items={securityItems}
-                                    />
-                                </div>
-                            );
-                        })()}
+                                    return (
+                                        <div className="pt-2">
+                                            <CollapsibleNavItem
+                                                title="Security"
+                                                icon={Shield}
+                                                collapsed={collapsed}
+                                                items={securityItems}
+                                            />
+                                        </div>
+                                    );
+                                })()}
 
-                        {/* Monitoring Group */}
-                        {(() => {
-                            const monitoringItems = [
-                                {
-                                    title: 'Database',
-                                    href: dbMonitoringIndex.url(),
-                                    permission: 'monitoreo.database',
-                                },
-                                {
-                                    title: 'Server',
-                                    href: serverMonitoringIndex.url(),
-                                    permission: 'monitoreo.server',
-                                },
-                                {
-                                    title: 'User Sessions',
-                                    href: sessionMonitoringIndex.url(),
-                                    permission: 'monitoreo.logins',
-                                },
-                                {
-                                    title: 'System Logs',
-                                    href: logMonitoringIndex.url(),
-                                    permission: 'monitoreo.view',
-                                },
-                                {
-                                    title: 'Queue Monitor',
-                                    href: queuesMonitoringIndex.url(),
-                                    permission: 'monitoreo.view',
-                                },
-                                {
-                                    title: 'Scheduled Tasks',
-                                    href: tasksMonitoringIndex.url(),
-                                    permission: 'monitoreo.view',
-                                },
-                            ].filter(item => hasPermission(item.permission));
+                                {/* Monitoring Group */}
+                                {(() => {
+                                    const monitoringItems = [
+                                        {
+                                            title: 'Database',
+                                            href: dbMonitoringIndex.url(),
+                                            permission: 'monitoreo.database',
+                                        },
+                                        {
+                                            title: 'Server',
+                                            href: serverMonitoringIndex.url(),
+                                            permission: 'monitoreo.server',
+                                        },
+                                        {
+                                            title: 'User Sessions',
+                                            href: sessionMonitoringIndex.url(),
+                                            permission: 'monitoreo.logins',
+                                        },
+                                        {
+                                            title: 'System Logs',
+                                            href: logMonitoringIndex.url(),
+                                            permission: 'monitoreo.view',
+                                        },
+                                        {
+                                            title: 'Queue Monitor',
+                                            href: queuesMonitoringIndex.url(),
+                                            permission: 'monitoreo.view',
+                                        },
+                                        {
+                                            title: 'Scheduled Tasks',
+                                            href: tasksMonitoringIndex.url(),
+                                            permission: 'monitoreo.view',
+                                        },
+                                    ].filter(item => hasPermission(item.permission));
 
-                            if (monitoringItems.length === 0) return null;
+                                    if (monitoringItems.length === 0) return null;
 
-                            return (
-                                <div className="pt-2">
-                                    <CollapsibleNavItem
-                                        title="Monitoring"
-                                        icon={Activity}
-                                        collapsed={collapsed}
-                                        items={monitoringItems}
-                                    />
-                                </div>
-                            );
-                        })()}
-                        </>
+                                    return (
+                                        <div className="pt-2">
+                                            <CollapsibleNavItem
+                                                title="Monitoring"
+                                                icon={Activity}
+                                                collapsed={collapsed}
+                                                items={monitoringItems}
+                                            />
+                                        </div>
+                                    );
+                                })()}
+                            </>
                         )}
                     </nav>
 
@@ -889,8 +889,8 @@ export default function AdminSaasLayout({
                                 if (!sub || sub.is_exempt) return null;
                                 return (
                                     <Link href="/admin/monitoring/subscription">
-                                        <Badge 
-                                            variant={sub.status === 'active' ? 'default' : sub.on_trial ? 'outline' : 'destructive'} 
+                                        <Badge
+                                            variant={sub.status === 'active' ? 'default' : sub.on_trial ? 'outline' : 'destructive'}
                                             className="gap-1.5 font-semibold text-xs cursor-pointer hover:opacity-90 transition-opacity"
                                         >
                                             <Clock className="h-3 w-3" />

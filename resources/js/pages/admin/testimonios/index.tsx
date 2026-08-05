@@ -111,7 +111,7 @@ export default function TestimoniosIndex({ testimonios = [] }: Props) {
         if (empresa?.logo) {
             return empresa.logo;
         }
-        return '/5.png';
+        return '/image/logo/5.png';
     };
 
     const { data, setData, post, patch, put, delete: destroy, processing, reset } = useForm({
@@ -351,9 +351,8 @@ export default function TestimoniosIndex({ testimonios = [] }: Props) {
                                                     {[...Array(5)].map((_, i) => (
                                                         <Star
                                                             key={i}
-                                                            className={`w-3.5 h-3.5 ${
-                                                                i < item.calificacion ? 'text-amber-400 fill-amber-400' : 'text-slate-200'
-                                                            }`}
+                                                            className={`w-3.5 h-3.5 ${i < item.calificacion ? 'text-amber-400 fill-amber-400' : 'text-slate-200'
+                                                                }`}
                                                         />
                                                     ))}
                                                 </div>
@@ -512,7 +511,7 @@ export default function TestimoniosIndex({ testimonios = [] }: Props) {
                                 <Input
                                     id="avatar"
                                     type="text"
-                                    placeholder={__('Ej. /5.png o /storage/empresas/...')}
+                                    placeholder={__('Ej. //image/logo/5.pngo /storage/empresas/...')}
                                     value={data.avatar}
                                     onChange={(e) => setData('avatar', e.target.value)}
                                     className="flex-1 min-w-0"
