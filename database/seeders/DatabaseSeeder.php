@@ -24,9 +24,6 @@ class DatabaseSeeder extends Seeder
             EmpresaSeeder::class,
             SucursalSeeder::class,
             UsersSeeder::class,
-            EquiposInicialSeeder::class,
-            EspecificacionesSeeder::class,
-            ProductosSeeder::class,
         ]);
     }
 }

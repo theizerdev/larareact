@@ -17,15 +17,42 @@ class RoleController extends Controller
     {
         $search = $request->input('search');
         $user = auth()->user();
+        $isSuperAdmin = $this->isSuperAdmin($user);
         $empresaId = $user?->empresa_id;
 
         $query = Role::with('users');
 
-        if (! $user?->hasRole('Super Administrador')) {
-            $query->where(function ($q) use ($empresaId) {
-                $q->where('empresa_id', $empresaId)
-                  ->orWhereNull('empresa_id');
-            });
+        if (! $isSuperAdmin) {
+            $query->whereNotIn('name', ['Super Administrador', 'super-admin', 'Super Admin']);
+
+            if ($empresaId === 1) {
+                $query->where(function ($q) {
+                    $q->where('empresa_id', 1)
+                      ->orWhereNull('empresa_id');
+                });
+            } else {
+                if ($empresaId) {
+                    $hasTenantRoles = Role::where('empresa_id', $empresaId)->exists();
+                    if (! $hasTenantRoles) {
+                        setPermissionsTeamId($empresaId);
+                        $adminRole = Role::firstOrCreate([
+                            'name' => 'Administrador',
+                            'guard_name' => 'web',
+                            'empresa_id' => $empresaId,
+                        ]);
+                        $adminRole->syncPermissions(
+                            Permission::where('module', '!=', 'roles')
+                                ->where('name', '!=', 'subscriptions.manage')
+                                ->get()
+                        );
+                        if ($user && ! $user->hasRole('Administrador')) {
+                            $user->assignRole($adminRole);
+                        }
+                    }
+                }
+
+                $query->where('empresa_id', $empresaId);
+            }
         }
 
         if ($search) {

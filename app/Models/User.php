@@ -44,13 +44,38 @@ class User extends Authenticatable implements PasskeyUser
 {
     /** @use HasFactory<UserFactory> */
     use HasFactory, HasRoles, HasGroupRoles, Notifiable, PasskeyAuthenticatable, TwoFactorAuthenticatable {
-        HasRoles::hasRole insteadof HasGroupRoles;
+        HasRoles::hasRole as spatieHasRole;
         HasRoles::hasAnyRole insteadof HasGroupRoles;
         HasRoles::hasAllRoles insteadof HasGroupRoles;
         HasRoles::hasPermissionTo as spatieHasPermissionTo;
         HasGroupRoles::hasPermissionTo insteadof HasRoles;
         HasGroupRoles::hasAnyPermission insteadof HasRoles;
         HasGroupRoles::hasAllPermissions insteadof HasRoles;
+    }
+
+    /**
+     * Safe hasRole method that supports multi-tenancy and prevents RoleDoesNotExist exceptions.
+     */
+    public function hasRole($roles, ?string $guard = null): bool
+    {
+        if (is_string($roles) && in_array($roles, ['Super Administrador', 'super-admin', 'Super Admin'])) {
+            return $this->id === 1 || \Illuminate\Support\Facades\DB::table('model_has_roles')
+                ->join('roles', 'roles.id', '=', 'model_has_roles.role_id')
+                ->where('model_has_roles.model_id', $this->id)
+                ->whereIn('roles.name', ['Super Administrador', 'super-admin', 'Super Admin'])
+                ->exists();
+        }
+
+        try {
+            return $this->spatieHasRole($roles, $guard);
+        } catch (\Spatie\Permission\Exceptions\RoleDoesNotExist $e) {
+            return false;
+        }
+    }
+
+    public function isSuperAdmin(): bool
+    {
+        return $this->hasRole('Super Administrador');
     }
 
     /**

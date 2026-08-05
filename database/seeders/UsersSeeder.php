@@ -19,6 +19,7 @@ class UsersSeeder extends Seeder
         $roles = Role::all();
         $empresa = Empresa::first();
         $sucursal = Sucursal::first();
+        $empresaId = $empresa?->id ?? 1;
 
         foreach ($roles as $role) {
             $name = ucwords(str_replace(['-', '_'], ' ', $role->name));
@@ -31,12 +32,13 @@ class UsersSeeder extends Seeder
                 'username' => $username,
                 'password' => Hash::make('password'),
                 'status' => 'activo',
-                'empresa_id' => $empresa?->id,
+                'empresa_id' => $empresaId,
                 'sucursal_id' => $sucursal?->id,
                 'email_verified_at' => now(),
             ]);
 
-            $user->assignRole($role->name);
+            setPermissionsTeamId($role->empresa_id ?? $empresaId);
+            $user->assignRole($role);
         }
     }
 }
