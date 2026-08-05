@@ -34,20 +34,20 @@
 
         <!-- Structured Data (JSON-LD) for Google -->
         <script type="application/ld+json">
-        {
-          "@context": "https://schema.org",
-          "@type": "WebApplication",
-          "name": "{{ config('app.name', 'SERVITEC') }}",
-          "url": "{{ url('/') }}",
-          "applicationCategory": "BusinessApplication",
-          "operatingSystem": "All",
-          "description": "Sistema integral de Punto de Venta, Control de Inventario, Gestión de Servicio Técnico y Automatización por WhatsApp.",
-          "offers": {
-            "@type": "Offer",
-            "price": "0",
-            "priceCurrency": "USD"
-          }
-        }
+        {!! json_encode([
+            '@context' => 'https://schema.org',
+            '@type' => 'WebApplication',
+            'name' => config('app.name', 'SERVITEC'),
+            'url' => url('/'),
+            'applicationCategory' => 'BusinessApplication',
+            'operatingSystem' => 'All',
+            'description' => 'Sistema integral de Punto de Venta, Control de Inventario, Gestión de Servicio Técnico y Automatización por WhatsApp.',
+            'offers' => [
+                '@type' => 'Offer',
+                'price' => '0',
+                'priceCurrency' => 'USD',
+            ],
+        ], JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT) !!}
         </script>
 
         {{-- Inline script to detect system dark mode preference and apply it immediately --}}
