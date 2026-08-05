@@ -7,33 +7,33 @@
 import { toast } from 'sonner';
 
 /**
- * Dispara una notificación de éxito.
+ * Dispara una notificación de éxito con deduplicación por id.
  * @param {string} title - El mensaje a mostrar.
  */
 export function notifySuccess(title: string) {
-    toast.success(title);
+    toast.success(title, { id: title });
 }
 
 /**
- * Dispara una notificación de error.
+ * Dispara una notificación de error con deduplicación por id.
  * @param {string} title - El mensaje a mostrar.
  */
 export function notifyError(title: string) {
-    toast.error(title);
+    toast.error(title, { id: title });
 }
 
 /**
- * Dispara una notificación de advertencia.
+ * Dispara una notificación de advertencia con deduplicación por id.
  * @param {string} title - El mensaje a mostrar.
  */
 export function notifyWarning(title: string) {
-    toast.warning(title);
+    toast.warning(title, { id: title });
 }
 
 /**
- * Dispara una notificación de información.
+ * Dispara una notificación de información con deduplicación por id.
  * @param {string} title - El mensaje a mostrar.
  */
 export function notifyInfo(title: string) {
-    toast.info(title);
+    toast.info(title, { id: title });
 }
