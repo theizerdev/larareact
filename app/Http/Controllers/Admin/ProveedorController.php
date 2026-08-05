@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Http\Resources\ProveedorResource;
 use App\Models\Proveedor;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
@@ -38,7 +39,7 @@ class ProveedorController extends Controller
             ->withQueryString();
 
         return Inertia::render('admin/PointOfSale/Proveedores/Index', [
-            'proveedores' => $proveedores,
+            'proveedores' => ProveedorResource::collection($proveedores),
             'filters' => $request->only(['search', 'status', 'perPage']),
         ]);
     }

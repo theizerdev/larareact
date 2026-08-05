@@ -3,6 +3,8 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Http\Requests\Admin\SucursalRequest;
+use App\Http\Resources\SucursalResource;
 use App\Models\Empresa;
 use App\Models\Pais;
 use App\Models\Sucursal;
@@ -65,7 +67,7 @@ class SucursalController extends Controller
         ];
 
         return inertia('admin/Sucursales/Index', [
-            'sucursales' => $sucursales,
+            'sucursales' => SucursalResource::collection($sucursales),
             'stats' => $stats,
             'sucursalLimitInfo' => $sucursalLimitInfo,
             'empresas' => Empresa::where('status', true)
@@ -78,18 +80,9 @@ class SucursalController extends Controller
         ]);
     }
 
-    public function store(Request $request)
+    public function store(SucursalRequest $request)
     {
-        $validated = $request->validate([
-            'empresa_id' => 'required|exists:empresas,id',
-            'nombre' => 'required|string|max:255',
-            'telefono' => 'nullable|string|max:255',
-            'pais_telefono_id' => 'nullable|exists:pais,id',
-            'direccion' => 'nullable|string',
-            'latitud' => 'nullable|numeric',
-            'longitud' => 'nullable|numeric',
-            'status' => 'boolean',
-        ]);
+        $validated = $request->validated();
 
         $empresa = Empresa::find($validated['empresa_id']);
         if ($empresa && ! $empresa->isExemptFromSubscription()) {
@@ -121,18 +114,9 @@ class SucursalController extends Controller
         }
     }
 
-    public function update(Request $request, Sucursal $sucursal)
+    public function update(SucursalRequest $request, Sucursal $sucursal)
     {
-        $validated = $request->validate([
-            'empresa_id' => 'required|exists:empresas,id',
-            'nombre' => 'required|string|max:255',
-            'telefono' => 'nullable|string|max:255',
-            'pais_telefono_id' => 'nullable|exists:pais,id',
-            'direccion' => 'nullable|string',
-            'latitud' => 'nullable|numeric',
-            'longitud' => 'nullable|numeric',
-            'status' => 'boolean',
-        ]);
+        $validated = $request->validated();
 
         try {
             DB::transaction(function () use ($sucursal, $validated) {
