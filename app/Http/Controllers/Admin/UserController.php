@@ -87,6 +87,12 @@ class UserController extends Controller
             'users' => UserResource::collection($users),
             'stats' => $stats,
             'roles' => Role::whereNotIn('name', ['Super Administrador', 'super-admin', 'Super Admin'])
+                ->when(! $currentUser->hasRole('Super Administrador'), function ($q) use ($currentUser) {
+                    $q->where(function ($sq) use ($currentUser) {
+                        $sq->where('empresa_id', $currentUser->empresa_id)
+                           ->orWhereNull('empresa_id');
+                    });
+                })
                 ->orderBy('name')
                 ->get(['id', 'name']),
             'empresas' => Empresa::where('status', true)->orderBy('razon_social')->get(['id', 'razon_social']),

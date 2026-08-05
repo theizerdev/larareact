@@ -50,6 +50,30 @@ class HandleInertiaRequests extends Middleware
         $countryCode = strtoupper($pais?->codigo_iso2 ?? 'MX');
         $isVenezuela = $countryCode === 'VE' || ($pais && str_contains(strtolower($pais->nombre), 'venezuela'));
 
+        $user = $request->user();
+        $isSuperAdmin = false;
+        $userRoles = [];
+        $userPermissions = [];
+
+        if ($user) {
+            $isSuperAdmin = $user->id === 1
+                || $user->hasRole('Super Administrador')
+                || $user->hasRole('super-admin')
+                || $user->hasRole('Super Admin')
+                || \Illuminate\Support\Facades\DB::table('model_has_roles')
+                    ->join('roles', 'roles.id', '=', 'model_has_roles.role_id')
+                    ->where('model_has_roles.model_id', $user->id)
+                    ->whereIn('roles.name', ['Super Administrador', 'super-admin', 'Super Admin'])
+                    ->exists();
+
+            $userRoles = $user->getRoleNames()->toArray();
+            if ($isSuperAdmin && ! in_array('Super Administrador', $userRoles)) {
+                $userRoles[] = 'Super Administrador';
+            }
+
+            $userPermissions = $user->getAllPermissions()->pluck('name')->toArray();
+        }
+
         return [
             ...parent::share($request),
             'name' => config('app.name'),
@@ -58,19 +82,19 @@ class HandleInertiaRequests extends Middleware
             'countryCode' => $countryCode,
             'isVenezuela' => $isVenezuela,
             'auth' => [
-                'user' => $request->user() ? array_merge($request->user()->toArray(), [
-                    'empresa' => $request->user()->empresa ? [
-                        'id' => $request->user()->empresa->id,
-                        'logo' => $request->user()->empresa->logo,
-                        'logo_mini' => $request->user()->empresa->logo_mini,
-                        'mapbox_api_key' => $request->user()->empresa->mapbox_api_key,
-                        'mapbox_active' => (bool) $request->user()->empresa->mapbox_active,
-                        'google_maps_api_key' => $request->user()->empresa->google_maps_api_key,
-                        'google_maps_active' => (bool) $request->user()->empresa->google_maps_active,
+                'user' => $user ? array_merge($user->toArray(), [
+                    'empresa' => $user->empresa ? [
+                        'id' => $user->empresa->id,
+                        'logo' => $user->empresa->logo,
+                        'logo_mini' => $user->empresa->logo_mini,
+                        'mapbox_api_key' => $user->empresa->mapbox_api_key,
+                        'mapbox_active' => (bool) $user->empresa->mapbox_active,
+                        'google_maps_api_key' => $user->empresa->google_maps_api_key,
+                        'google_maps_active' => (bool) $user->empresa->google_maps_active,
                     ] : null,
-                    'permissions' => $request->user()->getAllPermissions()->pluck('name')->toArray(),
-                    'roles' => $request->user()->getRoleNames()->toArray(),
-                    'is_super_admin' => $request->user()->hasRole('Super Administrador'),
+                    'permissions' => $userPermissions,
+                    'roles' => $userRoles,
+                    'is_super_admin' => $isSuperAdmin,
                 ]) : null,
             ],
             'sidebarOpen' => ! $request->hasCookie('sidebar_state') || $request->cookie('sidebar_state') === 'true',

@@ -258,7 +258,10 @@ export default function AdminSaasLayout({
     const userPermissions = (auth as any)?.user?.permissions || [];
     const isSuperAdmin = Boolean(
         (auth as any)?.user?.is_super_admin ||
-        (auth as any)?.user?.roles?.includes('Super Administrador')
+        (auth as any)?.user?.roles?.includes('Super Administrador') ||
+        (auth as any)?.user?.roles?.includes('super-admin') ||
+        (auth as any)?.user?.roles?.includes('Super Admin') ||
+        (auth as any)?.user?.id === 1
     );
     const userEmpresaId = (auth as any)?.user?.empresa_id;
     const isSubscriptionExpiredPage = page.url.includes('/subscription/expired') || ((auth as any)?.user?.empresa?.subscription_status === 'expired' && !(auth as any)?.user?.empresa?.is_exempt);

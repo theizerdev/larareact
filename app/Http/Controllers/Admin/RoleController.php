@@ -16,8 +16,17 @@ class RoleController extends Controller
     public function index(Request $request)
     {
         $search = $request->input('search');
+        $user = auth()->user();
+        $empresaId = $user?->empresa_id;
 
         $query = Role::with('users');
+
+        if (! $user?->hasRole('Super Administrador')) {
+            $query->where(function ($q) use ($empresaId) {
+                $q->where('empresa_id', $empresaId)
+                  ->orWhereNull('empresa_id');
+            });
+        }
 
         if ($search) {
             $query->where('name', 'like', "%{$search}%");
@@ -72,12 +81,12 @@ class RoleController extends Controller
                 'more_permissions_count' => $morePermissionsCount,
                 // Todos los permisos para el modal de edición
                 'all_permissions' => $allPermissions,
-                'is_super_admin' => $role->name === 'Super Admin',
+                'is_super_admin' => $role->name === 'Super Admin' || $role->name === 'Super Administrador',
             ];
         });
 
         $stats = [
-            'total' => Role::count(),
+            'total' => count($roles),
             'permissions_total' => Permission::count(),
         ];
 
@@ -93,14 +102,27 @@ class RoleController extends Controller
 
     public function store(Request $request)
     {
+        $user = auth()->user();
+        $empresaId = $user?->empresa_id;
+
         $validated = $request->validate([
-            'name' => 'required|string|unique:roles,name|max:255',
+            'name' => [
+                'required',
+                'string',
+                'max:255',
+                \Illuminate\Validation\Rule::unique('roles', 'name')->where('empresa_id', $empresaId),
+            ],
             'permissions' => 'array',
             'permissions.*' => 'exists:permissions,name',
         ]);
 
-        DB::transaction(function () use ($validated) {
-            $role = Role::create(['name' => $validated['name'], 'guard_name' => 'web']);
+        DB::transaction(function () use ($validated, $empresaId) {
+            $role = Role::create([
+                'name' => $validated['name'],
+                'guard_name' => 'web',
+                'empresa_id' => $empresaId,
+            ]);
+
             if (isset($validated['permissions'])) {
                 $role->syncPermissions($validated['permissions']);
             }
@@ -111,13 +133,22 @@ class RoleController extends Controller
 
     public function update(Request $request, Role $role)
     {
-        // Don't allow changing the name of Super Admin if you want to protect it
-        if ($role->name === 'Super Admin' && $request->name !== 'Super Admin') {
-            return back()->withErrors(['name' => 'No puedes cambiar el nombre del Super Admin.']);
+        $user = auth()->user();
+        $empresaId = $user?->empresa_id;
+
+        if (in_array($role->name, ['Super Admin', 'Super Administrador'])) {
+            return back()->withErrors(['name' => 'No puedes cambiar el nombre del Super Administrador.']);
         }
 
         $validated = $request->validate([
-            'name' => 'required|string|max:255|unique:roles,name,'.$role->id,
+            'name' => [
+                'required',
+                'string',
+                'max:255',
+                \Illuminate\Validation\Rule::unique('roles', 'name')
+                    ->where('empresa_id', $empresaId)
+                    ->ignore($role->id),
+            ],
             'permissions' => 'array',
             'permissions.*' => 'exists:permissions,name',
         ]);
@@ -137,8 +168,8 @@ class RoleController extends Controller
 
     public function destroy(Role $role)
     {
-        if ($role->name === 'Super Admin') {
-            return back()->withErrors(['error' => 'No puedes eliminar el rol Super Admin.']);
+        if (in_array($role->name, ['Super Admin', 'Super Administrador'])) {
+            return back()->withErrors(['error' => 'No puedes eliminar el rol Super Administrador.']);
         }
 
         $role->delete();
