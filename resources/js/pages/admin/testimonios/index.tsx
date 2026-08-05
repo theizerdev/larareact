@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Head, useForm } from '@inertiajs/react';
+import { Head, useForm, usePage } from '@inertiajs/react';
 import AdminLayout from '@/layouts/admin-layout';
 import {
     Star,
@@ -11,12 +11,17 @@ import {
     MoreVertical,
     MessageSquare,
     CheckCircle2,
-    XCircle,
+    Search,
+    RefreshCw,
+    SlidersHorizontal,
 } from 'lucide-react';
 import type { BreadcrumbItem } from '@/types';
 import { useTranslate } from '@/hooks/use-translate';
 
-// Importación de componentes de UI basados en Radix UI / Shadcn
+// Componentes del Sistema
+import { Breadcrumbs } from '@/components/breadcrumbs';
+import { ModuleHeader } from '@/components/module-header';
+import { StatCard } from '@/components/stat-card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
@@ -24,7 +29,7 @@ import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
 import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+import { Card, CardContent } from '@/components/ui/card';
 import {
     Table,
     TableHeader,
@@ -85,21 +90,35 @@ interface Props {
 }
 
 const breadcrumbs: BreadcrumbItem[] = [
-    { title: 'Dashboard', href: '/admin/dashboard' },
+    { title: 'Panel de control', href: '/admin/dashboard' },
     { title: 'Testimonios', href: '/admin/testimonios' },
 ];
 
 export default function TestimoniosIndex({ testimonios = [] }: Props) {
     const { __ } = useTranslate();
+    const { auth } = usePage().props as any;
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [editingItem, setEditingItem] = useState<Testimonio | null>(null);
     const [deleteId, setDeleteId] = useState<number | null>(null);
+    const [search, setSearch] = useState('');
+    const [statusFilter, setStatusFilter] = useState('all');
+
+    const getCompanyLogo = () => {
+        const empresa = auth?.user?.empresa;
+        if (empresa?.logo_mini) {
+            return empresa.logo_mini;
+        }
+        if (empresa?.logo) {
+            return empresa.logo;
+        }
+        return '/5.png';
+    };
 
     const { data, setData, post, patch, put, delete: destroy, processing, reset } = useForm({
-        nombre_cliente: '',
-        empresa_cargo: '',
-        ubicacion: '',
-        avatar: '',
+        nombre_cliente: auth?.user?.name || '',
+        empresa_cargo: auth?.user?.empresa?.nombre_comercial || auth?.user?.empresa?.nombre ? `Propietario - ${auth?.user?.empresa?.nombre_comercial || auth?.user?.empresa?.nombre}` : '',
+        ubicacion: auth?.user?.empresa?.direccion || '',
+        avatar: getCompanyLogo(),
         comentario: '',
         calificacion: 5,
         metrica_destacada: '',
@@ -108,9 +127,33 @@ export default function TestimoniosIndex({ testimonios = [] }: Props) {
         orden: 0,
     });
 
+    // Filtrado local
+    const filteredTestimonios = testimonios.filter((item) => {
+        const matchesSearch =
+            item.nombre_cliente.toLowerCase().includes(search.toLowerCase()) ||
+            (item.empresa_cargo && item.empresa_cargo.toLowerCase().includes(search.toLowerCase())) ||
+            item.comentario.toLowerCase().includes(search.toLowerCase());
+
+        if (statusFilter === 'active') return matchesSearch && item.activo;
+        if (statusFilter === 'featured') return matchesSearch && item.destacado;
+        if (statusFilter === 'inactive') return matchesSearch && !item.activo;
+        return matchesSearch;
+    });
+
     const openCreateModal = () => {
         setEditingItem(null);
-        reset();
+        setData({
+            nombre_cliente: auth?.user?.name || '',
+            empresa_cargo: auth?.user?.empresa?.nombre_comercial || auth?.user?.empresa?.nombre ? `Propietario - ${auth?.user?.empresa?.nombre_comercial || auth?.user?.empresa?.nombre}` : '',
+            ubicacion: auth?.user?.empresa?.direccion || '',
+            avatar: getCompanyLogo(),
+            comentario: '',
+            calificacion: 5,
+            metrica_destacada: '',
+            destacado: true,
+            activo: true,
+            orden: 0,
+        });
         setIsModalOpen(true);
     };
 
@@ -171,31 +214,85 @@ export default function TestimoniosIndex({ testimonios = [] }: Props) {
             <Head title={__('Gestión de Testimonios')} />
 
             <div className="space-y-6">
-                {/* Header Superior con Radix Card */}
-                <Card>
-                    <CardHeader className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 pb-6">
-                        <div>
-                            <CardTitle className="text-2xl font-black text-[#08264e] flex items-center gap-2">
-                                <Star className="w-6 h-6 text-amber-500 fill-amber-500" />
-                                <span>{__('Gestión de Testimonios & Reseñas')}</span>
-                            </CardTitle>
-                            <CardDescription className="mt-1">
-                                {__('Administra las opiniones de clientes que se muestran dinámicamente en la Landing Page.')}
-                            </CardDescription>
-                        </div>
+                {/* 1. Header Banner idéntico al sistema */}
+                <ModuleHeader
+                    icon={<Star className="h-6 w-6 text-white" />}
+                    title={__('Gestión de Testimonios & Reseñas')}
+                    description={__('Administre las opiniones de clientes que se muestran dinámicamente en la Landing Page.')}
+                    colorClassName="bg-[#4F46E5]"
+                >
+                    <Button
+                        onClick={openCreateModal}
+                        className="gap-2 text-slate-900 bg-white hover:bg-slate-100 font-bold shadow-sm"
+                    >
+                        <Plus className="w-4 h-4" />
+                        <span>{__('Nuevo Testimonio')}</span>
+                    </Button>
+                </ModuleHeader>
 
-                        <Button
-                            onClick={openCreateModal}
-                            className="bg-[#ff5a00] hover:bg-orange-600 text-white font-bold shrink-0 gap-2 shadow-md shadow-orange-500/20"
-                        >
-                            <Plus className="w-4 h-4" />
-                            <span>{__('Nuevo Testimonio')}</span>
-                        </Button>
-                    </CardHeader>
-                </Card>
+                {/* 2. Tarjetas de Estadísticas (StatCard) */}
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                    <StatCard
+                        icon={<Star className="w-6 h-6" />}
+                        title={__('TOTAL TESTIMONIOS')}
+                        value={testimonios.length.toString()}
+                        colorClassName="bg-amber-100 text-amber-600 dark:bg-amber-950 dark:text-amber-400"
+                    />
+                    <StatCard
+                        icon={<CheckCircle2 className="w-6 h-6" />}
+                        title={__('PUBLICADOS')}
+                        value={testimonios.filter((t) => t.activo).length.toString()}
+                        colorClassName="bg-emerald-100 text-emerald-600 dark:bg-emerald-950 dark:text-emerald-400"
+                    />
+                    <StatCard
+                        icon={<TrendingUp className="w-6 h-6" />}
+                        title={__('DESTACADOS LANDING')}
+                        value={testimonios.filter((t) => t.destacado).length.toString()}
+                        colorClassName="bg-indigo-100 text-indigo-600 dark:bg-indigo-950 dark:text-indigo-400"
+                    />
+                </div>
 
-                {/* Tabla de Registros Radix UI Table */}
-                <Card>
+                {/* 3. Barra de Búsqueda y Filtros */}
+                <div className="bg-white dark:bg-slate-900 p-4 rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm flex flex-wrap items-center gap-3">
+                    <div className="relative flex-1 min-w-[200px]">
+                        <Search className="w-4 h-4 absolute left-3 top-3 text-slate-400" />
+                        <Input
+                            placeholder={__('Buscar testimonio o cliente...')}
+                            value={search}
+                            onChange={(e) => setSearch(e.target.value)}
+                            className="pl-9"
+                        />
+                    </div>
+
+                    <div className="w-56">
+                        <Select value={statusFilter} onValueChange={setStatusFilter}>
+                            <SelectTrigger>
+                                <SelectValue placeholder={__('Filtrar Estado')} />
+                            </SelectTrigger>
+                            <SelectContent>
+                                <SelectItem value="all">{__('Todos los Testimonios')}</SelectItem>
+                                <SelectItem value="active">{__('Solo Publicados')}</SelectItem>
+                                <SelectItem value="featured">{__('Solo Destacados')}</SelectItem>
+                                <SelectItem value="inactive">{__('Solo Ocultos')}</SelectItem>
+                            </SelectContent>
+                        </Select>
+                    </div>
+
+                    <Button
+                        variant="outline"
+                        size="icon"
+                        onClick={() => {
+                            setSearch('');
+                            setStatusFilter('all');
+                        }}
+                        title={__('Restablecer Filtros')}
+                    >
+                        <RefreshCw className="w-4 h-4 text-slate-600" />
+                    </Button>
+                </div>
+
+                {/* 4. Tabla de Registros */}
+                <Card className="rounded-xl border border-slate-200 shadow-sm">
                     <CardContent className="p-0 overflow-hidden">
                         <Table>
                             <TableHeader className="bg-slate-50">
@@ -206,18 +303,18 @@ export default function TestimoniosIndex({ testimonios = [] }: Props) {
                                     <TableHead className="font-bold text-xs uppercase text-slate-700 text-center">{__('Métrica')}</TableHead>
                                     <TableHead className="font-bold text-xs uppercase text-slate-700 text-center">{__('Destacado (Landing)')}</TableHead>
                                     <TableHead className="font-bold text-xs uppercase text-slate-700 text-center">{__('Estado')}</TableHead>
-                                    <TableHead className="font-bold text-xs uppercase text-slate-700 text-right">{__('Acciones')}</TableHead>
+                                    <TableHead className="font-bold text-xs uppercase text-slate-700 text-right">{__('Acción')}</TableHead>
                                 </TableRow>
                             </TableHeader>
                             <TableBody>
-                                {testimonios.length === 0 ? (
+                                {filteredTestimonios.length === 0 ? (
                                     <TableRow>
-                                        <TableCell colSpan={7} className="h-32 text-center text-slate-400 text-xs">
+                                        <TableCell colSpan={7} className="h-32 text-center text-slate-400 text-xs font-medium">
                                             {__('No hay testimonios registrados actualmente.')}
                                         </TableCell>
                                     </TableRow>
                                 ) : (
-                                    testimonios.map((item) => (
+                                    filteredTestimonios.map((item) => (
                                         <TableRow key={item.id} className="hover:bg-slate-50/80 transition-colors">
                                             {/* Cliente & Avatar */}
                                             <TableCell>
@@ -226,7 +323,7 @@ export default function TestimoniosIndex({ testimonios = [] }: Props) {
                                                         {item.avatar ? (
                                                             <AvatarImage src={item.avatar} alt={item.nombre_cliente} />
                                                         ) : null}
-                                                        <AvatarFallback className="bg-[#08264e] text-white font-bold">
+                                                        <AvatarFallback className="bg-[#08264e] text-white font-bold text-xs">
                                                             {item.nombre_cliente?.charAt(0) || 'U'}
                                                         </AvatarFallback>
                                                     </Avatar>
@@ -399,16 +496,27 @@ export default function TestimoniosIndex({ testimonios = [] }: Props) {
                             </div>
                         </div>
 
-                        {/* URL Avatar */}
+                        {/* URL Avatar / Logo Preview */}
                         <div className="space-y-1.5">
-                            <Label htmlFor="avatar" className="font-bold text-xs">{__('URL del Avatar / Foto')}</Label>
-                            <Input
-                                id="avatar"
-                                type="url"
-                                placeholder="https://images.unsplash.com/..."
-                                value={data.avatar}
-                                onChange={(e) => setData('avatar', e.target.value)}
-                            />
+                            <Label htmlFor="avatar" className="font-bold text-xs">{__('Avatar / Logo de Empresa')}</Label>
+                            <div className="flex items-center gap-3">
+                                <Avatar className="w-10 h-10 border border-slate-200 shrink-0">
+                                    {data.avatar ? (
+                                        <AvatarImage src={data.avatar} alt="Logo Preview" />
+                                    ) : null}
+                                    <AvatarFallback className="bg-[#08264e] text-white font-bold text-xs">
+                                        {data.nombre_cliente?.charAt(0) || 'U'}
+                                    </AvatarFallback>
+                                </Avatar>
+                                <Input
+                                    id="avatar"
+                                    type="text"
+                                    placeholder={__('Ej. /5.png o /storage/empresas/...')}
+                                    value={data.avatar}
+                                    onChange={(e) => setData('avatar', e.target.value)}
+                                    className="flex-1"
+                                />
+                            </div>
                         </div>
 
                         {/* Métrica Destacada */}
