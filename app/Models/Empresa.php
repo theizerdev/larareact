@@ -20,7 +20,7 @@ class Empresa extends Model
     public function getActivitylogOptions(): LogOptions
     {
         return LogOptions::defaults()
-            ->logOnly(['razon_social', 'documento', 'status', 'telefono', 'email'])
+            ->logOnly(['razon_social', 'nombre_comercial', 'documento', 'status', 'telefono', 'email'])
             ->logOnlyDirty()
             ->setDescriptionForEvent(fn (string $eventName) => static::getSpanishDescription($eventName));
     }
@@ -28,6 +28,7 @@ class Empresa extends Model
     protected $fillable = [
         'pais_id',
         'razon_social',
+        'nombre_comercial',
         'documento',
         'pais_telefono_id',
         'logo',

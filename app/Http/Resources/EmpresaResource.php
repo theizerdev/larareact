@@ -17,6 +17,7 @@ class EmpresaResource extends JsonResource
         return [
             'id' => $this->id,
             'razon_social' => $this->razon_social,
+            'nombre_comercial' => $this->nombre_comercial,
             'documento' => $this->documento,
             'email' => $this->email,
             'telefono' => $this->telefono,

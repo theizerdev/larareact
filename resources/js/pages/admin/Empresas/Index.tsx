@@ -68,6 +68,7 @@ interface Empresa {
     id: number;
     pais_id?: number | null;
     razon_social: string;
+    nombre_comercial?: string | null;
     documento: string;
     logo?: string | null;
     logo_mini?: string | null;
@@ -101,6 +102,7 @@ interface EmpresasPageProps {
 
 const initialForm = {
     razon_social: '',
+    nombre_comercial: '',
     documento: '',
     representante_legal: '',
     status: true as boolean,
@@ -199,6 +201,7 @@ export default function EmpresasIndexPage({ auth, empresas, stats, paises, filte
         setEditingEmpresa(empresa);
         setData({
             razon_social:        empresa.razon_social || '',
+            nombre_comercial:    empresa.nombre_comercial || '',
             documento:           empresa.documento || '',
             representante_legal: empresa.representante_legal || '',
             status:              empresa.status,
@@ -337,6 +340,9 @@ formData.append('logo_mini', logoMiniFile);
                     )}
                     <div>
                         <p className="font-medium text-sm">{empresa.razon_social}</p>
+                        {empresa.nombre_comercial && (
+                            <p className="text-xs text-indigo-500 dark:text-indigo-400 font-medium">{empresa.nombre_comercial}</p>
+                        )}
                         <p className="text-xs text-muted-foreground">{empresa.documento}</p>
                     </div>
                 </div>
@@ -564,15 +570,30 @@ formData.append('logo_mini', logoMiniFile);
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                     {/* Razón Social */}
                                     <div className="md:col-span-2">
-                                        <Label htmlFor="razon_social">{__('Company Name')} *</Label>
+                                        <Label htmlFor="razon_social">{__('Company Name')} / Razón Social *</Label>
                                         <Input
                                             id="razon_social"
                                             value={data.razon_social}
                                             onChange={(e) => setData('razon_social', e.target.value)}
-                                            placeholder="Ej: Empresa S.A. de C.V."
+                                            placeholder="Ej: Restaurante y Café Bajo el Reloj C.A."
                                         />
                                         {errors.razon_social && (
                                             <p className="text-red-500 text-xs mt-1">{errors.razon_social}</p>
+                                        )}
+                                    </div>
+
+                                    {/* Nombre Comercial */}
+                                    <div className="md:col-span-2">
+                                        <Label htmlFor="nombre_comercial">Nombre Comercial / Marca <span className="text-muted-foreground text-xs">(Opcional)</span></Label>
+                                        <Input
+                                            id="nombre_comercial"
+                                            value={data.nombre_comercial || ''}
+                                            onChange={(e) => setData('nombre_comercial', e.target.value)}
+                                            placeholder="Ej: Bajo el Reloj"
+                                        />
+                                        <p className="text-muted-foreground text-xs mt-1">Se usará como nombre de la instancia de WhatsApp (agrupado, sin espacios).</p>
+                                        {errors.nombre_comercial && (
+                                            <p className="text-red-500 text-xs mt-1">{errors.nombre_comercial}</p>
                                         )}
                                     </div>
 

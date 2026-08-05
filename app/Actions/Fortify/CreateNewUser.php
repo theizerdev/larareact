@@ -28,9 +28,9 @@ class CreateNewUser implements CreatesNewUsers
     {
         Validator::make($input, [
             'company_name' => ['required', 'string', 'max:255'],
-            'company_document' => ['nullable', 'string', 'max:255'],
+            'nombre_comercial' => ['nullable', 'string', 'max:255'],
             'representante_legal' => ['required', 'string', 'max:255'],
-            'email' => ['required', 'email', 'max:255', 'unique:users,email'],
+            'email' => ['required', 'string', 'email', 'max:255', 'unique:users,email'],
             'password' => $this->passwordRules(),
             'company_phone' => ['nullable', 'string', 'max:255'],
             'pais_id' => ['nullable', 'exists:pais,id'],
@@ -44,12 +44,14 @@ class CreateNewUser implements CreatesNewUsers
         return DB::transaction(function () use ($input) {
             $phone = $input['company_phone'] ?? ($input['phone'] ?? null);
             $paisId = $input['pais_id'] ?? ($input['pais_telefono_id'] ?? null);
+            $nombreComercial = ! empty($input['nombre_comercial']) ? trim($input['nombre_comercial']) : null;
 
             // 1. Crear Empresa con plan de prueba de 7 días
             $documento = !empty($input['company_document']) ? $input['company_document'] : 'S/D-' . Str::upper(Str::random(6));
 
             $empresa = Empresa::create([
                 'razon_social' => $input['company_name'],
+                'nombre_comercial' => $nombreComercial,
                 'documento' => $documento,
                 'representante_legal' => $input['representante_legal'],
                 'telefono' => $phone,
@@ -64,8 +66,15 @@ class CreateNewUser implements CreatesNewUsers
                 'max_sucursales' => 1,
             ]);
 
+            // Crear el nombre de instancia agrupado y limpio para WhatsApp (ej: "Bajo el Reloj" -> "bajoelreloj")
+            $baseForInstance = $nombreComercial ?: $input['company_name'];
+            $cleanInstanceName = preg_replace('/[^a-zA-Z0-9_-]/', '', str_replace(['/', ' '], '', strtolower($baseForInstance)));
+            if (empty($cleanInstanceName)) {
+                $cleanInstanceName = 'empresa_'.$empresa->id;
+            }
+
             $empresa->update([
-                'whatsapp_instance' => $documento,
+                'whatsapp_instance' => $cleanInstanceName,
             ]);
 
             $trialPlan = \App\Models\SubscriptionPlan::where('nombre', 'like', '%Prueba%')->first()

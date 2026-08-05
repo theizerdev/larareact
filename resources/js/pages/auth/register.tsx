@@ -54,10 +54,23 @@ export default function Register({ passwordRules, paises = [] }: Props) {
                                         required
                                         autoFocus
                                         tabIndex={1}
-                                        placeholder="Ej: Mi Empresa C.A."
+                                        placeholder="Ej: Restaurante y Café Bajo el Reloj C.A."
                                         className="h-10"
                                     />
                                     <InputError message={errors.company_name} />
+                                </div>
+
+                                <div className="grid gap-2">
+                                    <Label htmlFor="nombre_comercial" className="text-sm font-medium">Nombre Comercial / Marca (Opcional)</Label>
+                                    <Input
+                                        id="nombre_comercial"
+                                        name="nombre_comercial"
+                                        type="text"
+                                        tabIndex={2}
+                                        placeholder="Ej: Bajo el Reloj"
+                                        className="h-10"
+                                    />
+                                    <InputError message={errors.nombre_comercial} />
                                 </div>
 
                                 <div className="grid gap-2">

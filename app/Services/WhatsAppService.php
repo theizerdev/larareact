@@ -332,47 +332,72 @@ class WhatsAppService
      */
     public function createInstance(?string $name = null, ?string $customToken = null)
     {
-        $instanceName = $name ?? $this->instanceName;
-        $token = $customToken ?? $this->apiKey;
-        $masterKey = config('whatsapp.api_key', 'cbd21569-e530-427f-993b-4abcb2a08f81');
+        $rawName = $name ?? $this->instanceName;
+        // El motor ya sanitiza, pero limpiamos por seguridad
+        $instanceName = preg_replace('/[^a-zA-Z0-9_-]/', '', str_replace(['/', ' '], '', strtolower($rawName)));
+        if (empty($instanceName)) {
+            $instanceName = 'empresa_'.$this->companyId;
+        }
+
+        // Usamos la master key del env para autenticar la creación.
+        // NO enviamos el whatsapp_api_key de la empresa como token —
+        // el motor genera un token UUID propio y lo devuelve en la respuesta.
+        $masterKey = config('whatsapp.api_key', 'my_secret_key_123');
 
         try {
             $url = "{$this->baseUrl}/api/instance/create";
+            $body = ['name' => $instanceName];
+
+            // Si se pasa un token personalizado (por ej. al rotar), lo incluimos
+            if ($customToken) {
+                $body['token'] = $customToken;
+            }
+
             $response = Http::timeout($this->timeout)
                 ->withHeaders([
-                    'x-api-key' => $masterKey,
-                    'X-API-Key' => $masterKey,
+                    'x-api-key'    => $masterKey,
+                    'X-API-Key'    => $masterKey,
                     'Content-Type' => 'application/json',
                 ])
-                ->post($url, [
-                    'name' => $instanceName,
-                    'token' => $token,
-                ]);
+                ->post($url, $body);
 
             if ($response->successful()) {
+                $data = $response->json();
+
                 Log::info("Instancia de WhatsApp '{$instanceName}' creada/inicializada exitosamente.", [
                     'company_id' => $this->companyId,
-                    'response' => $response->json(),
+                    'response'   => $data,
                 ]);
-                return $response->json();
+
+                // Guardar el token devuelto por el motor en la empresa
+                // para que las siguientes llamadas (status, envío, etc.) funcionen
+                $returnedToken = $data['instance']['token'] ?? $data['token'] ?? null;
+                if ($returnedToken && $this->companyId) {
+                    \App\Models\Empresa::where('id', $this->companyId)
+                        ->update(['whatsapp_api_key' => $returnedToken]);
+                    $this->apiKey = $returnedToken;
+                }
+
+                return $data;
             }
 
             Log::warning("No se pudo crear la instancia de WhatsApp '{$instanceName}' (HTTP {$response->status()})", [
                 'company_id' => $this->companyId,
-                'status' => $response->status(),
-                'body' => $response->body(),
+                'status'     => $response->status(),
+                'body'       => $response->body(),
             ]);
 
             return null;
         } catch (\Exception $e) {
             Log::error('WhatsApp Create Instance Error: '.$e->getMessage(), [
                 'company_id' => $this->companyId,
-                'instance' => $instanceName,
+                'instance'   => $instanceName,
             ]);
 
             return null;
         }
     }
+
 
     /**
      * Iniciar / Encender una instancia

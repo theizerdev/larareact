@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Head, useForm, router } from '@inertiajs/react';
+import { Head, useForm, router, Link } from '@inertiajs/react';
 import InputError from '@/components/input-error';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
@@ -7,6 +7,7 @@ import { Spinner } from '@/components/ui/spinner';
 import { ShieldCheck, MessageSquare, RefreshCw, CheckCircle2 } from 'lucide-react';
 import { useTranslate } from '@/hooks/use-translate';
 import OtpInput from '@/components/otp-input';
+import { logout } from '@/routes';
 
 interface Props {
     telefono: string;
@@ -103,26 +104,14 @@ export default function VerifyWhatsapp({ telefono, email, status }: Props) {
                         {resending ? <Spinner className="h-3.5 w-3.5" /> : <RefreshCw className="h-3.5 w-3.5" />}
                         {__('Reenviar código OTP por WhatsApp')}
                     </Button>
-                    <Button
-                        type="button"
-                        variant="ghost"
-                        size="sm"
-                        className="gap-1.5 font-bold text-xs h-8 text-gray-600 hover:text-gray-700 hover:bg-gray-50 dark:hover:bg-gray-950 flex-1"
-                        onClick={() => {
-                            fetch('/logout', {
-                                method: 'POST',
-                                headers: {
-                                    'X-CSRF-Token': document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '',
-                                },
-                            })
-                                .then(() => {
-                                    window.location.href = route('login');
-                                })
-                                .catch((err) => console.error('Error al cerrar sesión:', err));
-                        }}
+                    <Link
+                        href={logout()}
+                        method="post"
+                        as="button"
+                        className="gap-1.5 font-bold text-xs h-8 text-gray-600 hover:text-gray-700 hover:bg-gray-50 dark:hover:bg-gray-950 flex-1 inline-flex items-center justify-center rounded-md transition-colors cursor-pointer"
                     >
                         {__('Cerrar sesión')}
-                    </Button>
+                    </Link>
                 </div>
             </div>
         </>

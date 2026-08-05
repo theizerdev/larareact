@@ -70,7 +70,12 @@ class EmpresaController extends Controller
             $empresa->max_sucursales = 1;
             $empresa->save();
 
-            $instanceName = ! empty($empresa->documento) ? $empresa->documento : 'empresa_'.$empresa->id;
+            $baseForInstance = ! empty($empresa->nombre_comercial) ? $empresa->nombre_comercial : $empresa->razon_social;
+            $instanceName = preg_replace('/[^a-zA-Z0-9_-]/', '', str_replace(['/', ' '], '', strtolower($baseForInstance)));
+            if (empty($instanceName)) {
+                $instanceName = 'empresa_'.$empresa->id;
+            }
+
             $empresa->update([
                 'whatsapp_instance' => $instanceName,
             ]);
