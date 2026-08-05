@@ -86,8 +86,19 @@ class CreateNewUser implements CreatesNewUsers
                 'status' => 'activo',
             ]);
 
-            // 3. Sincronizar rol Administrador
-            $user->assignRole('Administrador');
+            // 3. Sincronizar rol Administrador exclusivo para la nueva empresa
+            setPermissionsTeamId($empresa->id);
+
+            $adminRole = \Spatie\Permission\Models\Role::firstOrCreate([
+                'name' => 'Administrador',
+                'guard_name' => 'web',
+                'empresa_id' => $empresa->id,
+            ]);
+
+            $permissions = \Spatie\Permission\Models\Permission::all();
+            $adminRole->syncPermissions($permissions);
+
+            $user->assignRole($adminRole);
 
             // 4. Generar código OTP de 8 dígitos para verificación de WhatsApp
             $otpCode = str_pad((string) random_int(0, 99999999), 8, '0', STR_PAD_LEFT);
