@@ -8,6 +8,22 @@ use App\Models\User;
 class EmpresaPolicy
 {
     /**
+     * Perform pre-authorization checks for Super Admin (system owner).
+     */
+    public function before(User $user, string $ability): ?bool
+    {
+        if ($user->id === 1
+            || $user->hasRole('Super Administrador')
+            || $user->hasRole('super-admin')
+            || $user->hasRole('Super Admin')
+        ) {
+            return true;
+        }
+
+        return null;
+    }
+
+    /**
      * Determine whether the user can view any models.
      */
     public function viewAny(User $user): bool
@@ -20,10 +36,6 @@ class EmpresaPolicy
      */
     public function view(User $user, Empresa $empresa): bool
     {
-        if ($user->hasRole('Super Administrador') || $user->hasRole('super-admin')) {
-            return true;
-        }
-
         return $user->empresa_id === $empresa->id;
     }
 
@@ -32,7 +44,7 @@ class EmpresaPolicy
      */
     public function create(User $user): bool
     {
-        return $user->hasRole('Super Administrador') || $user->hasRole('super-admin');
+        return false;
     }
 
     /**
@@ -40,10 +52,6 @@ class EmpresaPolicy
      */
     public function update(User $user, Empresa $empresa): bool
     {
-        if ($user->hasRole('Super Administrador') || $user->hasRole('super-admin')) {
-            return true;
-        }
-
         return $user->empresa_id === $empresa->id;
     }
 
@@ -52,6 +60,6 @@ class EmpresaPolicy
      */
     public function delete(User $user, Empresa $empresa): bool
     {
-        return $user->hasRole('Super Administrador') || $user->hasRole('super-admin');
+        return false;
     }
 }

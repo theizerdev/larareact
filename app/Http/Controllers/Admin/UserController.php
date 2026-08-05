@@ -19,6 +19,23 @@ use Spatie\Permission\Models\Role;
 
 class UserController extends Controller
 {
+    private function isSuperAdmin(?User $user): bool
+    {
+        if (! $user) {
+            return false;
+        }
+
+        return $user->id === 1
+            || $user->hasRole('Super Administrador')
+            || $user->hasRole('super-admin')
+            || $user->hasRole('Super Admin')
+            || \Illuminate\Support\Facades\DB::table('model_has_roles')
+                ->join('roles', 'roles.id', '=', 'model_has_roles.role_id')
+                ->where('model_has_roles.model_id', $user->id)
+                ->whereIn('roles.name', ['Super Administrador', 'super-admin', 'Super Admin'])
+                ->exists();
+    }
+
     public function index(Request $request)
     {
         Gate::authorize('viewAny', User::class);
@@ -33,8 +50,10 @@ class UserController extends Controller
         $query = User::with(['empresa', 'sucursal', 'roles', 'paisTelefono']);
 
         $currentUser = auth()->user();
-        if ($currentUser && ! $currentUser->hasRole('Super Administrador') && ! $currentUser->hasRole('super-admin')) {
-            if ($currentUser->empresa_id) {
+        $isSuperAdmin = $this->isSuperAdmin($currentUser);
+
+        if (! $isSuperAdmin) {
+            if ($currentUser?->empresa_id) {
                 $query->where('empresa_id', $currentUser->empresa_id);
             }
         }
@@ -52,7 +71,7 @@ class UserController extends Controller
             $query->where('status', $status);
         }
 
-        if ($empresaId && ($currentUser->hasRole('Super Administrador') || $currentUser->hasRole('super-admin'))) {
+        if ($empresaId && $isSuperAdmin) {
             $query->where('empresa_id', $empresaId);
         }
 
@@ -67,8 +86,8 @@ class UserController extends Controller
         $users = $query->latest()->paginate($perPage)->withQueryString();
 
         $statsQuery = User::query();
-        if ($currentUser && ! $currentUser->hasRole('Super Administrador') && ! $currentUser->hasRole('super-admin')) {
-            if ($currentUser->empresa_id) {
+        if (! $isSuperAdmin) {
+            if ($currentUser?->empresa_id) {
                 $statsQuery->where('empresa_id', $currentUser->empresa_id);
             }
         }
@@ -87,9 +106,9 @@ class UserController extends Controller
             'users' => UserResource::collection($users),
             'stats' => $stats,
             'roles' => Role::whereNotIn('name', ['Super Administrador', 'super-admin', 'Super Admin'])
-                ->when(! $currentUser->hasRole('Super Administrador'), function ($q) use ($currentUser) {
+                ->when(! $isSuperAdmin, function ($q) use ($currentUser) {
                     $q->where(function ($sq) use ($currentUser) {
-                        $sq->where('empresa_id', $currentUser->empresa_id)
+                        $sq->where('empresa_id', $currentUser?->empresa_id)
                            ->orWhereNull('empresa_id');
                     });
                 })
@@ -110,12 +129,14 @@ class UserController extends Controller
 
         try {
             $currentUser = auth()->user();
-            if ($currentUser && ! $currentUser->hasRole('Super Administrador') && ! $currentUser->hasRole('super-admin')) {
+            $isSuperAdmin = $this->isSuperAdmin($currentUser);
+
+            if (! $isSuperAdmin) {
                 if (empty($validated['empresa_id'])) {
-                    $validated['empresa_id'] = $currentUser->empresa_id;
+                    $validated['empresa_id'] = $currentUser?->empresa_id;
                 }
                 if (empty($validated['sucursal_id'])) {
-                    $validated['sucursal_id'] = $currentUser->sucursal_id;
+                    $validated['sucursal_id'] = $currentUser?->sucursal_id;
                 }
             }
 
