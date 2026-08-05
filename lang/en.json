@@ -1017,5 +1017,9 @@
   "Trial ends today": "Trial ends today",
   "Your trial period has expired": "Your trial period has expired",
   "WhatsApp module active during trial": "WhatsApp module active during trial",
-  "Access expires when trial ends": "Access expires when trial ends"
+  "Access expires when trial ends": "Access expires when trial ends",
+
+  "Check Now": "Check Now",
+  "Checked": "Checked",
+  "ago": "ago"
 }

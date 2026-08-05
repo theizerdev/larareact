@@ -4,7 +4,8 @@ import {
     Database, AlertTriangle, CheckCircle2, Copy, Check, Activity, Phone,
     Wifi, WifiOff, Smartphone, Zap, Shield, Info, Clock
 } from 'lucide-react';
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
+
 import Swal from 'sweetalert2';
 import { Breadcrumbs } from '@/components/breadcrumbs';
 import { Button } from '@/components/ui/button';
@@ -532,6 +533,7 @@ return '';
                 )}
 
 
+                {isServiceUnavailable && (
                     <Card className="border-rose-300 bg-rose-50/50 dark:bg-rose-950/10">
                         <CardContent className="flex items-start gap-3 p-4">
                             <AlertTriangle className="h-5 w-5 text-rose-600 shrink-0 mt-0.5" />
@@ -769,9 +771,26 @@ return '';
                                                         </div>
                                                     )}
                                                 </div>
-                                                <div className="text-xs text-muted-foreground flex items-center justify-center gap-1.5">
-                                                    <span className="w-2.5 h-2.5 rounded-full bg-amber-400 animate-ping" />
-                                                    <span>{__('Waiting for phone scan...')}</span>
+                                                <div className="flex flex-wrap items-center justify-center gap-3">
+                                                    <div className="text-xs text-muted-foreground flex items-center gap-1.5">
+                                                        <span className="w-2.5 h-2.5 rounded-full bg-amber-400 animate-ping" />
+                                                        <span>{__('Waiting for phone scan...')}</span>
+                                                        {lastPolled && (
+                                                            <span className="opacity-60">
+                                                                · {__('Checked')} {Math.round((Date.now() - lastPolled.getTime()) / 1000)}s {__('ago')}
+                                                            </span>
+                                                        )}
+                                                    </div>
+                                                    <Button
+                                                        variant="outline"
+                                                        size="sm"
+                                                        className="gap-1.5 h-7 text-xs"
+                                                        onClick={handleManualRefresh}
+                                                        disabled={manualCheckLoading}
+                                                    >
+                                                        <RefreshCw className={`h-3 w-3 ${manualCheckLoading ? 'animate-spin' : ''}`} />
+                                                        {__('Check Now')}
+                                                    </Button>
                                                 </div>
                                                 <Button variant="ghost" onClick={handleDisconnect} className="text-rose-600 hover:text-rose-700 hover:bg-rose-50 dark:hover:bg-rose-950/20 text-xs">
                                                     {__('Cancel and Clean Session')}

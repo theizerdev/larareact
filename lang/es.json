@@ -1542,5 +1542,9 @@
   "Trial ends today": "La prueba vence hoy",
   "Your trial period has expired": "Tu período de prueba ha vencido",
   "WhatsApp module active during trial": "Módulo WhatsApp activo durante la prueba",
-  "Access expires when trial ends": "El acceso vence cuando termina la prueba"
+  "Access expires when trial ends": "El acceso vence cuando termina la prueba",
+
+  "Check Now": "Verificar ahora",
+  "Checked": "Verificado",
+  "ago": "hace"
 }
