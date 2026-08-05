@@ -41,6 +41,7 @@ interface PageProps {
     whatsapp_status: string | null;
     live_status: LiveStatus | null;
     paises: PaisPhoneOption[];
+    is_superadmin: boolean;
 }
 
 export default function WhatsAppIntegration({
@@ -54,7 +55,8 @@ export default function WhatsAppIntegration({
     whatsapp_phone,
     whatsapp_status,
     live_status,
-    paises
+    paises,
+    is_superadmin,
 }: PageProps) {
     const { __ } = useTranslate();
     const [copied, setCopied] = useState(false);
@@ -404,141 +406,144 @@ return '';
                 )}
 
                 <div className="grid gap-6 md:grid-cols-12">
-                    {/* Left Column: Config Panel (recursos/whatsapp) */}
-                    <div className="md:col-span-5 space-y-6">
-                        <Card className="shadow-sm border-t-4 border-t-emerald-600">
-                            <CardHeader>
-                                <CardTitle className="flex items-center gap-2 text-lg">
-                                    <Settings2 className="h-5 w-5 text-slate-500" />
-                                    {__('API Configuration')}
-                                </CardTitle>
-                                <CardDescription>
-                                    {__('Set connection details for')} <span className="font-semibold text-slate-700 dark:text-slate-200">{empresa_nombre}</span>.
-                                </CardDescription>
-                            </CardHeader>
-                            <form onSubmit={handleSaveConfig}>
-                                <CardContent className="space-y-5">
-                                    {/* Enable Switch */}
-                                    <div className="flex items-center justify-between p-3 border rounded-lg bg-slate-50 dark:bg-slate-900/50">
-                                        <div className="space-y-0.5">
-                                            <Label className="text-sm font-medium">{__('Enable WhatsApp Integration')}</Label>
-                                            <p className="text-xs text-muted-foreground">{__('Enable automated template sending.')}</p>
+                    {/* Left Column: Config Panel — solo visible para superadmins */}
+                    {is_superadmin && (
+                        <div className="md:col-span-5 space-y-6">
+                            <Card className="shadow-sm border-t-4 border-t-emerald-600">
+                                <CardHeader>
+                                    <CardTitle className="flex items-center gap-2 text-lg">
+                                        <Settings2 className="h-5 w-5 text-slate-500" />
+                                        {__('API Configuration')}
+                                    </CardTitle>
+                                    <CardDescription>
+                                        {__('Set connection details for')} <span className="font-semibold text-slate-700 dark:text-slate-200">{empresa_nombre}</span>.
+                                    </CardDescription>
+                                </CardHeader>
+                                <form onSubmit={handleSaveConfig}>
+                                    <CardContent className="space-y-5">
+                                        {/* Enable Switch */}
+                                        <div className="flex items-center justify-between p-3 border rounded-lg bg-slate-50 dark:bg-slate-900/50">
+                                            <div className="space-y-0.5">
+                                                <Label className="text-sm font-medium">{__('Enable WhatsApp Integration')}</Label>
+                                                <p className="text-xs text-muted-foreground">{__('Enable automated template sending.')}</p>
+                                            </div>
+                                            <Switch
+                                                checked={configForm.data.whatsapp_active}
+                                                onCheckedChange={(checked) => configForm.setData('whatsapp_active', checked)}
+                                            />
                                         </div>
-                                        <Switch
-                                            checked={configForm.data.whatsapp_active}
-                                            onCheckedChange={(checked) => configForm.setData('whatsapp_active', checked)}
-                                        />
-                                    </div>
 
-                                    {/* Connection IP / API URL */}
-                                    <div className="space-y-2">
-                                        <Label htmlFor="whatsapp_api_url">{__('Connection IP / API URL')}</Label>
-                                        <Input
-                                            id="whatsapp_api_url"
-                                            placeholder="http://localhost:8092"
-                                            value={configForm.data.whatsapp_api_url}
-                                            onChange={(e) => configForm.setData('whatsapp_api_url', e.target.value)}
-                                            className="font-mono text-sm"
-                                        />
-                                        <p className="text-xs text-muted-foreground">
-                                            {__('Node service base URL.')}
-                                        </p>
-                                    </div>
-
-                                    {/* WhatsApp Instance Name */}
-                                    <div className="space-y-2">
-                                        <Label htmlFor="whatsapp_instance">{__('WhatsApp Instance Name')}</Label>
-                                        <Input
-                                            id="whatsapp_instance"
-                                            placeholder="empresa_1"
-                                            value={configForm.data.whatsapp_instance}
-                                            onChange={(e) => configForm.setData('whatsapp_instance', e.target.value)}
-                                            className="font-mono text-sm"
-                                        />
-                                        <p className="text-xs text-muted-foreground">
-                                            {__('Name of the session/instance in the WhatsApp API engine (e.g. ventas, empresa_1).')}
-                                        </p>
-                                    </div>
-
-                                    {/* Rate Limit */}
-                                    <div className="space-y-2">
-                                        <Label htmlFor="whatsapp_rate_limit">{__('Rate Limit (msg/min)')}</Label>
-                                        <Input
-                                            id="whatsapp_rate_limit"
-                                            type="number"
-                                            min="1"
-                                            max="1000"
-                                            value={configForm.data.whatsapp_rate_limit}
-                                            onChange={(e) => configForm.setData('whatsapp_rate_limit', parseInt(e.target.value) || 60)}
-                                        />
-                                        <p className="text-xs text-muted-foreground">
-                                            {__('Maximum messages sent per minute for this company.')}
-                                        </p>
-                                    </div>
-
-                                    {/* Company Token */}
-                                    <div className="space-y-2">
-                                        <Label htmlFor="whatsapp_api_key">{__('Company API Token')}</Label>
-                                        <div className="flex gap-2">
+                                        {/* Connection IP / API URL */}
+                                        <div className="space-y-2">
+                                            <Label htmlFor="whatsapp_api_url">{__('Connection IP / API URL')}</Label>
                                             <Input
-                                                id="whatsapp_api_key"
-                                                type="text"
-                                                placeholder={__('Paste or enter API token...')}
-                                                value={configForm.data.whatsapp_api_key}
-                                                onChange={(e) => configForm.setData('whatsapp_api_key', e.target.value)}
+                                                id="whatsapp_api_url"
+                                                placeholder="http://localhost:8092"
+                                                value={configForm.data.whatsapp_api_url}
+                                                onChange={(e) => configForm.setData('whatsapp_api_url', e.target.value)}
                                                 className="font-mono text-sm"
                                             />
+                                            <p className="text-xs text-muted-foreground">
+                                                {__('Node service base URL.')}
+                                            </p>
+                                        </div>
+
+                                        {/* WhatsApp Instance Name */}
+                                        <div className="space-y-2">
+                                            <Label htmlFor="whatsapp_instance">{__('WhatsApp Instance Name')}</Label>
+                                            <Input
+                                                id="whatsapp_instance"
+                                                placeholder="empresa_1"
+                                                value={configForm.data.whatsapp_instance}
+                                                onChange={(e) => configForm.setData('whatsapp_instance', e.target.value)}
+                                                className="font-mono text-sm"
+                                            />
+                                            <p className="text-xs text-muted-foreground">
+                                                {__('Name of the session/instance in the WhatsApp API engine (e.g. ventas, empresa_1).')}
+                                            </p>
+                                        </div>
+
+                                        {/* Rate Limit */}
+                                        <div className="space-y-2">
+                                            <Label htmlFor="whatsapp_rate_limit">{__('Rate Limit (msg/min)')}</Label>
+                                            <Input
+                                                id="whatsapp_rate_limit"
+                                                type="number"
+                                                min="1"
+                                                max="1000"
+                                                value={configForm.data.whatsapp_rate_limit}
+                                                onChange={(e) => configForm.setData('whatsapp_rate_limit', parseInt(e.target.value) || 60)}
+                                            />
+                                            <p className="text-xs text-muted-foreground">
+                                                {__('Maximum messages sent per minute for this company.')}
+                                            </p>
+                                        </div>
+
+                                        {/* Company Token */}
+                                        <div className="space-y-2">
+                                            <Label htmlFor="whatsapp_api_key">{__('Company API Token')}</Label>
+                                            <div className="flex gap-2">
+                                                <Input
+                                                    id="whatsapp_api_key"
+                                                    type="text"
+                                                    placeholder={__('Paste or enter API token...')}
+                                                    value={configForm.data.whatsapp_api_key}
+                                                    onChange={(e) => configForm.setData('whatsapp_api_key', e.target.value)}
+                                                    className="font-mono text-sm"
+                                                />
+                                                <Button
+                                                    type="button"
+                                                    variant="outline"
+                                                    onClick={copyToClipboard}
+                                                    disabled={!configForm.data.whatsapp_api_key}
+                                                    className="shrink-0"
+                                                    title={__('Copy to clipboard')}
+                                                >
+                                                    {copied ? <Check className="h-4 w-4 text-emerald-600" /> : <Copy className="h-4 w-4" />}
+                                                </Button>
+                                            </div>
+                                            <p className="text-xs text-muted-foreground">
+                                                {__('This credentials token authorizes this company to communicate with the node server. You can copy or paste it directly.')}
+                                            </p>
+                                        </div>
+                                    </CardContent>
+                                    <CardFooter className="border-t bg-slate-50/50 dark:bg-slate-900/10 px-6 py-4 flex flex-col gap-3">
+                                        {/* Save Button */}
+                                        <Button type="submit" disabled={configForm.processing} className="w-full gap-2">
+                                            <RefreshCw className={`h-4 w-4 ${configForm.processing ? 'animate-spin' : ''}`} />
+                                            {__('Save Settings')}
+                                        </Button>
+
+                                        {/* Button Group */}
+                                        <div className="grid grid-cols-2 gap-2 w-full mt-1">
                                             <Button
                                                 type="button"
                                                 variant="outline"
-                                                onClick={copyToClipboard}
-                                                disabled={!configForm.data.whatsapp_api_key}
-                                                className="shrink-0"
-                                                title={__('Copy to clipboard')}
+                                                onClick={handleGenerateToken}
+                                                className="gap-1 text-slate-700 hover:text-slate-900 border-slate-200 text-xs"
                                             >
-                                                {copied ? <Check className="h-4 w-4 text-emerald-600" /> : <Copy className="h-4 w-4" />}
+                                                <Key className="h-3.5 w-3.5" />
+                                                {__('Generate Token')}
+                                            </Button>
+                                            <Button
+                                                type="button"
+                                                variant="outline"
+                                                onClick={handleSyncCompany}
+                                                disabled={!whatsapp_api_key}
+                                                className="gap-1 text-slate-700 hover:text-emerald-700 border-slate-200 text-xs"
+                                            >
+                                                <Database className="h-3.5 w-3.5" />
+                                                {__('Sync Company')}
                                             </Button>
                                         </div>
-                                        <p className="text-xs text-muted-foreground">
-                                            {__('This credentials token authorizes this company to communicate with the node server. You can copy or paste it directly.')}
-                                        </p>
-                                    </div>
-                                </CardContent>
-                                <CardFooter className="border-t bg-slate-50/50 dark:bg-slate-900/10 px-6 py-4 flex flex-col gap-3">
-                                    {/* Save Button */}
-                                    <Button type="submit" disabled={configForm.processing} className="w-full gap-2">
-                                        <RefreshCw className={`h-4 w-4 ${configForm.processing ? 'animate-spin' : ''}`} />
-                                        {__('Save Settings')}
-                                    </Button>
+                                    </CardFooter>
+                                </form>
+                            </Card>
+                        </div>
+                    )}
 
-                                    {/* Button Group */}
-                                    <div className="grid grid-cols-2 gap-2 w-full mt-1">
-                                        <Button
-                                            type="button"
-                                            variant="outline"
-                                            onClick={handleGenerateToken}
-                                            className="gap-1 text-slate-700 hover:text-slate-900 border-slate-200 text-xs"
-                                        >
-                                            <Key className="h-3.5 w-3.5" />
-                                            {__('Generate Token')}
-                                        </Button>
-                                        <Button
-                                            type="button"
-                                            variant="outline"
-                                            onClick={handleSyncCompany}
-                                            disabled={!whatsapp_api_key}
-                                            className="gap-1 text-slate-700 hover:text-emerald-700 border-slate-200 text-xs"
-                                        >
-                                            <Database className="h-3.5 w-3.5" />
-                                            {__('Sync Company')}
-                                        </Button>
-                                    </div>
-                                </CardFooter>
-                            </form>
-                        </Card>
-                    </div>
-
-                    {/* Right Column: Connection / QR Scanner Card */}
+                    {/* Right Column: Connection / QR Scanner Card — solo visible para superadmins */}
+                    {is_superadmin && (
                     <div className="md:col-span-7 space-y-6">
                         {/* Status / QR Card */}
                         <Card className="shadow-sm border-t-4 border-t-emerald-600">
@@ -679,6 +684,7 @@ return '';
                         </Card>
 
                     </div>
+                    )}
                 </div>
 
                 {/* Test Messaging Panel - Full Width */}

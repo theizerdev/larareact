@@ -355,8 +355,7 @@ class WhatsAppService
 
             $response = Http::timeout($this->timeout)
                 ->withHeaders([
-                    'x-api-key'    => $masterKey,
-                    'X-API-Key'    => $masterKey,
+                    'X-API-Key' => $masterKey,
                     'Content-Type' => 'application/json',
                 ])
                 ->post($url, $body);

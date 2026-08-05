@@ -210,6 +210,7 @@ class IntegrationController extends Controller
             'live_status' => $status,
             'locale' => $currentLocale,
             'translations' => $translations,
+            'is_superadmin' => $request->user()->isSuperAdmin(),
         ]);
     }
 
