@@ -14,6 +14,14 @@ import {
     ChevronDown,
     Check,
     Lock,
+    Send,
+    MessageSquare,
+    Building2,
+    User,
+    Phone,
+    Mail,
+    Clock,
+    Loader2,
 } from 'lucide-react';
 import React, { useState } from 'react';
 import { useTranslate } from '@/hooks/use-translate';
@@ -31,10 +39,91 @@ export default function Welcome() {
     const currencySymbol = pageProps.currencySymbol || '$';
     const currencyCode = pageProps.currencyCode || 'MXN';
 
+    const countryOptions = [
+        { code: 'VE', name: 'Venezuela', dialCode: '+58', flag: '🇻🇪' },
+        { code: 'MX', name: 'México', dialCode: '+52', flag: '🇲🇽' },
+        { code: 'CL', name: 'Chile', dialCode: '+56', flag: '🇨🇱' },
+        { code: 'CO', name: 'Colombia', dialCode: '+57', flag: '🇨🇴' },
+        { code: 'AR', name: 'Argentina', dialCode: '+54', flag: '🇦🇷' },
+        { code: 'PE', name: 'Perú', dialCode: '+51', flag: '🇵🇪' },
+        { code: 'ES', name: 'España', dialCode: '+34', flag: '🇪🇸' },
+        { code: 'US', name: 'Estados Unidos', dialCode: '+1', flag: '🇺🇸' },
+        { code: 'EC', name: 'Ecuador', dialCode: '+593', flag: '🇪🇨' },
+        { code: 'PA', name: 'Panamá', dialCode: '+507', flag: '🇵🇦' },
+        { code: 'DO', name: 'Rep. Dominicana', dialCode: '+1-809', flag: '🇩🇴' },
+    ];
+
+    const defaultDial = isVenezuela ? '+58' : (countryOptions.find(c => c.code === countryCode)?.dialCode || '+52');
+
     const [activeFaq, setActiveFaq] = useState<number | null>(0);
+    const [contactForm, setContactForm] = useState({
+        name: '',
+        business: '',
+        countryDial: defaultDial,
+        phone: '',
+        message: '',
+    });
+
+    const [isSubmitting, setIsSubmitting] = useState(false);
+    const [submitFeedback, setSubmitFeedback] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
 
     const toggleFaq = (index: number) => {
         setActiveFaq(activeFaq === index ? null : index);
+    };
+
+    const handleContactSubmit = async (e: React.FormEvent) => {
+        e.preventDefault();
+        if (isSubmitting) return;
+
+        setIsSubmitting(true);
+        setSubmitFeedback(null);
+
+        try {
+            const csrfToken = (document.querySelector('meta[name="csrf-token"]') as HTMLMetaElement)?.content || '';
+            const res = await fetch('/contact-request', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Accept': 'application/json',
+                    'X-CSRF-TOKEN': csrfToken,
+                },
+                body: JSON.stringify({
+                    name: contactForm.name,
+                    business: contactForm.business,
+                    country_dial: contactForm.countryDial,
+                    phone: contactForm.phone,
+                    message: contactForm.message,
+                }),
+            });
+
+            const data = await res.json();
+
+            if (res.ok && data?.success) {
+                setSubmitFeedback({
+                    type: 'success',
+                    message: data.message || __('¡Gracias por contactarnos! Tu mensaje ha sido enviado exitosamente.'),
+                });
+                setContactForm({
+                    name: '',
+                    business: '',
+                    countryDial: defaultDial,
+                    phone: '',
+                    message: '',
+                });
+            } else {
+                setSubmitFeedback({
+                    type: 'error',
+                    message: data?.message || __('Ocurrió un problema al enviar tu mensaje. Por favor intenta de nuevo.'),
+                });
+            }
+        } catch (err: any) {
+            setSubmitFeedback({
+                type: 'error',
+                message: __('Ocurrió un problema al enviar tu mensaje. Por favor intenta de nuevo.'),
+            });
+        } finally {
+            setIsSubmitting(false);
+        }
     };
 
     return (
@@ -535,25 +624,267 @@ export default function Welcome() {
                     </div>
                 </section>
 
-                {/* ─── FOOTER ────────────────────────────────────────────────────────────── */}
-                <footer className="border-t border-slate-200 py-12 bg-white">
-                    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col md:flex-row items-center justify-between gap-6 text-xs text-slate-500 font-medium">
-                        <div className="flex items-center gap-3">
-                            <img
-                                src="/image/logo/5.png"
-                                alt="FixSale Logo"
-                                className="h-9 w-auto object-contain"
-                            />
-                            <span>© {new Date().getFullYear()} FixSale POS. All rights reserved.</span>
+                {/* ─── SECCIÓN CONTÁCTANOS (FORMULARIO CON SELECTOR DE PAÍS AGRUPADO Y ENVÍO A EMPRESA 1) ───── */}
+                <section id="contact" className="py-20 bg-slate-100/70 border-t border-slate-200 relative overflow-hidden">
+                    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
+                        <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 items-center">
+                            
+                            {/* Columna Izquierda: Información de Asesoría */}
+                            <div className="lg:col-span-5 space-y-6">
+                                <div className="inline-flex items-center gap-2 bg-blue-50 border border-blue-200 px-3.5 py-1.5 rounded-full text-[#08264e] text-xs font-extrabold tracking-wide uppercase shadow-sm">
+                                    <span className="w-2.5 h-2.5 rounded-full bg-[#ff5a00] animate-pulse" />
+                                    {__('Atención e Informes')}
+                                </div>
+
+                                <h2 className="text-3xl sm:text-4xl font-black text-[#08264e] leading-tight">
+                                    {__('¿Tienes dudas o necesitas asesoría personalizada?')}
+                                </h2>
+
+                                <p className="text-slate-600 text-sm leading-relaxed">
+                                    {__('Escríbenos y un asesor especialista se comunicará contigo a la brevedad para brindarte toda la información y demostración que necesitas.')}
+                                </p>
+
+                                <div className="space-y-4 pt-2">
+                                    <div className="flex items-start gap-4 p-4 rounded-xl bg-white border border-slate-200/80 shadow-sm">
+                                        <div className="w-10 h-10 rounded-lg bg-blue-100 text-[#08264e] flex items-center justify-center shrink-0 font-bold">
+                                            <MessageSquare className="w-5 h-5" />
+                                        </div>
+                                        <div>
+                                            <h4 className="text-sm font-bold text-[#08264e]">{__('Respuesta Ultra-Rápida')}</h4>
+                                            <p className="text-xs text-slate-500 mt-0.5">{__('Atención directa sobre planes, terminales POS e integración de tu negocio.')}</p>
+                                        </div>
+                                    </div>
+
+                                    <div className="flex items-start gap-4 p-4 rounded-xl bg-white border border-slate-200/80 shadow-sm">
+                                        <div className="w-10 h-10 rounded-lg bg-orange-100 text-[#ff5a00] flex items-center justify-center shrink-0 font-bold">
+                                            <ShieldCheck className="w-5 h-5" />
+                                        </div>
+                                        <div>
+                                            <h4 className="text-sm font-bold text-[#08264e]">{__('Demostración Guiada')}</h4>
+                                            <p className="text-xs text-slate-500 mt-0.5">{__('Te asesoramos paso a paso en la configuración de divisas, caja y catálogo.')}</p>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* Columna Derecha: Formulario con Selector de País Agrupado */}
+                            <div className="lg:col-span-7">
+                                <div className="bg-white border border-slate-200 rounded-3xl p-6 sm:p-10 shadow-2xl space-y-6 relative">
+                                    <div className="border-b border-slate-100 pb-4">
+                                        <h3 className="text-xl font-bold text-[#08264e]">{__('Formulario de Contacto Directo')}</h3>
+                                        <p className="text-xs text-slate-500 mt-1">{__('Ingresa tus datos para comunicarte directamente con nuestro equipo de atención.')}</p>
+                                    </div>
+
+                                    {submitFeedback && (
+                                        <div
+                                            className={`p-4 rounded-xl text-xs font-bold flex items-center gap-3 border ${
+                                                submitFeedback.type === 'success'
+                                                    ? 'bg-emerald-50 text-emerald-800 border-emerald-200'
+                                                    : 'bg-rose-50 text-rose-800 border-rose-200'
+                                            }`}
+                                        >
+                                            <CheckCircle2
+                                                className={`w-5 h-5 shrink-0 ${
+                                                    submitFeedback.type === 'success' ? 'text-emerald-600' : 'text-rose-600'
+                                                }`}
+                                            />
+                                            <span>{submitFeedback.message}</span>
+                                        </div>
+                                    )}
+
+                                    <form onSubmit={handleContactSubmit} className="space-y-4">
+                                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                            {/* Nombre Completo */}
+                                            <div className="space-y-1.5">
+                                                <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider">
+                                                    {__('Tu Nombre')} <span className="text-rose-500">*</span>
+                                                </label>
+                                                <div className="relative">
+                                                    <User className="w-4 h-4 text-slate-400 absolute left-3.5 top-3.5" />
+                                                    <input
+                                                        type="text"
+                                                        required
+                                                        placeholder={__('Ej. Carlos Mendoza')}
+                                                        value={contactForm.name}
+                                                        onChange={(e) => setContactForm({ ...contactForm, name: e.target.value })}
+                                                        className="w-full pl-10 pr-4 py-2.5 text-sm rounded-xl border border-slate-200 bg-slate-50/50 focus:bg-white focus:border-[#ff5a00] focus:ring-2 focus:ring-[#ff5a00]/20 transition-all outline-none"
+                                                    />
+                                                </div>
+                                            </div>
+
+                                            {/* Nombre del Negocio */}
+                                            <div className="space-y-1.5">
+                                                <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider">
+                                                    {__('Nombre de tu Negocio')} <span className="text-rose-500">*</span>
+                                                </label>
+                                                <div className="relative">
+                                                    <Building2 className="w-4 h-4 text-slate-400 absolute left-3.5 top-3.5" />
+                                                    <input
+                                                        type="text"
+                                                        required
+                                                        placeholder={__('Ej. Servitec Tech S.A.')}
+                                                        value={contactForm.business}
+                                                        onChange={(e) => setContactForm({ ...contactForm, business: e.target.value })}
+                                                        className="w-full pl-10 pr-4 py-2.5 text-sm rounded-xl border border-slate-200 bg-slate-50/50 focus:bg-white focus:border-[#ff5a00] focus:ring-2 focus:ring-[#ff5a00]/20 transition-all outline-none"
+                                                    />
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        {/* Teléfono de Contacto con Selector de País Agrupado */}
+                                        <div className="space-y-1.5">
+                                            <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider">
+                                                {__('Teléfono de Contacto')} <span className="text-rose-500">*</span>
+                                            </label>
+                                            <div className="flex rounded-xl border border-slate-200 bg-slate-50/50 focus-within:bg-white focus-within:border-[#ff5a00] focus-within:ring-2 focus-within:ring-[#ff5a00]/20 transition-all overflow-hidden">
+                                                {/* Selector de País */}
+                                                <select
+                                                    value={contactForm.countryDial}
+                                                    onChange={(e) => setContactForm({ ...contactForm, countryDial: e.target.value })}
+                                                    className="bg-slate-100 border-r border-slate-200 text-slate-800 text-xs font-bold px-3 py-2.5 outline-none cursor-pointer hover:bg-slate-200/70 transition-colors shrink-0"
+                                                >
+                                                    {countryOptions.map((c) => (
+                                                        <option key={c.code} value={c.dialCode}>
+                                                            {c.flag} {c.code} ({c.dialCode})
+                                                        </option>
+                                                    ))}
+                                                </select>
+
+                                                {/* Input de Teléfono */}
+                                                <div className="relative flex-1">
+                                                    <Phone className="w-4 h-4 text-slate-400 absolute left-3.5 top-3.5" />
+                                                    <input
+                                                        type="tel"
+                                                        required
+                                                        placeholder={__('412 1234567')}
+                                                        value={contactForm.phone}
+                                                        onChange={(e) => setContactForm({ ...contactForm, phone: e.target.value })}
+                                                        className="w-full pl-10 pr-4 py-2.5 text-sm bg-transparent outline-none text-slate-800 font-medium"
+                                                    />
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        {/* Mensaje o Consulta */}
+                                        <div className="space-y-1.5">
+                                            <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider">
+                                                {__('¿En qué podemos ayudarte?')}
+                                            </label>
+                                            <textarea
+                                                rows={3}
+                                                placeholder={__('Escribe tu mensaje o consulta aquí...')}
+                                                value={contactForm.message}
+                                                onChange={(e) => setContactForm({ ...contactForm, message: e.target.value })}
+                                                className="w-full p-3 text-sm rounded-xl border border-slate-200 bg-slate-50/50 focus:bg-white focus:border-[#ff5a00] focus:ring-2 focus:ring-[#ff5a00]/20 transition-all outline-none resize-none"
+                                            />
+                                        </div>
+
+                                        {/* Botón Principal de Enviar Mensaje */}
+                                        <button
+                                            type="submit"
+                                            disabled={isSubmitting}
+                                            className="w-full py-4 px-6 bg-gradient-to-r from-[#08264e] to-[#0b3368] hover:from-[#0b3368] hover:to-[#08264e] disabled:opacity-60 text-white font-extrabold rounded-2xl shadow-lg shadow-[#08264e]/20 transition-all flex items-center justify-center gap-3 text-base group cursor-pointer"
+                                        >
+                                            {isSubmitting ? (
+                                                <>
+                                                    <Loader2 className="w-5 h-5 animate-spin text-[#ff5a00]" />
+                                                    <span>{__('Enviando mensaje...')}</span>
+                                                </>
+                                            ) : (
+                                                <>
+                                                    <Send className="w-5 h-5 transition-transform group-hover:translate-x-1 text-[#ff5a00]" />
+                                                    <span>{__('Enviar Mensaje')}</span>
+                                                </>
+                                            )}
+                                        </button>
+                                    </form>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                {/* ─── FOOTER MEJORADO Y COMPLETO ────────────────────────────────────────── */}
+                <footer className="border-t border-slate-200 bg-white pt-16 pb-12">
+                    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-12">
+                        {/* Grid Principal del Footer */}
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-8 lg:gap-12">
+                            {/* Columna 1: Brand Info & Logo */}
+                            <div className="lg:col-span-2 space-y-4">
+                                <Link href="/" className="inline-block">
+                                    <img
+                                        src="/image/logo/5.png"
+                                        alt="FixSale Logo"
+                                        className="h-12 w-auto object-contain"
+                                    />
+                                </Link>
+                                <p className="text-xs text-slate-600 leading-relaxed max-w-sm">
+                                    {__('FixSale es el ecosistema inteligente de Punto de Venta, control de caja con auditoría estricta, conversión BCV en tiempo real y automatización por WhatsApp para comercios.')}
+                                </p>
+                                <div className="flex items-center gap-2 text-xs font-mono text-emerald-700 bg-emerald-50 border border-emerald-200 px-3 py-1.5 rounded-full w-fit font-bold">
+                                    <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+                                    <span>{__('Sistema Operativo & Online 99.9%')}</span>
+                                </div>
+                            </div>
+
+                            {/* Columna 2: Plataforma & Módulos */}
+                            <div className="space-y-3">
+                                <h4 className="text-xs font-black text-[#08264e] uppercase tracking-wider font-mono">
+                                    {__('Módulos')}
+                                </h4>
+                                <ul className="space-y-2 text-xs font-medium text-slate-600">
+                                    <li><a href="#pos" className="hover:text-[#ff5a00] transition-colors">{__('Terminal POS & Atajos')}</a></li>
+                                    <li><a href="#features" className="hover:text-[#ff5a00] transition-colors">{__('Caja Registradora & Cierre Z')}</a></li>
+                                    <li><a href="#features" className="hover:text-[#ff5a00] transition-colors">{__('WhatsApp Engine OTP')}</a></li>
+                                    <li><a href="#features" className="hover:text-[#ff5a00] transition-colors">{__('Tasa Oficial BCV')}</a></li>
+                                </ul>
+                            </div>
+
+                            {/* Columna 3: Navegación Rápida */}
+                            <div className="space-y-3">
+                                <h4 className="text-xs font-black text-[#08264e] uppercase tracking-wider font-mono">
+                                    {__('Navegación')}
+                                </h4>
+                                <ul className="space-y-2 text-xs font-medium text-slate-600">
+                                    <li><a href="#hero" className="hover:text-[#ff5a00] transition-colors">{__('Inicio')}</a></li>
+                                    <li><a href="#pricing" className="hover:text-[#ff5a00] transition-colors">{__('Planes & Precios')}</a></li>
+                                    <li><a href="#faq" className="hover:text-[#ff5a00] transition-colors">{__('Preguntas Frecuentes')}</a></li>
+                                    <li><a href="#contact" className="hover:text-[#ff5a00] transition-colors">{__('Contacto Directo')}</a></li>
+                                </ul>
+                            </div>
+
+                            {/* Columna 4: Accesos & Cuenta */}
+                            <div className="space-y-3">
+                                <h4 className="text-xs font-black text-[#08264e] uppercase tracking-wider font-mono">
+                                    {__('Acceso')}
+                                </h4>
+                                <div className="space-y-2.5">
+                                    <Link
+                                        href="/login"
+                                        className="block text-center py-2 px-4 bg-slate-100 hover:bg-slate-200 text-[#08264e] font-bold text-xs rounded-xl transition-colors"
+                                    >
+                                        {__('Iniciar Sesión')}
+                                    </Link>
+                                    <Link
+                                        href="/register"
+                                        className="block text-center py-2 px-4 bg-[#ff5a00] hover:bg-orange-600 text-white font-extrabold text-xs rounded-xl shadow-md shadow-orange-500/20 transition-all"
+                                    >
+                                        {__('Prueba Gratis 7 Días')}
+                                    </Link>
+                                </div>
+                            </div>
                         </div>
 
-                        <div className="flex items-center gap-6">
-                            <Link href="/login" className="hover:text-[#ff5a00] transition-colors font-bold">
-                                {__('Iniciar Sesión')}
-                            </Link>
-                            <Link href="/register" className="hover:text-[#ff5a00] transition-colors font-bold">
-                                {__('Registrarse')}
-                            </Link>
+                        {/* Barra Inferior del Footer */}
+                        <div className="border-t border-slate-200 pt-8 flex flex-col sm:flex-row items-center justify-between gap-4 text-xs text-slate-500 font-medium">
+                            <p>© {new Date().getFullYear()} FixSale POS. {__('Todos los derechos reservados.')}</p>
+                            <div className="flex items-center gap-6">
+                                <span className="hover:text-slate-800 transition-colors cursor-pointer">{__('Privacidad')}</span>
+                                <span>•</span>
+                                <span className="hover:text-slate-800 transition-colors cursor-pointer">{__('Términos del Servicio')}</span>
+                                <span>•</span>
+                                <span className="hover:text-slate-800 transition-colors cursor-pointer">{__('Seguridad 256-bit SSL')}</span>
+                            </div>
                         </div>
                     </div>
                 </footer>

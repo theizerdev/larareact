@@ -128,6 +128,7 @@ class HandleInertiaRequests extends Middleware
                 'expires_at' => $empresa->subscription_expires_at?->format('Y-m-d H:i:s'),
                 'max_sucursales' => $empresa->max_sucursales ?? 1,
             ] : null,
+          
         ];
     }
 

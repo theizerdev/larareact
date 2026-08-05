@@ -5,7 +5,10 @@ use App\Http\Controllers\Auth\ForgotPasswordOtpController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 
+use App\Http\Controllers\ContactController;
+
 Route::inertia('/', 'welcome')->name('home');
+Route::post('/contact-request', [ContactController::class, 'send'])->name('contact.send');
 
 Route::middleware(['guest'])->group(function () {
     Route::get('/forgot-password', [ForgotPasswordOtpController::class, 'show'])->name('password.request');
