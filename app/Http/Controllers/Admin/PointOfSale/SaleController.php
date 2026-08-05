@@ -3,6 +3,8 @@
 namespace App\Http\Controllers\Admin\PointOfSale;
 
 use App\Http\Controllers\Controller;
+use App\Http\Requests\Admin\SaleRequest;
+use App\Http\Resources\SaleResource;
 use App\Models\CashRegister;
 use App\Models\Cliente;
 use App\Models\Empresa;
@@ -178,33 +180,16 @@ class SaleController extends Controller
         ]);
     }
 
-    public function store(Request $request, SaleService $service)
+    public function store(SaleRequest $request, SaleService $service)
     {
-        $validated = $request->validate([
-            'cliente_nombre' => 'nullable|string|max:255',
-            'cliente_id' => 'nullable|integer|exists:clientes,id',
-            'metodo_pago' => 'nullable|string|max:50',
-            'impuesto' => 'nullable|numeric|min:0',
-            'descuento' => 'nullable|numeric|min:0',
-            'monto_recibido' => 'nullable|numeric|min:0',
-            'es_credito' => 'nullable|boolean',
-            'payments' => 'nullable|array',
-            'payments.*.metodo_pago' => 'required_with:payments|string|max:50',
-            'payments.*.monto' => 'required_with:payments|numeric|min:0',
-            'items' => 'required|array|min:1',
-            'items.*.itemable_id' => 'nullable|integer',
-            'items.*.concepto_tipo' => 'required|in:producto,servicio',
-            'items.*.nombre' => 'required|string|max:255',
-            'items.*.cantidad' => 'required|integer|min:1',
-            'items.*.precio_unitario' => 'required|numeric|min:0',
-        ]);
+        $validated = $request->validated();
 
         $sale = $service->processSale($validated, auth()->id());
 
         return back()->with('notification', [
             'type' => 'success',
             'message' => __("Venta :ticket completada exitosamente.", ['ticket' => $sale->codigo_ticket]),
-            'sale' => $sale->load('items', 'payments'),
+            'sale' => new SaleResource($sale->load('items', 'payments')),
         ]);
     }
 
@@ -231,7 +216,7 @@ class SaleController extends Controller
 
         if ($request->wantsJson()) {
             return response()->json([
-                'sales' => $sales,
+                'sales' => SaleResource::collection($sales),
             ]);
         }
 
@@ -239,7 +224,7 @@ class SaleController extends Controller
         $empresa = $user?->empresa;
 
         return inertia('admin/PointOfSale/Ventas/Index', [
-            'sales' => $sales,
+            'sales' => SaleResource::collection($sales),
             'currencySymbol' => $this->getCurrencySymbol(),
             'empresa' => $empresa ? [
                 'razon_social' => $empresa->razon_social,

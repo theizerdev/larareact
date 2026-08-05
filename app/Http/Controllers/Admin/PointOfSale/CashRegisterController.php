@@ -3,6 +3,8 @@
 namespace App\Http\Controllers\Admin\PointOfSale;
 
 use App\Http\Controllers\Controller;
+use App\Http\Requests\Admin\CashRegisterRequest;
+use App\Http\Resources\CashRegisterResource;
 use App\Models\CashRegister;
 use App\Models\Empresa;
 use App\Models\Pais;
@@ -72,14 +74,14 @@ class CashRegisterController extends Controller
         $activeRegister = CashRegister::getActiveRegister();
 
         return inertia('admin/PointOfSale/CashRegisters/Index', [
-            'cajas' => $cajas,
-            'activeRegister' => $activeRegister,
+            'cajas' => CashRegisterResource::collection($cajas),
+            'activeRegister' => $activeRegister ? new CashRegisterResource($activeRegister) : null,
             'currencySymbol' => $this->getCurrencySymbol(),
             'filters' => $request->only(['search', 'status', 'perPage']),
         ]);
     }
 
-    public function store(Request $request, CashRegisterService $service)
+    public function store(CashRegisterRequest $request, CashRegisterService $service)
     {
         $existingOpen = CashRegister::hasOpenRegister();
 
@@ -90,10 +92,7 @@ class CashRegisterController extends Controller
             ]);
         }
 
-        $validated = $request->validate([
-            'opening_amount' => 'required|numeric|min:0',
-            'valor_dolar' => 'nullable|numeric|gt:0',
-        ]);
+        $validated = $request->validated();
 
         $service->openRegister(auth()->id(), (float) $validated['opening_amount']);
 

@@ -3,6 +3,8 @@
 namespace App\Http\Controllers\Admin\PointOfSale;
 
 use App\Http\Controllers\Controller;
+use App\Http\Requests\Admin\ClienteRequest;
+use App\Http\Resources\ClienteResource;
 use App\Models\CashRegister;
 use App\Models\Cliente;
 use App\Models\CreditPayment;
@@ -51,21 +53,15 @@ class ClienteController extends Controller
         $clientes = $query->orderBy('nombre', 'asc')->paginate($perPage)->withQueryString();
 
         return inertia('admin/PointOfSale/Clientes/Index', [
-            'clientes' => $clientes,
+            'clientes' => ClienteResource::collection($clientes),
             'currencySymbol' => $this->getCurrencySymbol(),
             'filters' => $request->only(['search', 'perPage']),
         ]);
     }
 
-    public function store(Request $request)
+    public function store(ClienteRequest $request)
     {
-        $validated = $request->validate([
-            'nombre' => 'required|string|max:255',
-            'telefono' => 'nullable|string|max:50',
-            'email' => 'nullable|email|max:255',
-            'direccion' => 'nullable|string|max:500',
-            'limite_credito' => 'nullable|numeric|min:0',
-        ]);
+        $validated = $request->validated();
 
         Cliente::create($validated);
 
@@ -75,16 +71,9 @@ class ClienteController extends Controller
         ]);
     }
 
-    public function update(Request $request, Cliente $cliente)
+    public function update(ClienteRequest $request, Cliente $cliente)
     {
-        $validated = $request->validate([
-            'nombre' => 'required|string|max:255',
-            'telefono' => 'nullable|string|max:50',
-            'email' => 'nullable|email|max:255',
-            'direccion' => 'nullable|string|max:500',
-            'limite_credito' => 'nullable|numeric|min:0',
-            'estado' => 'boolean',
-        ]);
+        $validated = $request->validated();
 
         $cliente->update($validated);
 
