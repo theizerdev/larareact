@@ -505,68 +505,210 @@ export default function Welcome() {
                     </div>
                 </section>
 
-                {/* ─── SECCIÓN DE PRECIOS & PRUEBA DE 7 DÍAS ─────────────────────────────── */}
-                <section id="pricing" className="py-20 md:py-28">
+                {/* ─── SECCIÓN DE PRECIOS & PLANES COMPLETA ─────────────────────────────── */}
+                <section id="pricing" className="py-20 md:py-28 bg-slate-50/50">
                     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-16">
+                        {/* Encabezado de la Sección */}
                         <div className="text-center space-y-4 max-w-3xl mx-auto">
-                            <span className="text-xs font-bold font-mono uppercase tracking-widest text-[#ff5a00] bg-orange-50 border border-orange-200 px-3.5 py-1.5 rounded-full">
-                                {__('Comienza Hoy')}
+                            <span className="text-xs font-bold font-mono uppercase tracking-widest text-[#ff5a00] bg-orange-50 border border-orange-200 px-3.5 py-1.5 rounded-full shadow-sm">
+                                {__('Planes & Precios Transparentes')}
                             </span>
-                            <h2 className="text-3xl sm:text-5xl font-black text-[#08264e] tracking-tight">
-                                {__('Prueba 7 días gratis sin compromisos')}
+                            <h2 className="text-3xl sm:text-5xl font-black text-[#08264e] tracking-tight leading-tight">
+                                {__('Elige el plan ideal para impulsar tu negocio')}
                             </h2>
                             <p className="text-slate-600 text-base sm:text-lg">
-                                {__('Prueba todas las funcionalidades del sistema en tu negocio. Acceso inmediato sin tarjeta de crédito.')}
+                                {__('Sin sorpresas ni contratos forzosos. Todos los planes incluyen 7 días de prueba gratuita sin requerir tarjeta de crédito.')}
                             </p>
                         </div>
 
-                        <div className="max-w-md mx-auto relative">
-                            <div className="absolute -inset-1 bg-gradient-to-r from-[#ff5a00] to-amber-500 rounded-3xl blur-xl opacity-20" />
-                            <div className="relative bg-white border-2 border-[#ff5a00]/40 p-8 rounded-3xl space-y-6 text-center shadow-xl">
-                                <span className="inline-block px-4 py-1 rounded-full bg-orange-50 border border-orange-200 text-[#ff5a00] text-xs font-bold font-mono uppercase">
-                                    {__('Prueba Gratuita')}
-                                </span>
+                        {/* Grid de Planes (4 Tarjetas) */}
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 lg:gap-8 items-stretch">
 
-                                <div>
-                                    <span className="text-5xl font-black text-[#08264e] font-mono">7 {__('Días')}</span>
-                                    <p className="text-sm text-slate-500 mt-1 font-medium">{__('Acceso Total Ilimitado')}</p>
+                            {/* Plan 1: Prueba Gratis 7 Días */}
+                            <div className="bg-white border border-slate-200 p-6 sm:p-8 rounded-3xl space-y-6 flex flex-col justify-between shadow-sm hover:shadow-xl transition-all relative">
+                                <div className="space-y-4">
+                                    <span className="inline-block px-3 py-1 rounded-full bg-emerald-50 border border-emerald-200 text-emerald-700 text-xs font-bold uppercase tracking-wider">
+                                        {__('Sin Compromiso')}
+                                    </span>
+                                    <div>
+                                        <h3 className="text-xl font-bold text-[#08264e]">{__('Prueba Gratuita')}</h3>
+                                        <p className="text-xs text-slate-500 mt-1">{__('Evalúa todo el sistema en tu negocio')}</p>
+                                    </div>
+                                    <div className="pt-2">
+                                        <div className="flex items-baseline gap-1">
+                                            <span className="text-4xl font-black text-[#08264e] font-mono">$0</span>
+                                            <span className="text-xs font-bold text-slate-500">/ 7 {__('Días')}</span>
+                                        </div>
+                                        <p className="text-xs text-emerald-600 font-bold mt-1">{__('Acceso Total Ilimitado')}</p>
+                                    </div>
+
+                                    <ul className="space-y-2.5 text-xs text-slate-600 border-t border-slate-100 pt-4 font-medium">
+                                        <li className="flex items-center gap-2">
+                                            <Check className="w-4 h-4 text-emerald-600 shrink-0" />
+                                            <span>{__('Terminal POS con atajos rápidos')}</span>
+                                        </li>
+                                        <li className="flex items-center gap-2">
+                                            <Check className="w-4 h-4 text-emerald-600 shrink-0" />
+                                            <span>{__('Apertura y Cierre de Caja Z')}</span>
+                                        </li>
+                                        <li className="flex items-center gap-2">
+                                            <Check className="w-4 h-4 text-emerald-600 shrink-0" />
+                                            <span>{isVenezuela ? __('Tasa BCV en Tiempo Real') : __('Multimoneda & Divisas')}</span>
+                                        </li>
+                                        <li className="flex items-center gap-2">
+                                            <Check className="w-4 h-4 text-emerald-600 shrink-0" />
+                                            <span>{__('Envíos OTP por WhatsApp')}</span>
+                                        </li>
+                                    </ul>
                                 </div>
-
-                                <ul className="space-y-3 text-sm text-slate-700 text-left border-t border-slate-200 pt-6 font-medium">
-                                    <li className="flex items-center gap-2.5">
-                                        <Check className="w-4 h-4 text-emerald-600 shrink-0" />
-                                        <span>{__('Punto de venta POS con atajos rápidos')}</span>
-                                    </li>
-                                    <li className="flex items-center gap-2.5">
-                                        <Check className="w-4 h-4 text-emerald-600 shrink-0" />
-                                        <span>{__('WhatsApp Engine con envío de credenciales')}</span>
-                                    </li>
-                                    <li className="flex items-center gap-2.5">
-                                        <Check className="w-4 h-4 text-emerald-600 shrink-0" />
-                                        <span>{__('Control de cajas y cierres protegidos')}</span>
-                                    </li>
-                                    <li className="flex items-center gap-2.5">
-                                        <Check className="w-4 h-4 text-emerald-600 shrink-0" />
-                                        <span>
-                                            {isVenezuela
-                                                ? __('Sincronización oficial Tasa BCV')
-                                                : __('Multimoneda & tipos de cambio')}
-                                        </span>
-                                    </li>
-                                    <li className="flex items-center gap-2.5">
-                                        <Check className="w-4 h-4 text-emerald-600 shrink-0" />
-                                        <span>{__('Inventarios, compras y ventas a crédito')}</span>
-                                    </li>
-                                </ul>
 
                                 <Link
                                     href="/register"
-                                    className="w-full inline-flex items-center justify-center gap-2 py-4 rounded-xl bg-gradient-to-r from-[#ff5a00] to-orange-600 hover:from-orange-600 hover:to-orange-700 text-white font-black text-base transition-all shadow-lg shadow-orange-500/20 active:scale-95"
+                                    className="w-full py-3 px-4 rounded-xl bg-slate-100 hover:bg-slate-200 text-[#08264e] font-bold text-xs text-center transition-colors block mt-6"
                                 >
-                                    <span>{__('Crear Cuenta Gratis')}</span>
-                                    <ArrowRight className="w-5 h-5" />
+                                    {__('Probar 7 Días Gratis')}
                                 </Link>
                             </div>
+
+                            {/* Plan 2: Trimestral */}
+                            <div className="bg-white border border-slate-200 p-6 sm:p-8 rounded-3xl space-y-6 flex flex-col justify-between shadow-sm hover:shadow-xl transition-all relative">
+                                <div className="space-y-4">
+                                    <span className="inline-block px-3 py-1 rounded-full bg-blue-50 border border-blue-200 text-[#08264e] text-xs font-bold uppercase tracking-wider">
+                                        {__('Para Emprendedores')}
+                                    </span>
+                                    <div>
+                                        <h3 className="text-xl font-bold text-[#08264e]">{__('Plan Trimestral')}</h3>
+                                        <p className="text-xs text-slate-500 mt-1">{__('Control total para tu primer comercio')}</p>
+                                    </div>
+                                    <div className="pt-2">
+                                        <div className="flex items-baseline gap-1">
+                                            <span className="text-4xl font-black text-[#08264e] font-mono">$29.66</span>
+                                            <span className="text-xs font-bold text-slate-500">/ {__('mes')}</span>
+                                        </div>
+                                        <p className="text-xs text-slate-500 font-medium mt-1">{__('Facturado $89 cada 3 meses')}</p>
+                                    </div>
+
+                                    <ul className="space-y-2.5 text-xs text-slate-600 border-t border-slate-100 pt-4 font-medium">
+                                        <li className="flex items-center gap-2">
+                                            <Check className="w-4 h-4 text-emerald-600 shrink-0" />
+                                            <span>{__('Todo lo de la Prueba Gratis')}</span>
+                                        </li>
+                                        <li className="flex items-center gap-2">
+                                            <Check className="w-4 h-4 text-emerald-600 shrink-0" />
+                                            <span>{__('Catálogo y productos ilimitados')}</span>
+                                        </li>
+                                        <li className="flex items-center gap-2">
+                                            <Check className="w-4 h-4 text-emerald-600 shrink-0" />
+                                            <span>{__('Control de stock e inventario')}</span>
+                                        </li>
+                                        <li className="flex items-center gap-2">
+                                            <Check className="w-4 h-4 text-emerald-600 shrink-0" />
+                                            <span>{__('Reportes de ventas y ganancias')}</span>
+                                        </li>
+                                    </ul>
+                                </div>
+
+                                <Link
+                                    href="/register"
+                                    className="w-full py-3 px-4 rounded-xl bg-[#08264e] hover:bg-[#0b3368] text-white font-bold text-xs text-center transition-colors block mt-6"
+                                >
+                                    {__('Comenzar Plan Trimestral')}
+                                </Link>
+                            </div>
+
+                            {/* Plan 3: Semestral (DESTACADO / POPULAR) */}
+                            <div className="bg-white border-2 border-[#ff5a00] p-6 sm:p-8 rounded-3xl space-y-6 flex flex-col justify-between shadow-2xl transition-all relative transform lg:-translate-y-2">
+                                <div className="absolute -top-3.5 left-1/2 -translate-x-1/2 bg-gradient-to-r from-[#ff5a00] to-amber-500 text-white text-[11px] font-black uppercase tracking-wider px-4 py-1 rounded-full shadow-md shrink-0 whitespace-nowrap">
+                                    {__('★ Más Popular - Ahorra 15%')}
+                                </div>
+
+                                <div className="space-y-4 pt-2">
+                                    <div>
+                                        <h3 className="text-xl font-bold text-[#08264e]">{__('Plan Semestral')}</h3>
+                                        <p className="text-xs text-slate-500 mt-1">{__('El equilibrio perfecto para crecer')}</p>
+                                    </div>
+                                    <div className="pt-2">
+                                        <div className="flex items-baseline gap-1">
+                                            <span className="text-4xl font-black text-[#08264e] font-mono">$26.50</span>
+                                            <span className="text-xs font-bold text-slate-500">/ {__('mes')}</span>
+                                        </div>
+                                        <p className="text-xs text-[#ff5a00] font-bold mt-1">{__('Facturado $159 cada 6 meses')}</p>
+                                    </div>
+
+                                    <ul className="space-y-2.5 text-xs text-slate-600 border-t border-slate-100 pt-4 font-medium">
+                                        <li className="flex items-center gap-2">
+                                            <Check className="w-4 h-4 text-emerald-600 shrink-0" />
+                                            <span>{__('Todo lo del Plan Trimestral')}</span>
+                                        </li>
+                                        <li className="flex items-center gap-2">
+                                            <Check className="w-4 h-4 text-emerald-600 shrink-0" />
+                                            <span>{__('Sincronización automática de tasa')}</span>
+                                        </li>
+                                        <li className="flex items-center gap-2">
+                                            <Check className="w-4 h-4 text-emerald-600 shrink-0" />
+                                            <span>{__('WhatsApp Engine multi-usuario')}</span>
+                                        </li>
+                                        <li className="flex items-center gap-2">
+                                            <Check className="w-4 h-4 text-emerald-600 shrink-0" />
+                                            <span>{__('Soporte prioritario por WhatsApp')}</span>
+                                        </li>
+                                    </ul>
+                                </div>
+
+                                <Link
+                                    href="/register"
+                                    className="w-full py-3.5 px-4 rounded-xl bg-gradient-to-r from-[#ff5a00] to-orange-600 hover:from-orange-600 hover:to-orange-700 text-white font-extrabold text-xs text-center transition-all shadow-lg shadow-orange-500/25 block mt-6"
+                                >
+                                    {__('Elegir Plan Semestral')}
+                                </Link>
+                            </div>
+
+                            {/* Plan 4: Anual (MEJOR VALOR) */}
+                            <div className="bg-white border border-slate-200 p-6 sm:p-8 rounded-3xl space-y-6 flex flex-col justify-between shadow-sm hover:shadow-xl transition-all relative">
+                                <div className="space-y-4">
+                                    <span className="inline-block px-3 py-1 rounded-full bg-purple-50 border border-purple-200 text-purple-700 text-xs font-bold uppercase tracking-wider">
+                                        {__('Mejor Valor - Ahorra 30%')}
+                                    </span>
+                                    <div>
+                                        <h3 className="text-xl font-bold text-[#08264e]">{__('Plan Anual')}</h3>
+                                        <p className="text-xs text-slate-500 mt-1">{__('Máximo ahorro y soporte continuo')}</p>
+                                    </div>
+                                    <div className="pt-2">
+                                        <div className="flex items-baseline gap-1">
+                                            <span className="text-4xl font-black text-[#08264e] font-mono">$24.00</span>
+                                            <span className="text-xs font-bold text-slate-500">/ {__('mes')}</span>
+                                        </div>
+                                        <p className="text-xs text-slate-500 font-medium mt-1">{__('Facturado $288 al año')}</p>
+                                    </div>
+
+                                    <ul className="space-y-2.5 text-xs text-slate-600 border-t border-slate-100 pt-4 font-medium">
+                                        <li className="flex items-center gap-2">
+                                            <Check className="w-4 h-4 text-emerald-600 shrink-0" />
+                                            <span>{__('Sucursales y Cajas Ilimitadas')}</span>
+                                        </li>
+                                        <li className="flex items-center gap-2">
+                                            <Check className="w-4 h-4 text-emerald-600 shrink-0" />
+                                            <span>{__('Ventas a crédito y cobranza')}</span>
+                                        </li>
+                                        <li className="flex items-center gap-2">
+                                            <Check className="w-4 h-4 text-emerald-600 shrink-0" />
+                                            <span>{__('Auditoría estricta de transacciones')}</span>
+                                        </li>
+                                        <li className="flex items-center gap-2">
+                                            <Check className="w-4 h-4 text-emerald-600 shrink-0" />
+                                            <span>{__('Asesor técnico dedicado')}</span>
+                                        </li>
+                                    </ul>
+                                </div>
+
+                                <Link
+                                    href="/register"
+                                    className="w-full py-3 px-4 rounded-xl bg-slate-900 hover:bg-black text-white font-bold text-xs text-center transition-colors block mt-6"
+                                >
+                                    {__('Obtener Plan Anual')}
+                                </Link>
+                            </div>
+
                         </div>
                     </div>
                 </section>
