@@ -57,12 +57,22 @@ class CreateNewUser implements CreatesNewUsers
                 'pais_id' => $paisId,
                 'pais_telefono_id' => $paisId,
                 'status' => true,
-                'api_key' => '',
-                'whatsapp_api_key' => '',
+                'api_key' => Str::random(32),
+                'whatsapp_api_key' => Str::random(32),
                 'subscription_status' => 'trial',
                 'trial_ends_at' => now()->addDays(7),
                 'max_sucursales' => 1,
             ]);
+
+            $empresa->update([
+                'whatsapp_instance' => $documento,
+            ]);
+
+            try {
+                \App\Services\WhatsAppService::forCompany($empresa)->createInstance();
+            } catch (\Throwable $e) {
+                Log::warning('No se pudo crear la instancia inicial en el motor WhatsApp: '.$e->getMessage());
+            }
 
             // 2. Crear Sucursal Principal con los datos de la empresa
             $sucursal = Sucursal::create([

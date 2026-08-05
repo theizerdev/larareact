@@ -70,6 +70,17 @@ class EmpresaController extends Controller
             $empresa->max_sucursales = 1;
             $empresa->save();
 
+            $instanceName = ! empty($empresa->documento) ? $empresa->documento : 'empresa_'.$empresa->id;
+            $empresa->update([
+                'whatsapp_instance' => $instanceName,
+            ]);
+
+            try {
+                \App\Services\WhatsAppService::forCompany($empresa)->createInstance();
+            } catch (\Throwable $e) {
+                Log::warning('No se pudo crear la instancia inicial en el motor WhatsApp: '.$e->getMessage());
+            }
+
             return back()->with('notification', [
                 'type' => 'success',
                 'message' => __('Company created successfully.'),

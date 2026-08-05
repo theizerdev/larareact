@@ -135,6 +135,11 @@ class WhatsAppService
         return new self($empresa);
     }
 
+    public static function forCompanyOwn($empresa): self
+    {
+        return new self($empresa);
+    }
+
     public function getCompanyId(): int
     {
         return $this->companyId;
@@ -323,27 +328,85 @@ class WhatsAppService
     }
 
     /**
-     * Conectar / Crear instancia en el servidor de WhatsApp
+     * Crear una nueva instancia en el motor de WhatsApp (Node.js)
      */
-    public function connect()
+    public function createInstance(?string $name = null, ?string $customToken = null)
     {
+        $instanceName = $name ?? $this->instanceName;
         try {
             $url = "{$this->baseUrl}/api/instance/create";
             $response = Http::timeout($this->timeout)
                 ->withHeaders($this->getHeaders())
                 ->post($url, [
-                    'name' => $this->instanceName,
+                    'name' => $instanceName,
+                    'token' => $customToken ?? $this->apiKey,
                 ]);
 
             return $response->successful() ? $response->json() : null;
         } catch (\Exception $e) {
-            Log::error('WhatsApp Connect Error: '.$e->getMessage(), [
+            Log::error('WhatsApp Create Instance Error: '.$e->getMessage(), [
                 'company_id' => $this->companyId,
-                'instance' => $this->instanceName,
+                'instance' => $instanceName,
             ]);
 
             return null;
         }
+    }
+
+    /**
+     * Iniciar / Encender una instancia
+     */
+    public function startInstance(?string $name = null)
+    {
+        $instanceName = $name ?? $this->instanceName;
+        try {
+            $url = "{$this->baseUrl}/api/instance/{$instanceName}/start";
+            $response = Http::timeout($this->timeout)
+                ->withHeaders($this->getHeaders())
+                ->post($url);
+
+            return $response->successful() ? $response->json() : null;
+        } catch (\Exception $e) {
+            return null;
+        }
+    }
+
+    /**
+     * Detener / Apagar una instancia
+     */
+    public function stopInstance(?string $name = null)
+    {
+        $instanceName = $name ?? $this->instanceName;
+        try {
+            $url = "{$this->baseUrl}/api/instance/{$instanceName}/stop";
+            $response = Http::timeout($this->timeout)
+                ->withHeaders($this->getHeaders())
+                ->post($url);
+
+            return $response->successful() ? $response->json() : null;
+        } catch (\Exception $e) {
+            return null;
+        }
+    }
+
+    /**
+     * Alias para enviar mensajes de texto simple
+     */
+    public function sendText(string $to, string $message, ?string $instance = null)
+    {
+        if ($instance) {
+            $this->instanceName = $instance;
+        }
+
+        return $this->sendMessage($to, $message);
+    }
+
+    /**
+     * Conectar / Crear instancia en el servidor de WhatsApp
+     */
+    public function connect()
+    {
+        return $this->createInstance();
     }
 
     /**
