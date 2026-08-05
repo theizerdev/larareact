@@ -136,6 +136,9 @@ export default function Terminal({
     const pageProps = usePage().props as any;
     const isVenezuela = Boolean(pageProps?.isVenezuela);
     const currencyCode = pageProps?.currencyCode || 'MXN';
+    const currentUserId = pageProps?.auth?.user?.id;
+    const isSuperAdmin = Boolean(pageProps?.auth?.user?.is_super_admin);
+    const canCloseActiveRegister = !activeRegister || activeRegister.user_id === currentUserId || isSuperAdmin;
 
     // Local catalog state to allow live stock updates
     const [localCatalog, setLocalCatalog] = useState<CatalogItem[]>(catalog);
@@ -877,6 +880,11 @@ export default function Terminal({
         e.preventDefault();
         if (!activeRegister) return;
 
+        if (!canCloseActiveRegister) {
+            notifyError(__('Solo el usuario que aperturó esta caja puede realizar el cierre.'));
+            return;
+        }
+
         const counted = countedAmountInput !== '' ? parseFloat(countedAmountInput) : null;
 
         router.post(
@@ -911,7 +919,13 @@ export default function Terminal({
                 setIsVerifierOpen(true);
             } else if (e.key === 'F8') {
                 e.preventDefault();
-                if (activeRegister) setIsCorteOpen(true);
+                if (activeRegister) {
+                    if (!canCloseActiveRegister) {
+                        notifyError(__('Solo el usuario que aperturó esta caja puede realizar el cierre.'));
+                    } else {
+                        setIsCorteOpen(true);
+                    }
+                }
             } else if (e.key === 'Insert') {
                 e.preventDefault();
                 setIsMiscModalOpen(true);

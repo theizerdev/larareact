@@ -126,6 +126,8 @@ class UserController extends Controller
     public function store(StoreUserRequest $request)
     {
         $validated = $request->validated();
+        $plainPassword = $validated['password'] ?? '';
+        $sendWelcome = ! empty($validated['send_welcome_whatsapp']);
 
         try {
             $currentUser = auth()->user();
@@ -141,15 +143,68 @@ class UserController extends Controller
             }
 
             $validated['password'] = Hash::make($validated['password']);
+            unset($validated['send_welcome_whatsapp']);
+
             $user = User::create($validated);
 
             if (isset($validated['roles'])) {
                 $user->syncRoles($validated['roles']);
             }
 
+            $whatsappSent = false;
+
+            if ($sendWelcome && ! empty($user->telefono)) {
+                try {
+                    $empresa = $user->empresa ?? ($user->empresa_id ? Empresa::find($user->empresa_id) : $currentUser?->empresa);
+                    $sucursal = $user->sucursal ?? ($user->sucursal_id ? Sucursal::find($user->sucursal_id) : null);
+                    $empresaNombre = $empresa?->razon_social ?? config('app.name', 'Servitec');
+                    $sucursalNombre = $sucursal?->nombre ?? '';
+
+                    $fullPhone = $this->formatPhoneNumber($user);
+
+                    $loginUrl = config('app.url', url('/'));
+
+                    $message = "🌟 *¡Bienvenido(a) a Fix Sale!* 🌟\n\n"
+                        ."Hola *{$user->name}*, nos alegra darte la bienvenida a nuestra plataforma. Tu cuenta de acceso ha sido creada exitosamente.\n\n"
+                        ."🔑 *Tus Credenciales de Acceso:*\n"
+                        ."━━━━━━━━━━━━━━━━━━━━\n"
+                        ."👤 *Nombre:* {$user->name}\n"
+                        ."📧 *Correo:* {$user->email}\n"
+                        ."🏷️ *Usuario:* ".($user->username ?: $user->email)."\n"
+                        ."🔒 *Contraseña:* {$plainPassword}\n"
+                        ."🏢 *Empresa:* {$empresaNombre}\n"
+                        .(! empty($sucursalNombre) ? "🏬 *Sucursal:* {$sucursalNombre}\n" : '')
+                        ."━━━━━━━━━━━━━━━━━━━━\n\n"
+                        ."🌐 *Accede al sistema aquí:*\n"
+                        ."{$loginUrl}/login\n\n"
+                        ."💡 *Recomendación de Seguridad:*\n"
+                        ."Por tu seguridad, te sugerimos cambiar tu contraseña al ingresar por primera vez.\n\n"
+                        .'¡Cualquier duda o asistencia, estamos a tu disposición!';
+
+                    if ($empresa) {
+                        $whatsappService = \App\Services\WhatsAppService::forCompanyOwn($empresa);
+                        $res = $whatsappService->sendMessage($fullPhone, $message);
+                        if ($res) {
+                            $whatsappSent = true;
+                        }
+                    }
+                } catch (\Exception $we) {
+                    Log::error('Error al enviar WhatsApp de bienvenida: '.$we->getMessage());
+                }
+            }
+
+            $message = __('User created successfully.');
+            if ($sendWelcome) {
+                if ($whatsappSent) {
+                    $message .= ' '.__('Bienvenida enviada exitosamente por WhatsApp.');
+                } else {
+                    $message .= ' '.__('(No se pudo enviar el mensaje por WhatsApp, verifique la conexión del servicio).');
+                }
+            }
+
             return back()->with('notification', [
                 'type' => 'success',
-                'message' => __('User created successfully.'),
+                'message' => $message,
             ]);
         } catch (\Exception $e) {
             Log::error('Error al crear usuario: '.$e->getMessage());
@@ -229,5 +284,53 @@ class UserController extends Controller
                 'message' => __('There was an error updating the status. Please try again.'),
             ]);
         }
+    }
+
+    /**
+     * Formatea el número de teléfono agregando el código telefónico del país de la empresa/usuario si es necesario.
+     */
+    private function formatPhoneNumber(User $user): string
+    {
+        $phone = trim($user->telefono ?? '');
+        if (empty($phone)) {
+            return '';
+        }
+
+        $cleanPhone = preg_replace('/[^0-9]/', '', $phone);
+        if (str_starts_with($cleanPhone, '0')) {
+            $cleanPhone = substr($cleanPhone, 1);
+        }
+
+        // Obtener el código de país (1º país de teléfono, 2º empresa del usuario, 3º empresa del usuario autenticado)
+        $user->loadMissing(['paisTelefono', 'empresa.pais']);
+        $currentUser = auth()->user();
+        if ($currentUser) {
+            $currentUser->loadMissing('empresa.pais');
+        }
+
+        $codigoPais = $user->paisTelefono?->codigo_telefonico
+            ?? $user->empresa?->pais?->codigo_telefonico
+            ?? $currentUser?->empresa?->pais?->codigo_telefonico
+            ?? '';
+
+        $cleanCodigo = preg_replace('/[^0-9]/', '', $codigoPais);
+
+        if (! empty($cleanCodigo)) {
+            if (str_starts_with($cleanPhone, $cleanCodigo)) {
+                return $cleanPhone;
+            }
+
+            return $cleanCodigo.$cleanPhone;
+        }
+
+        // Fallback: verificar si ya incluye algún código de país conocido al inicio
+        $codigosComunes = ['593', '502', '503', '504', '505', '506', '507', '591', '595', '598', '52', '58', '57', '34', '54', '56', '51', '1'];
+        foreach ($codigosComunes as $code) {
+            if (str_starts_with($cleanPhone, $code) && strlen($cleanPhone) >= (strlen($code) + 7)) {
+                return $cleanPhone;
+            }
+        }
+
+        return $cleanPhone;
     }
 }

@@ -291,6 +291,10 @@ export default function Show({ caja, summary }: Props) {
     ];
 
     const isOpen = caja.status === 'open';
+    const currentUserId = pageProps.auth?.user?.id;
+    const isSuperAdmin = Boolean(pageProps.auth?.user?.is_super_admin);
+    const canClose = currentUserId === caja.user_id || isSuperAdmin;
+
     const finalBalance = isOpen
         ? Number(summary.current_balance || 0)
         : Number(caja.closing_amount !== null && caja.closing_amount !== undefined ? caja.closing_amount : summary.current_balance);
@@ -389,15 +393,40 @@ export default function Show({ caja, summary }: Props) {
                                         <Plus className="w-4 h-4" />
                                         {__('Registrar Movimiento')}
                                     </Button>
-                                    <Button variant="destructive" onClick={handleCloseRegister} className="font-bold gap-2">
-                                        <Lock className="w-4 h-4" />
-                                        {__('Cerrar Caja')}
-                                    </Button>
+                                    {canClose ? (
+                                        <Button variant="destructive" onClick={handleCloseRegister} className="font-bold gap-2">
+                                            <Lock className="w-4 h-4" />
+                                            {__('Cerrar Caja')}
+                                        </Button>
+                                    ) : (
+                                        <Button
+                                            variant="outline"
+                                            disabled
+                                            className="opacity-60 cursor-not-allowed font-medium gap-2 text-slate-500 border-slate-300 dark:border-slate-700"
+                                            title={__('Solo el usuario que aperturó esta caja puede realizar el cierre')}
+                                        >
+                                            <Lock className="w-4 h-4 text-slate-400" />
+                                            {__('Solo')} {caja.user?.name ? caja.user.name.split(' ')[0] : __('aperturador')} {__('puede cerrar')}
+                                        </Button>
+                                    )}
                                 </>
                             )}
                         </div>
                     </div>
                 </div>
+
+                {/* Banner Informativo si la caja está abierta pero pertenece a otro usuario */}
+                {isOpen && !canClose && (
+                    <div className="bg-amber-500/10 border border-amber-500/20 rounded-xl p-4 flex items-start gap-3 text-amber-800 dark:text-amber-300 shadow-sm">
+                        <AlertTriangle className="w-5 h-5 text-amber-500 shrink-0 mt-0.5" />
+                        <div className="space-y-1 text-sm">
+                            <p className="font-bold">{__('Restricción de Cierre de Caja')}</p>
+                            <p>
+                                {__('Esta caja fue aperturada por')} <span className="font-semibold text-slate-900 dark:text-slate-100">{caja.user?.name || __('otro usuario')}</span> ({caja.user?.email || ''}). {__('Por políticas de control interno, únicamente el usuario que aperturó la caja puede realizar el cierre de la misma.')}
+                            </p>
+                        </div>
+                    </div>
+                )}
 
                 {/* Banner de Resultado de Arqueo en Cajas Cerradas */}
                 {!isOpen && (

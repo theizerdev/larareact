@@ -206,6 +206,18 @@ class CashRegisterController extends Controller
             ]);
         }
 
+        $user = $request->user();
+        $isOwner = $caja->user_id === $user->id;
+        $isSuperAdmin = $user->id === 1 || $user->hasRole('Super Administrador');
+
+        if (! $isOwner && ! $isSuperAdmin) {
+            $creatorName = $caja->user?->name ?? __('otro usuario');
+            return back()->with('notification', [
+                'type' => 'error',
+                'message' => __('Solo el usuario que aperturó esta caja (:user) puede realizar el cierre de la misma.', ['user' => $creatorName]),
+            ]);
+        }
+
         $validated = $request->validate([
             'counted_amount' => 'nullable|numeric|min:0',
         ]);

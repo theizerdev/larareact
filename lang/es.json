@@ -1552,5 +1552,21 @@
   "Tu integración de WhatsApp aún no tiene una sesión activa.": "Tu integración de WhatsApp aún no tiene una sesión activa.",
   "Escanea el código QR para comenzar a enviar mensajes.": "Escanea el código QR para comenzar a enviar mensajes.",
   "Ir a WhatsApp →": "Ir a WhatsApp →",
-  "Después": "Después"
+  "Después": "Después",
+
+  "Solo el usuario que aperturó esta caja (:user) puede realizar el cierre de la misma.": "Solo el usuario que aperturó esta caja (:user) puede realizar el cierre de la misma.",
+  "Solo el usuario que aperturó esta caja puede realizar el cierre": "Solo el usuario que aperturó esta caja puede realizar el cierre",
+  "Solo el usuario que aperturó esta caja puede realizar el cierre.": "Solo el usuario que aperturó esta caja puede realizar el cierre.",
+  "puede cerrar": "puede cerrar",
+  "aperturador": "aperturador",
+  "Restricción de Cierre de Caja": "Restricción de Cierre de Caja",
+  "Esta caja fue aperturada por": "Esta caja fue aperturada por",
+  "Por políticas de control interno, únicamente el usuario que aperturó la caja puede realizar el cierre de la misma.": "Por políticas de control interno, únicamente el usuario que aperturó la caja puede realizar el cierre de la misma.",
+
+  "Bienvenida enviada exitosamente por WhatsApp.": "Bienvenida enviada exitosamente por WhatsApp.",
+  "(No se pudo enviar el mensaje por WhatsApp, verifique la conexión del servicio).": "(No se pudo enviar el mensaje por WhatsApp, verifique la conexión del servicio).",
+  "Enviar Mensaje de Bienvenida con Credenciales por WhatsApp": "Enviar Mensaje de Bienvenida con Credenciales por WhatsApp",
+  "Envía automáticamente un mensaje formateado con correo, usuario, contraseña y enlace de acceso.": "Envía automáticamente un mensaje formateado con correo, usuario, contraseña y enlace de acceso.",
+  "Enviar Recordatorio por WhatsApp": "Enviar Recordatorio por WhatsApp",
+  "El usuario no tiene un número de teléfono registrado.": "El usuario no tiene un número de teléfono registrado."
 }

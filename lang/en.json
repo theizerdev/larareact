@@ -1027,5 +1027,21 @@
   "Tu integración de WhatsApp aún no tiene una sesión activa.": "Your WhatsApp integration does not have an active session yet.",
   "Escanea el código QR para comenzar a enviar mensajes.": "Scan the QR code to start sending messages.",
   "Ir a WhatsApp →": "Go to WhatsApp →",
-  "Después": "Later"
+  "Después": "Later",
+
+  "Solo el usuario que aperturó esta caja (:user) puede realizar el cierre de la misma.": "Only the user who opened this cash register (:user) can close it.",
+  "Solo el usuario que aperturó esta caja puede realizar el cierre": "Only the user who opened this cash register can close it",
+  "Solo el usuario que aperturó esta caja puede realizar el cierre.": "Only the user who opened this cash register can close it.",
+  "puede cerrar": "can close",
+  "aperturador": "opener",
+  "Restricción de Cierre de Caja": "Cash Register Closing Restriction",
+  "Esta caja fue aperturada por": "This cash register was opened by",
+  "Por políticas de control interno, únicamente el usuario que aperturó la caja puede realizar el cierre de la misma.": "Per internal control policies, only the user who opened the cash register can close it.",
+
+  "Bienvenida enviada exitosamente por WhatsApp.": "Welcome message sent successfully via WhatsApp.",
+  "(No se pudo enviar el mensaje por WhatsApp, verifique la conexión del servicio).": "(Could not send message via WhatsApp, check service connection).",
+  "Enviar Mensaje de Bienvenida con Credenciales por WhatsApp": "Send Welcome Message with Credentials via WhatsApp",
+  "Envía automáticamente un mensaje formateado con correo, usuario, contraseña y enlace de acceso.": "Automatically sends a formatted message with email, username, password and login link.",
+  "Enviar Recordatorio por WhatsApp": "Send Reminder via WhatsApp",
+  "El usuario no tiene un número de teléfono registrado.": "The user does not have a registered phone number."
 }

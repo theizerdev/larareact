@@ -29,7 +29,13 @@ class CashRegisterPolicy
 
     public function close(User $user, CashRegister $register): bool
     {
-        return $register->status === 'open';
+        if ($register->status !== 'open') {
+            return false;
+        }
+
+        return $register->user_id === $user->id
+            || $user->id === 1
+            || $user->hasRole('Super Administrador');
     }
 
     public function deleteMovement(User $user, CashRegister $register): bool

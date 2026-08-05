@@ -135,6 +135,7 @@ const initialForm = {
     empresa_id: '' as string | number,
     sucursal_id: '' as string | number,
     roles: [] as string[],
+    send_welcome_whatsapp: true,
 };
 
 export default function UsersIndexPage({
@@ -226,6 +227,52 @@ return [];
             roles: user.roles.map((r) => r.name),
         });
         setIsModalOpen(true);
+    };
+
+    const handleSendWhatsAppWelcome = (user: User) => {
+        if (!user.telefono) {
+            notifyError(__('El usuario no tiene un número de teléfono registrado.'));
+            return;
+        }
+
+        let cleanPhone = user.telefono.replace(/[^0-9]/g, '');
+        if (cleanPhone.startsWith('0')) {
+            cleanPhone = cleanPhone.substring(1);
+        }
+
+        const paisTarget = paises.find((p) => p.id === user.pais_telefono_id);
+        const prefix = paisTarget?.codigo_telefonico
+            ? paisTarget.codigo_telefonico.replace(/[^0-9]/g, '')
+            : '';
+
+        let fullPhone = cleanPhone;
+        if (prefix) {
+            if (!cleanPhone.startsWith(prefix)) {
+                fullPhone = `${prefix}${cleanPhone}`;
+            }
+        } else {
+            const codigosComunes = ['593', '502', '503', '504', '505', '506', '507', '591', '595', '598', '52', '58', '57', '34', '54', '56', '51', '1'];
+            const hasKnownCode = codigosComunes.some((code) => cleanPhone.startsWith(code) && cleanPhone.length >= (code.length + 7));
+            if (!hasKnownCode) {
+                fullPhone = cleanPhone;
+            }
+        }
+
+        const empresaNombre = user.empresa?.razon_social || 'Servitec';
+
+        const text = `🌟 *¡Bienvenido(a) a ${empresaNombre}!* 🌟\n\n` +
+            `Hola *${user.name}*, recordamos tus datos de acceso a la plataforma:\n\n` +
+            `🔑 *Datos de Acceso:*\n` +
+            `━━━━━━━━━━━━━━━━━━━━\n` +
+            `👤 *Nombre:* ${user.name}\n` +
+            `📧 *Correo:* ${user.email}\n` +
+            `🏷️ *Usuario:* ${user.username || user.email}\n` +
+            `🏢 *Empresa:* ${empresaNombre}\n` +
+            `━━━━━━━━━━━━━━━━━━━━\n\n` +
+            `🌐 *Accede aquí:* ${window.location.origin}/login\n\n` +
+            `¡Cualquier duda o asistencia, estamos a tu disposición!`;
+
+        window.open(`https://wa.me/${fullPhone}?text=${encodeURIComponent(text)}`, '_blank');
     };
 
     const handleSubmit = (e: React.FormEvent) => {
@@ -388,6 +435,15 @@ return;
                             <Pencil className="mr-2 h-4 w-4" />
                             {__('Edit')}
                         </DropdownMenuItem>
+                        {user.telefono && (
+                            <DropdownMenuItem
+                                onClick={() => handleSendWhatsAppWelcome(user)}
+                                className="text-emerald-600 dark:text-emerald-400 font-medium"
+                            >
+                                <Phone className="mr-2 h-4 w-4 text-emerald-600" />
+                                {__('Enviar Recordatorio por WhatsApp')}
+                            </DropdownMenuItem>
+                        )}
                         <DropdownMenuItem onClick={() => handleToggleStatus(user)}>
                             <ToggleRight className="mr-2 h-4 w-4" />
                             {user.status === 'activo' ? __('Deactivate') : __('Activate')}
@@ -638,6 +694,25 @@ return;
                                     error={errors.telefono}
                                 />
                             </div>
+
+                            {/* Switch de Bienvenida por WhatsApp (Solo al crear) */}
+                            {!editingUser && (
+                                <div className="md:col-span-2 flex items-center justify-between p-3.5 border rounded-xl bg-slate-50 dark:bg-slate-900/60 border-indigo-200 dark:border-indigo-900/40">
+                                    <div className="space-y-0.5 pr-2">
+                                        <Label className="text-sm font-semibold flex items-center gap-2 text-indigo-700 dark:text-indigo-300">
+                                            <Phone className="w-4 h-4 text-emerald-600 shrink-0" />
+                                            {__('Enviar Mensaje de Bienvenida con Credenciales por WhatsApp')}
+                                        </Label>
+                                        <p className="text-xs text-muted-foreground">
+                                            {__('Envía automáticamente un mensaje formateado con correo, usuario, contraseña y enlace de acceso.')}
+                                        </p>
+                                    </div>
+                                    <Switch
+                                        checked={Boolean(data.send_welcome_whatsapp)}
+                                        onCheckedChange={(checked) => setData('send_welcome_whatsapp', checked)}
+                                    />
+                                </div>
+                            )}
 
                             {/* Empresa */}
                             <div>

@@ -217,31 +217,47 @@ export default function Index({ cajas, activeRegister, currencySymbol = '$', fil
             header: __('Acciones'),
             className: 'text-right',
             hideable: false,
-            stopRowClick: true,
-            cell: (caja) => (
-                <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                        <Button variant="ghost" size="icon">
-                            <MoreVertical className="h-4 w-4" />
-                        </Button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end">
-                        <DropdownMenuItem onClick={() => router.get(`/admin/cajas/${caja.id}`)}>
-                            <Eye className="mr-2 h-4 w-4" />
-                            {__('Ver Detalle')}
-                        </DropdownMenuItem>
-                        {caja.status === 'open' && (
-                            <DropdownMenuItem
-                                onClick={() => handleCloseRegister(caja)}
-                                className="text-rose-500 hover:text-rose-700"
-                            >
-                                <Lock className="mr-2 h-4 w-4" />
-                                {__('Cerrar Caja')}
+            cell: (caja) => {
+                const currentUserId = pageProps.auth?.user?.id;
+                const isSuperAdmin = Boolean(pageProps.auth?.user?.is_super_admin);
+                const canClose = currentUserId === caja.user_id || isSuperAdmin;
+
+                return (
+                    <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                            <Button variant="ghost" size="icon">
+                                <MoreVertical className="h-4 w-4" />
+                            </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end">
+                            <DropdownMenuItem onClick={() => router.get(`/admin/cajas/${caja.id}`)}>
+                                <Eye className="mr-2 h-4 w-4" />
+                                {__('Ver Detalle')}
                             </DropdownMenuItem>
-                        )}
-                    </DropdownMenuContent>
-                </DropdownMenu>
-            ),
+                            {caja.status === 'open' && (
+                                canClose ? (
+                                    <DropdownMenuItem
+                                        onClick={() => handleCloseRegister(caja)}
+                                        className="text-rose-500 hover:text-rose-700 font-medium"
+                                    >
+                                        <Lock className="mr-2 h-4 w-4" />
+                                        {__('Cerrar Caja')}
+                                    </DropdownMenuItem>
+                                ) : (
+                                    <DropdownMenuItem
+                                        disabled
+                                        className="text-muted-foreground opacity-60 text-xs cursor-not-allowed"
+                                        title={__('Solo el usuario que aperturó esta caja puede realizar el cierre')}
+                                    >
+                                        <Lock className="mr-2 h-3.5 w-3.5 text-slate-400" />
+                                        {__('Solo')} {caja.user?.name ? caja.user.name.split(' ')[0] : __('aperturador')} {__('puede cerrar')}
+                                    </DropdownMenuItem>
+                                )
+                            )}
+                        </DropdownMenuContent>
+                    </DropdownMenu>
+                );
+            },
         },
     ];
 

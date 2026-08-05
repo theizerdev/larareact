@@ -33,6 +33,7 @@ class StoreUserRequest extends FormRequest
             'empresa_id' => ['nullable', 'exists:empresas,id'],
             'sucursal_id' => ['nullable', 'exists:sucursales,id'],
             'roles' => ['array'],
+            'send_welcome_whatsapp' => ['nullable', 'boolean'],
         ];
     }
 }
