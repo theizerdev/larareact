@@ -353,7 +353,6 @@ class Empresa9DashboardSeeder extends Seeder
                     'sale_id' => $sale->id,
                     'metodo_pago' => $metodo,
                     'monto' => $totalVenta,
-                    'referencia' => $metodo === 'transferencia' ? 'REF-' . rand(100000, 999999) : null,
                     'created_at' => $saleDate,
                     'updated_at' => $saleDate,
                 ]);

@@ -174,103 +174,43 @@ export default function Welcome() {
                             </span>
                         </div>
 
-                        {/* MOCKUP INTERACTIVO SIMULADO DEL POS & DASHBOARD (LIGHT MODE) */}
+                        {/* SCREENSHOT REAL MEJORADO DEL DASHBOARD FIXSALE */}
                         <div id="pos" className="pt-8 max-w-6xl mx-auto relative group">
-                            <div className="absolute -inset-1 bg-gradient-to-r from-[#08264e] to-[#ff5a00] rounded-3xl blur-2xl opacity-15 group-hover:opacity-25 transition-opacity" />
-                            <div className="relative bg-white border border-slate-200 rounded-2xl p-4 sm:p-6 shadow-xl text-left space-y-6">
-                                {/* Barra superior de ventana simulada */}
-                                <div className="flex items-center justify-between border-b border-slate-200 pb-4">
+                            <div className="absolute -inset-1.5 bg-gradient-to-r from-[#08264e] via-[#ff5a00] to-[#08264e] rounded-3xl blur-2xl opacity-20 group-hover:opacity-35 transition-all duration-500" />
+                            <div className="relative bg-white border border-slate-200/80 rounded-2xl overflow-hidden shadow-2xl text-left">
+                                {/* Barra superior de ventana estilo navegador */}
+                                <div className="flex items-center justify-between border-b border-slate-200/80 bg-slate-50/80 backdrop-blur-md px-4 py-3">
                                     <div className="flex items-center gap-2">
-                                        <div className="w-3 h-3 rounded-full bg-rose-500" />
-                                        <div className="w-3 h-3 rounded-full bg-amber-500" />
-                                        <div className="w-3 h-3 rounded-full bg-emerald-500" />
-                                        <span className="text-xs font-mono text-slate-500 ml-2">
-                                            fixsale.app / admin / terminal
-                                        </span>
+                                        <div className="w-3 h-3 rounded-full bg-rose-500/90 shadow-sm" />
+                                        <div className="w-3 h-3 rounded-full bg-amber-500/90 shadow-sm" />
+                                        <div className="w-3 h-3 rounded-full bg-emerald-500/90 shadow-sm" />
+                                        <div className="hidden sm:flex items-center gap-1.5 text-xs font-mono text-slate-500 bg-white border border-slate-200 px-3 py-1 rounded-md ml-3 shadow-inner">
+                                            <span className="text-emerald-500">🔒</span>
+                                            <span>https://app.fixsale.app/admin/dashboard</span>
+                                        </div>
                                     </div>
                                     <div className="flex items-center gap-3 text-xs font-medium">
                                         {/* Estado WhatsApp Engine */}
-                                        <span className="flex items-center gap-1.5 bg-emerald-50 border border-emerald-200 px-3 py-1 rounded-full text-emerald-700 font-bold">
+                                        <span className="flex items-center gap-1.5 bg-emerald-50 border border-emerald-200 px-3 py-1 rounded-full text-emerald-700 font-bold shadow-sm">
                                             <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
                                             WhatsApp Active
                                         </span>
 
                                         {/* Tasa BCV o Multimoneda */}
-                                        <span className="bg-slate-100 px-3 py-1 rounded-full text-slate-700 font-mono font-bold border border-slate-200">
-                                            {isVenezuela ? '💵 Tasa BCV: 36.45 Bs' : `💵 Divisa: ${currencyCode} (${currencySymbol})`}
+                                        <span className="bg-white px-3 py-1 rounded-full text-slate-700 font-mono font-bold border border-slate-200 shadow-sm">
+                                            {isVenezuela ? '💵 Tasa BCV: 36.50 Bs' : `💵 Divisa: ${currencyCode} (${currencySymbol})`}
                                         </span>
                                     </div>
                                 </div>
 
-                                {/* Contenido Mockup POS (Light Theme) */}
-                                <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                                    {/* Panel Izquierdo: Resumen de Ventas / Dashboard */}
-                                    <div className="lg:col-span-2 space-y-4">
-                                        <div className="grid grid-cols-3 gap-3">
-                                            <div className="bg-slate-50 border border-slate-200 p-4 rounded-xl space-y-1">
-                                                <span className="text-xs text-slate-500 uppercase font-mono font-bold">{__('Ventas del Día')}</span>
-                                                <p className="text-xl font-black font-mono text-[#ff5a00]">{currencySymbol}1,480.00</p>
-                                            </div>
-                                            <div className="bg-slate-50 border border-slate-200 p-4 rounded-xl space-y-1">
-                                                <span className="text-xs text-slate-500 uppercase font-mono font-bold">{__('Caja Abierta')}</span>
-                                                <p className="text-xl font-black font-mono text-[#08264e]">Turno #104</p>
-                                            </div>
-                                            <div className="bg-slate-50 border border-slate-200 p-4 rounded-xl space-y-1">
-                                                <span className="text-xs text-slate-500 uppercase font-mono font-bold">{__('WhatsApp OTP')}</span>
-                                                <p className="text-xl font-black font-mono text-emerald-600">Active ✅</p>
-                                            </div>
-                                        </div>
-
-                                        {/* Simulación Tabla POS */}
-                                        <div className="bg-slate-50 border border-slate-200 rounded-xl p-4 space-y-3">
-                                            <div className="flex items-center justify-between text-xs font-extrabold text-slate-500 border-b border-slate-200 pb-2">
-                                                <span>{__('PRODUCTO / SERVICIO')}</span>
-                                                <span>{__('CANT')}</span>
-                                                <span>{__('SUBTOTAL')}</span>
-                                            </div>
-                                            <div className="flex items-center justify-between text-sm py-1">
-                                                <span className="font-medium text-slate-800">Mantenimiento de Servidor / Equipo</span>
-                                                <span className="font-mono text-slate-500">1</span>
-                                                <span className="font-mono font-bold text-[#08264e]">{currencySymbol}450.00</span>
-                                            </div>
-                                            <div className="flex items-center justify-between text-sm py-1 border-t border-slate-200">
-                                                <span className="font-medium text-slate-800">Cable de Red Cat6 & Conectores</span>
-                                                <span className="font-mono text-slate-500">5</span>
-                                                <span className="font-mono font-bold text-[#08264e]">{currencySymbol}75.00</span>
-                                            </div>
-                                        </div>
-                                    </div>
-
-                                    {/* Panel Derecho: Teclas Rápidas */}
-                                    <div className="bg-[#08264e] text-white p-4 rounded-xl space-y-3 flex flex-col justify-between shadow-lg">
-                                        <div>
-                                            <span className="text-xs font-bold text-orange-400 uppercase tracking-wider block mb-3 font-mono">
-                                                {__('Atajos de Teclado Rápido')}
-                                            </span>
-                                            <div className="space-y-2 text-xs">
-                                                <div className="flex justify-between p-2 rounded bg-[#0b3368] border border-blue-900">
-                                                    <span className="font-mono font-bold text-emerald-400">F11 / F12</span>
-                                                    <span className="text-slate-200">{__('Cobrar e Imprimir')}</span>
-                                                </div>
-                                                <div className="flex justify-between p-2 rounded bg-[#0b3368] border border-blue-900">
-                                                    <span className="font-mono font-bold text-orange-400">F10</span>
-                                                    <span className="text-slate-200">{__('Búsqueda Predictiva')}</span>
-                                                </div>
-                                                <div className="flex justify-between p-2 rounded bg-[#0b3368] border border-blue-900">
-                                                    <span className="font-mono font-bold text-rose-400">F8</span>
-                                                    <span className="text-slate-200">{__('Arqueo / Corte Z')}</span>
-                                                </div>
-                                            </div>
-                                        </div>
-
-                                        <div className="pt-2">
-                                            <div className="bg-orange-500/20 border border-orange-400/40 p-3 rounded-lg text-center">
-                                                <span className="text-xs text-orange-300 font-bold block">
-                                                    ⚡ {__('Ventas sin pausas ni clics de más')}
-                                                </span>
-                                            </div>
-                                        </div>
-                                    </div>
+                                {/* Contenedor de la Imagen del Dashboard Real */}
+                                <div className="relative bg-slate-950 overflow-hidden">
+                                    <img
+                                        src="/image/dashboard-preview.png"
+                                        alt={__('Panel de Control y Analíticas en Vivo de FixSale')}
+                                        className="w-full h-auto object-cover rounded-b-xl shadow-inner transition-transform duration-700 group-hover:scale-[1.008]"
+                                        loading="eager"
+                                    />
                                 </div>
                             </div>
                         </div>
