@@ -13,6 +13,18 @@ class RoleController extends Controller
 {
     use PermissionOrganizer;
 
+    private function isSuperAdmin(?\App\Models\User $user): bool
+    {
+        if (! $user) {
+            return false;
+        }
+
+        return $user->id === 1
+            || $user->hasRole('Super Administrador')
+            || $user->hasRole('super-admin')
+            || $user->hasRole('Super Admin');
+    }
+
     public function index(Request $request)
     {
         $search = $request->input('search');
