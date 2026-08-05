@@ -3,6 +3,8 @@
 namespace App\Http\Controllers\Admin\PointOfSale;
 
 use App\Http\Controllers\Controller;
+use App\Http\Requests\Admin\StoreCompraRequest;
+use App\Http\Resources\CompraResource;
 use App\Models\CashRegister;
 use App\Models\CierreMensual;
 use App\Models\Compra;
@@ -30,7 +32,7 @@ class PurchaseController extends Controller
 
         if ($empresa && $empresa->pais_id) {
             $pais = Pais::find($empresa->pais_id);
-            if ($pais && ! empty($pais->simbolo_moneda)) {
+            if (! empty($pais->simbolo_moneda)) {
                 return $pais->simbolo_moneda;
             }
         }
@@ -78,7 +80,7 @@ class PurchaseController extends Controller
         $proveedores = Proveedor::orderBy('razon_social')->select('id', 'razon_social', 'nombre_comercial')->get();
 
         return inertia('admin/PointOfSale/Compras/Index', [
-            'compras'        => $compras,
+            'compras'        => CompraResource::collection($compras),
             'proveedores'    => $proveedores,
             'stats'          => $stats,
             'filters'        => $request->only(['search', 'status', 'tipo_pago', 'proveedor_id']),
@@ -157,32 +159,9 @@ class PurchaseController extends Controller
         ]);
     }
 
-    public function store(Request $request, PurchaseService $purchaseService)
+    public function store(StoreCompraRequest $request, PurchaseService $purchaseService)
     {
-        $validated = $request->validate([
-            'proveedor_id' => 'required|exists:proveedores,id',
-            'sucursal_id' => 'nullable|exists:sucursales,id',
-            'numero_factura' => 'nullable|string|max:100',
-            'numero_control' => 'nullable|string|max:100',
-            'tipo_pago' => 'required|in:contado,credito',
-            'fecha_emision' => 'required|date',
-            'fecha_vencimiento' => 'nullable|date',
-            'descuento' => 'nullable|numeric|min:0',
-            'monto_inicial_pagado' => 'nullable|numeric|min:0',
-            'metodo_pago' => 'nullable|string',
-            'referencia_pago' => 'nullable|string',
-            'pagar_con_caja' => 'nullable|boolean',
-            'usar_fondo_mes' => 'nullable|boolean',
-            'cierre_mensual_id' => 'nullable|exists:cierres_mensuales,id',
-            'notas' => 'nullable|string',
-            'items' => 'required|array|min:1',
-            'items.*.producto_id' => 'required|exists:productos,id',
-            'items.*.cantidad' => 'required|numeric|gt:0',
-            'items.*.costo_unitario' => 'required|numeric|min:0',
-            'items.*.impuesto_unitario' => 'nullable|numeric|min:0',
-            'items.*.update_sale_price' => 'nullable|boolean',
-            'items.*.nuevo_precio_venta' => 'nullable|numeric|min:0',
-        ]);
+        $validated = $request->validated();
 
         $compra = $purchaseService->createPurchase($validated, auth()->id());
 

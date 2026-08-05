@@ -22,16 +22,16 @@ Esta guía documenta los patrones de diseño, arquitectura e infraestructura del
 
 ### C. Form Requests (Validaciones Desacopladas)
 - **Ubicación**: `app/Http/Requests/Admin/`
-- **Uso**: Los controladores inyectan clases `FormRequest` (`StoreUserRequest`, `UpdateUserRequest`, `StoreEmpresaRequest`, `StoreProductoRequest`, `SucursalRequest`, etc.) para asegurar controladores delgados (Thin Controllers).
+- **Uso**: Los controladores inyectan clases `FormRequest` (`StoreUserRequest`, `UpdateUserRequest`, `StoreEmpresaRequest`, `StoreProductoRequest`, `SucursalRequest`, `ClienteRequest`, `CashRegisterRequest`, `SaleRequest`, `StoreCompraRequest`, etc.) para asegurar controladores delgados (Thin Controllers).
 
 ### D. Capa de Transformación API (`JsonResource`)
 - **Ubicación**: `app/Http/Resources/`
-- **Modelos**: `UserResource`, `EmpresaResource`, `ProductoResource`, `SucursalResource`, `ProveedorResource`.
+- **Modelos**: `UserResource`, `EmpresaResource`, `ProductoResource`, `SucursalResource`, `ProveedorResource`, `ClienteResource`, `CashRegisterResource`, `SaleResource`, `CompraResource`.
 - **Beneficio**: Garantiza que React reciba objetos formateados mediante Inertia props sin transferir atributos no requeridos o confidenciales.
 
 ### E. Autorización Declarativa (`Policies & Gate`)
 - **Ubicación**: `app/Policies/`
-- **Mapeo**: `UserPolicy`, `EmpresaPolicy`, `ProductoPolicy`.
+- **Mapeo**: `UserPolicy`, `EmpresaPolicy`, `ProductoPolicy`, `CashRegisterPolicy`.
 - **Invocación**: `$this->authorize(...)` o `Gate::authorize(...)` en controladores.
 
 ---
@@ -39,3 +39,4 @@ Esta guía documenta los patrones de diseño, arquitectura e infraestructura del
 ## 🧪 2. Suite de Pruebas Automatizadas
 - `tests/Feature/Admin/UserManagementTest.php`: Cobertura de autenticación, creación de usuarios y aislamiento multi-tenant.
 - `tests/Feature/Admin/ProductoManagementTest.php`: Validación de Kardex e integración del `InventoryService`.
+- `tests/Feature/Admin/PointOfSaleTest.php`: Validación de apertura/cierre de caja registradora y procesamiento de ventas de contado/crédito.
