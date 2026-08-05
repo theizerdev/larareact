@@ -1,13 +1,12 @@
 import { useState } from 'react';
 import { Head, useForm, router } from '@inertiajs/react';
-import AuthSimpleLayout from '@/layouts/auth/auth-simple-layout';
 import InputError from '@/components/input-error';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Spinner } from '@/components/ui/spinner';
 import { ShieldCheck, MessageSquare, RefreshCw, CheckCircle2 } from 'lucide-react';
 import { useTranslate } from '@/hooks/use-translate';
+import OtpInput from '@/components/otp-input';
 
 interface Props {
     telefono: string;
@@ -17,15 +16,17 @@ interface Props {
 
 export default function VerifyWhatsapp({ telefono, email, status }: Props) {
     const { __ } = useTranslate();
-    const { data, setData, post, processing, errors } = useForm({
+    const { data, setData, processing, errors } = useForm({
         code: '',
     });
 
     const [resending, setResending] = useState(false);
 
-    const handleSubmit = (e: React.FormEvent) => {
-        e.preventDefault();
-        post('/verify-whatsapp/verify');
+    const handleSubmit = (codeToSubmit?: string) => {
+        const finalCode = codeToSubmit || data.code;
+        if (finalCode.length === 8 && !processing) {
+            router.post('/verify-whatsapp/verify', { code: finalCode });
+        }
     };
 
     const handleResend = () => {
@@ -62,22 +63,21 @@ export default function VerifyWhatsapp({ telefono, email, status }: Props) {
                     </div>
                 )}
 
-                <form onSubmit={handleSubmit} className="space-y-4">
-                    <div className="space-y-1.5 text-center">
+                <form onSubmit={(e) => { e.preventDefault(); handleSubmit(); }} className="space-y-4">
+                    <div className="space-y-2 text-center">
                         <Label htmlFor="code" className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground">
                             {__('Código OTP de 8 Dígitos')}
                         </Label>
-                        <Input
-                            id="code"
-                            type="text"
-                            maxLength={8}
+
+                        <OtpInput
+                            length={8}
                             value={data.code}
-                            onChange={(e) => setData('code', e.target.value.replace(/\D/g, ''))}
-                            placeholder="12345678"
-                            className="h-11 text-center font-mono text-lg tracking-[0.2em] font-black uppercase"
+                            onChange={(val) => setData('code', val)}
+                            onComplete={(fullCode) => handleSubmit(fullCode)}
+                            disabled={processing}
                             autoFocus
-                            required
                         />
+
                         <InputError message={errors.code} />
                     </div>
 
@@ -92,7 +92,6 @@ export default function VerifyWhatsapp({ telefono, email, status }: Props) {
                 </form>
 
                 <div className="flex space-x-4 mt-4">
-                    {/* Botón para reenviar OTP */}
                     <Button
                         type="button"
                         variant="ghost"
@@ -104,7 +103,6 @@ export default function VerifyWhatsapp({ telefono, email, status }: Props) {
                         {resending ? <Spinner className="h-3.5 w-3.5" /> : <RefreshCw className="h-3.5 w-3.5" />}
                         {__('Reenviar código OTP por WhatsApp')}
                     </Button>
-                    {/* Botón de logout */}
                     <Button
                         type="button"
                         variant="ghost"
