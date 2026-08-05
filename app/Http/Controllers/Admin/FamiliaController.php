@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Http\Requests\FamiliaRequest;
 use App\Models\Categoria;
 use App\Models\Familia;
 use App\Models\Marca;
@@ -46,18 +47,9 @@ class FamiliaController extends Controller
         ]);
     }
 
-    public function store(Request $request)
+    public function store(FamiliaRequest $request)
     {
-        $validated = $request->validate([
-            'marca_id' => 'required|exists:marcas,id',
-            'categoria_id' => 'nullable|exists:categorias,id',
-            'nombre' => 'required|string|max:255',
-            'descripcion' => 'nullable|string',
-            'specs_json' => 'nullable|array',
-            'estado' => 'boolean',
-            'empresa_id' => 'nullable|exists:empresas,id',
-            'sucursal_id' => 'nullable|exists:sucursales,id',
-        ]);
+        $validated = $request->validated();
 
         Familia::create($validated);
 
@@ -67,18 +59,9 @@ class FamiliaController extends Controller
         ]);
     }
 
-    public function update(Request $request, Familia $familia)
+    public function update(FamiliaRequest $request, Familia $familia)
     {
-        $validated = $request->validate([
-            'marca_id' => 'required|exists:marcas,id',
-            'categoria_id' => 'nullable|exists:categorias,id',
-            'nombre' => 'required|string|max:255',
-            'descripcion' => 'nullable|string',
-            'specs_json' => 'nullable|array',
-            'estado' => 'boolean',
-            'empresa_id' => 'nullable|exists:empresas,id',
-            'sucursal_id' => 'nullable|exists:sucursales,id',
-        ]);
+        $validated = $request->validated();
 
         $familia->update($validated);
 

@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Http\Requests\MarcaRequest;
 use App\Models\Marca;
 use Illuminate\Http\Request;
 use Illuminate\Support\Str;
@@ -33,15 +34,9 @@ class MarcaController extends Controller
         ]);
     }
 
-    public function store(Request $request)
+    public function store(MarcaRequest $request)
     {
-        $validated = $request->validate([
-            'nombre' => 'required|string|max:255',
-            'logo_url' => 'nullable|string|max:255',
-            'estado' => 'boolean',
-            'empresa_id' => 'nullable|exists:empresas,id',
-            'sucursal_id' => 'nullable|exists:sucursales,id',
-        ]);
+        $validated = $request->validated();
 
         $validated['slug'] = Str::slug($validated['nombre']);
 
@@ -53,15 +48,9 @@ class MarcaController extends Controller
         ]);
     }
 
-    public function update(Request $request, Marca $marca)
+    public function update(MarcaRequest $request, Marca $marca)
     {
-        $validated = $request->validate([
-            'nombre' => 'required|string|max:255',
-            'logo_url' => 'nullable|string|max:255',
-            'estado' => 'boolean',
-            'empresa_id' => 'nullable|exists:empresas,id',
-            'sucursal_id' => 'nullable|exists:sucursales,id',
-        ]);
+        $validated = $request->validated();
 
         $validated['slug'] = Str::slug($validated['nombre']);
 

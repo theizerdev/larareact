@@ -3,6 +3,8 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Http\Requests\Admin\StoreEmpresaRequest;
+use App\Http\Requests\Admin\UpdateEmpresaRequest;
 use App\Models\Empresa;
 use App\Models\Pais;
 use Illuminate\Http\Request;
@@ -51,27 +53,9 @@ class EmpresaController extends Controller
         ]);
     }
 
-    public function store(Request $request)
+    public function store(StoreEmpresaRequest $request)
     {
-        $user = $request->user();
-        if (! $user || (! $user->hasRole('Super Administrador') && ! $user->hasRole('super-admin'))) {
-            return back()->with('notification', [
-                'type' => 'error',
-                'message' => __('No tienes permisos para registrar nuevas empresas en la plataforma.'),
-            ]);
-        }
-        $validated = $request->validate([
-            'razon_social' => 'required|string|max:255',
-            'documento' => 'required|string|max:255|unique:empresas,documento',
-            'pais_id' => 'nullable|exists:pais,id',
-            'direccion' => 'nullable|string',
-            'latitud' => 'nullable|numeric',
-            'longitud' => 'nullable|numeric',
-            'telefono' => 'nullable|string|max:255',
-            'email' => 'nullable|email|max:255',
-            'representante_legal' => 'nullable|string|max:255',
-            'status' => 'boolean',
-        ]);
+        $validated = $request->validated();
 
         try {
             $empresa = new Empresa($validated);
@@ -96,20 +80,9 @@ class EmpresaController extends Controller
         }
     }
 
-    public function update(Request $request, Empresa $empresa)
+    public function update(UpdateEmpresaRequest $request, Empresa $empresa)
     {
-        $validated = $request->validate([
-            'razon_social' => 'required|string|max:255',
-            'documento' => 'required|string|max:255|unique:empresas,documento,'.$empresa->id,
-            'pais_id' => 'nullable|exists:pais,id',
-            'direccion' => 'nullable|string',
-            'latitud' => 'nullable|numeric',
-            'longitud' => 'nullable|numeric',
-            'telefono' => 'nullable|string|max:255',
-            'email' => 'nullable|email|max:255',
-            'representante_legal' => 'nullable|string|max:255',
-            'status' => 'boolean',
-        ]);
+        $validated = $request->validated();
 
         try {
             DB::transaction(function () use ($empresa, $validated) {

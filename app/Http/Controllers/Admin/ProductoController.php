@@ -3,18 +3,24 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Http\Requests\Admin\StoreProductoRequest;
+use App\Http\Requests\Admin\UpdateProductoRequest;
 use App\Models\Categoria;
 use App\Models\Familia;
-use App\Models\InventoryMovement;
 use App\Models\Marca;
 use App\Models\Modelo;
 use App\Models\Producto;
+use App\Services\InventoryService;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Inertia\Response;
 
 class ProductoController extends Controller
 {
+    public function __construct(
+        protected InventoryService $inventoryService
+    ) {}
+
     /**
      * Display a listing of the products/variants with filters and inventory stats.
      */
@@ -122,46 +128,9 @@ class ProductoController extends Controller
     /**
      * Store a newly created product/variant in storage.
      */
-    public function store(Request $request)
+    public function store(StoreProductoRequest $request)
     {
-        $validated = $request->validate([
-            'modelo_id' => 'required|exists:modelos,id',
-            'sku' => 'required|string|max:100|unique:productos,sku',
-            'codigo_barras' => 'nullable|string|max:100|unique:productos,codigo_barras',
-            'nombre_variante' => 'required|string|max:255',
-            'condicion' => 'required|string|in:nuevo,usado,reacondicionado,repuesto',
-            'tipo_venta' => 'required|string|in:unidad,granel,paquete',
-            'usa_inventario' => 'boolean',
-            'variant_specs' => 'nullable|array',
-            'precio_compra' => 'required|numeric|gt:0',
-            'precio_venta' => 'required|numeric|gt:0',
-            'precio_mayoreo' => 'nullable|numeric|gt:0',
-            'stock' => 'required_if:usa_inventario,true|nullable|numeric|min:0',
-            'stock_minimo' => 'required_if:usa_inventario,true|nullable|numeric|min:0',
-            'tipo_impuesto' => 'required|string|in:gravado,exento,tasa_cero',
-            'tasa_iva' => 'nullable|numeric|min:0',
-            'aplica_impuesto_adicional' => 'boolean',
-            'tasa_impuesto_adicional' => 'nullable|numeric|min:0',
-            'aplica_retencion' => 'boolean',
-            'tasa_retencion' => 'nullable|numeric|min:0',
-            'precio_incluye_impuestos' => 'boolean',
-            'clave_sat_producto' => 'nullable|string|max:20',
-            'clave_sat_unidad' => 'nullable|string|max:20',
-            'objeto_impuesto_sat' => 'nullable|string|max:5',
-            'estado' => 'boolean',
-            'empresa_id' => 'nullable|exists:empresas,id',
-            'sucursal_id' => 'nullable|exists:sucursales,id',
-        ], [
-            'precio_compra.required' => __('El precio de compra es obligatorio.'),
-            'precio_compra.gt' => __('El precio de compra debe ser mayor a 0.00.'),
-            'precio_venta.required' => __('El precio de venta es obligatorio.'),
-            'precio_venta.gt' => __('El precio de venta debe ser mayor a 0.00.'),
-            'precio_mayoreo.gt' => __('El precio mayoreo debe ser mayor a 0.00.'),
-            'stock.required' => __('La cantidad actual (stock) es obligatoria.'),
-            'stock.required_if' => __('Debe ingresar la cantidad actual de stock.'),
-            'stock.numeric' => __('La cantidad de stock debe ser un número válido.'),
-            'stock.min' => __('El stock no puede ser negativo.'),
-        ]);
+        $validated = $request->validated();
 
         $modelo = Modelo::findOrFail($validated['modelo_id']);
 
@@ -180,23 +149,8 @@ class ProductoController extends Controller
 
         $producto = Producto::create($validated);
 
-        // Registrar automáticamente en Kardex el inventario inicial si aplica
-        if ($producto->usa_inventario && $producto->stock > 0) {
-            InventoryMovement::create([
-                'empresa_id' => $producto->empresa_id ?? auth()->user()?->empresa_id,
-                'sucursal_id' => $producto->sucursal_id ?? auth()->user()?->sucursal_id,
-                'producto_id' => $producto->id,
-                'user_id' => auth()->id(),
-                'tipo' => 'entrada',
-                'motivo' => __('Inventario Inicial de Registro'),
-                'cantidad' => (float) $producto->stock,
-                'stock_anterior' => 0,
-                'stock_nuevo' => (float) $producto->stock,
-                'costo_unitario' => (float) $producto->precio_compra,
-                'referencia' => 'ALTA-' . $producto->sku,
-                'notas' => __('Registro de stock inicial al crear el producto en el catálogo.'),
-            ]);
-        }
+        // Registrar en Kardex usando InventoryService
+        $this->inventoryService->recordInitialStock($producto);
 
         return back()->with('notification', [
             'type' => 'success',
@@ -207,44 +161,9 @@ class ProductoController extends Controller
     /**
      * Update the specified product/variant in storage.
      */
-    public function update(Request $request, Producto $producto)
+    public function update(UpdateProductoRequest $request, Producto $producto)
     {
-        $validated = $request->validate([
-            'modelo_id' => 'required|exists:modelos,id',
-            'sku' => 'required|string|max:100|unique:productos,sku,' . $producto->id,
-            'codigo_barras' => 'nullable|string|max:100|unique:productos,codigo_barras,' . $producto->id,
-            'nombre_variante' => 'required|string|max:255',
-            'condicion' => 'required|string|in:nuevo,usado,reacondicionado,repuesto',
-            'tipo_venta' => 'required|string|in:unidad,granel,paquete',
-            'usa_inventario' => 'boolean',
-            'variant_specs' => 'nullable|array',
-            'precio_compra' => 'required|numeric|gt:0',
-            'precio_venta' => 'required|numeric|gt:0',
-            'precio_mayoreo' => 'nullable|numeric|gt:0',
-            'stock' => 'required_if:usa_inventario,true|nullable|numeric|min:0',
-            'stock_minimo' => 'required_if:usa_inventario,true|nullable|numeric|min:0',
-            'tipo_impuesto' => 'required|string|in:gravado,exento,tasa_cero',
-            'tasa_iva' => 'nullable|numeric|min:0',
-            'aplica_impuesto_adicional' => 'boolean',
-            'tasa_impuesto_adicional' => 'nullable|numeric|min:0',
-            'aplica_retencion' => 'boolean',
-            'tasa_retencion' => 'nullable|numeric|min:0',
-            'precio_incluye_impuestos' => 'boolean',
-            'clave_sat_producto' => 'nullable|string|max:20',
-            'clave_sat_unidad' => 'nullable|string|max:20',
-            'objeto_impuesto_sat' => 'nullable|string|max:5',
-            'estado' => 'boolean',
-        ], [
-            'precio_compra.required' => __('El precio de compra es obligatorio.'),
-            'precio_compra.gt' => __('El precio de compra debe ser mayor a 0.00.'),
-            'precio_venta.required' => __('El precio de venta es obligatorio.'),
-            'precio_venta.gt' => __('El precio de venta debe ser mayor a 0.00.'),
-            'precio_mayoreo.gt' => __('El precio mayoreo debe ser mayor a 0.00.'),
-            'stock.required' => __('La cantidad actual (stock) es obligatoria.'),
-            'stock.required_if' => __('Debe ingresar la cantidad actual de stock.'),
-            'stock.numeric' => __('La cantidad de stock debe ser un número válido.'),
-            'stock.min' => __('El stock no puede ser negativo.'),
-        ]);
+        $validated = $request->validated();
 
         $modelo = Modelo::findOrFail($validated['modelo_id']);
 
@@ -263,26 +182,8 @@ class ProductoController extends Controller
         $producto->update($validated);
         $stockNuevo = (float) $producto->stock;
 
-        // Registrar en Kardex si hubo un cambio directo en la cantidad de stock
-        if ($producto->usa_inventario && $stockAnterior !== $stockNuevo) {
-            $diferencia = $stockNuevo - $stockAnterior;
-            $tipo = $diferencia > 0 ? 'entrada' : 'salida';
-
-            InventoryMovement::create([
-                'empresa_id' => $producto->empresa_id ?? auth()->user()?->empresa_id,
-                'sucursal_id' => $producto->sucursal_id ?? auth()->user()?->sucursal_id,
-                'producto_id' => $producto->id,
-                'user_id' => auth()->id(),
-                'tipo' => $tipo,
-                'motivo' => __('Ajuste Directo (Edición de Producto)'),
-                'cantidad' => abs($diferencia),
-                'stock_anterior' => $stockAnterior,
-                'stock_nuevo' => $stockNuevo,
-                'costo_unitario' => (float) $producto->precio_compra,
-                'referencia' => 'EDIT-' . $producto->sku,
-                'notas' => __('Modificación manual de cantidad realizada desde el catálogo de productos.'),
-            ]);
-        }
+        // Registrar en Kardex usando InventoryService
+        $this->inventoryService->recordStockAdjustment($producto, $stockAnterior, $stockNuevo);
 
         return back()->with('notification', [
             'type' => 'success',
@@ -313,27 +214,17 @@ class ProductoController extends Controller
         ]);
 
         $cantidad = (float) $validated['cantidad'];
-        $stockAnterior = (float) $producto->stock;
-        $stockNuevo = $stockAnterior + $cantidad;
 
-        $producto->update(['stock' => $stockNuevo]);
+        $this->inventoryService->recordMovement(
+            producto: $producto,
+            tipo: 'entrada',
+            cantidad: $cantidad,
+            motivo: __('Ingreso Rápido en Venta POS'),
+            referencia: 'POS-STOCK-' . $producto->sku,
+            notas: __('Ingreso de existencia realizado directamente desde la Terminal POS al intentar vender producto sin stock.')
+        );
 
-        if ($producto->usa_inventario) {
-            InventoryMovement::create([
-                'empresa_id' => $producto->empresa_id ?? auth()->user()?->empresa_id,
-                'sucursal_id' => $producto->sucursal_id ?? auth()->user()?->sucursal_id,
-                'producto_id' => $producto->id,
-                'user_id' => auth()->id(),
-                'tipo' => 'entrada',
-                'motivo' => __('Ingreso Rápido en Venta POS'),
-                'cantidad' => $cantidad,
-                'stock_anterior' => $stockAnterior,
-                'stock_nuevo' => $stockNuevo,
-                'costo_unitario' => (float) $producto->precio_compra,
-                'referencia' => 'POS-STOCK-' . $producto->sku,
-                'notas' => __('Ingreso de existencia realizado directamente desde la Terminal POS al intentar vender producto sin stock.'),
-            ]);
-        }
+        $stockNuevo = (float) $producto->refresh()->stock;
 
         return response()->json([
             'success' => true,

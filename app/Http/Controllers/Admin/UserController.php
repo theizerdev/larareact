@@ -3,6 +3,8 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Http\Requests\Admin\StoreUserRequest;
+use App\Http\Requests\Admin\UpdateUserRequest;
 use App\Models\Empresa;
 use App\Models\Pais;
 use App\Models\Sucursal;
@@ -92,20 +94,9 @@ class UserController extends Controller
         ]);
     }
 
-    public function store(Request $request)
+    public function store(StoreUserRequest $request)
     {
-        $validated = $request->validate([
-            'name' => 'required|string|max:255',
-            'username' => 'nullable|string|max:255|unique:users,username',
-            'email' => 'required|string|email|max:255|unique:users,email',
-            'password' => 'required|string|min:8',
-            'telefono' => 'nullable|string|max:255',
-            'pais_telefono_id' => 'nullable|exists:pais,id',
-            'status' => ['required', Rule::in(['activo', 'inactivo', 'suspendido'])],
-            'empresa_id' => 'nullable|exists:empresas,id',
-            'sucursal_id' => 'nullable|exists:sucursales,id',
-            'roles' => 'array',
-        ]);
+        $validated = $request->validated();
 
         try {
             $currentUser = auth()->user();
@@ -139,20 +130,9 @@ class UserController extends Controller
         }
     }
 
-    public function update(Request $request, User $user)
+    public function update(UpdateUserRequest $request, User $user)
     {
-        $validated = $request->validate([
-            'name' => 'required|string|max:255',
-            'username' => ['nullable', 'string', 'max:255', Rule::unique('users', 'username')->ignore($user->id)],
-            'email' => ['required', 'string', 'email', 'max:255', Rule::unique('users', 'email')->ignore($user->id)],
-            'password' => 'nullable|string|min:8',
-            'telefono' => 'nullable|string|max:255',
-            'pais_telefono_id' => 'nullable|exists:pais,id',
-            'status' => ['required', Rule::in(['activo', 'inactivo', 'suspendido'])],
-            'empresa_id' => 'nullable|exists:empresas,id',
-            'sucursal_id' => 'nullable|exists:sucursales,id',
-            'roles' => 'array',
-        ]);
+        $validated = $request->validated();
 
         try {
             if (! empty($validated['password'])) {
