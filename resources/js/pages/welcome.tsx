@@ -18,6 +18,7 @@ import {
 import React, { useState } from 'react';
 import { useTranslate } from '@/hooks/use-translate';
 import BackgroundParticles from '@/components/background-particles';
+import PagePreloader from '@/components/page-preloader';
 
 export default function Welcome() {
     const pageProps = usePage().props as any;
@@ -39,6 +40,9 @@ export default function Welcome() {
     return (
         <>
             <Head title={__('FixSale | Punto de Venta, Inventario y Automatización WhatsApp')} />
+
+            {/* ─── PRELOADER CON ISOTIPO MINI FIXSALE (2.PNG) ────────────────────────── */}
+            <PagePreloader logoPath="/image/logo/2.png" durationMs={1100} slogan={__('Controla. Vende. Crece.')} />
 
             <div className="relative min-h-screen bg-slate-50 text-slate-800 font-sans selection:bg-orange-500 selection:text-white antialiased overflow-x-hidden">
                 {/* ─── CANVASES & PARTICLES DECORATION ──────────────────────────────────── */}
