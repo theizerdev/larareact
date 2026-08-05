@@ -33,7 +33,7 @@ class WhatsAppService
      */
     public function __construct($empresa = null)
     {
-        $this->baseUrl = config('whatsapp.api_url', 'http://82.165.213.124:8092');
+        $this->baseUrl = config('whatsapp.api_url', 'http://166.1.85.56:3000');
         $this->timeout = config('whatsapp.timeout', 30);
 
         if (is_array($empresa)) {
@@ -333,16 +333,37 @@ class WhatsAppService
     public function createInstance(?string $name = null, ?string $customToken = null)
     {
         $instanceName = $name ?? $this->instanceName;
+        $token = $customToken ?? $this->apiKey;
+        $masterKey = config('whatsapp.api_key', 'cbd21569-e530-427f-993b-4abcb2a08f81');
+
         try {
             $url = "{$this->baseUrl}/api/instance/create";
             $response = Http::timeout($this->timeout)
-                ->withHeaders($this->getHeaders())
+                ->withHeaders([
+                    'x-api-key' => $masterKey,
+                    'X-API-Key' => $masterKey,
+                    'Content-Type' => 'application/json',
+                ])
                 ->post($url, [
                     'name' => $instanceName,
-                    'token' => $customToken ?? $this->apiKey,
+                    'token' => $token,
                 ]);
 
-            return $response->successful() ? $response->json() : null;
+            if ($response->successful()) {
+                Log::info("Instancia de WhatsApp '{$instanceName}' creada/inicializada exitosamente.", [
+                    'company_id' => $this->companyId,
+                    'response' => $response->json(),
+                ]);
+                return $response->json();
+            }
+
+            Log::warning("No se pudo crear la instancia de WhatsApp '{$instanceName}' (HTTP {$response->status()})", [
+                'company_id' => $this->companyId,
+                'status' => $response->status(),
+                'body' => $response->body(),
+            ]);
+
+            return null;
         } catch (\Exception $e) {
             Log::error('WhatsApp Create Instance Error: '.$e->getMessage(), [
                 'company_id' => $this->companyId,
