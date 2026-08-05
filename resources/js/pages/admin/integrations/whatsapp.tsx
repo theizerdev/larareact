@@ -1,7 +1,8 @@
 import { Head, useForm, router } from '@inertiajs/react';
 import {
     Settings2, MessageSquare, QrCode, RefreshCw, Power, Send, Key,
-    Database, AlertTriangle, CheckCircle2, Copy, Check, Activity, Phone
+    Database, AlertTriangle, CheckCircle2, Copy, Check, Activity, Phone,
+    Wifi, WifiOff, Smartphone, Zap, Shield, Info, Clock
 } from 'lucide-react';
 import React, { useState, useEffect } from 'react';
 import Swal from 'sweetalert2';
@@ -42,6 +43,10 @@ interface PageProps {
     live_status: LiveStatus | null;
     paises: PaisPhoneOption[];
     is_superadmin: boolean;
+    subscription_status: string | null;
+    trial_ends_at: string | null;
+    dias_restantes: number;
+    is_on_trial: boolean;
 }
 
 export default function WhatsAppIntegration({
@@ -57,6 +62,10 @@ export default function WhatsAppIntegration({
     live_status,
     paises,
     is_superadmin,
+    subscription_status,
+    trial_ends_at,
+    dias_restantes,
+    is_on_trial,
 }: PageProps) {
     const { __ } = useTranslate();
     const [copied, setCopied] = useState(false);
@@ -391,7 +400,69 @@ return '';
                     </div>
                 </div>
 
-                {isServiceUnavailable && (
+                {/* ─ Banner de período de prueba ─ */}
+                {is_on_trial && (
+                    <div className={`rounded-xl border px-5 py-4 flex flex-wrap items-start gap-4 shadow-sm ${
+                        dias_restantes <= 1
+                            ? 'bg-rose-50 border-rose-300 dark:bg-rose-950/20 dark:border-rose-800'
+                            : dias_restantes <= 3
+                            ? 'bg-amber-50 border-amber-300 dark:bg-amber-950/20 dark:border-amber-800'
+                            : 'bg-sky-50 border-sky-200 dark:bg-sky-950/20 dark:border-sky-800'
+                    }`}>
+                        <div className={`mt-0.5 flex-shrink-0 w-9 h-9 rounded-full flex items-center justify-center ${
+                            dias_restantes <= 1
+                                ? 'bg-rose-100 text-rose-600 dark:bg-rose-950/50'
+                                : dias_restantes <= 3
+                                ? 'bg-amber-100 text-amber-600 dark:bg-amber-950/50'
+                                : 'bg-sky-100 text-sky-600 dark:bg-sky-950/50'
+                        }`}>
+                            <Clock className="h-5 w-5" />
+                        </div>
+                        <div className="flex-1 min-w-0">
+                            <div className="flex flex-wrap items-center gap-2">
+                                <h3 className={`font-semibold text-sm ${
+                                    dias_restantes <= 1 ? 'text-rose-800 dark:text-rose-300'
+                                    : dias_restantes <= 3 ? 'text-amber-800 dark:text-amber-300'
+                                    : 'text-sky-800 dark:text-sky-300'
+                                }`}>
+                                    {__('Free Trial Period')}
+                                </h3>
+                                <span className={`px-2 py-0.5 rounded-full text-xs font-bold border ${
+                                    dias_restantes <= 1
+                                        ? 'bg-rose-100 text-rose-700 border-rose-300 dark:bg-rose-900/40 dark:text-rose-300'
+                                        : dias_restantes <= 3
+                                        ? 'bg-amber-100 text-amber-700 border-amber-300 dark:bg-amber-900/40 dark:text-amber-300'
+                                        : 'bg-sky-100 text-sky-700 border-sky-300 dark:bg-sky-900/40 dark:text-sky-300'
+                                }`}>
+                                    {dias_restantes === 0
+                                        ? __('Trial ends today')
+                                        : dias_restantes === 1
+                                        ? `1 ${__('day')}`
+                                        : `${dias_restantes} ${__('days')}`
+                                    }
+                                </span>
+                            </div>
+                            <p className={`text-xs mt-1 ${
+                                dias_restantes <= 1 ? 'text-rose-700/80 dark:text-rose-400'
+                                : dias_restantes <= 3 ? 'text-amber-700/80 dark:text-amber-400'
+                                : 'text-sky-700/80 dark:text-sky-400'
+                            }`}>
+                                {dias_restantes > 0
+                                    ? `${__('Your free trial period ends in')} ${dias_restantes} ${dias_restantes === 1 ? __('day') : __('days')}. `
+                                    : `${__('Trial ends today')}. `
+                                }
+                                {__('WhatsApp module active during trial')} — {__('Access expires when trial ends')}.
+                            </p>
+                            {trial_ends_at && (
+                                <p className="text-xs mt-0.5 opacity-60">
+                                    {new Date(trial_ends_at).toLocaleDateString(undefined, { year: 'numeric', month: 'long', day: 'numeric' })}
+                                </p>
+                            )}
+                        </div>
+                    </div>
+                )}
+
+
                     <Card className="border-rose-300 bg-rose-50/50 dark:bg-rose-950/10">
                         <CardContent className="flex items-start gap-3 p-4">
                             <AlertTriangle className="h-5 w-5 text-rose-600 shrink-0 mt-0.5" />
@@ -403,6 +474,264 @@ return '';
                             </div>
                         </CardContent>
                     </Card>
+                )}
+
+                {/* ─────────────────────────────────────────────────────────
+                     PANEL DE ADMINISTRADOR DE EMPRESA (no superadmin)
+                ───────────────────────────────────────────────────────── */}
+                {!is_superadmin && (
+                    <div className="space-y-6">
+                        {/* Banner de estado */}
+                        <div className="rounded-xl border bg-gradient-to-r from-slate-50 to-emerald-50/40 dark:from-slate-900 dark:to-emerald-950/10 p-4 flex flex-wrap items-center gap-4 justify-between shadow-sm">
+                            <div className="flex items-center gap-3">
+                                <span
+                                    className={`inline-block w-3 h-3 rounded-full flex-shrink-0 ${
+                                        liveStatusState?.isConnected
+                                            ? 'bg-emerald-500 shadow-[0_0_8px_2px_rgba(16,185,129,0.45)] animate-pulse'
+                                            : 'bg-slate-300 dark:bg-slate-600'
+                                    }`}
+                                />
+                                <span className="font-semibold text-slate-800 dark:text-slate-100">{empresa_nombre}</span>
+                                <span className={`px-2.5 py-0.5 rounded-full border text-xs font-semibold ${stateInfo.color}`}>
+                                    {stateInfo.text}
+                                </span>
+                            </div>
+                            <div className="flex flex-wrap items-center gap-5 text-sm text-slate-600 dark:text-slate-400">
+                                {liveStatusState?.user?.id && (
+                                    <div className="flex items-center gap-1.5">
+                                        <Smartphone className="h-4 w-4 text-emerald-500" />
+                                        <span className="font-mono font-semibold text-slate-800 dark:text-slate-200">
+                                            +{liveStatusState.user.id.split('@')[0]}
+                                        </span>
+                                    </div>
+                                )}
+                                <div className="flex items-center gap-1.5">
+                                    <Zap className="h-4 w-4 text-amber-500" />
+                                    <span>{whatsapp_rate_limit} msg/min</span>
+                                </div>
+                                <div className="flex items-center gap-1.5">
+                                    {whatsapp_active ? (
+                                        <>
+                                            <CheckCircle2 className="h-4 w-4 text-emerald-500" />
+                                            <span className="text-emerald-700 dark:text-emerald-400 font-medium">{__('Active')}</span>
+                                        </>
+                                    ) : (
+                                        <>
+                                            <AlertTriangle className="h-4 w-4 text-amber-500" />
+                                            <span className="text-amber-700 dark:text-amber-400 font-medium">{__('Inactive')}</span>
+                                        </>
+                                    )}
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* Grid principal del admin */}
+                        <div className="grid gap-6 md:grid-cols-12">
+                            {/* Tarjeta info de empresa (solo lectura) */}
+                            <div className="md:col-span-4">
+                                <Card className="shadow-sm border-t-4 border-t-emerald-600 h-full">
+                                    <CardHeader>
+                                        <CardTitle className="flex items-center gap-2 text-lg">
+                                            <Info className="h-5 w-5 text-slate-500" />
+                                            {__('Integration Info')}
+                                        </CardTitle>
+                                        <CardDescription>
+                                            {__('Current WhatsApp configuration for')} <span className="font-semibold text-slate-700 dark:text-slate-200">{empresa_nombre}</span>.
+                                        </CardDescription>
+                                    </CardHeader>
+                                    <CardContent className="space-y-2.5">
+                                        {/* Estado activo */}
+                                        <div className="flex items-center justify-between py-2.5 px-3 rounded-lg bg-slate-50 dark:bg-slate-900/50 border">
+                                            <div className="flex items-center gap-2 text-sm text-slate-600 dark:text-slate-400">
+                                                <MessageSquare className="h-4 w-4" />
+                                                <span>{__('Integration')}</span>
+                                            </div>
+                                            <span className={`px-2 py-0.5 rounded-full text-xs font-semibold ${
+                                                whatsapp_active
+                                                    ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-400'
+                                                    : 'bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-400'
+                                            }`}>
+                                                {whatsapp_active ? __('Enabled') : __('Disabled')}
+                                            </span>
+                                        </div>
+
+                                        {/* Rate limit */}
+                                        <div className="flex items-center justify-between py-2.5 px-3 rounded-lg bg-slate-50 dark:bg-slate-900/50 border">
+                                            <div className="flex items-center gap-2 text-sm text-slate-600 dark:text-slate-400">
+                                                <Zap className="h-4 w-4" />
+                                                <span>{__('Rate Limit')}</span>
+                                            </div>
+                                            <span className="text-sm font-mono font-semibold text-slate-800 dark:text-slate-200">
+                                                {whatsapp_rate_limit} msg/min
+                                            </span>
+                                        </div>
+
+                                        {/* Instancia */}
+                                        <div className="flex items-center justify-between py-2.5 px-3 rounded-lg bg-slate-50 dark:bg-slate-900/50 border">
+                                            <div className="flex items-center gap-2 text-sm text-slate-600 dark:text-slate-400">
+                                                <Shield className="h-4 w-4" />
+                                                <span>{__('Instance')}</span>
+                                            </div>
+                                            <span className="text-xs font-mono font-semibold text-slate-700 dark:text-slate-300 truncate max-w-[130px]">
+                                                {whatsapp_instance || `empresa_${empresa_id}`}
+                                            </span>
+                                        </div>
+
+                                        {/* Teléfono vinculado */}
+                                        {liveStatusState?.user?.id && (
+                                            <div className="flex items-center justify-between py-2.5 px-3 rounded-lg bg-emerald-50 dark:bg-emerald-950/20 border border-emerald-200 dark:border-emerald-800">
+                                                <div className="flex items-center gap-2 text-sm text-emerald-700 dark:text-emerald-400">
+                                                    <Phone className="h-4 w-4" />
+                                                    <span>{__('Linked Phone')}</span>
+                                                </div>
+                                                <span className="text-xs font-mono font-semibold text-emerald-800 dark:text-emerald-300">
+                                                    +{liveStatusState.user.id.split('@')[0]}
+                                                </span>
+                                            </div>
+                                        )}
+
+                                        {/* Última sincronización */}
+                                        {liveStatusState?.lastSeen && (
+                                            <div className="flex items-center justify-between py-2.5 px-3 rounded-lg bg-slate-50 dark:bg-slate-900/50 border">
+                                                <div className="flex items-center gap-2 text-sm text-slate-600 dark:text-slate-400">
+                                                    <Clock className="h-4 w-4" />
+                                                    <span>{__('Last Sync')}</span>
+                                                </div>
+                                                <span className="text-xs text-slate-600 dark:text-slate-400">
+                                                    {new Date(liveStatusState.lastSeen).toLocaleString()}
+                                                </span>
+                                            </div>
+                                        )}
+                                    </CardContent>
+                                </Card>
+                            </div>
+
+                            {/* Tarjeta de gestión de sesión */}
+                            <div className="md:col-span-8">
+                                <Card className="shadow-sm border-t-4 border-t-emerald-600 h-full">
+                                    <CardHeader>
+                                        <div className="flex items-center justify-between">
+                                            <div>
+                                                <CardTitle className="text-lg flex items-center gap-2">
+                                                    <Activity className="h-5 w-5 text-slate-500" />
+                                                    {__('Connection Status')}
+                                                </CardTitle>
+                                                <CardDescription>{__('Manage your WhatsApp session for this company.')}</CardDescription>
+                                            </div>
+                                            <span className={`px-2.5 py-1 rounded-full border text-xs font-semibold ${stateInfo.color}`}>
+                                                {stateInfo.text}
+                                            </span>
+                                        </div>
+                                    </CardHeader>
+                                    <CardContent className="flex flex-col items-center justify-center min-h-[300px] text-center p-6">
+                                        {!whatsapp_active ? (
+                                            <div className="space-y-3">
+                                                <div className="mx-auto w-12 h-12 rounded-full bg-slate-100 dark:bg-slate-800 flex items-center justify-center text-slate-400">
+                                                    <AlertTriangle className="h-6 w-6" />
+                                                </div>
+                                                <h3 className="font-semibold text-slate-700 dark:text-slate-300">{__('Integration Inactive')}</h3>
+                                                <p className="text-sm text-muted-foreground max-w-sm">
+                                                    {__('Contact your system administrator to enable this integration.')}
+                                                </p>
+                                            </div>
+                                        ) : isServiceUnavailable ? (
+                                            <div className="space-y-3">
+                                                <div className="mx-auto w-12 h-12 rounded-full bg-rose-100 dark:bg-rose-950/30 flex items-center justify-center text-rose-500">
+                                                    <WifiOff className="h-6 w-6" />
+                                                </div>
+                                                <h3 className="font-semibold text-rose-700 dark:text-rose-400">{__('Server Offline')}</h3>
+                                                <p className="text-sm text-muted-foreground max-w-sm">
+                                                    {__('Unable to reach the WhatsApp engine. Please contact your system administrator.')}
+                                                </p>
+                                            </div>
+                                        ) : liveStatusState?.isConnected ? (
+                                            /* CONECTADO */
+                                            <div className="space-y-5 w-full py-2">
+                                                <div className="mx-auto w-16 h-16 rounded-full bg-emerald-100 dark:bg-emerald-950/40 flex items-center justify-center text-emerald-600 shadow-lg shadow-emerald-100/60 dark:shadow-none">
+                                                    <CheckCircle2 className="h-9 w-9" />
+                                                </div>
+                                                <div className="space-y-1">
+                                                    <h3 className="text-xl font-bold text-slate-800 dark:text-slate-100">{__('Successfully Linked')}</h3>
+                                                    <p className="text-sm text-emerald-600 dark:text-emerald-400 font-medium">
+                                                        {__('Active session — messages are being processed')}
+                                                    </p>
+                                                </div>
+                                                <div className="max-w-xs mx-auto flex flex-col gap-2 py-3 px-5 bg-emerald-50 dark:bg-emerald-950/20 rounded-xl border border-emerald-200 dark:border-emerald-800 text-sm">
+                                                    {liveStatusState.user?.name && (
+                                                        <div className="flex justify-between">
+                                                            <span className="text-slate-500">{__('Name')}</span>
+                                                            <span className="font-semibold text-slate-800 dark:text-slate-200">{liveStatusState.user.name}</span>
+                                                        </div>
+                                                    )}
+                                                    {liveStatusState.user?.id && (
+                                                        <div className="flex justify-between">
+                                                            <span className="text-slate-500">{__('Phone')}</span>
+                                                            <span className="font-mono font-semibold text-slate-800 dark:text-slate-200">+{liveStatusState.user.id.split('@')[0]}</span>
+                                                        </div>
+                                                    )}
+                                                </div>
+                                                <div className="flex justify-center gap-3 pt-1">
+                                                    <Button variant="outline" className="gap-2" onClick={handleReconnect}>
+                                                        <RefreshCw className="h-4 w-4" />
+                                                        {__('Reset Session')}
+                                                    </Button>
+                                                    <Button variant="destructive" className="gap-2" onClick={handleDisconnect}>
+                                                        <Power className="h-4 w-4" />
+                                                        {__('Disconnect')}
+                                                    </Button>
+                                                </div>
+                                            </div>
+                                        ) : (liveStatusState?.connectionState === 'qr_ready' || Boolean(liveStatusState?.qrCode)) && liveStatusState?.qrCode ? (
+                                            /* QR CODE */
+                                            <div className="space-y-4 py-2">
+                                                <h3 className="font-semibold text-slate-800 dark:text-slate-100 text-lg">{__('Scan QR Code to Link Account')}</h3>
+                                                <p className="text-sm text-muted-foreground max-w-md mx-auto">
+                                                    {__('Open WhatsApp on your phone, go to Menu or Settings > Linked Devices > Link a Device, and point your camera to this screen.')}
+                                                </p>
+                                                <div className="relative mx-auto w-60 h-60 border-4 border-slate-100 rounded-xl p-3 bg-white shadow-md flex items-center justify-center">
+                                                    <img
+                                                        src={liveStatusState.qrCode}
+                                                        alt="WhatsApp QR Code"
+                                                        className="w-full h-full object-contain select-none"
+                                                    />
+                                                    {isPolling && (
+                                                        <div className="absolute -top-1.5 -right-1.5 bg-emerald-500 text-white rounded-full p-1 shadow-md animate-pulse" title={__('Checking scan status...')}>
+                                                            <RefreshCw className="h-4 w-4 animate-spin" />
+                                                        </div>
+                                                    )}
+                                                </div>
+                                                <div className="text-xs text-muted-foreground flex items-center justify-center gap-1.5">
+                                                    <span className="w-2.5 h-2.5 rounded-full bg-amber-400 animate-ping" />
+                                                    <span>{__('Waiting for phone scan...')}</span>
+                                                </div>
+                                                <Button variant="ghost" onClick={handleDisconnect} className="text-rose-600 hover:text-rose-700 hover:bg-rose-50 dark:hover:bg-rose-950/20 text-xs">
+                                                    {__('Cancel and Clean Session')}
+                                                </Button>
+                                            </div>
+                                        ) : (
+                                            /* DESCONECTADO */
+                                            <div className="space-y-4">
+                                                <div className="mx-auto w-14 h-14 rounded-full bg-slate-100 dark:bg-slate-800 flex items-center justify-center text-slate-400 shadow">
+                                                    <WifiOff className="h-7 w-7" />
+                                                </div>
+                                                <h3 className="font-semibold text-slate-700 dark:text-slate-300">{__('No Active Session')}</h3>
+                                                <p className="text-sm text-muted-foreground max-w-sm">
+                                                    {__('Click the button below to start a new WhatsApp session and get the QR code to link your account.')}
+                                                </p>
+                                                <Button
+                                                    onClick={handleConnect}
+                                                    className="gap-2 bg-emerald-600 hover:bg-emerald-700 text-white font-medium px-6"
+                                                >
+                                                    <Wifi className="h-4 w-4" />
+                                                    {__('Connect WhatsApp')}
+                                                </Button>
+                                            </div>
+                                        )}
+                                    </CardContent>
+                                </Card>
+                            </div>
+                        </div>
+                    </div>
                 )}
 
                 <div className="grid gap-6 md:grid-cols-12">

@@ -211,6 +211,11 @@ class IntegrationController extends Controller
             'locale' => $currentLocale,
             'translations' => $translations,
             'is_superadmin' => $request->user()->isSuperAdmin(),
+            // Datos de suscripción / prueba
+            'subscription_status' => $empresa->subscription_status,
+            'trial_ends_at' => $empresa->trial_ends_at?->toIso8601String(),
+            'dias_restantes' => $empresa->dias_restantes_suscripcion,
+            'is_on_trial' => $empresa->isOnTrial(),
         ]);
     }
 
