@@ -7,6 +7,9 @@ use App\Models\CashRegisterMovement;
 use App\Models\Categoria;
 use App\Models\Cliente;
 use App\Models\Empresa;
+use App\Models\Familia;
+use App\Models\Marca;
+use App\Models\Modelo;
 use App\Models\Pais;
 use App\Models\Producto;
 use App\Models\Sale;
@@ -29,7 +32,7 @@ class Empresa9DashboardSeeder extends Seeder
             ?? Pais::where('codigo_iso2', 'MX')->first()
             ?? Pais::first();
 
-        // 1. Crear / Actualizar Empresa ID 9
+        // 1. Empresa ID 9
         $empresa = Empresa::updateOrCreate(
             ['id' => 9],
             [
@@ -45,9 +48,9 @@ class Empresa9DashboardSeeder extends Seeder
                 'email' => 'contacto@fixsale.app',
                 'valor_dolar' => 36.50,
                 'status' => true,
-                'api_key' => Empresa::generateApiKey(),
-                'whatsapp_active' => true,
-                'whatsapp_instance' => 'fixsale_instance_9',
+                //'api_key' => Empresa::generateApiKey(),
+                //'whatsapp_active' => true,
+                //'whatsapp_instance' => 'fixsale_instance_9',
             ]
         );
 
@@ -83,73 +86,121 @@ class Empresa9DashboardSeeder extends Seeder
             ]);
         }
 
-        // 4. Categorías
-        $catLaptops = Categoria::firstOrCreate(['empresa_id' => 9, 'nombre' => 'Laptops & Computadoras']);
-        $catPos = Categoria::firstOrCreate(['empresa_id' => 9, 'nombre' => 'Punto de Venta & Impresoras']);
-        $catAcc = Categoria::firstOrCreate(['empresa_id' => 9, 'nombre' => 'Accesorios & Periféricos']);
-        $catServ = Categoria::firstOrCreate(['empresa_id' => 9, 'nombre' => 'Servicios Técnicos']);
+        // 4. Categorías con SLUG explícito
+        $catLaptops = Categoria::firstOrCreate(
+            ['empresa_id' => 9, 'slug' => 'laptops-computadoras'],
+            ['nombre' => 'Laptops & Computadoras', 'sucursal_id' => $sucursal->id, 'estado' => true]
+        );
+        $catPos = Categoria::firstOrCreate(
+            ['empresa_id' => 9, 'slug' => 'punto-de-venta-impresoras'],
+            ['nombre' => 'Punto de Venta & Impresoras', 'sucursal_id' => $sucursal->id, 'estado' => true]
+        );
+        $catAcc = Categoria::firstOrCreate(
+            ['empresa_id' => 9, 'slug' => 'accesorios-perifericos'],
+            ['nombre' => 'Accesorios & Periféricos', 'sucursal_id' => $sucursal->id, 'estado' => true]
+        );
+        $catServ = Categoria::firstOrCreate(
+            ['empresa_id' => 9, 'slug' => 'servicios-tecnicos'],
+            ['nombre' => 'Servicios Técnicos', 'sucursal_id' => $sucursal->id, 'estado' => true]
+        );
 
-        // 5. Productos
+        // Marca, Familia y Modelo
+        $marca = Marca::firstOrCreate(
+            ['empresa_id' => 9, 'slug' => 'fixsale-brand'],
+            ['nombre' => 'FixSale Brand', 'sucursal_id' => $sucursal->id, 'estado' => true]
+        );
+
+        $familia = Familia::firstOrCreate(
+            ['empresa_id' => 9, 'nombre' => 'Equipos Principales'],
+            [
+                'marca_id' => $marca->id,
+                'categoria_id' => $catLaptops->id,
+                'sucursal_id' => $sucursal->id,
+                'estado' => true,
+            ]
+        );
+
+        $modelo = Modelo::firstOrCreate(
+            ['empresa_id' => 9, 'codigo_modelo' => 'MOD-FIXSALE-01'],
+            [
+                'nombre_comercial' => 'Modelo Estándar POS',
+                'marca_id' => $marca->id,
+                'categoria_id' => $catLaptops->id,
+                'familia_id' => $familia->id,
+                'sucursal_id' => $sucursal->id,
+                'estado' => true
+            ]
+        );
+
+        // 5. Productos con SKU y nombre_variante
         $productosData = [
             [
-                'nombre' => 'Laptop Gamer Pro 15" i7 16GB',
-                'codigo' => 'PROD-001',
+                'nombre_variante' => 'Laptop Gamer Pro 15" i7 16GB',
+                'sku' => 'PROD-001',
+                'codigo_barras' => '750100000001',
                 'precio_compra' => 650.00,
                 'precio_venta' => 850.00,
                 'stock' => 15,
                 'categoria_id' => $catLaptops->id,
             ],
             [
-                'nombre' => 'Servicio Mantenimiento Especializado',
-                'codigo' => 'SERV-001',
+                'nombre_variante' => 'Servicio Mantenimiento Especializado',
+                'sku' => 'SERV-001',
+                'codigo_barras' => '750100000002',
                 'precio_compra' => 10.00,
                 'precio_venta' => 45.00,
                 'stock' => 999,
                 'categoria_id' => $catServ->id,
             ],
             [
-                'nombre' => 'Impresora Térmica 80mm POS USB/Bluetooth',
-                'codigo' => 'PROD-002',
+                'nombre_variante' => 'Impresora Térmica 80mm POS USB/Bluetooth',
+                'sku' => 'PROD-002',
+                'codigo_barras' => '750100000003',
                 'precio_compra' => 75.00,
                 'precio_venta' => 120.00,
                 'stock' => 28,
                 'categoria_id' => $catPos->id,
             ],
             [
-                'nombre' => 'Teclado Mecánico RGB Gamer Pro',
-                'codigo' => 'PROD-003',
+                'nombre_variante' => 'Teclado Mecánico RGB Gamer Pro',
+                'sku' => 'PROD-003',
+                'codigo_barras' => '750100000004',
                 'precio_compra' => 35.00,
                 'precio_venta' => 65.00,
                 'stock' => 40,
                 'categoria_id' => $catAcc->id,
             ],
             [
-                'nombre' => 'Monitor LED 27" Full HD 144Hz',
-                'codigo' => 'PROD-004',
+                'nombre_variante' => 'Monitor LED 27" Full HD 144Hz',
+                'sku' => 'PROD-004',
+                'codigo_barras' => '750100000005',
                 'precio_compra' => 140.00,
                 'precio_venta' => 210.00,
                 'stock' => 18,
                 'categoria_id' => $catLaptops->id,
             ],
             [
-                'nombre' => 'Disco Duro SSD NVMe 1TB PCIe 4.0',
-                'codigo' => 'PROD-005',
+                'nombre_variante' => 'Disco Duro SSD NVMe 1TB PCIe 4.0',
+                'sku' => 'PROD-005',
+                'codigo_barras' => '750100000006',
                 'precio_compra' => 60.00,
                 'precio_venta' => 95.00,
                 'stock' => 35,
                 'categoria_id' => $catAcc->id,
             ],
             [
-                'nombre' => 'Mouse Inalámbrico Ergonómico USB',
-                'codigo' => 'PROD-006',
+                'nombre_variante' => 'Mouse Inalámbrico Ergonómico USB',
+                'sku' => 'PROD-006',
+                'codigo_barras' => '750100000007',
                 'precio_compra' => 12.00,
                 'precio_venta' => 25.00,
                 'stock' => 50,
                 'categoria_id' => $catAcc->id,
             ],
             [
-                'nombre' => 'Cable de Red Cat6 (Bobina 100m)',
-                'codigo' => 'PROD-007',
+                'nombre_variante' => 'Cable de Red Cat6 (Bobina 100m)',
+                'sku' => 'PROD-007',
+                'codigo_barras' => '750100000008',
                 'precio_compra' => 40.00,
                 'precio_venta' => 75.00,
                 'stock' => 22,
@@ -160,31 +211,43 @@ class Empresa9DashboardSeeder extends Seeder
         $productos = [];
         foreach ($productosData as $pData) {
             $pData['empresa_id'] = 9;
+            $pData['sucursal_id'] = $sucursal->id;
+            $pData['marca_id'] = $marca->id;
+            $pData['familia_id'] = $familia->id;
+            $pData['modelo_id'] = $modelo->id;
+            $pData['estado'] = true;
+
             $productos[] = Producto::updateOrCreate(
-                ['empresa_id' => 9, 'codigo' => $pData['codigo']],
+                ['empresa_id' => 9, 'sku' => $pData['sku']],
                 $pData
             );
         }
 
         // 6. Clientes
         $clientesData = [
-            ['nombre' => 'Distribuidora Corporativa C.A.', 'cedula_rif' => 'J-30987654-1', 'telefono' => '04141112233', 'email' => 'compras@discorp.com'],
-            ['nombre' => 'Consultoría & Soluciones Digitales', 'cedula_rif' => 'J-40123456-2', 'telefono' => '04122223344', 'email' => 'admin@csdigitales.com'],
-            ['nombre' => 'María Alejandra Rodríguez', 'cedula_rif' => 'V-18765432', 'telefono' => '04243334455', 'email' => 'maria.rodriguez@gmail.com'],
-            ['nombre' => 'Juan Carlos Gómez', 'cedula_rif' => 'V-15987654', 'telefono' => '04164445566', 'email' => 'jcgomez@hotmail.com'],
-            ['nombre' => 'Tecnologías del Caribe S.A.', 'cedula_rif' => 'J-50987123-4', 'telefono' => '04145556677', 'email' => 'contacto@tecno-caribe.com'],
+            ['nombre' => 'Distribuidora Corporativa C.A.', 'telefono' => '04141112233', 'email' => 'compras@discorp.com'],
+            ['nombre' => 'Consultoría & Soluciones Digitales', 'telefono' => '04122223344', 'email' => 'admin@csdigitales.com'],
+            ['nombre' => 'María Alejandra Rodríguez', 'telefono' => '04243334455', 'email' => 'maria.rodriguez@gmail.com'],
+            ['nombre' => 'Juan Carlos Gómez', 'telefono' => '04164445566', 'email' => 'jcgomez@hotmail.com'],
+            ['nombre' => 'Tecnologías del Caribe S.A.', 'telefono' => '04145556677', 'email' => 'contacto@tecno-caribe.com'],
         ];
 
         $clientes = [];
         foreach ($clientesData as $cData) {
             $cData['empresa_id'] = 9;
+            $cData['sucursal_id'] = $sucursal->id;
+            $cData['direccion'] = 'Av. Principal #123';
+            $cData['limite_credito'] = 1000.00;
+            $cData['saldo_pendiente'] = 0.00;
+            $cData['estado'] = true;
+
             $clientes[] = Cliente::updateOrCreate(
-                ['empresa_id' => 9, 'cedula_rif' => $cData['cedula_rif']],
+                ['empresa_id' => 9, 'email' => $cData['email']],
                 $cData
             );
         }
 
-        // 7. Caja Registradora Abierta para el Usuario
+        // 7. Caja Registradora Abierta
         $activeRegister = CashRegister::where('user_id', $user->id)
             ->where('status', 'open')
             ->first();
@@ -221,14 +284,13 @@ class Empresa9DashboardSeeder extends Seeder
 
         for ($daysAgo = 6; $daysAgo >= 0; $daysAgo--) {
             $date = Carbon::now()->subDays($daysAgo);
-            $salesCount = rand(4, 7); // Entre 4 y 7 ventas por día
+            $salesCount = rand(4, 7);
 
             for ($i = 0; $i < $salesCount; $i++) {
                 $saleDate = (clone $date)->setHour(rand(8, 18))->setMinute(rand(0, 59));
                 $cliente = $clientes[array_rand($clientes)];
                 $metodo = $metodosPago[array_rand($metodosPago)];
 
-                // Seleccionar entre 1 y 3 productos al azar
                 $selectedProducts = array_rand($productos, rand(1, 3));
                 if (!is_array($selectedProducts)) {
                     $selectedProducts = [$selectedProducts];
@@ -245,41 +307,48 @@ class Empresa9DashboardSeeder extends Seeder
 
                     $itemsToCreate[] = [
                         'producto_id' => $prod->id,
-                        'nombre' => $prod->nombre,
+                        'nombre' => $prod->nombre_variante,
                         'cantidad' => $qty,
                         'precio_unitario' => $prod->precio_venta,
                         'subtotal' => $subtotal,
                     ];
                 }
 
-                // Crear Venta
                 $sale = Sale::create([
                     'empresa_id' => 9,
                     'sucursal_id' => $sucursal->id,
                     'user_id' => $user->id,
                     'cliente_id' => $cliente->id,
+                    'cliente_nombre' => $cliente->nombre,
                     'cash_register_id' => $activeRegister->id,
-                    'folio' => 'VNT-' . Str::upper(Str::random(6)),
+                    'codigo_ticket' => 'VNT-' . Str::upper(Str::random(6)),
                     'subtotal' => $totalVenta,
                     'impuesto' => 0.00,
                     'descuento' => 0.00,
                     'total' => $totalVenta,
+                    'monto_recibido' => $totalVenta,
+                    'cambio' => 0.00,
                     'estado' => 'completada',
                     'metodo_pago' => $metodo,
                     'created_at' => $saleDate,
                     'updated_at' => $saleDate,
                 ]);
 
-                // Crear SaleItems
                 foreach ($itemsToCreate as $item) {
-                    SaleItem::create(array_merge($item, [
+                    SaleItem::create([
                         'sale_id' => $sale->id,
+                        'itemable_type' => Producto::class,
+                        'itemable_id' => $item['producto_id'],
+                        'concepto_tipo' => 'producto',
+                        'nombre' => $item['nombre'],
+                        'cantidad' => $item['cantidad'],
+                        'precio_unitario' => $item['precio_unitario'],
+                        'subtotal' => $item['subtotal'],
                         'created_at' => $saleDate,
                         'updated_at' => $saleDate,
-                    ]));
+                    ]);
                 }
 
-                // Crear SalePayment
                 SalePayment::create([
                     'sale_id' => $sale->id,
                     'metodo_pago' => $metodo,
