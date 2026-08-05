@@ -1363,10 +1363,10 @@ export default function GaritaControl({
 
                             {/* Status Header Banner */}
                             <div className={`p-5 text-white flex flex-wrap items-center justify-between gap-4 ${isInvitacion && record.status === 'pendiente' ? 'bg-[#104a29]' :
-                                    isAcceso && record.status === 1 ? 'bg-blue-700' :
-                                        isProveedor ? 'bg-rose-800' :
-                                            isProductor ? 'bg-blue-800' :
-                                                'bg-slate-800'
+                                isAcceso && record.status === 1 ? 'bg-blue-700' :
+                                    isProveedor ? 'bg-rose-800' :
+                                        isProductor ? 'bg-blue-800' :
+                                            'bg-slate-800'
                                 }`}>
                                 <div className="flex items-center gap-3">
                                     <div className="p-3 bg-white/10 rounded-2xl backdrop-blur-md">
@@ -1379,7 +1379,7 @@ export default function GaritaControl({
                                                     resultado?.tipo === 'proveedor_empleado' ? __('🪪 Gafete Rojo • Empleado de Proveedor') :
                                                         resultado?.tipo === 'productor' ? __('🪪 Gafete Azul • Productor Autorizado') :
                                                             resultado?.tipo === 'productor_empleado' ? __('🪪 Gafete Azul • Empleado de Productor') :
-                                                                isInvitacion ? __('Pre-Anuncio Registrado') : __('Registro de Acceso Caseta')}
+                                                                isInvitacion ? __('Pre-Registro  Registrado') : __('Registro de Acceso Caseta')}
                                         </span>
                                         <div className="flex flex-wrap items-center gap-2">
                                             <h2 className="text-xl font-extrabold tracking-tight text-white">
@@ -1549,8 +1549,8 @@ export default function GaritaControl({
                                                         type="button"
                                                         onClick={() => setMedioAcceso('peatonal')}
                                                         className={`py-2.5 px-3 rounded-xl font-extrabold text-xs flex items-center justify-center gap-2 transition-all ${medioAcceso === 'peatonal'
-                                                                ? 'bg-emerald-600 text-white shadow-md'
-                                                                : 'text-slate-700 hover:bg-slate-300/60'
+                                                            ? 'bg-emerald-600 text-white shadow-md'
+                                                            : 'text-slate-700 hover:bg-slate-300/60'
                                                             }`}
                                                     >
                                                         <Footprints className="w-4 h-4" />
@@ -1561,8 +1561,8 @@ export default function GaritaControl({
                                                         type="button"
                                                         onClick={() => setMedioAcceso('vehicular')}
                                                         className={`py-2.5 px-3 rounded-xl font-extrabold text-xs flex items-center justify-center gap-2 transition-all ${medioAcceso === 'vehicular'
-                                                                ? 'bg-amber-600 text-white shadow-md'
-                                                                : 'text-slate-700 hover:bg-slate-300/60'
+                                                            ? 'bg-amber-600 text-white shadow-md'
+                                                            : 'text-slate-700 hover:bg-slate-300/60'
                                                             }`}
                                                     >
                                                         <Car className="w-4 h-4" />
@@ -2073,8 +2073,8 @@ export default function GaritaControl({
                                                             type="button"
                                                             onClick={() => handleSolicitarWhatsappGarita(`${record.nombres} ${record.apellidos}`, record.documento_identidad || '', record.responsable_id, record.id)}
                                                             className={`w-full h-11 text-xs font-bold rounded-xl gap-2 shadow-md transition-all ${activeAuthToken
-                                                                    ? 'bg-amber-500 hover:bg-amber-600 text-white animate-pulse'
-                                                                    : 'bg-emerald-600 hover:bg-emerald-700 text-white shadow-emerald-600/20'
+                                                                ? 'bg-amber-500 hover:bg-amber-600 text-white animate-pulse'
+                                                                : 'bg-emerald-600 hover:bg-emerald-700 text-white shadow-emerald-600/20'
                                                                 }`}
                                                         >
                                                             {activeAuthToken ? (
@@ -2127,8 +2127,8 @@ export default function GaritaControl({
                                                         disabled={!autorizadoHoy}
                                                         onClick={() => handleRegistrarIngresoEmpleadoGarita(record.id, record.responsable_id)}
                                                         className={`w-full h-16 text-base font-extrabold rounded-2xl shadow-xl gap-2 flex items-center justify-center transition-transform active:scale-[0.98] ${autorizadoHoy
-                                                                ? 'bg-[#104a29] hover:bg-[#0c371e] text-white'
-                                                                : 'bg-slate-300 text-slate-500 cursor-not-allowed'
+                                                            ? 'bg-[#104a29] hover:bg-[#0c371e] text-white'
+                                                            : 'bg-slate-300 text-slate-500 cursor-not-allowed'
                                                             }`}
                                                     >
                                                         <CheckCircle2 className="w-6 h-6 text-emerald-400" />
@@ -2183,7 +2183,7 @@ export default function GaritaControl({
                         <div className="bg-white border border-slate-200 rounded-3xl p-12 text-center space-y-4 shadow-md text-slate-900">
                             <AlertCircle className="w-16 h-16 text-rose-500 mx-auto animate-pulse" />
                             <h3 className="text-lg font-extrabold text-slate-900">
-                                {__('No se encontró ningún pre-anuncio o pase de acceso')}
+                                {__('No se encontró ningún Pre-Registro  o pase de acceso')}
                             </h3>
                             <p className="text-xs text-slate-500 max-w-md mx-auto">
                                 {__('Verifique que el código escaneado o la placa ingresada sea correcta. Búsqueda realizada:')} <span className="font-mono font-bold text-[#104a29]">{searchQuery}</span>
@@ -2687,8 +2687,8 @@ export default function GaritaControl({
                                     activeCameraField === 'ac_foto_carnet'
                                         ? __('Fotografía del Rostro del Acompañante')
                                         : activeCameraField.includes('frontal')
-                                        ? __('Fotografía Frontal del Documento del Acompañante')
-                                        : __('Fotografía Reverso del Documento del Acompañante')
+                                            ? __('Fotografía Frontal del Documento del Acompañante')
+                                            : __('Fotografía Reverso del Documento del Acompañante')
                                 }
                                 faceGuide={activeCameraField === 'ac_foto_carnet'}
                                 docGuide={activeCameraField.includes('doc_foto')}

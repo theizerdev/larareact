@@ -564,13 +564,15 @@ class VisitaAccesoController extends Controller
                     $prefix     = $pais ? preg_replace('/[^0-9]/', '', $pais->codigo_telefonico) : '51';
                     $to         = $prefix . $cleanPhone;
                     $paseUrl    = url("/pase-digital/{$invitacion->uuid}");
+                    $terminos    = url("https://www.driscolls.com/Privacy-and-Terms  ");
                     $msg  = "Hola *{$invitacion->visitante_nombre}*,\n\n";
-                    $msg .= "Se ha generado tu pre-anuncio de visita a las instalaciones de *{$empresa->razon_social}*.\n\n";
+                    $msg .= "Se ha generado tu Pre-Registro  de visita a las instalaciones de *{$empresa->razon_social}*.\n\n";
                     $msg .= "📅 *Fecha:* {$invitacion->fecha_estimada}\n";
                     $msg .= "⏰ *Hora:* " . ($invitacion->hora_estimada ? substr($invitacion->hora_estimada, 0, 5) : '09:00 hrs') . "\n";
-                    $msg .= "🎫 *Pre-Anuncio N°:* {$invitacion->codigo_invitacion}\n\n";
+                    $msg .= "🎫 *Referencia N°:* {$invitacion->codigo_invitacion}\n\n";
                     $msg .= "📝 *PASO REQUERIDO:* Ingresa al siguiente enlace para completar tus datos de vehículo, identificación y activar tu Pase QR:\n";
-                    $msg .= "🔗 {$paseUrl}";
+                    $msg .= "🔗 {$paseUrl}\n\n";
+                    $msg .= "Para cualquier duda adicional, podrá consultar el aviso de privacidad en: {$terminos}";
 
                     $ws = new WhatsAppService($empresa);
                     $ws->sendMessage($to, $msg, true);
@@ -580,7 +582,7 @@ class VisitaAccesoController extends Controller
             }
         }
 
-        return redirect()->back()->with('success', "Pre-Anuncio N° {$invitacion->codigo_invitacion} registrado correctamente.");
+        return redirect()->back()->with('success', "Pre-Registro  N° {$invitacion->codigo_invitacion} registrado correctamente.");
     }
 
     public function canjearInvitacion(Request $request, VisitaAccesoInvitacion $invitacion)
@@ -625,7 +627,7 @@ class VisitaAccesoController extends Controller
             'vehiculo_foto_trasera' => $invitacion->vehiculo_foto_trasera,
             'acompanantes'          => $invitacion->acompanantes,
             'responsable_id'        => $invitacion->anfitrion_id,
-            'observaciones'         => "Pre-Anuncio N° {$invitacion->codigo_invitacion} | Visitante: {$invitacion->visitante_nombre} (" . ($invitacion->visitante_empresa ?: 'Particular') . "). Motivo: " . ($invitacion->motivo_visita ?: 'Reunión'),
+            'observaciones'         => "Pre-Registro  N° {$invitacion->codigo_invitacion} | Visitante: {$invitacion->visitante_nombre} (" . ($invitacion->visitante_empresa ?: 'Particular') . "). Motivo: " . ($invitacion->motivo_visita ?: 'Reunión'),
             'fecha_ingreso'         => now()->toDateString(),
             'hora_ingreso'          => now()->toTimeString(),
             'status'                => 1,
@@ -977,7 +979,7 @@ class VisitaAccesoController extends Controller
                                         'acceso_existente' => $accesoExistente,
                                     ];
                                 } else {
-                                    // 6. Buscar en invitaciones (pre-anuncios)
+                                    // 6. Buscar en invitaciones (Pre-Registro s)
                                     $invitacion = VisitaAccesoInvitacion::query()
                                         ->with(['anfitrion', 'empleado', 'proveedor.empleados', 'productor.empleados', 'proveedorEmpleado.proveedor.empleados', 'productorEmpleado.productor.empleados', 'paisTelefono', 'tipoServicio'])
                                         ->where('uuid', $search)

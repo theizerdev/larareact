@@ -859,7 +859,7 @@ export default function PaseDigital({ invitacion }: PaseDigitalProps) {
                             </div>
                         </div>
                         <div className="bg-white/10 backdrop-blur-md px-4 py-1.5 rounded-full text-xs font-mono font-extrabold text-emerald-200 border border-white/20">
-                            Pre-Anuncio N° {invitacion.codigo_invitacion}
+                            Pre-Registro  N° {invitacion.codigo_invitacion}
                         </div>
                     </div>
                 </header>
@@ -968,10 +968,10 @@ export default function PaseDigital({ invitacion }: PaseDigitalProps) {
 
                             <div className="border-b border-slate-200 dark:border-slate-800 pb-4">
                                 <h2 className="text-lg font-extrabold text-[#104a29] dark:text-emerald-400 flex items-center gap-2">
-                                    <FileText className="w-5 h-5" /> Completa tus Datos de Registro e Ingreso
+                                    <FileText className="w-5 h-5" /> Completa tus Datos de Registro para tu ingreso
                                 </h2>
                                 <p className="text-xs text-slate-500 mt-1">
-                                    Por favor registre el medio de acceso, fotografías de su documento de identidad, datos del vehículo (si aplica) y acompañantes antes de llegar a la caseta.
+                                    Por favor registra el medio de acceso, fotografías de tu documento de identidad, datos del vehículo (si aplica) y acompañantes antes de llegar a la caseta. Realizaremos una validación de tus datos con base a las políticas de seguridad y privacidad de la organización.
                                 </p>
                             </div>
 
@@ -985,8 +985,8 @@ export default function PaseDigital({ invitacion }: PaseDigitalProps) {
                                         type="button"
                                         onClick={() => setData('medio_acceso', 'peatonal')}
                                         className={`flex items-center justify-start gap-4 p-5 rounded-2xl border-2 text-left transition-all ${data.medio_acceso === 'peatonal'
-                                                ? 'border-emerald-600 bg-emerald-50 dark:bg-emerald-950/40 text-emerald-900 dark:text-emerald-300 shadow-sm'
-                                                : 'border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900 text-slate-600 dark:text-slate-400 hover:border-slate-300'
+                                            ? 'border-emerald-600 bg-emerald-50 dark:bg-emerald-950/40 text-emerald-900 dark:text-emerald-300 shadow-sm'
+                                            : 'border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900 text-slate-600 dark:text-slate-400 hover:border-slate-300'
                                             }`}
                                     >
                                         <div className={`p-3 rounded-xl ${data.medio_acceso === 'peatonal' ? 'bg-emerald-600 text-white' : 'bg-slate-200 dark:bg-slate-800 text-slate-600'}`}>
@@ -1002,8 +1002,8 @@ export default function PaseDigital({ invitacion }: PaseDigitalProps) {
                                         type="button"
                                         onClick={() => setData('medio_acceso', 'vehicular')}
                                         className={`flex items-center justify-start gap-4 p-5 rounded-2xl border-2 text-left transition-all ${data.medio_acceso === 'vehicular'
-                                                ? 'border-amber-500 bg-amber-50 dark:bg-amber-950/40 text-amber-900 dark:text-amber-300 shadow-sm'
-                                                : 'border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900 text-slate-600 dark:text-slate-400 hover:border-slate-300'
+                                            ? 'border-amber-500 bg-amber-50 dark:bg-amber-950/40 text-amber-900 dark:text-amber-300 shadow-sm'
+                                            : 'border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900 text-slate-600 dark:text-slate-400 hover:border-slate-300'
                                             }`}
                                     >
                                         <div className={`p-3 rounded-xl ${data.medio_acceso === 'vehicular' ? 'bg-amber-500 text-white' : 'bg-slate-200 dark:bg-slate-800 text-slate-600'}`}>
@@ -1207,15 +1207,13 @@ export default function PaseDigital({ invitacion }: PaseDigitalProps) {
                                                                             vehiculo_foto_trasera: v.foto_trasera || data.vehiculo_foto_trasera,
                                                                         });
                                                                     }}
-                                                                    className={`h-auto py-2 px-3 text-xs font-bold transition-all ${
-                                                                        isThisSelected
-                                                                            ? 'bg-amber-500 hover:bg-amber-600 text-white border-amber-600 shadow-xs'
-                                                                            : 'bg-white dark:bg-slate-900 text-slate-800 dark:text-slate-200 border-amber-300 hover:bg-amber-100'
-                                                                    }`}
+                                                                    className={`h-auto py-2 px-3 text-xs font-bold transition-all ${isThisSelected
+                                                                        ? 'bg-amber-500 hover:bg-amber-600 text-white border-amber-600 shadow-xs'
+                                                                        : 'bg-white dark:bg-slate-900 text-slate-800 dark:text-slate-200 border-amber-300 hover:bg-amber-100'
+                                                                        }`}
                                                                 >
-                                                                    <Badge variant="secondary" className={`font-mono font-extrabold mr-1 ${
-                                                                        isThisSelected ? 'bg-amber-600 text-white border-amber-400' : 'bg-amber-100 dark:bg-amber-950 text-amber-800 dark:text-amber-300 border-amber-300'
-                                                                    }`}>
+                                                                    <Badge variant="secondary" className={`font-mono font-extrabold mr-1 ${isThisSelected ? 'bg-amber-600 text-white border-amber-400' : 'bg-amber-100 dark:bg-amber-950 text-amber-800 dark:text-amber-300 border-amber-300'
+                                                                        }`}>
                                                                         {v.placa || 'S/N'}
                                                                     </Badge>
                                                                     <span>{v.marca} {v.modelo}</span>
@@ -1444,8 +1442,8 @@ export default function PaseDigital({ invitacion }: PaseDigitalProps) {
                                                         type="button"
                                                         onClick={toggleEmp}
                                                         className={`p-3.5 rounded-2xl border transition-all text-left flex items-center justify-between gap-3 cursor-pointer ${isSelected
-                                                                ? 'bg-emerald-600 text-white border-emerald-700 shadow-md ring-2 ring-emerald-400'
-                                                                : 'bg-white dark:bg-slate-900 text-slate-800 dark:text-slate-200 border-slate-200 dark:border-slate-800 hover:border-emerald-400'
+                                                            ? 'bg-emerald-600 text-white border-emerald-700 shadow-md ring-2 ring-emerald-400'
+                                                            : 'bg-white dark:bg-slate-900 text-slate-800 dark:text-slate-200 border-slate-200 dark:border-slate-800 hover:border-emerald-400'
                                                             }`}
                                                     >
                                                         <div className="flex items-center gap-3 min-w-0">
@@ -2037,8 +2035,8 @@ export default function PaseDigital({ invitacion }: PaseDigitalProps) {
                                     activeCameraField === 'ac_foto_carnet'
                                         ? 'Fotografía del Rostro del Acompañante'
                                         : activeCameraField.includes('frontal')
-                                        ? 'Fotografía Frontal del Documento del Acompañante'
-                                        : 'Fotografía Reverso del Documento del Acompañante'
+                                            ? 'Fotografía Frontal del Documento del Acompañante'
+                                            : 'Fotografía Reverso del Documento del Acompañante'
                                 }
                                 faceGuide={activeCameraField === 'ac_foto_carnet'}
                                 docGuide={activeCameraField.includes('doc_foto')}
@@ -2061,10 +2059,10 @@ export default function PaseDigital({ invitacion }: PaseDigitalProps) {
                         activeCameraField.includes('foto_carnet')
                             ? 'Fotografía del Rostro'
                             : activeCameraField.includes('doc_foto')
-                            ? activeCameraField.includes('frontal')
-                                ? 'Fotografía Frontal del Documento'
-                                : 'Fotografía Reverso del Documento'
-                            : 'Capturar Fotografía'
+                                ? activeCameraField.includes('frontal')
+                                    ? 'Fotografía Frontal del Documento'
+                                    : 'Fotografía Reverso del Documento'
+                                : 'Capturar Fotografía'
                     }
                     faceGuide={activeCameraField.includes('foto_carnet')}
                     docGuide={activeCameraField.includes('doc_foto')}

@@ -147,14 +147,16 @@ class ProveedorController extends Controller
             $whatsappService = new \App\Services\WhatsAppService($empresa);
 
             $link = url("/preregistro/{$token}");
+            $terminos    = url("https://www.driscolls.com/Privacy-and-Terms  ");
 
             $message = "Estimado Proveedor *{$request->nombre_comercial}*, le invitamos a completar su pre-registro de datos para su acceso a nuestras oficinas con la siguiente información:\n\n"
                 . "Ubicación:{$user->sucursal->nombre}\n"
                 . "Colaboradores: Indicar todos los que acudirán\n"
                 . "Vehículos: En el que acudirán.\n\n"
-                . "Será Indispensable contar con: *INE vigente* y *Chaleco de seguridad*\n\n"
+                . "Será Indispensable contar de cada colaborador con: INE vigente y Chaleco de seguridad*\n\n"
                 . "Ingresar a:\n"
-                . $link;
+                . $link. "\n\n"
+                . "Para cualquier duda adicional, podrá consultar el aviso de privacidad en: {$terminos}";
 
             $whatsappService->sendMessage($to, $message, true);
         } catch (\Exception $e) {

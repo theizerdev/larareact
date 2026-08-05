@@ -1,20 +1,20 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Head, useForm, usePage, router } from '@inertiajs/react';
-import { 
-    ShieldCheck, 
-    User, 
-    Truck, 
+import {
+    ShieldCheck,
+    User,
+    Truck,
     Sprout,
-    Search, 
-    Plus, 
-    Calendar, 
-    Clock, 
-    LogOut, 
-    CheckCircle, 
-    XCircle, 
-    Camera, 
-    Car, 
-    Footprints, 
+    Search,
+    Plus,
+    Calendar,
+    Clock,
+    LogOut,
+    CheckCircle,
+    XCircle,
+    Camera,
+    Car,
+    Footprints,
     Users,
     FileText,
     ChevronRight,
@@ -397,7 +397,7 @@ export default function Index({
             onSuccess: () => {
                 setIsCreateInvitacionOpen(false);
                 resetInvModal();
-                notifySuccess(__('Pre-Anuncio de visita registrado correctamente.'));
+                notifySuccess(__('Pre-Registro  de visita registrado correctamente.'));
             },
             onError: () => notifyError(__('Verifique los datos ingresados e intente nuevamente.')),
         });
@@ -889,9 +889,9 @@ export default function Index({
 
     // Renderizar Horario / Jornada Laboral estructurada
     const renderHorarioJornada = (
-        jornada: any, 
-        empleadoNombre?: string, 
-        empleadoDoc?: string, 
+        jornada: any,
+        empleadoNombre?: string,
+        empleadoDoc?: string,
         esAcompanante: boolean = false,
         isDetalleModal: boolean = false
     ) => {
@@ -941,8 +941,8 @@ export default function Index({
                                 {autorizadoHabitual
                                     ? `${__('Autorizado:')} ${jornadaHoy?.hora_ingreso || '08:00'} a ${jornadaHoy?.hora_salida || '17:00'}`
                                     : isDetalleModal
-                                    ? __('Autorizado Excepcionalmente por Responsable ✓')
-                                    : __('Autorizado por Responsable vía WhatsApp ✓')}
+                                        ? __('Autorizado Excepcionalmente por Responsable ✓')
+                                        : __('Autorizado por Responsable vía WhatsApp ✓')}
                             </Badge>
                         ) : (
                             <Badge variant="outline" className="bg-rose-50 text-rose-800 border-rose-300 dark:bg-rose-950/40 dark:text-rose-300 text-[11px] px-2.5 py-1 flex items-center gap-1.5 font-semibold">
@@ -958,11 +958,10 @@ export default function Index({
                             type="button"
                             size="sm"
                             onClick={() => handleSolicitarWhatsapp(empleadoNombre, empleadoDoc || '', esAcompanante)}
-                            className={`shrink-0 whitespace-nowrap h-9 px-3.5 text-xs font-bold shadow-sm transition-all rounded-xl gap-2 w-full sm:w-auto ${
-                                activeAuthToken
+                            className={`shrink-0 whitespace-nowrap h-9 px-3.5 text-xs font-bold shadow-sm transition-all rounded-xl gap-2 w-full sm:w-auto ${activeAuthToken
                                     ? 'bg-amber-500 hover:bg-amber-600 text-white animate-pulse'
                                     : 'bg-emerald-600 hover:bg-emerald-700 text-white shadow-emerald-600/20'
-                            }`}
+                                }`}
                         >
                             {activeAuthToken ? (
                                 <>
@@ -1001,11 +1000,10 @@ export default function Index({
                                 <Badge
                                     key={idx}
                                     variant="secondary"
-                                    className={`text-[10px] font-mono ${
-                                        esHoy
+                                    className={`text-[10px] font-mono ${esHoy
                                             ? 'bg-emerald-600 text-white font-bold'
                                             : 'bg-slate-200 text-slate-700 dark:bg-slate-800 dark:text-slate-300'
-                                    }`}
+                                        }`}
                                 >
                                     {d.dia}: {d.hora_ingreso || '08:00'}-{d.hora_salida || '17:00'}
                                 </Badge>
@@ -1065,8 +1063,8 @@ export default function Index({
         const listaVehiculos = tipoAcceso === 'empleado'
             ? selectedEntity.vehiculos
             : tipoAcceso === 'productor'
-            ? selectedEntity.vehiculos_productor
-            : selectedEntity.vehiculos_proveedor;
+                ? selectedEntity.vehiculos_productor
+                : selectedEntity.vehiculos_proveedor;
         return listaVehiculos?.find((v: any) => v.id.toString() === vehiculoSeleccionado) || null;
     };
 
@@ -1100,30 +1098,30 @@ export default function Index({
                 const nombre = isVisitante
                     ? (item.visitante_nombre || 'Visitante Particular')
                     : isEmp
-                    ? `${item.empleado?.nombres || ''} ${item.empleado?.apellidos || ''}`.trim() || 'Empleado'
-                    : isProd
-                    ? (item.productor_empleado
-                        ? `${item.productor_empleado?.nombres || ''} ${item.productor_empleado?.apellidos || ''}`.trim()
-                        : item.productor?.nombre_comercial_rancho || item.productor?.razon_social_rancho || item.productor?.nombre_comercial || item.productor?.razon_social || item.visitante_nombre || '-')
-                    : (item.proveedor_empleado
-                        ? `${item.proveedor_empleado?.nombres || ''} ${item.proveedor_empleado?.apellidos || ''}`.trim()
-                        : item.proveedor?.nombre_comercial || item.proveedor?.razon_social || item.visitante_nombre || '-');
+                        ? `${item.empleado?.nombres || ''} ${item.empleado?.apellidos || ''}`.trim() || 'Empleado'
+                        : isProd
+                            ? (item.productor_empleado
+                                ? `${item.productor_empleado?.nombres || ''} ${item.productor_empleado?.apellidos || ''}`.trim()
+                                : item.productor?.nombre_comercial_rancho || item.productor?.razon_social_rancho || item.productor?.nombre_comercial || item.productor?.razon_social || item.visitante_nombre || '-')
+                            : (item.proveedor_empleado
+                                ? `${item.proveedor_empleado?.nombres || ''} ${item.proveedor_empleado?.apellidos || ''}`.trim()
+                                : item.proveedor?.nombre_comercial || item.proveedor?.razon_social || item.visitante_nombre || '-');
 
                 const doc = isVisitante
                     ? item.visitante_documento
                     : isEmp
-                    ? item.empleado?.documento_identidad
-                    : isProd
-                    ? (item.productor_empleado?.documento_identidad || item.productor?.documento_identidad || item.visitante_documento)
-                    : (item.proveedor_empleado?.documento_identidad || item.proveedor?.documento_identidad || item.visitante_documento);
+                        ? item.empleado?.documento_identidad
+                        : isProd
+                            ? (item.productor_empleado?.documento_identidad || item.productor?.documento_identidad || item.visitante_documento)
+                            : (item.proveedor_empleado?.documento_identidad || item.proveedor?.documento_identidad || item.visitante_documento);
 
                 const rawAvatar = isVisitante
                     ? item.foto_carnet
                     : isEmp
-                    ? item.empleado?.foto_empleado
-                    : isProd
-                    ? (item.productor_empleado?.foto_carnet || (item.productor_empleado as any)?.foto_empleado || item.foto_carnet)
-                    : (item.proveedor_empleado?.foto_carnet || (item.proveedor_empleado as any)?.foto_empleado || item.foto_carnet);
+                        ? item.empleado?.foto_empleado
+                        : isProd
+                            ? (item.productor_empleado?.foto_carnet || (item.productor_empleado as any)?.foto_empleado || item.foto_carnet)
+                            : (item.proveedor_empleado?.foto_carnet || (item.proveedor_empleado as any)?.foto_empleado || item.foto_carnet);
                 const avatar = formatImageUrl(rawAvatar);
                 const tieneAcompanantes = item.acompanantes && item.acompanantes.length > 0;
 
@@ -1525,10 +1523,10 @@ export default function Index({
                                         1. {selectedAccesoDetail.tipo_acceso === 'empleado' || selectedAccesoDetail.empleado_id
                                             ? __('Información del Empleado / Conductor')
                                             : selectedAccesoDetail.tipo_acceso === 'productor' || selectedAccesoDetail.productor_id || selectedAccesoDetail.productor
-                                            ? __('Información del Rancho / Productor y Personal')
-                                            : selectedAccesoDetail.tipo_acceso === 'proveedor' || selectedAccesoDetail.proveedor_id || selectedAccesoDetail.proveedor
-                                            ? __('Información de la Empresa Proveedora y Personal')
-                                            : __('Información del Visitante Particular')}
+                                                ? __('Información del Rancho / Productor y Personal')
+                                                : selectedAccesoDetail.tipo_acceso === 'proveedor' || selectedAccesoDetail.proveedor_id || selectedAccesoDetail.proveedor
+                                                    ? __('Información de la Empresa Proveedora y Personal')
+                                                    : __('Información del Visitante Particular')}
                                     </h4>
 
                                     {selectedAccesoDetail.tipo_acceso === 'empleado' || selectedAccesoDetail.empleado_id ? (
@@ -1861,8 +1859,8 @@ export default function Index({
                                                 let veh = isProd
                                                     ? (selectedAccesoDetail.productor_vehiculo || selectedAccesoDetail.productor?.vehiculos?.[0] || selectedAccesoDetail.productor?.vehiculos_productor?.[0])
                                                     : isProv
-                                                    ? (selectedAccesoDetail.proveedor_vehiculo || selectedAccesoDetail.proveedor?.vehiculos?.[0] || selectedAccesoDetail.proveedor?.vehiculos_proveedor?.[0])
-                                                    : selectedAccesoDetail.empleado_vehiculo;
+                                                        ? (selectedAccesoDetail.proveedor_vehiculo || selectedAccesoDetail.proveedor?.vehiculos?.[0] || selectedAccesoDetail.proveedor?.vehiculos_proveedor?.[0])
+                                                        : selectedAccesoDetail.empleado_vehiculo;
 
                                                 if (veh) {
                                                     return {
@@ -2273,8 +2271,8 @@ export default function Index({
                                     2. {tipoAcceso === 'empleado'
                                         ? __('Buscar Empleado Conductor (Nombre, Apellidos, Documento)')
                                         : tipoAcceso === 'productor'
-                                        ? __('Buscar Productor / Rancho (Razón Social, Nombre Comercial, RFC)')
-                                        : __('Buscar Proveedor (Razón Social, Nombre Comercial, RUC/DNI)')}
+                                            ? __('Buscar Productor / Rancho (Razón Social, Nombre Comercial, RFC)')
+                                            : __('Buscar Proveedor (Razón Social, Nombre Comercial, RUC/DNI)')}
                                 </Label>
                                 <div className="relative">
                                     <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 h-5 w-5 text-slate-400" />
@@ -2282,8 +2280,8 @@ export default function Index({
                                         placeholder={tipoAcceso === 'empleado'
                                             ? __('Escriba nombre, apellido o documento...')
                                             : tipoAcceso === 'productor'
-                                            ? __('Escriba nombre del rancho, razón social o RFC...')
-                                            : __('Escriba razón social, nombre comercial o RUC...')}
+                                                ? __('Escriba nombre del rancho, razón social o RFC...')
+                                                : __('Escriba razón social, nombre comercial o RUC...')}
                                         value={searchQuery}
                                         onChange={(e) => setSearchQuery(e.target.value)}
                                         className="pl-11 h-12 text-base bg-white dark:bg-slate-900 w-full"
@@ -2432,32 +2430,30 @@ export default function Index({
                                                             <div
                                                                 key={emp.id}
                                                                 onClick={() => toggleProveedorEmpleadoSelection(empIdStr)}
-                                                                className={`p-3 rounded-xl border cursor-pointer transition-all flex items-center justify-between gap-3 ${
-                                                                    isSelected
+                                                                className={`p-3 rounded-xl border cursor-pointer transition-all flex items-center justify-between gap-3 ${isSelected
                                                                         ? 'bg-indigo-50/80 dark:bg-indigo-950/40 border-indigo-300 dark:border-indigo-700 ring-1 ring-indigo-400/30 shadow-xs'
                                                                         : 'bg-slate-50 dark:bg-slate-800/30 border-slate-200 dark:border-slate-800 hover:border-slate-300'
-                                                                }`}
+                                                                    }`}
                                                             >
                                                                 <div className="flex items-center gap-3 min-w-0">
-                                                                    <div className={`w-5 h-5 rounded-md border flex items-center justify-center shrink-0 transition-colors ${
-                                                                        isSelected
+                                                                    <div className={`w-5 h-5 rounded-md border flex items-center justify-center shrink-0 transition-colors ${isSelected
                                                                             ? 'bg-indigo-600 border-indigo-600 text-white'
                                                                             : 'border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-900'
-                                                                    }`}>
+                                                                        }`}>
                                                                         {isSelected && <Check className="w-3.5 h-3.5 stroke-[3]" />}
                                                                     </div>
                                                                     <div className="w-9 h-9 rounded-full overflow-hidden border bg-white dark:bg-slate-800 shrink-0 flex items-center justify-center shadow-xs">
-                                                                         {formatImageUrl(emp.foto_carnet || emp.foto_empleado) ? (
-                                                                             <img
-                                                                                 src={formatImageUrl(emp.foto_carnet || emp.foto_empleado)!}
-                                                                                 alt=""
-                                                                                 className="w-full h-full object-cover"
-                                                                             />
-                                                                         ) : (
-                                                                             <User className="w-4 h-4 text-slate-400" />
-                                                                         )}
-                                                                     </div>
-                                                                     <div className="min-w-0">
+                                                                        {formatImageUrl(emp.foto_carnet || emp.foto_empleado) ? (
+                                                                            <img
+                                                                                src={formatImageUrl(emp.foto_carnet || emp.foto_empleado)!}
+                                                                                alt=""
+                                                                                className="w-full h-full object-cover"
+                                                                            />
+                                                                        ) : (
+                                                                            <User className="w-4 h-4 text-slate-400" />
+                                                                        )}
+                                                                    </div>
+                                                                    <div className="min-w-0">
                                                                         <div className="font-semibold text-xs text-slate-800 dark:text-slate-200 truncate">
                                                                             {emp.nombres} {emp.apellidos}
                                                                         </div>
@@ -2469,11 +2465,10 @@ export default function Index({
                                                                 </div>
 
                                                                 {isSelected && (
-                                                                    <Badge className={`text-[10px] shrink-0 font-medium ${
-                                                                        isMain
+                                                                    <Badge className={`text-[10px] shrink-0 font-medium ${isMain
                                                                             ? 'bg-emerald-600 hover:bg-emerald-600 text-white'
                                                                             : 'bg-indigo-100 dark:bg-indigo-900/60 text-indigo-700 dark:text-indigo-300 border-indigo-200'
-                                                                    }`}>
+                                                                        }`}>
                                                                         {isMain ? __('Principal 🚗') : __('Acompañante 👥')}
                                                                     </Badge>
                                                                 )}
@@ -2541,30 +2536,30 @@ export default function Index({
                                             {((tipoAcceso === 'empleado' && selectedEntity.vehiculos?.length > 0) ||
                                                 (tipoAcceso === 'proveedor' && selectedEntity.vehiculos_proveedor?.length > 0) ||
                                                 (tipoAcceso === 'productor' && selectedEntity.vehiculos_productor?.length > 0)) && (
-                                                <div className="space-y-1.5">
-                                                    <Label className="text-xs text-muted-foreground">{__('Seleccionar Vehículo Registrado:')}</Label>
-                                                    <Select
-                                                        value={vehiculoSeleccionado}
-                                                        onValueChange={(val) => setVehiculoSeleccionado(val)}
-                                                    >
-                                                        <SelectTrigger className="w-full h-11 bg-white dark:bg-slate-900">
-                                                            <SelectValue placeholder={__('Seleccione vehículo...')} />
-                                                        </SelectTrigger>
-                                                        <SelectContent>
-                                                            <SelectItem value="nuevo">{__('+ Registrar otro vehículo ad-hoc')}</SelectItem>
-                                                            {(tipoAcceso === 'empleado'
-                                                                ? selectedEntity.vehiculos
-                                                                : tipoAcceso === 'productor'
-                                                                ? selectedEntity.vehiculos_productor
-                                                                : selectedEntity.vehiculos_proveedor).map((v: any) => (
-                                                                <SelectItem key={v.id} value={v.id.toString()}>
-                                                                    {v.marca} {v.modelo} - Placa: {v.placa} ({v.tipo_vehiculo || 'Auto'})
-                                                                </SelectItem>
-                                                            ))}
-                                                        </SelectContent>
-                                                    </Select>
-                                                </div>
-                                            )}
+                                                    <div className="space-y-1.5">
+                                                        <Label className="text-xs text-muted-foreground">{__('Seleccionar Vehículo Registrado:')}</Label>
+                                                        <Select
+                                                            value={vehiculoSeleccionado}
+                                                            onValueChange={(val) => setVehiculoSeleccionado(val)}
+                                                        >
+                                                            <SelectTrigger className="w-full h-11 bg-white dark:bg-slate-900">
+                                                                <SelectValue placeholder={__('Seleccione vehículo...')} />
+                                                            </SelectTrigger>
+                                                            <SelectContent>
+                                                                <SelectItem value="nuevo">{__('+ Registrar otro vehículo ad-hoc')}</SelectItem>
+                                                                {(tipoAcceso === 'empleado'
+                                                                    ? selectedEntity.vehiculos
+                                                                    : tipoAcceso === 'productor'
+                                                                        ? selectedEntity.vehiculos_productor
+                                                                        : selectedEntity.vehiculos_proveedor).map((v: any) => (
+                                                                            <SelectItem key={v.id} value={v.id.toString()}>
+                                                                                {v.marca} {v.modelo} - Placa: {v.placa} ({v.tipo_vehiculo || 'Auto'})
+                                                                            </SelectItem>
+                                                                        ))}
+                                                            </SelectContent>
+                                                        </Select>
+                                                    </div>
+                                                )}
 
                                             {/* Vehículo Ad-hoc Campos de Texto */}
                                             {vehiculoSeleccionado === 'nuevo' && (
@@ -2614,138 +2609,138 @@ export default function Index({
                                             )}
 
                                             {/* VISUALIZACIÓN DE FOTOGRAFÍAS */}
-                                             {!activeCameraField && (() => {
-                                                 const fotoFrontalUrl = formatImageUrl(vehiculoNuevo.foto_frontal) || formatImageUrl(vehiculoObj?.foto_frontal);
-                                                 const fotoTraseraUrl = formatImageUrl(vehiculoNuevo.foto_trasera) || formatImageUrl(vehiculoObj?.foto_trasera);
+                                            {!activeCameraField && (() => {
+                                                const fotoFrontalUrl = formatImageUrl(vehiculoNuevo.foto_frontal) || formatImageUrl(vehiculoObj?.foto_frontal);
+                                                const fotoTraseraUrl = formatImageUrl(vehiculoNuevo.foto_trasera) || formatImageUrl(vehiculoObj?.foto_trasera);
 
-                                                 return (
-                                                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-2 border-t">
-                                                         {/* Foto Frontal */}
-                                                         <div className="p-3 border rounded-xl bg-white dark:bg-slate-900 flex flex-col justify-between gap-3">
-                                                             <div className="flex items-center justify-between">
-                                                                 <span className="text-xs font-semibold flex items-center gap-1.5">
-                                                                     <Camera className="w-4 h-4 text-emerald-600" />
-                                                                     {__('Foto Frontal del Vehículo')}
-                                                                 </span>
-                                                                 {fotoFrontalUrl ? (
-                                                                     <Badge className="bg-emerald-100 text-emerald-800 text-[10px]">Registrada ✓</Badge>
-                                                                 ) : (
-                                                                     <Badge variant="outline" className="bg-amber-50 text-amber-800 text-[10px]">Pendiente ⚠️</Badge>
-                                                                 )}
-                                                             </div>
+                                                return (
+                                                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-2 border-t">
+                                                        {/* Foto Frontal */}
+                                                        <div className="p-3 border rounded-xl bg-white dark:bg-slate-900 flex flex-col justify-between gap-3">
+                                                            <div className="flex items-center justify-between">
+                                                                <span className="text-xs font-semibold flex items-center gap-1.5">
+                                                                    <Camera className="w-4 h-4 text-emerald-600" />
+                                                                    {__('Foto Frontal del Vehículo')}
+                                                                </span>
+                                                                {fotoFrontalUrl ? (
+                                                                    <Badge className="bg-emerald-100 text-emerald-800 text-[10px]">Registrada ✓</Badge>
+                                                                ) : (
+                                                                    <Badge variant="outline" className="bg-amber-50 text-amber-800 text-[10px]">Pendiente ⚠️</Badge>
+                                                                )}
+                                                            </div>
 
-                                                             <div className="w-full aspect-[16/9] rounded-lg overflow-hidden bg-slate-100 dark:bg-slate-800 border flex items-center justify-center relative">
-                                                                 {fotoFrontalUrl ? (
-                                                                     <img
-                                                                         src={fotoFrontalUrl}
-                                                                         alt="Foto Frontal Vehículo"
-                                                                         className="w-full h-full object-cover cursor-pointer hover:scale-105 transition-transform"
-                                                                         onClick={() => window.open(fotoFrontalUrl, '_blank')}
-                                                                     />
-                                                                 ) : (
-                                                                     <div className="text-center p-3 text-slate-400">
-                                                                         <Car className="w-8 h-8 mx-auto mb-1 opacity-50" />
-                                                                         <span className="text-xs block">Sin fotografía frontal registrada</span>
-                                                                     </div>
-                                                                 )}
-                                                             </div>
+                                                            <div className="w-full aspect-[16/9] rounded-lg overflow-hidden bg-slate-100 dark:bg-slate-800 border flex items-center justify-center relative">
+                                                                {fotoFrontalUrl ? (
+                                                                    <img
+                                                                        src={fotoFrontalUrl}
+                                                                        alt="Foto Frontal Vehículo"
+                                                                        className="w-full h-full object-cover cursor-pointer hover:scale-105 transition-transform"
+                                                                        onClick={() => window.open(fotoFrontalUrl, '_blank')}
+                                                                    />
+                                                                ) : (
+                                                                    <div className="text-center p-3 text-slate-400">
+                                                                        <Car className="w-8 h-8 mx-auto mb-1 opacity-50" />
+                                                                        <span className="text-xs block">Sin fotografía frontal registrada</span>
+                                                                    </div>
+                                                                )}
+                                                            </div>
 
-                                                             <div className="flex gap-2">
-                                                                 <Button
-                                                                     type="button"
-                                                                     size="sm"
-                                                                     variant="outline"
-                                                                     onClick={() => setActiveCameraField('foto_frontal')}
-                                                                     className="flex-1 text-xs gap-1"
-                                                                 >
-                                                                     <Camera className="w-3.5 h-3.5 text-emerald-600" />
-                                                                     {__('Tomar Foto')}
-                                                                 </Button>
-                                                                 <label className="flex-1">
-                                                                     <input
-                                                                         type="file"
-                                                                         accept="image/*"
-                                                                         onChange={(e) => handleImageUpload(e, 'foto_frontal')}
-                                                                         className="hidden"
-                                                                     />
-                                                                     <Button
-                                                                         type="button"
-                                                                         size="sm"
-                                                                         variant="outline"
-                                                                         onClick={(e) => (e.currentTarget.previousElementSibling as HTMLInputElement)?.click()}
-                                                                         className="w-full text-xs gap-1"
-                                                                     >
-                                                                         <Upload className="w-3.5 h-3.5" />
-                                                                         {__('Subir')}
-                                                                     </Button>
-                                                                 </label>
-                                                             </div>
-                                                         </div>
+                                                            <div className="flex gap-2">
+                                                                <Button
+                                                                    type="button"
+                                                                    size="sm"
+                                                                    variant="outline"
+                                                                    onClick={() => setActiveCameraField('foto_frontal')}
+                                                                    className="flex-1 text-xs gap-1"
+                                                                >
+                                                                    <Camera className="w-3.5 h-3.5 text-emerald-600" />
+                                                                    {__('Tomar Foto')}
+                                                                </Button>
+                                                                <label className="flex-1">
+                                                                    <input
+                                                                        type="file"
+                                                                        accept="image/*"
+                                                                        onChange={(e) => handleImageUpload(e, 'foto_frontal')}
+                                                                        className="hidden"
+                                                                    />
+                                                                    <Button
+                                                                        type="button"
+                                                                        size="sm"
+                                                                        variant="outline"
+                                                                        onClick={(e) => (e.currentTarget.previousElementSibling as HTMLInputElement)?.click()}
+                                                                        className="w-full text-xs gap-1"
+                                                                    >
+                                                                        <Upload className="w-3.5 h-3.5" />
+                                                                        {__('Subir')}
+                                                                    </Button>
+                                                                </label>
+                                                            </div>
+                                                        </div>
 
-                                                         {/* Foto Trasera */}
-                                                         <div className="p-3 border rounded-xl bg-white dark:bg-slate-900 flex flex-col justify-between gap-3">
-                                                             <div className="flex items-center justify-between">
-                                                                 <span className="text-xs font-semibold flex items-center gap-1.5">
-                                                                     <Camera className="w-4 h-4 text-emerald-600" />
-                                                                     {__('Foto Trasera del Vehículo')}
-                                                                 </span>
-                                                                 {fotoTraseraUrl ? (
-                                                                     <Badge className="bg-emerald-100 text-emerald-800 text-[10px]">Registrada ✓</Badge>
-                                                                 ) : (
-                                                                     <Badge variant="outline" className="bg-amber-50 text-amber-800 text-[10px]">Pendiente ⚠️</Badge>
-                                                                 )}
-                                                             </div>
+                                                        {/* Foto Trasera */}
+                                                        <div className="p-3 border rounded-xl bg-white dark:bg-slate-900 flex flex-col justify-between gap-3">
+                                                            <div className="flex items-center justify-between">
+                                                                <span className="text-xs font-semibold flex items-center gap-1.5">
+                                                                    <Camera className="w-4 h-4 text-emerald-600" />
+                                                                    {__('Foto Trasera del Vehículo')}
+                                                                </span>
+                                                                {fotoTraseraUrl ? (
+                                                                    <Badge className="bg-emerald-100 text-emerald-800 text-[10px]">Registrada ✓</Badge>
+                                                                ) : (
+                                                                    <Badge variant="outline" className="bg-amber-50 text-amber-800 text-[10px]">Pendiente ⚠️</Badge>
+                                                                )}
+                                                            </div>
 
-                                                             <div className="w-full aspect-[16/9] rounded-lg overflow-hidden bg-slate-100 dark:bg-slate-800 border flex items-center justify-center relative">
-                                                                 {fotoTraseraUrl ? (
-                                                                     <img
-                                                                         src={fotoTraseraUrl}
-                                                                         alt="Foto Trasera Vehículo"
-                                                                         className="w-full h-full object-cover cursor-pointer hover:scale-105 transition-transform"
-                                                                         onClick={() => window.open(fotoTraseraUrl, '_blank')}
-                                                                     />
-                                                                 ) : (
-                                                                     <div className="text-center p-3 text-slate-400">
-                                                                         <Car className="w-8 h-8 mx-auto mb-1 opacity-50" />
-                                                                         <span className="text-xs block">Sin fotografía trasera registrada</span>
-                                                                     </div>
-                                                                 )}
-                                                             </div>
+                                                            <div className="w-full aspect-[16/9] rounded-lg overflow-hidden bg-slate-100 dark:bg-slate-800 border flex items-center justify-center relative">
+                                                                {fotoTraseraUrl ? (
+                                                                    <img
+                                                                        src={fotoTraseraUrl}
+                                                                        alt="Foto Trasera Vehículo"
+                                                                        className="w-full h-full object-cover cursor-pointer hover:scale-105 transition-transform"
+                                                                        onClick={() => window.open(fotoTraseraUrl, '_blank')}
+                                                                    />
+                                                                ) : (
+                                                                    <div className="text-center p-3 text-slate-400">
+                                                                        <Car className="w-8 h-8 mx-auto mb-1 opacity-50" />
+                                                                        <span className="text-xs block">Sin fotografía trasera registrada</span>
+                                                                    </div>
+                                                                )}
+                                                            </div>
 
-                                                             <div className="flex gap-2">
-                                                                 <Button
-                                                                     type="button"
-                                                                     size="sm"
-                                                                     variant="outline"
-                                                                     onClick={() => setActiveCameraField('foto_trasera')}
-                                                                     className="flex-1 text-xs gap-1"
-                                                                 >
-                                                                     <Camera className="w-3.5 h-3.5 text-emerald-600" />
-                                                                     {__('Tomar Foto')}
-                                                                 </Button>
-                                                                 <label className="flex-1">
-                                                                     <input
-                                                                         type="file"
-                                                                         accept="image/*"
-                                                                         onChange={(e) => handleImageUpload(e, 'foto_trasera')}
-                                                                         className="hidden"
-                                                                     />
-                                                                     <Button
-                                                                         type="button"
-                                                                         size="sm"
-                                                                         variant="outline"
-                                                                         onClick={(e) => (e.currentTarget.previousElementSibling as HTMLInputElement)?.click()}
-                                                                         className="w-full text-xs gap-1"
-                                                                     >
-                                                                         <Upload className="w-3.5 h-3.5" />
-                                                                         {__('Subir')}
-                                                                     </Button>
-                                                                 </label>
-                                                             </div>
-                                                         </div>
-                                                     </div>
-                                                 );
-                                             })()}
+                                                            <div className="flex gap-2">
+                                                                <Button
+                                                                    type="button"
+                                                                    size="sm"
+                                                                    variant="outline"
+                                                                    onClick={() => setActiveCameraField('foto_trasera')}
+                                                                    className="flex-1 text-xs gap-1"
+                                                                >
+                                                                    <Camera className="w-3.5 h-3.5 text-emerald-600" />
+                                                                    {__('Tomar Foto')}
+                                                                </Button>
+                                                                <label className="flex-1">
+                                                                    <input
+                                                                        type="file"
+                                                                        accept="image/*"
+                                                                        onChange={(e) => handleImageUpload(e, 'foto_trasera')}
+                                                                        className="hidden"
+                                                                    />
+                                                                    <Button
+                                                                        type="button"
+                                                                        size="sm"
+                                                                        variant="outline"
+                                                                        onClick={(e) => (e.currentTarget.previousElementSibling as HTMLInputElement)?.click()}
+                                                                        className="w-full text-xs gap-1"
+                                                                    >
+                                                                        <Upload className="w-3.5 h-3.5" />
+                                                                        {__('Subir')}
+                                                                    </Button>
+                                                                </label>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                );
+                                            })()}
 
                                             {/* SECCIÓN DE ACOMPAÑANTES EN EL ACCESO */}
                                             <div className="pt-4 border-t space-y-3">
@@ -2972,11 +2967,10 @@ export default function Index({
                                                     visitante_apellidos: '',
                                                 }));
                                             }}
-                                            className={`flex flex-col items-center gap-1.5 rounded-xl border-2 p-3 text-xs font-bold transition-all cursor-pointer ${
-                                                invTipoAcceso === opt.val
+                                            className={`flex flex-col items-center gap-1.5 rounded-xl border-2 p-3 text-xs font-bold transition-all cursor-pointer ${invTipoAcceso === opt.val
                                                     ? 'border-emerald-600 bg-emerald-50 dark:bg-emerald-950/30 text-emerald-800 dark:text-emerald-300 shadow-sm'
                                                     : 'border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-600 dark:text-slate-400 hover:border-slate-300'
-                                            }`}
+                                                }`}
                                         >
                                             <span className="text-xl">{opt.icon}</span>
                                             <span className="text-center leading-tight">{opt.label}</span>
@@ -3058,229 +3052,229 @@ export default function Index({
 
                             <div className="border-t border-dashed pt-4 space-y-4">
 
-                            {/* ── VISITANTE PARTICULAR ── */}
-                            {invTipoAcceso === 'visitante' && (
-                                <>
-                                    {/* Nombres y Apellidos */}
-                                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                                        <div className="space-y-1.5">
-                                            <Label className="text-xs font-bold text-slate-600 dark:text-slate-400">{__('Nombres')} <span className="text-rose-500">*</span></Label>
-                                            <Input
-                                                placeholder="Ej: Juan Carlos"
-                                                value={invForm.data.visitante_nombres}
-                                                onChange={(e) => invForm.setData('visitante_nombres', e.target.value)}
-                                                className="h-10 w-full bg-white dark:bg-slate-900 text-xs"
-                                                required
-                                            />
+                                {/* ── VISITANTE PARTICULAR ── */}
+                                {invTipoAcceso === 'visitante' && (
+                                    <>
+                                        {/* Nombres y Apellidos */}
+                                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                            <div className="space-y-1.5">
+                                                <Label className="text-xs font-bold text-slate-600 dark:text-slate-400">{__('Nombres')} <span className="text-rose-500">*</span></Label>
+                                                <Input
+                                                    placeholder="Ej: Juan Carlos"
+                                                    value={invForm.data.visitante_nombres}
+                                                    onChange={(e) => invForm.setData('visitante_nombres', e.target.value)}
+                                                    className="h-10 w-full bg-white dark:bg-slate-900 text-xs"
+                                                    required
+                                                />
+                                            </div>
+                                            <div className="space-y-1.5">
+                                                <Label className="text-xs font-bold text-slate-600 dark:text-slate-400">{__('Apellidos')} <span className="text-rose-500">*</span></Label>
+                                                <Input
+                                                    placeholder="Ej: Pérez Gómez"
+                                                    value={invForm.data.visitante_apellidos}
+                                                    onChange={(e) => invForm.setData('visitante_apellidos', e.target.value)}
+                                                    className="h-10 w-full bg-white dark:bg-slate-900 text-xs"
+                                                    required
+                                                />
+                                            </div>
                                         </div>
-                                        <div className="space-y-1.5">
-                                            <Label className="text-xs font-bold text-slate-600 dark:text-slate-400">{__('Apellidos')} <span className="text-rose-500">*</span></Label>
-                                            <Input
-                                                placeholder="Ej: Pérez Gómez"
-                                                value={invForm.data.visitante_apellidos}
-                                                onChange={(e) => invForm.setData('visitante_apellidos', e.target.value)}
-                                                className="h-10 w-full bg-white dark:bg-slate-900 text-xs"
-                                                required
-                                            />
-                                        </div>
-                                    </div>
 
-                                    {/* País + Teléfono */}
-                                    <div className="space-y-1.5">
-                                        <Label className="text-xs font-bold text-slate-600 dark:text-slate-400">{__('Teléfono (WhatsApp)')} <span className="text-rose-500">*</span></Label>
-                                        <div className="flex gap-2">
-                                            <Select
-                                                value={invForm.data.pais_telefono_id}
-                                                onValueChange={(v) => invForm.setData('pais_telefono_id', v)}
-                                            >
-                                                <SelectTrigger className="w-48 flex-shrink-0 h-10 text-xs bg-white dark:bg-slate-900 font-mono">
-                                                    <SelectValue placeholder={__('País...')} />
+                                        {/* País + Teléfono */}
+                                        <div className="space-y-1.5">
+                                            <Label className="text-xs font-bold text-slate-600 dark:text-slate-400">{__('Teléfono (WhatsApp)')} <span className="text-rose-500">*</span></Label>
+                                            <div className="flex gap-2">
+                                                <Select
+                                                    value={invForm.data.pais_telefono_id}
+                                                    onValueChange={(v) => invForm.setData('pais_telefono_id', v)}
+                                                >
+                                                    <SelectTrigger className="w-48 flex-shrink-0 h-10 text-xs bg-white dark:bg-slate-900 font-mono">
+                                                        <SelectValue placeholder={__('País...')} />
+                                                    </SelectTrigger>
+                                                    <SelectContent>
+                                                        {paises.map((p: any) => (
+                                                            <SelectItem key={p.id} value={String(p.id)}>
+                                                                {p.nombre} ({p.codigo_telefonico})
+                                                            </SelectItem>
+                                                        ))}
+                                                    </SelectContent>
+                                                </Select>
+                                                <Input
+                                                    placeholder="Ej: 33 1234 5678"
+                                                    value={invForm.data.visitante_telefono}
+                                                    onChange={(e) => invForm.setData('visitante_telefono', e.target.value)}
+                                                    className="flex-1 h-10 bg-white dark:bg-slate-900 text-xs font-mono"
+                                                    required
+                                                />
+                                            </div>
+                                        </div>
+
+                                        {/* Fecha y Hora */}
+                                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                            <div className="space-y-1.5">
+                                                <Label className="text-xs font-bold text-slate-600 dark:text-slate-400">{__('Fecha Estimada')} <span className="text-rose-500">*</span></Label>
+                                                <Input type="date" value={invForm.data.fecha_estimada} onChange={(e) => invForm.setData('fecha_estimada', e.target.value)} className="h-10 w-full bg-white dark:bg-slate-900 text-xs" required />
+                                            </div>
+                                            <div className="space-y-1.5">
+                                                <Label className="text-xs font-bold text-slate-600 dark:text-slate-400">{__('Hora Estimada')}</Label>
+                                                <Input type="time" value={invForm.data.hora_estimada} onChange={(e) => invForm.setData('hora_estimada', e.target.value)} className="h-10 w-full bg-white dark:bg-slate-900 text-xs" />
+                                            </div>
+                                        </div>
+
+                                        {/* Motivo */}
+                                        <div className="space-y-1.5">
+                                            <Label className="text-xs font-bold text-slate-600 dark:text-slate-400">{__('Motivo de Visita')} <span className="text-rose-500">*</span></Label>
+                                            <Textarea placeholder="Ej: Reunión comercial en sala de juntas..." value={invForm.data.motivo_visita} onChange={(e) => invForm.setData('motivo_visita', e.target.value)} className="min-h-[80px] w-full bg-white dark:bg-slate-900 text-xs" required />
+                                        </div>
+                                    </>
+                                )}
+
+                                {/* ── PROVEEDOR ── */}
+                                {invTipoAcceso === 'proveedor' && (
+                                    <>
+                                        {/* Buscador de Proveedor */}
+                                        <div className="space-y-1.5">
+                                            <Label className="text-xs font-bold text-slate-600 dark:text-slate-400">{__('Buscar Proveedor')} <span className="text-rose-500">*</span></Label>
+                                            {selectedInvEntity ? (
+                                                <div className="flex items-center gap-3 p-3 rounded-xl bg-amber-50 dark:bg-amber-950/20 border border-amber-200">
+                                                    <div className="w-9 h-9 rounded-xl bg-amber-500 flex items-center justify-center text-white flex-shrink-0"><Truck className="w-4 h-4" /></div>
+                                                    <div className="flex-1 min-w-0">
+                                                        <div className="text-xs font-bold text-amber-900 dark:text-amber-300 truncate">{selectedInvEntity.razon_social || selectedInvEntity.nombre_comercial}</div>
+                                                        <div className="text-[11px] text-slate-500">RFC/Doc: {selectedInvEntity.documento_identidad || 'N/A'}</div>
+                                                    </div>
+                                                    <button type="button" onClick={() => { setSelectedInvEntity(null); invForm.setData('proveedor_id', ''); setInvEntityQuery(''); }} className="text-rose-500 hover:text-rose-700 text-xs font-bold px-2.5 py-1 rounded-lg hover:bg-rose-50 transition-colors">{__('Cambiar')}</button>
+                                                </div>
+                                            ) : (
+                                                <div className="space-y-1.5">
+                                                    <div className="relative">
+                                                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400 pointer-events-none" />
+                                                        <Input placeholder={__('Razón Social, Nombre Comercial o RFC...')} value={invEntityQuery} onChange={(e) => setInvEntityQuery(e.target.value)} className="pl-9 h-10 w-full bg-white dark:bg-slate-900 text-xs" />
+                                                    </div>
+                                                    {isSearchingInvEntity && <p className="text-xs text-slate-500 px-1">{__('Buscando...')}</p>}
+                                                    {invEntityResults.length > 0 && (
+                                                        <div className="border rounded-xl bg-white dark:bg-slate-900 divide-y max-h-48 overflow-y-auto shadow-lg">
+                                                            {invEntityResults.map((e: any) => (
+                                                                <button key={e.id} type="button" onClick={() => { setSelectedInvEntity(e); invForm.setData('proveedor_id', String(e.id)); setInvEntityQuery(''); setInvEntityResults([]); }} className="w-full p-3 hover:bg-slate-50 dark:hover:bg-slate-800 flex items-center gap-3 text-left text-xs">
+                                                                    <Truck className="w-4 h-4 text-amber-500 flex-shrink-0" />
+                                                                    <div>
+                                                                        <div className="font-bold text-slate-800 dark:text-slate-200">{e.razon_social || e.nombre_comercial}</div>
+                                                                        <div className="text-[10px] text-slate-500">Doc: {e.documento_identidad || 'N/A'} · Tel: {e.telefono || 'N/A'}</div>
+                                                                    </div>
+                                                                </button>
+                                                            ))}
+                                                        </div>
+                                                    )}
+                                                </div>
+                                            )}
+                                        </div>
+
+                                        {/* Tipo de Servicio (sin IDs 1 y 6) */}
+                                        <div className="space-y-1.5">
+                                            <Label className="text-xs font-bold text-slate-600 dark:text-slate-400">{__('Tipo de Servicio')} <span className="text-rose-500">*</span></Label>
+                                            <Select value={invForm.data.tipo_servicio_id} onValueChange={(v) => invForm.setData('tipo_servicio_id', v)}>
+                                                <SelectTrigger className="h-10 w-full bg-white dark:bg-slate-900 text-xs">
+                                                    <SelectValue placeholder={__('Seleccionar tipo de servicio...')} />
                                                 </SelectTrigger>
                                                 <SelectContent>
-                                                    {paises.map((p: any) => (
-                                                        <SelectItem key={p.id} value={String(p.id)}>
-                                                            {p.nombre} ({p.codigo_telefonico})
-                                                        </SelectItem>
+                                                    {tipoServicios.filter((ts: any) => ts.id !== 1 && ts.id !== 6).map((ts: any) => (
+                                                        <SelectItem key={ts.id} value={String(ts.id)}>{ts.nombre}</SelectItem>
                                                     ))}
                                                 </SelectContent>
                                             </Select>
-                                            <Input
-                                                placeholder="Ej: 33 1234 5678"
-                                                value={invForm.data.visitante_telefono}
-                                                onChange={(e) => invForm.setData('visitante_telefono', e.target.value)}
-                                                className="flex-1 h-10 bg-white dark:bg-slate-900 text-xs font-mono"
-                                                required
-                                            />
                                         </div>
-                                    </div>
 
-                                    {/* Fecha y Hora */}
-                                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                                        <div className="space-y-1.5">
-                                            <Label className="text-xs font-bold text-slate-600 dark:text-slate-400">{__('Fecha Estimada')} <span className="text-rose-500">*</span></Label>
-                                            <Input type="date" value={invForm.data.fecha_estimada} onChange={(e) => invForm.setData('fecha_estimada', e.target.value)} className="h-10 w-full bg-white dark:bg-slate-900 text-xs" required />
-                                        </div>
-                                        <div className="space-y-1.5">
-                                            <Label className="text-xs font-bold text-slate-600 dark:text-slate-400">{__('Hora Estimada')}</Label>
-                                            <Input type="time" value={invForm.data.hora_estimada} onChange={(e) => invForm.setData('hora_estimada', e.target.value)} className="h-10 w-full bg-white dark:bg-slate-900 text-xs" />
-                                        </div>
-                                    </div>
-
-                                    {/* Motivo */}
-                                    <div className="space-y-1.5">
-                                        <Label className="text-xs font-bold text-slate-600 dark:text-slate-400">{__('Motivo de Visita')} <span className="text-rose-500">*</span></Label>
-                                        <Textarea placeholder="Ej: Reunión comercial en sala de juntas..." value={invForm.data.motivo_visita} onChange={(e) => invForm.setData('motivo_visita', e.target.value)} className="min-h-[80px] w-full bg-white dark:bg-slate-900 text-xs" required />
-                                    </div>
-                                </>
-                            )}
-
-                            {/* ── PROVEEDOR ── */}
-                            {invTipoAcceso === 'proveedor' && (
-                                <>
-                                    {/* Buscador de Proveedor */}
-                                    <div className="space-y-1.5">
-                                        <Label className="text-xs font-bold text-slate-600 dark:text-slate-400">{__('Buscar Proveedor')} <span className="text-rose-500">*</span></Label>
-                                        {selectedInvEntity ? (
-                                            <div className="flex items-center gap-3 p-3 rounded-xl bg-amber-50 dark:bg-amber-950/20 border border-amber-200">
-                                                <div className="w-9 h-9 rounded-xl bg-amber-500 flex items-center justify-center text-white flex-shrink-0"><Truck className="w-4 h-4" /></div>
-                                                <div className="flex-1 min-w-0">
-                                                    <div className="text-xs font-bold text-amber-900 dark:text-amber-300 truncate">{selectedInvEntity.razon_social || selectedInvEntity.nombre_comercial}</div>
-                                                    <div className="text-[11px] text-slate-500">RFC/Doc: {selectedInvEntity.documento_identidad || 'N/A'}</div>
-                                                </div>
-                                                <button type="button" onClick={() => { setSelectedInvEntity(null); invForm.setData('proveedor_id', ''); setInvEntityQuery(''); }} className="text-rose-500 hover:text-rose-700 text-xs font-bold px-2.5 py-1 rounded-lg hover:bg-rose-50 transition-colors">{__('Cambiar')}</button>
-                                            </div>
-                                        ) : (
+                                        {/* Fecha y Hora */}
+                                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                                             <div className="space-y-1.5">
-                                                <div className="relative">
-                                                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400 pointer-events-none" />
-                                                    <Input placeholder={__('Razón Social, Nombre Comercial o RFC...')} value={invEntityQuery} onChange={(e) => setInvEntityQuery(e.target.value)} className="pl-9 h-10 w-full bg-white dark:bg-slate-900 text-xs" />
-                                                </div>
-                                                {isSearchingInvEntity && <p className="text-xs text-slate-500 px-1">{__('Buscando...')}</p>}
-                                                {invEntityResults.length > 0 && (
-                                                    <div className="border rounded-xl bg-white dark:bg-slate-900 divide-y max-h-48 overflow-y-auto shadow-lg">
-                                                        {invEntityResults.map((e: any) => (
-                                                            <button key={e.id} type="button" onClick={() => { setSelectedInvEntity(e); invForm.setData('proveedor_id', String(e.id)); setInvEntityQuery(''); setInvEntityResults([]); }} className="w-full p-3 hover:bg-slate-50 dark:hover:bg-slate-800 flex items-center gap-3 text-left text-xs">
-                                                                <Truck className="w-4 h-4 text-amber-500 flex-shrink-0" />
-                                                                <div>
-                                                                    <div className="font-bold text-slate-800 dark:text-slate-200">{e.razon_social || e.nombre_comercial}</div>
-                                                                    <div className="text-[10px] text-slate-500">Doc: {e.documento_identidad || 'N/A'} · Tel: {e.telefono || 'N/A'}</div>
-                                                                </div>
-                                                            </button>
-                                                        ))}
-                                                    </div>
-                                                )}
+                                                <Label className="text-xs font-bold text-slate-600 dark:text-slate-400">{__('Fecha Estimada de Visita')} <span className="text-rose-500">*</span></Label>
+                                                <Input type="date" value={invForm.data.fecha_estimada} onChange={(e) => invForm.setData('fecha_estimada', e.target.value)} className="h-10 w-full bg-white dark:bg-slate-900 text-xs" required />
                                             </div>
-                                        )}
-                                    </div>
-
-                                    {/* Tipo de Servicio (sin IDs 1 y 6) */}
-                                    <div className="space-y-1.5">
-                                        <Label className="text-xs font-bold text-slate-600 dark:text-slate-400">{__('Tipo de Servicio')} <span className="text-rose-500">*</span></Label>
-                                        <Select value={invForm.data.tipo_servicio_id} onValueChange={(v) => invForm.setData('tipo_servicio_id', v)}>
-                                            <SelectTrigger className="h-10 w-full bg-white dark:bg-slate-900 text-xs">
-                                                <SelectValue placeholder={__('Seleccionar tipo de servicio...')} />
-                                            </SelectTrigger>
-                                            <SelectContent>
-                                                {tipoServicios.filter((ts: any) => ts.id !== 1 && ts.id !== 6).map((ts: any) => (
-                                                    <SelectItem key={ts.id} value={String(ts.id)}>{ts.nombre}</SelectItem>
-                                                ))}
-                                            </SelectContent>
-                                        </Select>
-                                    </div>
-
-                                    {/* Fecha y Hora */}
-                                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                                        <div className="space-y-1.5">
-                                            <Label className="text-xs font-bold text-slate-600 dark:text-slate-400">{__('Fecha Estimada de Visita')} <span className="text-rose-500">*</span></Label>
-                                            <Input type="date" value={invForm.data.fecha_estimada} onChange={(e) => invForm.setData('fecha_estimada', e.target.value)} className="h-10 w-full bg-white dark:bg-slate-900 text-xs" required />
-                                        </div>
-                                        <div className="space-y-1.5">
-                                            <Label className="text-xs font-bold text-slate-600 dark:text-slate-400">{__('Hora de Llegada')}</Label>
-                                            <Input type="time" value={invForm.data.hora_estimada} onChange={(e) => invForm.setData('hora_estimada', e.target.value)} className="h-10 w-full bg-white dark:bg-slate-900 text-xs" />
-                                        </div>
-                                    </div>
-
-                                    {/* Motivo */}
-                                    <div className="space-y-1.5">
-                                        <Label className="text-xs font-bold text-slate-600 dark:text-slate-400">{__('Motivo de Visita')} <span className="text-rose-500">*</span></Label>
-                                        <Textarea placeholder="Ej: Mantenimiento preventivo de equipos..." value={invForm.data.motivo_visita} onChange={(e) => invForm.setData('motivo_visita', e.target.value)} className="min-h-[80px] w-full bg-white dark:bg-slate-900 text-xs" required />
-                                    </div>
-                                </>
-                            )}
-
-                            {/* ── PRODUCTOR ── */}
-                            {invTipoAcceso === 'productor' && (
-                                <>
-                                    {/* Buscador de Productor */}
-                                    <div className="space-y-1.5">
-                                        <Label className="text-xs font-bold text-slate-600 dark:text-slate-400">{__('Buscar Productor / Rancho')} <span className="text-rose-500">*</span></Label>
-                                        {selectedInvEntity ? (
-                                            <div className="flex items-center gap-3 p-3 rounded-xl bg-purple-50 dark:bg-purple-950/20 border border-purple-200">
-                                                <div className="w-9 h-9 rounded-xl bg-purple-600 flex items-center justify-center text-white flex-shrink-0"><Sprout className="w-4 h-4" /></div>
-                                                <div className="flex-1 min-w-0">
-                                                    <div className="text-xs font-bold text-purple-900 dark:text-purple-300 truncate">{selectedInvEntity.nombre_comercial_rancho || selectedInvEntity.razon_social_rancho || selectedInvEntity.nombre_comercial}</div>
-                                                    <div className="text-[11px] text-slate-500">RFC/Doc: {selectedInvEntity.documento_identidad || 'N/A'}</div>
-                                                </div>
-                                                <button type="button" onClick={() => { setSelectedInvEntity(null); invForm.setData('productor_id', ''); setInvEntityQuery(''); }} className="text-rose-500 hover:text-rose-700 text-xs font-bold px-2.5 py-1 rounded-lg hover:bg-rose-50 transition-colors">{__('Cambiar')}</button>
-                                            </div>
-                                        ) : (
                                             <div className="space-y-1.5">
-                                                <div className="relative">
-                                                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400 pointer-events-none" />
-                                                    <Input placeholder={__('Nombre del Rancho, Razón Social o RFC...')} value={invEntityQuery} onChange={(e) => setInvEntityQuery(e.target.value)} className="pl-9 h-10 w-full bg-white dark:bg-slate-900 text-xs" />
-                                                </div>
-                                                {isSearchingInvEntity && <p className="text-xs text-slate-500 px-1">{__('Buscando...')}</p>}
-                                                {invEntityResults.length > 0 && (
-                                                    <div className="border rounded-xl bg-white dark:bg-slate-900 divide-y max-h-48 overflow-y-auto shadow-lg">
-                                                        {invEntityResults.map((e: any) => (
-                                                            <button key={e.id} type="button" onClick={() => { setSelectedInvEntity(e); invForm.setData('productor_id', String(e.id)); setInvEntityQuery(''); setInvEntityResults([]); }} className="w-full p-3 hover:bg-slate-50 dark:hover:bg-slate-800 flex items-center gap-3 text-left text-xs">
-                                                                <Sprout className="w-4 h-4 text-purple-500 flex-shrink-0" />
-                                                                <div>
-                                                                    <div className="font-bold text-slate-800 dark:text-slate-200">{e.nombre_comercial_rancho || e.razon_social_rancho || e.nombre_comercial}</div>
-                                                                    <div className="text-[10px] text-slate-500">Razón Social: {e.razon_social || 'N/A'} · RFC: {e.documento_identidad || 'N/A'}</div>
-                                                                </div>
-                                                            </button>
-                                                        ))}
-                                                    </div>
-                                                )}
+                                                <Label className="text-xs font-bold text-slate-600 dark:text-slate-400">{__('Hora de Llegada')}</Label>
+                                                <Input type="time" value={invForm.data.hora_estimada} onChange={(e) => invForm.setData('hora_estimada', e.target.value)} className="h-10 w-full bg-white dark:bg-slate-900 text-xs" />
                                             </div>
-                                        )}
-                                    </div>
-
-                                    {/* Tipo de Servicio */}
-                                    <div className="space-y-1.5">
-                                        <Label className="text-xs font-bold text-slate-600 dark:text-slate-400">{__('Tipo de Servicio / Entrega')} <span className="text-rose-500">*</span></Label>
-                                        <Select value={invForm.data.tipo_servicio_id} onValueChange={(v) => invForm.setData('tipo_servicio_id', v)}>
-                                            <SelectTrigger className="h-10 w-full bg-white dark:bg-slate-900 text-xs">
-                                                <SelectValue placeholder={__('Seleccionar tipo de servicio agrícola...')} />
-                                            </SelectTrigger>
-                                            <SelectContent>
-                                                {tipoServicios.map((ts: any) => (
-                                                    <SelectItem key={ts.id} value={String(ts.id)}>{ts.nombre}</SelectItem>
-                                                ))}
-                                            </SelectContent>
-                                        </Select>
-                                    </div>
-
-                                    {/* Fecha y Hora */}
-                                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                                        <div className="space-y-1.5">
-                                            <Label className="text-xs font-bold text-slate-600 dark:text-slate-400">{__('Fecha Estimada de Visita')} <span className="text-rose-500">*</span></Label>
-                                            <Input type="date" value={invForm.data.fecha_estimada} onChange={(e) => invForm.setData('fecha_estimada', e.target.value)} className="h-10 w-full bg-white dark:bg-slate-900 text-xs" required />
                                         </div>
-                                        <div className="space-y-1.5">
-                                            <Label className="text-xs font-bold text-slate-600 dark:text-slate-400">{__('Hora de Llegada')}</Label>
-                                            <Input type="time" value={invForm.data.hora_estimada} onChange={(e) => invForm.setData('hora_estimada', e.target.value)} className="h-10 w-full bg-white dark:bg-slate-900 text-xs" />
-                                        </div>
-                                    </div>
 
-                                    {/* Motivo */}
-                                    <div className="space-y-1.5">
-                                        <Label className="text-xs font-bold text-slate-600 dark:text-slate-400">{__('Motivo de Visita')} <span className="text-rose-500">*</span></Label>
-                                        <Textarea placeholder="Ej: Entrega de cosecha / Reunión agrícola..." value={invForm.data.motivo_visita} onChange={(e) => invForm.setData('motivo_visita', e.target.value)} className="min-h-[80px] w-full bg-white dark:bg-slate-900 text-xs" required />
-                                    </div>
-                                </>
-                            )}
+                                        {/* Motivo */}
+                                        <div className="space-y-1.5">
+                                            <Label className="text-xs font-bold text-slate-600 dark:text-slate-400">{__('Motivo de Visita')} <span className="text-rose-500">*</span></Label>
+                                            <Textarea placeholder="Ej: Mantenimiento preventivo de equipos..." value={invForm.data.motivo_visita} onChange={(e) => invForm.setData('motivo_visita', e.target.value)} className="min-h-[80px] w-full bg-white dark:bg-slate-900 text-xs" required />
+                                        </div>
+                                    </>
+                                )}
+
+                                {/* ── PRODUCTOR ── */}
+                                {invTipoAcceso === 'productor' && (
+                                    <>
+                                        {/* Buscador de Productor */}
+                                        <div className="space-y-1.5">
+                                            <Label className="text-xs font-bold text-slate-600 dark:text-slate-400">{__('Buscar Productor / Rancho')} <span className="text-rose-500">*</span></Label>
+                                            {selectedInvEntity ? (
+                                                <div className="flex items-center gap-3 p-3 rounded-xl bg-purple-50 dark:bg-purple-950/20 border border-purple-200">
+                                                    <div className="w-9 h-9 rounded-xl bg-purple-600 flex items-center justify-center text-white flex-shrink-0"><Sprout className="w-4 h-4" /></div>
+                                                    <div className="flex-1 min-w-0">
+                                                        <div className="text-xs font-bold text-purple-900 dark:text-purple-300 truncate">{selectedInvEntity.nombre_comercial_rancho || selectedInvEntity.razon_social_rancho || selectedInvEntity.nombre_comercial}</div>
+                                                        <div className="text-[11px] text-slate-500">RFC/Doc: {selectedInvEntity.documento_identidad || 'N/A'}</div>
+                                                    </div>
+                                                    <button type="button" onClick={() => { setSelectedInvEntity(null); invForm.setData('productor_id', ''); setInvEntityQuery(''); }} className="text-rose-500 hover:text-rose-700 text-xs font-bold px-2.5 py-1 rounded-lg hover:bg-rose-50 transition-colors">{__('Cambiar')}</button>
+                                                </div>
+                                            ) : (
+                                                <div className="space-y-1.5">
+                                                    <div className="relative">
+                                                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400 pointer-events-none" />
+                                                        <Input placeholder={__('Nombre del Rancho, Razón Social o RFC...')} value={invEntityQuery} onChange={(e) => setInvEntityQuery(e.target.value)} className="pl-9 h-10 w-full bg-white dark:bg-slate-900 text-xs" />
+                                                    </div>
+                                                    {isSearchingInvEntity && <p className="text-xs text-slate-500 px-1">{__('Buscando...')}</p>}
+                                                    {invEntityResults.length > 0 && (
+                                                        <div className="border rounded-xl bg-white dark:bg-slate-900 divide-y max-h-48 overflow-y-auto shadow-lg">
+                                                            {invEntityResults.map((e: any) => (
+                                                                <button key={e.id} type="button" onClick={() => { setSelectedInvEntity(e); invForm.setData('productor_id', String(e.id)); setInvEntityQuery(''); setInvEntityResults([]); }} className="w-full p-3 hover:bg-slate-50 dark:hover:bg-slate-800 flex items-center gap-3 text-left text-xs">
+                                                                    <Sprout className="w-4 h-4 text-purple-500 flex-shrink-0" />
+                                                                    <div>
+                                                                        <div className="font-bold text-slate-800 dark:text-slate-200">{e.nombre_comercial_rancho || e.razon_social_rancho || e.nombre_comercial}</div>
+                                                                        <div className="text-[10px] text-slate-500">Razón Social: {e.razon_social || 'N/A'} · RFC: {e.documento_identidad || 'N/A'}</div>
+                                                                    </div>
+                                                                </button>
+                                                            ))}
+                                                        </div>
+                                                    )}
+                                                </div>
+                                            )}
+                                        </div>
+
+                                        {/* Tipo de Servicio */}
+                                        <div className="space-y-1.5">
+                                            <Label className="text-xs font-bold text-slate-600 dark:text-slate-400">{__('Tipo de Servicio / Entrega')} <span className="text-rose-500">*</span></Label>
+                                            <Select value={invForm.data.tipo_servicio_id} onValueChange={(v) => invForm.setData('tipo_servicio_id', v)}>
+                                                <SelectTrigger className="h-10 w-full bg-white dark:bg-slate-900 text-xs">
+                                                    <SelectValue placeholder={__('Seleccionar tipo de servicio agrícola...')} />
+                                                </SelectTrigger>
+                                                <SelectContent>
+                                                    {tipoServicios.map((ts: any) => (
+                                                        <SelectItem key={ts.id} value={String(ts.id)}>{ts.nombre}</SelectItem>
+                                                    ))}
+                                                </SelectContent>
+                                            </Select>
+                                        </div>
+
+                                        {/* Fecha y Hora */}
+                                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                            <div className="space-y-1.5">
+                                                <Label className="text-xs font-bold text-slate-600 dark:text-slate-400">{__('Fecha Estimada de Visita')} <span className="text-rose-500">*</span></Label>
+                                                <Input type="date" value={invForm.data.fecha_estimada} onChange={(e) => invForm.setData('fecha_estimada', e.target.value)} className="h-10 w-full bg-white dark:bg-slate-900 text-xs" required />
+                                            </div>
+                                            <div className="space-y-1.5">
+                                                <Label className="text-xs font-bold text-slate-600 dark:text-slate-400">{__('Hora de Llegada')}</Label>
+                                                <Input type="time" value={invForm.data.hora_estimada} onChange={(e) => invForm.setData('hora_estimada', e.target.value)} className="h-10 w-full bg-white dark:bg-slate-900 text-xs" />
+                                            </div>
+                                        </div>
+
+                                        {/* Motivo */}
+                                        <div className="space-y-1.5">
+                                            <Label className="text-xs font-bold text-slate-600 dark:text-slate-400">{__('Motivo de Visita')} <span className="text-rose-500">*</span></Label>
+                                            <Textarea placeholder="Ej: Entrega de cosecha / Reunión agrícola..." value={invForm.data.motivo_visita} onChange={(e) => invForm.setData('motivo_visita', e.target.value)} className="min-h-[80px] w-full bg-white dark:bg-slate-900 text-xs" required />
+                                        </div>
+                                    </>
+                                )}
 
                             </div>{/* end border-t section */}
 
@@ -3453,123 +3447,123 @@ export default function Index({
                             const cargoVal = selectedAcompananteDetail.cargo || matchedEmp?.cargo || selectedAcompananteDetail.observacion || selectedAcompananteDetail.departamento || null;
 
                             return (
-                            <div className="space-y-5 pt-2">
-                                {/* Rostro Carnet Principal */}
-                                <div className="flex items-center gap-4 p-4 rounded-2xl bg-emerald-50/70 dark:bg-emerald-950/30 border border-emerald-200/70 dark:border-emerald-900/60">
-                                    {fotoRostro ? (
-                                        <div
-                                            className="w-20 h-20 rounded-2xl overflow-hidden border-2 border-emerald-500 bg-white shadow-md shrink-0 cursor-pointer group"
-                                            onClick={() => setActiveImageModal(fotoRostro)}
-                                        >
-                                            <img
-                                                src={fotoRostro}
-                                                alt="Rostro Acompañante"
-                                                className="w-full h-full object-cover group-hover:scale-105 transition-transform"
-                                            />
-                                        </div>
-                                    ) : (
-                                        <div className="w-20 h-20 rounded-2xl bg-slate-200 dark:bg-slate-800 border flex items-center justify-center text-slate-400 shrink-0">
-                                            <User className="w-10 h-10" />
-                                        </div>
-                                    )}
-                                    <div className="space-y-1 min-w-0">
-                                        <h4 className="text-base font-extrabold text-slate-900 dark:text-slate-100 truncate">
-                                            {selectedAcompananteDetail.nombre || `${selectedAcompananteDetail.nombres || ''} ${selectedAcompananteDetail.apellidos || ''}`.trim() || 'Acompañante'}
-                                        </h4>
-                                        <p className="text-xs font-mono text-slate-500">
-                                            Doc/CURP: <span className="font-bold text-slate-800 dark:text-slate-200">{selectedAcompananteDetail.curp || selectedAcompananteDetail.documento || selectedAcompananteDetail.documento_identidad || 'N/A'}</span>
-                                        </p>
-                                        {cargoVal && (
-                                            <Badge className="bg-emerald-600 text-white text-[10px]">
-                                                {cargoVal}
-                                            </Badge>
+                                <div className="space-y-5 pt-2">
+                                    {/* Rostro Carnet Principal */}
+                                    <div className="flex items-center gap-4 p-4 rounded-2xl bg-emerald-50/70 dark:bg-emerald-950/30 border border-emerald-200/70 dark:border-emerald-900/60">
+                                        {fotoRostro ? (
+                                            <div
+                                                className="w-20 h-20 rounded-2xl overflow-hidden border-2 border-emerald-500 bg-white shadow-md shrink-0 cursor-pointer group"
+                                                onClick={() => setActiveImageModal(fotoRostro)}
+                                            >
+                                                <img
+                                                    src={fotoRostro}
+                                                    alt="Rostro Acompañante"
+                                                    className="w-full h-full object-cover group-hover:scale-105 transition-transform"
+                                                />
+                                            </div>
+                                        ) : (
+                                            <div className="w-20 h-20 rounded-2xl bg-slate-200 dark:bg-slate-800 border flex items-center justify-center text-slate-400 shrink-0">
+                                                <User className="w-10 h-10" />
+                                            </div>
                                         )}
-                                    </div>
-                                </div>
-
-                                {/* Grid de Datos Personales */}
-                                <div className="grid grid-cols-2 gap-3 text-xs bg-slate-50 dark:bg-slate-800/40 p-4 rounded-2xl border border-slate-200/80 dark:border-slate-700/60">
-                                    <div>
-                                        <span className="text-slate-400 block font-medium text-[11px]">{__('Género')}</span>
-                                        <span className="font-bold text-slate-800 dark:text-slate-200 capitalize">
-                                            {generoVal ? __(generoVal) : __('No especificado')}
-                                        </span>
-                                    </div>
-                                    <div>
-                                        <span className="text-slate-400 block font-medium text-[11px]">{__('Edad')}</span>
-                                        <span className="font-bold text-slate-800 dark:text-slate-200">
-                                            {edadCalculada ? `${edadCalculada} ${__('años')}` : 'N/A'}
-                                        </span>
-                                    </div>
-                                    <div>
-                                        <span className="text-slate-400 block font-medium text-[11px]">{__('Fecha Nacimiento')}</span>
-                                        <span className="font-bold text-slate-800 dark:text-slate-200 font-mono">
-                                            {fechaNacVal || 'N/A'}
-                                        </span>
-                                    </div>
-                                    <div>
-                                        <span className="text-slate-400 block font-medium text-[11px]">{__('Correo Electrónico')}</span>
-                                        <span className="font-bold text-slate-800 dark:text-slate-200 truncate block">
-                                            {correoVal || 'N/A'}
-                                        </span>
-                                    </div>
-                                </div>
-
-                                {/* Fotografías de Documentos adjuntos */}
-                                <div className="space-y-2">
-                                    <Label className="font-extrabold text-slate-700 dark:text-slate-300 text-xs uppercase tracking-wider block">
-                                        {__('Fotografías del Documento de Identidad')}
-                                    </Label>
-
-                                    <div className="grid grid-cols-2 gap-3">
-                                        <div className="space-y-1">
-                                            <span className="text-[11px] text-slate-500 font-medium block">{__('Foto Frontal')}</span>
-                                            {docFrontal ? (
-                                                <div
-                                                    className="w-full aspect-[16/10] rounded-xl overflow-hidden border border-slate-300 bg-slate-100 cursor-pointer shadow-xs group"
-                                                    onClick={() => setActiveImageModal(docFrontal)}
-                                                >
-                                                    <img
-                                                        src={docFrontal}
-                                                        alt="Doc Frontal"
-                                                        className="w-full h-full object-cover group-hover:scale-105 transition-transform"
-                                                    />
-                                                </div>
-                                            ) : (
-                                                <div className="w-full aspect-[16/10] rounded-xl bg-slate-100 dark:bg-slate-800 border flex items-center justify-center text-slate-400 text-xs italic">
-                                                    {__('Sin foto frontal')}
-                                                </div>
-                                            )}
-                                        </div>
-
-                                        <div className="space-y-1">
-                                            <span className="text-[11px] text-slate-500 font-medium block">{__('Foto Reverso')}</span>
-                                            {docTrasero ? (
-                                                <div
-                                                    className="w-full aspect-[16/10] rounded-xl overflow-hidden border border-slate-300 bg-slate-100 cursor-pointer shadow-xs group"
-                                                    onClick={() => setActiveImageModal(docTrasero)}
-                                                >
-                                                    <img
-                                                        src={docTrasero}
-                                                        alt="Doc Reverso"
-                                                        className="w-full h-full object-cover group-hover:scale-105 transition-transform"
-                                                    />
-                                                </div>
-                                            ) : (
-                                                <div className="w-full aspect-[16/10] rounded-xl bg-slate-100 dark:bg-slate-800 border flex items-center justify-center text-slate-400 text-xs italic">
-                                                    {__('Sin foto reverso')}
-                                                </div>
+                                        <div className="space-y-1 min-w-0">
+                                            <h4 className="text-base font-extrabold text-slate-900 dark:text-slate-100 truncate">
+                                                {selectedAcompananteDetail.nombre || `${selectedAcompananteDetail.nombres || ''} ${selectedAcompananteDetail.apellidos || ''}`.trim() || 'Acompañante'}
+                                            </h4>
+                                            <p className="text-xs font-mono text-slate-500">
+                                                Doc/CURP: <span className="font-bold text-slate-800 dark:text-slate-200">{selectedAcompananteDetail.curp || selectedAcompananteDetail.documento || selectedAcompananteDetail.documento_identidad || 'N/A'}</span>
+                                            </p>
+                                            {cargoVal && (
+                                                <Badge className="bg-emerald-600 text-white text-[10px]">
+                                                    {cargoVal}
+                                                </Badge>
                                             )}
                                         </div>
                                     </div>
-                                </div>
 
-                                <DialogFooter className="pt-3 border-t border-slate-100 dark:border-slate-800">
-                                    <Button type="button" variant="outline" onClick={() => setSelectedAcompananteDetail(null)} className="w-full rounded-xl">
-                                        {__('Cerrar')}
-                                    </Button>
-                                </DialogFooter>
-                            </div>
+                                    {/* Grid de Datos Personales */}
+                                    <div className="grid grid-cols-2 gap-3 text-xs bg-slate-50 dark:bg-slate-800/40 p-4 rounded-2xl border border-slate-200/80 dark:border-slate-700/60">
+                                        <div>
+                                            <span className="text-slate-400 block font-medium text-[11px]">{__('Género')}</span>
+                                            <span className="font-bold text-slate-800 dark:text-slate-200 capitalize">
+                                                {generoVal ? __(generoVal) : __('No especificado')}
+                                            </span>
+                                        </div>
+                                        <div>
+                                            <span className="text-slate-400 block font-medium text-[11px]">{__('Edad')}</span>
+                                            <span className="font-bold text-slate-800 dark:text-slate-200">
+                                                {edadCalculada ? `${edadCalculada} ${__('años')}` : 'N/A'}
+                                            </span>
+                                        </div>
+                                        <div>
+                                            <span className="text-slate-400 block font-medium text-[11px]">{__('Fecha Nacimiento')}</span>
+                                            <span className="font-bold text-slate-800 dark:text-slate-200 font-mono">
+                                                {fechaNacVal || 'N/A'}
+                                            </span>
+                                        </div>
+                                        <div>
+                                            <span className="text-slate-400 block font-medium text-[11px]">{__('Correo Electrónico')}</span>
+                                            <span className="font-bold text-slate-800 dark:text-slate-200 truncate block">
+                                                {correoVal || 'N/A'}
+                                            </span>
+                                        </div>
+                                    </div>
+
+                                    {/* Fotografías de Documentos adjuntos */}
+                                    <div className="space-y-2">
+                                        <Label className="font-extrabold text-slate-700 dark:text-slate-300 text-xs uppercase tracking-wider block">
+                                            {__('Fotografías del Documento de Identidad')}
+                                        </Label>
+
+                                        <div className="grid grid-cols-2 gap-3">
+                                            <div className="space-y-1">
+                                                <span className="text-[11px] text-slate-500 font-medium block">{__('Foto Frontal')}</span>
+                                                {docFrontal ? (
+                                                    <div
+                                                        className="w-full aspect-[16/10] rounded-xl overflow-hidden border border-slate-300 bg-slate-100 cursor-pointer shadow-xs group"
+                                                        onClick={() => setActiveImageModal(docFrontal)}
+                                                    >
+                                                        <img
+                                                            src={docFrontal}
+                                                            alt="Doc Frontal"
+                                                            className="w-full h-full object-cover group-hover:scale-105 transition-transform"
+                                                        />
+                                                    </div>
+                                                ) : (
+                                                    <div className="w-full aspect-[16/10] rounded-xl bg-slate-100 dark:bg-slate-800 border flex items-center justify-center text-slate-400 text-xs italic">
+                                                        {__('Sin foto frontal')}
+                                                    </div>
+                                                )}
+                                            </div>
+
+                                            <div className="space-y-1">
+                                                <span className="text-[11px] text-slate-500 font-medium block">{__('Foto Reverso')}</span>
+                                                {docTrasero ? (
+                                                    <div
+                                                        className="w-full aspect-[16/10] rounded-xl overflow-hidden border border-slate-300 bg-slate-100 cursor-pointer shadow-xs group"
+                                                        onClick={() => setActiveImageModal(docTrasero)}
+                                                    >
+                                                        <img
+                                                            src={docTrasero}
+                                                            alt="Doc Reverso"
+                                                            className="w-full h-full object-cover group-hover:scale-105 transition-transform"
+                                                        />
+                                                    </div>
+                                                ) : (
+                                                    <div className="w-full aspect-[16/10] rounded-xl bg-slate-100 dark:bg-slate-800 border flex items-center justify-center text-slate-400 text-xs italic">
+                                                        {__('Sin foto reverso')}
+                                                    </div>
+                                                )}
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <DialogFooter className="pt-3 border-t border-slate-100 dark:border-slate-800">
+                                        <Button type="button" variant="outline" onClick={() => setSelectedAcompananteDetail(null)} className="w-full rounded-xl">
+                                            {__('Cerrar')}
+                                        </Button>
+                                    </DialogFooter>
+                                </div>
                             );
                         })()}
                     </DialogContent>
