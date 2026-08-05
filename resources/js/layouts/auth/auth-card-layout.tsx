@@ -26,9 +26,9 @@ export default function AuthCardLayout({
                     className="flex items-center gap-2 self-center font-medium"
                 >
                     <img
-                        src="/image/logo/larareact_logo_transparent.png"
-                        alt="Fix Sale Logo"
-                        className="h-16 w-auto object-contain rounded-xl shadow-sm"
+                        src="/image/logo/5.png"
+                        alt="FixSale Logo"
+                        className="h-16 w-auto object-contain transition-transform hover:scale-105"
                     />
                 </Link>
 

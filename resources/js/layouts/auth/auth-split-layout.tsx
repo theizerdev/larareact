@@ -2,6 +2,7 @@ import { Link, usePage } from '@inertiajs/react';
 import { ShieldCheck } from 'lucide-react';
 import { home } from '@/routes';
 import type { AuthLayoutProps } from '@/types';
+import BackgroundParticles from '@/components/background-particles';
 
 export default function AuthSplitLayout({
     children,
@@ -11,9 +12,11 @@ export default function AuthSplitLayout({
     const { name } = usePage().props;
 
     return (
-        <div className="relative grid min-h-svh w-full lg:grid-cols-2">
+        <div className="relative grid min-h-svh w-full lg:grid-cols-2 overflow-hidden">
+            <BackgroundParticles particleCount={35} colorScheme="brand" />
+
             {/* Visual panel */}
-            <div className="relative hidden flex-col justify-between overflow-hidden bg-slate-950 p-12 text-white lg:flex border-r border-slate-800">
+            <div className="relative hidden flex-col justify-between overflow-hidden bg-slate-950 p-12 text-white lg:flex border-r border-slate-800 z-10">
                 {/* Tech background layers */}
                 <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-indigo-900/40 via-slate-950 to-slate-950 opacity-90" />
 
@@ -37,9 +40,9 @@ export default function AuthSplitLayout({
                     <div className="relative group">
                         <div className="absolute" />
                         <img
-                            src="/image/logo/larareact_logo_white_1785725468786.png"
-                            alt="Fix Sale Logo"
-                            className="relative h-44 w-auto max-w-full object-contain transition-transform duration-300 group-hover:scale-105"
+                            src="/image/logo/7.png"
+                            alt="FixSale Logo"
+                            className="relative h-20 w-auto max-w-full object-contain transition-transform duration-300 group-hover:scale-105"
                         />
                     </div>
                 </Link>
