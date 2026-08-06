@@ -589,14 +589,10 @@ formData.append('logo_mini', logoMiniFile);
 
                         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full mt-4">
                             {/* ── Navbar de tabs ── */}
-                            <TabsList className={`grid w-full mb-6 ${editingEmpresa ? 'grid-cols-4' : 'grid-cols-3'}`}>
+                            <TabsList className={`grid w-full mb-6 ${editingEmpresa ? 'grid-cols-3' : 'grid-cols-2'}`}>
                                 <TabsTrigger value="general" className="flex items-center gap-2">
                                     <Building2 className="h-4 w-4" />
-                                    {__('General')}
-                                </TabsTrigger>
-                                <TabsTrigger value="contacto" className="flex items-center gap-2">
-                                    <Phone className="h-4 w-4" />
-                                    {__('Contact')}
+                                    {__('General y Contacto')}
                                 </TabsTrigger>
                                 <TabsTrigger value="ubicacion" className="flex items-center gap-2">
                                     <MapPin className="h-4 w-4" />
@@ -610,7 +606,7 @@ formData.append('logo_mini', logoMiniFile);
                                 )}
                             </TabsList>
 
-                            {/* ══ Tab 1: Información General ══════════════════════════════════════ */}
+                            {/* ══ Tab 1: Información General y Contacto ════════════════════════════ */}
                             <TabsContent value="general" className="space-y-4">
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                     {/* Razón Social */}
@@ -667,6 +663,35 @@ formData.append('logo_mini', logoMiniFile);
                                         />
                                     </div>
 
+                                    {/* Teléfono unificado: [🏴 +58] [número] */}
+                                    <div>
+                                        <Label htmlFor="telefono">{__('Phone')}</Label>
+                                        <PhoneInputGroup
+                                            paises={paises}
+                                            selectedPaisId={data.pais_telefono_id}
+                                            phoneValue={data.telefono || ''}
+                                            onPaisChange={(v) => setData('pais_telefono_id', v)}
+                                            onPhoneChange={(v) => setData('telefono', v)}
+                                            placeholder="000-0000000"
+                                            error={errors.telefono}
+                                        />
+                                    </div>
+
+                                    {/* Email */}
+                                    <div>
+                                        <Label htmlFor="email">{__('Email')}</Label>
+                                        <Input
+                                            id="email"
+                                            type="email"
+                                            value={data.email || ''}
+                                            onChange={(e) => setData('email', e.target.value)}
+                                            placeholder="correo@empresa.com"
+                                        />
+                                        {errors.email && (
+                                            <p className="text-red-500 text-xs mt-1">{errors.email}</p>
+                                        )}
+                                    </div>
+
                                     {/* Status */}
                                     <div className="md:col-span-2">
                                         <Label htmlFor="status">{__('Status')}</Label>
@@ -681,38 +706,6 @@ formData.append('logo_mini', logoMiniFile);
                                             </span>
                                         </div>
                                     </div>
-                                </div>
-                            </TabsContent>
-
-                            {/* ══ Tab 2: Contacto ══════════════════════════════════════════════════ */}
-                            <TabsContent value="contacto" className="space-y-4">
-                                {/* Teléfono unificado: [🏴 +58] [número] */}
-                                <div>
-                                    <Label htmlFor="telefono">{__('Phone')}</Label>
-                                    <PhoneInputGroup
-                                        paises={paises}
-                                        selectedPaisId={data.pais_telefono_id}
-                                        phoneValue={data.telefono || ''}
-                                        onPaisChange={(v) => setData('pais_telefono_id', v)}
-                                        onPhoneChange={(v) => setData('telefono', v)}
-                                        placeholder="000-0000000"
-                                        error={errors.telefono}
-                                    />
-                                </div>
-
-                                {/* Email */}
-                                <div>
-                                    <Label htmlFor="email">{__('Email')}</Label>
-                                    <Input
-                                        id="email"
-                                        type="email"
-                                        value={data.email || ''}
-                                        onChange={(e) => setData('email', e.target.value)}
-                                        placeholder="correo@empresa.com"
-                                    />
-                                    {errors.email && (
-                                        <p className="text-red-500 text-xs mt-1">{errors.email}</p>
-                                    )}
                                 </div>
                             </TabsContent>
 
