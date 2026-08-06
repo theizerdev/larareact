@@ -26,7 +26,7 @@ import {
     Star,
     MessageSquare,
 } from 'lucide-react';
-import { Building2, GitBranch, Briefcase, Calendar, Smartphone, Wallet, Boxes } from 'lucide-react';
+import { Building2, GitBranch, Briefcase, Calendar, Smartphone, Wallet, Boxes, Calculator } from 'lucide-react';
 import * as React from 'react';
 import LanguageToggle from '@/components/language-toggle';
 import TemplateCustomizer from '@/components/template-customizer';
@@ -571,6 +571,51 @@ export default function AdminSaasLayout({
                                         </div>
                                     );
                                 })()}
+
+                                {/* Contabilidad Group */}
+                                {(() => {
+                                    const contabilidadItems = [
+                                        {
+                                            title: 'Configuración de Rubro',
+                                            href: '/admin/contabilidad/setup',
+                                            permission: 'contabilidad.setup',
+                                        },
+                                        {
+                                            title: 'Plan de Cuentas (PUC)',
+                                            href: '/admin/contabilidad/plan-cuentas',
+                                            permission: 'contabilidad.plan_cuentas',
+                                        },
+                                        {
+                                            title: 'Libro Diario',
+                                            href: '/admin/contabilidad/asientos',
+                                            permission: 'contabilidad.asientos',
+                                        },
+                                        {
+                                            title: 'Libro Mayor',
+                                            href: '/admin/contabilidad/mayor',
+                                            permission: 'contabilidad.mayor',
+                                        },
+                                        {
+                                            title: 'Estados Financieros & P&L',
+                                            href: '/admin/contabilidad/reportes',
+                                            permission: 'contabilidad.reportes',
+                                        },
+                                    ].filter(item => hasPermission(item.permission));
+
+                                    if (contabilidadItems.length === 0) return null;
+
+                                    return (
+                                        <div className="pt-2">
+                                            <CollapsibleNavItem
+                                                title="Contabilidad Automática"
+                                                icon={Calculator}
+                                                collapsed={collapsed}
+                                                items={contabilidadItems}
+                                            />
+                                        </div>
+                                    );
+                                })()}
+
                                 {(() => {
                                     const settingsItems = [
                                         {

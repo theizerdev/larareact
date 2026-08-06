@@ -34,7 +34,7 @@ class CashRegisterService
     ): CashMovement {
         $creator = User::find($creatorId);
 
-        return CashMovement::create([
+        $movement = CashMovement::create([
             'cash_register_id' => $register->id,
             'empresa_id' => $creator?->empresa_id ?? $register->empresa_id,
             'sucursal_id' => $creator?->sucursal_id ?? $register->sucursal_id,
@@ -45,6 +45,14 @@ class CashRegisterService
             'description' => $description,
             'created_by' => $creatorId,
         ]);
+
+        try {
+            app(\App\Services\AccountingService::class)->recordCashMovementEntry($movement);
+        } catch (\Throwable $e) {
+            // Silencioso
+        }
+
+        return $movement;
     }
 
     public function closeRegister(CashRegister $register, ?float $countedAmount = null): CashRegister

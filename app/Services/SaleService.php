@@ -158,6 +158,13 @@ class SaleService
                 }
             }
 
+            // Contabilización Automática por Partida Doble
+            try {
+                app(\App\Services\AccountingService::class)->recordSaleEntry($sale);
+            } catch (\Throwable $e) {
+                // Registro contable silencioso ante fallos secundarios
+            }
+
             return $sale;
         });
     }
