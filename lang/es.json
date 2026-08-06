@@ -1650,5 +1650,10 @@
   "El sistema consulta en tiempo real la tasa oficial publicada por el Banco Central de Venezuela (BCV), permitiéndote cotizar y cobrar automáticamente en dólares y bolívares.": "El sistema consulta en tiempo real la tasa oficial publicada por el Banco Central de Venezuela (BCV), permitiéndote cotizar y cobrar automáticamente en dólares y bolívares.",
   "Puedes configurar la moneda principal de tu país y utilizar tipos de cambio personalizados en tiempo real.": "Puedes configurar la moneda principal de tu país y utilizar tipos de cambio personalizados en tiempo real.",
   "¿Cómo se envían los mensajes por WhatsApp?": "¿Cómo se envían los mensajes por WhatsApp?",
-  "El sistema incluye un motor de WhatsApp integrado que puedes conectar escaneando un código QR. Permite enviar credenciales de acceso a nuevos usuarios y comprobantes de compra.": "El sistema incluye un motor de WhatsApp integrado que puedes conectar escaneando un código QR. Permite enviar credenciales de acceso a nuevos usuarios y comprobantes de compra."
+  "El sistema incluye un motor de WhatsApp integrado que puedes conectar escaneando un código QR. Permite enviar credenciales de acceso a nuevos usuarios y comprobantes de compra.": "El sistema incluye un motor de WhatsApp integrado que puedes conectar escaneando un código QR. Permite enviar credenciales de acceso a nuevos usuarios y comprobantes de compra.",
+  "Use Current Location": "Usar Ubicación Actual",
+  "Getting location...": "Obteniendo ubicación...",
+  "Current location obtained successfully.": "Ubicación actual obtenida con éxito.",
+  "Geolocation is not supported by your browser.": "La geolocalización no es compatible con su navegador.",
+  "Unable to retrieve your location. Please check your browser permissions.": "No se pudo obtener su ubicación. Por favor verifique los permisos de su navegador."
 }

@@ -13,6 +13,7 @@ import {
     ImageIcon,
     Upload,
     X,
+    LocateFixed,
 } from 'lucide-react';
 import React, { useState, Suspense, lazy, useRef } from 'react';
 import { Breadcrumbs } from '@/components/breadcrumbs';
@@ -316,6 +317,50 @@ formData.append('logo_mini', logoMiniFile);
             longitud: lng,
             ...(address ? { direccion: address } : {}),
         }));
+    };
+
+    const [isLocating, setIsLocating] = useState(false);
+
+    const handleGetCurrentLocation = () => {
+        if (!navigator.geolocation) {
+            notifyError(__('Geolocation is not supported by your browser.'));
+            return;
+        }
+
+        setIsLocating(true);
+        navigator.geolocation.getCurrentPosition(
+            async (position) => {
+                const lat = parseFloat(position.coords.latitude.toFixed(7));
+                const lng = parseFloat(position.coords.longitude.toFixed(7));
+
+                setData((prev) => ({
+                    ...prev,
+                    latitud: lat,
+                    longitud: lng,
+                }));
+
+                try {
+                    const res = await fetch(`https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=${lat}&lon=${lng}`);
+                    const geoData = await res.json();
+                    if (geoData && geoData.display_name) {
+                        setData((prev) => ({
+                            ...prev,
+                            direccion: geoData.display_name,
+                        }));
+                    }
+                } catch {
+                    // Silencioso
+                } finally {
+                    setIsLocating(false);
+                    notifySuccess(__('Current location obtained successfully.'));
+                }
+            },
+            (error) => {
+                setIsLocating(false);
+                notifyError(__('Unable to retrieve your location. Please check your browser permissions.'));
+            },
+            { enableHighAccuracy: true, timeout: 10000 }
+        );
     };
 
     // ── Columnas de la tabla ──────────────────────────────────────────────────
@@ -706,33 +751,50 @@ formData.append('logo_mini', logoMiniFile);
                                     )}
                                 </div>
 
-                                {/* Coordenadas manuales */}
-                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                    <div>
-                                        <Label htmlFor="latitud">{__('Latitude')}</Label>
-                                        <Input
-                                            id="latitud"
-                                            type="number"
-                                            step="any"
-                                            value={data.latitud ?? ''}
-                                            onChange={(e) =>
-                                                setData('latitud', e.target.value ? parseFloat(e.target.value) : null)
-                                            }
-                                            placeholder="10.48801"
-                                        />
+                                {/* Coordenadas manuales y Ubicación Actual */}
+                                <div className="space-y-2">
+                                    <div className="flex items-center justify-between">
+                                        <Label className="text-xs font-semibold text-slate-700 dark:text-slate-300">{__('Coordinates')}</Label>
+                                        <Button
+                                            type="button"
+                                            variant="outline"
+                                            size="sm"
+                                            disabled={isLocating}
+                                            onClick={handleGetCurrentLocation}
+                                            className="h-8 gap-1.5 text-xs font-semibold border-blue-200 text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-950/40"
+                                        >
+                                            <LocateFixed className={cn("w-3.5 h-3.5", isLocating && "animate-spin")} />
+                                            {isLocating ? __('Getting location...') : __('Use Current Location')}
+                                        </Button>
                                     </div>
-                                    <div>
-                                        <Label htmlFor="longitud">{__('Longitude')}</Label>
-                                        <Input
-                                            id="longitud"
-                                            type="number"
-                                            step="any"
-                                            value={data.longitud ?? ''}
-                                            onChange={(e) =>
-                                                setData('longitud', e.target.value ? parseFloat(e.target.value) : null)
-                                            }
-                                            placeholder="-66.87919"
-                                        />
+
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                        <div>
+                                            <Label htmlFor="latitud">{__('Latitude')}</Label>
+                                            <Input
+                                                id="latitud"
+                                                type="number"
+                                                step="any"
+                                                value={data.latitud ?? ''}
+                                                onChange={(e) =>
+                                                    setData('latitud', e.target.value ? parseFloat(e.target.value) : null)
+                                                }
+                                                placeholder="10.48801"
+                                            />
+                                        </div>
+                                        <div>
+                                            <Label htmlFor="longitud">{__('Longitude')}</Label>
+                                            <Input
+                                                id="longitud"
+                                                type="number"
+                                                step="any"
+                                                value={data.longitud ?? ''}
+                                                onChange={(e) =>
+                                                    setData('longitud', e.target.value ? parseFloat(e.target.value) : null)
+                                                }
+                                                placeholder="-66.87919"
+                                            />
+                                        </div>
                                     </div>
                                 </div>
 
