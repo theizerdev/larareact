@@ -238,7 +238,7 @@ export default function Welcome() {
 
                         {/* Titular Principal H1 */}
                         <h1 className="text-4xl sm:text-6xl lg:text-7xl font-black text-[#08264e] tracking-tight max-w-5xl mx-auto leading-[1.15]">
-                            {__('El Punto de Venta e Inventario')} <br />
+                            {__('El Punto de Venta')} <br />
                             <span className="bg-gradient-to-r from-[#ff5a00] via-orange-500 to-amber-500 bg-clip-text text-transparent">
                                 {__('que Hace Crecer tu Negocio')}
                             </span>

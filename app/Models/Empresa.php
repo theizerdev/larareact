@@ -140,11 +140,12 @@ class Empresa extends Model
 
     /**
      * Obtiene el registro de suscripción más reciente desde la tabla 'subscriptions'.
-     * Si la empresa no tiene un registro previo en 'subscriptions', crea uno automáticamente respetando sus fechas reales.
+     * Busca primero un registro activo o trial vigente; si no existe, toma el más reciente por ID.
      */
     public function getLatestSubscriptionRecord(): ?Subscription
     {
-        $sub = $this->subscriptions()->orderBy('id', 'desc')->first();
+        $sub = $this->subscriptions()->whereIn('estado', ['active', 'trial'])->orderBy('fecha_vencimiento', 'desc')->first()
+            ?? $this->subscriptions()->orderBy('id', 'desc')->first();
 
         if (! $sub && ! $this->isExemptFromSubscription()) {
             $fechaVencimiento = $this->subscription_expires_at ?? $this->trial_ends_at ?? $this->created_at?->copy()->addDays(7) ?? now();
@@ -237,7 +238,17 @@ class Empresa extends Model
             return 0;
         }
 
-        return (int) max(0, ceil(now()->diffInDays($sub->fecha_vencimiento, false)));
+        $now = now();
+        if ($now->gt($sub->fecha_vencimiento)) {
+            return 0;
+        }
+
+        $days = (int) $now->diffInDays($sub->fecha_vencimiento, false);
+        if ($days === 0 && $now->lt($sub->fecha_vencimiento)) {
+            return 1;
+        }
+
+        return max(0, $days);
     }
 
     /**
