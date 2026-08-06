@@ -371,23 +371,35 @@ class ContabilidadController extends Controller
             $ventasQuery->where('empresa_id', $empresaId);
         }
 
-        $ventasData = $ventasQuery->orderBy('created_at', 'desc')->get()->map(function ($sale) use ($isVenezuela) {
-            $subtotal = (float) ($sale->subtotal ?? ($sale->total - ($sale->tax_amount ?? 0)));
-            $taxAmount = (float) ($sale->tax_amount ?? 0);
+        $tasaPais = (float) ($empresa?->pais?->impuesto_predeterminado ?? 16.00);
+
+        $ventasData = $ventasQuery->orderBy('created_at', 'desc')->get()->map(function ($sale) use ($isVenezuela, $tasaPais) {
             $total = (float) $sale->total;
+            $subtotal = (float) ($sale->subtotal ?? 0);
+            
+            if ($sale->impuesto > 0) {
+                $taxAmount = (float) $sale->impuesto;
+            } elseif ($subtotal > 0 && $subtotal < $total) {
+                $taxAmount = $total - $subtotal;
+            } else {
+                // Generar automáticamente el IVA según la alícuota del país de la empresa
+                $taxAmount = round(($total * $tasaPais) / (100 + $tasaPais), 2);
+                $subtotal = $total - $taxAmount;
+            }
+
             $igtfAmount = (float) ($sale->igtf_amount ?? 0);
 
             return [
                 'id' => $sale->id,
-                'factura_numero' => $sale->invoice_number ?? ('FAC-' . str_pad($sale->id, 6, '0', STR_PAD_LEFT)),
+                'factura_numero' => $sale->codigo_ticket ?? $sale->invoice_number ?? ('FAC-' . str_pad($sale->id, 6, '0', STR_PAD_LEFT)),
                 'control_numero' => $sale->control_number ?? ('00-' . str_pad($sale->id, 6, '0', STR_PAD_LEFT)),
                 'fecha' => $sale->created_at->format('Y-m-d H:i'),
-                'cliente_nombre' => $sale->cliente?->razon_social ?? $sale->cliente?->nombre ?? 'Cliente Contado',
+                'cliente_nombre' => $sale->cliente_nombre ?? $sale->cliente?->razon_social ?? $sale->cliente?->nombre ?? 'Cliente Contado',
                 'cliente_rif' => $sale->cliente?->documento ?? 'J-000000000',
                 'base_imponible' => $subtotal,
                 'monto_iva' => $taxAmount,
-                'aliquota_iva' => $subtotal > 0 ? round(($taxAmount / $subtotal) * 100, 1) : ($isVenezuela ? 16 : 0),
-                'monto_exento' => $subtotal == 0 ? $total : 0,
+                'aliquota_iva' => $subtotal > 0 ? round(($taxAmount / $subtotal) * 100, 1) : $tasaPais,
+                'monto_exento' => $taxAmount == 0 ? $total : 0,
                 'monto_igtf' => $igtfAmount,
                 'total' => $total,
             ];
@@ -401,19 +413,27 @@ class ContabilidadController extends Controller
             $comprasQuery->where('empresa_id', $empresaId);
         }
 
-        $comprasData = $comprasQuery->orderBy('created_at', 'desc')->get()->map(function ($compra) {
+        $comprasData = $comprasQuery->orderBy('created_at', 'desc')->get()->map(function ($compra) use ($tasaPais) {
             $total = (float) $compra->total;
-            $taxAmount = (float) ($compra->tax_amount ?? ($total * 0.16 / 1.16));
-            $baseImponible = $total - $taxAmount;
+            $subtotal = (float) ($compra->subtotal ?? 0);
+
+            if ($compra->impuesto > 0) {
+                $taxAmount = (float) $compra->impuesto;
+            } elseif ($subtotal > 0 && $subtotal < $total) {
+                $taxAmount = $total - $subtotal;
+            } else {
+                $taxAmount = round(($total * $tasaPais) / (100 + $tasaPais), 2);
+                $subtotal = $total - $taxAmount;
+            }
 
             return [
                 'id' => $compra->id,
                 'factura_numero' => $compra->numero_factura ?? ('COM-' . str_pad($compra->id, 6, '0', STR_PAD_LEFT)),
                 'control_numero' => $compra->numero_control ?? ('00-' . str_pad($compra->id, 6, '0', STR_PAD_LEFT)),
                 'fecha' => $compra->created_at->format('Y-m-d H:i'),
-                'proveedor_nombre' => $compra->proveedor?->razon_social ?? $compra->proveedor?->nombre ?? 'Proveedor',
-                'proveedor_rif' => $compra->proveedor?->documento ?? 'J-000000000',
-                'base_imponible' => $baseImponible,
+                'proveedor_nombre' => $compra->proveedor?->razon_social ?? $compra->proveedor?->nombre_comercial ?? 'Proveedor',
+                'proveedor_rif' => $compra->proveedor?->rif_documento ?? $compra->proveedor?->documento ?? 'J-000000000',
+                'base_imponible' => $subtotal,
                 'monto_iva' => $taxAmount,
                 'total' => $total,
             ];

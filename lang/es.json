@@ -1819,5 +1819,19 @@
   "Filtrados": "Filtrados",
   "Filtrar Sucursal": "Filtrar Sucursal",
   "Todas las sucursales": "Todas las sucursales",
-  "No se encontraron eventos de auditoría para esta sucursal": "No se encontraron eventos de auditoría para esta sucursal"
+  "No se encontraron eventos de auditoría para esta sucursal": "No se encontraron eventos de auditoría para esta sucursal",
+  "IVA Débito (Ventas)": "IVA Débito (Ventas)",
+  "IVA Crédito (Compras)": "IVA Crédito (Compras)",
+  "IGTF 3% Divisas": "IGTF 3% Divisas",
+  "Percepciones USD": "Percepciones USD",
+  "IVA a Pagar": "IVA a Pagar",
+  "Crédito Fiscal": "Crédito Fiscal",
+  "Búsqueda por Factura o Cliente/RIF": "Búsqueda por Factura o Cliente/RIF",
+  "Buscar N° factura, RIF o cliente...": "Buscar N° factura, RIF o cliente...",
+  "Mes Anterior": "Mes Anterior",
+  "Total Ventas Registradas": "Total Ventas Registradas",
+  "Total Compras Registradas": "Total Compras Registradas",
+  "Base Imponible": "Base Imponible",
+  "No se encontraron ventas fiscales registradas": "No se encontraron ventas fiscales registradas",
+  "No se encontraron compras fiscales registradas": "No se encontraron compras fiscales registradas"
 }
