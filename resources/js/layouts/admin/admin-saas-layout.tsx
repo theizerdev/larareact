@@ -607,7 +607,7 @@ export default function AdminSaasLayout({
                                     return (
                                         <div className="pt-2">
                                             <CollapsibleNavItem
-                                                title="Contabilidad Automática"
+                                                title="Contabilidad"
                                                 icon={Calculator}
                                                 collapsed={collapsed}
                                                 items={contabilidadItems}
