@@ -155,7 +155,7 @@ class SaleController extends Controller
                 'telefono' => $empresa->telefono,
                 'email' => $empresa->email,
                 'direccion' => $empresa->direccion,
-                'logo' => $empresa->logo ? "/storage/{$empresa->logo}" : '/image/logo/larareact_logo_transparent.png',
+                'logo' => $empresa->logo ? "/storage/{$empresa->logo}" : '/image/logo/5.png',
             ] : null,
         ]);
     }
@@ -232,7 +232,7 @@ class SaleController extends Controller
                 'telefono' => $empresa->telefono,
                 'email' => $empresa->email,
                 'direccion' => $empresa->direccion,
-                'logo' => $empresa->logo ? "/storage/{$empresa->logo}" : '/image/logo/larareact_logo_transparent.png',
+                'logo' => $empresa->logo ? "/storage/{$empresa->logo}" : '/image/logo/5.png',
             ] : null,
             'filters' => $request->only(['search', 'status', 'perPage']),
         ]);
