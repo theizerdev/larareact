@@ -15,6 +15,10 @@ import {
     BookOpen,
     ArrowDownRight,
     ArrowUpRight,
+    TrendingUp,
+    ShieldCheck,
+    RefreshCw,
+    Sparkles,
 } from 'lucide-react';
 import React, { useState } from 'react';
 import { Breadcrumbs } from '@/components/breadcrumbs';
@@ -98,13 +102,31 @@ export default function LibroDiario({ asientos, filters }: Props) {
         router.get('/admin/contabilidad/asientos', {}, { preserveState: true, preserveScroll: true });
     };
 
+    const setQuickDate = (type: 'today' | 'month' | 'clear') => {
+        if (type === 'today') {
+            const todayStr = new Date().toISOString().split('T')[0];
+            setFromDate(todayStr);
+            setToDate(todayStr);
+            router.get('/admin/contabilidad/asientos', cleanParams({ search, from_date: todayStr, to_date: todayStr }), { preserveState: true, preserveScroll: true });
+        } else if (type === 'month') {
+            const now = new Date();
+            const firstDay = new Date(now.getFullYear(), now.getMonth(), 1).toISOString().split('T')[0];
+            const lastDay = new Date(now.getFullYear(), now.getMonth() + 1, 0).toISOString().split('T')[0];
+            setFromDate(firstDay);
+            setToDate(lastDay);
+            router.get('/admin/contabilidad/asientos', cleanParams({ search, from_date: firstDay, to_date: lastDay }), { preserveState: true, preserveScroll: true });
+        } else {
+            handleResetFilters();
+        }
+    };
+
     const breadcrumbs = [
         { title: __('Dashboard'), href: '/admin/dashboard' },
         { title: __('Contabilidad'), href: '#' },
         { title: __('Libro Diario'), href: '/admin/contabilidad/asientos' },
     ];
 
-    // Cálculos de totales agregados para la vista actual
+    // Cálculos agregados para la vista actual
     const totalDebeVista = asientos.data.reduce((acc, a) => {
         return acc + (a.apuntes?.reduce((sum, item) => sum + Number(item.debe), 0) || 0);
     }, 0);
@@ -114,6 +136,10 @@ export default function LibroDiario({ asientos, filters }: Props) {
     }, 0);
 
     const isBalancedView = Math.abs(totalDebeVista - totalHaberVista) < 0.01;
+
+    const formatMoney = (val: number) => {
+        return `$${Number(val).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+    };
 
     return (
         <>
@@ -125,128 +151,179 @@ export default function LibroDiario({ asientos, filters }: Props) {
                 <ModuleHeader
                     title={__('Libro Diario (Asientos Contables)')}
                     description={__('Registro cronológico y automático de todas las operaciones comerciales por Partida Doble.')}
-                    icon={<FileCheck2 className="w-6 h-6 text-blue-600" />}
+                    icon={<FileCheck2 className="w-6 h-6 text-blue-600 dark:text-blue-400" />}
                 />
 
-                {/* ══ Muestras Estadísticas Ejecutivas ════════════════════════════════════ */}
+                {/* ══ Cards Estadísticas Ejecutivas Pro ══════════════════════════════════ */}
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-                    <Card className="shadow-sm border-l-4 border-l-blue-600 bg-card">
-                        <CardContent className="p-4 flex items-center justify-between">
-                            <div>
-                                <p className="text-xs text-muted-foreground font-medium">{__('Total Asientos Registrados')}</p>
-                                <h3 className="text-2xl font-bold text-slate-900 dark:text-slate-100 mt-1 font-mono">
-                                    {asientos.total}
-                                </h3>
+                    {/* Card 1: Total Asientos */}
+                    <div className="relative overflow-hidden rounded-xl border border-slate-200 dark:border-slate-800 bg-gradient-to-b from-white to-slate-50/50 dark:from-slate-900 dark:to-slate-900/80 p-5 shadow-sm hover:shadow-md transition-all">
+                        <div className="flex items-center justify-between">
+                            <span className="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">
+                                {__('Comprobantes Diario')}
+                            </span>
+                            <div className="h-10 w-10 rounded-xl bg-gradient-to-br from-blue-500 to-blue-700 text-white flex items-center justify-center shadow-md shadow-blue-500/20">
+                                <Receipt className="w-5 h-5" />
                             </div>
-                            <div className="p-3 bg-blue-50 dark:bg-blue-950/50 rounded-xl text-blue-600">
-                                <Receipt className="w-6 h-6" />
-                            </div>
-                        </CardContent>
-                    </Card>
+                        </div>
+                        <div className="mt-3 flex items-baseline justify-between">
+                            <span className="text-3xl font-extrabold font-mono text-slate-900 dark:text-slate-100">
+                                {asientos.total}
+                            </span>
+                            <Badge variant="outline" className="text-[10px] font-semibold text-blue-600 bg-blue-50 dark:bg-blue-950/50 border-blue-200">
+                                {__('Registros')}
+                            </Badge>
+                        </div>
+                    </div>
 
-                    <Card className="shadow-sm border-l-4 border-l-emerald-600 bg-card">
-                        <CardContent className="p-4 flex items-center justify-between">
-                            <div>
-                                <p className="text-xs text-muted-foreground font-medium">{__('Total Débitos (Debe)')}</p>
-                                <h3 className="text-2xl font-bold text-slate-900 dark:text-slate-100 mt-1 font-mono">
-                                    ${totalDebeVista.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                                </h3>
+                    {/* Card 2: Total Débitos */}
+                    <div className="relative overflow-hidden rounded-xl border border-slate-200 dark:border-slate-800 bg-gradient-to-b from-white to-slate-50/50 dark:from-slate-900 dark:to-slate-900/80 p-5 shadow-sm hover:shadow-md transition-all">
+                        <div className="flex items-center justify-between">
+                            <span className="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">
+                                {__('Débitos (Debe)')}
+                            </span>
+                            <div className="h-10 w-10 rounded-xl bg-gradient-to-br from-emerald-500 to-teal-600 text-white flex items-center justify-center shadow-md shadow-emerald-500/20">
+                                <ArrowDownRight className="w-5 h-5" />
                             </div>
-                            <div className="p-3 bg-emerald-50 dark:bg-emerald-950/50 rounded-xl text-emerald-600">
-                                <ArrowDownRight className="w-6 h-6" />
-                            </div>
-                        </CardContent>
-                    </Card>
+                        </div>
+                        <div className="mt-3 flex items-baseline justify-between">
+                            <span className="text-2xl font-extrabold font-mono text-slate-900 dark:text-slate-100">
+                                {formatMoney(totalDebeVista)}
+                            </span>
+                            <span className="text-[11px] font-medium text-emerald-600 dark:text-emerald-400 flex items-center gap-0.5">
+                                <TrendingUp className="w-3 h-3" />
+                                {__('Cargos')}
+                            </span>
+                        </div>
+                    </div>
 
-                    <Card className="shadow-sm border-l-4 border-l-indigo-600 bg-card">
-                        <CardContent className="p-4 flex items-center justify-between">
-                            <div>
-                                <p className="text-xs text-muted-foreground font-medium">{__('Total Créditos (Haber)')}</p>
-                                <h3 className="text-2xl font-bold text-slate-900 dark:text-slate-100 mt-1 font-mono">
-                                    ${totalHaberVista.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                                </h3>
+                    {/* Card 3: Total Créditos */}
+                    <div className="relative overflow-hidden rounded-xl border border-slate-200 dark:border-slate-800 bg-gradient-to-b from-white to-slate-50/50 dark:from-slate-900 dark:to-slate-900/80 p-5 shadow-sm hover:shadow-md transition-all">
+                        <div className="flex items-center justify-between">
+                            <span className="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">
+                                {__('Créditos (Haber)')}
+                            </span>
+                            <div className="h-10 w-10 rounded-xl bg-gradient-to-br from-purple-500 to-indigo-600 text-white flex items-center justify-center shadow-md shadow-purple-500/20">
+                                <ArrowUpRight className="w-5 h-5" />
                             </div>
-                            <div className="p-3 bg-indigo-50 dark:bg-indigo-950/50 rounded-xl text-indigo-600">
-                                <ArrowUpRight className="w-6 h-6" />
-                            </div>
-                        </CardContent>
-                    </Card>
+                        </div>
+                        <div className="mt-3 flex items-baseline justify-between">
+                            <span className="text-2xl font-extrabold font-mono text-slate-900 dark:text-slate-100">
+                                {formatMoney(totalHaberVista)}
+                            </span>
+                            <span className="text-[11px] font-medium text-purple-600 dark:text-purple-400">
+                                {__('Abonos')}
+                            </span>
+                        </div>
+                    </div>
 
-                    <Card className="shadow-sm border-l-4 border-l-teal-500 bg-card">
-                        <CardContent className="p-4 flex items-center justify-between">
-                            <div>
-                                <p className="text-xs text-muted-foreground font-medium">{__('Estado Partida Doble')}</p>
-                                <div className="flex items-center gap-1.5 mt-1">
-                                    {isBalancedView ? (
-                                        <Badge className="bg-emerald-600 hover:bg-emerald-700 text-white font-mono font-bold text-xs gap-1">
-                                            <CheckCircle2 className="w-3.5 h-3.5" />
-                                            {__('Cuadrado 100%')}
-                                        </Badge>
-                                    ) : (
-                                        <Badge variant="destructive" className="font-mono text-xs">
-                                            {__('Desbalanceado')}
-                                        </Badge>
-                                    )}
-                                </div>
+                    {/* Card 4: Estado de Partida Doble */}
+                    <div className="relative overflow-hidden rounded-xl border border-slate-200 dark:border-slate-800 bg-gradient-to-b from-white to-slate-50/50 dark:from-slate-900 dark:to-slate-900/80 p-5 shadow-sm hover:shadow-md transition-all">
+                        <div className="flex items-center justify-between">
+                            <span className="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">
+                                {__('Verificación Contable')}
+                            </span>
+                            <div className="h-10 w-10 rounded-xl bg-gradient-to-br from-teal-500 to-emerald-600 text-white flex items-center justify-center shadow-md shadow-teal-500/20">
+                                <ShieldCheck className="w-5 h-5" />
                             </div>
-                            <div className="p-3 bg-teal-50 dark:bg-teal-950/50 rounded-xl text-teal-600">
-                                <Scale className="w-6 h-6" />
-                            </div>
-                        </CardContent>
-                    </Card>
+                        </div>
+                        <div className="mt-3 flex items-center justify-between">
+                            {isBalancedView ? (
+                                <Badge className="bg-emerald-600 hover:bg-emerald-700 text-white font-mono font-bold text-xs gap-1.5 px-3 py-1 shadow-sm">
+                                    <CheckCircle2 className="w-3.5 h-3.5" />
+                                    {__('100% Cuadrado')}
+                                </Badge>
+                            ) : (
+                                <Badge variant="destructive" className="font-mono text-xs px-3 py-1">
+                                    {__('Desbalanceado')}
+                                </Badge>
+                            )}
+                            <span className="text-[10px] font-mono text-muted-foreground">
+                                Δ $0.00
+                            </span>
+                        </div>
+                    </div>
                 </div>
 
-                {/* ══ Filtros de Búsqueda Avanzados ════════════════════════════════════ */}
-                <Card className="shadow-sm">
-                    <CardHeader className="p-4 border-b bg-slate-50/50 dark:bg-slate-900/50">
-                        <form onSubmit={handleSearch} className="flex flex-col lg:flex-row items-end justify-between gap-4">
-                            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 w-full lg:w-auto flex-1">
+                {/* ══ Toolbar de Búsqueda y Filtros Rápidos ══════════════════════════════ */}
+                <Card className="shadow-sm border-slate-200 dark:border-slate-800">
+                    <CardHeader className="p-4 border-b bg-slate-50/60 dark:bg-slate-900/60">
+                        <form onSubmit={handleSearch} className="flex flex-col lg:flex-row items-stretch lg:items-center justify-between gap-4">
+                            {/* Inputs de Filtro */}
+                            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 flex-1">
                                 <div className="space-y-1">
-                                    <Label className="text-xs text-muted-foreground">{__('Búsqueda por N° o Glosa')}</Label>
+                                    <Label className="text-xs font-semibold text-slate-600 dark:text-slate-400">{__('Búsqueda')}</Label>
                                     <div className="relative">
                                         <Search className="w-4 h-4 absolute left-3 top-2.5 text-muted-foreground" />
                                         <Input
-                                            placeholder={__('Buscar N° asiento o concepto...')}
+                                            placeholder={__('Buscar N° asiento o glosa...')}
                                             value={search}
                                             onChange={(e) => setSearch(e.target.value)}
-                                            className="pl-9 h-9 text-xs"
+                                            className="pl-9 h-9 text-xs bg-white dark:bg-slate-950"
                                         />
                                     </div>
                                 </div>
 
                                 <div className="space-y-1">
-                                    <Label className="text-xs text-muted-foreground">{__('Desde Fecha')}</Label>
+                                    <Label className="text-xs font-semibold text-slate-600 dark:text-slate-400">{__('Desde Fecha')}</Label>
                                     <Input
                                         type="date"
                                         value={fromDate}
                                         onChange={(e) => setFromDate(e.target.value)}
-                                        className="h-9 text-xs"
+                                        className="h-9 text-xs bg-white dark:bg-slate-950"
                                     />
                                 </div>
 
                                 <div className="space-y-1">
-                                    <Label className="text-xs text-muted-foreground">{__('Hasta Fecha')}</Label>
+                                    <Label className="text-xs font-semibold text-slate-600 dark:text-slate-400">{__('Hasta Fecha')}</Label>
                                     <Input
                                         type="date"
                                         value={toDate}
                                         onChange={(e) => setToDate(e.target.value)}
-                                        className="h-9 text-xs"
+                                        className="h-9 text-xs bg-white dark:bg-slate-950"
                                     />
                                 </div>
                             </div>
 
-                            <div className="flex items-center gap-2 w-full lg:w-auto justify-end">
-                                <Button type="submit" size="sm" className="h-9 px-4 text-xs font-bold gap-1.5 bg-blue-600 hover:bg-blue-700">
+                            {/* Botones de Acción y Presets */}
+                            <div className="flex flex-wrap items-center gap-2 justify-end pt-1 lg:pt-5">
+                                <Button
+                                    type="button"
+                                    variant="outline"
+                                    size="sm"
+                                    onClick={() => setQuickDate('today')}
+                                    className="h-9 text-xs gap-1 font-medium bg-white dark:bg-slate-950"
+                                >
+                                    <Calendar className="w-3.5 h-3.5 text-blue-600" />
+                                    {__('Hoy')}
+                                </Button>
+
+                                <Button
+                                    type="button"
+                                    variant="outline"
+                                    size="sm"
+                                    onClick={() => setQuickDate('month')}
+                                    className="h-9 text-xs gap-1 font-medium bg-white dark:bg-slate-950"
+                                >
+                                    {__('Este Mes')}
+                                </Button>
+
+                                <Button
+                                    type="submit"
+                                    size="sm"
+                                    className="h-9 px-4 text-xs font-bold gap-1.5 bg-blue-600 hover:bg-blue-700 text-white shadow-sm"
+                                >
                                     <Filter className="w-3.5 h-3.5" />
                                     {__('Filtrar')}
                                 </Button>
+
                                 {(search || fromDate || toDate) && (
                                     <Button
                                         type="button"
-                                        variant="outline"
+                                        variant="ghost"
                                         size="sm"
                                         onClick={handleResetFilters}
-                                        className="h-9 px-3 text-xs gap-1"
+                                        className="h-9 px-3 text-xs gap-1 text-slate-600 hover:text-slate-900"
                                     >
                                         <X className="w-3.5 h-3.5" />
                                         {__('Limpiar')}
@@ -256,8 +333,8 @@ export default function LibroDiario({ asientos, filters }: Props) {
                         </form>
                     </CardHeader>
 
-                    {/* ══ Listado Profesional de Asientos ═════════════════════════════════ */}
-                    <CardContent className="p-0 divide-y">
+                    {/* ══ Listado Ejecutivos de Comprobantes ═════════════════════════════════ */}
+                    <CardContent className="p-0 divide-y divide-slate-100 dark:divide-slate-800">
                         {asientos.data.length > 0 ? (
                             asientos.data.map((asiento) => {
                                 const totalDebe = asiento.apuntes?.reduce((acc, curr) => acc + Number(curr.debe), 0) || 0;
@@ -267,28 +344,28 @@ export default function LibroDiario({ asientos, filters }: Props) {
                                 return (
                                     <div
                                         key={asiento.id}
-                                        className="p-5 hover:bg-slate-50/80 dark:hover:bg-slate-900/40 transition-colors space-y-3"
+                                        className="p-5 hover:bg-slate-50/90 dark:hover:bg-slate-900/50 transition-all space-y-3 group"
                                     >
-                                        {/* Cabecera de Asiento */}
-                                        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-2 border-b border-dashed">
+                                        {/* Header Asiento */}
+                                        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-2 border-b border-dashed border-slate-200 dark:border-slate-800">
                                             <div className="flex flex-wrap items-center gap-2">
-                                                <Badge className="bg-slate-900 dark:bg-slate-100 text-white dark:text-slate-900 font-mono font-bold text-xs px-2.5 py-1">
+                                                <Badge className="bg-slate-900 dark:bg-slate-100 text-white dark:text-slate-900 font-mono font-bold text-xs px-3 py-1 shadow-sm">
                                                     {asiento.numero_asiento}
                                                 </Badge>
 
-                                                <span className="flex items-center gap-1 text-xs text-muted-foreground font-mono bg-slate-100 dark:bg-slate-800 px-2 py-0.5 rounded">
-                                                    <Calendar className="w-3 h-3" />
+                                                <span className="flex items-center gap-1 text-xs text-slate-600 dark:text-slate-400 font-mono bg-slate-100 dark:bg-slate-800 px-2.5 py-1 rounded-md border border-slate-200/60 dark:border-slate-700/60">
+                                                    <Calendar className="w-3.5 h-3.5 text-slate-500" />
                                                     {new Date(asiento.fecha).toLocaleDateString()} {new Date(asiento.fecha).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                                                 </span>
 
                                                 {asiento.user && (
-                                                    <span className="flex items-center gap-1 text-xs text-muted-foreground bg-slate-100 dark:bg-slate-800 px-2 py-0.5 rounded">
-                                                        <User className="w-3 h-3 text-slate-500" />
+                                                    <span className="flex items-center gap-1.5 text-xs text-slate-600 dark:text-slate-400 bg-slate-100 dark:bg-slate-800 px-2.5 py-1 rounded-md border border-slate-200/60 dark:border-slate-700/60">
+                                                        <User className="w-3.5 h-3.5 text-slate-500" />
                                                         {asiento.user.name}
                                                     </span>
                                                 )}
 
-                                                <Badge variant="outline" className="text-[11px] font-mono text-emerald-600 border-emerald-300 dark:border-emerald-800 bg-emerald-50/50 dark:bg-emerald-950/30">
+                                                <Badge variant="outline" className="text-[11px] font-mono text-emerald-700 dark:text-emerald-400 border-emerald-300 dark:border-emerald-800 bg-emerald-50/60 dark:bg-emerald-950/40">
                                                     <DollarSign className="w-3 h-3 mr-0.5" />
                                                     Tasa: ${Number(asiento.tasa_cambio).toFixed(2)} VES
                                                 </Badge>
@@ -296,7 +373,7 @@ export default function LibroDiario({ asientos, filters }: Props) {
 
                                             <div className="flex items-center gap-2">
                                                 {isBalanced && (
-                                                    <span className="text-[11px] text-emerald-600 font-semibold flex items-center gap-1">
+                                                    <span className="text-[11px] text-emerald-600 dark:text-emerald-400 font-semibold flex items-center gap-1 bg-emerald-50 dark:bg-emerald-950/50 px-2 py-0.5 rounded border border-emerald-200 dark:border-emerald-900">
                                                         <CheckCircle2 className="w-3.5 h-3.5" />
                                                         {__('Cuadrado')}
                                                     </span>
@@ -306,7 +383,7 @@ export default function LibroDiario({ asientos, filters }: Props) {
                                                     variant="outline"
                                                     size="sm"
                                                     onClick={() => setSelectedAsiento(asiento)}
-                                                    className="h-8 text-xs font-semibold gap-1.5 border-blue-200 text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-950/40"
+                                                    className="h-8 text-xs font-bold gap-1.5 border-blue-200 text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-950/40 group-hover:border-blue-400"
                                                 >
                                                     <Eye className="w-3.5 h-3.5" />
                                                     {__('Ver Comprobante')}
@@ -314,52 +391,52 @@ export default function LibroDiario({ asientos, filters }: Props) {
                                             </div>
                                         </div>
 
-                                        {/* Glosa o Concepto */}
-                                        <div className="flex items-start gap-2 bg-slate-50 dark:bg-slate-900/60 p-2.5 rounded-md border border-slate-100 dark:border-slate-800">
-                                            <BookOpen className="w-4 h-4 text-blue-600 shrink-0 mt-0.5" />
+                                        {/* Glosa / Concepto */}
+                                        <div className="flex items-start gap-2.5 bg-slate-50/80 dark:bg-slate-900/80 p-3 rounded-lg border border-slate-200/80 dark:border-slate-800">
+                                            <BookOpen className="w-4 h-4 text-blue-600 dark:text-blue-400 shrink-0 mt-0.5" />
                                             <p className="text-xs font-semibold text-slate-800 dark:text-slate-200 leading-relaxed">
                                                 {asiento.glosa}
                                             </p>
                                         </div>
 
-                                        {/* Tabla de Apuntes Contables (Partida Doble) */}
-                                        <div className="overflow-x-auto rounded-lg border bg-card">
+                                        {/* Tabla de Apuntes Contables */}
+                                        <div className="overflow-x-auto rounded-xl border border-slate-200/80 dark:border-slate-800 bg-white dark:bg-slate-950 shadow-2xs">
                                             <table className="w-full text-left text-xs font-mono">
-                                                <thead className="bg-slate-100 dark:bg-slate-800 text-[10px] uppercase font-bold text-muted-foreground tracking-wider border-b">
+                                                <thead className="bg-slate-100/80 dark:bg-slate-900 text-[10px] uppercase font-bold text-slate-600 dark:text-slate-400 tracking-wider border-b">
                                                     <tr>
-                                                        <th className="py-2 px-3">{__('Código')}</th>
-                                                        <th className="py-2 px-3 font-sans">{__('Cuenta Contable')}</th>
-                                                        <th className="py-2 px-3 text-right">{__('Debe (Débito)')}</th>
-                                                        <th className="py-2 px-3 text-right">{__('Haber (Crédito)')}</th>
+                                                        <th className="py-2.5 px-4">{__('Código')}</th>
+                                                        <th className="py-2.5 px-4 font-sans">{__('Cuenta Contable')}</th>
+                                                        <th className="py-2.5 px-4 text-right">{__('Debe (Débito)')}</th>
+                                                        <th className="py-2.5 px-4 text-right">{__('Haber (Crédito)')}</th>
                                                     </tr>
                                                 </thead>
-                                                <tbody className="divide-y text-[11px]">
+                                                <tbody className="divide-y divide-slate-100 dark:divide-slate-900 text-[11px]">
                                                     {asiento.apuntes?.map((apunte) => {
                                                         const isCredit = Number(apunte.haber) > 0;
 
                                                         return (
-                                                            <tr key={apunte.id} className="hover:bg-slate-50/50 dark:hover:bg-slate-800/30">
-                                                                <td className="py-2 px-3 font-bold text-blue-600 w-32">
+                                                            <tr key={apunte.id} className="hover:bg-slate-50/60 dark:hover:bg-slate-900/40">
+                                                                <td className="py-2.5 px-4 font-bold text-blue-600 dark:text-blue-400 w-36">
                                                                     {apunte.cuenta?.codigo}
                                                                 </td>
-                                                                <td className="py-2 px-3 font-sans">
-                                                                    <span className={isCredit ? 'pl-6 text-slate-600 dark:text-slate-400 inline-block' : 'font-semibold text-slate-900 dark:text-slate-100'}>
+                                                                <td className="py-2.5 px-4 font-sans">
+                                                                    <span className={isCredit ? 'pl-6 text-slate-600 dark:text-slate-400 font-normal inline-block' : 'font-semibold text-slate-900 dark:text-slate-100'}>
                                                                         {isCredit ? '↳ ' : ''}{apunte.cuenta?.nombre}
                                                                     </span>
                                                                 </td>
-                                                                <td className="py-2 px-3 text-right font-bold w-36">
+                                                                <td className="py-2.5 px-4 text-right font-bold w-40">
                                                                     {Number(apunte.debe) > 0 ? (
-                                                                        <span className="text-slate-900 dark:text-slate-100 bg-slate-100 dark:bg-slate-800 px-2 py-0.5 rounded">
-                                                                            ${Number(apunte.debe).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                                                        <span className="text-slate-900 dark:text-slate-100 bg-slate-100 dark:bg-slate-800 px-2.5 py-1 rounded-md">
+                                                                            {formatMoney(apunte.debe)}
                                                                         </span>
                                                                     ) : (
                                                                         <span className="text-slate-300 dark:text-slate-700">-</span>
                                                                     )}
                                                                 </td>
-                                                                <td className="py-2 px-3 text-right font-bold w-36">
+                                                                <td className="py-2.5 px-4 text-right font-bold w-40">
                                                                     {Number(apunte.haber) > 0 ? (
-                                                                        <span className="text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/40 px-2 py-0.5 rounded">
-                                                                            ${Number(apunte.haber).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                                                        <span className="text-emerald-700 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/50 px-2.5 py-1 rounded-md border border-emerald-100 dark:border-emerald-900">
+                                                                            {formatMoney(apunte.haber)}
                                                                         </span>
                                                                     ) : (
                                                                         <span className="text-slate-300 dark:text-slate-700">-</span>
@@ -369,16 +446,16 @@ export default function LibroDiario({ asientos, filters }: Props) {
                                                         );
                                                     })}
                                                 </tbody>
-                                                <tfoot className="bg-slate-50 dark:bg-slate-900 font-bold border-t text-[11px]">
+                                                <tfoot className="bg-slate-50/80 dark:bg-slate-900/80 font-bold border-t border-slate-200 dark:border-slate-800 text-[11px]">
                                                     <tr>
-                                                        <td colSpan={2} className="py-2 px-3 font-sans text-right text-muted-foreground uppercase text-[10px]">
+                                                        <td colSpan={2} className="py-2.5 px-4 font-sans text-right text-muted-foreground uppercase text-[10px]">
                                                             {__('Totales del Asiento:')}
                                                         </td>
-                                                        <td className="py-2 px-3 text-right text-slate-900 dark:text-slate-100">
-                                                            ${totalDebe.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                                        <td className="py-2.5 px-4 text-right text-slate-900 dark:text-slate-100">
+                                                            {formatMoney(totalDebe)}
                                                         </td>
-                                                        <td className="py-2 px-3 text-right text-emerald-600 dark:text-emerald-400">
-                                                            ${totalHaber.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                                        <td className="py-2.5 px-4 text-right text-emerald-600 dark:text-emerald-400">
+                                                            {formatMoney(totalHaber)}
                                                         </td>
                                                     </tr>
                                                 </tfoot>
@@ -400,13 +477,13 @@ export default function LibroDiario({ asientos, filters }: Props) {
 
                     {/* ══ Paginación Nativa ══════════════════════════════════════════════ */}
                     {asientos.total > 0 && (
-                        <div className="p-4 border-t">
+                        <div className="p-4 border-t bg-slate-50/40 dark:bg-slate-900/40">
                             <Pagination paginatedData={asientos} filters={filters} />
                         </div>
                     )}
                 </Card>
 
-                {/* ══ Modal de Comprobante de Contabilidad ══════════════════════════════ */}
+                {/* ══ Modal de Comprobante Oficial de Contabilidad ══════════════════════ */}
                 <Dialog open={!!selectedAsiento} onOpenChange={() => setSelectedAsiento(null)}>
                     <DialogContent className="sm:max-w-3xl max-h-[90vh] overflow-y-auto">
                         <DialogHeader className="border-b pb-3">
@@ -423,8 +500,8 @@ export default function LibroDiario({ asientos, filters }: Props) {
 
                         {selectedAsiento && (
                             <div className="space-y-5 text-xs font-sans py-2">
-                                {/* Información del Encabezado */}
-                                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 bg-slate-50 dark:bg-slate-900 p-3 rounded-lg border">
+                                {/* Encabezado de Voucher */}
+                                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 bg-slate-50 dark:bg-slate-900 p-3.5 rounded-xl border border-slate-200 dark:border-slate-800">
                                     <div>
                                         <p className="text-[11px] text-muted-foreground uppercase font-semibold">{__('Fecha del Asiento')}</p>
                                         <p className="font-mono font-bold text-slate-900 dark:text-slate-100 mt-0.5">
@@ -445,16 +522,16 @@ export default function LibroDiario({ asientos, filters }: Props) {
                                     </div>
                                 </div>
 
-                                {/* Glosa / Concepto */}
+                                {/* Concepto / Glosa */}
                                 <div>
                                     <p className="text-[11px] text-muted-foreground uppercase font-semibold mb-1">{__('Concepto / Glosa Comercial')}</p>
-                                    <p className="p-3 bg-blue-50/50 dark:bg-blue-950/30 rounded-md border border-blue-100 dark:border-blue-900 font-medium text-slate-800 dark:text-slate-200">
+                                    <p className="p-3 bg-blue-50/50 dark:bg-blue-950/30 rounded-lg border border-blue-100 dark:border-blue-900 font-medium text-slate-800 dark:text-slate-200">
                                         {selectedAsiento.glosa}
                                     </p>
                                 </div>
 
-                                {/* Tabla Completa del Comprobante */}
-                                <div className="overflow-x-auto rounded-lg border">
+                                {/* Tabla del Voucher */}
+                                <div className="overflow-x-auto rounded-xl border border-slate-200 dark:border-slate-800">
                                     <table className="w-full text-left font-mono text-xs">
                                         <thead className="bg-slate-100 dark:bg-slate-800 text-[10px] uppercase font-bold text-muted-foreground border-b">
                                             <tr>
@@ -476,10 +553,10 @@ export default function LibroDiario({ asientos, filters }: Props) {
                                                             </span>
                                                         </td>
                                                         <td className="p-2.5 border-r text-right font-bold">
-                                                            {Number(apunte.debe) > 0 ? `$${Number(apunte.debe).toFixed(2)}` : '-'}
+                                                            {Number(apunte.debe) > 0 ? formatMoney(apunte.debe) : '-'}
                                                         </td>
                                                         <td className="p-2.5 text-right font-bold text-emerald-600">
-                                                            {Number(apunte.haber) > 0 ? `$${Number(apunte.haber).toFixed(2)}` : '-'}
+                                                            {Number(apunte.haber) > 0 ? formatMoney(apunte.haber) : '-'}
                                                         </td>
                                                     </tr>
                                                 );
@@ -491,17 +568,17 @@ export default function LibroDiario({ asientos, filters }: Props) {
                                                     {__('Totales Generales:')}
                                                 </td>
                                                 <td className="p-2.5 border-r text-right text-slate-900 dark:text-slate-100">
-                                                    ${selectedAsiento.apuntes?.reduce((a, b) => a + Number(b.debe), 0).toFixed(2)}
+                                                    {formatMoney(selectedAsiento.apuntes?.reduce((a, b) => a + Number(b.debe), 0) || 0)}
                                                 </td>
                                                 <td className="p-2.5 text-right text-emerald-600">
-                                                    ${selectedAsiento.apuntes?.reduce((a, b) => a + Number(b.haber), 0).toFixed(2)}
+                                                    {formatMoney(selectedAsiento.apuntes?.reduce((a, b) => a + Number(b.haber), 0) || 0)}
                                                 </td>
                                             </tr>
                                         </tfoot>
                                     </table>
                                 </div>
 
-                                {/* Acciones del Modal */}
+                                {/* Pie de Modal */}
                                 <div className="flex items-center justify-between pt-2">
                                     <Badge variant="outline" className="text-emerald-600 border-emerald-300 font-mono text-[11px] gap-1">
                                         <CheckCircle2 className="w-3.5 h-3.5" />
