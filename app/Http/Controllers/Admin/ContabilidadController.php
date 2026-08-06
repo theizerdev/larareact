@@ -216,13 +216,47 @@ class ContabilidadController extends Controller
             ->values();
 
         // Resumen P&L (Estado de Resultados)
-        $ingresosProductos = (float) ApunteContable::whereHas('cuenta', fn($q) => $q->where('codigo', '4.1.01.01'))->sum('haber');
-        $ingresosServicios = (float) ApunteContable::whereHas('cuenta', fn($q) => $q->where('codigo', '4.1.02.01'))->sum('haber');
-        $totalIngresos = $ingresosProductos + $ingresosServicios;
+        $config = $empresaId ? ConfiguracionContable::where('empresa_id', $empresaId)->first() : null;
 
-        $costoProductos = (float) ApunteContable::whereHas('cuenta', fn($q) => $q->where('codigo', '5.1.01.01'))->sum('debe');
-        $costoRepuestos = (float) ApunteContable::whereHas('cuenta', fn($q) => $q->where('codigo', '5.1.02.01'))->sum('debe');
+        if ($config) {
+            $ingresosProductos = (float) ApunteContable::where('cuenta_id', $config->cuenta_ventas_productos_id)->sum('haber');
+            $ingresosServicios = (float) ApunteContable::where('cuenta_id', $config->cuenta_ventas_servicios_id)->sum('haber');
+            $costoProductos = (float) ApunteContable::where('cuenta_id', $config->cuenta_costo_ventas_productos_id)->sum('debe');
+            $costoRepuestos = (float) ApunteContable::where('cuenta_id', $config->cuenta_costo_repuestos_id)->sum('debe');
+        } else {
+            $ingresosProductos = 0;
+            $ingresosServicios = 0;
+            $costoProductos = 0;
+            $costoRepuestos = 0;
+        }
+
+        // Si no se encuentra por ID directo de config, buscar por prefijos de código o tipo
+        if ($ingresosProductos == 0) {
+            $ingresosProductos = (float) ApunteContable::whereHas('cuenta', fn($q) => $q->where('codigo', 'like', '4.1.01%'))->sum('haber');
+        }
+        if ($ingresosServicios == 0) {
+            $ingresosServicios = (float) ApunteContable::whereHas('cuenta', fn($q) => $q->where('codigo', 'like', '4.1.02%'))->sum('haber');
+        }
+
+        // Si aún no hay desglose específico pero hay ingresos de tipo 'ingreso', asignarlos a productos
+        $totalIngresos = $ingresosProductos + $ingresosServicios;
+        if ($totalIngresos == 0) {
+            $ingresosProductos = (float) ApunteContable::whereHas('cuenta', fn($q) => $q->where('tipo', 'ingreso'))->sum('haber');
+            $totalIngresos = $ingresosProductos;
+        }
+
+        if ($costoProductos == 0) {
+            $costoProductos = (float) ApunteContable::whereHas('cuenta', fn($q) => $q->where('codigo', 'like', '5.1.01%'))->sum('debe');
+        }
+        if ($costoRepuestos == 0) {
+            $costoRepuestos = (float) ApunteContable::whereHas('cuenta', fn($q) => $q->where('codigo', 'like', '5.1.02%'))->sum('debe');
+        }
+
         $totalCostos = $costoProductos + $costoRepuestos;
+        if ($totalCostos == 0) {
+            $costoProductos = (float) ApunteContable::whereHas('cuenta', fn($q) => $q->where('tipo', 'costo'))->sum('debe');
+            $totalCostos = $costoProductos;
+        }
 
         $gastosGenerales = (float) ApunteContable::whereHas('cuenta', fn($q) => $q->where('tipo', 'gasto'))->sum('debe');
 
