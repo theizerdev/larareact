@@ -5,7 +5,7 @@ import { ModuleHeader } from '@/components/module-header';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import AppLayout from '@/layouts/app-layout';
+import { Breadcrumbs } from '@/components/breadcrumbs';
 
 interface CuentaReporte {
     id: number;
@@ -43,14 +43,15 @@ export default function ReportesContables({ cuentasReporte, pnl }: Props) {
     ];
 
     return (
-        <AppLayout breadcrumbs={breadcrumbs}>
+        <>
             <Head title="Estados Financieros & P&L" />
 
-            <div className="space-y-6 max-w-7xl mx-auto pb-12">
+            <div className="space-y-6">
+                <Breadcrumbs breadcrumbs={breadcrumbs} />
                 <ModuleHeader
                     title="Estados Financieros (P&L y Balance de Comprobación)"
                     description="Resumen de resultados del ejercicio, desglose de ingresos por productos y servicios, y balance de comprobación."
-                    icon={BarChart3}
+                    icon={<BarChart3 className="w-6 h-6" />}
                 />
 
                 {/* 1. Tarjetas de Resumen P&L */}
@@ -197,6 +198,6 @@ export default function ReportesContables({ cuentasReporte, pnl }: Props) {
                     </CardContent>
                 </Card>
             </div>
-        </AppLayout>
+        </>
     );
 }

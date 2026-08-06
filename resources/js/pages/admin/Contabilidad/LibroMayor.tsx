@@ -6,7 +6,7 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import AppLayout from '@/layouts/app-layout';
+import { Breadcrumbs } from '@/components/breadcrumbs';
 
 interface Cuenta {
     id: number;
@@ -57,14 +57,15 @@ export default function LibroMayor({ cuentasDisponibles, cuentaSeleccionada, mov
     const saldoNeto = totalDebe - totalHaber;
 
     return (
-        <AppLayout breadcrumbs={breadcrumbs}>
+        <>
             <Head title="Libro Mayor Contable" />
 
-            <div className="space-y-6 max-w-7xl mx-auto pb-12">
+            <div className="space-y-6">
+                <Breadcrumbs breadcrumbs={breadcrumbs} />
                 <ModuleHeader
                     title="Libro Mayor"
                     description="Consolidado de movimientos y saldos por cuenta contable."
-                    icon={BookMarked}
+                    icon={<BookMarked className="w-6 h-6" />}
                 />
 
                 <Card className="shadow-sm">
@@ -137,6 +138,6 @@ export default function LibroMayor({ cuentasDisponibles, cuentaSeleccionada, mov
                     </CardContent>
                 </Card>
             </div>
-        </AppLayout>
+        </>
     );
 }

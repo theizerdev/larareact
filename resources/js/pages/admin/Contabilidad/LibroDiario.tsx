@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
-import AppLayout from '@/layouts/app-layout';
+import { Breadcrumbs } from '@/components/breadcrumbs';
 
 interface Apunte {
     id: number;
@@ -62,14 +62,15 @@ export default function LibroDiario({ asientos, filters }: Props) {
     ];
 
     return (
-        <AppLayout breadcrumbs={breadcrumbs}>
+        <>
             <Head title="Libro Diario - Asientos Contables" />
 
-            <div className="space-y-6 max-w-7xl mx-auto pb-12">
+            <div className="space-y-6">
+                <Breadcrumbs breadcrumbs={breadcrumbs} />
                 <ModuleHeader
                     title="Libro Diario (Asientos Contables)"
                     description="Registro cronológico y automático de todas las operaciones comerciales por Partida Doble."
-                    icon={FileCheck2}
+                    icon={<FileCheck2 className="w-6 h-6" />}
                 />
 
                 <Card className="shadow-sm">
@@ -197,6 +198,6 @@ export default function LibroDiario({ asientos, filters }: Props) {
                     </DialogContent>
                 </Dialog>
             </div>
-        </AppLayout>
+        </>
     );
 }

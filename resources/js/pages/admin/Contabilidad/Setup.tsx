@@ -6,7 +6,7 @@ import { ModuleHeader } from '@/components/module-header';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import AppLayout from '@/layouts/app-layout';
+
 
 interface RubroOption {
     id: string;
@@ -38,14 +38,15 @@ export default function Setup({ config, rubros }: Props) {
     ];
 
     return (
-        <AppLayout breadcrumbs={breadcrumbs}>
+        <>
             <Head title="Configuración de Contabilidad Automática" />
 
-            <div className="space-y-6 max-w-5xl mx-auto pb-12">
+            <div className="space-y-6">
+                <Breadcrumbs breadcrumbs={breadcrumbs} />
                 <ModuleHeader
                     title="Contabilidad Automática por Partida Doble"
                     description="Configure el rubro comercial de su empresa para auto-generar su Plan de Cuentas y reglas de contabilización."
-                    icon={Calculator}
+                    icon={<Calculator className="w-6 h-6" />}
                 />
 
                 <form onSubmit={handleSubmit} className="space-y-6">
@@ -114,6 +115,6 @@ export default function Setup({ config, rubros }: Props) {
                     </Card>
                 </form>
             </div>
-        </AppLayout>
+        </>
     );
 }

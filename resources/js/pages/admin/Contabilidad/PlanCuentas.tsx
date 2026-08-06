@@ -9,7 +9,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import AppLayout from '@/layouts/app-layout';
+import { Breadcrumbs } from '@/components/breadcrumbs';
 
 interface Cuenta {
     id: number;
@@ -129,15 +129,16 @@ export default function PlanCuentas({ cuentas }: Props) {
     };
 
     return (
-        <AppLayout breadcrumbs={breadcrumbs}>
+        <>
             <Head title="Plan de Cuentas (PUC)" />
 
-            <div className="space-y-6 max-w-7xl mx-auto pb-12">
+            <div className="space-y-6">
+                <Breadcrumbs breadcrumbs={breadcrumbs} />
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                     <ModuleHeader
                         title="Plan de Cuentas (PUC Estándar)"
                         description="Catálogo estructurado de cuentas contables de la empresa para la contabilización automática."
-                        icon={BookOpen}
+                        icon={<BookOpen className="w-6 h-6" />}
                     />
 
                     <Dialog open={openModal} onOpenChange={setOpenModal}>
@@ -232,6 +233,6 @@ export default function PlanCuentas({ cuentas }: Props) {
                     </CardContent>
                 </Card>
             </div>
-        </AppLayout>
+        </>
     );
 }
