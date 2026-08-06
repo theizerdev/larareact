@@ -3,9 +3,36 @@
 namespace App\Traits;
 
 use Spatie\Activitylog\Contracts\Activity;
+use Spatie\Activitylog\LogOptions;
+use Spatie\Activitylog\Traits\LogsActivity;
 
 trait HasSpanishActivityLog
 {
+    use LogsActivity;
+
+    public function getActivitylogOptions(): LogOptions
+    {
+        $className = class_basename(static::class);
+        $logName = match ($className) {
+            'Sale', 'HeldSale', 'SalePayment' => 'ventas',
+            'CashRegister', 'CashMovement' => 'caja',
+            'AsientoContable', 'ApunteContable', 'CuentaContable', 'ConfiguracionContable' => 'contabilidad',
+            'Producto', 'Product', 'Category', 'Brand', 'Familia', 'Modelo', 'Categoria', 'Marca' => 'inventario',
+            'User', 'Role', 'Permission' => 'seguridad',
+            'Compra', 'Proveedor', 'Supplier' => 'compras',
+            'Cliente', 'Customer' => 'clientes',
+            'Empresa' => 'empresas',
+            'Sucursal' => 'sucursales',
+            default => 'general',
+        };
+
+        return LogOptions::defaults()
+            ->useLogName($logName)
+            ->logAll()
+            ->logOnlyDirty()
+            ->dontSubmitEmptyLogs();
+    }
+
     public static $modelNamesMap = [
         'User' => 'Usuario',
         'Empresa' => 'Empresa',
