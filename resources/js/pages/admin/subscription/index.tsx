@@ -120,14 +120,13 @@ export default function SubscriptionIndex({ empresa, plan, opcionesPrecios, pago
 
     const currentOption = opcionesPrecios[selectedCycle] || opcionesPrecios[12];
 
-    // Si la empresa tiene una suscripción pagada activa y aprobada:
-    // - El plan base no se cobra ($0.00).
-    // - Solo se cobran las sucursales adicionales NUEVAS a $10.00 USD cada una por mes.
-    const currentSubtotalPlan = hasActivePaidSubscription ? 0 : (currentOption?.subtotal_plan ?? 0);
+    // Si la empresa ya posee una suscripción activa pagada:
+    // - El plan ya está pagado ($0.00).
+    // - Únicamente se cobran las NUEVAS sucursales adicionales ($10.00 USD c/u).
+    const currentSubtotalPlan = hasActivePaidSubscription ? 0 : (currentOption?.subtotal_plan ?? (selectedCycle === 3 ? 89 : selectedCycle === 6 ? 159 : 288));
     const sucursalesExtrasCount = hasActivePaidSubscription 
         ? Math.max(0, extraSucursales - empresa.max_sucursales)
         : Math.max(0, extraSucursales - (plan?.sucursales_incluidas ?? 1));
-
     const precioSucursalExtra = (plan?.precio_sucursal_extra_mensual && plan.precio_sucursal_extra_mensual > 0) ? plan.precio_sucursal_extra_mensual : 10;
     const multiplicadorTiempo = hasActivePaidSubscription ? 1 : selectedCycle;
     const costoExtraSucursales = sucursalesExtrasCount * precioSucursalExtra * multiplicadorTiempo;

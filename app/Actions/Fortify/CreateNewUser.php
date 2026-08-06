@@ -83,7 +83,7 @@ class CreateNewUser implements CreatesNewUsers
             \App\Models\Subscription::create([
                 'empresa_id' => $empresa->id,
                 'plan_id' => $trialPlan?->id,
-                'nombre_plan' => $trialPlan?->nombre ?? 'Plan Prueba (7 días)',
+                'nombre_plan' => 'Prueba Gratuita',
                 'ciclo_meses' => 0,
                 'max_sucursales' => 1,
                 'monto_total' => 0.00,

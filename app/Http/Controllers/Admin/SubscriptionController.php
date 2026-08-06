@@ -232,16 +232,9 @@ class SubscriptionController extends Controller
         }
 
         $plan = $request->plan_id ? SubscriptionPlan::find($request->plan_id) : SubscriptionPlan::getPlanRenovacionDefault();
-        $hasActivePaidSubscription = $empresa->subscription_status === 'active' && ! $empresa->isExemptFromSubscription();
-
-        if ($hasActivePaidSubscription && $plan) {
-            $sucursalesExtra = max(0, (int) $request->sucursales_contratadas - ($empresa->max_sucursales ?? 1));
-            $montoCalculado = round($sucursalesExtra * $plan->precio_sucursal_extra_mensual, 2);
-        } else {
-            $montoCalculado = $plan
-                ? $plan->calcularPrecio((int) $request->ciclo_meses, (int) $request->sucursales_contratadas)
-                : 89.00;
-        }
+        $montoCalculado = $plan
+            ? $plan->calcularPrecio((int) $request->ciclo_meses, (int) $request->sucursales_contratadas)
+            : 89.00;
 
         $comprobantePath = null;
         if ($request->hasFile('comprobante')) {
@@ -293,15 +286,7 @@ class SubscriptionController extends Controller
                 'activo' => true,
             ]
         );
-        $hasActivePaidSubscription = $empresa->subscription_status === 'active' && ! $empresa->isExemptFromSubscription();
-        $basePrice = $hasActivePaidSubscription ? 0.0 : null;
-
-        if ($hasActivePaidSubscription) {
-            $sucursalesExtra = max(0, (int) $request->sucursales_contratadas - ($empresa->max_sucursales ?? 1));
-            $monto = round($sucursalesExtra * $plan->precio_sucursal_extra_mensual, 2);
-        } else {
-            $monto = $plan->calcularPrecio((int) $request->ciclo_meses, (int) $request->sucursales_contratadas);
-        }
+        $monto = $plan ? $plan->calcularPrecio((int) $request->ciclo_meses, (int) $request->sucursales_contratadas) : 89.00;
 
         $masterEmpresa = Empresa::withoutGlobalScopes()->find(1) ?? $empresa;
         $clientId = $masterEmpresa->paypal_client_id;
@@ -381,13 +366,7 @@ class SubscriptionController extends Controller
             $transactionId = $data['purchase_units'][0]['payments']['captures'][0]['id'] ?? $orderId;
             $planId = $request->input('plan_id');
             $plan = $planId ? SubscriptionPlan::find($planId) : SubscriptionPlan::getPlanRenovacionDefault();
-            $hasActivePaidSubscription = $empresa->subscription_status === 'active' && ! $empresa->isExemptFromSubscription();
-            if ($hasActivePaidSubscription) {
-                $sucursalesExtra = max(0, (int) $request->sucursales_contratadas - ($empresa->max_sucursales ?? 1));
-                $monto = round($sucursalesExtra * ($plan?->precio_sucursal_extra_mensual ?? 10.00), 2);
-            } else {
-                $monto = $plan ? $plan->calcularPrecio((int) $request->ciclo_meses, (int) $request->sucursales_contratadas) : 89.00;
-            }
+            $monto = $plan ? $plan->calcularPrecio((int) $request->ciclo_meses, (int) $request->sucursales_contratadas) : 89.00;
 
             // Extender fecha de expiración calculando desde la tabla subscriptions
             $latestSub = $empresa->getLatestSubscriptionRecord();
@@ -412,7 +391,7 @@ class SubscriptionController extends Controller
             $subscription = Subscription::create([
                 'empresa_id' => $empresa->id,
                 'plan_id' => $plan?->id,
-                'nombre_plan' => $plan?->nombre ?? 'Plan Profesional',
+                'nombre_plan' => Subscription::getNombrePlanByCiclo((int) $request->ciclo_meses),
                 'ciclo_meses' => (int) $request->ciclo_meses,
                 'max_sucursales' => (int) $request->sucursales_contratadas,
                 'monto_total' => $monto,
@@ -543,7 +522,7 @@ class SubscriptionController extends Controller
             $subscription = Subscription::create([
                 'empresa_id' => $empresa->id,
                 'plan_id' => $plan?->id,
-                'nombre_plan' => $plan?->nombre ?? 'Plan Profesional',
+                'nombre_plan' => Subscription::getNombrePlanByCiclo($meses),
                 'ciclo_meses' => $meses,
                 'max_sucursales' => $payment->sucursales_contratadas,
                 'monto_total' => $payment->monto,

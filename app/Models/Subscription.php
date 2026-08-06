@@ -47,4 +47,22 @@ class Subscription extends Model
     {
         return $this->hasMany(SubscriptionPayment::class, 'subscription_id');
     }
+
+    /**
+     * Retorna el nombre comercial exacto del plan según la duración en meses.
+     */
+    public static function getNombrePlanByCiclo(int $cicloMeses, bool $isOnlyExtraBranch = false): string
+    {
+        if ($isOnlyExtraBranch) {
+            return 'Sucursales Adicionales';
+        }
+
+        return match ($cicloMeses) {
+            3 => 'Plan Trimestral',
+            6 => 'Plan Semestral',
+            12 => 'Plan Anual',
+            0 => 'Prueba Gratuita',
+            default => 'Plan Trimestral',
+        };
+    }
 }

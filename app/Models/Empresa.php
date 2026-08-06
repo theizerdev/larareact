@@ -146,6 +146,12 @@ class Empresa extends Model
     {
         $sub = $this->subscriptions()->orderBy('id', 'desc')->first();
 
+        if ($sub && in_array($sub->nombre_plan, ['Plan Básico', 'Plan Profesional', 'Plan Corporativo', 'Plan Prueba (7 días)'])) {
+            $nuevoNombre = Subscription::getNombrePlanByCiclo($sub->ciclo_meses);
+            $sub->update(['nombre_plan' => $nuevoNombre]);
+            $sub->nombre_plan = $nuevoNombre;
+        }
+
         if (! $sub && ! $this->isExemptFromSubscription()) {
             $estado = $this->subscription_status ?: 'trial';
             $fechaVencimiento = match ($estado) {
@@ -157,7 +163,7 @@ class Empresa extends Model
             $sub = Subscription::create([
                 'empresa_id' => $this->id,
                 'plan_id' => SubscriptionPlan::getPlanRenovacionDefault()?->id,
-                'nombre_plan' => $estado === 'trial' ? 'Plan Prueba (7 días)' : 'Plan Profesional',
+                'nombre_plan' => $estado === 'trial' ? 'Prueba Gratuita' : Subscription::getNombrePlanByCiclo(12),
                 'ciclo_meses' => $estado === 'trial' ? 0 : 12,
                 'max_sucursales' => $this->max_sucursales ?? 1,
                 'monto_total' => 0.00,
