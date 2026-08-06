@@ -177,6 +177,7 @@ class PermissionSeeder extends Seeder
                 'contabilidad.asientos' => 'Ver Libro Diario (Asientos)',
                 'contabilidad.mayor' => 'Ver Libro Mayor',
                 'contabilidad.reportes' => 'Ver Estados Financieros & P&L',
+                'contabilidad.impuestos' => 'Ver Impuestos & Libros Fiscales',
             ],
         ];
 

@@ -423,4 +423,96 @@ class AccountingService
             return $asiento;
         });
     }
+
+    /**
+     * Registrar asiento contable manual de partida doble.
+     */
+    public function recordManualEntry(array $data, int $empresaId, int $userId): AsientoContable
+    {
+        return DB::transaction(function () use ($data, $empresaId, $userId) {
+            $tasaDolar = 36.50;
+            $count = AsientoContable::withoutGlobalScopes()->where('empresa_id', $empresaId)->count();
+            $numeroAsiento = 'AS-MNL-' . date('Y') . '-' . str_pad($count + 1, 5, '0', STR_PAD_LEFT);
+
+            $asiento = AsientoContable::create([
+                'empresa_id' => $empresaId,
+                'numero_asiento' => $numeroAsiento,
+                'fecha' => $data['fecha'] ?? now(),
+                'glosa' => $data['glosa'],
+                'tasa_cambio' => $tasaDolar,
+                'origen_tipo' => 'manual',
+                'origen_id' => null,
+                'user_id' => $userId,
+                'estado' => 'asentado',
+            ]);
+
+            foreach ($data['apuntes'] as $item) {
+                $debe = (float) ($item['debe'] ?? 0);
+                $haber = (float) ($item['haber'] ?? 0);
+
+                if ($debe > 0 || $haber > 0) {
+                    ApunteContable::create([
+                        'asiento_id' => $asiento->id,
+                        'cuenta_id' => $item['cuenta_id'],
+                        'debe' => $debe,
+                        'haber' => $haber,
+                        'debe_usd' => $debe / $tasaDolar,
+                        'haber_usd' => $haber / $tasaDolar,
+                        'referencia' => $item['referencia'] ?? null,
+                    ]);
+                }
+            }
+
+            return $asiento;
+        });
+    }
+
+    /**
+     * Cierre de Ejercicio Contable (Liquidar cuentas de resultado)
+     */
+    public function closeFiscalPeriod(int $empresaId, int $userId): ?AsientoContable
+    {
+        return DB::transaction(function () use ($empresaId, $userId) {
+            $totalIngresos = (float) ApunteContable::whereHas('cuenta', fn($q) => $q->where('tipo', 'ingreso'))->sum('haber');
+            $totalGastosCostos = (float) ApunteContable::whereHas('cuenta', fn($q) => $q->whereIn('tipo', ['costo', 'gasto']))->sum('debe');
+
+            $utilidadNeta = $totalIngresos - $totalGastosCostos;
+            if (abs($utilidadNeta) < 0.01) {
+                return null;
+            }
+
+            $cuentaPatrimonio = CuentaContable::where('tipo', 'patrimonio')->where('acepta_movimiento', true)->first();
+            if (!$cuentaPatrimonio) {
+                return null;
+            }
+
+            $tasaDolar = 36.50;
+            $count = AsientoContable::withoutGlobalScopes()->where('empresa_id', $empresaId)->count();
+            $numeroAsiento = 'AS-CIERRE-' . date('Y') . '-' . str_pad($count + 1, 4, '0', STR_PAD_LEFT);
+
+            $asiento = AsientoContable::create([
+                'empresa_id' => $empresaId,
+                'numero_asiento' => $numeroAsiento,
+                'fecha' => now(),
+                'glosa' => 'Asiento de Cierre de Ejercicio Económico - Liquidación de Cuentas de Resultado',
+                'tasa_cambio' => $tasaDolar,
+                'origen_tipo' => 'cierre',
+                'origen_id' => null,
+                'user_id' => $userId,
+                'estado' => 'asentado',
+            ]);
+
+            ApunteContable::create([
+                'asiento_id' => $asiento->id,
+                'cuenta_id' => $cuentaPatrimonio->id,
+                'debe' => $utilidadNeta > 0 ? 0 : abs($utilidadNeta),
+                'haber' => $utilidadNeta > 0 ? $utilidadNeta : 0,
+                'debe_usd' => $utilidadNeta > 0 ? 0 : abs($utilidadNeta) / $tasaDolar,
+                'haber_usd' => $utilidadNeta > 0 ? $utilidadNeta / $tasaDolar : 0,
+                'referencia' => 'Cierre de Ejercicio',
+            ]);
+
+            return $asiento;
+        });
+    }
 }

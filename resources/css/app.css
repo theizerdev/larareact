@@ -229,3 +229,61 @@ html[data-sidebar="dark"]:not(.dark) {
 .custom-scrollbar::-webkit-scrollbar-thumb:hover {
     background: rgba(156, 163, 175, 0.6);
 }
+
+/* Official Executive Print Media Styles */
+@media print {
+    aside,
+    nav,
+    header,
+    button:not(.allow-print),
+    .no-print,
+    .pagination-container {
+        display: none !important;
+    }
+
+    body, html {
+        background: #ffffff !important;
+        color: #000000 !important;
+        font-size: 10pt !important;
+        margin: 0 !important;
+        padding: 0 !important;
+    }
+
+    .print-only {
+        display: block !important;
+    }
+
+    table {
+        width: 100% !important;
+        border-collapse: collapse !important;
+        font-size: 8.5pt !important;
+    }
+
+    th, td {
+        border: 1px solid #cbd5e1 !important;
+        padding: 4pt 6pt !important;
+    }
+
+    thead {
+        background-color: #f1f5f9 !important;
+        -webkit-print-color-adjust: exact !important;
+        print-color-adjust: exact !important;
+    }
+
+    .print-signatures {
+        display: flex !important;
+        justify-content: space-between !important;
+        margin-top: 40pt !important;
+        padding-top: 10pt !important;
+        page-break-inside: avoid !important;
+    }
+
+    .print-signature-box {
+        width: 30% !important;
+        text-align: center !important;
+        border-top: 1px solid #000000 !important;
+        padding-top: 4pt !important;
+        font-size: 8pt !important;
+        font-weight: bold !important;
+    }
+}

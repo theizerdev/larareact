@@ -24,12 +24,24 @@ Route::middleware(['verified'])->group(function () {
         ->name('contabilidad.asientos')
         ->middleware('permission:contabilidad.asientos');
 
+    Route::post('contabilidad/asientos', [ContabilidadController::class, 'storeAsientoManual'])
+        ->name('contabilidad.asientos.store')
+        ->middleware('permission:contabilidad.asientos');
+
     Route::get('contabilidad/mayor', [ContabilidadController::class, 'mayor'])
         ->name('contabilidad.mayor')
         ->middleware('permission:contabilidad.mayor');
 
     Route::get('contabilidad/reportes', [ContabilidadController::class, 'reportes'])
         ->name('contabilidad.reportes')
+        ->middleware('permission:contabilidad.reportes');
+
+    Route::get('contabilidad/impuestos', [ContabilidadController::class, 'impuestos'])
+        ->name('contabilidad.impuestos')
+        ->middleware('permission:contabilidad.impuestos');
+
+    Route::post('contabilidad/cierre-ejercicio', [ContabilidadController::class, 'cierreEjercicio'])
+        ->name('contabilidad.cierre-ejercicio')
         ->middleware('permission:contabilidad.reportes');
 });
 

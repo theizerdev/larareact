@@ -600,6 +600,11 @@ export default function AdminSaasLayout({
                                             href: '/admin/contabilidad/reportes',
                                             permission: 'contabilidad.reportes',
                                         },
+                                        {
+                                            title: 'Impuestos & Libros Fiscales',
+                                            href: '/admin/contabilidad/impuestos',
+                                            permission: 'contabilidad.impuestos',
+                                        },
                                     ].filter(item => hasPermission(item.permission));
 
                                     if (contabilidadItems.length === 0) return null;
@@ -710,6 +715,11 @@ export default function AdminSaasLayout({
                                             title: 'Roles',
                                             href: rolesIndex.url(),
                                             permission: 'roles.view',
+                                        },
+                                        {
+                                            title: 'Bitácora de Auditoría',
+                                            href: '/admin/seguridad/bitacora',
+                                            permission: 'users.view',
                                         },
                                     ].filter(item => hasPermission(item.permission));
 

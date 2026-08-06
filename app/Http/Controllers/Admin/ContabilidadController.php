@@ -145,9 +145,78 @@ class ContabilidadController extends Controller
 
         $asientos = $query->orderBy('fecha', 'desc')->paginate(15)->withQueryString();
 
+        $cuentasDisponibles = CuentaContable::where('acepta_movimiento', true)
+            ->orderBy('codigo')
+            ->get(['id', 'codigo', 'nombre', 'tipo']);
+
         return Inertia::render('admin/Contabilidad/LibroDiario', [
             'asientos' => $asientos,
+            'cuentasDisponibles' => $cuentasDisponibles,
             'filters' => $request->only(['search', 'from_date', 'to_date']),
+        ]);
+    }
+
+    /**
+     * Registrar Asiento Manual
+     */
+    public function storeAsientoManual(Request $request)
+    {
+        $validated = $request->validate([
+            'glosa' => 'required|string|max:255',
+            'fecha' => 'required|date',
+            'apuntes' => 'required|array|min:2',
+            'apuntes.*.cuenta_id' => 'required|exists:cuentas_contables,id',
+            'apuntes.*.debe' => 'nullable|numeric|min:0',
+            'apuntes.*.haber' => 'nullable|numeric|min:0',
+            'apuntes.*.referencia' => 'nullable|string|max:255',
+        ]);
+
+        $user = auth()->user();
+        if (!$user->empresa_id) {
+            return back()->with('notification', ['type' => 'error', 'message' => 'No se encontró la empresa del usuario.']);
+        }
+
+        // Validar Partida Doble
+        $totalDebe = collect($validated['apuntes'])->sum(fn($i) => (float)($i['debe'] ?? 0));
+        $totalHaber = collect($validated['apuntes'])->sum(fn($i) => (float)($i['haber'] ?? 0));
+
+        if (abs($totalDebe - $totalHaber) >= 0.01) {
+            return back()->with('notification', [
+                'type' => 'error',
+                'message' => 'El asiento está desbalanceado. El Total Debe ($' . number_format($totalDebe, 2) . ') debe ser igual al Total Haber ($' . number_format($totalHaber, 2) . ').',
+            ]);
+        }
+
+        $this->accountingService->recordManualEntry($validated, $user->empresa_id, $user->id);
+
+        return back()->with('notification', [
+            'type' => 'success',
+            'message' => 'Asiento contable manual registrado exitosamente.',
+        ]);
+    }
+
+    /**
+     * Cierre de Ejercicio Económico
+     */
+    public function cierreEjercicio(Request $request)
+    {
+        $user = auth()->user();
+        if (!$user->empresa_id) {
+            return back()->with('notification', ['type' => 'error', 'message' => 'No se encontró la empresa del usuario.']);
+        }
+
+        $asiento = $this->accountingService->closeFiscalPeriod($user->empresa_id, $user->id);
+
+        if (!$asiento) {
+            return back()->with('notification', [
+                'type' => 'error',
+                'message' => 'No se encontraron saldos de utilidad/pérdida pendientes por cerrar.',
+            ]);
+        }
+
+        return back()->with('notification', [
+            'type' => 'success',
+            'message' => 'Cierre de Ejercicio Contable procesado correctamente. Asiento N° ' . $asiento->numero_asiento,
         ]);
     }
 
@@ -275,6 +344,105 @@ class ContabilidadController extends Controller
                 'gastosGenerales' => $gastosGenerales,
                 'utilidadBruta' => $utilidadBruta,
                 'utilidadNeta' => $utilidadNeta,
+            ],
+        ]);
+    }
+
+    /**
+     * Módulo de Impuestos, IGTF y Libros Fiscales (Ventas & Compras)
+     */
+    public function impuestos(Request $request)
+    {
+        $user = auth()->user();
+        $empresa = $user?->empresa ?? ($user->empresa_id ? Empresa::with('pais')->find($user->empresa_id) : null);
+        $empresaId = $empresa?->id;
+
+        $fromDate = $request->input('from_date', date('Y-m-01'));
+        $toDate = $request->input('to_date', date('Y-m-t'));
+
+        $paisIso = strtoupper($empresa?->pais?->codigo_iso2 ?? 'VE');
+        $isVenezuela = in_array($paisIso, ['VE', 'VEN']) || str_contains(strtolower($empresa?->pais?->nombre ?? ''), 'venezuela');
+
+        // Libro de Ventas Fiscales
+        $ventasQuery = \App\Models\Sale::with(['cliente', 'user'])
+            ->whereBetween('created_at', [$fromDate . ' 00:00:00', $toDate . ' 23:59:59']);
+
+        if ($empresaId) {
+            $ventasQuery->where('empresa_id', $empresaId);
+        }
+
+        $ventasData = $ventasQuery->orderBy('created_at', 'desc')->get()->map(function ($sale) use ($isVenezuela) {
+            $subtotal = (float) ($sale->subtotal ?? ($sale->total - ($sale->tax_amount ?? 0)));
+            $taxAmount = (float) ($sale->tax_amount ?? 0);
+            $total = (float) $sale->total;
+            $igtfAmount = (float) ($sale->igtf_amount ?? 0);
+
+            return [
+                'id' => $sale->id,
+                'factura_numero' => $sale->invoice_number ?? ('FAC-' . str_pad($sale->id, 6, '0', STR_PAD_LEFT)),
+                'control_numero' => $sale->control_number ?? ('00-' . str_pad($sale->id, 6, '0', STR_PAD_LEFT)),
+                'fecha' => $sale->created_at->format('Y-m-d H:i'),
+                'cliente_nombre' => $sale->cliente?->razon_social ?? $sale->cliente?->nombre ?? 'Cliente Contado',
+                'cliente_rif' => $sale->cliente?->documento ?? 'J-000000000',
+                'base_imponible' => $subtotal,
+                'monto_iva' => $taxAmount,
+                'aliquota_iva' => $subtotal > 0 ? round(($taxAmount / $subtotal) * 100, 1) : ($isVenezuela ? 16 : 0),
+                'monto_exento' => $subtotal == 0 ? $total : 0,
+                'monto_igtf' => $igtfAmount,
+                'total' => $total,
+            ];
+        });
+
+        // Libro de Compras Fiscales
+        $comprasQuery = \App\Models\Compra::with(['proveedor', 'user'])
+            ->whereBetween('created_at', [$fromDate . ' 00:00:00', $toDate . ' 23:59:59']);
+
+        if ($empresaId) {
+            $comprasQuery->where('empresa_id', $empresaId);
+        }
+
+        $comprasData = $comprasQuery->orderBy('created_at', 'desc')->get()->map(function ($compra) {
+            $total = (float) $compra->total;
+            $taxAmount = (float) ($compra->tax_amount ?? ($total * 0.16 / 1.16));
+            $baseImponible = $total - $taxAmount;
+
+            return [
+                'id' => $compra->id,
+                'factura_numero' => $compra->numero_factura ?? ('COM-' . str_pad($compra->id, 6, '0', STR_PAD_LEFT)),
+                'control_numero' => $compra->numero_control ?? ('00-' . str_pad($compra->id, 6, '0', STR_PAD_LEFT)),
+                'fecha' => $compra->created_at->format('Y-m-d H:i'),
+                'proveedor_nombre' => $compra->proveedor?->razon_social ?? $compra->proveedor?->nombre ?? 'Proveedor',
+                'proveedor_rif' => $compra->proveedor?->documento ?? 'J-000000000',
+                'base_imponible' => $baseImponible,
+                'monto_iva' => $taxAmount,
+                'total' => $total,
+            ];
+        });
+
+        // Totales de resumen tributario
+        $totalIvaDebito = $ventasData->sum('monto_iva');
+        $totalIvaCredito = $comprasData->sum('monto_iva');
+        $totalIgtf = $ventasData->sum('monto_igtf');
+        $saldoNetoIva = $totalIvaDebito - $totalIvaCredito;
+
+        return Inertia::render('admin/Contabilidad/Impuestos', [
+            'empresaInfo' => [
+                'nombre' => $empresa?->razon_social ?? 'Empresa',
+                'documento' => $empresa?->documento ?? '',
+                'pais' => $empresa?->pais?->nombre ?? 'Venezuela',
+                'isVenezuela' => $isVenezuela,
+            ],
+            'ventasData' => $ventasData,
+            'comprasData' => $comprasData,
+            'totales' => [
+                'totalIvaDebito' => $totalIvaDebito,
+                'totalIvaCredito' => $totalIvaCredito,
+                'totalIgtf' => $totalIgtf,
+                'saldoNetoIva' => $saldoNetoIva,
+            ],
+            'filters' => [
+                'from_date' => $fromDate,
+                'to_date' => $toDate,
             ],
         ]);
     }

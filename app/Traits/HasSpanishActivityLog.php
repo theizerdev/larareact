@@ -249,6 +249,17 @@ trait HasSpanishActivityLog
     public function tapActivity(Activity $activity, string $eventName): void
     {
         $request = request();
+        $user = auth()->user();
+
+        $empresaId = $user?->empresa_id ?? ($this->empresa_id ?? null);
+        $sucursalId = $user?->sucursal_id ?? ($this->sucursal_id ?? null);
+
+        if ($empresaId) {
+            $activity->empresa_id = $empresaId;
+        }
+        if ($sucursalId) {
+            $activity->sucursal_id = $sucursalId;
+        }
 
         $properties = $activity->properties->toArray();
         $extra = [];
@@ -258,6 +269,8 @@ trait HasSpanishActivityLog
             $extra[$key] = $value;
         }
 
+        $extra['empresa_id'] = $empresaId;
+        $extra['sucursal_id'] = $sucursalId;
         $extra['ip_address'] = $request->ip();
         $extra['user_agent'] = $request->userAgent();
         $extra['url'] = $request->fullUrl();
