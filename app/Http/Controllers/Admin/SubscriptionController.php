@@ -389,15 +389,14 @@ class SubscriptionController extends Controller
                 $monto = $plan ? $plan->calcularPrecio((int) $request->ciclo_meses, (int) $request->sucursales_contratadas) : 89.00;
             }
 
-            // Extender fecha de expiración solo si NO tenía una suscripción activa previa (ej. primer pago o renovación por expiración)
+            // Extender fecha de expiración calculando desde la tabla subscriptions
+            $latestSub = $empresa->getLatestSubscriptionRecord();
             if ($hasActivePaidSubscription) {
-                $nuevaFechaExpiracion = $empresa->subscription_expires_at;
+                $nuevaFechaExpiracion = $latestSub?->fecha_vencimiento ?? $empresa->subscription_expires_at ?? now();
             } else {
                 $baseDate = now();
-                if ($empresa->subscription_expires_at && $empresa->subscription_expires_at->isFuture()) {
-                    $baseDate = $empresa->subscription_expires_at->copy();
-                } elseif ($empresa->trial_ends_at && $empresa->trial_ends_at->isFuture()) {
-                    $baseDate = $empresa->trial_ends_at->copy();
+                if ($latestSub?->fecha_vencimiento && $latestSub->fecha_vencimiento->isFuture()) {
+                    $baseDate = $latestSub->fecha_vencimiento->copy();
                 }
                 $nuevaFechaExpiracion = $baseDate->addMonths((int) $request->ciclo_meses);
             }
@@ -519,15 +518,14 @@ class SubscriptionController extends Controller
 
             $hasActivePaidSubscription = $empresa->subscription_status === 'active' && ! $empresa->isExemptFromSubscription();
 
-            // Extender vigencia solo si NO tenía una suscripción activa previa (ej. primer pago o renovación por expiración)
+            // Extender vigencia calculando desde la tabla subscriptions
+            $latestSub = $empresa->getLatestSubscriptionRecord();
             if ($hasActivePaidSubscription) {
-                $nuevaFechaVencimiento = $empresa->subscription_expires_at ?? now()->addMonths($meses);
+                $nuevaFechaVencimiento = $latestSub?->fecha_vencimiento ?? $empresa->subscription_expires_at ?? now()->addMonths($meses);
             } else {
                 $baseDate = now();
-                if ($empresa->subscription_expires_at && $empresa->subscription_expires_at->isFuture()) {
-                    $baseDate = $empresa->subscription_expires_at->copy();
-                } elseif ($empresa->trial_ends_at && $empresa->trial_ends_at->isFuture()) {
-                    $baseDate = $empresa->trial_ends_at->copy();
+                if ($latestSub?->fecha_vencimiento && $latestSub->fecha_vencimiento->isFuture()) {
+                    $baseDate = $latestSub->fecha_vencimiento->copy();
                 }
                 $nuevaFechaVencimiento = $baseDate->addMonths($meses);
             }
