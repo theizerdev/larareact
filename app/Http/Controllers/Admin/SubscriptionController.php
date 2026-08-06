@@ -242,11 +242,13 @@ class SubscriptionController extends Controller
         if ($hasActivePaidSubscription) {
             $nuevasSucursales = max(0, (int) $request->sucursales_contratadas - ($empresa->max_sucursales ?? 1));
             $precioExtra = ($plan?->precio_sucursal_extra_mensual > 0) ? $plan->precio_sucursal_extra_mensual : 10.00;
-            $montoCalculado = round($nuevasSucursales * $precioExtra, 2);
+            $montoCalculado = round($nuevasSucursales * $precioExtra * 1, 2);
+            $cicloPago = 1;
         } else {
             $montoCalculado = $plan
                 ? $plan->calcularPrecio((int) $request->ciclo_meses, (int) $request->sucursales_contratadas)
                 : 89.00;
+            $cicloPago = (int) $request->ciclo_meses;
         }
 
         $comprobantePath = null;
@@ -259,7 +261,7 @@ class SubscriptionController extends Controller
             'plan_id' => $plan?->id,
             'user_id' => $user->id,
             'monto' => $montoCalculado,
-            'ciclo_meses' => (int) $request->ciclo_meses,
+            'ciclo_meses' => $cicloPago,
             'sucursales_contratadas' => (int) $request->sucursales_contratadas,
             'metodo_pago' => $request->metodo_pago,
             'referencia_pago' => $request->referencia_pago,
@@ -409,18 +411,31 @@ class SubscriptionController extends Controller
                 ? 'Sucursales Adicionales'
                 : Subscription::getNombrePlanByCiclo((int) $request->ciclo_meses);
 
-            // Crear el registro de la Suscripción
-            $subscription = Subscription::create([
-                'empresa_id' => $empresa->id,
-                'plan_id' => $plan?->id,
-                'nombre_plan' => $nombrePlan,
-                'ciclo_meses' => $hasActivePaidSubscription ? 0 : (int) $request->ciclo_meses,
-                'max_sucursales' => (int) $request->sucursales_contratadas,
-                'monto_total' => $monto,
-                'fecha_inicio' => now(),
-                'fecha_vencimiento' => $nuevaFechaExpiracion,
-                'estado' => 'active',
-            ]);
+            // Actualizar la suscripción existente de la empresa (NO crear registros duplicados)
+            $subscription = $empresa->getLatestSubscriptionRecord();
+            if ($subscription) {
+                $subscription->update([
+                    'plan_id' => $plan?->id,
+                    'nombre_plan' => $nombrePlan,
+                    'ciclo_meses' => $hasActivePaidSubscription ? ($subscription->ciclo_meses ?: (int) $request->ciclo_meses) : (int) $request->ciclo_meses,
+                    'max_sucursales' => max($empresa->max_sucursales ?? 1, (int) $request->sucursales_contratadas),
+                    'monto_total' => $monto,
+                    'fecha_vencimiento' => $nuevaFechaExpiracion,
+                    'estado' => 'active',
+                ]);
+            } else {
+                $subscription = Subscription::create([
+                    'empresa_id' => $empresa->id,
+                    'plan_id' => $plan?->id,
+                    'nombre_plan' => $nombrePlan,
+                    'ciclo_meses' => (int) $request->ciclo_meses,
+                    'max_sucursales' => (int) $request->sucursales_contratadas,
+                    'monto_total' => $monto,
+                    'fecha_inicio' => now(),
+                    'fecha_vencimiento' => $nuevaFechaExpiracion,
+                    'estado' => 'active',
+                ]);
+            }
 
             // Registrar Pago Aprobado enlazando subscription_id y plan_id
             SubscriptionPayment::create([
@@ -429,7 +444,7 @@ class SubscriptionController extends Controller
                 'empresa_id' => $empresa->id,
                 'user_id' => auth()->id(),
                 'monto' => $monto,
-                'ciclo_meses' => (int) $request->ciclo_meses,
+                'ciclo_meses' => $hasActivePaidSubscription ? 1 : (int) $request->ciclo_meses,
                 'sucursales_contratadas' => (int) $request->sucursales_contratadas,
                 'metodo_pago' => 'paypal',
                 'referencia_pago' => $transactionId,
@@ -545,18 +560,31 @@ class SubscriptionController extends Controller
                 ? 'Sucursales Adicionales'
                 : Subscription::getNombrePlanByCiclo($meses);
 
-            // Registrar suscripción activa
-            $subscription = Subscription::create([
-                'empresa_id' => $empresa->id,
-                'plan_id' => $plan?->id,
-                'nombre_plan' => $nombrePlan,
-                'ciclo_meses' => $hasActivePaidSubscription ? 0 : $meses,
-                'max_sucursales' => $payment->sucursales_contratadas,
-                'monto_total' => $payment->monto,
-                'fecha_inicio' => now(),
-                'fecha_vencimiento' => $nuevaFechaVencimiento,
-                'estado' => 'active',
-            ]);
+            // Actualizar la suscripción existente de la empresa (NO crear registros duplicados)
+            $subscription = $empresa->getLatestSubscriptionRecord();
+            if ($subscription) {
+                $subscription->update([
+                    'plan_id' => $plan?->id,
+                    'nombre_plan' => $nombrePlan,
+                    'ciclo_meses' => $hasActivePaidSubscription ? ($subscription->ciclo_meses ?: $meses) : $meses,
+                    'max_sucursales' => max($empresa->max_sucursales ?? 1, $payment->sucursales_contratadas),
+                    'monto_total' => $payment->monto,
+                    'fecha_vencimiento' => $nuevaFechaVencimiento,
+                    'estado' => 'active',
+                ]);
+            } else {
+                $subscription = Subscription::create([
+                    'empresa_id' => $empresa->id,
+                    'plan_id' => $plan?->id,
+                    'nombre_plan' => $nombrePlan,
+                    'ciclo_meses' => $meses,
+                    'max_sucursales' => $payment->sucursales_contratadas,
+                    'monto_total' => $payment->monto,
+                    'fecha_inicio' => now(),
+                    'fecha_vencimiento' => $nuevaFechaVencimiento,
+                    'estado' => 'active',
+                ]);
+            }
 
             $payment->update([
                 'subscription_id' => $subscription->id,

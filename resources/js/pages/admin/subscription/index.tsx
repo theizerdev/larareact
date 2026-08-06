@@ -133,7 +133,8 @@ export default function SubscriptionIndex({ empresa, plan, opcionesPrecios, pago
         ? Math.max(0, extraSucursales - empresa.max_sucursales)
         : Math.max(0, extraSucursales - (plan?.sucursales_incluidas ?? 1));
     const precioSucursalExtra = (plan?.precio_sucursal_extra_mensual && plan.precio_sucursal_extra_mensual > 0) ? plan.precio_sucursal_extra_mensual : 10;
-    const costoExtraSucursales = sucursalesExtrasCount * precioSucursalExtra;
+    const multiplicadorTiempo = hasActivePaidSubscription ? 1 : selectedCycle;
+    const costoExtraSucursales = sucursalesExtrasCount * precioSucursalExtra * multiplicadorTiempo;
     const precioFinalEstimado = currentSubtotalPlan + costoExtraSucursales;
 
     // Formateador especial estricto para Venezuela (convierte USD a Bolívares según tasa BCV)
