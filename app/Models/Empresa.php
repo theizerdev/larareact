@@ -50,6 +50,10 @@ class Empresa extends Model
         'mapbox_active',
         'google_maps_api_key',
         'google_maps_active',
+        'control_acceso_base_url',
+        'control_acceso_app_token',
+        'control_acceso_user_token',
+        'control_acceso_active',
     ];
 
     protected function casts(): array
@@ -63,6 +67,7 @@ class Empresa extends Model
             'whatsapp_last_connected' => 'datetime',
             'mapbox_active' => 'boolean',
             'google_maps_active' => 'boolean',
+            'control_acceso_active' => 'boolean',
         ];
     }
 

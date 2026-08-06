@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use App\Models\Empresa;
 use App\Models\Pais;
+use App\Services\ControlAccesoService;
 use App\Services\WhatsAppService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Artisan;
@@ -40,6 +41,10 @@ class IntegrationController extends Controller
             'google_maps_active' => (bool) $empresa->google_maps_active,
             'whatsapp_active' => (bool) $empresa->whatsapp_active,
             'whatsapp_connected' => $whatsappConnected,
+            'control_acceso_base_url' => $empresa->control_acceso_base_url,
+            'control_acceso_app_token' => $empresa->control_acceso_app_token,
+            'control_acceso_user_token' => $empresa->control_acceso_user_token,
+            'control_acceso_active' => (bool) $empresa->control_acceso_active,
         ]);
     }
 
@@ -144,6 +149,69 @@ class IntegrationController extends Controller
         return back()->with('notification', [
             'type' => 'success',
             'message' => __('Google Maps integration settings updated successfully.'),
+        ]);
+    }
+
+    /**
+     * Actualiza la configuración del middleware de Control de Acceso de la empresa del usuario.
+     */
+    public function updateControlAcceso(Request $request)
+    {
+        $empresa = $request->user()->empresa;
+
+        if (! $empresa) {
+            return back()->with('notification', [
+                'type' => 'error',
+                'message' => __('No active company associated with your user.'),
+            ]);
+        }
+
+        $validated = $request->validate([
+            'control_acceso_base_url' => 'nullable|url|max:255',
+            'control_acceso_app_token' => 'nullable|string|max:255',
+            'control_acceso_user_token' => 'nullable|string|max:255',
+            'control_acceso_active' => 'required|boolean',
+        ]);
+
+        $empresa->update([
+            'control_acceso_base_url' => $validated['control_acceso_base_url'] ? rtrim($validated['control_acceso_base_url'], '/') : null,
+            'control_acceso_app_token' => $validated['control_acceso_app_token'],
+            'control_acceso_user_token' => $validated['control_acceso_user_token'],
+            'control_acceso_active' => $validated['control_acceso_active'],
+        ]);
+
+        return back()->with('notification', [
+            'type' => 'success',
+            'message' => __('Access Control middleware settings updated successfully.'),
+        ]);
+    }
+
+    /**
+     * Prueba la conexión con el middleware de Control de Acceso usando las credenciales guardadas.
+     */
+    public function controlAccesoTest(Request $request)
+    {
+        $empresa = $request->user()->empresa;
+
+        if (! $empresa) {
+            return back()->with('notification', [
+                'type' => 'error',
+                'message' => __('No active company associated with your user.'),
+            ]);
+        }
+
+        if (empty($empresa->control_acceso_base_url) || empty($empresa->control_acceso_app_token) || empty($empresa->control_acceso_user_token)) {
+            return back()->with('notification', [
+                'type' => 'error',
+                'message' => __('Please configure and save the Base URL and both tokens before testing the connection.'),
+            ]);
+        }
+
+        $result = (new ControlAccesoService($empresa))->testConnection();
+
+        return back()->with('notification', [
+            'type' => $result['success'] ? 'success' : 'error',
+            'message' => $result['message'],
         ]);
     }
 

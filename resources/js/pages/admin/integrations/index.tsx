@@ -1,5 +1,5 @@
-import { Head, useForm, Link } from '@inertiajs/react';
-import { Settings2, Map, ShieldCheck, Save, MessageSquare, CreditCard, ExternalLink } from 'lucide-react';
+import { Head, useForm, Link, router } from '@inertiajs/react';
+import { Settings2, Map, ShieldCheck, Save, MessageSquare, CreditCard, ExternalLink, Wifi, Loader2 } from 'lucide-react';
 import React, { useState } from 'react';
 import Swal from 'sweetalert2';
 import { Breadcrumbs } from '@/components/breadcrumbs';
@@ -17,17 +17,26 @@ interface PageProps {
     google_maps_active: boolean;
     whatsapp_active: boolean;
     whatsapp_connected: boolean;
+    control_acceso_base_url: string | null;
+    control_acceso_app_token: string | null;
+    control_acceso_user_token: string | null;
+    control_acceso_active: boolean;
 }
 
-export default function Integrations({ 
-    mapbox_api_key, 
-    mapbox_active, 
+export default function Integrations({
+    mapbox_api_key,
+    mapbox_active,
     google_maps_api_key,
     google_maps_active,
-    whatsapp_active, 
-    whatsapp_connected 
+    whatsapp_active,
+    whatsapp_connected,
+    control_acceso_base_url,
+    control_acceso_app_token,
+    control_acceso_user_token,
+    control_acceso_active,
 }: PageProps) {
     const { __ } = useTranslate();
+    const [testingConnection, setTestingConnection] = useState(false);
 
     const mapboxForm = useForm({
         mapbox_api_key: mapbox_api_key || '',
@@ -37,6 +46,13 @@ export default function Integrations({
     const googleMapsForm = useForm({
         google_maps_api_key: google_maps_api_key || '',
         google_maps_active: google_maps_active,
+    });
+
+    const controlAccesoForm = useForm({
+        control_acceso_base_url: control_acceso_base_url || '',
+        control_acceso_app_token: control_acceso_app_token || '',
+        control_acceso_user_token: control_acceso_user_token || '',
+        control_acceso_active: control_acceso_active,
     });
 
     const handleSaveMapbox = (e: React.FormEvent) => {
@@ -68,6 +84,30 @@ export default function Integrations({
                     showConfirmButton: false,
                 });
             },
+        });
+    };
+
+    const handleSaveControlAcceso = (e: React.FormEvent) => {
+        e.preventDefault();
+        controlAccesoForm.put('/admin/integrations/control-acceso', {
+            preserveScroll: true,
+            onSuccess: () => {
+                Swal.fire({
+                    title: __('Settings Saved'),
+                    text: __('Access Control middleware settings updated successfully.'),
+                    icon: 'success',
+                    timer: 2000,
+                    showConfirmButton: false,
+                });
+            },
+        });
+    };
+
+    const handleTestControlAcceso = () => {
+        setTestingConnection(true);
+        router.post('/admin/integrations/control-acceso/test', {}, {
+            preserveScroll: true,
+            onFinish: () => setTestingConnection(false),
         });
     };
 
@@ -256,6 +296,96 @@ export default function Integrations({
                                 </Button>
                             </Link>
                         </CardFooter>
+                    </Card>
+
+                    {/* Control de Acceso Middleware Integration */}
+                    <Card className="shadow-sm border-t-4 border-t-purple-600 flex flex-col justify-between">
+                        <CardHeader>
+                            <div className="flex items-center justify-between">
+                                <div className="flex items-center gap-2">
+                                    <div className="p-2 rounded bg-purple-50 dark:bg-purple-950/20 text-purple-600">
+                                        <ShieldCheck className="h-5 w-5" />
+                                    </div>
+                                    <div>
+                                        <CardTitle>{__('Access Control Middleware')}</CardTitle>
+                                        <CardDescription>{__('Connect to the external Access Control middleware to authenticate requests such as employee lookups.')}</CardDescription>
+                                    </div>
+                                </div>
+                                <BadgeStatus active={controlAccesoForm.data.control_acceso_active} />
+                            </div>
+                        </CardHeader>
+                        <form onSubmit={handleSaveControlAcceso}>
+                            <CardContent className="space-y-4">
+                                <div className="flex items-center justify-between p-3 border rounded-lg bg-slate-50 dark:bg-slate-900/50">
+                                    <div className="space-y-0.5">
+                                        <Label className="text-sm font-medium">{__('Enable Access Control Middleware')}</Label>
+                                        <p className="text-xs text-muted-foreground">{__('Toggle the connection to the external Access Control middleware service.')}</p>
+                                    </div>
+                                    <Switch
+                                        checked={controlAccesoForm.data.control_acceso_active}
+                                        onCheckedChange={(checked) => controlAccesoForm.setData('control_acceso_active', checked)}
+                                    />
+                                </div>
+
+                                <div className="space-y-2">
+                                    <Label htmlFor="control_acceso_base_url">{__('Base URL')}</Label>
+                                    <Input
+                                        id="control_acceso_base_url"
+                                        type="text"
+                                        placeholder="https://tu-middleware.ejemplo.com"
+                                        value={controlAccesoForm.data.control_acceso_base_url}
+                                        onChange={(e) => controlAccesoForm.setData('control_acceso_base_url', e.target.value)}
+                                        disabled={!controlAccesoForm.data.control_acceso_active}
+                                        className="font-mono text-sm"
+                                    />
+                                </div>
+
+                                <div className="space-y-2">
+                                    <Label htmlFor="control_acceso_app_token">{__('App Token')}</Label>
+                                    <Input
+                                        id="control_acceso_app_token"
+                                        type="password"
+                                        placeholder="shk_..."
+                                        value={controlAccesoForm.data.control_acceso_app_token}
+                                        onChange={(e) => controlAccesoForm.setData('control_acceso_app_token', e.target.value)}
+                                        disabled={!controlAccesoForm.data.control_acceso_active}
+                                        className="font-mono text-sm"
+                                    />
+                                    <p className="text-xs text-muted-foreground">{__('Sent as the Bearer Authorization header on every request.')}</p>
+                                </div>
+
+                                <div className="space-y-2">
+                                    <Label htmlFor="control_acceso_user_token">{__('User Token')}</Label>
+                                    <Input
+                                        id="control_acceso_user_token"
+                                        type="password"
+                                        placeholder="usr_..."
+                                        value={controlAccesoForm.data.control_acceso_user_token}
+                                        onChange={(e) => controlAccesoForm.setData('control_acceso_user_token', e.target.value)}
+                                        disabled={!controlAccesoForm.data.control_acceso_active}
+                                        className="font-mono text-sm"
+                                    />
+                                    <p className="text-xs text-muted-foreground">{__('Sent as the X-User-Token header on every request.')}</p>
+                                </div>
+                            </CardContent>
+                            <CardFooter className="border-t bg-slate-50/50 dark:bg-slate-900/10 px-6 py-4 flex justify-between">
+                                <Button
+                                    type="button"
+                                    variant="outline"
+                                    size="sm"
+                                    className="gap-2 border-purple-200 text-purple-700 hover:bg-purple-50 hover:text-purple-800 dark:border-purple-900/50 dark:text-purple-400 dark:hover:bg-purple-950/20"
+                                    disabled={!controlAccesoForm.data.control_acceso_active || testingConnection}
+                                    onClick={handleTestControlAcceso}
+                                >
+                                    {testingConnection ? <Loader2 className="h-4 w-4 animate-spin" /> : <Wifi className="h-4 w-4" />}
+                                    {__('Test Connection')}
+                                </Button>
+                                <Button type="submit" disabled={controlAccesoForm.processing || !controlAccesoForm.data.control_acceso_active} className="gap-2">
+                                    <Save className="h-4 w-4" />
+                                    {__('Save Changes')}
+                                </Button>
+                            </CardFooter>
+                        </form>
                     </Card>
 
                     {/* Placeholder Premium 2: Stripe Integration */}

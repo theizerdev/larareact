@@ -1531,5 +1531,22 @@
   "Eliminar Productor": "Eliminar Productor",
   "Suspender": "Suspender",
   "Activar": "Activar",
-  "Acciones": "Acciones"
+  "Acciones": "Acciones",
+  "Access Control Middleware": "Middleware Control de Acceso",
+  "Connect to the external Access Control middleware to authenticate requests such as employee lookups.": "Conecta con el middleware externo de Control de Acceso para autenticar solicitudes como la consulta de colaboradores.",
+  "Enable Access Control Middleware": "Habilitar Middleware de Control de Acceso",
+  "Toggle the connection to the external Access Control middleware service.": "Alternar la conexión con el servicio externo de middleware de Control de Acceso.",
+  "Base URL": "URL Base",
+  "App Token": "App Token",
+  "User Token": "User Token",
+  "Sent as the Bearer Authorization header on every request.": "Se envía como la cabecera Authorization Bearer en cada solicitud.",
+  "Sent as the X-User-Token header on every request.": "Se envía como la cabecera X-User-Token en cada solicitud.",
+  "Test Connection": "Probar Conexión",
+  "Access Control middleware settings updated successfully.": "La configuración del middleware de Control de Acceso se actualizó con éxito.",
+  "Please configure and save the Base URL and both tokens before testing the connection.": "Por favor configura y guarda la URL Base y ambos tokens antes de probar la conexión.",
+  "Connection successful. The Access Control middleware responded correctly.": "Conexión exitosa. El middleware de Control de Acceso respondió correctamente.",
+  "Connection rejected. Check the App Token and User Token.": "Conexión rechazada. Verifica el App Token y el User Token.",
+  "The middleware responded with an unexpected error.": "El middleware respondió con un error inesperado.",
+  "Unable to reach the Access Control middleware. Check the Base URL.": "No se pudo contactar al middleware de Control de Acceso. Verifica la URL Base.",
+  "An unexpected error occurred while testing the connection.": "Ocurrió un error inesperado al probar la conexión."
 }

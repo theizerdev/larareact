@@ -829,5 +829,22 @@
   "Eliminar Productor": "Delete Producer",
   "Suspender": "Suspend",
   "Activar": "Activate",
-  "Acciones": "Actions"
+  "Acciones": "Actions",
+  "Access Control Middleware": "Access Control Middleware",
+  "Connect to the external Access Control middleware to authenticate requests such as employee lookups.": "Connect to the external Access Control middleware to authenticate requests such as employee lookups.",
+  "Enable Access Control Middleware": "Enable Access Control Middleware",
+  "Toggle the connection to the external Access Control middleware service.": "Toggle the connection to the external Access Control middleware service.",
+  "Base URL": "Base URL",
+  "App Token": "App Token",
+  "User Token": "User Token",
+  "Sent as the Bearer Authorization header on every request.": "Sent as the Bearer Authorization header on every request.",
+  "Sent as the X-User-Token header on every request.": "Sent as the X-User-Token header on every request.",
+  "Test Connection": "Test Connection",
+  "Access Control middleware settings updated successfully.": "Access Control middleware settings updated successfully.",
+  "Please configure and save the Base URL and both tokens before testing the connection.": "Please configure and save the Base URL and both tokens before testing the connection.",
+  "Connection successful. The Access Control middleware responded correctly.": "Connection successful. The Access Control middleware responded correctly.",
+  "Connection rejected. Check the App Token and User Token.": "Connection rejected. Check the App Token and User Token.",
+  "The middleware responded with an unexpected error.": "The middleware responded with an unexpected error.",
+  "Unable to reach the Access Control middleware. Check the Base URL.": "Unable to reach the Access Control middleware. Check the Base URL.",
+  "An unexpected error occurred while testing the connection.": "An unexpected error occurred while testing the connection."
 }
