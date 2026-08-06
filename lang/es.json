@@ -1810,5 +1810,14 @@
   "Modificación de Campos (Antes vs Después)": "Modificación de Campos (Antes vs Después)",
   "Campo / Atributo": "Campo / Atributo",
   "Valor Anterior (Old)": "Valor Anterior (Old)",
-  "Valor Nuevo (Attributes)": "Valor Nuevo (Attributes)"
+  "Valor Nuevo (Attributes)": "Valor Nuevo (Attributes)",
+  "Bitácora de Auditoría por Empresa y Sucursal": "Bitácora de Auditoría por Empresa y Sucursal",
+  "Registro inalterable y aislado por Empresa y Sucursal de todas las acciones del sistema.": "Registro inalterable y aislado por Empresa y Sucursal de todas las acciones del sistema.",
+  "Bitácora con aislamiento Multi-Tenant estricto. Solo se muestran auditorías correspondientes a su organización.": "Bitácora con aislamiento Multi-Tenant estricto. Solo se muestran auditorías correspondientes a su organización.",
+  "Seguridad Auditada 100%": "Seguridad Auditada 100%",
+  "Eventos Empresa": "Eventos Empresa",
+  "Filtrados": "Filtrados",
+  "Filtrar Sucursal": "Filtrar Sucursal",
+  "Todas las sucursales": "Todas las sucursales",
+  "No se encontraron eventos de auditoría para esta sucursal": "No se encontraron eventos de auditoría para esta sucursal"
 }

@@ -3,24 +3,52 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Models\Empresa;
+use App\Models\Sucursal;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\DB;
 use Inertia\Inertia;
 use Spatie\Activitylog\Models\Activity;
 
 class AuditLogController extends Controller
 {
     /**
-     * Bitácora de Auditoría de Seguridad y Operaciones Sensibles
+     * Bitácora de Auditoría de Seguridad y Operaciones Sensibles por Empresa y Sucursal
      */
     public function index(Request $request)
     {
+        $user = auth()->user();
+        $empresaId = $user?->empresa_id;
+        $sucursalId = $user?->sucursal_id;
+
         $search = $request->input('search');
         $logName = $request->input('log_name');
         $fromDate = $request->input('from_date');
         $toDate = $request->input('to_date');
+        $filterSucursal = $request->input('sucursal_id', $sucursalId);
 
         $query = Activity::with(['causer']);
+
+        // Aislamiento Multi-Tenant estricto por Empresa
+        if ($empresaId) {
+            $query->where(function ($q) use ($empresaId) {
+                $q->where('empresa_id', $empresaId)
+                  ->orWhere('properties->empresa_id', $empresaId)
+                  ->orWhereHasMorph('causer', [\App\Models\User::class], function ($userQuery) use ($empresaId) {
+                      $userQuery->where('empresa_id', $empresaId);
+                  });
+            });
+        }
+
+        // Filtrado opcional por Sucursal (si está asignada o seleccionada)
+        if ($filterSucursal && $filterSucursal !== 'all') {
+            $query->where(function ($q) use ($filterSucursal) {
+                $q->where('sucursal_id', $filterSucursal)
+                  ->orWhere('properties->sucursal_id', $filterSucursal)
+                  ->orWhereHasMorph('causer', [\App\Models\User::class], function ($userQuery) use ($filterSucursal) {
+                      $userQuery->where('sucursal_id', $filterSucursal);
+                  });
+            });
+        }
 
         if ($search) {
             $query->where(function ($q) use ($search) {
@@ -51,15 +79,27 @@ class AuditLogController extends Controller
             ->whereNotNull('log_name')
             ->pluck('log_name');
 
+        $sucursales = $empresaId ? Sucursal::where('empresa_id', $empresaId)->get(['id', 'nombre']) : [];
+
+        $empresa = $empresaId ? Empresa::find($empresaId) : null;
+        $sucursalActual = $sucursalId ? Sucursal::find($sucursalId) : null;
+
         return Inertia::render('admin/Seguridad/Bitacora', [
             'logs' => $logs,
             'categories' => $categories,
-            'filters' => $request->only(['search', 'log_name', 'from_date', 'to_date']),
+            'sucursales' => $sucursales,
+            'tenantInfo' => [
+                'empresaNombre' => $empresa?->razon_social ?? $empresa?->nombre ?? 'Global System',
+                'sucursalNombre' => $sucursalActual?->nombre ?? 'Todas las sucursales',
+                'empresaId' => $empresaId,
+                'sucursalId' => $sucursalId,
+            ],
+            'filters' => $request->only(['search', 'log_name', 'from_date', 'to_date', 'sucursal_id']),
             'stats' => [
-                'totalEvents' => Activity::count(),
-                'todayEvents' => Activity::whereDate('created_at', today())->count(),
-                'contabilidadEvents' => Activity::where('log_name', 'contabilidad')->count(),
-                'cajaEvents' => Activity::whereIn('log_name', ['caja', 'ventas', 'auth'])->count(),
+                'totalEvents' => (clone $query)->count(),
+                'todayEvents' => (clone $query)->whereDate('created_at', today())->count(),
+                'contabilidadEvents' => (clone $query)->where('log_name', 'contabilidad')->count(),
+                'cajaEvents' => (clone $query)->whereIn('log_name', ['caja', 'ventas', 'auth'])->count(),
             ],
         ]);
     }

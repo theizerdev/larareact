@@ -25,6 +25,8 @@ import {
     ArrowRight,
     TrendingUp,
     Shield,
+    Building2,
+    GitBranch,
 } from 'lucide-react';
 import React, { useState } from 'react';
 import { Breadcrumbs } from '@/components/breadcrumbs';
@@ -56,9 +58,16 @@ interface LogItem {
     properties: {
         attributes?: Record<string, any>;
         old?: Record<string, any>;
+        empresa_id?: number;
+        sucursal_id?: number;
         [key: string]: any;
     };
     created_at: string;
+}
+
+interface SucursalItem {
+    id: number;
+    nombre: string;
 }
 
 interface Props {
@@ -73,11 +82,19 @@ interface Props {
         to?: number | null;
     };
     categories: string[];
+    sucursales: SucursalItem[];
+    tenantInfo: {
+        empresaNombre: string;
+        sucursalNombre: string;
+        empresaId?: number;
+        sucursalId?: number;
+    };
     filters: {
         search?: string;
         log_name?: string;
         from_date?: string;
         to_date?: string;
+        sucursal_id?: string;
     };
     stats: {
         totalEvents: number;
@@ -87,12 +104,13 @@ interface Props {
     };
 }
 
-export default function BitacoraPage({ logs, categories, filters, stats }: Props) {
+export default function BitacoraPage({ logs, categories, sucursales = [], tenantInfo, filters, stats }: Props) {
     const { __ } = useTranslate();
     const [search, setSearch] = useState(filters.search || '');
     const [logName, setLogName] = useState(filters.log_name || 'all');
     const [fromDate, setFromDate] = useState(filters.from_date || '');
     const [toDate, setToDate] = useState(filters.to_date || '');
+    const [filterSucursal, setFilterSucursal] = useState(filters.sucursal_id || 'all');
     const [selectedLog, setSelectedLog] = useState<LogItem | null>(null);
 
     const handleSearch = (e?: React.FormEvent) => {
@@ -104,6 +122,7 @@ export default function BitacoraPage({ logs, categories, filters, stats }: Props
                 log_name: logName,
                 from_date: fromDate,
                 to_date: toDate,
+                sucursal_id: filterSucursal,
             }),
             { preserveState: true, preserveScroll: true }
         );
@@ -118,6 +137,7 @@ export default function BitacoraPage({ logs, categories, filters, stats }: Props
                 log_name: cat,
                 from_date: fromDate,
                 to_date: toDate,
+                sucursal_id: filterSucursal,
             }),
             { preserveState: true, preserveScroll: true }
         );
@@ -128,10 +148,10 @@ export default function BitacoraPage({ logs, categories, filters, stats }: Props
         setLogName('all');
         setFromDate('');
         setToDate('');
+        setFilterSucursal('all');
         router.get('/admin/seguridad/bitacora', {}, { preserveState: true, preserveScroll: true });
     };
 
-    // Exportar bitácora a CSV
     const exportToCSV = () => {
         if (!logs.data || logs.data.length === 0) return;
 
@@ -144,7 +164,7 @@ export default function BitacoraPage({ logs, categories, filters, stats }: Props
         const url = URL.createObjectURL(blob);
         const link = document.createElement('a');
         link.setAttribute('href', url);
-        link.setAttribute('download', `Bitacora_Auditoria_${new Date().toISOString().split('T')[0]}.csv`);
+        link.setAttribute('download', `Bitacora_Auditoria_${tenantInfo.empresaNombre}_${new Date().toISOString().split('T')[0]}.csv`);
         document.body.appendChild(link);
         link.click();
         document.body.removeChild(link);
@@ -214,7 +234,7 @@ export default function BitacoraPage({ logs, categories, filters, stats }: Props
 
     return (
         <>
-            <Head title={__('Bitácora de Auditoría & Seguridad')} />
+            <Head title={__('Bitácora de Auditoría por Empresa y Sucursal')} />
 
             <div className="space-y-6">
                 <Breadcrumbs breadcrumbs={breadcrumbs} />
@@ -222,7 +242,7 @@ export default function BitacoraPage({ logs, categories, filters, stats }: Props
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                     <ModuleHeader
                         title={__('Bitácora de Auditoría & Logs de Seguridad')}
-                        description={__('Historial cronológico e inalterable de auditoría sobre transacciones, eventos de seguridad y modificaciones.')}
+                        description={__('Registro inalterable y aislado por Empresa y Sucursal de todas las acciones del sistema.')}
                         icon={<ShieldCheck className="w-6 h-6 text-purple-600 dark:text-purple-400" />}
                     />
 
@@ -237,13 +257,40 @@ export default function BitacoraPage({ logs, categories, filters, stats }: Props
                     </Button>
                 </div>
 
+                {/* ══ Contexto Tenant (Empresa & Sucursal) ════════════════════════════ */}
+                <div className="p-4 rounded-xl border border-purple-200 dark:border-purple-900 bg-gradient-to-r from-purple-50/60 via-white to-indigo-50/60 dark:from-slate-900 dark:via-slate-900 dark:to-purple-950/40 flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-2xs">
+                    <div className="flex items-center gap-3">
+                        <div className="p-2.5 bg-purple-600 text-white rounded-lg">
+                            <Building2 className="w-5 h-5" />
+                        </div>
+                        <div>
+                            <div className="flex items-center gap-2">
+                                <h3 className="font-bold text-sm text-slate-900 dark:text-slate-100">
+                                    {tenantInfo.empresaNombre}
+                                </h3>
+                                <Badge className="bg-purple-600 text-white font-mono text-[10px] gap-1">
+                                    <GitBranch className="w-3 h-3" />
+                                    {tenantInfo.sucursalNombre}
+                                </Badge>
+                            </div>
+                            <p className="text-xs text-muted-foreground mt-0.5">
+                                {__('Bitácora con aislamiento Multi-Tenant estricto. Solo se muestran auditorías correspondientes a su organización.')}
+                            </p>
+                        </div>
+                    </div>
+
+                    <Badge variant="outline" className="text-xs font-mono text-purple-700 border-purple-300 self-start sm:self-auto">
+                        {__('Seguridad Auditada 100%')}
+                    </Badge>
+                </div>
+
                 {/* ══ Cards Estadísticas Ejecutivas Pro ══════════════════════════════════ */}
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
                     {/* Card 1: Total Eventos */}
                     <div className="relative overflow-hidden rounded-xl border border-slate-200 dark:border-slate-800 bg-gradient-to-b from-white to-slate-50/50 dark:from-slate-900 dark:to-slate-900/80 p-5 shadow-sm hover:shadow-md transition-all">
                         <div className="flex items-center justify-between">
                             <span className="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">
-                                {__('Total Eventos')}
+                                {__('Eventos Empresa')}
                             </span>
                             <div className="h-10 w-10 rounded-xl bg-gradient-to-br from-purple-500 to-indigo-700 text-white flex items-center justify-center shadow-md shadow-purple-500/20">
                                 <Shield className="w-5 h-5" />
@@ -254,7 +301,7 @@ export default function BitacoraPage({ logs, categories, filters, stats }: Props
                                 {stats.totalEvents}
                             </span>
                             <Badge variant="outline" className="text-[10px] font-semibold text-purple-600 bg-purple-50 dark:bg-purple-950/50 border-purple-200">
-                                {__('Histórico')}
+                                {__('Filtrados')}
                             </Badge>
                         </div>
                     </div>
@@ -351,7 +398,7 @@ export default function BitacoraPage({ logs, categories, filters, stats }: Props
                 <Card className="shadow-sm border-slate-200 dark:border-slate-800">
                     <CardHeader className="p-4 border-b bg-slate-50/60 dark:bg-slate-900/60">
                         <form onSubmit={handleSearch} className="flex flex-col lg:flex-row items-stretch lg:items-center justify-between gap-4">
-                            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 flex-1">
+                            <div className="grid grid-cols-1 sm:grid-cols-4 gap-3 flex-1">
                                 <div className="space-y-1">
                                     <Label className="text-xs font-semibold text-slate-600 dark:text-slate-400">{__('Búsqueda Libre')}</Label>
                                     <div className="relative">
@@ -364,6 +411,25 @@ export default function BitacoraPage({ logs, categories, filters, stats }: Props
                                         />
                                     </div>
                                 </div>
+
+                                {sucursales.length > 0 && (
+                                    <div className="space-y-1">
+                                        <Label className="text-xs font-semibold text-slate-600 dark:text-slate-400">{__('Filtrar Sucursal')}</Label>
+                                        <Select value={filterSucursal} onValueChange={setFilterSucursal}>
+                                            <SelectTrigger className="h-9 text-xs bg-white dark:bg-slate-950">
+                                                <SelectValue placeholder={__('Todas las sucursales')} />
+                                            </SelectTrigger>
+                                            <SelectContent>
+                                                <SelectItem value="all">{__('Todas las sucursales')}</SelectItem>
+                                                {sucursales.map((s) => (
+                                                    <SelectItem key={s.id} value={String(s.id)}>
+                                                        {s.nombre}
+                                                    </SelectItem>
+                                                ))}
+                                            </SelectContent>
+                                        </Select>
+                                    </div>
+                                )}
 
                                 <div className="space-y-1">
                                     <Label className="text-xs font-semibold text-slate-600 dark:text-slate-400">{__('Desde Fecha')}</Label>
@@ -392,7 +458,7 @@ export default function BitacoraPage({ logs, categories, filters, stats }: Props
                                     {__('Filtrar')}
                                 </Button>
 
-                                {(search || logName !== 'all' || fromDate || toDate) && (
+                                {(search || logName !== 'all' || fromDate || toDate || filterSucursal !== 'all') && (
                                     <Button type="button" variant="ghost" size="sm" onClick={handleReset} className="h-9 px-3 text-xs gap-1 text-slate-600 hover:text-slate-900">
                                         <X className="w-3.5 h-3.5" />
                                         {__('Limpiar')}
@@ -462,7 +528,7 @@ export default function BitacoraPage({ logs, categories, filters, stats }: Props
                                         <tr>
                                             <td colSpan={7} className="py-16 text-center text-xs text-muted-foreground space-y-3">
                                                 <ShieldCheck className="w-12 h-12 mx-auto text-slate-300 dark:text-slate-700 stroke-[1.2]" />
-                                                <p className="font-semibold text-sm">{__('No se encontraron eventos de auditoría')}</p>
+                                                <p className="font-semibold text-sm">{__('No se encontraron eventos de auditoría para esta sucursal')}</p>
                                                 <p className="text-xs text-slate-400 max-w-sm mx-auto">
                                                     {__('Los eventos sensibles de contabilidad, caja y seguridad se registrarán automáticamente aquí.')}
                                                 </p>
