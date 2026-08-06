@@ -214,7 +214,7 @@ class SaleController extends Controller
 
         $sales = $query->orderBy('created_at', 'desc')->paginate($perPage)->withQueryString();
 
-        if ($request->wantsJson()) {
+        if ($request->wantsJson() || $request->ajax() || $request->header('X-Requested-With') === 'XMLHttpRequest') {
             return response()->json([
                 'sales' => SaleResource::collection($sales),
             ]);
