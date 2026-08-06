@@ -21,7 +21,7 @@ import {
     Activity,
     Link2,
 } from 'lucide-react';
-import { Building2, GitBranch, Briefcase, Calendar } from 'lucide-react';
+import { Building2, GitBranch, Briefcase, Calendar, Fingerprint } from 'lucide-react';
 import * as React from 'react';
 import LanguageToggle from '@/components/language-toggle';
 import TemplateCustomizer from '@/components/template-customizer';
@@ -469,6 +469,50 @@ export default function AdminSaasLayout({
                                         icon={Calendar}
                                         collapsed={collapsed}
                                         items={visitsItems}
+                                    />
+                                </div>
+                            );
+                        })()}
+
+                        {/* Access Control Group */}
+                        {(() => {
+                            const controlAccesoItems = [
+                                {
+                                    title: 'IVMS Employees',
+                                    href: '/admin/control-acceso/empleados',
+                                    permission: 'control_acceso.view',
+                                },
+                                {
+                                    title: 'Access Cards',
+                                    href: '/admin/control-acceso/tarjetas',
+                                    permission: 'control_acceso.view',
+                                },
+                                {
+                                    title: 'Pedestrian Access Events',
+                                    href: '/admin/control-acceso/eventos-peatonales',
+                                    permission: 'control_acceso.view',
+                                },
+                                {
+                                    title: 'Vehicles',
+                                    href: '/admin/control-acceso/vehiculos',
+                                    permission: 'control_acceso.view',
+                                },
+                                {
+                                    title: 'Vehicle Access Events',
+                                    href: '/admin/control-acceso/eventos-vehiculares',
+                                    permission: 'control_acceso.view',
+                                },
+                            ].filter(item => hasPermission(item.permission));
+
+                            if (controlAccesoItems.length === 0) return null;
+
+                            return (
+                                <div className="pt-2">
+                                    <CollapsibleNavItem
+                                        title="Access Control"
+                                        icon={Fingerprint}
+                                        collapsed={collapsed}
+                                        items={controlAccesoItems}
                                     />
                                 </div>
                             );

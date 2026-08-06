@@ -132,6 +132,11 @@ class PermissionSeeder extends Seeder
                 'empleados.import' => 'Importar Empleados desde Excel',
             ],
 
+            // Sector: Control de Acceso (datos del ivms vía middleware)
+            'control_acceso' => [
+                'control_acceso.view' => 'Ver Control de Acceso',
+            ],
+
         ];
 
         foreach ($permissions as $sector => $sectorPermissions) {
@@ -154,6 +159,7 @@ class PermissionSeeder extends Seeder
                     str_starts_with($permission, 'productores.') => 'productores',
                     str_starts_with($permission, 'monitoreo.') => 'monitoreo',
                     str_starts_with($permission, 'visitas_temporales.') => 'visitas_temporales',
+                    str_starts_with($permission, 'control_acceso.') => 'control_acceso',
 
                     default => 'general',
                 };
