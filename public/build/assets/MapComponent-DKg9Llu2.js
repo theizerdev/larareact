@@ -1,1 +1,0 @@
-import{r as e,t}from"./app-D1QPZ0Wu.js";import{t as n}from"./leaflet-map-CPVbWXI5.js";e();var r=t(),i=({markerPosition:e,zoom:t,onLocationSelected:i})=>(0,r.jsx)(`div`,{className:`w-full h-80 min-h-[320px] rounded-lg overflow-hidden border`,children:(0,r.jsx)(n,{lat:e?e[0]:0,lng:e?e[1]:0,zoom:t,onChange:i,interactive:!0})});export{i as default};

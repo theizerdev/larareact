@@ -53,6 +53,7 @@ interface PaymentGatewayInfo {
 interface PageProps {
     empresa: EmpresaInfo | null;
     plan: PlanInfo | null;
+    planes?: PlanInfo[];
     opcionesPrecios: Record<number, PlanOption>;
     bcvRate?: number;
     paymentGateways?: {
@@ -62,19 +63,33 @@ interface PageProps {
     };
 }
 
-export default function SubscriptionExpired({ empresa, plan, opcionesPrecios, bcvRate = 36.50, paymentGateways }: PageProps) {
+export default function SubscriptionExpired({ empresa, plan, planes = [], opcionesPrecios, bcvRate = 36.50, paymentGateways }: PageProps) {
     const { __ } = useTranslate();
     const pageProps = usePage().props as any;
     const { currencySymbol = '$', isVenezuela = false } = pageProps;
 
+    const activePlanes = planes.length > 0 ? planes : (plan ? [plan] : []);
+    const [selectedPlanId, setSelectedPlanId] = useState<number>(plan?.id || activePlanes[0]?.id || 1);
     const [selectedCycle, setSelectedCycle] = useState<number>(12);
     const [extraSucursales, setExtraSucursales] = useState<number>(Math.max(1, empresa?.sucursales_activas ?? 1));
     const [imagePreviewUrl, setImagePreviewUrl] = useState<string | null>(null);
 
-    const currentOption = opcionesPrecios[selectedCycle] || opcionesPrecios[12];
-    const sucursalesExtrasCount = Math.max(0, extraSucursales - (plan?.sucursales_incluidas ?? 1));
-    const costoExtraSucursales = sucursalesExtrasCount * (plan?.precio_sucursal_extra_mensual ?? 10);
-    const precioFinalEstimado = (currentOption?.subtotal_plan ?? 0) + costoExtraSucursales;
+    const currentPlan = activePlanes.find(p => p.id === selectedPlanId) || plan || activePlanes[0];
+
+    const getPlanSubtotal = (cycle: number) => {
+        if (!currentPlan) return opcionesPrecios[cycle]?.subtotal_plan ?? 0;
+        if (cycle === 3) return currentPlan.precio_3_meses > 0 ? currentPlan.precio_3_meses : 89.00;
+        if (cycle === 6) return currentPlan.precio_6_meses > 0 ? currentPlan.precio_6_meses : 159.00;
+        return currentPlan.precio_12_meses > 0 ? currentPlan.precio_12_meses : 288.00;
+    };
+
+    const precioSucursalExtra = (currentPlan?.precio_sucursal_extra_mensual && currentPlan.precio_sucursal_extra_mensual > 0)
+        ? currentPlan.precio_sucursal_extra_mensual
+        : 10;
+    const currentSubtotal = getPlanSubtotal(selectedCycle);
+    const sucursalesExtrasCount = Math.max(0, extraSucursales - (currentPlan?.sucursales_incluidas ?? 1));
+    const costoExtraSucursales = sucursalesExtrasCount * precioSucursalExtra * selectedCycle;
+    const precioFinalEstimado = currentSubtotal + costoExtraSucursales;
 
     const formatPrice = (usdAmount: number) => {
         if (isVenezuela) {
@@ -85,6 +100,7 @@ export default function SubscriptionExpired({ empresa, plan, opcionesPrecios, bc
     };
 
     const { data, setData, post, processing, errors, reset } = useForm({
+        plan_id: selectedPlanId,
         ciclo_meses: selectedCycle,
         sucursales_contratadas: extraSucursales,
         metodo_pago: 'transferencia',
@@ -92,6 +108,11 @@ export default function SubscriptionExpired({ empresa, plan, opcionesPrecios, bc
         comprobante: null as File | null,
         notas: '',
     });
+
+    const handlePlanChange = (planId: number) => {
+        setSelectedPlanId(planId);
+        setData('plan_id', planId);
+    };
 
     const handleCycleChange = (cycle: number) => {
         setSelectedCycle(cycle);
@@ -154,46 +175,96 @@ export default function SubscriptionExpired({ empresa, plan, opcionesPrecios, bc
                 </CardHeader>
                 <CardContent className="p-6">
                     <form onSubmit={handleSubmitRenewal} className="space-y-6">
-                        {/* 1. Duración del Plan */}
+                        {/* 1. Selecciona la Duración del Servicio / Plan */}
                         <div className="space-y-3">
-                            <Label className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
-                                {__('1. Selecciona la Duración del Servicio')}
+                            <Label className="text-xs font-bold uppercase tracking-wider text-muted-foreground flex items-center gap-2">
+                                <Zap className="h-4 w-4 text-primary" />
+                                {__('1. Selecciona tu Plan de Renovación')}
                             </Label>
-                            <div className="grid gap-4 sm:grid-cols-3">
+                            <div className="grid gap-6 sm:grid-cols-3">
                                 {[3, 6, 12].map((meses) => {
-                                    const opt = opcionesPrecios[meses];
+                                    const meta = {
+                                        3: {
+                                            badge: __('Para Emprendedores'),
+                                            badgeClass: 'bg-slate-700 text-white font-bold',
+                                            titulo: __('Plan Trimestral'),
+                                            subtitulo: __('Control total para tu primer comercio'),
+                                            promedioCalculado: 29.66,
+                                            facturadoText: __('Facturado $89 cada 3 meses'),
+                                            features: [
+                                                __('Todo lo de la Prueba Gratis'),
+                                                __('Catálogo y productos ilimitados'),
+                                                __('Control de stock e inventario'),
+                                                __('Reportes de ventas y ganancias'),
+                                            ],
+                                        },
+                                        6: {
+                                            badge: __('★ Más Popular - Ahorra 15%'),
+                                            badgeClass: 'bg-amber-500 text-white font-bold',
+                                            titulo: __('Plan Semestral'),
+                                            subtitulo: __('El equilibrio perfecto para crecer'),
+                                            promedioCalculado: 26.50,
+                                            facturadoText: __('Facturado $159 cada 6 meses'),
+                                            features: [
+                                                __('Todo lo del Plan Trimestral'),
+                                                __('Sincronización automática de tasa'),
+                                                __('WhatsApp Engine multi-usuario'),
+                                                __('Soporte prioritario por WhatsApp'),
+                                            ],
+                                        },
+                                        12: {
+                                            badge: __('🔥 Mejor Valor - Ahorra 30%'),
+                                            badgeClass: 'bg-emerald-600 text-white font-bold',
+                                            titulo: __('Plan Anual'),
+                                            subtitulo: __('Máximo ahorro y soporte continuo'),
+                                            promedioCalculado: 24.00,
+                                            facturadoText: __('Facturado $288 al año'),
+                                            features: [
+                                                __('Sucursales y Cajas Ilimitadas'),
+                                                __('Ventas a crédito y cobranza'),
+                                                __('Auditoría estricta de transacciones'),
+                                                __('Asesor técnico dedicado'),
+                                            ],
+                                        },
+                                    }[meses]!;
+
+                                    const subtotal = getPlanSubtotal(meses);
                                     const isSelected = selectedCycle === meses;
                                     return (
                                         <div
                                             key={meses}
                                             onClick={() => handleCycleChange(meses)}
-                                            className={`cursor-pointer rounded-xl border-2 p-4 transition-all relative text-center flex flex-col justify-between ${
+                                            className={`cursor-pointer rounded-2xl border-2 p-5 transition-all relative flex flex-col justify-between ${
                                                 isSelected
-                                                    ? 'border-primary bg-primary/5 shadow-md ring-2 ring-primary/20'
-                                                    : 'border-slate-200 hover:border-slate-300 dark:border-slate-800'
+                                                    ? 'border-primary bg-primary/5 shadow-lg ring-2 ring-primary/20 scale-[1.02]'
+                                                    : 'border-slate-200 hover:border-slate-300 dark:border-slate-800 bg-card'
                                             }`}
                                         >
-                                            {meses === 12 && (
-                                                <Badge className="absolute -top-3 right-3 bg-emerald-600 text-white text-[10px] font-bold">
-                                                    {__('🔥 Mejor Opción - 20% Dcto')}
-                                                </Badge>
-                                            )}
-                                            {meses === 6 && (
-                                                <Badge className="absolute -top-3 right-3 bg-blue-600 text-white text-[10px] font-bold">
-                                                    {__('Ahorra 10%')}
-                                                </Badge>
-                                            )}
-                                            <div>
-                                                <span className="text-xs font-bold text-muted-foreground uppercase">{meses} {__('Meses de Acceso')}</span>
-                                                <h3 className="text-2xl font-black text-foreground mt-1">
-                                                    {formatPrice(opt?.subtotal_plan ?? 0)}
-                                                </h3>
+                                            <Badge className={`absolute -top-3 right-4 text-[10px] px-2.5 py-0.5 ${meta.badgeClass}`}>
+                                                {meta.badge}
+                                            </Badge>
+
+                                            <div className="space-y-2">
+                                                <span className="text-xs font-extrabold uppercase tracking-wider text-muted-foreground">{meta.titulo}</span>
+                                                <p className="text-xs text-muted-foreground min-h-[32px]">{meta.subtitulo}</p>
+                                                <div className="pt-2">
+                                                    <h3 className="text-3xl font-black text-foreground">
+                                                        {formatPrice(meta.promedioCalculado)} <span className="text-xs font-semibold text-muted-foreground">/ {__('mes')}</span>
+                                                    </h3>
+                                                    <p className="text-[11px] font-medium text-primary mt-0.5">{meta.facturadoText}</p>
+                                                </div>
                                             </div>
-                                            <div className="mt-3 pt-2 border-t text-[11px] text-muted-foreground flex justify-between items-center">
-                                                <span>{__('Promedio:')}</span>
-                                                <span className="font-bold text-primary">
-                                                    {formatPrice(opt?.precio_mensual_promedio ?? 0)}/{__('mes')}
-                                                </span>
+
+                                            <div className="mt-4 pt-3 border-t space-y-2">
+                                                <span className="text-[11px] font-bold text-muted-foreground uppercase">{__('Incluye:')}</span>
+                                                <ul className="space-y-1.5 text-xs">
+                                                    {meta.features.map((feat, idx) => (
+                                                        <li key={idx} className="flex items-start gap-2 text-foreground font-medium">
+                                                            <CheckCircle2 className="h-3.5 w-3.5 text-emerald-500 shrink-0 mt-0.5" />
+                                                            <span className="leading-tight">{feat}</span>
+                                                        </li>
+                                                    ))}
+                                                </ul>
                                             </div>
                                         </div>
                                     );
@@ -211,7 +282,7 @@ export default function SubscriptionExpired({ empresa, plan, opcionesPrecios, bc
                                     <p className="text-xs text-muted-foreground">
                                         {__('El plan base incluye 1 sucursal. Cada sucursal adicional suma únicamente +')}
                                         <strong className="text-primary font-bold">
-                                            {formatPrice(plan?.precio_sucursal_extra_mensual ?? 10)}
+                                            {formatPrice(precioSucursalExtra)}
                                         </strong>.
                                     </p>
                                     <div className="flex items-center gap-3">
@@ -271,8 +342,8 @@ export default function SubscriptionExpired({ empresa, plan, opcionesPrecios, bc
 
                                     <div className="space-y-1.5 text-xs text-slate-300">
                                         <div className="flex justify-between">
-                                            <span>Plan Full ({selectedCycle} meses):</span>
-                                            <span className="font-mono font-semibold">{formatPrice(currentOption?.subtotal_plan ?? 0)}</span>
+                                            <span>{currentPlan?.nombre || 'Plan Full'} ({selectedCycle} meses):</span>
+                                            <span className="font-mono font-semibold">{formatPrice(currentSubtotal)}</span>
                                         </div>
                                         {sucursalesExtrasCount > 0 && (
                                             <div className="flex justify-between text-indigo-300">

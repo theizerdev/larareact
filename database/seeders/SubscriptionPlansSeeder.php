@@ -88,7 +88,7 @@ class SubscriptionPlansSeeder extends Seeder
                 'precio_3_meses' => 149.00,
                 'precio_6_meses' => 269.00,
                 'precio_12_meses' => 479.00,
-                'precio_sucursal_extra_mensual' => 8.00,
+                'precio_sucursal_extra_mensual' => 10.00,
                 'sucursales_incluidas' => 2,
                 'modulos_incluidos' => [
                     'ventas',

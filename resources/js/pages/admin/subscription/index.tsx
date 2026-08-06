@@ -128,9 +128,9 @@ export default function SubscriptionIndex({ empresa, plan, opcionesPrecios, pago
         ? Math.max(0, extraSucursales - empresa.max_sucursales)
         : Math.max(0, extraSucursales - (plan?.sucursales_incluidas ?? 1));
 
-    // Si ya posee suscripción activa, cada sucursal extra cuesta únicamente la tarifa mensual ($10.00 USD)
+    const precioSucursalExtra = (plan?.precio_sucursal_extra_mensual && plan.precio_sucursal_extra_mensual > 0) ? plan.precio_sucursal_extra_mensual : 10;
     const multiplicadorTiempo = hasActivePaidSubscription ? 1 : selectedCycle;
-    const costoExtraSucursales = sucursalesExtrasCount * (plan?.precio_sucursal_extra_mensual ?? 10) * multiplicadorTiempo;
+    const costoExtraSucursales = sucursalesExtrasCount * precioSucursalExtra * multiplicadorTiempo;
     const precioFinalEstimado = currentSubtotalPlan + costoExtraSucursales;
 
     // Formateador especial estricto para Venezuela (convierte USD a Bolívares según tasa BCV)
@@ -378,9 +378,53 @@ export default function SubscriptionIndex({ empresa, plan, opcionesPrecios, pago
                                         <span className="h-6 w-6 rounded-full bg-primary text-primary-foreground text-xs flex items-center justify-center font-bold">1</span>
                                         {__('Selecciona la Duración del Servicio')}
                                     </Label>
-                                    <div className="grid gap-4 sm:grid-cols-3">
+                                    <div className="grid gap-6 sm:grid-cols-3">
                                         {[3, 6, 12].map((meses) => {
-                                            const opt = opcionesPrecios[meses];
+                                            const meta = {
+                                                3: {
+                                                    badge: __('Para Emprendedores'),
+                                                    badgeClass: 'bg-slate-700 text-white font-bold',
+                                                    titulo: __('Plan Trimestral'),
+                                                    subtitulo: __('Control total para tu primer comercio'),
+                                                    promedioCalculado: 29.66,
+                                                    facturadoText: __('Facturado $89 cada 3 meses'),
+                                                    features: [
+                                                        __('Todo lo de la Prueba Gratis'),
+                                                        __('Catálogo y productos ilimitados'),
+                                                        __('Control de stock e inventario'),
+                                                        __('Reportes de ventas y ganancias'),
+                                                    ],
+                                                },
+                                                6: {
+                                                    badge: __('★ Más Popular - Ahorra 15%'),
+                                                    badgeClass: 'bg-amber-500 text-white font-bold',
+                                                    titulo: __('Plan Semestral'),
+                                                    subtitulo: __('El equilibrio perfecto para crecer'),
+                                                    promedioCalculado: 26.50,
+                                                    facturadoText: __('Facturado $159 cada 6 meses'),
+                                                    features: [
+                                                        __('Todo lo del Plan Trimestral'),
+                                                        __('Sincronización automática de tasa'),
+                                                        __('WhatsApp Engine multi-usuario'),
+                                                        __('Soporte prioritario por WhatsApp'),
+                                                    ],
+                                                },
+                                                12: {
+                                                    badge: __('🔥 Mejor Valor - Ahorra 30%'),
+                                                    badgeClass: 'bg-emerald-600 text-white font-bold',
+                                                    titulo: __('Plan Anual'),
+                                                    subtitulo: __('Máximo ahorro y soporte continuo'),
+                                                    promedioCalculado: 24.00,
+                                                    facturadoText: __('Facturado $288 al año'),
+                                                    features: [
+                                                        __('Sucursales y Cajas Ilimitadas'),
+                                                        __('Ventas a crédito y cobranza'),
+                                                        __('Auditoría estricta de transacciones'),
+                                                        __('Asesor técnico dedicado'),
+                                                    ],
+                                                },
+                                            }[meses]!;
+
                                             const isSelected = selectedCycle === meses;
                                             const isLocked = hasActivePaidSubscription && !isSelected;
                                             return (
@@ -393,38 +437,41 @@ export default function SubscriptionIndex({ empresa, plan, opcionesPrecios, pago
                                                             : 'cursor-pointer'
                                                     } ${
                                                         isSelected 
-                                                            ? 'border-primary bg-primary/5 shadow-md ring-2 ring-primary/20'
+                                                            ? 'border-primary bg-primary/5 shadow-md ring-2 ring-primary/20 scale-[1.02]'
                                                             : !isLocked ? 'border-border hover:border-muted-foreground/30 bg-card' : ''
                                                     }`}
                                                 >
-                                                    {isSelected && hasActivePaidSubscription && (
+                                                    {isSelected && hasActivePaidSubscription ? (
                                                         <Badge className="absolute -top-3 right-4 bg-emerald-600 text-white text-[10px] font-bold px-2.5 py-0.5 shadow-sm">
                                                             {__('✓ Plan Contratado')}
                                                         </Badge>
-                                                    )}
-                                                    {meses === 12 && !hasActivePaidSubscription && (
-                                                        <Badge className="absolute -top-3 right-4 bg-emerald-600 text-white text-[10px] font-bold px-2.5 py-0.5 shadow-sm">
-                                                            {__('🔥 Mejor Opción - 20% Dcto')}
-                                                        </Badge>
-                                                    )}
-                                                    {meses === 6 && !hasActivePaidSubscription && (
-                                                        <Badge className="absolute -top-3 right-4 bg-blue-600 text-white text-[10px] font-bold px-2.5 py-0.5 shadow-sm">
-                                                            {__('Ahorra 10%')}
+                                                    ) : (
+                                                        <Badge className={`absolute -top-3 right-4 text-[10px] px-2.5 py-0.5 shadow-sm ${meta.badgeClass}`}>
+                                                            {meta.badge}
                                                         </Badge>
                                                     )}
 
-                                                    <div>
-                                                        <span className="text-xs font-bold text-muted-foreground uppercase">{meses} {__('Meses de Acceso')}</span>
-                                                        <h3 className="text-2xl font-black text-foreground mt-1">
-                                                            {formatPrice(opt?.subtotal_plan ?? 0)}
-                                                        </h3>
+                                                    <div className="space-y-2">
+                                                        <span className="text-xs font-extrabold uppercase tracking-wider text-muted-foreground">{meta.titulo}</span>
+                                                        <p className="text-xs text-muted-foreground min-h-[32px]">{meta.subtitulo}</p>
+                                                        <div className="pt-2">
+                                                            <h3 className="text-3xl font-black text-foreground">
+                                                                {formatPrice(meta.promedioCalculado)} <span className="text-xs font-semibold text-muted-foreground">/ {__('mes')}</span>
+                                                            </h3>
+                                                            <p className="text-[11px] font-medium text-primary mt-0.5">{meta.facturadoText}</p>
+                                                        </div>
                                                     </div>
 
-                                                    <div className="mt-4 pt-3 border-t text-xs text-muted-foreground flex justify-between items-center">
-                                                        <span>{__('Promedio mensual:')}</span>
-                                                        <span className="font-bold text-primary">
-                                                            {formatPrice(opt?.precio_mensual_promedio ?? 0)}/{__('mes')}
-                                                        </span>
+                                                    <div className="mt-4 pt-3 border-t space-y-2">
+                                                        <span className="text-[11px] font-bold text-muted-foreground uppercase">{__('Incluye:')}</span>
+                                                        <ul className="space-y-1.5 text-xs">
+                                                            {meta.features.map((feat, idx) => (
+                                                                <li key={idx} className="flex items-start gap-2 text-foreground font-medium">
+                                                                    <CheckCircle2 className="h-3.5 w-3.5 text-emerald-500 shrink-0 mt-0.5" />
+                                                                    <span className="leading-tight">{feat}</span>
+                                                                </li>
+                                                            ))}
+                                                        </ul>
                                                     </div>
                                                 </div>
                                             );
@@ -512,7 +559,7 @@ export default function SubscriptionIndex({ empresa, plan, opcionesPrecios, pago
 
                                             <div className="space-y-1.5 text-xs text-slate-300">
                                                 <div className="flex justify-between">
-                                                    <span>Plan Full ({selectedCycle} meses):</span>
+                                                    <span>{selectedCycle === 3 ? __('Plan Trimestral') : selectedCycle === 6 ? __('Plan Semestral') : __('Plan Anual')} ({selectedCycle} meses):</span>
                                                     <span className="font-mono font-semibold">
                                                         {hasActivePaidSubscription ? (
                                                             <span className="text-emerald-400 font-bold">{__('✓ Pagado (Vigente)')}</span>

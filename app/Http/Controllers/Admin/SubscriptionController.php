@@ -28,7 +28,7 @@ class SubscriptionController extends Controller
         }
 
         $planes = SubscriptionPlan::where('activo', true)->get();
-        $plan = $planes->first();
+        $plan = SubscriptionPlan::getPlanRenovacionDefault() ?? $planes->first();
         $totalSucursales = $empresa->sucursales()->count();
 
         $pagos = SubscriptionPayment::where('empresa_id', $empresa->id)
@@ -43,24 +43,28 @@ class SubscriptionController extends Controller
 
         $bcvRate = $bcvService->getRate() ?? 36.50; // Tasa por defecto de respaldo si falla el API
 
+        $precio3 = ($plan?->precio_3_meses > 0) ? $plan->precio_3_meses : 89.00;
+        $precio6 = ($plan?->precio_6_meses > 0) ? $plan->precio_6_meses : 159.00;
+        $precio12 = ($plan?->precio_12_meses > 0) ? $plan->precio_12_meses : 288.00;
+
         // Opciones de cálculo de precios
         $opcionesPrecios = [
             3 => [
                 'meses' => 3,
-                'subtotal_plan' => $plan?->precio_3_meses ?? 89.00,
-                'precio_mensual_promedio' => round(($plan?->precio_3_meses ?? 89.00) / 3, 2),
+                'subtotal_plan' => $precio3,
+                'precio_mensual_promedio' => round($precio3 / 3, 2),
                 'total' => $plan ? $plan->calcularPrecio(3, max(1, $totalSucursales)) : 89.00,
             ],
             6 => [
                 'meses' => 6,
-                'subtotal_plan' => $plan?->precio_6_meses ?? 159.00,
-                'precio_mensual_promedio' => round(($plan?->precio_6_meses ?? 159.00) / 6, 2),
+                'subtotal_plan' => $precio6,
+                'precio_mensual_promedio' => round($precio6 / 6, 2),
                 'total' => $plan ? $plan->calcularPrecio(6, max(1, $totalSucursales)) : 159.00,
             ],
             12 => [
                 'meses' => 12,
-                'subtotal_plan' => $plan?->precio_12_meses ?? 288.00,
-                'precio_mensual_promedio' => round(($plan?->precio_12_meses ?? 288.00) / 12, 2),
+                'subtotal_plan' => $precio12,
+                'precio_mensual_promedio' => round($precio12 / 12, 2),
                 'total' => $plan ? $plan->calcularPrecio(12, max(1, $totalSucursales)) : 288.00,
             ],
         ];
@@ -121,28 +125,42 @@ class SubscriptionController extends Controller
             return redirect('/admin/dashboard');
         }
 
-        $plan = SubscriptionPlan::first();
+        SubscriptionPlan::ensureDefaultPlansExist();
+        $planes = SubscriptionPlan::where('activo', true)
+            ->where('precio_3_meses', '>', 0)
+            ->orderBy('precio_12_meses', 'asc')
+            ->get();
+
+        if ($planes->isEmpty()) {
+            $planes = SubscriptionPlan::where('activo', true)->get();
+        }
+
+        $plan = SubscriptionPlan::getPlanRenovacionDefault() ?? $planes->first();
         $totalSucursales = $empresa ? $empresa->sucursales()->count() : 1;
 
         $bcvRate = $bcvService->getRate() ?? 36.50;
 
+        $precio3 = ($plan?->precio_3_meses > 0) ? $plan->precio_3_meses : 89.00;
+        $precio6 = ($plan?->precio_6_meses > 0) ? $plan->precio_6_meses : 159.00;
+        $precio12 = ($plan?->precio_12_meses > 0) ? $plan->precio_12_meses : 288.00;
+
         $opcionesPrecios = [
             3 => [
                 'meses' => 3,
-                'subtotal_plan' => $plan?->precio_3_meses ?? 89.00,
-                'precio_mensual_promedio' => round(($plan?->precio_3_meses ?? 89.00) / 3, 2),
+                'subtotal_plan' => $precio3,
+                'precio_mensual_promedio' => round($precio3 / 3, 2),
                 'total' => $plan ? $plan->calcularPrecio(3, max(1, $totalSucursales)) : 89.00,
             ],
             6 => [
                 'meses' => 6,
-                'subtotal_plan' => $plan?->precio_6_meses ?? 159.00,
-                'precio_mensual_promedio' => round(($plan?->precio_6_meses ?? 159.00) / 6, 2),
+                'subtotal_plan' => $precio6,
+                'precio_mensual_promedio' => round($precio6 / 6, 2),
                 'total' => $plan ? $plan->calcularPrecio(6, max(1, $totalSucursales)) : 159.00,
             ],
             12 => [
                 'meses' => 12,
-                'subtotal_plan' => $plan?->precio_12_meses ?? 288.00,
-                'precio_mensual_promedio' => round(($plan?->precio_12_meses ?? 288.00) / 12, 2),
+                'subtotal_plan' => $precio12,
+                'precio_mensual_promedio' => round($precio12 / 12, 2),
                 'total' => $plan ? $plan->calcularPrecio(12, max(1, $totalSucursales)) : 288.00,
             ],
         ];
@@ -181,6 +199,7 @@ class SubscriptionController extends Controller
                 'sucursales_activas' => $totalSucursales,
             ] : null,
             'plan' => $plan,
+            'planes' => $planes,
             'opcionesPrecios' => $opcionesPrecios,
             'bcvRate' => $bcvRate,
             'paymentGateways' => $paymentGateways,
@@ -212,7 +231,7 @@ class SubscriptionController extends Controller
             ]);
         }
 
-        $plan = $request->plan_id ? SubscriptionPlan::find($request->plan_id) : SubscriptionPlan::first();
+        $plan = $request->plan_id ? SubscriptionPlan::find($request->plan_id) : SubscriptionPlan::getPlanRenovacionDefault();
         $hasActivePaidSubscription = $empresa->subscription_status === 'active' && ! $empresa->isExemptFromSubscription();
 
         if ($hasActivePaidSubscription && $plan) {
@@ -361,7 +380,7 @@ class SubscriptionController extends Controller
         if ($captureResponse->successful() && isset($data['status']) && $data['status'] === 'COMPLETED') {
             $transactionId = $data['purchase_units'][0]['payments']['captures'][0]['id'] ?? $orderId;
             $planId = $request->input('plan_id');
-            $plan = $planId ? SubscriptionPlan::find($planId) : SubscriptionPlan::first();
+            $plan = $planId ? SubscriptionPlan::find($planId) : SubscriptionPlan::getPlanRenovacionDefault();
             $hasActivePaidSubscription = $empresa->subscription_status === 'active' && ! $empresa->isExemptFromSubscription();
             if ($hasActivePaidSubscription) {
                 $sucursalesExtra = max(0, (int) $request->sucursales_contratadas - ($empresa->max_sucursales ?? 1));
@@ -476,7 +495,7 @@ class SubscriptionController extends Controller
         return inertia('admin/subscription/manage', [
             'empresas' => $empresas,
             'pagosPendientes' => $pagosPendientes,
-            'plan' => $planes->first(),
+            'plan' => SubscriptionPlan::getPlanRenovacionDefault() ?? $planes->first(),
             'planes' => $planes,
             'stats' => $stats,
         ]);
@@ -520,7 +539,7 @@ class SubscriptionController extends Controller
                 'max_sucursales' => max($empresa->max_sucursales ?? 1, $payment->sucursales_contratadas),
             ]);
 
-            $plan = $payment->plan ?? ($payment->plan_id ? SubscriptionPlan::find($payment->plan_id) : SubscriptionPlan::first());
+            $plan = $payment->plan ?? ($payment->plan_id ? SubscriptionPlan::find($payment->plan_id) : SubscriptionPlan::getPlanRenovacionDefault());
 
             // Registrar suscripción activa
             $subscription = Subscription::create([
