@@ -27,7 +27,7 @@ class DatabaseSeeder extends Seeder
             SubscriptionPlansSeeder::class,
             TestimonioSeeder::class,
             EquiposInicialSeeder::class,
-            EspecificacionesSeeder::class,
+            //EspecificacionesSeeder::class,
         ]);
     }
 }
