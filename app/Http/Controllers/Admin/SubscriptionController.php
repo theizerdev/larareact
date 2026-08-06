@@ -27,6 +27,7 @@ class SubscriptionController extends Controller
             abort(404, 'Empresa no encontrada.');
         }
 
+        SubscriptionPlan::ensureDefaultPlansExist();
         $planes = SubscriptionPlan::where('activo', true)->get();
         $plan = SubscriptionPlan::getPlanRenovacionDefault() ?? $planes->first();
         $totalSucursales = $empresa->sucursales()->count();
@@ -89,25 +90,27 @@ class SubscriptionController extends Controller
             ],
         ];
 
+        $latestSub = $empresa->getLatestSubscriptionRecord();
+
         return inertia('admin/subscription/index', [
             'empresa' => [
                 'id' => $empresa->id,
                 'razon_social' => $empresa->razon_social,
-                'subscription_status' => $empresa->subscription_status,
-                'trial_ends_at' => $empresa->trial_ends_at?->format('Y-m-d H:i:s'),
-                'subscription_expires_at' => $empresa->subscription_expires_at?->format('Y-m-d H:i:s'),
+                'subscription_status' => $latestSub?->estado ?? $empresa->subscription_status,
+                'trial_ends_at' => ($latestSub && $latestSub->estado === 'trial') ? $latestSub->fecha_vencimiento?->format('Y-m-d H:i:s') : $empresa->trial_ends_at?->format('Y-m-d H:i:s'),
+                'subscription_expires_at' => $latestSub?->fecha_vencimiento?->format('Y-m-d H:i:s') ?? $empresa->subscription_expires_at?->format('Y-m-d H:i:s'),
                 'dias_restantes' => $empresa->dias_restantes_suscripcion,
                 'estado_legible' => $empresa->estado_suscripcion_legible,
                 'is_exempt' => $empresa->isExemptFromSubscription(),
-                'billing_cycle' => $empresa->billing_cycle,
-                'max_sucursales' => $empresa->max_sucursales ?? 1,
+                'billing_cycle' => $latestSub ? ($latestSub->ciclo_meses . '_months') : $empresa->billing_cycle,
+                'max_sucursales' => $latestSub?->max_sucursales ?? $empresa->max_sucursales ?? 1,
                 'sucursales_activas' => $totalSucursales,
             ],
             'plan' => $plan,
             'planes' => $planes,
             'opcionesPrecios' => $opcionesPrecios,
             'pagos' => $pagos,
-            'suscripcionActiva' => $suscripcionActiva,
+            'suscripcionActiva' => $latestSub,
             'bcvRate' => $bcvRate,
             'paymentGateways' => $paymentGateways,
         ]);
@@ -184,18 +187,20 @@ class SubscriptionController extends Controller
             ],
         ];
 
+        $latestSub = $empresa?->getLatestSubscriptionRecord();
+
         return inertia('subscription/expired', [
             'empresa' => $empresa ? [
                 'id' => $empresa->id,
                 'razon_social' => $empresa->razon_social,
-                'subscription_status' => $empresa->subscription_status,
-                'trial_ends_at' => $empresa->trial_ends_at?->format('Y-m-d H:i:s'),
-                'subscription_expires_at' => $empresa->subscription_expires_at?->format('Y-m-d H:i:s'),
+                'subscription_status' => $latestSub?->estado ?? $empresa->subscription_status,
+                'trial_ends_at' => ($latestSub && $latestSub->estado === 'trial') ? $latestSub->fecha_vencimiento?->format('Y-m-d H:i:s') : $empresa->trial_ends_at?->format('Y-m-d H:i:s'),
+                'subscription_expires_at' => $latestSub?->fecha_vencimiento?->format('Y-m-d H:i:s') ?? $empresa->subscription_expires_at?->format('Y-m-d H:i:s'),
                 'dias_restantes' => $empresa->dias_restantes_suscripcion,
                 'estado_legible' => $empresa->estado_suscripcion_legible,
                 'is_exempt' => $empresa->isExemptFromSubscription(),
-                'billing_cycle' => $empresa->billing_cycle,
-                'max_sucursales' => $empresa->max_sucursales ?? 1,
+                'billing_cycle' => $latestSub ? ($latestSub->ciclo_meses . '_months') : $empresa->billing_cycle,
+                'max_sucursales' => $latestSub?->max_sucursales ?? $empresa->max_sucursales ?? 1,
                 'sucursales_activas' => $totalSucursales,
             ] : null,
             'plan' => $plan,
@@ -232,9 +237,17 @@ class SubscriptionController extends Controller
         }
 
         $plan = $request->plan_id ? SubscriptionPlan::find($request->plan_id) : SubscriptionPlan::getPlanRenovacionDefault();
-        $montoCalculado = $plan
-            ? $plan->calcularPrecio((int) $request->ciclo_meses, (int) $request->sucursales_contratadas)
-            : 89.00;
+        $hasActivePaidSubscription = $empresa->subscription_status === 'active' && ! $empresa->isExemptFromSubscription();
+
+        if ($hasActivePaidSubscription) {
+            $nuevasSucursales = max(0, (int) $request->sucursales_contratadas - ($empresa->max_sucursales ?? 1));
+            $precioExtra = ($plan?->precio_sucursal_extra_mensual > 0) ? $plan->precio_sucursal_extra_mensual : 10.00;
+            $montoCalculado = round($nuevasSucursales * $precioExtra, 2);
+        } else {
+            $montoCalculado = $plan
+                ? $plan->calcularPrecio((int) $request->ciclo_meses, (int) $request->sucursales_contratadas)
+                : 89.00;
+        }
 
         $comprobantePath = null;
         if ($request->hasFile('comprobante')) {
@@ -273,20 +286,17 @@ class SubscriptionController extends Controller
         ]);
 
         $empresa = $request->user()->empresa;
-        $plan = SubscriptionPlan::firstOrCreate(
-            ['nombre' => 'Plan Full'],
-            [
-                'descripcion' => 'Acceso completo a todos los módulos operativos del sistema (Ventas, Inventario, Caja, Clientes, Créditos, Servicios). Excluye monitoreo e integraciones.',
-                'precio_3_meses' => 89.00,
-                'precio_6_meses' => 159.00,
-                'precio_12_meses' => 288.00,
-                'precio_sucursal_extra_mensual' => 10.00,
-                'sucursales_incluidas' => 1,
-                'modulos_incluidos' => ['ventas', 'cajas', 'inventarios', 'productos', 'servicios', 'clientes', 'creditos', 'metas_ventas'],
-                'activo' => true,
-            ]
-        );
-        $monto = $plan ? $plan->calcularPrecio((int) $request->ciclo_meses, (int) $request->sucursales_contratadas) : 89.00;
+        $planId = $request->input('plan_id');
+        $plan = $planId ? SubscriptionPlan::find($planId) : SubscriptionPlan::getPlanRenovacionDefault();
+        $hasActivePaidSubscription = $empresa->subscription_status === 'active' && ! $empresa->isExemptFromSubscription();
+
+        if ($hasActivePaidSubscription) {
+            $nuevasSucursales = max(0, (int) $request->sucursales_contratadas - ($empresa->max_sucursales ?? 1));
+            $precioExtra = ($plan?->precio_sucursal_extra_mensual > 0) ? $plan->precio_sucursal_extra_mensual : 10.00;
+            $monto = round($nuevasSucursales * $precioExtra, 2);
+        } else {
+            $monto = $plan ? $plan->calcularPrecio((int) $request->ciclo_meses, (int) $request->sucursales_contratadas) : 89.00;
+        }
 
         $masterEmpresa = Empresa::withoutGlobalScopes()->find(1) ?? $empresa;
         $clientId = $masterEmpresa->paypal_client_id;
@@ -366,7 +376,15 @@ class SubscriptionController extends Controller
             $transactionId = $data['purchase_units'][0]['payments']['captures'][0]['id'] ?? $orderId;
             $planId = $request->input('plan_id');
             $plan = $planId ? SubscriptionPlan::find($planId) : SubscriptionPlan::getPlanRenovacionDefault();
-            $monto = $plan ? $plan->calcularPrecio((int) $request->ciclo_meses, (int) $request->sucursales_contratadas) : 89.00;
+            $hasActivePaidSubscription = $empresa->subscription_status === 'active' && ! $empresa->isExemptFromSubscription();
+
+            if ($hasActivePaidSubscription) {
+                $nuevasSucursales = max(0, (int) $request->sucursales_contratadas - ($empresa->max_sucursales ?? 1));
+                $precioExtra = ($plan?->precio_sucursal_extra_mensual > 0) ? $plan->precio_sucursal_extra_mensual : 10.00;
+                $monto = round($nuevasSucursales * $precioExtra, 2);
+            } else {
+                $monto = $plan ? $plan->calcularPrecio((int) $request->ciclo_meses, (int) $request->sucursales_contratadas) : 89.00;
+            }
 
             // Extender fecha de expiración calculando desde la tabla subscriptions
             $latestSub = $empresa->getLatestSubscriptionRecord();
@@ -387,12 +405,16 @@ class SubscriptionController extends Controller
                 'billing_cycle' => (string) $request->ciclo_meses,
             ]);
 
+            $nombrePlan = $hasActivePaidSubscription
+                ? 'Sucursales Adicionales'
+                : Subscription::getNombrePlanByCiclo((int) $request->ciclo_meses);
+
             // Crear el registro de la Suscripción
             $subscription = Subscription::create([
                 'empresa_id' => $empresa->id,
                 'plan_id' => $plan?->id,
-                'nombre_plan' => Subscription::getNombrePlanByCiclo((int) $request->ciclo_meses),
-                'ciclo_meses' => (int) $request->ciclo_meses,
+                'nombre_plan' => $nombrePlan,
+                'ciclo_meses' => $hasActivePaidSubscription ? 0 : (int) $request->ciclo_meses,
                 'max_sucursales' => (int) $request->sucursales_contratadas,
                 'monto_total' => $monto,
                 'fecha_inicio' => now(),
@@ -437,19 +459,20 @@ class SubscriptionController extends Controller
             ->orderBy('id', 'asc')
             ->get()
             ->map(function ($emp) {
+                $sub = $emp->getLatestSubscriptionRecord();
                 return [
                     'id' => $emp->id,
                     'razon_social' => $emp->razon_social,
                     'documento' => $emp->documento,
                     'email' => $emp->email,
                     'telefono' => $emp->telefono,
-                    'subscription_status' => $emp->subscription_status,
-                    'trial_ends_at' => $emp->trial_ends_at?->format('Y-m-d H:i:s'),
-                    'subscription_expires_at' => $emp->subscription_expires_at?->format('Y-m-d H:i:s'),
+                    'subscription_status' => $sub?->estado ?? $emp->subscription_status,
+                    'trial_ends_at' => ($sub && $sub->estado === 'trial') ? $sub->fecha_vencimiento?->format('Y-m-d H:i:s') : $emp->trial_ends_at?->format('Y-m-d H:i:s'),
+                    'subscription_expires_at' => $sub?->fecha_vencimiento?->format('Y-m-d H:i:s') ?? $emp->subscription_expires_at?->format('Y-m-d H:i:s'),
                     'dias_restantes' => $emp->dias_restantes_suscripcion,
                     'estado_legible' => $emp->estado_suscripcion_legible,
                     'is_exempt' => $emp->isExemptFromSubscription(),
-                    'max_sucursales' => $emp->max_sucursales ?? 1,
+                    'max_sucursales' => $sub?->max_sucursales ?? $emp->max_sucursales ?? 1,
                     'total_sucursales' => $emp->sucursales_count ?? 1,
                 ];
             });
@@ -518,12 +541,16 @@ class SubscriptionController extends Controller
 
             $plan = $payment->plan ?? ($payment->plan_id ? SubscriptionPlan::find($payment->plan_id) : SubscriptionPlan::getPlanRenovacionDefault());
 
+            $nombrePlan = $hasActivePaidSubscription
+                ? 'Sucursales Adicionales'
+                : Subscription::getNombrePlanByCiclo($meses);
+
             // Registrar suscripción activa
             $subscription = Subscription::create([
                 'empresa_id' => $empresa->id,
                 'plan_id' => $plan?->id,
-                'nombre_plan' => Subscription::getNombrePlanByCiclo($meses),
-                'ciclo_meses' => $meses,
+                'nombre_plan' => $nombrePlan,
+                'ciclo_meses' => $hasActivePaidSubscription ? 0 : $meses,
                 'max_sucursales' => $payment->sucursales_contratadas,
                 'monto_total' => $payment->monto,
                 'fecha_inicio' => now(),

@@ -56,18 +56,20 @@ class SuperAdminDashboardController extends Controller
 
             return $dias >= 0 && $dias <= 7;
         })->map(function ($emp) {
+            $sub = $emp->getLatestSubscriptionRecord();
             return [
                 'id' => $emp->id,
                 'razon_social' => $emp->razon_social,
                 'documento' => $emp->documento,
                 'email' => $emp->email,
                 'telefono' => $emp->telefono,
-                'subscription_status' => $emp->subscription_status,
+                'subscription_status' => $sub?->estado ?? $emp->subscription_status,
                 'dias_restantes' => $emp->dias_restantes_suscripcion,
-                'fecha_vencimiento' => $emp->subscription_expires_at?->format('d/m/Y')
+                'fecha_vencimiento' => $sub?->fecha_vencimiento?->format('d/m/Y')
+                    ?? $emp->subscription_expires_at?->format('d/m/Y')
                     ?? $emp->trial_ends_at?->format('d/m/Y')
                     ?? 'N/A',
-                'max_sucursales' => $emp->max_sucursales ?? 1,
+                'max_sucursales' => $sub?->max_sucursales ?? $emp->max_sucursales ?? 1,
                 'total_sucursales' => $emp->sucursales_count,
             ];
         })->values();
@@ -121,19 +123,20 @@ class SuperAdminDashboardController extends Controller
 
         // 5. Listado Resumido de Estado Actual de Todas las Empresas
         $empresasResumen = $empresas->map(function ($emp) {
+            $sub = $emp->getLatestSubscriptionRecord();
             return [
                 'id' => $emp->id,
                 'razon_social' => $emp->razon_social,
                 'documento' => $emp->documento,
                 'email' => $emp->email,
                 'telefono' => $emp->telefono,
-                'subscription_status' => $emp->subscription_status,
+                'subscription_status' => $sub?->estado ?? $emp->subscription_status,
                 'estado_legible' => $emp->estado_suscripcion_legible,
                 'dias_restantes' => $emp->dias_restantes_suscripcion,
                 'is_exempt' => $emp->isExemptFromSubscription(),
                 'fecha_vencimiento' => $emp->isExemptFromSubscription()
                     ? 'Permanente'
-                    : ($emp->subscription_expires_at?->format('d/m/Y') ?? $emp->trial_ends_at?->format('d/m/Y') ?? 'N/A'),
+                    : ($sub?->fecha_vencimiento?->format('d/m/Y') ?? $emp->subscription_expires_at?->format('d/m/Y') ?? $emp->trial_ends_at?->format('d/m/Y') ?? 'N/A'),
                 'total_sucursales' => $emp->sucursales_count,
                 'created_at' => $emp->created_at ? $emp->created_at->format('d/m/Y') : 'N/A',
             ];

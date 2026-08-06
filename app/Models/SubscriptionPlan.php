@@ -49,45 +49,24 @@ class SubscriptionPlan extends Model
      */
     public static function ensureDefaultPlansExist(): void
     {
+        // Asegurar que todos los planes activos posean la estructura de precios oficial ($89, $159, $288)
+        self::query()->update([
+            'precio_3_meses' => 89.00,
+            'precio_6_meses' => 159.00,
+            'precio_12_meses' => 288.00,
+            'precio_sucursal_extra_mensual' => 10.00,
+        ]);
 
         self::updateOrCreate(
-            ['nombre' => 'Plan Básico'],
+            ['nombre' => 'Plan Full'],
             [
-                'descripcion' => 'Ideal para emprendedores y pequeños negocios. Incluye Punto de Venta (POS), Inventario y Clientes.',
-                'precio_3_meses' => 49.00,
-                'precio_6_meses' => 89.00,
-                'precio_12_meses' => 159.00,
-                'precio_sucursal_extra_mensual' => 10.00,
-                'sucursales_incluidas' => 1,
-                'modulos_incluidos' => ['ventas', 'cajas', 'inventarios', 'productos', 'clientes'],
-                'activo' => true,
-            ]
-        );
-
-        self::updateOrCreate(
-            ['nombre' => 'Plan Profesional'],
-            [
-                'descripcion' => 'Control total operativo para comercios y talleres. Añade Servicios, Proveedores, Compras, Créditos y Metas.',
+                'descripcion' => 'Acceso completo a todos los módulos operativos del sistema. Control total para tu comercio.',
                 'precio_3_meses' => 89.00,
                 'precio_6_meses' => 159.00,
                 'precio_12_meses' => 288.00,
                 'precio_sucursal_extra_mensual' => 10.00,
                 'sucursales_incluidas' => 1,
-                'modulos_incluidos' => ['ventas', 'cajas', 'inventarios', 'productos', 'servicios', 'clientes', 'proveedores', 'compras', 'creditos', 'metas_ventas'],
-                'activo' => true,
-            ]
-        );
-
-        self::updateOrCreate(
-            ['nombre' => 'Plan Corporativo'],
-            [
-                'descripcion' => 'Solución sin límites para empresas multi-sucursales. Incluye WhatsApp API, Multi-Sucursales y Reportes Avanzados.',
-                'precio_3_meses' => 149.00,
-                'precio_6_meses' => 269.00,
-                'precio_12_meses' => 479.00,
-                'precio_sucursal_extra_mensual' => 10.00,
-                'sucursales_incluidas' => 2,
-                'modulos_incluidos' => ['ventas', 'cajas', 'inventarios', 'productos', 'servicios', 'clientes', 'proveedores', 'compras', 'creditos', 'metas_ventas', 'whatsapp_api', 'multi_sucursales', 'reportes_avanzados'],
+                'modulos_incluidos' => ['ventas', 'cajas', 'inventarios', 'productos', 'servicios', 'clientes', 'proveedores', 'compras', 'creditos', 'metas_ventas', 'multi_sucursales'],
                 'activo' => true,
             ]
         );

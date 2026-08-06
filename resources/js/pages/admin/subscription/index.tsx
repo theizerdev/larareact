@@ -96,6 +96,7 @@ interface PageProps {
     plan: PlanInfo | null;
     opcionesPrecios: Record<number, PlanOption>;
     pagos: PagoItem[];
+    suscripcionActiva?: any;
     bcvRate?: number;
     paymentGateways?: {
         paypal: PaymentGatewayInfo;
@@ -104,14 +105,18 @@ interface PageProps {
     };
 }
 
-export default function SubscriptionIndex({ empresa, plan, opcionesPrecios, pagos, bcvRate = 36.50, paymentGateways }: PageProps) {
+export default function SubscriptionIndex({ empresa, plan, opcionesPrecios, pagos, suscripcionActiva, bcvRate = 36.50, paymentGateways }: PageProps) {
     const { __ } = useTranslate();
     const pageProps = usePage().props as any;
     const { currencySymbol = '$', isVenezuela = false } = pageProps;
 
-    // Determinar ciclo activo pagado si la empresa ya posee una suscripción activa aprobada
-    const hasActivePaidSubscription = empresa.subscription_status === 'active' && !empresa.is_exempt;
-    const activePaidCycle = empresa.billing_cycle ? parseInt(empresa.billing_cycle.replace('_months', '')) : null;
+    // Determinar si la empresa posee una suscripción activa pagada (monto_total > 0 y estado 'active')
+    const hasActivePaidSubscription = empresa.subscription_status === 'active' 
+        && !empresa.is_exempt 
+        && suscripcionActiva 
+        && parseFloat(suscripcionActiva.monto_total ?? 0) > 0 
+        && suscripcionActiva.estado === 'active';
+    const activePaidCycle = (hasActivePaidSubscription && empresa.billing_cycle) ? parseInt(empresa.billing_cycle.replace('_months', '')) : null;
 
     const [selectedCycle, setSelectedCycle] = useState<number>(activePaidCycle && [3, 6, 12].includes(activePaidCycle) ? activePaidCycle : 12);
     const [extraSucursales, setExtraSucursales] = useState<number>(hasActivePaidSubscription ? (empresa.max_sucursales || 1) : Math.max(1, empresa.sucursales_activas));
@@ -128,8 +133,7 @@ export default function SubscriptionIndex({ empresa, plan, opcionesPrecios, pago
         ? Math.max(0, extraSucursales - empresa.max_sucursales)
         : Math.max(0, extraSucursales - (plan?.sucursales_incluidas ?? 1));
     const precioSucursalExtra = (plan?.precio_sucursal_extra_mensual && plan.precio_sucursal_extra_mensual > 0) ? plan.precio_sucursal_extra_mensual : 10;
-    const multiplicadorTiempo = hasActivePaidSubscription ? 1 : selectedCycle;
-    const costoExtraSucursales = sucursalesExtrasCount * precioSucursalExtra * multiplicadorTiempo;
+    const costoExtraSucursales = sucursalesExtrasCount * precioSucursalExtra;
     const precioFinalEstimado = currentSubtotalPlan + costoExtraSucursales;
 
     // Formateador especial estricto para Venezuela (convierte USD a Bolívares según tasa BCV)
