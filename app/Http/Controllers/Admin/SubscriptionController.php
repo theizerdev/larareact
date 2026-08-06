@@ -618,17 +618,42 @@ class SubscriptionController extends Controller
 
         $fechaVencimiento = \Carbon\Carbon::parse($request->fecha_vencimiento);
 
-        if ($request->subscription_status === 'trial') {
+        $status = $request->subscription_status;
+        $maxSucursales = (int) $request->max_sucursales;
+
+        if ($status === 'trial') {
             $empresa->update([
                 'subscription_status' => 'trial',
                 'trial_ends_at' => $fechaVencimiento,
-                'max_sucursales' => (int) $request->max_sucursales,
+                'max_sucursales' => $maxSucursales,
             ]);
         } else {
             $empresa->update([
-                'subscription_status' => $request->subscription_status,
+                'subscription_status' => $status,
                 'subscription_expires_at' => $fechaVencimiento,
-                'max_sucursales' => (int) $request->max_sucursales,
+                'max_sucursales' => $maxSucursales,
+            ]);
+        }
+
+        // Actualizar o registrar en la tabla 'subscriptions'
+        $latestSub = $empresa->subscriptions()->orderBy('id', 'desc')->first();
+        if ($latestSub) {
+            $latestSub->update([
+                'estado' => $status,
+                'fecha_vencimiento' => $fechaVencimiento,
+                'max_sucursales' => $maxSucursales,
+            ]);
+        } else {
+            Subscription::create([
+                'empresa_id' => $empresa->id,
+                'plan_id' => SubscriptionPlan::getPlanRenovacionDefault()?->id,
+                'nombre_plan' => $status === 'trial' ? 'Plan Prueba (7 días)' : 'Plan Profesional',
+                'ciclo_meses' => 12,
+                'max_sucursales' => $maxSucursales,
+                'monto_total' => 0.00,
+                'fecha_inicio' => now(),
+                'fecha_vencimiento' => $fechaVencimiento,
+                'estado' => $status,
             ]);
         }
 

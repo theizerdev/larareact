@@ -139,12 +139,49 @@ class Empresa extends Model
     }
 
     /**
-     * Comprueba si la empresa está en período de prueba gratis (7 días).
+     * Obtiene el registro de suscripción más reciente desde la tabla 'subscriptions'.
+     * Si la empresa no tiene un registro previo en 'subscriptions', crea uno automáticamente.
+     */
+    public function getLatestSubscriptionRecord(): ?Subscription
+    {
+        $sub = $this->subscriptions()->orderBy('id', 'desc')->first();
+
+        if (! $sub && ! $this->isExemptFromSubscription()) {
+            $estado = $this->subscription_status ?: 'trial';
+            $fechaVencimiento = match ($estado) {
+                'trial' => $this->trial_ends_at ?? now()->addDays(7),
+                'active' => $this->subscription_expires_at ?? now()->addYear(),
+                default => $this->subscription_expires_at ?? $this->trial_ends_at ?? now()->addDays(7),
+            };
+
+            $sub = Subscription::create([
+                'empresa_id' => $this->id,
+                'plan_id' => SubscriptionPlan::getPlanRenovacionDefault()?->id,
+                'nombre_plan' => $estado === 'trial' ? 'Plan Prueba (7 días)' : 'Plan Profesional',
+                'ciclo_meses' => $estado === 'trial' ? 0 : 12,
+                'max_sucursales' => $this->max_sucursales ?? 1,
+                'monto_total' => 0.00,
+                'fecha_inicio' => $this->created_at ?? now(),
+                'fecha_vencimiento' => $fechaVencimiento,
+                'estado' => $estado,
+            ]);
+        }
+
+        return $sub;
+    }
+
+    /**
+     * Comprueba si la empresa está en período de prueba gratis (7 días) leyendo la tabla subscriptions.
      */
     public function isOnTrial(): bool
     {
         if ($this->isExemptFromSubscription()) {
             return false;
+        }
+
+        $sub = $this->getLatestSubscriptionRecord();
+        if ($sub && $sub->estado === 'trial' && $sub->fecha_vencimiento) {
+            return now()->lte($sub->fecha_vencimiento);
         }
 
         if ($this->subscription_status === 'trial' && $this->trial_ends_at) {
@@ -155,12 +192,20 @@ class Empresa extends Model
     }
 
     /**
-     * Comprueba si la empresa tiene una suscripción activa o prueba vigente.
+     * Comprueba si la empresa tiene una suscripción activa o prueba vigente leyendo la tabla subscriptions.
      */
     public function hasActiveSubscription(): bool
     {
         if ($this->isExemptFromSubscription()) {
             return true;
+        }
+
+        $sub = $this->getLatestSubscriptionRecord();
+        if ($sub) {
+            if (in_array($sub->estado, ['active', 'trial']) && $sub->fecha_vencimiento) {
+                return now()->lte($sub->fecha_vencimiento);
+            }
+            return false;
         }
 
         if ($this->isOnTrial()) {
@@ -183,7 +228,7 @@ class Empresa extends Model
     }
 
     /**
-     * Retorna los días restantes de prueba o suscripción activa.
+     * Retorna los días restantes de prueba o suscripción activa basándose en la tabla subscriptions.
      */
     public function getDiasRestantesSuscripcionAttribute(): int
     {
@@ -191,11 +236,16 @@ class Empresa extends Model
             return 9999;
         }
 
-        $fechaVencimiento = match ($this->subscription_status) {
-            'trial' => $this->trial_ends_at,
-            'active' => $this->subscription_expires_at,
-            default => null,
-        };
+        $sub = $this->getLatestSubscriptionRecord();
+        $fechaVencimiento = $sub?->fecha_vencimiento;
+
+        if (! $fechaVencimiento) {
+            $fechaVencimiento = match ($this->subscription_status) {
+                'trial' => $this->trial_ends_at,
+                'active' => $this->subscription_expires_at,
+                default => null,
+            };
+        }
 
         if (! $fechaVencimiento) {
             return 0;
