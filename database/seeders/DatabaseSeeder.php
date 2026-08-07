@@ -27,6 +27,7 @@ class DatabaseSeeder extends Seeder
             SubscriptionPlansSeeder::class,
             TestimonioSeeder::class,
             EquiposInicialSeeder::class,
+            ServiciosReparacionSeeder::class,
             //EspecificacionesSeeder::class,
         ]);
     }

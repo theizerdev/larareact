@@ -10,6 +10,7 @@ return new class extends Migration {
             $table->id();
             $table->foreignId('empresa_id')->nullable()->constrained('empresas')->onDelete('set null');
             $table->foreignId('sucursal_id')->nullable()->constrained('sucursales')->onDelete('set null');
+            //$table->foreignId('categoria_id')->nullable()->constrained('categorias')->onDelete('set null');
             $table->string('nombre');
             $table->string('codigo')->nullable();
             $table->text('descripcion')->nullable();

@@ -16,6 +16,7 @@ class Servicio extends Model
     protected $fillable = [
         'empresa_id',
         'sucursal_id',
+        'categoria_id',
         'nombre',
         'codigo',
         'descripcion',
@@ -36,5 +37,10 @@ class Servicio extends Model
     public function sucursal(): BelongsTo
     {
         return $this->belongsTo(Sucursal::class);
+    }
+
+    public function categoria(): BelongsTo
+    {
+        return $this->belongsTo(Categoria::class);
     }
 }
