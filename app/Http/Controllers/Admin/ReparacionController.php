@@ -116,16 +116,9 @@ class ReparacionController extends Controller
             'sucursal_id' => $user->sucursal_id,
         ]));
 
-        if ($request->wantsJson()) {
-            return response()->json([
-                'success' => true,
-                'cliente' => $cliente,
-                'message' => __('Cliente registrado exitosamente.')
-            ]);
-        }
-
-        return back()->with('notification', [
-            'type' => 'success',
+        return response()->json([
+            'success' => true,
+            'cliente' => $cliente,
             'message' => __('Cliente registrado exitosamente.')
         ]);
     }
