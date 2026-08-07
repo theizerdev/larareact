@@ -27,13 +27,8 @@ class OrdenReparacion extends Model
         'modelo_nombre',
         'color',
         'imei_serie',
-        'contrasena_patron',
         'descripcion_falla',
         'observaciones_fisicas',
-        'inspeccion_fisica',
-        'estado_equipo',
-        'accesorios',
-        'evidencias_fotos',
         'tecnico_id',
         'estado_orden',
         'costo_mano_obra',
@@ -49,10 +44,6 @@ class OrdenReparacion extends Model
     ];
 
     protected $casts = [
-        'inspeccion_fisica' => 'array',
-        'estado_equipo' => 'array',
-        'accesorios' => 'array',
-        'evidencias_fotos' => 'array',
         'costo_mano_obra' => 'decimal:2',
         'costo_repuestos' => 'decimal:2',
         'costo_estimado' => 'decimal:2',
@@ -106,5 +97,10 @@ class OrdenReparacion extends Model
     public function historial(): HasMany
     {
         return $this->hasMany(OrdenReparacionHistorial::class, 'orden_id')->orderBy('created_at', 'desc');
+    }
+
+    public function fotos(): HasMany
+    {
+        return $this->hasMany(OrdenReparacionFoto::class, 'orden_id');
     }
 }

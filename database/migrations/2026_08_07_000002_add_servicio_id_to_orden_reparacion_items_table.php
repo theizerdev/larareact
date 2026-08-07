@@ -8,16 +8,20 @@ return new class extends Migration
 {
     public function up(): void
     {
-        Schema::table('orden_reparacion_items', function (Blueprint $table) {
-            $table->foreignId('servicio_id')->nullable()->after('producto_id')->constrained('servicios')->onDelete('set null');
-        });
+        if (!Schema::hasColumn('orden_reparacion_items', 'servicio_id')) {
+            Schema::table('orden_reparacion_items', function (Blueprint $table) {
+                $table->foreignId('servicio_id')->nullable()->after('producto_id')->constrained('servicios')->onDelete('set null');
+            });
+        }
     }
 
     public function down(): void
     {
-        Schema::table('orden_reparacion_items', function (Blueprint $table) {
-            $table->dropForeign(['servicio_id']);
-            $table->dropColumn('servicio_id');
-        });
+        if (Schema::hasColumn('orden_reparacion_items', 'servicio_id')) {
+            Schema::table('orden_reparacion_items', function (Blueprint $table) {
+                $table->dropForeign(['servicio_id']);
+                $table->dropColumn('servicio_id');
+            });
+        }
     }
 };

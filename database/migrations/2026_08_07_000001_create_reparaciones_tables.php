@@ -25,16 +25,10 @@ return new class extends Migration
             $table->string('modelo_nombre')->nullable();
             $table->string('color')->nullable();
             $table->string('imei_serie')->nullable()->index();
-            $table->string('contrasena_patron')->nullable();
-
             $table->text('descripcion_falla');
             $table->text('observaciones_fisicas')->nullable();
 
-            // Checklist de Inspección Física (12 puntos) & Estado del Equipo (5 preguntas)
-            $table->json('inspeccion_fisica')->nullable();
-            $table->json('estado_equipo')->nullable();
-            $table->json('accesorios')->nullable();
-            $table->json('evidencias_fotos')->nullable();
+     
 
             $table->foreignId('tecnico_id')->nullable()->constrained('users')->onDelete('set null');
 
@@ -87,10 +81,20 @@ return new class extends Migration
             $table->text('comentario')->nullable();
             $table->timestamps();
         });
+
+        Schema::create('orden_reparacion_fotos', function (Blueprint $table) {
+            $table->id();
+            $table->foreignId('orden_id')->constrained('ordenes_reparacion')->onDelete('cascade');
+            $table->string('angulo')->default('frente');
+            $table->longText('url');
+            $table->string('descripcion')->nullable();
+            $table->timestamps();
+        });
     }
 
     public function down(): void
     {
+        Schema::dropIfExists('orden_reparacion_fotos');
         Schema::dropIfExists('orden_reparacion_historial');
         Schema::dropIfExists('orden_reparacion_items');
         Schema::dropIfExists('ordenes_reparacion');

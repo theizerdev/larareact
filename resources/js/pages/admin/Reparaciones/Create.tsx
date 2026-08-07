@@ -157,49 +157,6 @@ export default function CreateReparacion({ clientes: initialClientes, marcas: in
     });
     const [isCreatingServicio, setIsCreatingServicio] = useState(false);
 
-    // 12 Puntos de Inspección Física
-    const elementosInspeccion = [
-        { key: 'Pantalla', label: 'Pantalla / Display' },
-        { key: 'Cristal trasero', label: 'Cristal Trasero / Tapa' },
-        { key: 'Marco', label: 'Marco / Bisel' },
-        { key: 'Botones', label: 'Botones (Power/Vol)' },
-        { key: 'Bandeja SIM', label: 'Bandeja SIM / MicroSD' },
-        { key: 'Cámara trasera', label: 'Cámara Trasera' },
-        { key: 'Cámara frontal', label: 'Cámara Frontal' },
-        { key: 'Tornillos', label: 'Tornillos Chasis' },
-        { key: 'Tapa trasera', label: 'Tapa / Carcasa' },
-        { key: 'Puerto de carga', label: 'Puerto de Carga' },
-        { key: 'Humedad visible', label: 'Sensor de Humedad' },
-        { key: 'Equipo doblado', label: 'Chasis Doblado/Curvo' },
-    ];
-
-    const [inspeccionState, setInspeccionState] = useState<Record<string, { estado: 'bueno' | 'malo' | 'no_aplica'; obs: string }>>(
-        elementosInspeccion.reduce((acc, el) => {
-            acc[el.key] = { estado: 'bueno', obs: '' };
-            return acc;
-        }, {} as Record<string, { estado: 'bueno' | 'malo' | 'no_aplica'; obs: string }>)
-    );
-
-    // 5 Revisiones de Estado Operativo
-    const [estadoEquipoState, setEstadoEquipoState] = useState({
-        enciende: 'si',
-        carga_bateria: 'si',
-        entra_sistema: 'si',
-        tiene_bloqueo: 'no',
-        proporciona_contrasena: 'no',
-    });
-
-    const [accesoriosState, setAccesoriosState] = useState({
-        cargador: false,
-        funda: false,
-        bandeja_sim: false,
-        tarjeta_sd: false,
-    });
-
-    // Estado del Patrón de Desbloqueo (Grid 3x3)
-    const [tipoBloqueo, setTipoBloqueo] = useState<'password' | 'pattern' | 'none'>('password');
-    const [patronSecuencia, setPatronSecuencia] = useState<number[]>([]);
-
     // 4 Ángulos de Evidencias Fotográficas
     const [fotosState, setFotosState] = useState<Record<string, string>>({
         frente: '',
@@ -803,9 +760,6 @@ export default function CreateReparacion({ clientes: initialClientes, marcas: in
 
         transform((prevData) => ({
             ...prevData,
-            inspeccion_fisica: inspeccionState,
-            estado_equipo: estadoEquipoState,
-            accesorios: accesoriosState,
             servicios_seleccionados: cartServicios,
         }));
 

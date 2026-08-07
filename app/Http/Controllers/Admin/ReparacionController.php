@@ -11,6 +11,7 @@ use App\Models\Modelo;
 use App\Models\OrdenReparacion;
 use App\Models\OrdenReparacionHistorial;
 use App\Models\OrdenReparacionItem;
+use App\Models\OrdenReparacionFoto;
 use App\Models\Pais;
 use App\Models\Producto;
 use App\Models\User;
@@ -322,12 +323,8 @@ class ReparacionController extends Controller
             'modelo_nombre' => 'required|string|max:255',
             'color' => 'nullable|string|max:100',
             'imei_serie' => 'nullable|string|max:100',
-            'contrasena_patron' => 'nullable|string|max:255',
             'descripcion_falla' => 'required|string',
             'observaciones_fisicas' => 'nullable|string',
-            'inspeccion_fisica' => 'nullable|array',
-            'estado_equipo' => 'nullable|array',
-            'accesorios' => 'nullable|array',
             'tecnico_id' => 'nullable|exists:users,id',
             'costo_estimado' => 'required|numeric|min:0',
             'anticipo' => 'nullable|numeric|min:0',
@@ -348,9 +345,11 @@ class ReparacionController extends Controller
         $anticipo = (float) ($validated['anticipo'] ?? 0);
         $saldoRestante = max(0, $costoEstimado - $anticipo);
 
-        // Remover servicios_seleccionados antes de crear la orden
+        // Remover campos que se guardan en tablas secundarias antes de crear la orden
         $serviciosSeleccionados = $validated['servicios_seleccionados'] ?? [];
+        $evidenciasFotos = $validated['evidencias_fotos'] ?? [];
         unset($validated['servicios_seleccionados']);
+        unset($validated['evidencias_fotos']);
 
         $ordenData = array_merge($validated, [
             'empresa_id' => $empresaId,
@@ -402,6 +401,23 @@ class ReparacionController extends Controller
             }
         }
 
+        // Guardar evidencias fotográficas en la tabla orden_reparacion_fotos
+        if (!empty($evidenciasFotos)) {
+            $hasFotosTable = \Illuminate\Support\Facades\Schema::hasTable('orden_reparacion_fotos');
+            if ($hasFotosTable) {
+                foreach ($evidenciasFotos as $angulo => $url) {
+                    if (!empty($url)) {
+                        OrdenReparacionFoto::create([
+                            'orden_id' => $orden->id,
+                            'angulo' => $angulo,
+                            'url' => $url,
+                            'descripcion' => "Fotografía de recepción - " . ucfirst(str_replace('_', ' ', $angulo)),
+                        ]);
+                    }
+                }
+            }
+        }
+
         // Registro de Historial inicial
         OrdenReparacionHistorial::create([
             'orden_id' => $orden->id,
@@ -417,9 +433,14 @@ class ReparacionController extends Controller
         ]);
     }
 
-    public function show(OrdenReparacion $reparacion)
+    public function show($id)
     {
-        $reparacion->load(['cliente', 'marca', 'modelo', 'tecnico', 'items.producto', 'items.servicio', 'historial.user', 'sale']);
+        $reparacion = OrdenReparacion::find($id);
+        $relations = ['cliente', 'marca', 'modelo', 'tecnico', 'items.producto', 'items.servicio', 'historial.user', 'sale'];
+        if (\Illuminate\Support\Facades\Schema::hasTable('orden_reparacion_fotos')) {
+            $relations[] = 'fotos';
+        }
+        $reparacion->load($relations);
 
         $user = auth()->user();
         $empresaId = $user->empresa_id;
