@@ -1,5 +1,4 @@
 import { Head, useForm, Link, router } from '@inertiajs/react';
-import axios from 'axios';
 import {
     Wrench,
     User,
@@ -257,6 +256,22 @@ export default function CreateReparacion({ clientes: initialClientes, marcas: in
         setSearchClienteTerm('');
     };
 
+    // Helper para peticiones JSON asíncronas sin recarga de página mediante fetch nativo
+    const postJson = async (url: string, bodyObj: any) => {
+        const csrfToken = (document.querySelector('meta[name="csrf-token"]') as HTMLMetaElement)?.content || '';
+        const response = await fetch(url, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Accept': 'application/json',
+                'X-CSRF-TOKEN': csrfToken,
+                'X-Requested-With': 'XMLHttpRequest',
+            },
+            body: JSON.stringify(bodyObj),
+        });
+        return await response.json();
+    };
+
     // Crear Nuevo Cliente desde el Modal (sin recarga)
     const handleCreateNewClient = async (e?: React.SyntheticEvent) => {
         if (e) {
@@ -267,9 +282,9 @@ export default function CreateReparacion({ clientes: initialClientes, marcas: in
 
         setIsCreatingClient(true);
         try {
-            const response = await axios.post('/admin/reparaciones/quick-cliente', newClientData);
-            if (response.data.success) {
-                const newClient = response.data.cliente;
+            const dataRes = await postJson('/admin/reparaciones/quick-cliente', newClientData);
+            if (dataRes.success) {
+                const newClient = dataRes.cliente;
                 setClientesList((prev) => [newClient, ...prev]);
                 setData((prev) => ({
                     ...prev,
@@ -281,6 +296,8 @@ export default function CreateReparacion({ clientes: initialClientes, marcas: in
                 setOpenNewClientModal(false);
                 setNewClientData({ nombre: '', telefono: '', email: '', direccion: '' });
                 notifySuccess(__('Nuevo cliente registrado y seleccionado.'));
+            } else {
+                notifyError(__('Ocurrió un error al registrar el cliente.'));
             }
         } catch (error) {
             notifyError(__('Ocurrió un error al registrar el cliente.'));
@@ -299,9 +316,9 @@ export default function CreateReparacion({ clientes: initialClientes, marcas: in
 
         setIsCreatingMarca(true);
         try {
-            const response = await axios.post('/admin/reparaciones/quick-marca', { nombre: newMarcaNombre.trim() });
-            if (response.data.success) {
-                const newMarca: MarcaItem = response.data.marca;
+            const dataRes = await postJson('/admin/reparaciones/quick-marca', { nombre: newMarcaNombre.trim() });
+            if (dataRes.success) {
+                const newMarca: MarcaItem = dataRes.marca;
                 setMarcasList((prev) => [...prev, newMarca]);
                 setSelectedMarcaId(String(newMarca.id));
                 setModelosFiltrados([]);
@@ -315,6 +332,8 @@ export default function CreateReparacion({ clientes: initialClientes, marcas: in
                 setOpenNewMarcaModal(false);
                 setNewMarcaNombre('');
                 notifySuccess(__('Nueva marca registrada exitosamente.'));
+            } else {
+                notifyError(__('Ocurrió un error al registrar la marca.'));
             }
         } catch (error) {
             notifyError(__('Ocurrió un error al registrar la marca.'));
@@ -341,13 +360,13 @@ export default function CreateReparacion({ clientes: initialClientes, marcas: in
 
         setIsCreatingModelo(true);
         try {
-            const response = await axios.post('/admin/reparaciones/quick-modelo', {
+            const dataRes = await postJson('/admin/reparaciones/quick-modelo', {
                 marca_id: marcaIdToUse,
                 nombre_comercial: newModeloNombre.trim(),
                 codigo_modelo: newModeloCodigo.trim(),
             });
-            if (response.data.success) {
-                const newModelo: ModeloItem = response.data.modelo;
+            if (dataRes.success) {
+                const newModelo: ModeloItem = dataRes.modelo;
                 setModelosFiltrados((prev) => [...prev, newModelo]);
                 setMarcasList((prevMarcas) =>
                     prevMarcas.map((m) =>
@@ -366,6 +385,8 @@ export default function CreateReparacion({ clientes: initialClientes, marcas: in
                 setNewModeloNombre('');
                 setNewModeloCodigo('');
                 notifySuccess(__('Nuevo modelo registrado exitosamente.'));
+            } else {
+                notifyError(__('Ocurrió un error al registrar el modelo.'));
             }
         } catch (error) {
             notifyError(__('Ocurrió un error al registrar el modelo.'));
