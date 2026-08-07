@@ -45,4 +45,9 @@ class Categoria extends Model
     {
         return $this->hasMany(Modelo::class);
     }
+
+    public function servicios(): HasMany
+    {
+        return $this->hasMany(Servicio::class);
+    }
 }

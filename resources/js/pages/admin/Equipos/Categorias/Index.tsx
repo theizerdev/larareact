@@ -1,5 +1,5 @@
 import { Head, useForm, router } from '@inertiajs/react';
-import { Layers, Plus, CheckCircle, XCircle, MoreVertical, Pencil, Trash2 } from 'lucide-react';
+import { Layers, Plus, CheckCircle, XCircle, MoreVertical, Pencil, Trash2, Wrench } from 'lucide-react';
 import React, { useState } from 'react';
 import { Breadcrumbs } from '@/components/breadcrumbs';
 import type { ColumnDef } from '@/components/data-table';
@@ -38,6 +38,7 @@ interface Categoria {
     icono?: string;
     estado: boolean;
     modelos_count?: number;
+    servicios_count?: number;
 }
 
 interface Props {
@@ -155,6 +156,16 @@ export default function Index({ categorias, filters }: Props) {
             cell: (categoria) => (
                 <span className="inline-flex items-center rounded-full bg-slate-100 dark:bg-slate-800 px-2.5 py-0.5 text-xs font-semibold text-slate-700 dark:text-slate-300">
                     {categoria.modelos_count || 0} modelos
+                </span>
+            ),
+        },
+        {
+            header: __('Servicios Asociados'),
+            accessorKey: 'servicios_count',
+            cell: (categoria) => (
+                <span className="inline-flex items-center rounded-full bg-purple-50 dark:bg-purple-950/40 border border-purple-200 dark:border-purple-800 px-2.5 py-0.5 text-xs font-semibold text-purple-700 dark:text-purple-300">
+                    <Wrench className="w-3 h-3 mr-1 text-purple-600" />
+                    {categoria.servicios_count || 0} servicios
                 </span>
             ),
         },

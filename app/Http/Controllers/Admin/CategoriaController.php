@@ -10,13 +10,31 @@ use Illuminate\Support\Str;
 
 class CategoriaController extends Controller
 {
+    private function getCurrencySymbol(): string
+    {
+        $user = auth()->user();
+        if (!$user) return '$';
+        $empresa = $user->empresa ?? ($user->empresa_id ? \App\Models\Empresa::find($user->empresa_id) : null);
+        if ($empresa && $empresa->pais_id) {
+            $pais = \App\Models\Pais::find($empresa->pais_id);
+            if ($pais && !empty($pais->simbolo_moneda)) {
+                return $pais->simbolo_moneda;
+            }
+        }
+        return '$';
+    }
+
     public function index(Request $request)
     {
         $search = $request->input('search');
         $status = $request->input('status');
         $perPage = $request->input('perPage', 10);
 
-        $query = Categoria::withCount('modelos');
+        $query = Categoria::with([
+            'modelos:id,nombre_comercial,codigo_modelo,marca_id,categoria_id',
+            'modelos.marca:id,nombre',
+            'servicios:id,categoria_id,nombre,codigo,precio,estado',
+        ])->withCount(['modelos', 'servicios']);
 
         if ($search) {
             $query->where('nombre', 'like', "%{$search}%");
@@ -31,6 +49,7 @@ class CategoriaController extends Controller
         return inertia('admin/Equipos/Categorias/Index', [
             'categorias' => $categorias,
             'filters' => $request->only(['search', 'status', 'perPage']),
+            'currencySymbol' => $this->getCurrencySymbol(),
         ]);
     }
 
