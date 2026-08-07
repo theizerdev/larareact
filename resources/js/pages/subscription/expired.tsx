@@ -146,7 +146,7 @@ export default function SubscriptionExpired({ empresa, plan, planes = [], opcion
     };
 
     return (
-        <div className="p-4 sm:p-6 lg:p-8 max-w-4xl mx-auto space-y-6">
+        <div className="p-4 sm:p-6 lg:p-8 w-full space-y-6">
             <Head title={__('Suscripción Vencida')} />
 
             {/* Header Alerta */}
