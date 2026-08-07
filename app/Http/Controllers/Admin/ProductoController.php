@@ -60,6 +60,15 @@ class ProductoController extends Controller
             $query->where('condicion', $condicion);
         }
 
+        // Filtro por Tipo de Producto (venta, repuesto, servicio)
+        if ($tipoProducto = $request->input('tipo_producto')) {
+            if (Schema::hasColumn('productos', 'tipo_producto')) {
+                $query->where('tipo_producto', $tipoProducto);
+            } else if ($tipoProducto === 'repuesto') {
+                $query->where('condicion', 'repuesto');
+            }
+        }
+
         // Ordenación
         $sortBy = $request->input('sortBy', 'created_at');
         $sortDir = $request->input('sortDir', 'desc');
@@ -113,18 +122,27 @@ class ProductoController extends Controller
         $stockBajoCount = Producto::whereColumn('stock', '<=', 'stock_minimo')->where('usa_inventario', true)->count();
         $valorInventario = Producto::selectRaw('SUM(stock * precio_venta) as total')->value('total') ?? 0;
 
+        $hasTipoCol = Schema::hasColumn('productos', 'tipo_producto');
+        $tipoCounts = [
+            'todos' => $totalProductos,
+            'venta' => $hasTipoCol ? Producto::where('tipo_producto', 'venta')->count() : Producto::where('condicion', '!=', 'repuesto')->count(),
+            'repuesto' => $hasTipoCol ? Producto::where('tipo_producto', 'repuesto')->count() : Producto::where('condicion', 'repuesto')->count(),
+            'servicio' => $hasTipoCol ? Producto::where('tipo_producto', 'servicio')->count() : 0,
+        ];
+
         return Inertia::render('admin/Productos/Index', [
             'productos' => ProductoResource::collection($productos),
             'categorias' => $categorias,
             'marcas' => $marcas,
             'familias' => $familias,
             'modelos' => $modelos,
-            'filters' => $request->only(['search', 'modelo_id', 'condicion', 'sortBy', 'sortDir', 'perPage']),
+            'filters' => $request->only(['search', 'modelo_id', 'condicion', 'tipo_producto', 'sortBy', 'sortDir', 'perPage']),
             'stats' => [
                 'totalProductos' => $totalProductos,
                 'stockTotal' => (float) $stockTotal,
                 'stockBajoCount' => $stockBajoCount,
                 'valorInventario' => (float) $valorInventario,
+                'tipoCounts' => $tipoCounts,
             ],
         ]);
     }

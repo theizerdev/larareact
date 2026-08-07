@@ -20,6 +20,7 @@ class ProductoResource extends JsonResource
             'codigo_barras' => $this->codigo_barras,
             'nombre_variante' => $this->nombre_variante,
             'condicion' => $this->condicion,
+            'tipo_producto' => $this->tipo_producto ?? ($this->condicion === 'repuesto' ? 'repuesto' : 'venta'),
             'tipo_venta' => $this->tipo_venta,
             'usa_inventario' => (bool) $this->usa_inventario,
             'precio_compra' => (float) $this->precio_compra,

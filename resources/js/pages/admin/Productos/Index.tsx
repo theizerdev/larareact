@@ -88,6 +88,7 @@ interface Producto {
     codigo_barras?: string;
     nombre_variante: string;
     condicion: 'nuevo' | 'usado' | 'reacondicionado' | 'repuesto';
+    tipo_producto?: 'venta' | 'repuesto' | 'servicio';
     tipo_venta: 'unidad' | 'granel' | 'paquete';
     usa_inventario: boolean;
     variant_specs?: Record<string, string>;
@@ -132,6 +133,7 @@ interface Props {
         search?: string;
         modelo_id?: string;
         condicion?: string;
+        tipo_producto?: string;
         sortBy?: string;
         sortDir?: string;
         perPage?: string;
@@ -141,6 +143,12 @@ interface Props {
         stockTotal: number;
         stockBajoCount: number;
         valorInventario: number;
+        tipoCounts?: {
+            todos: number;
+            venta: number;
+            repuesto: number;
+            servicio: number;
+        };
     };
 }
 
@@ -149,6 +157,11 @@ export default function Index({ productos, categorias: categoriasProp, marcas: m
     const [isCreateOpen, setIsCreateOpen] = useState(false);
     const [activeTab, setActiveTab] = useState<string>('general');
     const [editingProducto, setEditingProducto] = useState<Producto | null>(null);
+
+    // Filtro por tipo de producto en tabla
+    const [tipoProductoFilter, setTipoProductoFilter] = useState<string>(filters.tipo_producto || 'all');
+    const [modeloFilter, setModeloFilter] = useState<string>(filters.modelo_id || 'all');
+    const [condicionFilter, setCondicionFilter] = useState<string>(filters.condicion || 'all');
 
     // Estados dinámicos para mantener listas actualizadas al crear sub-elementos en caliente
     const [categorias, setCategorias] = useState<Option[]>(categoriasProp);
@@ -192,8 +205,6 @@ export default function Index({ productos, categorias: categoriasProp, marcas: m
 
     // Filtros de tabla
     const [searchTerm, setSearchTerm] = useState(filters.search || '');
-    const [modeloFilter, setModeloFilter] = useState(filters.modelo_id || 'all');
-    const [condicionFilter, setCondicionFilter] = useState(filters.condicion || 'all');
 
     // Inertia Form
     const { data, setData, post, put, processing, errors, reset } = useForm({
@@ -202,6 +213,7 @@ export default function Index({ productos, categorias: categoriasProp, marcas: m
         codigo_barras: '',
         nombre_variante: '',
         condicion: 'nuevo',
+        tipo_producto: 'venta',
         tipo_venta: 'unidad',
         usa_inventario: true,
         variant_specs: {} as Record<string, string>,
@@ -264,13 +276,15 @@ export default function Index({ productos, categorias: categoriasProp, marcas: m
         return true;
     });
 
-    const handleFilter = () => {
+    const handleFilter = (customTipo?: string) => {
+        const targetTipo = customTipo !== undefined ? customTipo : tipoProductoFilter;
         router.get(
             '/admin/productos',
             cleanParams({
                 search: searchTerm,
                 modelo_id: modeloFilter === 'all' ? undefined : modeloFilter,
                 condicion: condicionFilter === 'all' ? undefined : condicionFilter,
+                tipo_producto: targetTipo === 'all' ? undefined : targetTipo,
             }),
             { preserveState: true, preserveScroll: true }
         );
@@ -280,6 +294,7 @@ export default function Index({ productos, categorias: categoriasProp, marcas: m
         setSearchTerm('');
         setModeloFilter('all');
         setCondicionFilter('all');
+        setTipoProductoFilter('all');
         router.get('/admin/productos', {}, { preserveState: true, preserveScroll: true });
     };
 
@@ -306,6 +321,7 @@ export default function Index({ productos, categorias: categoriasProp, marcas: m
             codigo_barras: prod.codigo_barras || '',
             nombre_variante: prod.nombre_variante,
             condicion: prod.condicion,
+            tipo_producto: prod.tipo_producto || (prod.condicion === 'repuesto' ? 'repuesto' : 'venta'),
             tipo_venta: prod.tipo_venta || 'unidad',
             usa_inventario: prod.usa_inventario ?? true,
             variant_specs: prod.variant_specs || {},
@@ -818,6 +834,19 @@ export default function Index({ productos, categorias: categoriasProp, marcas: m
 
     const filterFields: FilterField[] = [
         {
+            name: 'tipo_producto',
+            label: __('Tipo de Inventario'),
+            type: 'select',
+            options: [
+                { label: __('Todos los tipos'), value: 'all' },
+                { label: __('🛍️ Productos Venta (POS)'), value: 'venta' },
+                { label: __('🛠️ Repuestos Taller'), value: 'repuesto' },
+                { label: __('⚡ Servicios'), value: 'servicio' },
+            ],
+            value: tipoProductoFilter,
+            onChange: (val) => { setTipoProductoFilter(val); handleFilter(val); },
+        },
+        {
             name: 'modelo_id',
             label: __('Modelo de Equipo'),
             type: 'select',
@@ -903,6 +932,59 @@ export default function Index({ productos, categorias: categoriasProp, marcas: m
                         icon={<DollarSign className="h-5 w-5 text-purple-500" />}
                         description={__('Valoración total a precio de venta')}
                     />
+                </div>
+
+                {/* Pestañas de Filtrado Rápido por Tipo de Inventario */}
+                <div className="flex flex-wrap items-center gap-2 p-1.5 bg-slate-100 dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800">
+                    <button
+                        type="button"
+                        onClick={() => { setTipoProductoFilter('all'); handleFilter('all'); }}
+                        className={cn(
+                            "px-3.5 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer",
+                            tipoProductoFilter === 'all'
+                                ? "bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 shadow-xs border border-slate-200 dark:border-slate-700"
+                                : "text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200"
+                        )}
+                    >
+                        <Boxes className="w-3.5 h-3.5 text-slate-500" />
+                        {__('Todos los Productos')} ({stats.tipoCounts?.todos ?? stats.totalProductos})
+                    </button>
+                    <button
+                        type="button"
+                        onClick={() => { setTipoProductoFilter('venta'); handleFilter('venta'); }}
+                        className={cn(
+                            "px-3.5 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer",
+                            tipoProductoFilter === 'venta'
+                                ? "bg-blue-600 text-white shadow-xs"
+                                : "text-slate-600 dark:text-slate-400 hover:text-blue-600 dark:hover:text-blue-400"
+                        )}
+                    >
+                        🛍️ {__('Productos Venta POS')} ({stats.tipoCounts?.venta ?? 0})
+                    </button>
+                    <button
+                        type="button"
+                        onClick={() => { setTipoProductoFilter('repuesto'); handleFilter('repuesto'); }}
+                        className={cn(
+                            "px-3.5 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer",
+                            tipoProductoFilter === 'repuesto'
+                                ? "bg-purple-600 text-white shadow-xs"
+                                : "text-slate-600 dark:text-slate-400 hover:text-purple-600 dark:hover:text-purple-400"
+                        )}
+                    >
+                        🛠️ {__('Repuestos Taller')} ({stats.tipoCounts?.repuesto ?? 0})
+                    </button>
+                    <button
+                        type="button"
+                        onClick={() => { setTipoProductoFilter('servicio'); handleFilter('servicio'); }}
+                        className={cn(
+                            "px-3.5 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer",
+                            tipoProductoFilter === 'servicio'
+                                ? "bg-amber-600 text-white shadow-xs"
+                                : "text-slate-600 dark:text-slate-400 hover:text-amber-600 dark:hover:text-amber-400"
+                        )}
+                    >
+                        ⚡ {__('Servicios')} ({stats.tipoCounts?.servicio ?? 0})
+                    </button>
                 </div>
 
                 {/* Barra de Filtros */}
@@ -1154,6 +1236,46 @@ export default function Index({ productos, categorias: categoriasProp, marcas: m
                                                         className="font-mono text-xs bg-slate-100 dark:bg-slate-800 cursor-not-allowed text-slate-700 dark:text-slate-300"
                                                     />
                                                     {errors.sku && <p className="text-xs text-rose-500">{errors.sku}</p>}
+                                                </div>
+
+                                                {/* Tipo de Inventario / Destino */}
+                                                <div className="md:col-span-12 space-y-1.5 pt-1">
+                                                    <Label htmlFor="tipo_producto_form" className="text-xs font-bold text-slate-800 dark:text-slate-200 flex items-center gap-1.5">
+                                                        <Boxes className="w-3.5 h-3.5 text-purple-600" />
+                                                        {__('Tipo de Inventario / Destino del Producto *')}
+                                                    </Label>
+                                                    <Select
+                                                        value={data.tipo_producto || 'venta'}
+                                                        onValueChange={(val) => {
+                                                            setData((prev) => ({
+                                                                ...prev,
+                                                                tipo_producto: val as any,
+                                                                condicion: val === 'repuesto' ? 'repuesto' : prev.condicion,
+                                                            }));
+                                                        }}
+                                                    >
+                                                        <SelectTrigger id="tipo_producto_form" className="text-xs h-9 font-semibold bg-white dark:bg-slate-900 border-purple-200 dark:border-purple-900">
+                                                            <SelectValue />
+                                                        </SelectTrigger>
+                                                        <SelectContent>
+                                                            <SelectItem value="venta" className="text-xs font-bold text-blue-700 dark:text-blue-300">
+                                                                🛍️ {__('Producto para Venta POS (Comercial / Venta Directa en Caja)')}
+                                                            </SelectItem>
+                                                            <SelectItem value="repuesto" className="text-xs font-bold text-purple-700 dark:text-purple-300">
+                                                                🛠️ {__('Repuesto / Refacción de Taller (Asignable a Órdenes de Reparación)')}
+                                                            </SelectItem>
+                                                            <SelectItem value="servicio" className="text-xs font-bold text-amber-700 dark:text-amber-300">
+                                                                ⚡ {__('Servicio Técnico / Mano de Obra (Intangible sin stock físico)')}
+                                                            </SelectItem>
+                                                        </SelectContent>
+                                                    </Select>
+                                                    <p className="text-[11px] text-muted-foreground">
+                                                        {data.tipo_producto === 'repuesto'
+                                                            ? __('Este item se listará prioritariamente al asignar piezas en el Servicio Técnico de Reparaciones.')
+                                                            : (data.tipo_producto === 'servicio'
+                                                                ? __('Este item representa un servicio o trabajo técnico intangibe.')
+                                                                : __('Este item estará disponible en el Punto de Venta (POS) para venta libre.'))}
+                                                    </p>
                                                 </div>
                                             </div>
                                         </div>

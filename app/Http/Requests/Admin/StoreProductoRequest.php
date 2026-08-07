@@ -27,6 +27,7 @@ class StoreProductoRequest extends FormRequest
             'codigo_barras' => ['nullable', 'string', 'max:100', 'unique:productos,codigo_barras'],
             'nombre_variante' => ['required', 'string', 'max:255'],
             'condicion' => ['required', 'string', 'in:nuevo,usado,reacondicionado,repuesto'],
+            'tipo_producto' => ['nullable', 'string', 'in:venta,repuesto,servicio'],
             'tipo_venta' => ['required', 'string', 'in:unidad,granel,paquete'],
             'usa_inventario' => ['boolean'],
             'variant_specs' => ['nullable', 'array'],

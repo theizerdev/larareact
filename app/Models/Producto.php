@@ -23,6 +23,7 @@ class Producto extends Model
         'codigo_barras',
         'nombre_variante',
         'condicion',
+        'tipo_producto',
         'tipo_venta',
         'usa_inventario',
         'variant_specs',

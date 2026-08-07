@@ -20,6 +20,7 @@ import {
     ShieldCheck,
     History,
     Camera,
+    Sparkles,
 } from 'lucide-react';
 import React, { useState } from 'react';
 import { Breadcrumbs } from '@/components/breadcrumbs';
@@ -30,7 +31,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Select, SelectContent, SelectGroup, SelectItem, SelectLabel, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
 import { useTranslate } from '@/hooks/use-translate';
 import { notifySuccess, notifyError } from '@/utils/notifications';
@@ -87,10 +88,17 @@ interface Orden {
 
 interface ProductoRepuesto {
     id: number;
-    codigo: string;
-    nombre: string;
+    sku?: string;
+    codigo_barras?: string;
+    nombre_variante?: string;
+    nombre?: string;
     precio_venta: number;
     stock: number;
+    marca_id?: number;
+    modelo_id?: number;
+    condicion?: string;
+    marca?: { id: number; nombre: string };
+    modelo?: { id: number; nombre_comercial: string };
 }
 
 interface Props {
@@ -100,7 +108,7 @@ interface Props {
     currencySymbol: string;
 }
 
-export default function ShowReparacion({ orden, productosRepuestos, tecnicos, currencySymbol }: Props) {
+export default function ShowReparacion({ orden, productosRepuestos = [], tecnicos, currencySymbol }: Props) {
     const { __ } = useTranslate();
 
     const [openStatusModal, setOpenStatusModal] = useState(false);
@@ -112,6 +120,14 @@ export default function ShowReparacion({ orden, productosRepuestos, tecnicos, cu
     const [selectedProductoId, setSelectedProductoId] = useState('');
     const [cantidadRepuesto, setCantidadRepuesto] = useState('1');
     const [isSubmittingItem, setIsSubmittingItem] = useState(false);
+
+    // Repuestos agrupados por compatibilidad con el equipo de la orden
+    const repuestosCompatibles = productosRepuestos.filter(
+        (p) => (orden.modelo_id && p.modelo_id === orden.modelo_id) || (orden.marca_id && p.marca_id === orden.marca_id)
+    );
+    const otrosRepuestos = productosRepuestos.filter(
+        (p) => !((orden.modelo_id && p.modelo_id === orden.modelo_id) || (orden.marca_id && p.marca_id === orden.marca_id))
+    );
 
     // Formulario Mano de Obra
     const [manoObraInput, setManoObraInput] = useState(String(orden.costo_mano_obra || 0));
@@ -498,11 +514,39 @@ export default function ShowReparacion({ orden, productosRepuestos, tecnicos, cu
                                                 <SelectValue placeholder={__('Buscar repuesto en inventario...')} />
                                             </SelectTrigger>
                                             <SelectContent>
-                                                {productosRepuestos.map((p) => (
-                                                    <SelectItem key={p.id} value={String(p.id)} className="text-xs">
-                                                        {p.nombre} ({p.codigo}) - {currencySymbol}{p.precio_venta} [Stock: {p.stock}]
-                                                    </SelectItem>
-                                                ))}
+                                                {repuestosCompatibles.length > 0 && (
+                                                    <SelectGroup>
+                                                        <SelectLabel className="text-[11px] font-extrabold text-purple-700 dark:text-purple-300 bg-purple-50 dark:bg-purple-950/60 px-2 py-1 flex items-center gap-1">
+                                                            <Sparkles className="w-3 h-3 text-purple-600" />
+                                                            {__('🎯 Compatibles con')} {orden.marca_nombre} {orden.modelo_nombre} ({repuestosCompatibles.length})
+                                                        </SelectLabel>
+                                                        {repuestosCompatibles.map((p) => {
+                                                            const nombreProd = p.nombre_variante || p.nombre || '';
+                                                            const cod = p.sku || p.codigo_barras || p.codigo || '';
+                                                            return (
+                                                                <SelectItem key={p.id} value={String(p.id)} className="text-xs font-bold text-purple-950 dark:text-purple-100">
+                                                                    🎯 {nombreProd} {cod ? `(${cod})` : ''} - {currencySymbol}{Number(p.precio_venta).toFixed(2)} [Stock: {p.stock}]
+                                                                </SelectItem>
+                                                            );
+                                                        })}
+                                                    </SelectGroup>
+                                                )}
+
+                                                <SelectGroup>
+                                                    <SelectLabel className="text-[11px] font-bold text-slate-500 bg-slate-100 dark:bg-slate-800 px-2 py-1">
+                                                        {__('📦 Todos los Repuestos de Inventario')} ({otrosRepuestos.length})
+                                                    </SelectLabel>
+                                                    {otrosRepuestos.map((p) => {
+                                                        const nombreProd = p.nombre_variante || p.nombre || '';
+                                                        const cod = p.sku || p.codigo_barras || p.codigo || '';
+                                                        const marcaInfo = p.marca?.nombre ? `[${p.marca.nombre}] ` : '';
+                                                        return (
+                                                            <SelectItem key={p.id} value={String(p.id)} className="text-xs">
+                                                                {marcaInfo}{nombreProd} {cod ? `(${cod})` : ''} - {currencySymbol}{Number(p.precio_venta).toFixed(2)} [Stock: {p.stock}]
+                                                            </SelectItem>
+                                                        );
+                                                    })}
+                                                </SelectGroup>
                                             </SelectContent>
                                         </Select>
                                     </div>

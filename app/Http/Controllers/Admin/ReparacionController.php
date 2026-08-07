@@ -198,8 +198,9 @@ class ReparacionController extends Controller
 
         $productosRepuestos = Producto::where('empresa_id', $empresaId)
             ->where('stock', '>', 0)
-            ->orderBy('nombre')
-            ->get(['id', 'codigo', 'nombre', 'precio_venta', 'precio_costo', 'stock']);
+            ->with(['marca:id,nombre', 'modelo:id,nombre_comercial'])
+            ->orderBy('nombre_variante')
+            ->get(['id', 'sku', 'codigo_barras', 'nombre_variante', 'precio_venta', 'precio_costo', 'stock', 'marca_id', 'modelo_id', 'condicion', 'tipo_producto']);
 
         $tecnicos = User::where('empresa_id', $empresaId)->get(['id', 'name']);
 
