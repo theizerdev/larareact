@@ -36,8 +36,9 @@ import {
     Camera,
     Upload,
     Trash2,
+    RefreshCw,
 } from 'lucide-react';
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Breadcrumbs } from '@/components/breadcrumbs';
 import { ModuleHeader } from '@/components/module-header';
 import { Badge } from '@/components/ui/badge';
@@ -76,15 +77,35 @@ interface CategoriaItem {
     nombre: string;
 }
 
+interface ServicioItem {
+    id: number;
+    codigo?: string | null;
+    nombre: string;
+    precio: number;
+    categoria_id?: number | null;
+    categoria?: { id: number; nombre: string } | null;
+}
+
+interface CartServicio {
+    servicio_id?: number;
+    nombre: string;
+    codigo?: string;
+    precio: number;
+    cantidad: number;
+    subtotal: number;
+    categoria_nombre?: string;
+}
+
 interface Props {
     clientes: Cliente[];
     marcas: MarcaItem[];
     tecnicos: { id: number; name: string }[];
     categorias?: CategoriaItem[];
+    servicios?: ServicioItem[];
     currencySymbol: string;
 }
 
-export default function CreateReparacion({ clientes: initialClientes, marcas: initialMarcas, tecnicos, categorias = [], currencySymbol }: Props) {
+export default function CreateReparacion({ clientes: initialClientes, marcas: initialMarcas, tecnicos, categorias = [], servicios: initialServicios = [], currencySymbol }: Props) {
     const { __ } = useTranslate();
 
     const [clientesList, setClientesList] = useState<Cliente[]>(initialClientes || []);
@@ -118,6 +139,23 @@ export default function CreateReparacion({ clientes: initialClientes, marcas: in
     const [newModeloNombre, setNewModeloNombre] = useState('');
     const [newModeloCodigo, setNewModeloCodigo] = useState('');
     const [isCreatingModelo, setIsCreatingModelo] = useState(false);
+
+    // Carrito de Servicios en Tiempo Real
+    const [serviciosList, setServiciosList] = useState<ServicioItem[]>(initialServicios || []);
+    const [cartServicios, setCartServicios] = useState<CartServicio[]>([]);
+    const [searchServicioTerm, setSearchServicioTerm] = useState('');
+    const [isServicioDropdownOpen, setIsServicioDropdownOpen] = useState(false);
+
+    // Modal Crear Nuevo Servicio
+    const [openNewServicioModal, setOpenNewServicioModal] = useState(false);
+    const [newServicioData, setNewServicioData] = useState({
+        categoria_id: '',
+        nombre: '',
+        codigo: '',
+        descripcion: '',
+        precio: '',
+    });
+    const [isCreatingServicio, setIsCreatingServicio] = useState(false);
 
     // 12 Puntos de Inspección Física
     const elementosInspeccion = [
@@ -169,6 +207,111 @@ export default function CreateReparacion({ clientes: initialClientes, marcas: in
         borde_sup: '',
         borde_inf: '',
     });
+
+    // Modal & Stream de Cámara en Vivo
+    const [activeCameraSlot, setActiveCameraSlot] = useState<string | null>(null);
+    const [cameraSlotLabel, setCameraSlotLabel] = useState<string>('');
+    const [cameraStream, setCameraStream] = useState<MediaStream | null>(null);
+    const [capturedImage, setCapturedImage] = useState<string | null>(null);
+    const [isCameraLoading, setIsCameraLoading] = useState<boolean>(false);
+    const [cameraError, setCameraError] = useState<string | null>(null);
+    const [cameraFacingMode, setCameraFacingMode] = useState<'environment' | 'user'>('environment');
+
+    const videoRef = useRef<HTMLVideoElement | null>(null);
+    const canvasRef = useRef<HTMLCanvasElement | null>(null);
+
+    const stopCameraStream = () => {
+        if (cameraStream) {
+            cameraStream.getTracks().forEach((track) => track.stop());
+            setCameraStream(null);
+        }
+        setActiveCameraSlot(null);
+        setCapturedImage(null);
+        setCameraError(null);
+    };
+
+    const startCameraStream = async (slotKey: string, slotLabel: string, mode: 'environment' | 'user' = 'environment') => {
+        setActiveCameraSlot(slotKey);
+        setCameraSlotLabel(slotLabel);
+        setCapturedImage(null);
+        setCameraError(null);
+        setIsCameraLoading(true);
+
+        if (cameraStream) {
+            cameraStream.getTracks().forEach((track) => track.stop());
+            setCameraStream(null);
+        }
+
+        try {
+            const stream = await navigator.mediaDevices.getUserMedia({
+                video: {
+                    facingMode: mode,
+                    width: { ideal: 1920 },
+                    height: { ideal: 1080 },
+                },
+                audio: false,
+            });
+            setCameraStream(stream);
+            if (videoRef.current) {
+                videoRef.current.srcObject = stream;
+            }
+        } catch (err: any) {
+            console.error('Camera access error:', err);
+            setCameraError(__('No se pudo acceder a la cámara. Por favor verifique los permisos del navegador o use la opción de subir archivo.'));
+        } finally {
+            setIsCameraLoading(false);
+        }
+    };
+
+    useEffect(() => {
+        if (cameraStream && videoRef.current && !capturedImage) {
+            videoRef.current.srcObject = cameraStream;
+            videoRef.current.play().catch((e) => console.log('Video play error:', e));
+        }
+    }, [cameraStream, capturedImage]);
+
+    const handleCaptureSnapshot = () => {
+        if (videoRef.current && canvasRef.current) {
+            const video = videoRef.current;
+            const canvas = canvasRef.current;
+            canvas.width = video.videoWidth || 1280;
+            canvas.height = video.videoHeight || 720;
+            const ctx = canvas.getContext('2d');
+            if (ctx) {
+                ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+                const dataUrl = canvas.toDataURL('image/jpeg', 0.88);
+                setCapturedImage(dataUrl);
+            }
+        }
+    };
+
+    const handleAcceptCapturedPhoto = () => {
+        if (capturedImage && activeCameraSlot) {
+            setFotosState((prev) => {
+                const next = { ...prev, [activeCameraSlot]: capturedImage };
+                setData('evidencias_fotos', next);
+                return next;
+            });
+            notifySuccess(__('Fotografía capturada y guardada.'));
+            stopCameraStream();
+        }
+    };
+
+    const handleRetakeSnapshot = () => {
+        setCapturedImage(null);
+        if (videoRef.current && cameraStream) {
+            videoRef.current.srcObject = cameraStream;
+            videoRef.current.play();
+        }
+    };
+
+    const toggleFacingMode = () => {
+        const nextMode = cameraFacingMode === 'environment' ? 'user' : 'environment';
+        setCameraFacingMode(nextMode);
+        if (activeCameraSlot) {
+            startCameraStream(activeCameraSlot, cameraSlotLabel, nextMode);
+        }
+    };
 
     const handleFotoUpload = (slotKey: string, e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0];
@@ -231,6 +374,145 @@ export default function CreateReparacion({ clientes: initialClientes, marcas: in
         garantia_dias: '30',
         fecha_prometida: new Date(Date.now() + 86400000 * 2).toISOString().split('T')[0],
     });
+
+    // Servicios filtrados por la búsqueda en tiempo real
+    const serviciosFiltrados = serviciosList.filter((s) => {
+        if (!searchServicioTerm || searchServicioTerm.trim() === '') return false;
+        const term = searchServicioTerm.toLowerCase().trim();
+        return (
+            s.nombre.toLowerCase().includes(term) ||
+            s.codigo?.toLowerCase().includes(term) ||
+            s.categoria?.nombre.toLowerCase().includes(term)
+        );
+    });
+
+    const totalCartServicios = cartServicios.reduce((acc, item) => acc + item.subtotal, 0);
+
+    const updateCostoEstimadoWithCart = (newCart: CartServicio[]) => {
+        const total = newCart.reduce((acc, item) => acc + item.subtotal, 0);
+        if (total > 0) {
+            setData('costo_estimado', String(total));
+        }
+    };
+
+    const handleAddServicioToCart = (servicio: ServicioItem) => {
+        const existingIdx = cartServicios.findIndex((item) => item.servicio_id === servicio.id);
+        let updated: CartServicio[];
+        if (existingIdx >= 0) {
+            updated = [...cartServicios];
+            const item = updated[existingIdx];
+            const newCant = item.cantidad + 1;
+            updated[existingIdx] = {
+                ...item,
+                cantidad: newCant,
+                subtotal: item.precio * newCant,
+            };
+        } else {
+            const precioNum = Number(servicio.precio || 0);
+            updated = [
+                ...cartServicios,
+                {
+                    servicio_id: servicio.id,
+                    nombre: servicio.nombre,
+                    codigo: servicio.codigo || '',
+                    precio: precioNum,
+                    cantidad: 1,
+                    subtotal: precioNum,
+                    categoria_nombre: servicio.categoria?.nombre || '',
+                },
+            ];
+        }
+        setCartServicios(updated);
+        updateCostoEstimadoWithCart(updated);
+        setSearchServicioTerm('');
+        setIsServicioDropdownOpen(false);
+        notifySuccess(__('Servicio agregado a la orden.'));
+    };
+
+    const handleUpdateCartItemPrecio = (index: number, newPrecio: number) => {
+        const updated = [...cartServicios];
+        const item = updated[index];
+        const p = Math.max(0, newPrecio);
+        updated[index] = {
+            ...item,
+            precio: p,
+            subtotal: p * item.cantidad,
+        };
+        setCartServicios(updated);
+        updateCostoEstimadoWithCart(updated);
+    };
+
+    const handleUpdateCartItemCantidad = (index: number, newCant: number) => {
+        if (newCant <= 0) {
+            handleRemoveCartItem(index);
+            return;
+        }
+        const updated = [...cartServicios];
+        const item = updated[index];
+        updated[index] = {
+            ...item,
+            cantidad: newCant,
+            subtotal: item.precio * newCant,
+        };
+        setCartServicios(updated);
+        updateCostoEstimadoWithCart(updated);
+    };
+
+    const handleRemoveCartItem = (index: number) => {
+        const updated = cartServicios.filter((_, i) => i !== index);
+        setCartServicios(updated);
+        updateCostoEstimadoWithCart(updated);
+        notifySuccess(__('Servicio eliminado de la orden.'));
+    };
+
+    const handleCreateNewServicio = async (e?: React.SyntheticEvent) => {
+        if (e) {
+            e.preventDefault();
+            e.stopPropagation();
+        }
+        if (!newServicioData.nombre.trim()) {
+            notifyError(__('Por favor ingrese el nombre del servicio.'));
+            return;
+        }
+        if (!newServicioData.precio || Number(newServicioData.precio) < 0) {
+            notifyError(__('Por favor ingrese un precio válido.'));
+            return;
+        }
+
+        setIsCreatingServicio(true);
+        try {
+            const dataRes = await postJson('/admin/reparaciones/quick-servicio', newServicioData);
+            if (dataRes.success) {
+                const newServicio: ServicioItem = dataRes.servicio;
+                setServiciosList((prev) => [...prev, newServicio]);
+
+                // Agregar automáticamente al carrito
+                const precioNum = Number(newServicio.precio || 0);
+                const newCartItem: CartServicio = {
+                    servicio_id: newServicio.id,
+                    nombre: newServicio.nombre,
+                    codigo: newServicio.codigo || '',
+                    precio: precioNum,
+                    cantidad: 1,
+                    subtotal: precioNum,
+                    categoria_nombre: newServicio.categoria?.nombre || '',
+                };
+                const updatedCart = [...cartServicios, newCartItem];
+                setCartServicios(updatedCart);
+                updateCostoEstimadoWithCart(updatedCart);
+
+                setOpenNewServicioModal(false);
+                setNewServicioData({ categoria_id: '', nombre: '', codigo: '', descripcion: '', precio: '' });
+                notifySuccess(__('Nuevo servicio creado y agregado a la orden.'));
+            } else {
+                notifyError(__('Ocurrió un error al registrar el servicio.'));
+            }
+        } catch (error) {
+            notifyError(__('Ocurrió un error al registrar el servicio.'));
+        } finally {
+            setIsCreatingServicio(false);
+        }
+    };
 
     // Categorías filtradas por la búsqueda rápida (Select2)
     const categoriasFiltradas = categorias.filter((cat) => {
@@ -468,6 +750,7 @@ export default function CreateReparacion({ clientes: initialClientes, marcas: in
             inspeccion_fisica: inspeccionState,
             estado_equipo: estadoEquipoState,
             accesorios: accesoriosState,
+            servicios_seleccionados: cartServicios,
         };
 
         post('/admin/reparaciones', {
@@ -518,8 +801,8 @@ export default function CreateReparacion({ clientes: initialClientes, marcas: in
                     </Link>
                 </div>
 
-                {/* STEPPER PROGRESIVO EN 3 ETAPAS */}
-                <div className="grid grid-cols-3 gap-3 bg-white dark:bg-slate-900 p-2 rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm">
+                {/* STEPPER PROGRESIVO EN 2 ETAPAS */}
+                <div className="grid grid-cols-2 gap-3 bg-white dark:bg-slate-900 p-2 rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm">
                     <button
                         type="button"
                         onClick={() => setCurrentStep(1)}
@@ -990,29 +1273,55 @@ export default function CreateReparacion({ clientes: initialClientes, marcas: in
                                                             <span className="text-[10px] text-slate-400">{slot.desc}</span>
 
                                                             {fotoUrl ? (
-                                                                <div className="relative w-full h-32 rounded-lg overflow-hidden border border-purple-300 dark:border-purple-800">
+                                                                <div className="relative w-full h-32 rounded-lg overflow-hidden border border-purple-300 dark:border-purple-800 group">
                                                                     <img src={fotoUrl} alt={slot.label} className="w-full h-full object-cover" />
-                                                                    <button
-                                                                        type="button"
-                                                                        onClick={() => handleRemoveFoto(slot.key)}
-                                                                        className="absolute top-1.5 right-1.5 bg-rose-600 text-white p-1 rounded-full shadow hover:bg-rose-700 transition-colors"
-                                                                        title={__('Eliminar foto')}
-                                                                    >
-                                                                        <Trash2 className="w-3.5 h-3.5" />
-                                                                    </button>
+                                                                    <div className="absolute inset-0 bg-slate-950/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-1.5">
+                                                                        <Button
+                                                                            type="button"
+                                                                            size="sm"
+                                                                            onClick={() => startCameraStream(slot.key, slot.label)}
+                                                                            className="h-7 px-2 text-[10px] font-bold bg-purple-600 hover:bg-purple-700 text-white gap-1"
+                                                                        >
+                                                                            <Camera className="w-3 h-3" />
+                                                                            {__('Recapturar')}
+                                                                        </Button>
+                                                                        <Button
+                                                                            type="button"
+                                                                            size="sm"
+                                                                            variant="destructive"
+                                                                            onClick={() => handleRemoveFoto(slot.key)}
+                                                                            className="h-7 w-7 p-0"
+                                                                            title={__('Eliminar foto')}
+                                                                        >
+                                                                            <Trash2 className="w-3.5 h-3.5" />
+                                                                        </Button>
+                                                                    </div>
                                                                 </div>
                                                             ) : (
-                                                                <label className="w-full h-32 rounded-lg border-2 border-dashed border-slate-200 dark:border-slate-800 hover:border-purple-400 bg-slate-50 dark:bg-slate-950 flex flex-col items-center justify-center cursor-pointer transition-colors gap-1.5 p-2">
-                                                                    <Camera className="w-6 h-6 text-purple-600" />
-                                                                    <span className="text-[10px] font-bold text-purple-600">{__('Tomar / Adjuntar')}</span>
-                                                                    <input
-                                                                        type="file"
-                                                                        accept="image/*"
-                                                                        capture="environment"
-                                                                        className="hidden"
-                                                                        onChange={(e) => handleFotoUpload(slot.key, e)}
-                                                                    />
-                                                                </label>
+                                                                <div className="w-full h-32 rounded-lg border-2 border-dashed border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-950 flex flex-col items-center justify-center p-2 gap-2">
+                                                                    <Button
+                                                                        type="button"
+                                                                        size="sm"
+                                                                        onClick={() => startCameraStream(slot.key, slot.label)}
+                                                                        className="w-full h-9 text-[11px] font-extrabold bg-purple-600 hover:bg-purple-700 text-white gap-1.5 shadow-sm"
+                                                                    >
+                                                                        <Camera className="w-3.5 h-3.5" />
+                                                                        {__('Tomar con Cámara')}
+                                                                    </Button>
+
+                                                                    <label className="w-full text-center">
+                                                                        <span className="text-[10px] font-semibold text-slate-500 hover:text-purple-600 dark:hover:text-purple-400 cursor-pointer flex items-center justify-center gap-1">
+                                                                            <Upload className="w-3 h-3" />
+                                                                            {__('Subir Archivo')}
+                                                                        </span>
+                                                                        <input
+                                                                            type="file"
+                                                                            accept="image/*"
+                                                                            className="hidden"
+                                                                            onChange={(e) => handleFotoUpload(slot.key, e)}
+                                                                        />
+                                                                    </label>
+                                                                </div>
                                                             )}
                                                         </div>
                                                     );
@@ -1021,32 +1330,403 @@ export default function CreateReparacion({ clientes: initialClientes, marcas: in
                                         </CardContent>
                                     </Card>
 
-                                    <div className="flex items-center justify-between">
-                                        <Button
-                                            type="button"
-                                            variant="outline"
-                                            onClick={() => setCurrentStep(1)}
-                                            className="h-10 px-5 text-xs font-bold gap-2"
-                                        >
-                                            <ChevronLeft className="w-4 h-4" />
-                                            {__('Anterior')}
-                                        </Button>
+                                    {/* MODAL CÁMARA EN VIVO WEBCAM */}
+                                    <Dialog open={!!activeCameraSlot} onOpenChange={(open) => { if (!open) stopCameraStream(); }}>
+                                        <DialogContent className="sm:max-w-xl p-0 overflow-hidden bg-slate-950 text-white border-slate-800">
+                                            <DialogHeader className="p-4 bg-slate-900 border-b border-slate-800 flex flex-row items-center justify-between">
+                                                <DialogTitle className="flex items-center gap-2 text-sm font-bold text-white">
+                                                    <Camera className="w-5 h-5 text-purple-400" />
+                                                    {__('Capturar Evidencia Fotográfica:')} <span className="text-purple-300 font-mono">{cameraSlotLabel}</span>
+                                                </DialogTitle>
+                                                <Button type="button" variant="ghost" size="sm" onClick={stopCameraStream} className="h-8 w-8 p-0 text-slate-400 hover:text-white hover:bg-slate-800">
+                                                    <X className="w-4 h-4" />
+                                                </Button>
+                                            </DialogHeader>
 
-                                        <Button
-                                            type="button"
-                                            onClick={() => setCurrentStep(3)}
-                                            className="h-10 px-6 font-bold bg-purple-600 hover:bg-purple-700 text-white gap-2 text-xs"
-                                        >
-                                            {__('Siguiente: Presupuesto & Asignación')}
-                                            <ChevronRight className="w-4 h-4" />
-                                        </Button>
-                                    </div>
+                                            <div className="p-4 space-y-4">
+                                                {cameraError ? (
+                                                    <div className="p-6 text-center space-y-3 bg-rose-950/40 border border-rose-800 rounded-xl">
+                                                        <ShieldAlert className="w-10 h-10 mx-auto text-rose-500" />
+                                                        <p className="text-xs text-rose-200 font-medium">{cameraError}</p>
+                                                        <Button type="button" variant="outline" size="sm" onClick={stopCameraStream} className="text-xs text-white border-slate-700">
+                                                            {__('Cerrar y usar subida de archivo')}
+                                                        </Button>
+                                                    </div>
+                                                ) : (
+                                                    <div className="relative w-full aspect-video bg-black rounded-xl overflow-hidden border border-slate-800 flex items-center justify-center shadow-2xl">
+                                                        <canvas ref={canvasRef} className="hidden" />
+
+                                                        {isCameraLoading && (
+                                                            <div className="absolute inset-0 flex flex-col items-center justify-center bg-slate-950/90 gap-2 text-xs text-slate-300">
+                                                                <RefreshCw className="w-8 h-8 animate-spin text-purple-500" />
+                                                                <span>{__('Iniciando cámara...')}</span>
+                                                            </div>
+                                                        )}
+
+                                                        {capturedImage ? (
+                                                            <div className="relative w-full h-full">
+                                                                <img src={capturedImage} alt="Captura" className="w-full h-full object-contain" />
+                                                                <div className="absolute top-3 left-3 bg-emerald-600/90 text-white text-[10px] font-bold px-2.5 py-1 rounded-md backdrop-blur-md">
+                                                                    ✓ {__('Captura lista')}
+                                                                </div>
+                                                            </div>
+                                                        ) : (
+                                                            <video
+                                                                ref={videoRef}
+                                                                autoPlay
+                                                                playsInline
+                                                                muted
+                                                                className="w-full h-full object-cover"
+                                                            />
+                                                        )}
+
+                                                        {!capturedImage && !isCameraLoading && (
+                                                            <div className="absolute inset-0 pointer-events-none border-2 border-purple-500/30 m-4 rounded-lg flex items-center justify-center">
+                                                                <div className="w-10 h-10 border-t-2 border-l-2 border-purple-400 absolute top-0 left-0" />
+                                                                <div className="w-10 h-10 border-t-2 border-r-2 border-purple-400 absolute top-0 right-0" />
+                                                                <div className="w-10 h-10 border-b-2 border-l-2 border-purple-400 absolute bottom-0 left-0" />
+                                                                <div className="w-10 h-10 border-b-2 border-r-2 border-purple-400 absolute bottom-0 right-0" />
+                                                            </div>
+                                                        )}
+                                                    </div>
+                                                )}
+
+                                                {!cameraError && (
+                                                    <div className="flex items-center justify-between pt-2">
+                                                        <Button
+                                                            type="button"
+                                                            variant="outline"
+                                                            size="sm"
+                                                            onClick={toggleFacingMode}
+                                                            className="text-xs bg-slate-900 border-slate-700 text-slate-300 hover:text-white hover:bg-slate-800 gap-1.5"
+                                                        >
+                                                            <RefreshCw className="w-3.5 h-3.5" />
+                                                            {__('Voltear Cámara')}
+                                                        </Button>
+
+                                                        {capturedImage ? (
+                                                            <div className="flex items-center gap-2">
+                                                                <Button
+                                                                    type="button"
+                                                                    variant="outline"
+                                                                    size="sm"
+                                                                    onClick={handleRetakeSnapshot}
+                                                                    className="text-xs bg-slate-900 border-slate-700 text-slate-300 hover:text-white"
+                                                                >
+                                                                    {__('Repetir Foto')}
+                                                                </Button>
+                                                                <Button
+                                                                    type="button"
+                                                                    size="sm"
+                                                                    onClick={handleAcceptCapturedPhoto}
+                                                                    className="text-xs font-bold bg-emerald-600 hover:bg-emerald-700 text-white gap-1.5 px-4"
+                                                                >
+                                                                    <Check className="w-4 h-4" />
+                                                                    {__('Usar Esta Foto')}
+                                                                </Button>
+                                                            </div>
+                                                        ) : (
+                                                            <Button
+                                                                type="button"
+                                                                size="sm"
+                                                                onClick={handleCaptureSnapshot}
+                                                                disabled={isCameraLoading}
+                                                                className="h-10 px-6 font-extrabold bg-purple-600 hover:bg-purple-700 text-white shadow-lg rounded-full gap-2 text-xs"
+                                                            >
+                                                                <Camera className="w-4 h-4" />
+                                                                {__('CAPTURAR FOTO')}
+                                                            </Button>
+                                                        )}
+                                                    </div>
+                                                )}
+                                            </div>
+                                        </DialogContent>
+                                    </Dialog>
+
+
                                 </div>
                             )}
 
-                            {/* ETAPA 3: PRESUPUESTO & ASIGNACIÓN */}
-                            {currentStep === 3 && (
+                            {/* ETAPA 2: PRESUPUESTO & ASIGNACIÓN DE SERVICIOS */}
+                            {currentStep === 2 && (
                                 <div className="space-y-6 animate-in fade-in duration-300">
+
+                                    {/* PASO 7: SERVICIOS DE REPARACIÓN REQUERIDOS (CARRITO) */}
+                                    <Card className="border-slate-200 dark:border-slate-800 shadow-sm overflow-visible">
+                                        <CardHeader className="bg-slate-50 dark:bg-slate-900/50 border-b border-slate-100 dark:border-slate-800 py-3 flex flex-row items-center justify-between">
+                                            <CardTitle className="text-sm font-bold flex items-center gap-2 text-slate-800 dark:text-slate-200">
+                                                <Wrench className="w-4 h-4 text-purple-600" />
+                                                {__('Servicios de Reparación Requeridos (Carrito)')}
+                                            </CardTitle>
+
+                                            {/* MODAL CREAR NUEVO SERVICIO RÁPIDO */}
+                                            <Dialog open={openNewServicioModal} onOpenChange={setOpenNewServicioModal}>
+                                                <DialogTrigger asChild>
+                                                    <Button type="button" size="sm" variant="outline" className="h-8 gap-1.5 text-xs font-bold text-purple-700 border-purple-300 hover:bg-purple-50 dark:text-purple-300 dark:border-purple-800">
+                                                        <Plus className="w-4 h-4 text-purple-600" />
+                                                        {__('+ Crear Nuevo Servicio')}
+                                                    </Button>
+                                                </DialogTrigger>
+                                                <DialogContent className="sm:max-w-md">
+                                                    <DialogHeader>
+                                                        <DialogTitle className="flex items-center gap-2 text-base font-bold text-slate-900 dark:text-slate-100">
+                                                            <Wrench className="w-5 h-5 text-purple-600" />
+                                                            {__('Crear Nuevo Servicio de Reparación')}
+                                                        </DialogTitle>
+                                                    </DialogHeader>
+
+                                                    <div className="space-y-4 py-2">
+                                                        {/* CATEGORÍA SELECCIÓN TODO EL ANCHO ARRIBA */}
+                                                        <div>
+                                                            <Label className="text-xs font-semibold">{__('Categoría de Dispositivo / Servicio *')}</Label>
+                                                            <Select
+                                                                value={newServicioData.categoria_id}
+                                                                onValueChange={(val) => setNewServicioData({ ...newServicioData, categoria_id: val })}
+                                                            >
+                                                                <SelectTrigger className="text-xs h-9 mt-1 w-full">
+                                                                    <SelectValue placeholder={__('Seleccionar Categoría...')} />
+                                                                </SelectTrigger>
+                                                                <SelectContent>
+                                                                    {categorias.map((cat) => (
+                                                                        <SelectItem key={cat.id} value={String(cat.id)}>
+                                                                            {cat.nombre}
+                                                                        </SelectItem>
+                                                                    ))}
+                                                                </SelectContent>
+                                                            </Select>
+                                                        </div>
+
+                                                        <div className="grid grid-cols-2 gap-3">
+                                                            <div>
+                                                                <Label className="text-xs font-semibold">{__('Código / SKU')}</Label>
+                                                                <Input
+                                                                    value={newServicioData.codigo}
+                                                                    onChange={(e) => setNewServicioData({ ...newServicioData, codigo: e.target.value })}
+                                                                    placeholder="Ej: SRV-001"
+                                                                    className="text-xs h-9 mt-1 font-mono"
+                                                                />
+                                                            </div>
+                                                            <div>
+                                                                <Label className="text-xs font-semibold">{__('Precio Base *')} ({currencySymbol})</Label>
+                                                                <Input
+                                                                    type="number"
+                                                                    step="0.01"
+                                                                    min="0"
+                                                                    value={newServicioData.precio}
+                                                                    onChange={(e) => setNewServicioData({ ...newServicioData, precio: e.target.value })}
+                                                                    placeholder="Ej: 25.00"
+                                                                    className="text-xs h-9 mt-1 font-mono font-bold"
+                                                                />
+                                                            </div>
+                                                        </div>
+
+                                                        <div>
+                                                            <Label className="text-xs font-semibold">{__('Nombre del Servicio *')}</Label>
+                                                            <Input
+                                                                value={newServicioData.nombre}
+                                                                onChange={(e) => setNewServicioData({ ...newServicioData, nombre: e.target.value })}
+                                                                placeholder={__('ej: Cambio de Pantalla OLED, Pin de Carga')}
+                                                                className="text-xs h-9 mt-1"
+                                                            />
+                                                        </div>
+
+                                                        <div>
+                                                            <Label className="text-xs font-semibold">{__('Descripción (Opcional)')}</Label>
+                                                            <Textarea
+                                                                value={newServicioData.descripcion}
+                                                                onChange={(e) => setNewServicioData({ ...newServicioData, descripcion: e.target.value })}
+                                                                placeholder={__('Detalles del trabajo a realizar...')}
+                                                                rows={2}
+                                                                className="text-xs mt-1"
+                                                            />
+                                                        </div>
+
+                                                        <div className="flex items-center justify-end gap-2 pt-2 border-t border-slate-100 dark:border-slate-800">
+                                                            <Button type="button" variant="outline" size="sm" onClick={() => setOpenNewServicioModal(false)} className="h-8 text-xs">
+                                                                {__('Cancelar')}
+                                                            </Button>
+                                                            <Button type="button" onClick={(e) => handleCreateNewServicio(e)} disabled={isCreatingServicio} size="sm" className="h-8 text-xs font-bold bg-purple-600 hover:bg-purple-700 text-white">
+                                                                {__('Guardar y Agregar a la Orden')}
+                                                            </Button>
+                                                        </div>
+                                                    </div>
+                                                </DialogContent>
+                                            </Dialog>
+                                        </CardHeader>
+
+                                        <CardContent className="p-4 space-y-4">
+                                            {/* BUSCADOR DE SERVICIOS EN TIEMPO REAL */}
+                                            <div className="relative w-full">
+                                                <Label className="text-xs font-semibold">{__('Buscar y Agregar Servicios a la Orden *')}</Label>
+                                                <div className="relative mt-1">
+                                                    <Search className="w-4 h-4 absolute left-3 top-3.5 text-purple-600" />
+                                                    <Input
+                                                        value={searchServicioTerm}
+                                                        onChange={(e) => {
+                                                            const val = e.target.value;
+                                                            setSearchServicioTerm(val);
+                                                            setIsServicioDropdownOpen(val.trim().length > 0);
+                                                        }}
+                                                        onFocus={() => {
+                                                            if (searchServicioTerm.trim().length > 0) {
+                                                                setIsServicioDropdownOpen(true);
+                                                            }
+                                                        }}
+                                                        placeholder={__('Escriba para buscar un servicio (ej: Pantalla, Batería, Limpieza...)...')}
+                                                        className="text-xs h-11 pl-9 pr-8 font-medium"
+                                                    />
+                                                    {searchServicioTerm && (
+                                                        <button
+                                                            type="button"
+                                                            onClick={() => {
+                                                                setSearchServicioTerm('');
+                                                                setIsServicioDropdownOpen(false);
+                                                            }}
+                                                            className="absolute right-3 top-3.5 text-slate-400 hover:text-slate-600"
+                                                        >
+                                                            <X className="w-4 h-4" />
+                                                        </button>
+                                                    )}
+                                                </div>
+
+                                                {/* LISTA DE RESULTADOS EN TIEMPO REAL */}
+                                                {isServicioDropdownOpen && serviciosFiltrados.length > 0 && (
+                                                    <div className="absolute left-0 right-0 z-50 mt-1 max-h-60 overflow-y-auto bg-white dark:bg-slate-900 rounded-lg border border-slate-200 dark:border-slate-800 shadow-xl divide-y divide-slate-100 dark:divide-slate-800">
+                                                        {serviciosFiltrados.map((s) => (
+                                                            <div
+                                                                key={s.id}
+                                                                className="p-3 hover:bg-purple-50 dark:hover:bg-purple-950/40 flex items-center justify-between transition-colors text-xs"
+                                                            >
+                                                                <div className="space-y-0.5">
+                                                                    <span className="font-bold text-slate-900 dark:text-slate-100 block">{s.nombre}</span>
+                                                                    <div className="flex items-center gap-2 text-[10px] text-slate-400">
+                                                                        {s.codigo && <span className="font-mono">Cód: {s.codigo}</span>}
+                                                                        {s.categoria && (
+                                                                            <Badge variant="outline" className="text-[10px] py-0 border-purple-200 text-purple-700">
+                                                                                {s.categoria.nombre}
+                                                                            </Badge>
+                                                                        )}
+                                                                    </div>
+                                                                </div>
+                                                                <div className="flex items-center gap-3">
+                                                                    <span className="font-extrabold text-slate-900 dark:text-slate-100 font-mono">
+                                                                        {currencySymbol}{Number(s.precio).toFixed(2)}
+                                                                    </span>
+                                                                    <Button
+                                                                        type="button"
+                                                                        size="sm"
+                                                                        onClick={() => handleAddServicioToCart(s)}
+                                                                        className="h-8 px-3 text-xs font-bold bg-purple-600 hover:bg-purple-700 text-white gap-1"
+                                                                    >
+                                                                        <Plus className="w-3.5 h-3.5" />
+                                                                        {__('Agregar')}
+                                                                    </Button>
+                                                                </div>
+                                                            </div>
+                                                        ))}
+                                                    </div>
+                                                )}
+                                            </div>
+
+                                            {/* TABLA DEL CARRITO DE SERVICIOS SELECCIONADOS */}
+                                            <div className="space-y-2 pt-2">
+                                                <Label className="text-xs font-semibold">{__('Servicios Seleccionados en la Orden')}</Label>
+
+                                                {cartServicios.length > 0 ? (
+                                                    <div className="border border-slate-200 dark:border-slate-800 rounded-xl overflow-hidden shadow-sm">
+                                                        <table className="w-full text-xs text-left">
+                                                            <thead className="bg-slate-100 dark:bg-slate-800/80 text-slate-700 dark:text-slate-300 font-bold uppercase text-[10px]">
+                                                                <tr>
+                                                                    <th className="p-3">{__('Servicio / Categoría')}</th>
+                                                                    <th className="p-3 text-right">{__('Precio Unit.')} ({currencySymbol})</th>
+                                                                    <th className="p-3 text-center">{__('Cant.')}</th>
+                                                                    <th className="p-3 text-right">{__('Subtotal')} ({currencySymbol})</th>
+                                                                    <th className="p-3 text-center">{__('Acciones')}</th>
+                                                                </tr>
+                                                            </thead>
+                                                            <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
+                                                                {cartServicios.map((item, idx) => (
+                                                                    <tr key={idx} className="hover:bg-slate-50 dark:hover:bg-slate-900/50 transition-colors">
+                                                                        <td className="p-3 font-medium text-slate-900 dark:text-slate-100">
+                                                                            <div className="flex items-center gap-2">
+                                                                                <Wrench className="w-3.5 h-3.5 text-purple-600 flex-shrink-0" />
+                                                                                <div>
+                                                                                    <span className="font-bold block">{item.nombre}</span>
+                                                                                    {item.categoria_nombre && (
+                                                                                        <span className="text-[10px] text-purple-600 font-semibold">{item.categoria_nombre}</span>
+                                                                                    )}
+                                                                                </div>
+                                                                            </div>
+                                                                        </td>
+                                                                        <td className="p-3 text-right font-mono">
+                                                                            <Input
+                                                                                type="number"
+                                                                                step="0.01"
+                                                                                min="0"
+                                                                                value={item.precio}
+                                                                                onChange={(e) => handleUpdateCartItemPrecio(idx, Number(e.target.value))}
+                                                                                className="w-24 h-8 text-xs text-right font-mono font-bold inline-block"
+                                                                            />
+                                                                        </td>
+                                                                        <td className="p-3 text-center">
+                                                                            <div className="flex items-center justify-center gap-1">
+                                                                                <button
+                                                                                    type="button"
+                                                                                    onClick={() => handleUpdateCartItemCantidad(idx, item.cantidad - 1)}
+                                                                                    className="w-6 h-6 rounded bg-slate-200 dark:bg-slate-700 text-slate-800 dark:text-slate-200 font-bold flex items-center justify-center hover:bg-slate-300"
+                                                                                >
+                                                                                    -
+                                                                                </button>
+                                                                                <span className="w-8 text-center font-bold font-mono">{item.cantidad}</span>
+                                                                                <button
+                                                                                    type="button"
+                                                                                    onClick={() => handleUpdateCartItemCantidad(idx, item.cantidad + 1)}
+                                                                                    className="w-6 h-6 rounded bg-slate-200 dark:bg-slate-700 text-slate-800 dark:text-slate-200 font-bold flex items-center justify-center hover:bg-slate-300"
+                                                                                >
+                                                                                    +
+                                                                                </button>
+                                                                            </div>
+                                                                        </td>
+                                                                        <td className="p-3 text-right font-extrabold text-purple-700 dark:text-purple-300 font-mono">
+                                                                            {currencySymbol}{item.subtotal.toFixed(2)}
+                                                                        </td>
+                                                                        <td className="p-3 text-center">
+                                                                            <button
+                                                                                type="button"
+                                                                                onClick={() => handleRemoveCartItem(idx)}
+                                                                                className="p-1.5 text-rose-500 hover:text-rose-700 hover:bg-rose-50 dark:hover:bg-rose-950/30 rounded-lg transition-colors"
+                                                                                title={__('Eliminar del carrito')}
+                                                                            >
+                                                                                <Trash2 className="w-4 h-4" />
+                                                                            </button>
+                                                                        </td>
+                                                                    </tr>
+                                                                ))}
+                                                            </tbody>
+                                                            <tfoot className="bg-purple-50/70 dark:bg-purple-950/40 font-bold text-xs">
+                                                                <tr>
+                                                                    <td colSpan={3} className="p-3 text-right font-bold text-purple-900 dark:text-purple-200">
+                                                                        {__('Total Servicios en la Orden:')}
+                                                                    </td>
+                                                                    <td className="p-3 text-right font-black text-purple-700 dark:text-purple-300 text-sm font-mono">
+                                                                        {currencySymbol}{totalCartServicios.toFixed(2)}
+                                                                    </td>
+                                                                    <td></td>
+                                                                </tr>
+                                                            </tfoot>
+                                                        </table>
+                                                    </div>
+                                                ) : (
+                                                    <div className="p-6 border-2 border-dashed border-slate-200 dark:border-slate-800 rounded-xl text-center text-slate-400 space-y-1">
+                                                        <Wrench className="w-8 h-8 mx-auto text-slate-300 dark:text-slate-700" />
+                                                        <p className="text-xs font-semibold">{__('No se ha agregado ningún servicio a esta orden.')}</p>
+                                                        <p className="text-[11px] text-slate-400">{__('Utilice el buscador arriba para agregar servicios o cree uno nuevo.')}</p>
+                                                    </div>
+                                                )}
+                                            </div>
+                                        </CardContent>
+                                    </Card>
+
                                     <Card className="border-slate-200 dark:border-slate-800 shadow-sm">
                                         <CardHeader className="bg-slate-50 dark:bg-slate-900/50 border-b border-slate-100 dark:border-slate-800 py-3">
                                             <CardTitle className="text-sm font-bold flex items-center gap-2 text-slate-800 dark:text-slate-200">

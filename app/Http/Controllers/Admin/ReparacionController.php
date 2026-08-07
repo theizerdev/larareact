@@ -93,12 +93,14 @@ class ReparacionController extends Controller
         $marcas = Marca::with('modelos')->where('empresa_id', $empresaId)->orderBy('nombre')->get();
         $tecnicos = User::where('empresa_id', $empresaId)->get(['id', 'name']);
         $categorias = \App\Models\Categoria::where('empresa_id', $empresaId)->where('estado', true)->orderBy('nombre')->get(['id', 'nombre']);
+        $servicios = \App\Models\Servicio::with('categoria:id,nombre')->where('empresa_id', $empresaId)->where('estado', true)->orderBy('nombre')->get(['id', 'codigo', 'nombre', 'precio', 'categoria_id']);
 
         return Inertia::render('admin/Reparaciones/Create', [
             'clientes' => $clientes,
             'marcas' => $marcas,
             'tecnicos' => $tecnicos,
             'categorias' => $categorias,
+            'servicios' => $servicios,
             'currencySymbol' => $this->getCurrencySymbol(),
         ]);
     }
@@ -122,6 +124,32 @@ class ReparacionController extends Controller
             'success' => true,
             'cliente' => $cliente,
             'message' => __('Cliente registrado exitosamente.')
+        ]);
+    }
+
+    public function storeServicio(Request $request)
+    {
+        $validated = $request->validate([
+            'categoria_id' => 'nullable|exists:categorias,id',
+            'nombre' => 'required|string|max:255',
+            'codigo' => 'nullable|string|max:100',
+            'descripcion' => 'nullable|string',
+            'precio' => 'required|numeric|min:0',
+        ]);
+
+        $user = auth()->user();
+        $servicio = \App\Models\Servicio::create(array_merge($validated, [
+            'empresa_id' => $user->empresa_id,
+            'sucursal_id' => $user->sucursal_id,
+            'estado' => true,
+        ]));
+
+        $servicio->load('categoria:id,nombre');
+
+        return response()->json([
+            'success' => true,
+            'servicio' => $servicio,
+            'message' => __('Servicio registrado exitosamente.')
         ]);
     }
 
@@ -150,6 +178,7 @@ class ReparacionController extends Controller
             'garantia_dias' => 'nullable|integer|min:0',
             'fecha_prometida' => 'nullable|date',
             'evidencias_fotos' => 'nullable|array',
+            'servicios_seleccionados' => 'nullable|array',
         ]);
 
         $user = auth()->user();
@@ -163,6 +192,10 @@ class ReparacionController extends Controller
         $anticipo = (float) ($validated['anticipo'] ?? 0);
         $saldoRestante = max(0, $costoEstimado - $anticipo);
 
+        // Remover servicios_seleccionados antes de crear la orden
+        $serviciosSeleccionados = $validated['servicios_seleccionados'] ?? [];
+        unset($validated['servicios_seleccionados']);
+
         $ordenData = array_merge($validated, [
             'empresa_id' => $empresaId,
             'sucursal_id' => $user->sucursal_id,
@@ -175,6 +208,36 @@ class ReparacionController extends Controller
         ]);
 
         $orden = OrdenReparacion::create($ordenData);
+
+        // Guardar servicios agregados desde el carrito como items de la orden
+        if (!empty($serviciosSeleccionados)) {
+            $totalServicios = 0;
+            foreach ($serviciosSeleccionados as $item) {
+                $cant = (int) ($item['cantidad'] ?? 1);
+                $precio = (float) ($item['precio'] ?? 0);
+                $subtotal = $cant * $precio;
+                $totalServicios += $subtotal;
+
+                OrdenReparacionItem::create([
+                    'orden_id' => $orden->id,
+                    'servicio_id' => $item['servicio_id'] ?? null,
+                    'descripcion' => $item['nombre'] ?? 'Servicio de Reparación',
+                    'cantidad' => $cant,
+                    'precio_costo' => 0,
+                    'precio_venta' => $precio,
+                    'subtotal' => $subtotal,
+                ]);
+            }
+
+            if ($totalServicios > 0) {
+                $costoFinal = max($costoEstimado, $totalServicios);
+                $orden->update([
+                    'costo_mano_obra' => $totalServicios,
+                    'costo_estimado' => $costoFinal,
+                    'saldo_restante' => max(0, $costoFinal - $anticipo),
+                ]);
+            }
+        }
 
         // Registro de Historial inicial
         OrdenReparacionHistorial::create([
