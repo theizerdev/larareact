@@ -395,6 +395,11 @@ export default function AdminSaasLayout({
                         {(() => {
                             const orgItems = [
                                 {
+                                    title: 'Branches',
+                                    href: sucursalesIndex.url(),
+                                    permission: 'sucursales.view',
+                                },
+                                {
                                     title: 'Departments',
                                     href: departamentosIndex.url(),
                                     permission: 'departamentos.view',
@@ -525,11 +530,6 @@ export default function AdminSaasLayout({
                                     title: 'Companies',
                                     href: empresasIndex.url(),
                                     permission: 'empresas.view',
-                                },
-                                {
-                                    title: 'Branches',
-                                    href: sucursalesIndex.url(),
-                                    permission: 'sucursales.view',
                                 },
                                 {
                                     title: 'Countries',
