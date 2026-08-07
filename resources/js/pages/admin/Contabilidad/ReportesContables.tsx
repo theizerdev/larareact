@@ -88,7 +88,7 @@ export default function ReportesContables({ cuentasReporte, pnl }: Props) {
 
         if (activeTab === 'pnl') {
             filename = `Estado_Resultados_PyG_${new Date().toISOString().split('T')[0]}.csv`;
-            csv = 'Concepto,Monto (USD)\n';
+            csv = 'Concepto,Monto\n';
             csv += `"Ventas de Productos POS",${pnl.ingresosProductos}\n`;
             csv += `"Servicios Técnicos y Reparaciones",${pnl.ingresosServicios}\n`;
             csv += `"Total Ingresos Operacionales",${pnl.totalIngresos}\n`;
@@ -100,7 +100,7 @@ export default function ReportesContables({ cuentasReporte, pnl }: Props) {
             csv += `"Utilidad Neta del Ejercicio",${pnl.utilidadNeta}\n`;
         } else if (activeTab === 'balance') {
             filename = `Balance_General_${new Date().toISOString().split('T')[0]}.csv`;
-            csv = 'Tipo,Codigo,Cuenta,Saldo (USD)\n';
+            csv = 'Tipo,Codigo,Cuenta,Saldo\n';
             cuentasReporte.forEach((c) => {
                 csv += `"${c.tipo.toUpperCase()}","${c.codigo}","${c.nombre.replace(/"/g, '""')}",${c.saldo}\n`;
             });

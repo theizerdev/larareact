@@ -86,6 +86,11 @@ interface Props {
         from_date?: string;
         to_date?: string;
     };
+    empresaInfo?: {
+        nombre?: string;
+        simbolo_moneda?: string;
+        codigo_moneda?: string;
+    };
 }
 
 interface ApunteRow {
@@ -95,8 +100,9 @@ interface ApunteRow {
     referencia: string;
 }
 
-export default function LibroDiario({ asientos, cuentasDisponibles = [], filters }: Props) {
+export default function LibroDiario({ asientos, cuentasDisponibles = [], filters, empresaInfo }: Props) {
     const { __ } = useTranslate();
+    const simboloMoneda = empresaInfo?.simbolo_moneda || 'Bs.';
     const [search, setSearch] = useState(filters.search || '');
     const [fromDate, setFromDate] = useState(filters.from_date || '');
     const [toDate, setToDate] = useState(filters.to_date || '');
@@ -653,7 +659,7 @@ export default function LibroDiario({ asientos, cuentasDisponibles = [], filters
 
                                                 <Badge variant="outline" className="text-[11px] font-mono text-emerald-700 dark:text-emerald-400 border-emerald-300 dark:border-emerald-800 bg-emerald-50/60 dark:bg-emerald-950/40">
                                                     <DollarSign className="w-3 h-3 mr-0.5" />
-                                                    Tasa: ${Number(asiento.tasa_cambio).toFixed(2)} VES
+                                                    Tasa: {Number(asiento.tasa_cambio).toFixed(2)}
                                                 </Badge>
                                             </div>
 
@@ -796,7 +802,7 @@ export default function LibroDiario({ asientos, cuentasDisponibles = [], filters
                                     <div>
                                         <p className="text-[11px] text-muted-foreground uppercase font-semibold">{__('Tasa Oficial Registrada')}</p>
                                         <p className="font-mono font-bold text-emerald-600 mt-0.5">
-                                            ${Number(selectedAsiento.tasa_cambio).toFixed(2)} VES/USD
+                                            {simboloMoneda} {Number(selectedAsiento.tasa_cambio).toFixed(2)}
                                         </p>
                                     </div>
                                     <div>
@@ -820,8 +826,8 @@ export default function LibroDiario({ asientos, cuentasDisponibles = [], filters
                                             <tr>
                                                 <th className="p-2.5 border-r">{__('Código')}</th>
                                                 <th className="p-2.5 border-r font-sans">{__('Cuenta Contable')}</th>
-                                                <th className="p-2.5 border-r text-right">{__('Debe (USD)')}</th>
-                                                <th className="p-2.5 text-right">{__('Haber (USD)')}</th>
+                                                <th className="p-2.5 border-r text-right">{__('Debe')} ({simboloMoneda})</th>
+                                                <th className="p-2.5 text-right">{__('Haber')} ({simboloMoneda})</th>
                                             </tr>
                                         </thead>
                                         <tbody className="divide-y text-[11px]">

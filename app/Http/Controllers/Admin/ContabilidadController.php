@@ -149,10 +149,18 @@ class ContabilidadController extends Controller
             ->orderBy('codigo')
             ->get(['id', 'codigo', 'nombre', 'tipo']);
 
+        $empresa = Empresa::with('pais')->find(auth()->user()->empresa_id);
+        $empresaInfo = [
+            'nombre' => $empresa?->razon_social ?? 'Empresa',
+            'simbolo_moneda' => $empresa?->pais?->simbolo_moneda ?? 'Bs.',
+            'codigo_moneda' => $empresa?->pais?->moneda_principal ?? 'VES',
+        ];
+
         return Inertia::render('admin/Contabilidad/LibroDiario', [
             'asientos' => $asientos,
             'cuentasDisponibles' => $cuentasDisponibles,
             'filters' => $request->only(['search', 'from_date', 'to_date']),
+            'empresaInfo' => $empresaInfo,
         ]);
     }
 

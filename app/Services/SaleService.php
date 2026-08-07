@@ -4,6 +4,7 @@ namespace App\Services;
 
 use App\Models\CashRegister;
 use App\Models\Cliente;
+use App\Models\Empresa;
 use App\Models\Producto;
 use App\Models\Sale;
 use App\Models\SaleItem;
@@ -39,7 +40,7 @@ class SaleService
                 $subtotal += $item['precio_unitario'] * $item['cantidad'];
             }
             // Obtener país y tasa predeterminada de la empresa
-            $empresa = Empresa::with('pais')->find($empresaId);
+            $empresa = Empresa::with('pais')->find(\Auth::user()->empresa_id);
             $tasaPais = (float) ($empresa?->pais?->impuesto_predeterminado ?? 16.00);
 
             $descuento = (float) ($data['descuento'] ?? 0);
