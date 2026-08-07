@@ -1,5 +1,5 @@
 import { Head, useForm, router } from '@inertiajs/react';
-import { Wrench, Plus, CheckCircle, XCircle, MoreVertical, Pencil, Trash2, Tag } from 'lucide-react';
+import { Wrench, Plus, CheckCircle, XCircle, MoreVertical, Pencil, Trash2, Tag, Layers } from 'lucide-react';
 import React, { useState } from 'react';
 import { Breadcrumbs } from '@/components/breadcrumbs';
 import type { ColumnDef } from '@/components/data-table';
@@ -32,6 +32,11 @@ import { cleanParams, cn } from '@/lib/utils';
 import type { Paginated } from '@/types/app';
 import { notifySuccess, notifyError } from '@/utils/notifications';
 
+interface CategoriaItem {
+    id: number;
+    nombre: string;
+}
+
 interface Servicio {
     id: number;
     nombre: string;
@@ -39,10 +44,13 @@ interface Servicio {
     descripcion: string | null;
     precio: number;
     estado: boolean;
+    categoria_id?: number | null;
+    categoria?: CategoriaItem | null;
 }
 
 interface Props {
     servicios: Paginated<Servicio>;
+    categorias?: CategoriaItem[];
     currencySymbol?: string;
     filters: {
         search?: string;
@@ -51,7 +59,7 @@ interface Props {
     };
 }
 
-export default function Index({ servicios, currencySymbol = '$', filters }: Props) {
+export default function Index({ servicios, categorias = [], currencySymbol = '$', filters }: Props) {
     const { __ } = useTranslate();
     const [isCreateOpen, setIsCreateOpen] = useState(false);
     const [editingServicio, setEditingServicio] = useState<Servicio | null>(null);
@@ -80,6 +88,7 @@ export default function Index({ servicios, currencySymbol = '$', filters }: Prop
     ];
 
     const { data, setData, post, put, processing, errors, reset } = useForm({
+        categoria_id: '',
         nombre: '',
         codigo: '',
         descripcion: '',
@@ -96,6 +105,7 @@ export default function Index({ servicios, currencySymbol = '$', filters }: Prop
     const handleOpenEdit = (servicio: Servicio) => {
         setEditingServicio(servicio);
         setData({
+            categoria_id: servicio.categoria_id ? String(servicio.categoria_id) : '',
             nombre: servicio.nombre,
             codigo: servicio.codigo || '',
             descripcion: servicio.descripcion || '',
@@ -138,6 +148,20 @@ export default function Index({ servicios, currencySymbol = '$', filters }: Prop
     };
 
     const columns: ColumnDef<Servicio>[] = [
+        {
+            header: __('Categoría'),
+            accessorKey: 'categoria',
+            cell: (servicio) => (
+                servicio.categoria ? (
+                    <span className="inline-flex items-center rounded-full bg-purple-50 dark:bg-purple-950/40 border border-purple-200 dark:border-purple-800 px-2.5 py-0.5 text-xs font-semibold text-purple-700 dark:text-purple-300">
+                        <Layers className="w-3 h-3 mr-1 text-purple-600" />
+                        {servicio.categoria.nombre}
+                    </span>
+                ) : (
+                    <span className="text-xs text-slate-400 italic">{__('Sin categoría')}</span>
+                )
+            ),
+        },
         {
             header: __('Código'),
             accessorKey: 'codigo',
@@ -315,6 +339,34 @@ export default function Index({ servicios, currencySymbol = '$', filters }: Prop
                         </DialogHeader>
 
                         <form onSubmit={handleSubmit} className="space-y-4 py-2">
+                            {/* SELECCIÓN DE CATEGORÍA (DE PRIMERO Y OCUPANDO TODO EL ANCHO) */}
+                            <div className="space-y-2">
+                                <Label htmlFor="categoria_id">{__('Categoría de Dispositivo / Servicio *')}</Label>
+                                <Select
+                                    value={data.categoria_id}
+                                    onValueChange={(val) => setData('categoria_id', val)}
+                                >
+                                    <SelectTrigger id="categoria_id" className="w-full">
+                                        <SelectValue placeholder={__('Seleccionar Categoría...')} />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        {categorias && categorias.length > 0 ? (
+                                            categorias.map((cat) => (
+                                                <SelectItem key={cat.id} value={String(cat.id)}>
+                                                    {cat.nombre}
+                                                </SelectItem>
+                                            ))
+                                        ) : (
+                                            <SelectItem value="none" disabled>
+                                                {__('No hay categorías registradas')}
+                                            </SelectItem>
+                                        )}
+                                    </SelectContent>
+                                </Select>
+                                {errors.categoria_id && <p className="text-xs text-rose-500">{errors.categoria_id}</p>}
+                            </div>
+
+                            {/* CÓDIGO Y PRECIO BASE (DEBAJO DE LA CATEGORÍA) */}
                             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                                 <div className="space-y-2">
                                     <Label htmlFor="codigo">{__('Código / SKU')}</Label>

@@ -34,11 +34,12 @@ class ServicioController extends Controller
 
     public function index(Request $request)
     {
+        $user = auth()->user();
         $search = $request->input('search');
         $status = $request->input('status');
         $perPage = $request->input('perPage', 10);
 
-        $query = Servicio::query();
+        $query = Servicio::with('categoria:id,nombre');
 
         if ($search) {
             $query->where(function ($q) use ($search) {
@@ -54,8 +55,14 @@ class ServicioController extends Controller
 
         $servicios = $query->orderBy('nombre', 'asc')->paginate($perPage)->withQueryString();
 
+        $categorias = \App\Models\Categoria::where('empresa_id', $user->empresa_id)
+            ->where('estado', true)
+            ->orderBy('nombre')
+            ->get(['id', 'nombre']);
+
         return inertia('admin/PointOfSale/Servicios/Index', [
             'servicios' => $servicios,
+            'categorias' => $categorias,
             'currencySymbol' => $this->getCurrencySymbol(),
             'filters' => $request->only(['search', 'status', 'perPage']),
         ]);
@@ -64,6 +71,7 @@ class ServicioController extends Controller
     public function store(Request $request)
     {
         $validated = $request->validate([
+            'categoria_id' => 'nullable|exists:categorias,id',
             'nombre' => 'required|string|max:255',
             'codigo' => 'nullable|string|max:100',
             'descripcion' => 'nullable|string',
@@ -82,6 +90,7 @@ class ServicioController extends Controller
     public function update(Request $request, Servicio $servicio)
     {
         $validated = $request->validate([
+            'categoria_id' => 'nullable|exists:categorias,id',
             'nombre' => 'required|string|max:255',
             'codigo' => 'nullable|string|max:100',
             'descripcion' => 'nullable|string',
