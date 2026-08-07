@@ -139,8 +139,19 @@ function CollapsibleNavItem({
     const { url } = usePage();
     const { __ } = useTranslate();
 
+    const allHrefs = items.map((i) => i.href);
+    const checkActive = (itemHref: string) => {
+        const cleanUrl = url.split('?')[0];
+        if (cleanUrl === itemHref) return true;
+        const moreSpecificMatch = allHrefs.some(
+            (otherHref) => otherHref !== itemHref && otherHref.length > itemHref.length && cleanUrl.startsWith(otherHref)
+        );
+        if (moreSpecificMatch) return false;
+        return cleanUrl.startsWith(itemHref);
+    };
+
     // Determine if any of the sub-items are active
-    const isAnyActive = items.some((item) => url.startsWith(item.href));
+    const isAnyActive = items.some((item) => checkActive(item.href));
 
     // State to toggle open/closed
     const [isOpen, setIsOpen] = React.useState(isAnyActive);
@@ -180,7 +191,7 @@ function CollapsibleNavItem({
                                 href={item.href}
                                 className={cn(
                                     'text-xs py-1 px-2 rounded hover:bg-sidebar-accent block',
-                                    url.startsWith(item.href) ? 'text-primary font-semibold' : 'text-sidebar-foreground/80'
+                                    checkActive(item.href) ? 'text-primary font-semibold' : 'text-sidebar-foreground/80'
                                 )}
                             >
                                 {__(item.title)}
@@ -215,7 +226,7 @@ function CollapsibleNavItem({
             {isOpen && (
                 <div className="pl-9 space-y-1 transition-all duration-300">
                     {items.map((item, idx) => {
-                        const active = url.startsWith(item.href);
+                        const active = checkActive(item.href);
 
                         return (
                             <Link
@@ -455,7 +466,7 @@ export default function AdminSaasLayout({
                                             permission: 'reparaciones.view',
                                         },
                                         {
-                                            title: 'Nueva Recepción (11 Pasos)',
+                                            title: 'Nueva Recepción',
                                             href: '/admin/reparaciones/create',
                                             permission: 'reparaciones.create',
                                         },

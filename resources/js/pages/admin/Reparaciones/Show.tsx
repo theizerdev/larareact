@@ -150,6 +150,23 @@ export default function ShowReparacion({ orden, productosRepuestos = [], tecnico
         }
     };
 
+    const formatOnlyDate = (dateStr?: string): string => {
+        if (!dateStr) return __('Sin fecha especificada');
+        try {
+            const cleanStr = String(dateStr).split('T')[0];
+            const parts = cleanStr.split('-');
+            if (parts.length === 3) {
+                const [year, month, day] = parts;
+                return `${day}/${month}/${year}`;
+            }
+            const d = new Date(dateStr);
+            if (isNaN(d.getTime())) return dateStr;
+            return d.toLocaleDateString('es-ES', { day: '2-digit', month: '2-digit', year: 'numeric' });
+        } catch {
+            return dateStr || __('Sin fecha especificada');
+        }
+    };
+
     const copyToClipboard = (text: string, label: string) => {
         navigator.clipboard.writeText(text);
         notifySuccess(`${label} ${__('copiado al portapapeles.')}`);
@@ -442,55 +459,58 @@ export default function ShowReparacion({ orden, productosRepuestos = [], tecnico
                 {/* 4 STRIPS METRICAS CLAVE DE LA ORDEN */}
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
                     {/* CLIENTE */}
-                    <Card className="border-slate-200 dark:border-slate-800 shadow-sm bg-white dark:bg-slate-900 hover:border-purple-300 dark:hover:border-purple-800 transition-colors">
+                    <Card className="border-slate-200 dark:border-slate-800 shadow-xs bg-white dark:bg-slate-900 hover:border-purple-300 dark:hover:border-purple-800 transition-colors">
                         <CardContent className="p-4 flex items-center gap-3">
-                            <div className="p-3 rounded-xl bg-purple-50 dark:bg-purple-950/60 text-purple-600 dark:text-purple-400">
+                            <div className="p-3 rounded-xl bg-purple-50 dark:bg-purple-950/60 text-purple-600 dark:text-purple-400 shrink-0">
                                 <User className="w-5 h-5" />
                             </div>
                             <div className="min-w-0 flex-1">
                                 <span className="text-[10px] font-extrabold uppercase tracking-wider text-slate-400 block">{__('Cliente')}</span>
-                                <h3 className="text-sm font-bold text-slate-900 dark:text-slate-100 truncate">{clienteNombreDisplay}</h3>
+                                <h3 className="text-sm font-bold text-slate-900 dark:text-slate-100 truncate" title={clienteNombreDisplay}>{clienteNombreDisplay}</h3>
                                 <p className="text-xs font-mono text-purple-700 dark:text-purple-300 font-semibold">{clienteTelefonoDisplay}</p>
                             </div>
                         </CardContent>
                     </Card>
 
                     {/* DISPOSITIVO */}
-                    <Card className="border-slate-200 dark:border-slate-800 shadow-sm bg-white dark:bg-slate-900 hover:border-purple-300 dark:hover:border-purple-800 transition-colors">
+                    <Card className="border-slate-200 dark:border-slate-800 shadow-xs bg-white dark:bg-slate-900 hover:border-purple-300 dark:hover:border-purple-800 transition-colors">
                         <CardContent className="p-4 flex items-center gap-3">
-                            <div className="p-3 rounded-xl bg-indigo-50 dark:bg-indigo-950/60 text-indigo-600 dark:text-indigo-400">
+                            <div className="p-3 rounded-xl bg-indigo-50 dark:bg-indigo-950/60 text-indigo-600 dark:text-indigo-400 shrink-0">
                                 <Smartphone className="w-5 h-5" />
                             </div>
                             <div className="min-w-0 flex-1">
                                 <span className="text-[10px] font-extrabold uppercase tracking-wider text-slate-400 block">{__('Equipo / Modelo')}</span>
-                                <h3 className="text-sm font-bold text-slate-900 dark:text-slate-100 truncate">{marcaNombreDisplay} {modeloNombreDisplay}</h3>
+                                <h3 className="text-sm font-bold text-slate-900 dark:text-slate-100 truncate" title={`${marcaNombreDisplay} ${modeloNombreDisplay}`}>{marcaNombreDisplay} {modeloNombreDisplay}</h3>
                                 <p className="text-[11px] text-slate-500 font-mono flex items-center gap-1 truncate">
-                                    IMEI: <strong className="text-slate-700 dark:text-slate-300">{orden.imei_serie || 'N/A'}</strong>
+                                    IMEI: <strong className="text-slate-700 dark:text-slate-300 font-bold">{orden.imei_serie || 'N/A'}</strong>
                                 </p>
                             </div>
                         </CardContent>
                     </Card>
 
                     {/* DÍAS GARANTÍA / FECHA PROMETIDA */}
-                    <Card className="border-slate-200 dark:border-slate-800 shadow-sm bg-white dark:bg-slate-900 hover:border-purple-300 dark:hover:border-purple-800 transition-colors">
+                    <Card className="border-slate-200 dark:border-slate-800 shadow-xs bg-white dark:bg-slate-900 hover:border-purple-300 dark:hover:border-purple-800 transition-colors">
                         <CardContent className="p-4 flex items-center gap-3">
-                            <div className="p-3 rounded-xl bg-amber-50 dark:bg-amber-950/60 text-amber-600 dark:text-amber-400">
+                            <div className="p-3 rounded-xl bg-amber-50 dark:bg-amber-950/60 text-amber-600 dark:text-amber-400 shrink-0">
                                 <Calendar className="w-5 h-5" />
                             </div>
-                            <div className="min-w-0 flex-1">
+                            <div className="min-w-0 flex-1 space-y-0.5">
                                 <span className="text-[10px] font-extrabold uppercase tracking-wider text-slate-400 block">{__('Compromiso & Garantía')}</span>
-                                <h3 className="text-xs font-bold text-slate-900 dark:text-slate-100 truncate">{orden.fecha_prometida || __('Sin fecha especificada')}</h3>
-                                <p className="text-[11px] font-bold text-emerald-600 flex items-center gap-1">
-                                    <ShieldCheck className="w-3.5 h-3.5" /> {orden.garantia_dias} {__('días de garantía')}
-                                </p>
+                                <div className="text-sm font-black text-slate-900 dark:text-slate-100 font-mono">
+                                    {formatOnlyDate(orden.fecha_prometida)}
+                                </div>
+                                <span className="inline-flex items-center gap-1 text-[10px] font-extrabold text-emerald-700 dark:text-emerald-300 bg-emerald-50 dark:bg-emerald-950/60 px-2 py-0.5 rounded-full border border-emerald-200 dark:border-emerald-900">
+                                    <ShieldCheck className="w-3 h-3 text-emerald-600" />
+                                    {orden.garantia_dias} {__('días de garantía')}
+                                </span>
                             </div>
                         </CardContent>
                     </Card>
 
                     {/* SALDO PENDIENTE */}
-                    <Card className="border-slate-200 dark:border-slate-800 shadow-sm bg-white dark:bg-slate-900 border-l-4 border-l-emerald-500 hover:border-purple-300 dark:hover:border-purple-800 transition-colors">
+                    <Card className="border-slate-200 dark:border-slate-800 shadow-xs bg-white dark:bg-slate-900 border-l-4 border-l-emerald-500 hover:border-purple-300 dark:hover:border-purple-800 transition-colors">
                         <CardContent className="p-4 flex items-center gap-3">
-                            <div className="p-3 rounded-xl bg-emerald-50 dark:bg-emerald-950/60 text-emerald-600 dark:text-emerald-400">
+                            <div className="p-3 rounded-xl bg-emerald-50 dark:bg-emerald-950/60 text-emerald-600 dark:text-emerald-400 shrink-0">
                                 <DollarSign className="w-5 h-5" />
                             </div>
                             <div className="min-w-0 flex-1">
