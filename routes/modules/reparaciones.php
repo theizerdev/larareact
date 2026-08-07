@@ -12,6 +12,8 @@ Route::middleware(['verified'])->group(function () {
         ->name('reparaciones.quick-modelo');
     Route::post('reparaciones/quick-servicio', [ReparacionController::class, 'storeServicio'])
         ->name('reparaciones.quick-servicio');
+    Route::post('reparaciones/check-imei', [ReparacionController::class, 'checkImei'])
+        ->name('reparaciones.check-imei');
     Route::resource('reparaciones', ReparacionController::class);
     Route::post('reparaciones/{reparacion}/estado', [ReparacionController::class, 'updateEstado'])
         ->name('reparaciones.update-estado');

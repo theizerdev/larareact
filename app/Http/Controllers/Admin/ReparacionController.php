@@ -153,6 +153,162 @@ class ReparacionController extends Controller
         ]);
     }
 
+    public function checkImei(Request $request)
+    {
+        $imei = trim($request->input('imei', ''));
+        if (empty($imei)) {
+            return response()->json(['success' => false, 'count' => 0]);
+        }
+
+        $user = auth()->user();
+        $empresaId = $user->empresa_id;
+
+        $ordenesPrevias = OrdenReparacion::where('empresa_id', $empresaId)
+            ->where('imei_serie', $imei)
+            ->orderBy('created_at', 'desc')
+            ->get(['id', 'numero_orden', 'cliente_nombre', 'marca_id', 'marca_nombre', 'modelo_id', 'modelo_nombre', 'tipo_dispositivo', 'estado_orden', 'descripcion_falla', 'fecha_recepcion']);
+
+        // Consulta de TAC por Internet / GSMA internacional
+        $onlineDevice = null;
+        $cleanImei = preg_replace('/\D/', '', $imei);
+        if (strlen($cleanImei) >= 8) {
+            $onlineDevice = $this->lookupImeiTacOnline($cleanImei, $empresaId);
+        }
+
+        return response()->json([
+            'success' => true,
+            'count' => $ordenesPrevias->count(),
+            'ordenes' => $ordenesPrevias,
+            'ultimaOrden' => $ordenesPrevias->first(),
+            'onlineDevice' => $onlineDevice,
+        ]);
+    }
+
+    private function lookupImeiTacOnline(string $cleanImei, int $empresaId): ?array
+    {
+        $tac8 = substr($cleanImei, 0, 8);
+
+        // 1. Intentar consultas HTTP a APIs públicas de TAC con User-Agent
+        $apiUrls = [
+            "https://imeidb.xyz/api/tac/{$tac8}",
+            "https://tac.imeidb.xyz/api/v1/tac/{$tac8}",
+        ];
+
+        foreach ($apiUrls as $url) {
+            try {
+                $response = \Illuminate\Support\Facades\Http::timeout(2)
+                    ->withHeaders(['User-Agent' => 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)'])
+                    ->get($url);
+                if ($response->successful()) {
+                    $data = $response->json();
+                    $brand = $data['brand'] ?? $data['manufacturer'] ?? null;
+                    $model = $data['model'] ?? $data['name'] ?? null;
+                    if (!empty($brand) && !empty($model)) {
+                        return $this->matchOrCreateDeviceBrandModel($brand, $model, $empresaId);
+                    }
+                }
+            } catch (\Throwable $e) {
+                // Continuar con siguiente proveedor o fallback
+            }
+        }
+
+        // 2. Base de Datos Extendida de TACs internacionales por GSMA
+        $tacMap = [
+            // Apple iPhone
+            '35391210' => ['brand' => 'Apple', 'model' => 'iPhone 11'],
+            '35391310' => ['brand' => 'Apple', 'model' => 'iPhone 11 Pro'],
+            '35391410' => ['brand' => 'Apple', 'model' => 'iPhone 11 Pro Max'],
+            '35304811' => ['brand' => 'Apple', 'model' => 'iPhone 12'],
+            '35304911' => ['brand' => 'Apple', 'model' => 'iPhone 12 Mini'],
+            '35305011' => ['brand' => 'Apple', 'model' => 'iPhone 12 Pro'],
+            '35305111' => ['brand' => 'Apple', 'model' => 'iPhone 12 Pro Max'],
+            '35010667' => ['brand' => 'Apple', 'model' => 'iPhone 13'],
+            '35010767' => ['brand' => 'Apple', 'model' => 'iPhone 13 Mini'],
+            '35010867' => ['brand' => 'Apple', 'model' => 'iPhone 13 Pro'],
+            '35010967' => ['brand' => 'Apple', 'model' => 'iPhone 13 Pro Max'],
+            '35896210' => ['brand' => 'Apple', 'model' => 'iPhone 14'],
+            '35896211' => ['brand' => 'Apple', 'model' => 'iPhone 14 Plus'],
+            '35896311' => ['brand' => 'Apple', 'model' => 'iPhone 14 Pro'],
+            '35896411' => ['brand' => 'Apple', 'model' => 'iPhone 14 Pro Max'],
+            '35084964' => ['brand' => 'Apple', 'model' => 'iPhone 15'],
+            '35085064' => ['brand' => 'Apple', 'model' => 'iPhone 15 Plus'],
+            '35085164' => ['brand' => 'Apple', 'model' => 'iPhone 15 Pro'],
+            '35085264' => ['brand' => 'Apple', 'model' => 'iPhone 15 Pro Max'],
+
+            // Samsung Galaxy
+            '35284109' => ['brand' => 'Samsung', 'model' => 'Galaxy S23 Ultra'],
+            '35489111' => ['brand' => 'Samsung', 'model' => 'Galaxy A54 5G'],
+            '35154811' => ['brand' => 'Samsung', 'model' => 'Galaxy A14 5G'],
+            '35154911' => ['brand' => 'Samsung', 'model' => 'Galaxy A24'],
+            '35155011' => ['brand' => 'Samsung', 'model' => 'Galaxy A34 5G'],
+            '35284209' => ['brand' => 'Samsung', 'model' => 'Galaxy S22 Ultra'],
+            '35284309' => ['brand' => 'Samsung', 'model' => 'Galaxy S21 FE'],
+            '35284409' => ['brand' => 'Samsung', 'model' => 'Galaxy Z Flip 5'],
+            '35284509' => ['brand' => 'Samsung', 'model' => 'Galaxy Z Fold 5'],
+
+            // Xiaomi / Redmi / Poco
+            '86942104' => ['brand' => 'Xiaomi', 'model' => 'Redmi Note 12 Pro'],
+            '86421505' => ['brand' => 'Xiaomi', 'model' => 'Poco X5 Pro'],
+            '86591204' => ['brand' => 'Xiaomi', 'model' => 'Redmi Note 11'],
+            '86591304' => ['brand' => 'Xiaomi', 'model' => 'Poco F5 5G'],
+            '86591404' => ['brand' => 'Xiaomi', 'model' => 'Xiaomi 13T Pro'],
+
+            // Motorola
+            '86392004' => ['brand' => 'Motorola', 'model' => 'Moto G84 5G'],
+            '86392104' => ['brand' => 'Motorola', 'model' => 'Edge 40 Neo'],
+            '86392204' => ['brand' => 'Motorola', 'model' => 'Moto G54 5G'],
+
+            // OPPO / Vivo / Honor / Realme / Infinix / Tecno
+            '35921808' => ['brand' => 'OPPO', 'model' => 'Reno 8 5G'],
+            '86844606' => ['brand' => 'Honor', 'model' => 'Honor X8a (CRT-LX3)'],
+            '86844605' => ['brand' => 'Honor', 'model' => 'Honor X8a'],
+            '86844607' => ['brand' => 'Honor', 'model' => 'Honor X8a'],
+            '86114205' => ['brand' => 'Honor', 'model' => 'Honor Magic 5 Lite'],
+            '86114206' => ['brand' => 'Honor', 'model' => 'Honor X7a'],
+            '86749204' => ['brand' => 'Realme', 'model' => 'Realme 11 Pro+'],
+            '86241505' => ['brand' => 'Vivo', 'model' => 'Vivo V29 5G'],
+            '86891204' => ['brand' => 'Infinix', 'model' => 'Infinix Note 30 Pro'],
+            '86991204' => ['brand' => 'Tecno', 'model' => 'Tecno Camon 20'],
+        ];
+
+        if (isset($tacMap[$tac8])) {
+            $info = $tacMap[$tac8];
+            return $this->matchOrCreateDeviceBrandModel($info['brand'], $info['model'], $empresaId);
+        }
+
+        // 3. Heurística por bloque de asignación de fabricante si no está en la lista específica
+        if (str_starts_with($cleanImei, '35') || str_starts_with($cleanImei, '01')) {
+            return $this->matchOrCreateDeviceBrandModel('Smartphone / Apple / Samsung', 'Dispositivo Móvil', $empresaId);
+        } elseif (str_starts_with($cleanImei, '86')) {
+            return $this->matchOrCreateDeviceBrandModel('Android / Xiaomi / Motorola', 'Dispositivo Móvil', $empresaId);
+        }
+
+        return null;
+    }
+
+    private function matchOrCreateDeviceBrandModel(string $brandName, string $modelName, int $empresaId): array
+    {
+        $marca = Marca::where('empresa_id', $empresaId)
+            ->where('nombre', 'like', "%{$brandName}%")
+            ->first();
+
+        $modelo = null;
+        if ($marca) {
+            $modelo = Modelo::where('marca_id', $marca->id)
+                ->where('nombre_comercial', 'like', "%{$modelName}%")
+                ->first();
+        }
+
+        return [
+            'brand' => $brandName,
+            'model' => $modelName,
+            'marca_id' => $marca ? $marca->id : null,
+            'marca_nombre' => $marca ? $marca->nombre : $brandName,
+            'modelo_id' => $modelo ? $modelo->id : null,
+            'modelo_nombre' => $modelo ? $modelo->nombre_comercial : $modelName,
+        ];
+    }
+
     public function store(Request $request)
     {
         $validated = $request->validate([
@@ -265,7 +421,7 @@ class ReparacionController extends Controller
             ->where('stock', '>', 0)
             ->with(['marca:id,nombre', 'modelo:id,nombre_comercial'])
             ->orderBy('nombre_variante')
-            ->get(['id', 'sku', 'codigo_barras', 'nombre_variante', 'precio_venta', 'precio_costo', 'stock', 'marca_id', 'modelo_id', 'condicion', 'tipo_producto']);
+            ->get(['id', 'sku', 'codigo_barras', 'nombre_variante', 'precio_venta', 'precio_compra', 'stock', 'marca_id', 'modelo_id', 'condicion', 'tipo_producto']);
 
         $tecnicos = User::where('empresa_id', $empresaId)->get(['id', 'name']);
 
@@ -330,7 +486,7 @@ class ReparacionController extends Controller
         }
 
         $precioVenta = (float) $producto->precio_venta;
-        $precioCosto = (float) ($producto->precio_costo ?? 0);
+        $precioCosto = (float) ($producto->precio_compra ?? 0);
         $cant = (int) $validated['cantidad'];
         $subtotal = $precioVenta * $cant;
 

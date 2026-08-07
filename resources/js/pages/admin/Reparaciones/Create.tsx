@@ -217,6 +217,14 @@ export default function CreateReparacion({ clientes: initialClientes, marcas: in
     const [cameraError, setCameraError] = useState<string | null>(null);
     const [cameraFacingMode, setCameraFacingMode] = useState<'environment' | 'user'>('environment');
 
+    // Estado e Historial de IMEI
+    const [imeiHistoryData, setImeiHistoryData] = useState<{
+        count: number;
+        ultimaOrden: any;
+        ordenes: any[];
+    } | null>(null);
+    const [isCheckingImei, setIsCheckingImei] = useState(false);
+
     const videoRef = useRef<HTMLVideoElement | null>(null);
     const canvasRef = useRef<HTMLCanvasElement | null>(null);
 
@@ -311,6 +319,54 @@ export default function CreateReparacion({ clientes: initialClientes, marcas: in
         if (activeCameraSlot) {
             startCameraStream(activeCameraSlot, cameraSlotLabel, nextMode);
         }
+    };
+
+    // Algoritmo de Luhn para validación matemática de IMEI (15 dígitos)
+    const checkIMEILuhn = (val: string): { isValid: boolean; isCandidate: boolean } => {
+        const clean = val.replace(/\D/g, '');
+        if (clean.length !== 15) {
+            return { isValid: false, isCandidate: clean.length > 0 && /^\d+$/.test(val.trim()) };
+        }
+
+        let sum = 0;
+        for (let i = 0; i < 15; i++) {
+            let digit = parseInt(clean.charAt(i), 10);
+            if (i % 2 !== 0) {
+                digit *= 2;
+                if (digit > 9) digit -= 9;
+            }
+            sum += digit;
+        }
+        return { isValid: sum % 10 === 0, isCandidate: true };
+    };
+
+    // Búsqueda en tiempo real de Historial Previo por IMEI / Serie
+    const handleImeiChange = (val: string) => {
+        setData('imei_serie', val);
+
+        if (!val || val.trim().length < 4) {
+            setImeiHistoryData(null);
+            return;
+        }
+
+        if ((window as any)._imeiDebounceTimer) {
+            clearTimeout((window as any)._imeiDebounceTimer);
+        }
+        (window as any)._imeiDebounceTimer = setTimeout(async () => {
+            setIsCheckingImei(true);
+            try {
+                const res = await postJson('/admin/reparaciones/check-imei', { imei: val.trim() });
+                if (res.success && res.count > 0) {
+                    setImeiHistoryData(res);
+                } else {
+                    setImeiHistoryData(null);
+                }
+            } catch (err) {
+                console.error('Error al verificar IMEI:', err);
+            } finally {
+                setIsCheckingImei(false);
+            }
+        }, 400);
     };
 
     const handleFotoUpload = (slotKey: string, e: React.ChangeEvent<HTMLInputElement>) => {
@@ -1205,13 +1261,125 @@ export default function CreateReparacion({ clientes: initialClientes, marcas: in
                                                 </div>
 
                                                 <div>
-                                                    <Label className="text-xs font-semibold">{__('Color / Serie / IMEI')}</Label>
-                                                    <Input
-                                                        value={data.imei_serie}
-                                                        onChange={(e) => setData('imei_serie', e.target.value)}
-                                                        placeholder={__('IMEI (15 dígitos) o Serie')}
-                                                        className="text-xs h-10 mt-1 font-mono"
-                                                    />
+                                                    <div className="flex items-center justify-between">
+                                                        <Label className="text-xs font-semibold">{__('Color / Serie / IMEI')}</Label>
+                                                        {data.imei_serie && (
+                                                            <span className="text-[10px] font-mono font-bold">
+                                                                {checkIMEILuhn(data.imei_serie).isValid ? (
+                                                                    <span className="text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/40 px-2 py-0.5 rounded border border-emerald-200 dark:border-emerald-800">
+                                                                        ✓ IMEI Válido (Luhn OK)
+                                                                    </span>
+                                                                ) : data.imei_serie.replace(/\D/g, '').length === 15 ? (
+                                                                    <span className="text-rose-600 dark:text-rose-400 bg-rose-50 dark:bg-rose-950/40 px-2 py-0.5 rounded border border-rose-200 dark:border-rose-800">
+                                                                        ✕ IMEI Inválido (Check Erróneo)
+                                                                    </span>
+                                                                ) : (
+                                                                    <span className="text-slate-500 bg-slate-100 dark:bg-slate-800 px-2 py-0.5 rounded">
+                                                                        {data.imei_serie.length} chars (Serie)
+                                                                    </span>
+                                                                )}
+                                                            </span>
+                                                        )}
+                                                    </div>
+                                                    <div className="relative mt-1">
+                                                        <Input
+                                                            value={data.imei_serie}
+                                                            onChange={(e) => handleImeiChange(e.target.value)}
+                                                            placeholder={__('IMEI (15 dígitos) o Serie del equipo...')}
+                                                            className={cn(
+                                                                "text-xs h-10 font-mono font-semibold pr-8",
+                                                                data.imei_serie && checkIMEILuhn(data.imei_serie).isValid
+                                                                    ? "border-emerald-500 focus-visible:ring-emerald-500"
+                                                                    : data.imei_serie && data.imei_serie.replace(/\D/g, '').length === 15
+                                                                    ? "border-rose-500 focus-visible:ring-rose-500"
+                                                                    : ""
+                                                            )}
+                                                        />
+                                                        {isCheckingImei && (
+                                                            <RefreshCw className="w-3.5 h-3.5 animate-spin absolute right-3 top-3 text-purple-600" />
+                                                        )}
+                                                    </div>
+
+                                                    {/* DETECCIÓN POR INTERNET TAC / GSMA */}
+                                                    {imeiHistoryData?.onlineDevice && (!imeiHistoryData.count || imeiHistoryData.count === 0) && (
+                                                        <div className="mt-2.5 p-3 rounded-xl bg-purple-50 dark:bg-purple-950/40 border border-purple-200 dark:border-purple-800 text-xs flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 animate-in fade-in duration-300">
+                                                            <div className="flex items-center gap-2 text-purple-900 dark:text-purple-200 font-medium">
+                                                                <Sparkles className="w-4 h-4 text-purple-600 flex-shrink-0" />
+                                                                <span>
+                                                                    {__('Dispositivo Detectado por Internet (TAC GSMA):')} <strong className="font-bold text-purple-700 dark:text-purple-300">{imeiHistoryData.onlineDevice.brand} {imeiHistoryData.onlineDevice.model}</strong>
+                                                                </span>
+                                                            </div>
+                                                            <Button
+                                                                type="button"
+                                                                size="sm"
+                                                                onClick={() => {
+                                                                    const dev = imeiHistoryData.onlineDevice;
+                                                                    if (dev) {
+                                                                        if (dev.marca_id) {
+                                                                            handleSelectMarca(String(dev.marca_id));
+                                                                        } else {
+                                                                            setData((prev) => ({ ...prev, marca_nombre: dev.brand }));
+                                                                        }
+                                                                        setTimeout(() => {
+                                                                            setData((prev) => ({
+                                                                                ...prev,
+                                                                                modelo_id: dev.modelo_id ? String(dev.modelo_id) : '',
+                                                                                modelo_nombre: dev.model || dev.modelo_nombre || '',
+                                                                            }));
+                                                                        }, 50);
+                                                                        notifySuccess(__('Marca y Modelo autocompletados desde la consulta en internet.'));
+                                                                    }
+                                                                }}
+                                                                className="h-7 text-[10px] font-bold bg-purple-600 hover:bg-purple-700 text-white gap-1 flex-shrink-0 w-full sm:w-auto"
+                                                            >
+                                                                <Check className="w-3 h-3" />
+                                                                {__('Cargar Marca & Modelo')}
+                                                            </Button>
+                                                        </div>
+                                                    )}
+
+                                                    {/* TARJETA DE HISTORIAL PREVIO DEL EQUIPO SI EXISTE */}
+                                                    {imeiHistoryData && imeiHistoryData.count > 0 && (
+                                                        <div className="mt-2.5 p-3 rounded-xl bg-amber-50 dark:bg-amber-950/40 border border-amber-300 dark:border-amber-800 text-xs space-y-2 animate-in fade-in duration-300">
+                                                            <div className="flex items-center justify-between font-bold text-amber-900 dark:text-amber-200">
+                                                                <span className="flex items-center gap-1.5">
+                                                                    <ShieldAlert className="w-4 h-4 text-amber-600" />
+                                                                    {__('¡Equipo Registrado Anteriormente!')}
+                                                                </span>
+                                                                <Badge variant="outline" className="bg-amber-100 text-amber-800 border-amber-300 font-mono text-[10px]">
+                                                                    {imeiHistoryData.count} {imeiHistoryData.count === 1 ? __('Ingreso Previo') : __('Ingresos Previos')}
+                                                                </Badge>
+                                                            </div>
+
+                                                            <p className="text-[11px] text-amber-800 dark:text-amber-300">
+                                                                {__('Última recepción:')} <strong className="font-mono">{imeiHistoryData.ultimaOrden?.numero_orden}</strong> - {imeiHistoryData.ultimaOrden?.fecha_recepcion?.split('T')[0]} ({imeiHistoryData.ultimaOrden?.estado_orden?.replace('_', ' ')})
+                                                                <br />
+                                                                {__('Cliente previo:')} <strong>{imeiHistoryData.ultimaOrden?.cliente_nombre}</strong> | {__('Falla:')} <em>"{imeiHistoryData.ultimaOrden?.descripcion_falla}"</em>
+                                                            </p>
+
+                                                            {imeiHistoryData.ultimaOrden?.marca_id && imeiHistoryData.ultimaOrden?.modelo_id && (
+                                                                <Button
+                                                                    type="button"
+                                                                    size="sm"
+                                                                    onClick={() => {
+                                                                        handleSelectMarca(String(imeiHistoryData.ultimaOrden.marca_id));
+                                                                        setTimeout(() => {
+                                                                            setData((prev) => ({
+                                                                                ...prev,
+                                                                                modelo_id: String(imeiHistoryData.ultimaOrden.modelo_id),
+                                                                                modelo_nombre: imeiHistoryData.ultimaOrden.modelo_nombre,
+                                                                            }));
+                                                                        }, 50);
+                                                                        notifySuccess(__('Marca y Modelo autocompletados desde el historial del equipo.'));
+                                                                    }}
+                                                                    className="h-7 text-[10px] font-bold bg-amber-600 hover:bg-amber-700 text-white gap-1 w-full sm:w-auto"
+                                                                >
+                                                                    <Check className="w-3 h-3" />
+                                                                    {__('Cargar Marca & Modelo Previos:')} {imeiHistoryData.ultimaOrden?.marca_nombre} {imeiHistoryData.ultimaOrden?.modelo_nombre}
+                                                                </Button>
+                                                            )}
+                                                        </div>
+                                                    )}
                                                 </div>
                                             </div>
 
