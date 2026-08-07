@@ -446,7 +446,7 @@ class ReparacionController extends Controller
         $empresaId = $user->empresa_id;
 
         $productosRepuestos = Producto::where('empresa_id', $empresaId)
-            ->where('stock', '>', 0)
+            ->where('tipo_producto', 'repuesto')
             ->with(['marca:id,nombre', 'modelo:id,nombre_comercial'])
             ->orderBy('nombre_variante')
             ->get(['id', 'sku', 'codigo_barras', 'nombre_variante', 'precio_venta', 'precio_compra', 'stock', 'marca_id', 'modelo_id', 'condicion', 'tipo_producto']);
@@ -518,15 +518,15 @@ class ReparacionController extends Controller
         $cant = (int) $validated['cantidad'];
         $subtotal = $precioVenta * $cant;
 
-        OrdenReparacionItem::create([
-            'orden_id' => $reparacion->id,
-            'producto_id' => $producto->id,
-            'descripcion' => $producto->nombre,
-            'cantidad' => $cant,
-            'precio_costo' => $precioCosto,
-            'precio_venta' => $precioVenta,
-            'subtotal' => $subtotal,
-        ]);
+        $item =OrdenReparacionItem::where('orden_id', $reparacion->id)->first();
+
+        if($item != null)
+
+        {
+            $item->update([
+                'producto_id' => $producto->id,
+            ]);
+        }
 
         // Descontar inventario
         $producto->decrement('stock', $cant);

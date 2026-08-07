@@ -672,9 +672,13 @@ export default function Index({ productos, categorias: categoriasProp, marcas: m
                             <Tag className="h-3 w-3 text-slate-400" />
                             {prod.sku}
                         </span>
-                        {prod.codigo_barras && (
-                            <span className="text-[11px] text-muted-foreground">
-                                EAN: {prod.codigo_barras}
+                        {prod.tipo_producto === 'repuesto' || prod.condicion === 'repuesto' ? (
+                            <span className="inline-flex items-center gap-1 text-[10px] font-bold bg-purple-100 text-purple-700 dark:bg-purple-950 dark:text-purple-300 px-1.5 py-0.5 rounded border border-purple-200">
+                                🛠️ Refacción
+                            </span>
+                        ) : (
+                            <span className="inline-flex items-center gap-1 text-[10px] font-medium bg-blue-50 text-blue-700 dark:bg-blue-950 dark:text-blue-300 px-1.5 py-0.5 rounded border border-blue-200">
+                                🛒 Venta POS
                             </span>
                         )}
                         <span className="text-[11px] px-1.5 py-0.5 rounded bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-400 capitalize">
@@ -1210,16 +1214,36 @@ export default function Index({ productos, categorias: categoriasProp, marcas: m
                                                     {errors.codigo_barras && <p className="text-xs text-rose-500">{errors.codigo_barras}</p>}
                                                 </div>
 
-                                                {/* Nombre del Producto (readOnly) */}
+                                                {/* Nombre del Producto */}
                                                 <div className="md:col-span-5 space-y-1.5">
-                                                    <Label htmlFor="nombre_variante" className="text-xs required">{__('Nombre del Producto')}</Label>
+                                                    <div className="flex items-center justify-between">
+                                                        <Label htmlFor="nombre_variante" className="text-xs required">{__('Nombre del Producto')}</Label>
+                                                        {data.tipo_producto === 'repuesto' && (
+                                                            <span className="text-[10px] font-bold text-purple-600 dark:text-purple-400 bg-purple-50 dark:bg-purple-950/60 px-1.5 py-0.5 rounded border border-purple-200">
+                                                                ✏️ {__('Edición Habilitada')}
+                                                            </span>
+                                                        )}
+                                                    </div>
                                                     <Input
                                                         id="nombre_variante"
                                                         value={data.nombre_variante}
-                                                        onChange={(e) => setData('nombre_variante', e.target.value)}
-                                                        placeholder={__('Se genera automáticamente al seleccionar el modelo')}
-                                                        readOnly
-                                                        className="text-xs font-medium bg-slate-100 dark:bg-slate-800 cursor-not-allowed text-slate-700 dark:text-slate-300"
+                                                        onChange={(e) => {
+                                                            const val = e.target.value;
+                                                            const mod = modelos.find((m) => String(m.id) === data.modelo_id);
+                                                            setData((prev) => ({
+                                                                ...prev,
+                                                                nombre_variante: val,
+                                                                sku: generateSkuSuggestion(mod, val, prev.codigo_barras),
+                                                            }));
+                                                        }}
+                                                        placeholder={data.tipo_producto === 'repuesto' ? __('ej: Pantalla OLED Incell iPhone 13 Pro Black') : __('Se genera automáticamente al seleccionar el modelo')}
+                                                        readOnly={data.tipo_producto !== 'repuesto'}
+                                                        className={cn(
+                                                            "text-xs font-medium",
+                                                            data.tipo_producto !== 'repuesto'
+                                                                ? "bg-slate-100 dark:bg-slate-800 cursor-not-allowed text-slate-700 dark:text-slate-300"
+                                                                : "bg-white dark:bg-slate-950 border-purple-300 focus:border-purple-600 text-purple-950 dark:text-purple-100 font-bold"
+                                                        )}
                                                     />
                                                     {errors.nombre_variante && <p className="text-xs text-rose-500">{errors.nombre_variante}</p>}
                                                 </div>
