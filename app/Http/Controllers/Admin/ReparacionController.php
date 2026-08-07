@@ -101,6 +101,35 @@ class ReparacionController extends Controller
         ]);
     }
 
+    public function storeCliente(Request $request)
+    {
+        $validated = $request->validate([
+            'nombre' => 'required|string|max:255',
+            'telefono' => 'nullable|string|max:50',
+            'email' => 'nullable|email|max:255',
+            'direccion' => 'nullable|string|max:500',
+        ]);
+
+        $user = auth()->user();
+        $cliente = Cliente::create(array_merge($validated, [
+            'empresa_id' => $user->empresa_id,
+            'sucursal_id' => $user->sucursal_id,
+        ]));
+
+        if ($request->wantsJson()) {
+            return response()->json([
+                'success' => true,
+                'cliente' => $cliente,
+                'message' => __('Cliente registrado exitosamente.')
+            ]);
+        }
+
+        return back()->with('notification', [
+            'type' => 'success',
+            'message' => __('Cliente registrado exitosamente.')
+        ]);
+    }
+
     public function store(Request $request)
     {
         $validated = $request->validate([

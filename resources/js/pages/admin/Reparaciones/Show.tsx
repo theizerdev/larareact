@@ -360,13 +360,43 @@ export default function ShowReparacion({ orden, productosRepuestos, tecnicos, cu
                                     <div>
                                         <span className="text-slate-400 block text-[11px]">{__('Garantía')}</span>
                                         <span className="font-bold text-emerald-600">{orden.garantia_dias} {__('días')}</span>
-                                    </div>
-                                </div>
-
-                                <div className="p-3 bg-slate-50 dark:bg-slate-900/60 rounded-lg border border-slate-200 dark:border-slate-800 space-y-1">
+                                           <div className="p-3 bg-slate-50 dark:bg-slate-900/60 rounded-lg border border-slate-200 dark:border-slate-800 space-y-1">
                                     <span className="font-bold text-purple-700 dark:text-purple-400 block">{__('Falla Reportada por el Cliente:')}</span>
                                     <p className="text-slate-700 dark:text-slate-300">{orden.descripcion_falla}</p>
                                 </div>
+
+                                {orden.contrasena_patron && (
+                                    <div className="p-3 bg-purple-50 dark:bg-purple-950/40 rounded-lg border border-purple-200 dark:border-purple-900 flex items-center justify-between text-xs">
+                                        <div>
+                                            <span className="font-bold text-purple-900 dark:text-purple-200 block">{__('🔑 Clave / Patrón de Desbloqueo:')}</span>
+                                            <span className="font-mono text-purple-700 dark:text-purple-300 font-bold">{orden.contrasena_patron}</span>
+                                        </div>
+                                        {orden.contrasena_patron.includes('Patrón:') && (
+                                            <div className="grid grid-cols-3 gap-1 bg-white dark:bg-slate-950 p-2 rounded-lg border border-purple-200 dark:border-purple-800 shadow-sm">
+                                                {[1, 2, 3, 4, 5, 6, 7, 8, 9].map((node) => {
+                                                    const nodeNumbers = orden.contrasena_patron
+                                                        .replace('Patrón:', '')
+                                                        .split('-')
+                                                        .map((n) => parseInt(n.trim()))
+                                                        .filter((n) => !isNaN(n));
+                                                    const stepIdx = nodeNumbers.indexOf(node);
+                                                    const isSelected = stepIdx !== -1;
+                                                    return (
+                                                        <div
+                                                            key={node}
+                                                            className={cn(
+                                                                'w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-bold font-mono',
+                                                                isSelected ? 'bg-purple-600 text-white' : 'bg-slate-100 dark:bg-slate-800 text-slate-400'
+                                                            )}
+                                                        >
+                                                            {isSelected ? stepIdx + 1 : ''}
+                                                        </div>
+                                                    );
+                                                })}
+                                            </div>
+                                        )}
+                                    </div>
+                                )}
 
                                 {orden.observaciones_fisicas && (
                                     <div className="p-3 bg-amber-50 dark:bg-amber-950/30 rounded-lg border border-amber-200 dark:border-amber-900/60 text-amber-900 dark:text-amber-300 space-y-1">
@@ -374,6 +404,8 @@ export default function ShowReparacion({ orden, productosRepuestos, tecnicos, cu
                                         <p>{orden.observaciones_fisicas}</p>
                                     </div>
                                 )}
+                            </CardContent>
+                        </Card>
                             </CardContent>
                         </Card>
 

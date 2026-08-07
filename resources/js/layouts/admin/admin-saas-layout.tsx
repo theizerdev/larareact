@@ -538,16 +538,6 @@ export default function AdminSaasLayout({
                                             permission: 'cajas.view',
                                         },
                                         {
-                                            title: 'Servicios',
-                                            href: '/admin/servicios',
-                                            permission: 'servicios.view',
-                                        },
-                                        {
-                                            title: 'Taller & Reparaciones',
-                                            href: '/admin/reparaciones',
-                                            permission: 'servicios.view',
-                                        },
-                                        {
                                             title: 'Clientes',
                                             href: '/admin/clientes',
                                             permission: 'clientes.view',

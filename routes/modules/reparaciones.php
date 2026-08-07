@@ -4,6 +4,8 @@ use App\Http\Controllers\Admin\ReparacionController;
 use Illuminate\Support\Facades\Route;
 
 Route::middleware(['verified'])->group(function () {
+    Route::post('reparaciones/quick-cliente', [ReparacionController::class, 'storeCliente'])
+        ->name('reparaciones.quick-cliente');
     Route::resource('reparaciones', ReparacionController::class);
     Route::post('reparaciones/{reparacion}/estado', [ReparacionController::class, 'updateEstado'])
         ->name('reparaciones.update-estado');
