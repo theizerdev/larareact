@@ -92,11 +92,13 @@ class ReparacionController extends Controller
         $clientes = Cliente::where('empresa_id', $empresaId)->orderBy('nombre')->get(['id', 'nombre', 'telefono', 'email']);
         $marcas = Marca::with('modelos')->where('empresa_id', $empresaId)->orderBy('nombre')->get();
         $tecnicos = User::where('empresa_id', $empresaId)->get(['id', 'name']);
+        $categorias = \App\Models\Categoria::where('empresa_id', $empresaId)->where('estado', true)->orderBy('nombre')->get(['id', 'nombre']);
 
         return Inertia::render('admin/Reparaciones/Create', [
             'clientes' => $clientes,
             'marcas' => $marcas,
             'tecnicos' => $tecnicos,
+            'categorias' => $categorias,
             'currencySymbol' => $this->getCurrencySymbol(),
         ]);
     }
@@ -129,7 +131,7 @@ class ReparacionController extends Controller
             'cliente_id' => 'nullable|exists:clientes,id',
             'cliente_nombre' => 'required|string|max:255',
             'cliente_telefono' => 'nullable|string|max:50',
-            'tipo_dispositivo' => 'required|in:smartphone,laptop,cpu,consola,otro',
+            'tipo_dispositivo' => 'required|string|max:255',
             'marca_id' => 'nullable|exists:marcas,id',
             'marca_nombre' => 'required|string|max:255',
             'modelo_id' => 'nullable|exists:modelos,id',

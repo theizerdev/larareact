@@ -18,7 +18,7 @@ return new class extends Migration
             $table->string('cliente_nombre')->nullable();
             $table->string('cliente_telefono')->nullable();
 
-            $table->enum('tipo_dispositivo', ['smartphone', 'laptop', 'cpu', 'consola', 'otro'])->default('smartphone');
+            $table->string('tipo_dispositivo')->default('Smartphone');
             $table->foreignId('marca_id')->nullable()->constrained('marcas')->onDelete('set null');
             $table->string('marca_nombre')->nullable();
             $table->foreignId('modelo_id')->nullable()->constrained('modelos')->onDelete('set null');

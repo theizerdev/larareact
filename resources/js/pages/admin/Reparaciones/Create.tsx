@@ -71,19 +71,29 @@ interface MarcaItem {
     modelos: ModeloItem[];
 }
 
+interface CategoriaItem {
+    id: number;
+    nombre: string;
+}
+
 interface Props {
     clientes: Cliente[];
     marcas: MarcaItem[];
     tecnicos: { id: number; name: string }[];
+    categorias?: CategoriaItem[];
     currencySymbol: string;
 }
 
-export default function CreateReparacion({ clientes: initialClientes, marcas: initialMarcas, tecnicos, currencySymbol }: Props) {
+export default function CreateReparacion({ clientes: initialClientes, marcas: initialMarcas, tecnicos, categorias = [], currencySymbol }: Props) {
     const { __ } = useTranslate();
 
     const [clientesList, setClientesList] = useState<Cliente[]>(initialClientes || []);
     const [marcasList, setMarcasList] = useState<MarcaItem[]>(initialMarcas || []);
     const [currentStep, setCurrentStep] = useState<number>(1);
+
+    // Búsqueda en tiempo real de Tipo de Dispositivo / Categoría (Select2 style)
+    const [searchCategoriaTerm, setSearchCategoriaTerm] = useState('');
+    const [isCategoriaDropdownOpen, setIsCategoriaDropdownOpen] = useState(false);
 
     // Búsqueda en tiempo real de Cliente
     const [searchClienteTerm, setSearchClienteTerm] = useState('');
@@ -205,7 +215,7 @@ export default function CreateReparacion({ clientes: initialClientes, marcas: in
         cliente_id: '',
         cliente_nombre: '',
         cliente_telefono: '',
-        tipo_dispositivo: 'smartphone',
+        tipo_dispositivo: (categorias && categorias.length > 0) ? categorias[0].nombre : 'Smartphone',
         marca_id: '',
         marca_nombre: '',
         modelo_id: '',
@@ -220,6 +230,12 @@ export default function CreateReparacion({ clientes: initialClientes, marcas: in
         anticipo: '0',
         garantia_dias: '30',
         fecha_prometida: new Date(Date.now() + 86400000 * 2).toISOString().split('T')[0],
+    });
+
+    // Categorías filtradas por la búsqueda rápida (Select2)
+    const categoriasFiltradas = categorias.filter((cat) => {
+        if (!searchCategoriaTerm || searchCategoriaTerm.trim() === '') return true;
+        return cat.nombre.toLowerCase().includes(searchCategoriaTerm.toLowerCase().trim());
     });
 
     // Clientes filtrados por la búsqueda en tiempo real (solo si hay un término escrito)
@@ -529,20 +545,6 @@ export default function CreateReparacion({ clientes: initialClientes, marcas: in
                         )}
                     >
                         <span className="w-5 h-5 rounded-full bg-white/20 flex items-center justify-center text-[10px]">2</span>
-                        <span>{__('Inspección & Estado (12 Puntos)')}</span>
-                    </button>
-
-                    <button
-                        type="button"
-                        onClick={() => setCurrentStep(3)}
-                        className={cn(
-                            'flex items-center justify-center gap-2 p-3 rounded-lg text-xs font-bold transition-all',
-                            currentStep === 3
-                                ? 'bg-purple-600 text-white shadow-md'
-                                : 'text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800'
-                        )}
-                    >
-                        <span className="w-5 h-5 rounded-full bg-white/20 flex items-center justify-center text-[10px]">3</span>
                         <span>{__('Presupuesto & Asignación')}</span>
                     </button>
                 </div>
@@ -696,19 +698,7 @@ export default function CreateReparacion({ clientes: initialClientes, marcas: in
                                                 )}
                                             </div>
 
-                                            {/* TARJETA DEL CLIENTE SELECCIONADO */}
-                                            {data.cliente_nombre && (
-                                                <div className="p-3 bg-purple-50/60 dark:bg-purple-950/30 rounded-xl border border-purple-200 dark:border-purple-900 flex items-center justify-between text-xs">
-                                                    <div className="flex items-center gap-2">
-                                                        <User className="w-4 h-4 text-purple-600" />
-                                                        <span className="font-bold text-slate-900 dark:text-slate-100">{data.cliente_nombre}</span>
-                                                        {data.cliente_telefono && (
-                                                            <span className="text-purple-700 dark:text-purple-300 font-mono text-[11px]">({data.cliente_telefono})</span>
-                                                        )}
-                                                    </div>
-                                                    <Badge className="bg-emerald-600 text-white text-[10px] font-bold">✓ Cliente Seleccionado</Badge>
-                                                </div>
-                                            )}
+
                                         </CardContent>
                                     </Card>
 
@@ -721,28 +711,79 @@ export default function CreateReparacion({ clientes: initialClientes, marcas: in
                                             </CardTitle>
                                         </CardHeader>
                                         <CardContent className="p-4 space-y-5">
-                                            {/* SELECTOR INTERACTIVO DE ICONOS */}
-                                            <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
-                                                {tiposDispositivo.map((t) => {
-                                                    const IconComp = t.icon;
-                                                    const isSelected = data.tipo_dispositivo === t.id;
-                                                    return (
+                                            {/* SELECT CON BUSCADOR RÁPIDO PARA TIPO DE DISPOSITIVO (CATEGORÍAS) */}
+                                            <div className="relative w-full">
+                                                <Label className="text-xs font-semibold">{__('Seleccionar Categoría / Tipo de Dispositivo *')}</Label>
+                                                <div className="relative mt-1">
+                                                    <Layers className="w-4 h-4 absolute left-3 top-3.5 text-purple-600 z-10 pointer-events-none" />
+                                                    <Input
+                                                        value={isCategoriaDropdownOpen ? searchCategoriaTerm : data.tipo_dispositivo}
+                                                        onChange={(e) => {
+                                                            const val = e.target.value;
+                                                            setSearchCategoriaTerm(val);
+                                                            setData('tipo_dispositivo', val);
+                                                            setIsCategoriaDropdownOpen(true);
+                                                        }}
+                                                        onFocus={() => {
+                                                            setSearchCategoriaTerm(data.tipo_dispositivo || '');
+                                                            setIsCategoriaDropdownOpen(true);
+                                                        }}
+                                                        placeholder={__('Escriba para buscar o seleccione una categoría...')}
+                                                        className="text-xs h-11 pl-9 pr-8 font-medium"
+                                                        required
+                                                    />
+                                                    {data.tipo_dispositivo && (
                                                         <button
-                                                            key={t.id}
                                                             type="button"
-                                                            onClick={() => setData('tipo_dispositivo', t.id)}
-                                                            className={cn(
-                                                                'flex flex-col items-center justify-center p-3 rounded-xl border transition-all gap-1.5',
-                                                                isSelected
-                                                                    ? 'ring-2 ring-purple-600 border-purple-600 bg-purple-50/50 dark:bg-purple-950/30'
-                                                                    : 'border-slate-200 dark:border-slate-800 hover:border-purple-300 bg-white dark:bg-slate-900'
-                                                            )}
+                                                            onClick={() => {
+                                                                setSearchCategoriaTerm('');
+                                                                setData('tipo_dispositivo', '');
+                                                                setIsCategoriaDropdownOpen(false);
+                                                            }}
+                                                            className="absolute right-3 top-3.5 text-slate-400 hover:text-slate-600"
+                                                            title={__('Limpiar selección')}
                                                         >
-                                                            <IconComp className={cn('w-6 h-6', t.color.split(' ')[0])} />
-                                                            <span className="text-xs font-bold text-slate-800 dark:text-slate-200">{t.label}</span>
+                                                            <X className="w-4 h-4" />
                                                         </button>
-                                                    );
-                                                })}
+                                                    )}
+                                                </div>
+
+                                                {/* RESULTADOS EN TIEMPO REAL / DROPDOWN LIST */}
+                                                {isCategoriaDropdownOpen && (
+                                                    <div className="absolute left-0 right-0 z-50 mt-1 max-h-56 overflow-y-auto bg-white dark:bg-slate-900 rounded-lg border border-slate-200 dark:border-slate-800 shadow-xl divide-y divide-slate-100 dark:divide-slate-800">
+                                                        {categoriasFiltradas.length > 0 ? (
+                                                            categoriasFiltradas.map((cat) => (
+                                                                <button
+                                                                    key={cat.id}
+                                                                    type="button"
+                                                                    onClick={() => {
+                                                                        setData('tipo_dispositivo', cat.nombre);
+                                                                        setSearchCategoriaTerm(cat.nombre);
+                                                                        setIsCategoriaDropdownOpen(false);
+                                                                    }}
+                                                                    className={cn(
+                                                                        'w-full px-4 py-2.5 text-left text-xs flex items-center justify-between transition-colors',
+                                                                        data.tipo_dispositivo === cat.nombre
+                                                                            ? 'bg-purple-50 dark:bg-purple-950/50 text-purple-700 font-bold'
+                                                                            : 'hover:bg-slate-50 dark:hover:bg-slate-800 text-slate-800 dark:text-slate-200'
+                                                                    )}
+                                                                >
+                                                                    <span className="flex items-center gap-2">
+                                                                        <Layers className="w-3.5 h-3.5 text-purple-600" />
+                                                                        {cat.nombre}
+                                                                    </span>
+                                                                    {data.tipo_dispositivo === cat.nombre && (
+                                                                        <Check className="w-4 h-4 text-purple-600" />
+                                                                    )}
+                                                                </button>
+                                                            ))
+                                                        ) : (
+                                                            <div className="p-3 text-xs text-slate-400 text-center">
+                                                                {__('No se encontraron categorías. Se usará el texto ingresado.')}
+                                                            </div>
+                                                        )}
+                                                    </div>
+                                                )}
                                             </div>
 
                                             {/* MARCA & MODELO & IMEI */}
@@ -912,240 +953,22 @@ export default function CreateReparacion({ clientes: initialClientes, marcas: in
                                             onClick={() => setCurrentStep(2)}
                                             className="h-10 px-6 font-bold bg-purple-600 hover:bg-purple-700 text-white gap-2 text-xs"
                                         >
-                                            {__('Siguiente: Inspección Técnica')}
+                                            {__('Siguiente: Presupuesto & Asignación')}
                                             <ChevronRight className="w-4 h-4" />
                                         </Button>
                                     </div>
                                 </div>
                             )}
 
-                            {/* ETAPA 2: INSPECCIÓN FÍSICA & ESTADO */}
+                            {/* ETAPA 2: EVIDENCIAS FOTOGRÁFICAS */}
                             {currentStep === 2 && (
                                 <div className="space-y-6 animate-in fade-in duration-300">
-                                    <Card className="border-slate-200 dark:border-slate-800 shadow-sm">
-                                        <CardHeader className="bg-slate-50 dark:bg-slate-900/50 border-b border-slate-100 dark:border-slate-800 py-3">
-                                            <CardTitle className="text-sm font-bold flex items-center gap-2 text-slate-800 dark:text-slate-200">
-                                                <ShieldCheck className="w-4 h-4 text-purple-600" />
-                                                {__('6. Matriz de Inspección Física (12 Puntos)')}
-                                            </CardTitle>
-                                        </CardHeader>
-                                        <CardContent className="p-4 space-y-4">
-                                            <p className="text-xs text-slate-500">{__('Marque el estado de cada elemento antes de recibir el equipo en taller:')}</p>
-
-                                            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                                                {elementosInspeccion.map((el) => {
-                                                    const currentVal = inspeccionState[el.key]?.estado;
-                                                    return (
-                                                        <div key={el.key} className="p-3 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 space-y-2">
-                                                            <div className="flex items-center justify-between">
-                                                                <span className="text-xs font-bold text-slate-800 dark:text-slate-200">{el.label}</span>
-                                                                <div className="flex items-center gap-1">
-                                                                    <button
-                                                                        type="button"
-                                                                        onClick={() => handleInspeccionChange(el.key, 'bueno')}
-                                                                        className={cn(
-                                                                            'px-2.5 py-1 rounded text-[11px] font-bold transition-all',
-                                                                            currentVal === 'bueno'
-                                                                                ? 'bg-emerald-600 text-white shadow-sm'
-                                                                                : 'bg-slate-100 dark:bg-slate-800 text-slate-600 hover:bg-emerald-50'
-                                                                        )}
-                                                                    >
-                                                                        Bueno
-                                                                    </button>
-                                                                    <button
-                                                                        type="button"
-                                                                        onClick={() => handleInspeccionChange(el.key, 'malo')}
-                                                                        className={cn(
-                                                                            'px-2.5 py-1 rounded text-[11px] font-bold transition-all',
-                                                                            currentVal === 'malo'
-                                                                                ? 'bg-rose-600 text-white shadow-sm'
-                                                                                : 'bg-slate-100 dark:bg-slate-800 text-slate-600 hover:bg-rose-50'
-                                                                        )}
-                                                                    >
-                                                                        Malo
-                                                                    </button>
-                                                                    <button
-                                                                        type="button"
-                                                                        onClick={() => handleInspeccionChange(el.key, 'no_aplica')}
-                                                                        className={cn(
-                                                                            'px-2.5 py-1 rounded text-[11px] font-bold transition-all',
-                                                                            currentVal === 'no_aplica'
-                                                                                ? 'bg-slate-700 text-white shadow-sm'
-                                                                                : 'bg-slate-100 dark:bg-slate-800 text-slate-400'
-                                                                        )}
-                                                                    >
-                                                                        N/A
-                                                                    </button>
-                                                                </div>
-                                                            </div>
-                                                            <Input
-                                                                value={inspeccionState[el.key]?.obs || ''}
-                                                                onChange={(e) => handleInspeccionObsChange(el.key, e.target.value)}
-                                                                placeholder={__('Detalle u observación (ej: rayón fino, falta tornillo)...')}
-                                                                className="text-xs h-7 bg-slate-50 dark:bg-slate-950"
-                                                            />
-                                                        </div>
-                                                    );
-                                                })}
-                                            </div>
-                                        </CardContent>
-                                    </Card>
-
-                                    {/* PASO 7: ESTADO OPERATIVO & BLOQUEOS */}
-                                    <Card className="border-slate-200 dark:border-slate-800 shadow-sm">
-                                        <CardHeader className="bg-slate-50 dark:bg-slate-900/50 border-b border-slate-100 dark:border-slate-800 py-3">
-                                            <CardTitle className="text-sm font-bold flex items-center gap-2 text-slate-800 dark:text-slate-200">
-                                                <Lock className="w-4 h-4 text-purple-600" />
-                                                {__('7. Estado Operativo & Contraseña de Desbloqueo')}
-                                            </CardTitle>
-                                        </CardHeader>
-                                        <CardContent className="p-4 space-y-4">
-                                            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
-                                                {[
-                                                    { key: 'enciende', label: '¿Enciende?' },
-                                                    { key: 'carga_bateria', label: '¿Carga batería?' },
-                                                    { key: 'entra_sistema', label: '¿Entra al sistema?' },
-                                                    { key: 'tiene_bloqueo', label: '¿Tiene bloqueo?' },
-                                                    { key: 'proporciona_contrasena', label: '¿Cliente da contraseña?' },
-                                                ].map((rev) => (
-                                                    <div key={rev.key} className="flex items-center justify-between p-3 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900">
-                                                        <span className="text-xs font-semibold text-slate-700 dark:text-slate-300">{rev.label}</span>
-                                                        <div className="flex items-center gap-1">
-                                                            <button
-                                                                type="button"
-                                                                onClick={() => setEstadoEquipoState((prev) => ({ ...prev, [rev.key]: 'si' }))}
-                                                                className={cn(
-                                                                    'px-3 py-1 rounded text-xs font-bold transition-all',
-                                                                    (estadoEquipoState as any)[rev.key] === 'si'
-                                                                        ? 'bg-emerald-600 text-white shadow-sm'
-                                                                        : 'bg-slate-100 dark:bg-slate-800 text-slate-500'
-                                                                )}
-                                                            >
-                                                                Sí
-                                                            </button>
-                                                            <button
-                                                                type="button"
-                                                                onClick={() => setEstadoEquipoState((prev) => ({ ...prev, [rev.key]: 'no' }))}
-                                                                className={cn(
-                                                                    'px-3 py-1 rounded text-xs font-bold transition-all',
-                                                                    (estadoEquipoState as any)[rev.key] === 'no'
-                                                                        ? 'bg-rose-600 text-white shadow-sm'
-                                                                        : 'bg-slate-100 dark:bg-slate-800 text-slate-500'
-                                                                )}
-                                                            >
-                                                                No
-                                                            </button>
-                                                        </div>
-                                                    </div>
-                                                ))}
-                                            </div>
-
-                                            <div className="pt-3 border-t border-slate-100 dark:border-slate-800 space-y-3">
-                                                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
-                                                    <Label className="text-xs font-bold text-slate-800 dark:text-slate-200">
-                                                        {__('7. Clave o Patrón de Desbloqueo')}
-                                                    </Label>
-
-                                                    {/* SELECTOR TIPO DE CLAVE */}
-                                                    <div className="flex items-center gap-1 bg-slate-100 dark:bg-slate-800 p-1 rounded-lg">
-                                                        <button
-                                                            type="button"
-                                                            onClick={() => { setTipoBloqueo('password'); setData('contrasena_patron', ''); }}
-                                                            className={cn('px-2.5 py-1 rounded text-[11px] font-bold transition-all', tipoBloqueo === 'password' ? 'bg-purple-600 text-white shadow-sm' : 'text-slate-600 dark:text-slate-400')}
-                                                        >
-                                                            🔑 PIN / Contraseña
-                                                        </button>
-                                                        <button
-                                                            type="button"
-                                                            onClick={() => { setTipoBloqueo('pattern'); setPatronSecuencia([]); setData('contrasena_patron', ''); }}
-                                                            className={cn('px-2.5 py-1 rounded text-[11px] font-bold transition-all', tipoBloqueo === 'pattern' ? 'bg-purple-600 text-white shadow-sm' : 'text-slate-600 dark:text-slate-400')}
-                                                        >
-                                                            📐 Patrón (Grid 3x3)
-                                                        </button>
-                                                        <button
-                                                            type="button"
-                                                            onClick={() => { setTipoBloqueo('none'); setData('contrasena_patron', 'Sin Bloqueo'); }}
-                                                            className={cn('px-2.5 py-1 rounded text-[11px] font-bold transition-all', tipoBloqueo === 'none' ? 'bg-slate-700 text-white shadow-sm' : 'text-slate-600 dark:text-slate-400')}
-                                                        >
-                                                            🔓 Sin Bloqueo
-                                                        </button>
-                                                    </div>
-                                                </div>
-
-                                                {/* SI ES CONTRASEÑA / PIN */}
-                                                {tipoBloqueo === 'password' && (
-                                                    <div>
-                                                        <Input
-                                                            value={data.contrasena_patron}
-                                                            onChange={(e) => setData('contrasena_patron', e.target.value)}
-                                                            placeholder={__('Escriba el PIN (ej: 1234) o clave alfanumérica...')}
-                                                            className="text-xs h-10 font-mono"
-                                                        />
-                                                    </div>
-                                                )}
-
-                                                {/* SI ES PATRÓN 3X3 GRID INTERACTIVO */}
-                                                {tipoBloqueo === 'pattern' && (
-                                                    <div className="p-4 bg-slate-50 dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 space-y-4">
-                                                        <div className="flex items-center justify-between">
-                                                            <span className="text-xs font-bold text-slate-700 dark:text-slate-300">
-                                                                {__('Toque los 9 puntos en el orden del patrón:')}
-                                                            </span>
-                                                            {patronSecuencia.length > 0 && (
-                                                                <Button type="button" size="sm" variant="ghost" onClick={handleClearPatron} className="h-7 text-xs text-rose-600 hover:bg-rose-50">
-                                                                    {__('Limpiar Patrón')}
-                                                                </Button>
-                                                            )}
-                                                        </div>
-
-                                                        {/* CUADRO 3X3 DE DIBUJO DE PATRÓN */}
-                                                        <div className="flex flex-col items-center gap-3">
-                                                            <div className="grid grid-cols-3 gap-6 p-5 bg-white dark:bg-slate-950 rounded-2xl border border-purple-200 dark:border-purple-900 shadow-inner">
-                                                                {[1, 2, 3, 4, 5, 6, 7, 8, 9].map((node) => {
-                                                                    const stepIndex = patronSecuencia.indexOf(node);
-                                                                    const isSelected = stepIndex !== -1;
-                                                                    return (
-                                                                        <button
-                                                                            key={node}
-                                                                            type="button"
-                                                                            onClick={() => handleNodeClick(node)}
-                                                                            className={cn(
-                                                                                'w-12 h-12 rounded-full flex items-center justify-center font-bold font-mono text-sm transition-all duration-200 relative',
-                                                                                isSelected
-                                                                                    ? 'bg-purple-600 text-white ring-4 ring-purple-300 dark:ring-purple-900 scale-105 shadow-md'
-                                                                                    : 'bg-slate-100 dark:bg-slate-800 text-slate-400 hover:bg-purple-100 hover:text-purple-600'
-                                                                            )}
-                                                                        >
-                                                                            {isSelected ? stepIndex + 1 : node}
-                                                                        </button>
-                                                                    );
-                                                                })}
-                                                            </div>
-
-                                                            <div className="text-xs font-mono text-center">
-                                                                {patronSecuencia.length > 0 ? (
-                                                                    <span className="font-bold text-purple-700 dark:text-purple-300 bg-purple-50 dark:bg-purple-950/60 px-3 py-1 rounded-full border border-purple-200 dark:border-purple-900">
-                                                                        {__('Secuencia Grabada:')} {patronSecuencia.join(' ➔ ')}
-                                                                    </span>
-                                                                ) : (
-                                                                    <span className="text-slate-400 italic">
-                                                                        {__('Toque los puntos en orden (ej: 1 ➔ 2 ➔ 3 ➔ 6 ➔ 9)')}
-                                                                    </span>
-                                                                )}
-                                                            </div>
-                                                        </div>
-                                                    </div>
-                                                )}
-                                            </div>
-                                        </CardContent>
-                                    </Card>
-
-                                    {/* PASO 8: EVIDENCIAS FOTOGRÁFICAS (4 ÁNGULOS) */}
+                                    {/* PASO 6: EVIDENCIAS FOTOGRÁFICAS (4 ÁNGULOS) */}
                                     <Card className="border-slate-200 dark:border-slate-800 shadow-sm">
                                         <CardHeader className="bg-slate-50 dark:bg-slate-900/50 border-b border-slate-100 dark:border-slate-800 py-3">
                                             <CardTitle className="text-sm font-bold flex items-center gap-2 text-slate-800 dark:text-slate-200">
                                                 <Camera className="w-4 h-4 text-purple-600" />
-                                                {__('8. Evidencias Fotográficas del Equipo (4 Ángulos)')}
+                                                {__('6. Evidencias Fotográficas del Equipo (4 Ángulos)')}
                                             </CardTitle>
                                         </CardHeader>
                                         <CardContent className="p-4 space-y-3">
@@ -1228,7 +1051,7 @@ export default function CreateReparacion({ clientes: initialClientes, marcas: in
                                         <CardHeader className="bg-slate-50 dark:bg-slate-900/50 border-b border-slate-100 dark:border-slate-800 py-3">
                                             <CardTitle className="text-sm font-bold flex items-center gap-2 text-slate-800 dark:text-slate-200">
                                                 <DollarSign className="w-4 h-4 text-emerald-600" />
-                                                {__('8 - 10. Presupuesto, Adelanto y Técnico Asignado')}
+                                                {__('7. Presupuesto, Adelanto y Técnico Asignado')}
                                             </CardTitle>
                                         </CardHeader>
                                         <CardContent className="p-4 space-y-5">
@@ -1272,7 +1095,7 @@ export default function CreateReparacion({ clientes: initialClientes, marcas: in
 
                                             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-2">
                                                 <div>
-                                                    <Label className="text-xs font-semibold">{__('9. Fecha Estimada de Entrega')}</Label>
+                                                    <Label className="text-xs font-semibold">{__('8. Fecha Estimada de Entrega')}</Label>
                                                     <Input
                                                         type="date"
                                                         value={data.fecha_prometida}
