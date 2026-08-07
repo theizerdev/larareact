@@ -135,6 +135,14 @@ class PermissionSeeder extends Seeder
                 'clientes.edit' => 'Editar Clientes',
                 'clientes.delete' => 'Eliminar Clientes',
                 'clientes.abono' => 'Registrar Abonos de Crédito',
+
+                // Módulo: Taller & Reparaciones
+                'reparaciones.view' => 'Ver Ordenes de Reparación',
+                'reparaciones.create' => 'Recepcionar Equipos',
+                'reparaciones.edit' => 'Editar / Diagnosticar Reparaciones',
+                'reparaciones.delete' => 'Eliminar Ordenes de Reparación',
+                'reparaciones.assign_repuesto' => 'Asignar Repuestos de Inventario',
+                'reparaciones.change_status' => 'Cambiar Estado de Reparación',
             ],
 
             // Sector: Inventario
@@ -203,6 +211,7 @@ class PermissionSeeder extends Seeder
                     str_starts_with($permission, 'productos.') => 'productos',
                     str_starts_with($permission, 'cajas.') => 'cajas',
                     str_starts_with($permission, 'servicios.') => 'servicios',
+                    str_starts_with($permission, 'reparaciones.') => 'reparaciones',
                     str_starts_with($permission, 'ventas.') => 'ventas',
                     str_starts_with($permission, 'clientes.') => 'clientes',
                     str_starts_with($permission, 'proveedores.') => 'proveedores',

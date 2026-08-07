@@ -21,6 +21,24 @@ class RoleSeeder extends Seeder
         );
         $superAdmin->syncPermissions(Permission::all());
 
+        // Rol Técnico de Reparaciones
+        $tecnicoRole = Role::firstOrCreate(
+            ['name' => 'Técnico de Reparaciones', 'guard_name' => 'web', 'empresa_id' => 1],
+            []
+        );
+        $tecnicoPermissions = Permission::whereIn('name', [
+            'dashboard.view',
+            'reparaciones.view',
+            'reparaciones.create',
+            'reparaciones.edit',
+            'reparaciones.assign_repuesto',
+            'reparaciones.change_status',
+            'productos.view',
+            'clientes.view',
+            'servicios.view',
+        ])->get();
+        $tecnicoRole->syncPermissions($tecnicoPermissions);
+
         // Reset cached roles and permissions
         app()[PermissionRegistrar::class]->forgetCachedPermissions();
     }

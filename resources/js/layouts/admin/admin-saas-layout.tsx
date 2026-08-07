@@ -26,7 +26,7 @@ import {
     Star,
     MessageSquare,
 } from 'lucide-react';
-import { Building2, GitBranch, Briefcase, Calendar, Smartphone, Wallet, Boxes, Calculator } from 'lucide-react';
+import { Building2, GitBranch, Briefcase, Calendar, Smartphone, Wallet, Boxes, Calculator, Wrench } from 'lucide-react';
 import * as React from 'react';
 import LanguageToggle from '@/components/language-toggle';
 import TemplateCustomizer from '@/components/template-customizer';
@@ -273,6 +273,12 @@ export default function AdminSaasLayout({
         if (permission === 'subscriptions.manage' && userEmpresaId !== 1) {
             return false;
         }
+        if (permission === 'reparaciones.view') {
+            return userPermissions.includes('reparaciones.view') || userPermissions.includes('servicios.view') || userPermissions.length === 0;
+        }
+        if (permission === 'reparaciones.create') {
+            return userPermissions.includes('reparaciones.create') || userPermissions.includes('servicios.view') || userPermissions.length === 0;
+        }
         return userPermissions.includes(permission);
     };
 
@@ -440,6 +446,40 @@ export default function AdminSaasLayout({
                                     );
                                 })()}
 
+                                {/* Servicio Técnico Group */}
+                                {(() => {
+                                    const servicioTecnicoItems = [
+                                        {
+                                            title: 'Taller & Reparaciones',
+                                            href: '/admin/reparaciones',
+                                            permission: 'reparaciones.view',
+                                        },
+                                        {
+                                            title: 'Nueva Recepción (11 Pasos)',
+                                            href: '/admin/reparaciones/create',
+                                            permission: 'reparaciones.create',
+                                        },
+                                        {
+                                            title: 'Catálogo de Servicios',
+                                            href: '/admin/servicios',
+                                            permission: 'servicios.view',
+                                        },
+                                    ].filter(item => hasPermission(item.permission));
+
+                                    if (servicioTecnicoItems.length === 0) return null;
+
+                                    return (
+                                        <div className="pt-2">
+                                            <CollapsibleNavItem
+                                                title="Servicio Técnico"
+                                                icon={Wrench}
+                                                collapsed={collapsed}
+                                                items={servicioTecnicoItems}
+                                            />
+                                        </div>
+                                    );
+                                })()}
+
                                 {/* Inventario Group */}
                                 {(() => {
                                     const inventarioItems = [
@@ -500,6 +540,11 @@ export default function AdminSaasLayout({
                                         {
                                             title: 'Servicios',
                                             href: '/admin/servicios',
+                                            permission: 'servicios.view',
+                                        },
+                                        {
+                                            title: 'Taller & Reparaciones',
+                                            href: '/admin/reparaciones',
                                             permission: 'servicios.view',
                                         },
                                         {
