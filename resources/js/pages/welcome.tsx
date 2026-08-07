@@ -25,6 +25,10 @@ import {
     Star,
     Quote,
     TrendingUp,
+    FileSpreadsheet,
+    Calculator,
+    Scale,
+    BookOpen,
 } from 'lucide-react';
 import React, { useState } from 'react';
 import { useTranslate } from '@/hooks/use-translate';
@@ -246,7 +250,7 @@ export default function Welcome() {
 
                         {/* Subtítulo */}
                         <p className="text-lg sm:text-xl text-slate-600 max-w-3xl mx-auto font-normal leading-relaxed">
-                            {__('Procesa ventas en segundos con atajos de teclado, automatiza envíos de credenciales y recibos por WhatsApp, controla cajas con cero descuadres y gestiona tus divisas en tiempo real.')}
+                            {__('Procesa ventas en segundos, automatiza recibos por WhatsApp, controla tu Contabilidad completa (Diario, Mayor, P&L, Impuestos, Excel 10 Pestañas) y gestiona tus divisas en tiempo real.')}
                         </p>
 
                         {/* Botones CTA */}
@@ -443,6 +447,17 @@ export default function Welcome() {
                                 <h3 className="text-xl font-bold text-[#08264e]">{__('Ventas a Crédito y Cobranza')}</h3>
                                 <p className="text-slate-600 text-sm leading-relaxed">
                                     {__('Gestión de límites de crédito por cliente, registro de abonos y cuentas por cobrar con impacto directo en caja.')}
+                                </p>
+                            </div>
+
+                            {/* Card 7: Contabilidad Completa & Libros Fiscales */}
+                            <div className="bg-white border border-slate-200 hover:border-purple-400 p-8 rounded-2xl space-y-4 shadow-sm hover:shadow-lg transition-all hover:-translate-y-1 group">
+                                <div className="w-12 h-12 rounded-xl bg-purple-50 border border-purple-200 text-purple-600 flex items-center justify-center group-hover:scale-110 transition-transform">
+                                    <FileSpreadsheet className="w-6 h-6" />
+                                </div>
+                                <h3 className="text-xl font-bold text-[#08264e]">{__('Contabilidad & Libros Fiscales')}</h3>
+                                <p className="text-slate-600 text-sm leading-relaxed">
+                                    {__('Plan de Cuentas, Libro Diario, Libro Mayor, Balance General, P&L, Libros IVA/IGTF y exportación Excel (.xlsx) de 10 pestañas.')}
                                 </p>
                             </div>
                         </div>
@@ -706,11 +721,11 @@ export default function Welcome() {
                                         </li>
                                         <li className="flex items-center gap-2">
                                             <Check className="w-4 h-4 text-emerald-600 shrink-0" />
-                                            <span>{__('Ventas a crédito y cobranza')}</span>
+                                            <span>{__('Contabilidad & Exportación Excel (10 Pestañas)')}</span>
                                         </li>
                                         <li className="flex items-center gap-2">
                                             <Check className="w-4 h-4 text-emerald-600 shrink-0" />
-                                            <span>{__('Auditoría estricta de transacciones')}</span>
+                                            <span>{__('Ventas a crédito y cobranza')}</span>
                                         </li>
                                         <li className="flex items-center gap-2">
                                             <Check className="w-4 h-4 text-emerald-600 shrink-0" />
@@ -864,6 +879,10 @@ export default function Welcome() {
                                 {
                                     q: __('¿Cómo se envían los mensajes por WhatsApp?'),
                                     a: __('El sistema incluye un motor de WhatsApp integrado que puedes conectar escaneando un código QR. Permite enviar credenciales de acceso a nuevos usuarios y comprobantes de compra.'),
+                                },
+                                {
+                                    q: __('¿FixSale incluye módulo de contabilidad y exportación fiscal en Excel?'),
+                                    a: __('Sí. Incluye Plan de Cuentas por rubro, Libro Diario, Libro Mayor, Balance General, Estado de Resultados (P&L) y Libros Fiscales de Ventas y Compras con exportación a un único archivo Excel (.xlsx) profesional de 10 pestañas.'),
                                 },
                             ].map((faq, idx) => (
                                 <div
