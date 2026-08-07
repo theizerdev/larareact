@@ -76,6 +76,7 @@ interface Productor {
     razon_social: string;
     nombre_comercial: string;
     documento_identidad: string;
+    rfc?: string | null;
     razon_social_rancho?: string | null;
     nombre_comercial_rancho?: string | null;
     pais_telefono_id?: number | null;
@@ -84,6 +85,7 @@ interface Productor {
     codigo_postal?: string | null;
     estado?: string | null;
     responsable?: string | null;
+    curp?: string | null;
     pais_id?: number | null;
     latitud?: number | null;
     longitud?: number | null;
@@ -222,21 +224,23 @@ export default function Index({
     const defaultLng = sucursal?.longitud ? Number(sucursal.longitud) : (paises[0]?.longitud ? Number(paises[0].longitud) : -102.2839);
 
     // Main Productor Form
-    const { data, setData, post, put, delete: destroy, processing, errors, reset, clearErrors } = useForm({
+    const { data, setData, post, put, reset, errors, processing, clearErrors } = useForm({
         razon_social: '',
         nombre_comercial: '',
+        rfc: '',
         documento_identidad: '',
         razon_social_rancho: '',
         nombre_comercial_rancho: '',
         pais_telefono_id: paises.length > 0 ? String(paises[0].id) : '',
         telefono: '',
-        direccion: '',
+        direccion: sucursal?.direccion || '',
         codigo_postal: '',
         estado: '',
         responsable: '',
+        curp: '',
         pais_id: paises.length > 0 ? String(paises[0].id) : '',
-        latitud: defaultLat as number | null,
-        longitud: defaultLng as number | null,
+        latitud: defaultLat as any,
+        longitud: defaultLng as any,
         status: 'activo' as 'activo' | 'suspendido' | 'en_revision',
         empresa_id: empresa ? String(empresa.id) : '',
         sucursal_id: sucursal ? String(sucursal.id) : '',
@@ -286,6 +290,7 @@ export default function Index({
         setData({
             razon_social: productor.razon_social || '',
             nombre_comercial: productor.nombre_comercial || '',
+            rfc: productor.rfc || '',
             documento_identidad: productor.documento_identidad || '',
             razon_social_rancho: productor.razon_social_rancho || '',
             nombre_comercial_rancho: productor.nombre_comercial_rancho || '',
@@ -295,6 +300,7 @@ export default function Index({
             codigo_postal: productor.codigo_postal || '',
             estado: productor.estado || '',
             responsable: productor.responsable || '',
+            curp: productor.curp || productor.documento_identidad || '',
             pais_id: productor.pais_id ? String(productor.pais_id) : (paises.length > 0 ? String(paises[0].id) : ''),
             latitud: productor.latitud ?? null,
             longitud: productor.longitud ?? null,
@@ -345,7 +351,7 @@ export default function Index({
     // Delete submission
     const handleDelete = () => {
         if (!deletingProductor) return;
-        destroy(`/admin/productores/${deletingProductor.id}`, {
+        router.delete(`/admin/productores/${deletingProductor.id}`, {
             onSuccess: () => {
                 setIsDeleteModalOpen(false);
                 setDeletingProductor(null);
@@ -374,30 +380,6 @@ export default function Index({
         });
     };
 
-    // Filter fields configuration
-    const filterFields: FilterField[] = [
-        {
-            name: 'status',
-            label: __('Estado'),
-            type: 'select',
-            options: [
-                { label: __('Todos'), value: 'all' },
-                { label: __('Activo'), value: 'activo' },
-                { label: __('Suspendido'), value: 'suspendido' },
-                { label: __('En Revisión'), value: 'en_revision' },
-            ],
-        },
-        {
-            name: 'pais_id',
-            label: __('Country'),
-            type: 'select',
-            options: [
-                { label: __('All Countries'), value: 'all' },
-                ...paises.map((p) => ({ label: p.nombre, value: String(p.id) })),
-            ],
-        },
-    ];
-
     // Table columns
     const columns: ColumnDef<Productor>[] = [
         {
@@ -418,11 +400,11 @@ export default function Index({
             ),
         },
         {
-            accessorKey: 'documento_identidad',
+            accessorKey: 'rfc',
             header: __('RFC (Tax ID)'),
             cell: (productor: Productor) => (
                 <span className="font-mono text-xs font-semibold px-2 py-1 bg-slate-100 dark:bg-slate-800 rounded text-slate-700 dark:text-slate-300">
-                    {productor.documento_identidad}
+                    {productor.rfc || productor.documento_identidad || '-'}
                 </span>
             ),
         },
@@ -440,17 +422,19 @@ export default function Index({
         },
         {
             accessorKey: 'responsable',
-            header: __('Responsible'),
+            header: __('Responsable / CURP'),
             cell: (productor: Productor) => (
                 <div className="text-xs text-slate-600 dark:text-slate-300">
-                    {productor.responsable || '-'}
+                    <div className="font-medium text-slate-800 dark:text-slate-200">{productor.responsable || '-'}</div>
+                    {productor.curp && (
+                        <div className="font-mono text-[11px] text-slate-400">CURP: {productor.curp}</div>
+                    )}
                 </div>
             ),
         },
         {
             accessorKey: 'status',
             header: __('Estado'),
-            stopRowClick: true,
             cell: (productor: Productor) => {
                 const rawStatus = (productor.status || '').toLowerCase();
                 const isActive = rawStatus === 'activo' || rawStatus === 'active';
@@ -495,7 +479,6 @@ export default function Index({
         },
         {
             header: __('Acciones'),
-            stopRowClick: true,
             cell: (productor: Productor) => {
                 const rawStatus = (productor.status || '').toLowerCase();
                 const isActive = rawStatus === 'activo' || rawStatus === 'active';
@@ -563,7 +546,6 @@ export default function Index({
                     ]}
                 />
 
-                {/* Header */}
                 <ModuleHeader
                     icon={<Sprout className="h-6 w-6 text-white" />}
                     title={__('Producers')}
@@ -593,7 +575,6 @@ export default function Index({
                     </div>
                 </ModuleHeader>
 
-                {/* Stats */}
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
                     <StatCard
                         title={__('Total Producers')}
@@ -621,7 +602,6 @@ export default function Index({
                     />
                 </div>
 
-                {/* ── Barra de Filtros ── */}
                 <FilterBar>
                     <div className="flex flex-wrap items-end gap-4">
                         <FilterField label={__('Buscar')}>
@@ -632,7 +612,6 @@ export default function Index({
                                 onChange={(e) => setSearchTerm(e.target.value)}
                             />
                         </FilterField>
-
                         <FilterField label={__('Estado')}>
                             <Select value={statusFilter} onValueChange={setStatusFilter}>
                                 <SelectTrigger className="w-full md:w-44">
@@ -646,7 +625,6 @@ export default function Index({
                                 </SelectContent>
                             </Select>
                         </FilterField>
-
                         <FilterField label={__('Country')}>
                             <Select value={paisFilter} onValueChange={setPaisFilter}>
                                 <SelectTrigger className="w-full md:w-52">
@@ -662,7 +640,6 @@ export default function Index({
                                 </SelectContent>
                             </Select>
                         </FilterField>
-
                         <FilterField label={__('Records per page')}>
                             <Select value={perPageFilter} onValueChange={setPerPageFilter}>
                                 <SelectTrigger className="w-full md:w-28">
@@ -679,7 +656,6 @@ export default function Index({
                     </div>
                 </FilterBar>
 
-                {/* ── Tabla de Datos ── */}
                 <div className="w-full">
                     <DataTable
                         columns={columns}
@@ -689,112 +665,19 @@ export default function Index({
                         isLoading={isTableLoading}
                     />
                 </div>
-
-                {/* Modal: Pre-registro WhatsApp */}
-                <Dialog open={isPreRegistroModalOpen} onOpenChange={setIsPreRegistroModalOpen}>
-                    <DialogContent className="max-w-md bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800">
-                        <DialogHeader>
-                            <div className="h-10 w-10 rounded-lg bg-emerald-50 dark:bg-emerald-950/40 text-emerald-600 dark:text-emerald-400 flex items-center justify-center mb-2">
-                                <Send className="h-5 w-5" />
-                            </div>
-                            <DialogTitle className="text-lg font-bold text-slate-900 dark:text-white">
-                                {__('Pre-registro de Productor por WhatsApp')}
-                            </DialogTitle>
-                            <DialogDescription className="text-xs text-slate-500">
-                                {__('Envíe una invitación por WhatsApp para que el productor complete los datos del rancho, colaboradores y vehículos.')}
-                            </DialogDescription>
-                        </DialogHeader>
-
-                        <form onSubmit={handlePreRegistroSubmit} className="space-y-4 py-2">
-                            <div>
-                                <Label htmlFor="pre_razon_social_rancho">{__('Razón Social del Rancho')} *</Label>
-                                <Input
-                                    id="pre_razon_social_rancho"
-                                    required
-                                    className="mt-1.5 w-full"
-                                    placeholder="ej. Agrícola del Valle S.A. de C.V."
-                                    value={preRegistroForm.data.razon_social_rancho}
-                                    onChange={(e) => preRegistroForm.setData('razon_social_rancho', e.target.value)}
-                                />
-                            </div>
-
-                            <div>
-                                <Label htmlFor="pre_nombre_comercial_rancho">{__('Nombre Comercial del Rancho')} *</Label>
-                                <Input
-                                    id="pre_nombre_comercial_rancho"
-                                    required
-                                    className="mt-1.5 w-full"
-                                    placeholder="ej. Rancho Don Pedro"
-                                    value={preRegistroForm.data.nombre_comercial_rancho}
-                                    onChange={(e) => preRegistroForm.setData('nombre_comercial_rancho', e.target.value)}
-                                />
-                            </div>
-
-                            <div>
-                                <Label>{__('Teléfono de Contacto (WhatsApp)')} *</Label>
-                                <div className="mt-1.5 w-full">
-                                    <PhoneInputGroup
-                                        paises={paises}
-                                        selectedPaisId={preRegistroForm.data.pais_telefono_id}
-                                        phoneValue={preRegistroForm.data.telefono}
-                                        onPaisChange={(id) => preRegistroForm.setData('pais_telefono_id', id)}
-                                        onPhoneChange={(phone) => preRegistroForm.setData('telefono', phone)}
-                                        className="w-full"
-                                    />
-                                </div>
-                            </div>
-
-                            <DialogFooter className="pt-4 border-t dark:border-slate-800">
-                                <Button type="button" variant="outline" onClick={() => setIsPreRegistroModalOpen(false)}>
-                                    {__('Cancelar')}
-                                </Button>
-                                <Button
-                                    type="submit"
-                                    disabled={preRegistroForm.processing}
-                                    className="bg-emerald-600 hover:bg-emerald-700 text-white gap-2"
-                                >
-                                    <Send className="h-4 w-4" />
-                                    {preRegistroForm.processing ? __('Enviando...') : __('Enviar Invitación por WhatsApp')}
-                                </Button>
-                            </DialogFooter>
-                        </form>
-                    </DialogContent>
-                </Dialog>
             </div>
 
-            {/* Modal: Create/Edit Productor */}
             <Dialog open={isCreateModalOpen} onOpenChange={setIsCreateModalOpen}>
-                <DialogContent className="w-[95vw] sm:max-w-[900px] lg:max-w-[1100px] xl:max-w-[1200px] max-h-[90vh] overflow-y-auto bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-6 md:p-8">
-                    <DialogHeader className="border-b pb-4 dark:border-slate-800">
-                        <div className="flex items-center gap-3">
-                            <div className="h-10 w-10 rounded-lg bg-[#104a29]/10 text-[#104a29] dark:bg-emerald-950/40 dark:text-emerald-400 flex items-center justify-center font-bold">
-                                <Sprout className="h-5 w-5" />
-                            </div>
-                            <div>
-                                <DialogTitle className="text-xl font-bold text-slate-900 dark:text-white">
-                                    {editingProductor ? __('Editar Productor') : __('Nuevo Productor')}
-                                </DialogTitle>
-                                <DialogDescription className="text-xs text-slate-500">
-                                    {__('Complete la información general del rancho, datos de contacto y dirección geolocalizada.')}
-                                </DialogDescription>
-                            </div>
-                        </div>
+                <DialogContent className="w-[95vw] sm:max-w-[900px] lg:max-w-[1100px] xl:max-w-[1200px] max-h-[90vh] overflow-y-auto">
+                    <DialogHeader className="border-b pb-4">
+                        <DialogTitle>{editingProductor ? __('Editar Productor') : __('Nuevo Productor')}</DialogTitle>
                     </DialogHeader>
-
                     <form onSubmit={handleSubmit} className="space-y-6 py-2">
                         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-                            <TabsList className="grid grid-cols-2 mb-6 bg-slate-100 dark:bg-slate-800 p-1 rounded-xl">
-                                <TabsTrigger value="general" className="py-2.5 font-medium text-sm gap-2">
-                                    <Building2 className="h-4 w-4" />
-                                    {__('Datos del Rancho')}
-                                </TabsTrigger>
-                                <TabsTrigger value="location" className="py-2.5 font-medium text-sm gap-2">
-                                    <MapPin className="h-4 w-4" />
-                                    {__('Ubicación y Dirección')}
-                                </TabsTrigger>
+                            <TabsList className="grid grid-cols-2 mb-6">
+                                <TabsTrigger value="general">{__('Datos del Rancho')}</TabsTrigger>
+                                <TabsTrigger value="location">{__('Ubicación y Dirección')}</TabsTrigger>
                             </TabsList>
-
-                            {/* Tab 1: Datos del Rancho */}
                             <TabsContent value="general" className="space-y-6">
                                 <div className="bg-slate-50/70 dark:bg-slate-900/50 p-5 rounded-xl border border-slate-200/80 dark:border-slate-800 space-y-4">
                                     <h4 className="text-xs font-bold text-slate-600 dark:text-slate-300 uppercase tracking-wider flex items-center gap-2">
@@ -834,17 +717,16 @@ export default function Index({
                                             {errors.nombre_comercial && <p className="text-xs text-red-500 mt-1">{errors.nombre_comercial}</p>}
                                         </div>
 
-                                        <div>
-                                            <Label htmlFor="documento_identidad">{__('RFC (Registro Federal de Contribuyentes)')} *</Label>
+                                        <div className="md:col-span-2">
+                                            <Label htmlFor="rfc">{__('RFC (Registro Federal de Contribuyentes)')}</Label>
                                             <Input
-                                                id="documento_identidad"
-                                                required
+                                                id="rfc"
                                                 className="mt-1.5 w-full"
                                                 placeholder="ej. ABC123456789"
-                                                value={data.documento_identidad}
-                                                onChange={(e) => setData('documento_identidad', e.target.value)}
+                                                value={data.rfc}
+                                                onChange={(e) => setData('rfc', e.target.value)}
                                             />
-                                            {errors.documento_identidad && <p className="text-xs text-red-500 mt-1">{errors.documento_identidad}</p>}
+                                            {errors.rfc && <p className="text-xs text-red-500 mt-1">{errors.rfc}</p>}
                                         </div>
 
                                         <div>
@@ -856,9 +738,23 @@ export default function Index({
                                                 value={data.responsable}
                                                 onChange={(e) => setData('responsable', e.target.value)}
                                             />
+                                            {errors.responsable && <p className="text-xs text-red-500 mt-1">{errors.responsable}</p>}
                                         </div>
 
                                         <div>
+                                            <Label htmlFor="curp">{__('CURP (del Responsable)')}</Label>
+                                            <Input
+                                                id="curp"
+                                                className="mt-1.5 w-full"
+                                                placeholder="ej. ABCD900101HDFRRR01"
+                                                maxLength={18}
+                                                value={data.curp}
+                                                onChange={(e) => setData('curp', e.target.value.toUpperCase())}
+                                            />
+                                            {errors.curp && <p className="text-xs text-red-500 mt-1">{errors.curp}</p>}
+                                        </div>
+
+                                        <div className="md:col-span-2">
                                             <Label>{__('Teléfono de Contacto')}</Label>
                                             <div className="mt-1.5 w-full">
                                                 <PhoneInputGroup
@@ -872,7 +768,7 @@ export default function Index({
                                             </div>
                                         </div>
 
-                                        <div>
+                                        <div className="md:col-span-2">
                                             <Label htmlFor="status">{__('Estado del Productor')}</Label>
                                             <Select value={data.status} onValueChange={(val: any) => setData('status', val)}>
                                                 <SelectTrigger id="status" className="mt-1.5 w-full">

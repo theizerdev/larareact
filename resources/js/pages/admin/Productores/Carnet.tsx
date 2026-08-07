@@ -26,7 +26,9 @@ interface Productor {
     razon_social: string;
     nombre_comercial?: string | null;
     documento_identidad?: string | null;
+    rfc?: string | null;
     responsable?: string | null;
+    curp?: string | null;
     telefono?: string | null;
     paisTelefono?: Pais | null;
     empresa?: Empresa | null;
@@ -47,7 +49,7 @@ export default function CarnetProductorPage({ productor }: CarnetProductorPagePr
     const nameWords = displayName.split(/\s+/).filter(Boolean);
 
     // QR de Verificación
-    const qrData = productor.documento_identidad || `PROD_${productor.id}`;
+    const qrData = productor.curp || productor.rfc || productor.documento_identidad || `PROD_${productor.id}`;
     const qrCodeUrl = `https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${encodeURIComponent(qrData)}&color=1d4ed8`;
 
     const handlePrint = () => {

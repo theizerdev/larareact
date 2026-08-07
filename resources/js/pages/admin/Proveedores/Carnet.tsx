@@ -26,7 +26,9 @@ interface Proveedor {
     razon_social: string;
     nombre_comercial?: string | null;
     documento_identidad?: string | null;
+    rfc?: string | null;
     responsable?: string | null;
+    curp?: string | null;
     telefono?: string | null;
     paisTelefono?: Pais | null;
     empresa?: Empresa | null;
@@ -47,7 +49,7 @@ export default function CarnetProveedorPage({ proveedor }: CarnetProveedorPagePr
     const nameWords = displayName.split(/\s+/).filter(Boolean);
 
     // QR de Verificación
-    const qrData = proveedor.documento_identidad || `PROV_${proveedor.id}`;
+    const qrData = proveedor.curp || proveedor.rfc || proveedor.documento_identidad || `PROV_${proveedor.id}`;
     const qrCodeUrl = `https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${encodeURIComponent(qrData)}&color=b91c1c`;
 
     const handlePrint = () => {

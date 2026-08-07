@@ -78,10 +78,12 @@ interface Proveedor {
     razon_social: string;
     nombre_comercial: string;
     documento_identidad: string;
+    rfc?: string | null;
     pais_telefono_id?: number | null;
     telefono?: string | null;
     direccion?: string | null;
     responsable?: string | null;
+    curp?: string | null;
     pais_id?: number | null;
     latitud?: number | null;
     longitud?: number | null;
@@ -134,11 +136,13 @@ interface ProveedoresPageProps {
 const initialForm = {
     razon_social: '',
     nombre_comercial: '',
+    rfc: '',
     documento_identidad: '',
     pais_telefono_id: '',
     telefono: '',
     direccion: '',
     responsable: '',
+    curp: '',
     pais_id: '',
     latitud: '' as any,
     longitud: '' as any,
@@ -299,11 +303,13 @@ export default function ProveedoresIndexPage({
         setData({
             razon_social: prov.razon_social || '',
             nombre_comercial: prov.nombre_comercial || '',
+            rfc: prov.rfc || '',
             documento_identidad: prov.documento_identidad || '',
             pais_telefono_id: prov.pais_telefono_id ? String(prov.pais_telefono_id) : '',
             telefono: prov.telefono || '',
             direccion: prov.direccion || '',
             responsable: prov.responsable || '',
+            curp: prov.curp || prov.documento_identidad || '',
             pais_id: prov.pais_id ? String(prov.pais_id) : '',
             latitud: prov.latitud || '',
             longitud: prov.longitud || '',
@@ -477,17 +483,22 @@ export default function ProveedoresIndexPage({
             ),
         },
         {
-            header: 'Identity Document',
-            accessorKey: 'documento_identidad',
-            cell: (prov) => <span className="text-sm font-mono">{prov.documento_identidad}</span>,
+            header: 'RFC / Doc',
+            accessorKey: 'rfc',
+            cell: (prov) => <span className="text-sm font-mono">{prov.rfc || prov.documento_identidad || '—'}</span>,
         },
         {
-            header: 'Responsable',
+            header: 'Responsable / CURP',
             accessorKey: 'responsable',
             cell: (prov) => (
-                <div className="flex items-center gap-1 text-sm">
-                    <UserIcon className="w-3.5 h-3.5 text-muted-foreground" />
-                    <span>{prov.responsable || '—'}</span>
+                <div className="text-sm">
+                    <div className="flex items-center gap-1 font-medium">
+                        <UserIcon className="w-3.5 h-3.5 text-muted-foreground" />
+                        <span>{prov.responsable || '—'}</span>
+                    </div>
+                    {prov.curp && (
+                        <p className="text-xs font-mono text-muted-foreground ml-4">CURP: {prov.curp}</p>
+                    )}
                 </div>
             ),
         },
@@ -803,28 +814,30 @@ export default function ProveedoresIndexPage({
                                         )}
                                     </div>
 
-                                    {/* Documento de Identidad */}
-                                    <div className="space-y-1.5">
-                                        <Label htmlFor="documento_identidad">{__('Identity Document')}</Label>
+                                    {/* RFC (Registro Federal de Contribuyente) */}
+                                    <div className="space-y-1.5 md:col-span-2">
+                                        <Label htmlFor="rfc">{__('RFC (Registro Federal de Contribuyentes)')}</Label>
                                         <Input
-                                            id="documento_identidad"
-                                            value={data.documento_identidad}
-                                            onChange={(e) => setData('documento_identidad', e.target.value)}
-                                            className={cn(errors.documento_identidad && 'border-rose-500')}
+                                            id="rfc"
+                                            placeholder="ej. ABC123456789"
+                                            value={data.rfc}
+                                            onChange={(e) => setData('rfc', e.target.value)}
+                                            className={cn(errors.rfc && 'border-rose-500')}
                                         />
-                                        {errors.documento_identidad && (
+                                        {errors.rfc && (
                                             <p className="text-xs text-rose-500 flex items-center gap-1 mt-1">
                                                 <ShieldAlert className="w-3 h-3" />
-                                                {errors.documento_identidad}
+                                                {errors.rfc}
                                             </p>
                                         )}
                                     </div>
 
-                                    {/* Responsable */}
+                                    {/* Persona Responsable / Contacto */}
                                     <div className="space-y-1.5">
-                                        <Label htmlFor="responsable">{__('Responsable')}</Label>
+                                        <Label htmlFor="responsable">{__('Persona Responsable / Contacto')}</Label>
                                         <Input
                                             id="responsable"
+                                            placeholder="ej. Juan Pérez"
                                             value={data.responsable}
                                             onChange={(e) => setData('responsable', e.target.value)}
                                             className={cn(errors.responsable && 'border-rose-500')}
@@ -833,6 +846,25 @@ export default function ProveedoresIndexPage({
                                             <p className="text-xs text-rose-500 flex items-center gap-1 mt-1">
                                                 <ShieldAlert className="w-3 h-3" />
                                                 {errors.responsable}
+                                            </p>
+                                        )}
+                                    </div>
+
+                                    {/* CURP (del Responsable) */}
+                                    <div className="space-y-1.5">
+                                        <Label htmlFor="curp">{__('CURP (del Responsable)')}</Label>
+                                        <Input
+                                            id="curp"
+                                            placeholder="ej. ABCD900101HDFRRR01"
+                                            maxLength={18}
+                                            value={data.curp}
+                                            onChange={(e) => setData('curp', e.target.value.toUpperCase())}
+                                            className={cn(errors.curp && 'border-rose-500')}
+                                        />
+                                        {errors.curp && (
+                                            <p className="text-xs text-rose-500 flex items-center gap-1 mt-1">
+                                                <ShieldAlert className="w-3 h-3" />
+                                                {errors.curp}
                                             </p>
                                         )}
                                     </div>

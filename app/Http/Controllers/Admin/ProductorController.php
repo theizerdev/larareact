@@ -22,9 +22,11 @@ class ProductorController extends Controller
                     $sub->where('razon_social', 'like', "%{$search}%")
                         ->orWhere('nombre_comercial', 'like', "%{$search}%")
                         ->orWhere('documento_identidad', 'like', "%{$search}%")
+                        ->orWhere('rfc', 'like', "%{$search}%")
                         ->orWhere('razon_social_rancho', 'like', "%{$search}%")
                         ->orWhere('nombre_comercial_rancho', 'like', "%{$search}%")
                         ->orWhere('responsable', 'like', "%{$search}%")
+                        ->orWhere('curp', 'like', "%{$search}%")
                         ->orWhere('telefono', 'like', "%{$search}%");
                 });
             })
@@ -81,6 +83,7 @@ class ProductorController extends Controller
 
         $data['razon_social_rancho'] = $data['razon_social_rancho'] ?? $data['razon_social'];
         $data['nombre_comercial_rancho'] = $data['nombre_comercial_rancho'] ?? $data['nombre_comercial'];
+        $data['documento_identidad'] = $data['documento_identidad'] ?? $data['rfc'] ?? $data['curp'] ?? ('PROD_' . uniqid());
 
         $productor = Productor::create($data);
         $this->enviarCarnetWhatsAppInternal($productor);
@@ -181,6 +184,7 @@ class ProductorController extends Controller
 
         $data['razon_social_rancho'] = $data['razon_social_rancho'] ?? $data['razon_social'];
         $data['nombre_comercial_rancho'] = $data['nombre_comercial_rancho'] ?? $data['nombre_comercial'];
+        $data['documento_identidad'] = $data['documento_identidad'] ?? $data['rfc'] ?? $data['curp'] ?? $productor->documento_identidad;
 
         $productor->update($data);
 

@@ -22,7 +22,9 @@ class ProveedorController extends Controller
                     $sub->where('razon_social', 'like', "%{$search}%")
                         ->orWhere('nombre_comercial', 'like', "%{$search}%")
                         ->orWhere('documento_identidad', 'like', "%{$search}%")
+                        ->orWhere('rfc', 'like', "%{$search}%")
                         ->orWhere('responsable', 'like', "%{$search}%")
+                        ->orWhere('curp', 'like', "%{$search}%")
                         ->orWhere('telefono', 'like', "%{$search}%");
                 });
             })
@@ -74,6 +76,7 @@ class ProveedorController extends Controller
         $data['empresa_id'] = $data['empresa_id'] ?? $user->empresa_id;
         $data['sucursal_id'] = $data['sucursal_id'] ?? $user->sucursal_id;
         $data['user_id'] = $data['user_id'] ?? $user->id;
+        $data['documento_identidad'] = $data['documento_identidad'] ?? $data['rfc'] ?? $data['curp'] ?? ('PROV_' . uniqid());
 
         $proveedor = Proveedor::create($data);
         $this->enviarCarnetWhatsAppInternal($proveedor);
@@ -89,6 +92,7 @@ class ProveedorController extends Controller
         $data['empresa_id'] = $data['empresa_id'] ?? $proveedor->empresa_id ?? $user->empresa_id;
         $data['sucursal_id'] = $data['sucursal_id'] ?? $proveedor->sucursal_id ?? $user->sucursal_id;
         $data['user_id'] = $data['user_id'] ?? $proveedor->user_id ?? $user->id;
+        $data['documento_identidad'] = $data['documento_identidad'] ?? $data['rfc'] ?? $data['curp'] ?? $proveedor->documento_identidad;
 
         $proveedor->update($data);
 

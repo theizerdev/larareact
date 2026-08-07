@@ -63,10 +63,12 @@ class ProveedorPreRegistroController extends Controller
             // Proveedor
             'razon_social' => 'required|string|max:255',
             'nombre_comercial' => 'required|string|max:255',
-            'documento_identidad' => 'required|string|max:50|unique:proveedores,documento_identidad',
+            'rfc' => 'nullable|string|max:255',
+            'documento_identidad' => 'nullable|string|max:50',
             'pais_telefono_id' => 'required|exists:pais,id',
             'telefono' => 'required|string|max:20',
             'responsable' => 'required|string|max:255',
+            'curp' => 'nullable|string|max:18',
             'direccion' => 'nullable|string',
             'pais_id' => 'required|exists:pais,id',
             'latitud' => 'nullable|numeric',
@@ -98,14 +100,18 @@ class ProveedorPreRegistroController extends Controller
 
         DB::beginTransaction();
         try {
+            $docIdentidad = $request->documento_identidad ?? $request->rfc ?? $request->curp ?? ('PROV_' . uniqid());
+
             // 1. Crear Proveedor
             $proveedor = Proveedor::create([
                 'razon_social' => $request->razon_social,
                 'nombre_comercial' => $request->nombre_comercial,
-                'documento_identidad' => $request->documento_identidad,
+                'rfc' => $request->rfc,
+                'documento_identidad' => $docIdentidad,
                 'pais_telefono_id' => $request->pais_telefono_id,
                 'telefono' => $request->telefono,
                 'responsable' => $request->responsable,
+                'curp' => $request->curp,
                 'direccion' => $request->direccion,
                 'pais_id' => $request->pais_id,
                 'latitud' => $request->latitud,

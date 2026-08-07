@@ -96,8 +96,10 @@ export default function Wizard({ preRegistro, paises, mapbox_api_key, mapbox_act
     const [providerData, setProviderData] = useState({
         razon_social: '',
         nombre_comercial: preRegistro.nombre_comercial,
+        rfc: '',
         documento_identidad: '',
         responsable: '',
+        curp: '',
         direccion: '',
         pais_telefono_id: preRegistro.pais_telefono_id,
         telefono: preRegistro.telefono,
@@ -297,7 +299,6 @@ export default function Wizard({ preRegistro, paises, mapbox_api_key, mapbox_act
     const validateStep1 = (): boolean => {
         const newErrors: Record<string, string> = {};
         if (!providerData.razon_social.trim()) newErrors.razon_social = __('Business name is required.');
-        if (!providerData.documento_identidad.trim()) newErrors.documento_identidad = __('ID document is required.');
         if (!providerData.responsable.trim()) newErrors.responsable = __('Representative is required.');
         if (!providerData.pais_id) newErrors.pais_id = __('Country is required.');
         if (!providerData.direccion.trim()) newErrors.direccion = __('Address is required.');
@@ -561,27 +562,42 @@ export default function Wizard({ preRegistro, paises, mapbox_api_key, mapbox_act
                                         />
                                     </div>
 
-                                    <div className="space-y-1.5">
-                                        <Label htmlFor="documento_identidad">{__('Documento de Identidad *')}</Label>
-                                        <Input
-                                            id="documento_identidad"
-                                            value={providerData.documento_identidad}
-                                            onChange={(e) => setProviderData(prev => ({ ...prev, documento_identidad: e.target.value }))}
-                                            className={errors.documento_identidad ? 'border-rose-500' : ''}
-                                        />
-                                        {errors.documento_identidad && <p className="text-xs text-rose-500">{errors.documento_identidad}</p>}
-                                    </div>
+                                    <div className="space-y-1.5 md:col-span-2">
+                                         <Label htmlFor="rfc">{__('RFC (Registro Federal de Contribuyente)')}</Label>
+                                         <Input
+                                             id="rfc"
+                                             placeholder="ej. ABC123456789"
+                                             value={providerData.rfc}
+                                             onChange={(e) => setProviderData(prev => ({ ...prev, rfc: e.target.value }))}
+                                             className={errors.rfc ? 'border-rose-500' : ''}
+                                         />
+                                         {errors.rfc && <p className="text-xs text-rose-500">{errors.rfc}</p>}
+                                     </div>
 
-                                    <div className="space-y-1.5">
-                                        <Label htmlFor="responsable">{__('Responsable *')}</Label>
-                                        <Input
-                                            id="responsable"
-                                            value={providerData.responsable}
-                                            onChange={(e) => setProviderData(prev => ({ ...prev, responsable: e.target.value }))}
-                                            className={errors.responsable ? 'border-rose-500' : ''}
-                                        />
-                                        {errors.responsable && <p className="text-xs text-rose-500">{errors.responsable}</p>}
-                                    </div>
+                                     <div className="space-y-1.5">
+                                         <Label htmlFor="responsable">{__('Persona Responsable / Contacto *')}</Label>
+                                         <Input
+                                             id="responsable"
+                                             placeholder="ej. Juan Pérez"
+                                             value={providerData.responsable}
+                                             onChange={(e) => setProviderData(prev => ({ ...prev, responsable: e.target.value }))}
+                                             className={errors.responsable ? 'border-rose-500' : ''}
+                                         />
+                                         {errors.responsable && <p className="text-xs text-rose-500">{errors.responsable}</p>}
+                                     </div>
+
+                                     <div className="space-y-1.5">
+                                         <Label htmlFor="curp">{__('CURP (del Responsable)')}</Label>
+                                         <Input
+                                             id="curp"
+                                             placeholder="ej. ABCD900101HDFRRR01"
+                                             maxLength={18}
+                                             value={providerData.curp}
+                                             onChange={(e) => setProviderData(prev => ({ ...prev, curp: e.target.value.toUpperCase() }))}
+                                             className={errors.curp ? 'border-rose-500' : ''}
+                                         />
+                                         {errors.curp && <p className="text-xs text-rose-500">{errors.curp}</p>}
+                                     </div>
 
                                     <div className="space-y-1.5 md:col-span-2">
                                         <PhoneInputGroup

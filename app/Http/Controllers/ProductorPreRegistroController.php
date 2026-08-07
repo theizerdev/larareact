@@ -64,12 +64,14 @@ class ProductorPreRegistroController extends Controller
             // Productor & Rancho
             'razon_social' => 'required|string|max:255',
             'nombre_comercial' => 'required|string|max:255',
-            'documento_identidad' => 'required|string|max:50|unique:productores,documento_identidad',
+            'rfc' => 'nullable|string|max:255',
+            'documento_identidad' => 'nullable|string|max:50',
             'razon_social_rancho' => 'required|string|max:255',
             'nombre_comercial_rancho' => 'required|string|max:255',
             'pais_telefono_id' => 'required|exists:pais,id',
             'telefono' => 'required|string|max:20',
             'responsable' => 'required|string|max:255',
+            'curp' => 'nullable|string|max:18',
             'direccion' => 'nullable|string',
             'codigo_postal' => 'nullable|string|max:50',
             'estado' => 'nullable|string|max:255',
@@ -103,16 +105,20 @@ class ProductorPreRegistroController extends Controller
 
         DB::beginTransaction();
         try {
+            $docIdentidad = $request->documento_identidad ?? $request->rfc ?? $request->curp ?? ('PROD_' . uniqid());
+
             // 1. Crear Productor
             $productor = Productor::create([
                 'razon_social' => $request->razon_social,
                 'nombre_comercial' => $request->nombre_comercial,
-                'documento_identidad' => $request->documento_identidad,
+                'rfc' => $request->rfc,
+                'documento_identidad' => $docIdentidad,
                 'razon_social_rancho' => $request->razon_social_rancho,
                 'nombre_comercial_rancho' => $request->nombre_comercial_rancho,
                 'pais_telefono_id' => $request->pais_telefono_id,
                 'telefono' => $request->telefono,
                 'responsable' => $request->responsable,
+                'curp' => $request->curp,
                 'direccion' => $request->direccion,
                 'codigo_postal' => $request->codigo_postal,
                 'estado' => $request->estado,

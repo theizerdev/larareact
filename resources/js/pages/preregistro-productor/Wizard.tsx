@@ -194,12 +194,14 @@ export default function Wizard({ preRegistro, paises, mapbox_api_key, mapbox_act
     const [productorData, setProductorData] = useState({
         razon_social: '',
         nombre_comercial: '',
+        rfc: '',
         documento_identidad: '',
         razon_social_rancho: preRegistro.razon_social_rancho || '',
         nombre_comercial_rancho: preRegistro.nombre_comercial_rancho || '',
         pais_telefono_id: preRegistro.pais_telefono_id ? String(preRegistro.pais_telefono_id) : (paises[0]?.id ? String(paises[0].id) : ''),
         telefono: preRegistro.telefono || '',
         responsable: '',
+        curp: '',
         direccion: '',
         codigo_postal: '',
         estado: '',
@@ -504,16 +506,16 @@ export default function Wizard({ preRegistro, paises, mapbox_api_key, mapbox_act
                                                     {errors.nombre_comercial_rancho && <p className="text-xs text-red-500 mt-1">{errors.nombre_comercial_rancho}</p>}
                                                 </div>
 
-                                                <div>
-                                                    <Label htmlFor="documento_identidad">{__('RFC (Registro Federal de Contribuyentes)')} *</Label>
+                                                <div className="md:col-span-2">
+                                                    <Label htmlFor="rfc">{__('RFC (Registro Federal de Contribuyentes)')}</Label>
                                                     <Input 
-                                                        id="documento_identidad"
+                                                        id="rfc"
                                                         className="mt-1.5 w-full"
                                                         placeholder="ej. ABC123456789"
-                                                        value={productorData.documento_identidad}
-                                                        onChange={(e) => setProductorData({ ...productorData, documento_identidad: e.target.value })}
+                                                        value={productorData.rfc}
+                                                        onChange={(e) => setProductorData({ ...productorData, rfc: e.target.value })}
                                                     />
-                                                    {errors.documento_identidad && <p className="text-xs text-red-500 mt-1">{errors.documento_identidad}</p>}
+                                                    {errors.rfc && <p className="text-xs text-red-500 mt-1">{errors.rfc}</p>}
                                                 </div>
 
                                                 <div>
@@ -529,6 +531,19 @@ export default function Wizard({ preRegistro, paises, mapbox_api_key, mapbox_act
                                                 </div>
 
                                                 <div>
+                                                    <Label htmlFor="curp">{__('CURP (del Responsable)')}</Label>
+                                                    <Input 
+                                                        id="curp"
+                                                        className="mt-1.5 w-full"
+                                                        placeholder="ej. ABCD900101HDFRRR01"
+                                                        maxLength={18}
+                                                        value={productorData.curp}
+                                                        onChange={(e) => setProductorData({ ...productorData, curp: e.target.value.toUpperCase() })}
+                                                    />
+                                                    {errors.curp && <p className="text-xs text-red-500 mt-1">{errors.curp}</p>}
+                                                </div>
+
+                                                <div className="md:col-span-2">
                                                     <Label>{__('Teléfono de Contacto (WhatsApp)')} *</Label>
                                                     <div className="mt-1.5 w-full">
                                                         <PhoneInputGroup

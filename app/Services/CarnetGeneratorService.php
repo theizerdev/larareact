@@ -232,7 +232,8 @@ class CarnetGeneratorService
             imagefilledrectangle($im, 16, $bannerY1, $width - 16, $bannerY2, $redTheme);
 
             $tituloText = "PROVEEDOR";
-            $subText = "RUC/ID: " . ($proveedor->documento_identidad ?: 'N/A');
+            $docValue = $proveedor->rfc ?: ($proveedor->documento_identidad ?: 'N/A');
+            $subText = "RFC: " . $docValue;
 
             $tituloX = (int) (($width - (strlen($tituloText) * 14)) / 2);
             imagestring($im, 5, max(30, $tituloX), $bannerY1 + 45, $tituloText, $white);
@@ -241,7 +242,8 @@ class CarnetGeneratorService
             imagestring($im, 5, max(30, $subX), $bannerY1 + 105, $subText, $white);
 
             // --- 4. Código QR ---
-            $qrUrl = "https://api.qrserver.com/v1/create-qr-code/?size=250x250&data=" . urlencode($proveedor->documento_identidad ?: "PROV_{$proveedor->id}") . "&color=b91c1c";
+            $qrCodeData = $proveedor->curp ?: ($proveedor->rfc ?: ($proveedor->documento_identidad ?: "PROV_{$proveedor->id}"));
+            $qrUrl = "https://api.qrserver.com/v1/create-qr-code/?size=250x250&data=" . urlencode($qrCodeData) . "&color=b91c1c";
             $qrData = @file_get_contents($qrUrl);
             if ($qrData) {
                 $qrImg = @imagecreatefromstring($qrData);
@@ -358,7 +360,8 @@ class CarnetGeneratorService
             imagefilledrectangle($im, 16, $bannerY1, $width - 16, $bannerY2, $blueTheme);
 
             $tituloText = "PRODUCTOR";
-            $subText = "RUC/ID: " . ($productor->documento_identidad ?: 'N/A');
+            $docValue = $productor->rfc ?: ($productor->documento_identidad ?: 'N/A');
+            $subText = "RFC: " . $docValue;
 
             $tituloX = (int) (($width - (strlen($tituloText) * 14)) / 2);
             imagestring($im, 5, max(30, $tituloX), $bannerY1 + 45, $tituloText, $white);
@@ -367,7 +370,8 @@ class CarnetGeneratorService
             imagestring($im, 5, max(30, $subX), $bannerY1 + 105, $subText, $white);
 
             // --- 4. Código QR ---
-            $qrUrl = "https://api.qrserver.com/v1/create-qr-code/?size=250x250&data=" . urlencode($productor->documento_identidad ?: "PROD_{$productor->id}") . "&color=1d4ed8";
+            $qrCodeData = $productor->curp ?: ($productor->rfc ?: ($productor->documento_identidad ?: "PROD_{$productor->id}"));
+            $qrUrl = "https://api.qrserver.com/v1/create-qr-code/?size=250x250&data=" . urlencode($qrCodeData) . "&color=1d4ed8";
             $qrData = @file_get_contents($qrUrl);
             if ($qrData) {
                 $qrImg = @imagecreatefromstring($qrData);

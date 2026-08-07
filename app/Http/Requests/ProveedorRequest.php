@@ -25,8 +25,9 @@ class ProveedorRequest extends FormRequest
         return [
             'razon_social' => ['required', 'string', 'max:255'],
             'nombre_comercial' => ['required', 'string', 'max:255'],
+            'rfc' => ['nullable', 'string', 'max:255'],
             'documento_identidad' => [
-                'required',
+                'nullable',
                 'string',
                 'max:255',
                 Rule::unique('proveedores', 'documento_identidad')->ignore($id),
@@ -35,6 +36,7 @@ class ProveedorRequest extends FormRequest
             'telefono' => ['nullable', 'string', 'max:255'],
             'direccion' => ['nullable', 'string'],
             'responsable' => ['nullable', 'string', 'max:255'],
+            'curp' => ['nullable', 'string', 'max:18'],
             'pais_id' => ['required', 'exists:pais,id'],
             'latitud' => ['nullable', 'numeric', 'between:-90,90'],
             'longitud' => ['nullable', 'numeric', 'between:-180,180'],
