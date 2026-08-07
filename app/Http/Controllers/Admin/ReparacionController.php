@@ -368,21 +368,28 @@ class ReparacionController extends Controller
         // Guardar servicios agregados desde el carrito como items de la orden
         if (!empty($serviciosSeleccionados)) {
             $totalServicios = 0;
+            $hasServicioIdCol = \Illuminate\Support\Facades\Schema::hasColumn('orden_reparacion_items', 'servicio_id');
+
             foreach ($serviciosSeleccionados as $item) {
                 $cant = (int) ($item['cantidad'] ?? 1);
                 $precio = (float) ($item['precio'] ?? 0);
                 $subtotal = $cant * $precio;
                 $totalServicios += $subtotal;
 
-                OrdenReparacionItem::create([
+                $itemData = [
                     'orden_id' => $orden->id,
-                    'servicio_id' => $item['servicio_id'] ?? null,
                     'descripcion' => $item['nombre'] ?? 'Servicio de Reparación',
                     'cantidad' => $cant,
                     'precio_costo' => 0,
                     'precio_venta' => $precio,
                     'subtotal' => $subtotal,
-                ]);
+                ];
+
+                if ($hasServicioIdCol) {
+                    $itemData['servicio_id'] = $item['servicio_id'] ?? null;
+                }
+
+                OrdenReparacionItem::create($itemData);
             }
 
             if ($totalServicios > 0) {
@@ -412,7 +419,7 @@ class ReparacionController extends Controller
 
     public function show(OrdenReparacion $reparacion)
     {
-        $reparacion->load(['cliente', 'marca', 'modelo', 'tecnico', 'items.producto', 'historial.user', 'sale']);
+        $reparacion->load(['cliente', 'marca', 'modelo', 'tecnico', 'items.producto', 'items.servicio', 'historial.user', 'sale']);
 
         $user = auth()->user();
         $empresaId = $user->empresa_id;

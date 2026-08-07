@@ -69,6 +69,7 @@ return new class extends Migration
             $table->id();
             $table->foreignId('orden_id')->constrained('ordenes_reparacion')->onDelete('cascade');
             $table->foreignId('producto_id')->nullable()->constrained('productos')->onDelete('set null');
+            $table->foreignId('servicio_id')->nullable()->constrained('servicios')->onDelete('set null');
             $table->string('descripcion');
             $table->integer('cantidad')->default(1);
             $table->decimal('precio_costo', 12, 2)->default(0);

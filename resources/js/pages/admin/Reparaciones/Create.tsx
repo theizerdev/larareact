@@ -410,7 +410,7 @@ export default function CreateReparacion({ clientes: initialClientes, marcas: in
     const [selectedMarcaId, setSelectedMarcaId] = useState<string>('');
     const [modelosFiltrados, setModelosFiltrados] = useState<ModeloItem[]>([]);
 
-    const { data, setData, post, processing, errors } = useForm({
+    const { data, setData, post, processing, errors, transform } = useForm({
         cliente_id: '',
         cliente_nombre: '',
         cliente_telefono: '',
@@ -589,24 +589,24 @@ export default function CreateReparacion({ clientes: initialClientes, marcas: in
 
     // Seleccionar Cliente de la búsqueda
     const handleSelectClienteObj = (c: Cliente) => {
-        setData((prev) => ({
-            ...prev,
+        setData({
+            ...data,
             cliente_id: String(c.id),
             cliente_nombre: c.nombre,
             cliente_telefono: c.telefono || '',
-        }));
+        });
         setSearchClienteTerm(c.nombre);
         setIsClientDropdownOpen(false);
     };
 
     // Limpiar Cliente seleccionado
     const handleClearCliente = () => {
-        setData((prev) => ({
-            ...prev,
+        setData({
+            ...data,
             cliente_id: '',
             cliente_nombre: '',
             cliente_telefono: '',
-        }));
+        });
         setSearchClienteTerm('');
     };
 
@@ -640,12 +640,12 @@ export default function CreateReparacion({ clientes: initialClientes, marcas: in
             if (dataRes.success) {
                 const newClient = dataRes.cliente;
                 setClientesList((prev) => [newClient, ...prev]);
-                setData((prev) => ({
-                    ...prev,
+                setData({
+                    ...data,
                     cliente_id: String(newClient.id),
                     cliente_nombre: newClient.nombre,
                     cliente_telefono: newClient.telefono || '',
-                }));
+                });
                 setSearchClienteTerm(newClient.nombre);
                 setOpenNewClientModal(false);
                 setNewClientData({ nombre: '', telefono: '', email: '', direccion: '' });
@@ -755,13 +755,13 @@ export default function CreateReparacion({ clientes: initialClientes, marcas: in
         setSelectedMarcaId(marcaId);
         if (m) {
             setModelosFiltrados(m.modelos || []);
-            setData((prev) => ({
-                ...prev,
+            setData({
+                ...data,
                 marca_id: String(m.id),
                 marca_nombre: m.nombre,
                 modelo_id: '',
                 modelo_nombre: '',
-            }));
+            });
         } else {
             setModelosFiltrados([]);
         }
@@ -771,11 +771,11 @@ export default function CreateReparacion({ clientes: initialClientes, marcas: in
     const handleSelectModelo = (modeloId: string) => {
         const mod = modelosFiltrados.find((item) => String(item.id) === modeloId);
         if (mod) {
-            setData((prev) => ({
-                ...prev,
+            setData({
+                ...data,
                 modelo_id: String(mod.id),
                 modelo_nombre: mod.nombre_comercial,
-            }));
+            });
         }
     };
 
@@ -801,18 +801,20 @@ export default function CreateReparacion({ clientes: initialClientes, marcas: in
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
 
-        const payloadData = {
-            ...data,
+        transform((prevData) => ({
+            ...prevData,
             inspeccion_fisica: inspeccionState,
             estado_equipo: estadoEquipoState,
             accesorios: accesoriosState,
             servicios_seleccionados: cartServicios,
-        };
+        }));
 
         post('/admin/reparaciones', {
-            data: payloadData,
             onSuccess: () => notifySuccess(__('Orden de reparación registrada exitosamente.')),
-            onError: () => notifyError(__('Por favor completa los campos requeridos.')),
+            onError: (errs) => {
+                console.error('Errores al guardar orden:', errs);
+                notifyError(__('Por favor completa los campos requeridos.'));
+            },
         });
     };
 
@@ -985,10 +987,7 @@ export default function CreateReparacion({ clientes: initialClientes, marcas: in
                                                         onChange={(e) => {
                                                             const val = e.target.value;
                                                             setSearchClienteTerm(val);
-                                                            setData((prev) => ({
-                                                                ...prev,
-                                                                cliente_nombre: val,
-                                                            }));
+                                                            setData('cliente_nombre', val);
                                                             setIsClientDropdownOpen(val.trim().length > 0);
                                                         }}
                                                         onFocus={() => {

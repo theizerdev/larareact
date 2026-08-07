@@ -15,6 +15,7 @@ class OrdenReparacionItem extends Model
     protected $fillable = [
         'orden_id',
         'producto_id',
+        'servicio_id',
         'descripcion',
         'cantidad',
         'precio_costo',
@@ -37,5 +38,10 @@ class OrdenReparacionItem extends Model
     public function producto(): BelongsTo
     {
         return $this->belongsTo(Producto::class, 'producto_id');
+    }
+
+    public function servicio(): BelongsTo
+    {
+        return $this->belongsTo(Servicio::class, 'servicio_id');
     }
 }

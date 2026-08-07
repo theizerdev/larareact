@@ -35,6 +35,7 @@ import { Select, SelectContent, SelectGroup, SelectItem, SelectLabel, SelectTrig
 import { Textarea } from '@/components/ui/textarea';
 import { useTranslate } from '@/hooks/use-translate';
 import { notifySuccess, notifyError } from '@/utils/notifications';
+import { cn } from '@/lib/utils';
 
 interface Item {
     id: number;
@@ -110,6 +111,28 @@ interface Props {
 
 export default function ShowReparacion({ orden, productosRepuestos = [], tecnicos, currencySymbol }: Props) {
     const { __ } = useTranslate();
+
+    const formatNum = (val: any): string => {
+        if (val === null || val === undefined || val === '') return '0.00';
+        const num = parseFloat(val);
+        return isNaN(num) ? '0.00' : num.toFixed(2);
+    };
+
+    const formatDate = (dateStr?: string): string => {
+        if (!dateStr) return __('No especificada');
+        try {
+            const cleanStr = String(dateStr).replace(' ', 'T');
+            const d = new Date(cleanStr);
+            if (isNaN(d.getTime())) return dateStr;
+            return d.toLocaleDateString() + ' ' + d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+        } catch {
+            return dateStr || __('No especificada');
+        }
+    };
+
+    // Separar items de servicios de los repuestos de inventario
+    const serviciosItems = (orden.items || []).filter((i) => i.servicio_id || !i.producto_id);
+    const repuestosItems = (orden.items || []).filter((i) => !!i.producto_id);
 
     const [openStatusModal, setOpenStatusModal] = useState(false);
     const [nuevoEstado, setNuevoEstado] = useState(orden.estado_orden);
@@ -238,7 +261,7 @@ export default function ShowReparacion({ orden, productosRepuestos = [], tecnico
                             {getStatusBadge(orden.estado_orden)}
                         </div>
                         <p className="text-xs text-slate-500 mt-1">
-                            {__('Recepción:')} {new Date(orden.fecha_recepcion).toLocaleString()} | {__('Técnico:')} <strong className="text-purple-700 dark:text-purple-400">{orden.tecnico?.name || __('Sin Asignar')}</strong>
+                            {__('Recepción:')} {formatDate(orden.fecha_recepcion)} | {__('Técnico:')} <strong className="text-purple-700 dark:text-purple-400">{orden.tecnico?.name || __('Sin Asignar')}</strong>
                         </p>
                     </div>
 
@@ -347,16 +370,16 @@ export default function ShowReparacion({ orden, productosRepuestos = [], tecnico
                                 <CardTitle className="text-sm font-bold flex items-center justify-between text-slate-800 dark:text-slate-200">
                                     <span className="flex items-center gap-2">
                                         <Smartphone className="w-4 h-4 text-purple-600" />
-                                        {orden.marca_nombre} {orden.modelo_nombre}
+                                        {orden.marca_nombre || __('Equipo')} {orden.modelo_nombre || ''}
                                     </span>
-                                    <Badge variant="outline" className="font-mono text-[11px] capitalize">{orden.tipo_dispositivo}</Badge>
+                                    <Badge variant="outline" className="font-mono text-[11px] capitalize">{orden.tipo_dispositivo || __('Dispositivo')}</Badge>
                                 </CardTitle>
                             </CardHeader>
                             <CardContent className="p-4 space-y-4 text-xs">
                                 <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
                                     <div>
                                         <span className="text-slate-400 block text-[11px]">{__('Cliente')}</span>
-                                        <span className="font-bold text-slate-900 dark:text-slate-100">{orden.cliente_nombre}</span>
+                                        <span className="font-bold text-slate-900 dark:text-slate-100">{orden.cliente_nombre || __('No especificado')}</span>
                                     </div>
                                     <div>
                                         <span className="text-slate-400 block text-[11px]">{__('Teléfono')}</span>
@@ -426,6 +449,94 @@ export default function ShowReparacion({ orden, productosRepuestos = [], tecnico
                                 )}
                             </CardContent>
                         </Card>
+
+                        {/* TARJETA DE SERVICIOS SOLICITADOS / MANO DE OBRA */}
+                        {serviciosItems.length > 0 && (
+                            <Card className="border-slate-200 dark:border-slate-800 shadow-sm">
+                                <CardHeader className="bg-slate-50 dark:bg-slate-900/50 border-b border-slate-100 dark:border-slate-800 py-3">
+                                    <CardTitle className="text-sm font-bold flex items-center justify-between text-slate-800 dark:text-slate-200">
+                                        <span className="flex items-center gap-2">
+                                            <Wrench className="w-4 h-4 text-purple-600" />
+                                            {__('Servicios Solicitados / Trabajos a Realizar')}
+                                        </span>
+                                        <Badge variant="outline" className="font-mono text-purple-700 bg-purple-50 dark:bg-purple-950/50 font-bold border-purple-200">
+                                            {serviciosItems.length} {serviciosItems.length === 1 ? __('Servicio') : __('Servicios')}
+                                        </Badge>
+                                    </CardTitle>
+                                </CardHeader>
+                                <CardContent className="p-4">
+                                    <div className="divide-y divide-slate-100 dark:divide-slate-800">
+                                        {serviciosItems.map((item) => (
+                                            <div key={item.id} className="py-2.5 flex items-center justify-between text-xs">
+                                                <div className="space-y-0.5">
+                                                    <span className="font-bold text-slate-900 dark:text-slate-100 flex items-center gap-1.5">
+                                                        <CheckCircle2 className="w-3.5 h-3.5 text-purple-600" />
+                                                        {item.descripcion}
+                                                    </span>
+                                                    {(item as any).servicio?.categoria?.nombre && (
+                                                        <span className="text-[10px] text-slate-400 block font-medium">
+                                                            Categoría: {(item as any).servicio.categoria.nombre}
+                                                        </span>
+                                                    )}
+                                                </div>
+                                                <div className="text-right font-mono font-bold text-slate-900 dark:text-slate-100">
+                                                    {currencySymbol}{formatNum(item.precio_venta)}
+                                                </div>
+                                            </div>
+                                        ))}
+                                    </div>
+                                </CardContent>
+                            </Card>
+                        )}
+
+                        {/* ESTADO OPERATIVO & ACCESORIOS DE RECEPCIÓN */}
+                        {((orden.accesorios && Object.values(orden.accesorios).some(Boolean)) || (orden.estado_equipo && Object.keys(orden.estado_equipo).length > 0)) && (
+                            <Card className="border-slate-200 dark:border-slate-800 shadow-sm">
+                                <CardHeader className="bg-slate-50 dark:bg-slate-900/50 border-b border-slate-100 dark:border-slate-800 py-3">
+                                    <CardTitle className="text-sm font-bold flex items-center gap-2 text-slate-800 dark:text-slate-200">
+                                        <Lock className="w-4 h-4 text-purple-600" />
+                                        {__('Accesorios Dejados & Estado Operativo al Recibir')}
+                                    </CardTitle>
+                                </CardHeader>
+                                <CardContent className="p-4 space-y-3 text-xs">
+                                    {orden.accesorios && (
+                                        <div>
+                                            <span className="text-slate-400 block text-[11px] font-medium mb-1.5">{__('Accesorios Dejados por el Cliente:')}</span>
+                                            <div className="flex flex-wrap gap-1.5">
+                                                {Object.entries(orden.accesorios).map(([accKey, rec]) => (
+                                                    <Badge
+                                                        key={accKey}
+                                                        variant={rec ? "default" : "outline"}
+                                                        className={cn(
+                                                            "text-[10px] capitalize font-semibold",
+                                                            rec ? "bg-purple-600 text-white" : "text-slate-400 opacity-60"
+                                                        )}
+                                                    >
+                                                        {rec ? '✓ ' : '✕ '} {accKey.replace('_', ' ')}
+                                                    </Badge>
+                                                ))}
+                                            </div>
+                                        </div>
+                                    )}
+
+                                    {orden.estado_equipo && (
+                                        <div className="pt-2 border-t border-slate-100 dark:border-slate-800">
+                                            <span className="text-slate-400 block text-[11px] font-medium mb-1.5">{__('Verificación de Inicio y Encendido:')}</span>
+                                            <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                                                {Object.entries(orden.estado_equipo).map(([stKey, val]) => (
+                                                    <div key={stKey} className="p-2 rounded bg-slate-50 dark:bg-slate-900/60 border border-slate-100 dark:border-slate-800 flex items-center justify-between">
+                                                        <span className="text-[11px] capitalize text-slate-700 dark:text-slate-300 font-medium">{stKey.replace('_', ' ')}</span>
+                                                        <Badge variant={val === 'si' ? 'default' : 'secondary'} className={cn('text-[10px] font-bold', val === 'si' ? 'bg-emerald-600' : 'bg-slate-200 text-slate-700')}>
+                                                            {String(val).toUpperCase()}
+                                                        </Badge>
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        </div>
+                                    )}
+                                </CardContent>
+                            </Card>
+                        )}
 
                         {/* RESUMEN DE INSPECCIÓN FÍSICA & ESTADO */}
                         {orden.inspeccion_fisica && (
@@ -501,7 +612,7 @@ export default function ShowReparacion({ orden, productosRepuestos = [], tecnico
                                         {__('Repuestos Consumidos de Inventario')}
                                     </span>
                                     <span className="font-mono text-xs text-purple-600 font-bold">
-                                        {currencySymbol}{Number(orden.costo_repuestos).toFixed(2)}
+                                        {currencySymbol}{formatNum(orden.costo_repuestos)}
                                     </span>
                                 </CardTitle>
                             </CardHeader>
@@ -579,14 +690,14 @@ export default function ShowReparacion({ orden, productosRepuestos = [], tecnico
                                             </tr>
                                         </thead>
                                         <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
-                                            {orden.items.length === 0 ? (
+                                            {repuestosItems.length === 0 ? (
                                                 <tr>
                                                     <td colSpan={5} className="px-3 py-4 text-center text-slate-400 italic">
-                                                        {__('No se han asignado repuestos a esta orden.')}
+                                                        {__('No se han asignado repuestos adicionales a esta orden.')}
                                                     </td>
                                                 </tr>
                                             ) : (
-                                                orden.items.map((item) => (
+                                                repuestosItems.map((item) => (
                                                     <tr key={item.id}>
                                                         <td className="px-3 py-2 font-medium text-slate-900 dark:text-slate-100">{item.descripcion}</td>
                                                         <td className="px-3 py-2 text-center font-mono">{item.cantidad}</td>
@@ -626,7 +737,7 @@ export default function ShowReparacion({ orden, productosRepuestos = [], tecnico
                                 <div className="space-y-2">
                                     <div className="flex justify-between items-center text-slate-600 dark:text-slate-400">
                                         <span>{__('Costo Repuestos:')}</span>
-                                        <span className="font-mono font-bold">{currencySymbol}{Number(orden.costo_repuestos).toFixed(2)}</span>
+                                        <span className="font-mono font-bold">{currencySymbol}{formatNum(orden.costo_repuestos)}</span>
                                     </div>
 
                                     <div className="space-y-1 pt-1 border-t border-slate-100 dark:border-slate-800">
@@ -660,11 +771,11 @@ export default function ShowReparacion({ orden, productosRepuestos = [], tecnico
                                 <div className="pt-3 border-t border-slate-200 dark:border-slate-800 space-y-2">
                                     <div className="flex justify-between items-center text-sm font-bold text-slate-900 dark:text-slate-100">
                                         <span>{__('Total Presupuesto:')}</span>
-                                        <span className="font-mono text-purple-700 dark:text-purple-400 text-base">{currencySymbol}{Number(orden.costo_estimado).toFixed(2)}</span>
+                                        <span className="font-mono text-purple-700 dark:text-purple-400 text-base">{currencySymbol}{formatNum(orden.costo_estimado)}</span>
                                     </div>
                                     <div className="flex justify-between items-center p-2.5 bg-emerald-50 dark:bg-emerald-950/40 rounded-lg border border-emerald-200 dark:border-emerald-900 text-emerald-900 dark:text-emerald-300">
                                         <span className="font-bold text-xs">{__('Saldo Restante a Cobrar:')}</span>
-                                        <span className="font-mono font-black text-base">{currencySymbol}{Number(orden.saldo_restante).toFixed(2)}</span>
+                                        <span className="font-mono font-black text-base">{currencySymbol}{formatNum(orden.saldo_restante)}</span>
                                     </div>
                                 </div>
                             </CardContent>
@@ -685,7 +796,7 @@ export default function ShowReparacion({ orden, productosRepuestos = [], tecnico
                                             <div className="absolute left-1 top-1 w-3 h-3 rounded-full bg-purple-600 border-2 border-white dark:border-slate-900" />
                                             <div className="flex items-center justify-between text-[11px]">
                                                 <span className="font-bold capitalize text-slate-900 dark:text-slate-100">{h.estado_nuevo.replace('_', ' ')}</span>
-                                                <span className="text-slate-400 text-[10px]">{new Date(h.created_at).toLocaleString()}</span>
+                                                <span className="text-slate-400 text-[10px]">{formatDate(h.created_at)}</span>
                                             </div>
                                             {h.user && <span className="text-[10px] text-slate-500 block">{h.user.name}</span>}
                                             {h.comentario && <p className="text-[11px] text-slate-600 dark:text-slate-300 italic bg-slate-50 dark:bg-slate-900 p-2 rounded border border-slate-100 dark:border-slate-800 mt-1">{h.comentario}</p>}
