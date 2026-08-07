@@ -350,4 +350,68 @@ class ReparacionController extends Controller
             'saldo_restante' => $saldo,
         ]);
     }
+
+    public function storeMarca(Request $request)
+    {
+        $validated = $request->validate([
+            'nombre' => 'required|string|max:255',
+        ]);
+
+        $user = auth()->user();
+        $empresaId = $user->empresa_id;
+
+        $marca = \App\Models\Marca::create([
+            'empresa_id' => $empresaId,
+            'sucursal_id' => $user->sucursal_id,
+            'nombre' => $validated['nombre'],
+            'slug' => \Illuminate\Support\Str::slug($validated['nombre']),
+            'estado' => true,
+        ]);
+
+        return back()->with('notification', [
+            'type' => 'success',
+            'message' => "Marca '{$marca->nombre}' registrada exitosamente.",
+        ]);
+    }
+
+    public function storeModelo(Request $request)
+    {
+        $validated = $request->validate([
+            'marca_id' => 'required|exists:marcas,id',
+            'nombre_comercial' => 'required|string|max:255',
+            'codigo_modelo' => 'nullable|string|max:255',
+        ]);
+
+        $user = auth()->user();
+        $empresaId = $user->empresa_id;
+
+        $familia = \App\Models\Familia::where('empresa_id', $empresaId)->first() 
+            ?? \App\Models\Familia::firstOrCreate([
+                'nombre' => 'General',
+                'marca_id' => $validated['marca_id'],
+                'empresa_id' => $empresaId,
+            ]);
+
+        $categoria = \App\Models\Categoria::where('empresa_id', $empresaId)->first() 
+            ?? \App\Models\Categoria::firstOrCreate([
+                'nombre' => 'General',
+                'empresa_id' => $empresaId,
+            ]);
+
+        $modelo = \App\Models\Modelo::create([
+            'empresa_id' => $empresaId,
+            'sucursal_id' => $user->sucursal_id,
+            'marca_id' => $validated['marca_id'],
+            'familia_id' => $familia->id,
+            'categoria_id' => $categoria->id,
+            'nombre_comercial' => $validated['nombre_comercial'],
+            'codigo_modelo' => $validated['codigo_modelo'] ?? null,
+            'estado' => true,
+        ]);
+
+        return back()->with('notification', [
+            'type' => 'success',
+            'message' => "Modelo '{$modelo->nombre_comercial}' registrado exitosamente.",
+        ]);
+    }
 }

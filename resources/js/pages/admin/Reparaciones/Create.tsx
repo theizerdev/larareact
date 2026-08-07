@@ -32,6 +32,7 @@ import {
     Cpu,
     UserPlus,
     X,
+    Tag,
 } from 'lucide-react';
 import React, { useState } from 'react';
 import { Breadcrumbs } from '@/components/breadcrumbs';
@@ -93,6 +94,16 @@ export default function CreateReparacion({ clientes: initialClientes, marcas, te
         direccion: '',
     });
     const [isCreatingClient, setIsCreatingClient] = useState(false);
+
+    // Modales de Marca y Modelo
+    const [openNewMarcaModal, setOpenNewMarcaModal] = useState(false);
+    const [newMarcaNombre, setNewMarcaNombre] = useState('');
+    const [isCreatingMarca, setIsCreatingMarca] = useState(false);
+
+    const [openNewModeloModal, setOpenNewModeloModal] = useState(false);
+    const [newModeloNombre, setNewModeloNombre] = useState('');
+    const [newModeloCodigo, setNewModeloCodigo] = useState('');
+    const [isCreatingModelo, setIsCreatingModelo] = useState(false);
 
     // 12 Puntos de Inspección Física
     const elementosInspeccion = [
@@ -174,10 +185,10 @@ export default function CreateReparacion({ clientes: initialClientes, marcas, te
         fecha_prometida: new Date(Date.now() + 86400000 * 2).toISOString().split('T')[0],
     });
 
-    // Clientes filtrados por la búsqueda en tiempo real
+    // Clientes filtrados por la búsqueda en tiempo real (solo si hay un término escrito)
     const clientesFiltrados = clientesList.filter((c) => {
-        if (!searchClienteTerm) return true;
-        const term = searchClienteTerm.toLowerCase();
+        if (!searchClienteTerm || searchClienteTerm.trim() === '') return false;
+        const term = searchClienteTerm.toLowerCase().trim();
         return (
             c.nombre?.toLowerCase().includes(term) ||
             c.telefono?.toLowerCase().includes(term) ||
@@ -237,6 +248,55 @@ export default function CreateReparacion({ clientes: initialClientes, marcas, te
             onError: () => {
                 setIsCreatingClient(false);
                 notifyError(__('Ocurrió un error al registrar el cliente.'));
+            },
+        });
+    };
+
+    // Crear Nueva Marca desde el Modal
+    const handleCreateNewMarca = (e: React.FormEvent) => {
+        e.preventDefault();
+        if (!newMarcaNombre) return;
+
+        setIsCreatingMarca(true);
+        router.post('/admin/reparaciones/quick-marca', { nombre: newMarcaNombre }, {
+            preserveScroll: true,
+            onSuccess: () => {
+                setIsCreatingMarca(false);
+                setOpenNewMarcaModal(false);
+                setData((prev) => ({ ...prev, marca_nombre: newMarcaNombre }));
+                setNewMarcaNombre('');
+                notifySuccess(__('Nueva marca registrada exitosamente.'));
+            },
+            onError: () => {
+                setIsCreatingMarca(false);
+                notifyError(__('Ocurrió un error al registrar la marca.'));
+            },
+        });
+    };
+
+    // Crear Nuevo Modelo desde el Modal
+    const handleCreateNewModelo = (e: React.FormEvent) => {
+        e.preventDefault();
+        if (!newModeloNombre || !selectedMarcaId) return;
+
+        setIsCreatingModelo(true);
+        router.post('/admin/reparaciones/quick-modelo', {
+            marca_id: selectedMarcaId,
+            nombre_comercial: newModeloNombre,
+            codigo_modelo: newModeloCodigo,
+        }, {
+            preserveScroll: true,
+            onSuccess: () => {
+                setIsCreatingModelo(false);
+                setOpenNewModeloModal(false);
+                setData((prev) => ({ ...prev, modelo_nombre: newModeloNombre }));
+                setNewModeloNombre('');
+                setNewModeloCodigo('');
+                notifySuccess(__('Nuevo modelo registrado exitosamente.'));
+            },
+            onError: () => {
+                setIsCreatingModelo(false);
+                notifyError(__('Ocurrió un error al registrar el modelo.'));
             },
         });
     };
@@ -487,7 +547,7 @@ export default function CreateReparacion({ clientes: initialClientes, marcas, te
                                                 <div className="relative mt-1">
                                                     <Search className="w-4 h-4 absolute left-3 top-3.5 text-purple-600" />
                                                     <Input
-                                                        value={data.cliente_nombre || searchClienteTerm}
+                                                        value={searchClienteTerm}
                                                         onChange={(e) => {
                                                             const val = e.target.value;
                                                             setSearchClienteTerm(val);
@@ -495,10 +555,14 @@ export default function CreateReparacion({ clientes: initialClientes, marcas, te
                                                                 ...prev,
                                                                 cliente_nombre: val,
                                                             }));
-                                                            setIsClientDropdownOpen(true);
+                                                            setIsClientDropdownOpen(val.trim().length > 0);
                                                         }}
-                                                        onFocus={() => setIsClientDropdownOpen(true)}
-                                                        placeholder={__('Escriba el nombre o teléfono del cliente en tiempo real...')}
+                                                        onFocus={() => {
+                                                            if (searchClienteTerm.trim().length > 0) {
+                                                                setIsClientDropdownOpen(true);
+                                                            }
+                                                        }}
+                                                        placeholder={__('Escriba el nombre o teléfono para buscar un cliente...')}
                                                         className="text-xs h-11 pl-9 pr-8 font-medium"
                                                         required
                                                     />
@@ -590,8 +654,50 @@ export default function CreateReparacion({ clientes: initialClientes, marcas, te
 
                                             {/* MARCA & MODELO & IMEI */}
                                             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 pt-2">
+                                                {/* MARCA DE EQUIPO */}
                                                 <div>
-                                                    <Label className="text-xs font-semibold">{__('3. Marca del Equipo *')}</Label>
+                                                    <div className="flex items-center justify-between">
+                                                        <Label className="text-xs font-semibold">{__('3. Marca del Equipo *')}</Label>
+                                                        <Dialog open={openNewMarcaModal} onOpenChange={setOpenNewMarcaModal}>
+                                                            <DialogTrigger asChild>
+                                                                <button type="button" className="text-[11px] font-bold text-purple-600 hover:text-purple-800 flex items-center gap-1">
+                                                                    <Plus className="w-3 h-3" />
+                                                                    {__('Crear Marca')}
+                                                                </button>
+                                                            </DialogTrigger>
+                                                            <DialogContent className="sm:max-w-md">
+                                                                <DialogHeader>
+                                                                    <DialogTitle className="flex items-center gap-2 text-base font-bold text-slate-900 dark:text-slate-100">
+                                                                        <Tag className="w-5 h-5 text-purple-600" />
+                                                                        {__('Crear Nueva Marca')}
+                                                                    </DialogTitle>
+                                                                </DialogHeader>
+
+                                                                <form onSubmit={handleCreateNewMarca} className="space-y-4 py-2">
+                                                                    <div>
+                                                                        <Label className="text-xs font-semibold">{__('Nombre de la Marca *')}</Label>
+                                                                        <Input
+                                                                            value={newMarcaNombre}
+                                                                            onChange={(e) => setNewMarcaNombre(e.target.value)}
+                                                                            placeholder={__('ej: OPPO, Honor, Realme, Xiaomi, Apple')}
+                                                                            className="text-xs h-9 mt-1"
+                                                                            required
+                                                                        />
+                                                                    </div>
+
+                                                                    <div className="flex items-center justify-end gap-2 pt-2 border-t border-slate-100 dark:border-slate-800">
+                                                                        <Button type="button" variant="outline" size="sm" onClick={() => setOpenNewMarcaModal(false)} className="h-8 text-xs">
+                                                                            {__('Cancelar')}
+                                                                        </Button>
+                                                                        <Button type="submit" disabled={isCreatingMarca} size="sm" className="h-8 text-xs font-bold bg-purple-600 hover:bg-purple-700 text-white">
+                                                                            {__('Guardar Marca')}
+                                                                        </Button>
+                                                                    </div>
+                                                                </form>
+                                                            </DialogContent>
+                                                        </Dialog>
+                                                    </div>
+
                                                     <Select onValueChange={handleSelectMarca}>
                                                         <SelectTrigger className="text-xs h-10 mt-1">
                                                             <SelectValue placeholder={__('Seleccionar marca...')} />
@@ -615,8 +721,69 @@ export default function CreateReparacion({ clientes: initialClientes, marcas, te
                                                     )}
                                                 </div>
 
+                                                {/* MODELO DE EQUIPO */}
                                                 <div>
-                                                    <Label className="text-xs font-semibold">{__('4. Modelo del Equipo *')}</Label>
+                                                    <div className="flex items-center justify-between">
+                                                        <Label className="text-xs font-semibold">{__('4. Modelo del Equipo *')}</Label>
+                                                        <Dialog open={openNewModeloModal} onOpenChange={setOpenNewModeloModal}>
+                                                            <DialogTrigger asChild>
+                                                                <button type="button" className="text-[11px] font-bold text-purple-600 hover:text-purple-800 flex items-center gap-1">
+                                                                    <Plus className="w-3 h-3" />
+                                                                    {__('Crear Modelo')}
+                                                                </button>
+                                                            </DialogTrigger>
+                                                            <DialogContent className="sm:max-w-md">
+                                                                <DialogHeader>
+                                                                    <DialogTitle className="flex items-center gap-2 text-base font-bold text-slate-900 dark:text-slate-100">
+                                                                        <Smartphone className="w-5 h-5 text-purple-600" />
+                                                                        {__('Crear Nuevo Modelo')}
+                                                                    </DialogTitle>
+                                                                </DialogHeader>
+
+                                                                <form onSubmit={handleCreateNewModelo} className="space-y-4 py-2">
+                                                                    <div>
+                                                                        <Label className="text-xs font-semibold">{__('Marca Seleccionada')}</Label>
+                                                                        <Input
+                                                                            value={data.marca_nombre || __('Seleccione una marca primero')}
+                                                                            disabled
+                                                                            className="text-xs h-9 mt-1 bg-slate-100 dark:bg-slate-800"
+                                                                        />
+                                                                    </div>
+
+                                                                    <div>
+                                                                        <Label className="text-xs font-semibold">{__('Nombre Comercial del Modelo *')}</Label>
+                                                                        <Input
+                                                                            value={newModeloNombre}
+                                                                            onChange={(e) => setNewModeloNombre(e.target.value)}
+                                                                            placeholder={__('ej: Redmi Note 12 Pro / Reno 8 / Galaxy A54')}
+                                                                            className="text-xs h-9 mt-1"
+                                                                            required
+                                                                        />
+                                                                    </div>
+
+                                                                    <div>
+                                                                        <Label className="text-xs font-semibold">{__('Código de Modelo (Opcional)')}</Label>
+                                                                        <Input
+                                                                            value={newModeloCodigo}
+                                                                            onChange={(e) => setNewModeloCodigo(e.target.value)}
+                                                                            placeholder={__('ej: SM-A546B / CPH2359')}
+                                                                            className="text-xs h-9 mt-1 font-mono"
+                                                                        />
+                                                                    </div>
+
+                                                                    <div className="flex items-center justify-end gap-2 pt-2 border-t border-slate-100 dark:border-slate-800">
+                                                                        <Button type="button" variant="outline" size="sm" onClick={() => setOpenNewModeloModal(false)} className="h-8 text-xs">
+                                                                            {__('Cancelar')}
+                                                                        </Button>
+                                                                        <Button type="submit" disabled={isCreatingModelo || !selectedMarcaId} size="sm" className="h-8 text-xs font-bold bg-purple-600 hover:bg-purple-700 text-white">
+                                                                            {__('Guardar Modelo')}
+                                                                        </Button>
+                                                                    </div>
+                                                                </form>
+                                                            </DialogContent>
+                                                        </Dialog>
+                                                    </div>
+
                                                     {modelosFiltrados.length > 0 ? (
                                                         <Select onValueChange={handleSelectModelo}>
                                                             <SelectTrigger className="text-xs h-10 mt-1">

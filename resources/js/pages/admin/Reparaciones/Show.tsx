@@ -360,7 +360,10 @@ export default function ShowReparacion({ orden, productosRepuestos, tecnicos, cu
                                     <div>
                                         <span className="text-slate-400 block text-[11px]">{__('Garantía')}</span>
                                         <span className="font-bold text-emerald-600">{orden.garantia_dias} {__('días')}</span>
-                                           <div className="p-3 bg-slate-50 dark:bg-slate-900/60 rounded-lg border border-slate-200 dark:border-slate-800 space-y-1">
+                                    </div>
+                                </div>
+
+                                <div className="p-3 bg-slate-50 dark:bg-slate-900/60 rounded-lg border border-slate-200 dark:border-slate-800 space-y-1">
                                     <span className="font-bold text-purple-700 dark:text-purple-400 block">{__('Falla Reportada por el Cliente:')}</span>
                                     <p className="text-slate-700 dark:text-slate-300">{orden.descripcion_falla}</p>
                                 </div>
@@ -404,8 +407,6 @@ export default function ShowReparacion({ orden, productosRepuestos, tecnicos, cu
                                         <p>{orden.observaciones_fisicas}</p>
                                     </div>
                                 )}
-                            </CardContent>
-                        </Card>
                             </CardContent>
                         </Card>
 
