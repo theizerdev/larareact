@@ -474,10 +474,31 @@ class ReparacionController extends Controller
 
     public function updateEstado(Request $request, OrdenReparacion $reparacion)
     {
+        // Auto-provisionar columnas en la base de datos si la migración no fue ejecutada manualmente
+        if (!\Illuminate\Support\Facades\Schema::hasColumn('ordenes_reparacion', 'contrasena_patron')) {
+            \Illuminate\Support\Facades\Schema::table('ordenes_reparacion', function (\Illuminate\Database\Schema\Blueprint $table) {
+                $table->string('contrasena_patron')->nullable()->after('observaciones_fisicas');
+            });
+        }
+        if (!\Illuminate\Support\Facades\Schema::hasColumn('ordenes_reparacion', 'inspeccion_json')) {
+            \Illuminate\Support\Facades\Schema::table('ordenes_reparacion', function (\Illuminate\Database\Schema\Blueprint $table) {
+                $table->json('inspeccion_json')->nullable()->after('contrasena_patron');
+            });
+        }
+        if (!\Illuminate\Support\Facades\Schema::hasColumn('ordenes_reparacion', 'post_servicio_json')) {
+            \Illuminate\Support\Facades\Schema::table('ordenes_reparacion', function (\Illuminate\Database\Schema\Blueprint $table) {
+                $table->json('post_servicio_json')->nullable()->after('inspeccion_json');
+            });
+        }
+
         $validated = $request->validate([
             'estado_orden' => 'required|in:recibido,en_diagnostico,presupuestado,en_reparacion,esperando_repuesto,reparado,entregado,cancelado',
             'comentario' => 'nullable|string',
             'tecnico_id' => 'nullable|exists:users,id',
+            'observaciones_fisicas' => 'nullable|string',
+            'contrasena_patron' => 'nullable|string',
+            'inspeccion_json' => 'nullable',
+            'post_servicio_json' => 'nullable',
         ]);
 
         $estadoAnterior = $reparacion->estado_orden;
@@ -486,6 +507,37 @@ class ReparacionController extends Controller
         $updateData = ['estado_orden' => $nuevoEstado];
         if (isset($validated['tecnico_id'])) {
             $updateData['tecnico_id'] = $validated['tecnico_id'];
+        }
+
+        if ($request->has('observaciones_fisicas')) {
+            $updateData['observaciones_fisicas'] = $request->input('observaciones_fisicas');
+        }
+        if ($request->has('contrasena_patron')) {
+            $updateData['contrasena_patron'] = $request->input('contrasena_patron');
+        }
+        if ($request->has('inspeccion_json')) {
+            $inspeccionVal = $request->input('inspeccion_json');
+            $updateData['inspeccion_json'] = is_array($inspeccionVal) ? $inspeccionVal : json_decode($inspeccionVal, true);
+        }
+        if ($request->has('post_servicio_json')) {
+            $postVal = $request->input('post_servicio_json');
+            $postArray = is_array($postVal) ? $postVal : json_decode($postVal, true);
+            $updateData['post_servicio_json'] = $postArray;
+
+            if (!empty($postArray['fotos_post']) && is_array($postArray['fotos_post']) && \Illuminate\Support\Facades\Schema::hasTable('orden_reparacion_fotos')) {
+                foreach ($postArray['fotos_post'] as $key => $fotoItem) {
+                    $url = is_array($fotoItem) ? ($fotoItem['url'] ?? null) : $fotoItem;
+                    if (!empty($url)) {
+                        $anguloKey = is_array($fotoItem) ? ($fotoItem['angulo'] ?? "post_{$key}") : "post_{$key}";
+                        OrdenReparacionFoto::create([
+                            'orden_id' => $reparacion->id,
+                            'angulo' => $anguloKey,
+                            'url' => $url,
+                            'descripcion' => "Fotografía Post-Reparación (" . ucfirst(str_replace('_', ' ', $anguloKey)) . ")",
+                        ]);
+                    }
+                }
+            }
         }
 
         if ($nuevoEstado === 'entregado' && !$reparacion->fecha_entrega) {
@@ -504,7 +556,7 @@ class ReparacionController extends Controller
 
         return back()->with('notification', [
             'type' => 'success',
-            'message' => "Estado actualizado a " . ucfirst(str_replace('_', ' ', $nuevoEstado)),
+            'message' => "Proceso de preservicio e inspección iniciado correctamente.",
         ]);
     }
 
@@ -681,5 +733,74 @@ class ReparacionController extends Controller
             'modelo' => $modelo,
             'message' => "Modelo '{$modelo->nombre_comercial}' registrado exitosamente.",
         ]);
+    }
+
+    public function postServicioForm(OrdenReparacion $reparacion)
+    {
+        $relations = ['cliente', 'marca', 'modelo', 'tecnico'];
+        if (\Illuminate\Support\Facades\Schema::hasTable('orden_reparacion_fotos')) {
+            $relations[] = 'fotos';
+        }
+        $reparacion->load($relations);
+
+        return Inertia::render('admin/Reparaciones/PostServicio', [
+            'orden' => $reparacion,
+            'currencySymbol' => $this->getCurrencySymbol(),
+        ]);
+    }
+
+    public function savePostServicio(Request $request, OrdenReparacion $reparacion)
+    {
+        if (!\Illuminate\Support\Facades\Schema::hasColumn('ordenes_reparacion', 'post_servicio_json')) {
+            \Illuminate\Support\Facades\Schema::table('ordenes_reparacion', function (\Illuminate\Database\Schema\Blueprint $table) {
+                $table->json('post_servicio_json')->nullable()->after('inspeccion_json');
+            });
+        }
+
+        $validated = $request->validate([
+            'post_servicio_json' => 'required',
+            'estado_orden' => 'nullable|string',
+        ]);
+
+        $postVal = $validated['post_servicio_json'];
+        $postArray = is_array($postVal) ? $postVal : json_decode($postVal, true);
+
+        $updateData = [
+            'post_servicio_json' => $postArray,
+        ];
+
+        if ($request->filled('estado_orden')) {
+            $updateData['estado_orden'] = $request->input('estado_orden');
+        } else if ($reparacion->estado_orden !== 'entregado') {
+            $updateData['estado_orden'] = 'reparado';
+        }
+
+        $reparacion->update($updateData);
+
+        if (!empty($postArray['fotos_post']) && is_array($postArray['fotos_post']) && \Illuminate\Support\Facades\Schema::hasTable('orden_reparacion_fotos')) {
+            foreach ($postArray['fotos_post'] as $key => $fotoItem) {
+                $url = is_array($fotoItem) ? ($fotoItem['url'] ?? null) : $fotoItem;
+                if (!empty($url)) {
+                    $anguloKey = is_array($fotoItem) ? ($fotoItem['angulo'] ?? "post_{$key}") : "post_{$key}";
+                    OrdenReparacionFoto::create([
+                        'orden_id' => $reparacion->id,
+                        'angulo' => $anguloKey,
+                        'url' => $url,
+                        'descripcion' => "Fotografía Post-Reparación (" . ucfirst(str_replace('_', ' ', $anguloKey)) . ")",
+                    ]);
+                }
+            }
+        }
+
+        OrdenReparacionHistorial::create([
+            'orden_id' => $reparacion->id,
+            'user_id' => auth()->id(),
+            'estado_anterior' => $reparacion->estado_orden,
+            'estado_nuevo' => $updateData['estado_orden'] ?? $reparacion->estado_orden,
+            'comentario' => 'Validación Final, Limpieza & Control de Calidad Post-Atención registrado.',
+        ]);
+
+        return redirect()->route('admin.reparaciones.show', $reparacion->id)
+            ->with('success', 'Proceso de Post-Atención y Control de Calidad guardado exitosamente.');
     }
 }

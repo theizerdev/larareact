@@ -29,6 +29,9 @@ class OrdenReparacion extends Model
         'imei_serie',
         'descripcion_falla',
         'observaciones_fisicas',
+        'contrasena_patron',
+        'inspeccion_json',
+        'post_servicio_json',
         'tecnico_id',
         'estado_orden',
         'costo_mano_obra',
@@ -52,6 +55,8 @@ class OrdenReparacion extends Model
         'fecha_recepcion' => 'datetime',
         'fecha_prometida' => 'date',
         'fecha_entrega' => 'datetime',
+        'inspeccion_json' => 'array',
+        'post_servicio_json' => 'array',
     ];
 
     public function empresa(): BelongsTo

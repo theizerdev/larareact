@@ -28,8 +28,10 @@ import {
     Activity,
     Eye,
     X,
+    Upload,
+    RefreshCw,
 } from 'lucide-react';
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { Breadcrumbs } from '@/components/breadcrumbs';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -85,6 +87,8 @@ interface Orden {
     imei_serie?: string;
     descripcion_falla: string;
     observaciones_fisicas?: string;
+    contrasena_patron?: string;
+    inspeccion_json?: any;
     estado_orden: string;
     costo_mano_obra: number;
     costo_repuestos: number;
@@ -127,10 +131,781 @@ interface Props {
     currencySymbol: string;
 }
 
+const DOT_COORDS_VIEW: Record<number, { x: number; y: number }> = {
+    1: { x: 50, y: 50 },
+    2: { x: 150, y: 50 },
+    3: { x: 250, y: 50 },
+    4: { x: 50, y: 150 },
+    5: { x: 150, y: 150 },
+    6: { x: 250, y: 150 },
+    7: { x: 50, y: 250 },
+    8: { x: 150, y: 250 },
+    9: { x: 250, y: 250 },
+};
+
+function PatternLockViewer({ pattern = [] }: { pattern: number[] }) {
+    const { __ } = useTranslate();
+    if (!pattern || pattern.length === 0) {
+        return (
+            <div className="text-xs text-slate-400 italic">
+                {__('No hay patrón dibujado registrado.')}
+            </div>
+        );
+    }
+
+    return (
+        <div className="flex flex-col items-center gap-2">
+            <div className="text-xs font-bold text-indigo-400 font-mono bg-indigo-950/80 px-3 py-1 rounded-full border border-indigo-800">
+                {__('Secuencia:')} {pattern.join(' ➔ ')}
+            </div>
+
+            <div className="relative bg-slate-950 rounded-2xl p-4 border border-slate-800 shadow-2xl">
+                <svg className="w-[200px] h-[200px]" viewBox="0 0 300 300">
+                    {pattern.map((dot, idx) => {
+                        if (idx === 0) return null;
+                        const prevDot = pattern[idx - 1];
+                        const from = DOT_COORDS_VIEW[prevDot];
+                        const to = DOT_COORDS_VIEW[dot];
+                        return (
+                            <g key={`line-${idx}`}>
+                                <line
+                                    x1={from.x}
+                                    y1={from.y}
+                                    x2={to.x}
+                                    y2={to.y}
+                                    stroke="#6366f1"
+                                    strokeWidth="10"
+                                    strokeLinecap="round"
+                                    opacity="0.8"
+                                />
+                                <line
+                                    x1={from.x}
+                                    y1={from.y}
+                                    x2={to.x}
+                                    y2={to.y}
+                                    stroke="#818cf8"
+                                    strokeWidth="4"
+                                    strokeLinecap="round"
+                                />
+                            </g>
+                        );
+                    })}
+
+                    {[1, 2, 3, 4, 5, 6, 7, 8, 9].map((dotNum) => {
+                        const coord = DOT_COORDS_VIEW[dotNum];
+                        const isSelected = pattern.includes(dotNum);
+                        const orderIndex = pattern.indexOf(dotNum);
+
+                        return (
+                            <g key={dotNum}>
+                                <circle
+                                    cx={coord.x}
+                                    cy={coord.y}
+                                    r={isSelected ? 26 : 18}
+                                    fill={isSelected ? 'rgba(99, 102, 241, 0.25)' : 'rgba(255, 255, 255, 0.05)'}
+                                    stroke={isSelected ? 'rgba(99, 102, 241, 0.5)' : 'transparent'}
+                                    strokeWidth="2"
+                                />
+                                <circle
+                                    cx={coord.x}
+                                    cy={coord.y}
+                                    r={14}
+                                    fill={isSelected ? '#6366f1' : '#475569'}
+                                    stroke={isSelected ? '#c7d2fe' : '#334155'}
+                                    strokeWidth="3"
+                                />
+                                {isSelected ? (
+                                    <text
+                                        x={coord.x}
+                                        y={coord.y + 4}
+                                        textAnchor="middle"
+                                        fill="#ffffff"
+                                        fontSize="12"
+                                        fontWeight="900"
+                                        fontFamily="monospace"
+                                    >
+                                        {orderIndex + 1}
+                                    </text>
+                                ) : (
+                                    <circle cx={coord.x} cy={coord.y} r={4} fill="#cbd5e1" />
+                                )}
+                            </g>
+                        );
+                    })}
+                </svg>
+            </div>
+        </div>
+    );
+}
+
+const ELEMENTOS_INSPECCION_LIST = [
+    'Pantalla',
+    'Cristal trasero',
+    'Marco',
+    'Botones',
+    'Bandeja SIM',
+    'Cámara trasera',
+    'Cámara frontal',
+    'Tornillos',
+    'Tapa trasera',
+    'Puerto de carga',
+    'Humedad visible',
+    'Equipo doblado',
+];
+
+const REVISIONES_ESTADO_LIST = [
+    { key: 'enciende', label: 'Enciende' },
+    { key: 'carga_bateria', label: 'Carga batería' },
+    { key: 'entra_sistema', label: 'Entra al sistema' },
+    { key: 'tiene_bloqueo', label: 'Tiene bloqueo' },
+    { key: 'cliente_proporciona_contrasena', label: 'Cliente proporciona clave/patrón' },
+];
+
+const FUNCIONES_VALIDACION_FINAL = [
+    'Equipo enciende',
+    'Carga correctamente',
+    'Pantalla',
+    'Touch',
+    'Cámara frontal',
+    'Cámara trasera',
+    'Flash',
+    'Micrófono',
+    'Bocina',
+    'Auricular',
+    'Vibrador',
+    'WiFi',
+    'Bluetooth',
+    'Red móvil',
+    'Face ID',
+    'Huella',
+    'GPS',
+    'NFC',
+    'Sensor proximidad',
+    'Sensor luz',
+    'Puerto USB',
+    'Botón Encendido',
+    'Volumen +',
+    'Volumen -',
+];
+
+const LIMPIEZA_FINAL_LIST = [
+    'Pantalla limpia',
+    'Carcasa limpia',
+    'Tornillos completos',
+    'Sin piezas sobrantes',
+    'Sellos colocados',
+];
+
+const CONTROL_CALIDAD_LIST = [
+    { key: 'reparacion_completada', label: 'Reparación completada' },
+    { key: 'equipo_probado', label: 'Equipo probado' },
+    { key: 'equipo_limpio', label: 'Equipo limpio' },
+    { key: 'garantia_registrada', label: 'Garantía registrada' },
+    { key: 'cliente_notificado', label: 'Cliente notificado' },
+    { key: 'equipo_listo_entrega', label: 'Equipo listo para entrega' },
+];
+
+const FOTOS_POST_REPARACION_ANGULOS = [
+    {
+        key: 'post_reparado',
+        label: '1. Foto de la Reparación Realizada',
+        desc: 'Evidencia principal del teléfono reparado y funcionando.',
+        icon: '✨',
+    },
+    {
+        key: 'post_frontal',
+        label: '2. Ángulo Frontal (Pantalla)',
+        desc: 'Vista frontal del dispositivo.',
+        icon: '📱',
+    },
+    {
+        key: 'post_trasera',
+        label: '3. Ángulo Trasero (Tapa)',
+        desc: 'Vista trasera y lente de cámaras.',
+        icon: '📲',
+    },
+    {
+        key: 'post_lateral_izq',
+        label: '4. Ángulo Lateral Izquierdo',
+        desc: 'Borde izquierdo y botones de volumen.',
+        icon: '↔️',
+    },
+    {
+        key: 'post_lateral_der',
+        label: '5. Ángulo Lateral Derecho',
+        desc: 'Borde derecho y botón de encendido.',
+        icon: '↕️',
+    },
+];
+
+function PatternLockCanvas({
+    pattern = [],
+    onChange,
+}: {
+    pattern: number[];
+    onChange: (p: number[]) => void;
+}) {
+    const { __ } = useTranslate();
+    const [isMouseDown, setIsMouseDown] = useState(false);
+
+    const addDot = (dotNum: number) => {
+        if (!pattern.includes(dotNum)) {
+            onChange([...pattern, dotNum]);
+        }
+    };
+
+    return (
+        <div className="flex flex-col items-center gap-3 select-none">
+            <div className="text-xs font-bold text-slate-700 dark:text-slate-300 flex items-center gap-2">
+                <span>{__('Patrón dibujado:')}</span>
+                {pattern.length > 0 ? (
+                    <span className="font-mono bg-indigo-100 dark:bg-indigo-950 text-indigo-700 dark:text-indigo-300 px-3 py-1 rounded-full text-xs font-black border border-indigo-200 dark:border-indigo-800">
+                        {pattern.join(' ➔ ')}
+                    </span>
+                ) : (
+                    <span className="text-slate-400 font-normal italic">{__('Toque o arrastre los puntos')}</span>
+                )}
+            </div>
+
+            <div
+                className="relative bg-slate-950 rounded-2xl p-4 border border-slate-800 shadow-2xl touch-none cursor-crosshair"
+                onMouseDown={() => setIsMouseDown(true)}
+                onMouseUp={() => setIsMouseDown(false)}
+                onMouseLeave={() => setIsMouseDown(false)}
+            >
+                <svg className="w-[240px] h-[240px]" viewBox="0 0 300 300">
+                    {pattern.map((dot, idx) => {
+                        if (idx === 0) return null;
+                        const prevDot = pattern[idx - 1];
+                        const from = DOT_COORDS_VIEW[prevDot];
+                        const to = DOT_COORDS_VIEW[dot];
+                        return (
+                            <g key={`line-${idx}`}>
+                                <line
+                                    x1={from.x}
+                                    y1={from.y}
+                                    x2={to.x}
+                                    y2={to.y}
+                                    stroke="#6366f1"
+                                    strokeWidth="10"
+                                    strokeLinecap="round"
+                                    opacity="0.8"
+                                />
+                                <line
+                                    x1={from.x}
+                                    y1={from.y}
+                                    x2={to.x}
+                                    y2={to.y}
+                                    stroke="#818cf8"
+                                    strokeWidth="4"
+                                    strokeLinecap="round"
+                                />
+                            </g>
+                        );
+                    })}
+
+                    {[1, 2, 3, 4, 5, 6, 7, 8, 9].map((dotNum) => {
+                        const coord = DOT_COORDS_VIEW[dotNum];
+                        const isSelected = pattern.includes(dotNum);
+                        const orderIndex = pattern.indexOf(dotNum);
+
+                        return (
+                            <g
+                                key={dotNum}
+                                onMouseDown={() => addDot(dotNum)}
+                                onMouseEnter={() => {
+                                    if (isMouseDown) addDot(dotNum);
+                                }}
+                                onTouchStart={() => addDot(dotNum)}
+                                className="cursor-pointer"
+                            >
+                                <circle
+                                    cx={coord.x}
+                                    cy={coord.y}
+                                    r={isSelected ? 28 : 20}
+                                    fill={isSelected ? 'rgba(99, 102, 241, 0.25)' : 'rgba(255, 255, 255, 0.05)'}
+                                    stroke={isSelected ? 'rgba(99, 102, 241, 0.5)' : 'transparent'}
+                                    strokeWidth="2"
+                                    className="transition-all duration-200"
+                                />
+                                <circle
+                                    cx={coord.x}
+                                    cy={coord.y}
+                                    r={14}
+                                    fill={isSelected ? '#6366f1' : '#475569'}
+                                    stroke={isSelected ? '#c7d2fe' : '#334155'}
+                                    strokeWidth="3"
+                                    className="transition-all duration-200"
+                                />
+                                {isSelected ? (
+                                    <text
+                                        x={coord.x}
+                                        y={coord.y + 4}
+                                        textAnchor="middle"
+                                        fill="#ffffff"
+                                        fontSize="12"
+                                        fontWeight="900"
+                                        fontFamily="monospace"
+                                    >
+                                        {orderIndex + 1}
+                                    </text>
+                                ) : (
+                                    <circle cx={coord.x} cy={coord.y} r={4} fill="#cbd5e1" />
+                                )}
+                            </g>
+                        );
+                    })}
+                </svg>
+            </div>
+
+            <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => onChange([])}
+                disabled={pattern.length === 0}
+                className="h-8 text-xs font-bold text-rose-600 border-rose-200 hover:bg-rose-50 dark:border-rose-900 dark:text-rose-400 gap-1.5 rounded-xl"
+            >
+                <X className="w-3.5 h-3.5" />
+                {__('Limpiar Patrón')}
+            </Button>
+        </div>
+    );
+}
+
 export default function ShowReparacion({ orden, productosRepuestos = [], tecnicos, currencySymbol }: Props) {
     const { __ } = useTranslate();
-    const [activeTab, setActiveTab] = useState<'general' | 'fotos' | 'historial'>('general');
+    const [activeTab, setActiveTab] = useState<'general' | 'preservicio' | 'postservicio' | 'repuestos' | 'fotos' | 'historial'>('general');
     const [previewPhoto, setPreviewPhoto] = useState<{ url: string; label: string } | null>(null);
+
+    const inspeccionData = React.useMemo(() => {
+        if (!orden.inspeccion_json) return null;
+        if (typeof orden.inspeccion_json === 'string') {
+            try {
+                return JSON.parse(orden.inspeccion_json);
+            } catch {
+                return null;
+            }
+        }
+        return orden.inspeccion_json;
+    }, [orden.inspeccion_json]);
+
+    const tienePreservicio = Boolean(
+        inspeccionData || orden.contrasena_patron || orden.observaciones_fisicas
+    );
+
+    const postServicioData = React.useMemo(() => {
+        if (!orden.post_servicio_json) return null;
+        if (typeof orden.post_servicio_json === 'string') {
+            try {
+                return JSON.parse(orden.post_servicio_json);
+            } catch {
+                return null;
+            }
+        }
+        return orden.post_servicio_json;
+    }, [orden.post_servicio_json]);
+
+    const tienePostServicio = Boolean(postServicioData);
+
+    const [isPostServicioModalOpen, setIsPostServicioModalOpen] = useState(false);
+    const [postModalTab, setPostModalTab] = useState<'validacion' | 'limpieza_qc' | 'fotos_obs'>('validacion');
+
+    const [validacionFinalState, setValidacionFinalState] = useState<Record<string, { estado: 'correcto' | 'incorrecto'; obs: string }>>(() => {
+        const init: Record<string, { estado: 'correcto' | 'incorrecto'; obs: string }> = {};
+        FUNCIONES_VALIDACION_FINAL.forEach((fn) => {
+            init[fn] = { estado: 'correcto', obs: '' };
+        });
+        return init;
+    });
+
+    const [limpiezaFinalState, setLimpiezaFinalState] = useState<Record<string, boolean>>(() => {
+        const init: Record<string, boolean> = {};
+        LIMPIEZA_FINAL_LIST.forEach((item) => {
+            init[item] = true;
+        });
+        return init;
+    });
+
+    const [controlCalidadState, setControlCalidadState] = useState<Record<string, boolean>>({
+        reparacion_completada: true,
+        equipo_probado: true,
+        equipo_limpio: true,
+        garantia_registrada: true,
+        cliente_notificado: false,
+        equipo_listo_entrega: true,
+    });
+
+    const [observacionesFinalesInput, setObservacionesFinalesInput] = useState('');
+    const [fotosPostState, setFotosPostState] = useState<Record<string, string>>({});
+    const [isSubmittingPostServicio, setIsSubmittingPostServicio] = useState(false);
+
+    // CÁMARA EN VIVO WEBCAM PARA FOTOS POST-REPARACIÓN
+    const [activePostCameraSlot, setActivePostCameraSlot] = useState<string | null>(null);
+    const [postCameraSlotLabel, setPostCameraSlotLabel] = useState<string>('');
+    const [postCameraStream, setPostCameraStream] = useState<MediaStream | null>(null);
+    const [postCapturedImage, setPostCapturedImage] = useState<string | null>(null);
+    const [postCameraError, setPostCameraError] = useState<string | null>(null);
+    const [isPostCameraLoading, setIsPostCameraLoading] = useState(false);
+    const [postCameraFacingMode, setPostCameraFacingMode] = useState<'environment' | 'user'>('environment');
+
+    const postVideoRef = useRef<HTMLVideoElement | null>(null);
+    const postCanvasRef = useRef<HTMLCanvasElement | null>(null);
+
+    const stopPostCameraStream = () => {
+        if (postCameraStream) {
+            postCameraStream.getTracks().forEach((track) => track.stop());
+            setPostCameraStream(null);
+        }
+        setActivePostCameraSlot(null);
+        setPostCapturedImage(null);
+        setPostCameraError(null);
+    };
+
+    const startPostCameraStream = async (slotKey: string, slotLabel: string, mode: 'environment' | 'user' = 'environment') => {
+        setActivePostCameraSlot(slotKey);
+        setPostCameraSlotLabel(slotLabel);
+        setPostCapturedImage(null);
+        setPostCameraError(null);
+        setIsPostCameraLoading(true);
+
+        if (postCameraStream) {
+            postCameraStream.getTracks().forEach((track) => track.stop());
+            setPostCameraStream(null);
+        }
+
+        try {
+            const stream = await navigator.mediaDevices.getUserMedia({
+                video: {
+                    facingMode: mode,
+                    width: { ideal: 1920 },
+                    height: { ideal: 1080 },
+                },
+                audio: false,
+            });
+            setPostCameraStream(stream);
+
+            setTimeout(() => {
+                const videoEl = postVideoRef.current || (document.getElementById('post-camera-video') as HTMLVideoElement | null);
+                if (videoEl) {
+                    videoEl.srcObject = stream;
+                    videoEl.play().catch((e) => console.log('Video play error:', e));
+                }
+            }, 100);
+        } catch (err: any) {
+            console.error('Camera access error:', err);
+            setPostCameraError(__('No se pudo acceder a la cámara. Por favor verifique los permisos del navegador o use la opción de subir archivo.'));
+        } finally {
+            setIsPostCameraLoading(false);
+        }
+    };
+
+    useEffect(() => {
+        if (postCameraStream && !postCapturedImage) {
+            const videoEl = postVideoRef.current || (document.getElementById('post-camera-video') as HTMLVideoElement | null);
+            if (videoEl) {
+                videoEl.srcObject = postCameraStream;
+                videoEl.play().catch((e) => console.log('Video play error:', e));
+            }
+        }
+    }, [postCameraStream, activePostCameraSlot, postCapturedImage]);
+
+    const handleCapturePostSnapshot = () => {
+        try {
+            const video = postVideoRef.current || (document.getElementById('post-camera-video') as HTMLVideoElement | null);
+            if (!video) {
+                notifyError(__('No se encontró la fuente de video de la cámara.'));
+                return;
+            }
+
+            const width = video.videoWidth || video.clientWidth || 1280;
+            const height = video.videoHeight || video.clientHeight || 720;
+
+            if (width === 0 || height === 0) {
+                notifyError(__('Esperando señal de la cámara... Reintente en un momento.'));
+                return;
+            }
+
+            const canvas = document.createElement('canvas');
+            canvas.width = width;
+            canvas.height = height;
+
+            const ctx = canvas.getContext('2d');
+            if (ctx) {
+                ctx.drawImage(video, 0, 0, width, height);
+                const dataUrl = canvas.toDataURL('image/jpeg', 0.92);
+                if (dataUrl && dataUrl.length > 500) {
+                    setPostCapturedImage(dataUrl);
+                    notifySuccess(__('Foto capturada correctamente. Haga clic en "Usar Esta Foto".'));
+                } else {
+                    notifyError(__('La captura resultó vacía. Por favor reintente.'));
+                }
+            }
+        } catch (err: any) {
+            console.error('Error al capturar foto:', err);
+            notifyError(__('Error al procesar la captura de la cámara: ') + (err?.message || ''));
+        }
+    };
+
+    const handleAcceptPostCapturedPhoto = () => {
+        if (postCapturedImage && activePostCameraSlot) {
+            setFotosPostState((prev) => ({
+                ...prev,
+                [activePostCameraSlot]: postCapturedImage,
+            }));
+            notifySuccess(__('Fotografía capturada y guardada.'));
+            stopPostCameraStream();
+        }
+    };
+
+    const handleRetakePostSnapshot = () => {
+        setPostCapturedImage(null);
+        if (postVideoRef.current && postCameraStream) {
+            postVideoRef.current.srcObject = postCameraStream;
+            postVideoRef.current.play();
+        }
+    };
+
+    const togglePostFacingMode = () => {
+        const nextMode = postCameraFacingMode === 'environment' ? 'user' : 'environment';
+        setPostCameraFacingMode(nextMode);
+        if (activePostCameraSlot) {
+            startPostCameraStream(activePostCameraSlot, postCameraSlotLabel, nextMode);
+        }
+    };
+
+    const openPostServicioModal = () => {
+        if (postServicioData?.validacion) {
+            setValidacionFinalState(postServicioData.validacion);
+        } else {
+            const init: Record<string, { estado: 'correcto' | 'incorrecto'; obs: string }> = {};
+            FUNCIONES_VALIDACION_FINAL.forEach((fn) => {
+                init[fn] = { estado: 'correcto', obs: '' };
+            });
+            setValidacionFinalState(init);
+        }
+
+        if (postServicioData?.limpieza) {
+            setLimpiezaFinalState(postServicioData.limpieza);
+        } else {
+            const init: Record<string, boolean> = {};
+            LIMPIEZA_FINAL_LIST.forEach((item) => {
+                init[item] = true;
+            });
+            setLimpiezaFinalState(init);
+        }
+
+        if (postServicioData?.qc) {
+            setControlCalidadState(postServicioData.qc);
+        } else {
+            setControlCalidadState({
+                reparacion_completada: true,
+                equipo_probado: true,
+                equipo_limpio: true,
+                garantia_registrada: true,
+                cliente_notificado: false,
+                equipo_listo_entrega: true,
+            });
+        }
+
+        setObservacionesFinalesInput(postServicioData?.observaciones || '');
+
+        if (postServicioData?.fotos_post) {
+            if (typeof postServicioData.fotos_post === 'object' && !Array.isArray(postServicioData.fotos_post)) {
+                setFotosPostState(postServicioData.fotos_post);
+            } else if (Array.isArray(postServicioData.fotos_post)) {
+                const map: Record<string, string> = {};
+                postServicioData.fotos_post.forEach((item: any) => {
+                    if (item.key && item.url) map[item.key] = item.url;
+                    else if (item.angulo && item.url) map[item.angulo] = item.url;
+                });
+                setFotosPostState(map);
+            } else {
+                setFotosPostState({});
+            }
+        } else {
+            setFotosPostState({});
+        }
+
+        setPostModalTab('validacion');
+        setIsPostServicioModalOpen(true);
+    };
+
+    const handleSingleFotoPostUpload = (slotKey: string, e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
+        if (!file) return;
+
+        const reader = new FileReader();
+        reader.onloadend = () => {
+            if (reader.result) {
+                setFotosPostState((prev) => ({
+                    ...prev,
+                    [slotKey]: reader.result as string,
+                }));
+                notifySuccess(__('Fotografía cargada correctamente.'));
+            }
+        };
+        reader.readAsDataURL(file);
+    };
+
+    const handleRemoveFotoPost = (slotKey: string) => {
+        setFotosPostState((prev) => {
+            const next = { ...prev };
+            delete next[slotKey];
+            return next;
+        });
+    };
+
+    const handleSavePostServicio = (e: React.FormEvent) => {
+        e.preventDefault();
+        setIsSubmittingPostServicio(true);
+
+        const postPayload = {
+            validacion: validacionFinalState,
+            limpieza: limpiezaFinalState,
+            qc: controlCalidadState,
+            observaciones: observacionesFinalesInput,
+            fotos_post: fotosPostState,
+            fecha_registro: new Date().toISOString(),
+        };
+
+        router.post(`/admin/reparaciones/${orden.id}/estado`, {
+            estado_orden: orden.estado_orden === 'reparado' || orden.estado_orden === 'entregado' ? orden.estado_orden : 'reparado',
+            post_servicio_json: postPayload,
+            comentario: __('Validación Final, Limpieza & Control de Calidad Post-Atención registrado.'),
+        }, {
+            onSuccess: () => {
+                setIsPostServicioModalOpen(false);
+                setIsSubmittingPostServicio(false);
+                notifySuccess(__('Validación Final y Post-Atención guardados correctamente.'));
+            },
+            onError: () => {
+                setIsSubmittingPostServicio(false);
+            }
+        });
+    };
+
+    const [isPreservicioModalOpen, setIsPreservicioModalOpen] = useState(false);
+    const [modalTab, setModalTab] = useState<'fisica' | 'estado' | 'observaciones'>('fisica');
+
+    const [inspeccionFisica, setInspeccionFisica] = useState<Record<string, { estado: 'bueno' | 'malo' | 'na'; obs: string }>>(() => {
+        const init: Record<string, { estado: 'bueno' | 'malo' | 'na'; obs: string }> = {};
+        ELEMENTOS_INSPECCION_LIST.forEach((item) => {
+            init[item] = { estado: 'na', obs: '' };
+        });
+        return init;
+    });
+
+    const [estadoEquipo, setEstadoEquipo] = useState<Record<string, boolean>>({
+        enciende: false,
+        carga_bateria: false,
+        entra_sistema: false,
+        tiene_bloqueo: false,
+        cliente_proporciona_contrasena: false,
+    });
+
+    const [tipoBloqueo, setTipoBloqueo] = useState<'sin_bloqueo' | 'pin' | 'contrasena' | 'patron'>('sin_bloqueo');
+    const [codigoPin, setCodigoPin] = useState('');
+    const [claveTexto, setClaveTexto] = useState('');
+    const [patternDots, setPatternDots] = useState<number[]>([]);
+    const [observacionesFisicasInput, setObservacionesFisicasInput] = useState('');
+    const [isSubmittingPreservicio, setIsSubmittingPreservicio] = useState(false);
+
+    const openPreservicioModal = () => {
+        setObservacionesFisicasInput(orden.observaciones_fisicas || '');
+
+        if (inspeccionData?.tipo_bloqueo) {
+            setTipoBloqueo(inspeccionData.tipo_bloqueo);
+            setCodigoPin(inspeccionData.codigo_pin || '');
+            setClaveTexto(inspeccionData.clave_texto || '');
+            if (inspeccionData.patron_dots) {
+                setPatternDots(inspeccionData.patron_dots);
+            }
+        } else if (orden.contrasena_patron) {
+            if (orden.contrasena_patron.startsWith('Patrón:')) {
+                setTipoBloqueo('patron');
+            } else if (orden.contrasena_patron.startsWith('PIN:')) {
+                setTipoBloqueo('pin');
+                setCodigoPin(orden.contrasena_patron.replace('PIN:', '').trim());
+            } else if (orden.contrasena_patron.startsWith('Clave:')) {
+                setTipoBloqueo('contrasena');
+                setClaveTexto(orden.contrasena_patron.replace('Clave:', '').trim());
+            }
+        } else {
+            setTipoBloqueo('sin_bloqueo');
+            setPatternDots([]);
+            setCodigoPin('');
+            setClaveTexto('');
+        }
+
+        if (inspeccionData?.fisica) {
+            setInspeccionFisica(inspeccionData.fisica);
+        } else {
+            const init: Record<string, { estado: 'bueno' | 'malo' | 'na'; obs: string }> = {};
+            ELEMENTOS_INSPECCION_LIST.forEach((item) => {
+                init[item] = { estado: 'na', obs: '' };
+            });
+            setInspeccionFisica(init);
+        }
+
+        if (inspeccionData?.estado) {
+            setEstadoEquipo(inspeccionData.estado);
+        } else {
+            setEstadoEquipo({
+                enciende: false,
+                carga_bateria: false,
+                entra_sistema: false,
+                tiene_bloqueo: false,
+                cliente_proporciona_contrasena: false,
+            });
+        }
+
+        setModalTab('fisica');
+        setIsPreservicioModalOpen(true);
+    };
+
+    const handleSavePreservicio = (e: React.FormEvent) => {
+        e.preventDefault();
+        setIsSubmittingPreservicio(true);
+
+        let finalPasswordString = '';
+        if (tipoBloqueo === 'sin_bloqueo') {
+            finalPasswordString = __('Sin Bloqueo');
+        } else if (tipoBloqueo === 'pin') {
+            finalPasswordString = `PIN: ${codigoPin}`;
+        } else if (tipoBloqueo === 'contrasena') {
+            finalPasswordString = `Clave: ${claveTexto}`;
+        } else if (tipoBloqueo === 'patron') {
+            finalPasswordString = `Patrón: ${patternDots.join(' ➔ ')}`;
+        }
+
+        const inspeccionPayload = {
+            fisica: inspeccionFisica,
+            estado: estadoEquipo,
+            tipo_bloqueo: tipoBloqueo,
+            codigo_pin: codigoPin,
+            clave_texto: claveTexto,
+            patron_dots: patternDots,
+            patron_secuencia: patternDots.join('-'),
+        };
+
+        router.post(`/admin/reparaciones/${orden.id}/estado`, {
+            estado_orden: orden.estado_orden || 'en_diagnostico',
+            observaciones_fisicas: observacionesFisicasInput,
+            contrasena_patron: finalPasswordString,
+            inspeccion_json: inspeccionPayload,
+            comentario: __('Inspección inicial de preservicio registrada / actualizada.'),
+        }, {
+            onSuccess: () => {
+                setIsPreservicioModalOpen(false);
+                setIsSubmittingPreservicio(false);
+                notifySuccess(__('Preservicio e inspección inicial guardados correctamente.'));
+            },
+            onError: () => {
+                setIsSubmittingPreservicio(false);
+            }
+        });
+    };
 
     const formatNum = (val: any): string => {
         if (val === null || val === undefined || val === '') return '0.00';
@@ -544,6 +1319,52 @@ export default function ShowReparacion({ orden, productosRepuestos = [], tecnico
 
                     <button
                         type="button"
+                        onClick={() => setActiveTab('preservicio')}
+                        className={cn(
+                            'px-4 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-2 whitespace-nowrap',
+                            activeTab === 'preservicio'
+                                ? 'bg-purple-600 text-white shadow-md shadow-purple-600/20'
+                                : 'bg-white dark:bg-slate-900 text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800'
+                        )}
+                    >
+                        <ShieldCheck className="w-4 h-4 text-emerald-400" />
+                        {__('Preservicio / Inspección')}
+                        {orden.inspeccion_json || orden.contrasena_patron ? (
+                            <Badge className="ml-1 text-[10px] h-4 px-1.5 bg-emerald-500 text-white border-0 font-bold">
+                                🟢 {__('Completado')}
+                            </Badge>
+                        ) : (
+                            <Badge variant="outline" className="ml-1 text-[10px] h-4 px-1.5">
+                                {__('Pendiente')}
+                            </Badge>
+                        )}
+                    </button>
+
+                    <button
+                        type="button"
+                        onClick={() => setActiveTab('postservicio')}
+                        className={cn(
+                            'px-4 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-2 whitespace-nowrap',
+                            activeTab === 'postservicio'
+                                ? 'bg-purple-600 text-white shadow-md shadow-purple-600/20'
+                                : 'bg-white dark:bg-slate-900 text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800'
+                        )}
+                    >
+                        <CheckCircle2 className="w-4 h-4 text-emerald-400" />
+                        {__('Post-Atención / QC')}
+                        {tienePostServicio ? (
+                            <Badge className="ml-1 text-[10px] h-4 px-1.5 bg-emerald-500 text-white border-0 font-bold">
+                                🟢 {__('Completado')}
+                            </Badge>
+                        ) : (
+                            <Badge variant="outline" className="ml-1 text-[10px] h-4 px-1.5">
+                                {__('Pendiente')}
+                            </Badge>
+                        )}
+                    </button>
+
+                    <button
+                        type="button"
                         onClick={() => setActiveTab('repuestos')}
                         className={cn(
                             'px-4 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-2 whitespace-nowrap',
@@ -702,6 +1523,430 @@ export default function ShowReparacion({ orden, productosRepuestos = [], tecnico
                                         )}
                                     </CardContent>
                                 </Card>
+                            </div>
+                        )}
+
+                        {/* PESTAÑA: PRESERVICIO / INSPECCIÓN INICIAL */}
+                        {activeTab === 'preservicio' && (
+                            <div className="space-y-6 animate-in fade-in duration-300">
+                                {!tienePreservicio ? (
+                                    <Card className="border-indigo-200 dark:border-indigo-900 shadow-sm bg-white dark:bg-slate-900">
+                                        <CardContent className="p-8 text-center space-y-4">
+                                            <div className="w-14 h-14 rounded-full bg-indigo-50 dark:bg-indigo-950/60 text-indigo-600 dark:text-indigo-400 flex items-center justify-center mx-auto text-3xl shadow-xs border border-indigo-100 dark:border-indigo-900">
+                                                🛡️
+                                            </div>
+                                            <div className="space-y-1">
+                                                <h3 className="text-base font-bold text-slate-900 dark:text-slate-100">
+                                                    {__('El preservicio e inspección inicial aún no ha sido completado')}
+                                                </h3>
+                                                <p className="text-xs text-slate-500 max-w-md mx-auto">
+                                                    {__('Registre la inspección estética (12 puntos), el estado funcional y el patrón de desbloqueo táctil 3x3.')}
+                                                </p>
+                                            </div>
+                                            <Button
+                                                type="button"
+                                                onClick={openPreservicioModal}
+                                                className="bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold px-6 h-10 gap-2 rounded-xl shadow-lg shadow-indigo-200 dark:shadow-none"
+                                            >
+                                                <ShieldCheck className="w-4 h-4" />
+                                                {__('Iniciar Proceso de Preservicio')} ➔
+                                            </Button>
+                                        </CardContent>
+                                    </Card>
+                                ) : (
+                                    <Card className="border-indigo-200 dark:border-indigo-900 shadow-sm bg-gradient-to-r from-indigo-50/50 via-white to-purple-50/50 dark:from-indigo-950/20 dark:via-slate-900 dark:to-purple-950/20">
+                                        <CardHeader className="py-4 border-b border-indigo-100 dark:border-indigo-900/50">
+                                            <div className="flex items-center justify-between flex-wrap gap-2">
+                                                <CardTitle className="text-base font-black flex items-center gap-2 text-indigo-950 dark:text-indigo-100">
+                                                    <ShieldCheck className="w-5 h-5 text-indigo-600 dark:text-indigo-400" />
+                                                    {__('Ficha de Preservicio e Inspección Inicial')}
+                                                </CardTitle>
+                                                <div className="flex items-center gap-2">
+                                                    {orden.tecnico && (
+                                                        <Badge variant="outline" className="text-xs bg-white dark:bg-slate-800 font-semibold text-indigo-700 dark:text-indigo-300 border-indigo-200">
+                                                            🛠️ {__('Inspeccionado por:')} {orden.tecnico.name}
+                                                        </Badge>
+                                                    )}
+                                                    <Button
+                                                        type="button"
+                                                        size="sm"
+                                                        onClick={openPreservicioModal}
+                                                        className="text-xs font-bold bg-indigo-600 hover:bg-indigo-700 text-white h-8 gap-1.5 rounded-lg shadow-xs"
+                                                    >
+                                                        <Wrench className="w-3.5 h-3.5" />
+                                                        {__('Editar Preservicio')}
+                                                    </Button>
+                                                </div>
+                                            </div>
+                                        </CardHeader>
+                                    <CardContent className="p-5 space-y-6">
+                                        {/* 1. CLAVE Y PATRÓN DE DESBLOQUEO */}
+                                        <div className="space-y-3">
+                                            <h4 className="text-xs font-black uppercase tracking-wider text-slate-500 dark:text-slate-400 flex items-center gap-2">
+                                                <Lock className="w-4 h-4 text-indigo-500" />
+                                                {__('1. Tipo de Bloqueo & Claves de Acceso')}
+                                            </h4>
+
+                                            <div className="p-4 rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-950 space-y-4 shadow-xs">
+                                                <div className="flex items-center justify-between flex-wrap gap-3 border-b border-slate-100 dark:border-slate-900 pb-3">
+                                                    <div className="flex items-center gap-2">
+                                                        <span className="text-xs font-bold text-slate-600 dark:text-slate-400">{__('Tipo de Bloqueo Registrado:')}</span>
+                                                        <Badge className="bg-indigo-600 text-white font-extrabold text-xs px-3 py-1">
+                                                            {inspeccionData?.tipo_bloqueo === 'patron' ? '🌀 Patrón (3x3)' :
+                                                             inspeccionData?.tipo_bloqueo === 'pin' ? '🔢 Código PIN' :
+                                                             inspeccionData?.tipo_bloqueo === 'contrasena' ? '🔠 Contraseña' :
+                                                             inspeccionData?.tipo_bloqueo === 'sin_bloqueo' ? '🔓 Sin Bloqueo' :
+                                                             (orden.contrasena_patron || __('No registrado'))}
+                                                        </Badge>
+                                                    </div>
+
+                                                    {orden.contrasena_patron && (
+                                                        <div className="font-mono text-xs font-bold text-indigo-700 dark:text-indigo-300 bg-indigo-50 dark:bg-indigo-950/60 px-3 py-1.5 rounded-lg border border-indigo-200 dark:border-indigo-800">
+                                                            🔑 {orden.contrasena_patron}
+                                                        </div>
+                                                    )}
+                                                </div>
+
+                                                {/* RENDERIZADO DEL LIENZO DE PATRÓN 3X3 SI ES UN PATRÓN */}
+                                                {(inspeccionData?.tipo_bloqueo === 'patron' || (inspeccionData?.patron_dots && inspeccionData.patron_dots.length > 0)) ? (
+                                                    <div className="flex flex-col items-center justify-center p-5 rounded-2xl bg-slate-950 text-white space-y-3 shadow-inner">
+                                                        <span className="text-xs font-bold text-slate-300 flex items-center gap-2">
+                                                            <span>🌀</span> {__('Lienzo de Patrón 3x3 Dibujado por el Técnico:')}
+                                                        </span>
+                                                        <PatternLockViewer pattern={inspeccionData?.patron_dots || []} />
+                                                    </div>
+                                                ) : inspeccionData?.tipo_bloqueo === 'pin' ? (
+                                                    <div className="p-3 bg-amber-50 dark:bg-amber-950/40 text-amber-900 dark:text-amber-200 rounded-xl text-center text-xs font-bold font-mono">
+                                                        🔑 PIN Numérico: {inspeccionData.codigo_pin || orden.contrasena_patron}
+                                                    </div>
+                                                ) : inspeccionData?.tipo_bloqueo === 'contrasena' ? (
+                                                    <div className="p-3 bg-indigo-50 dark:bg-indigo-950/40 text-indigo-900 dark:text-indigo-200 rounded-xl text-center text-xs font-bold font-mono">
+                                                        🔑 Clave Alfanumérica: {inspeccionData.clave_texto || orden.contrasena_patron}
+                                                    </div>
+                                                ) : inspeccionData?.tipo_bloqueo === 'sin_bloqueo' ? (
+                                                    <div className="p-3 bg-emerald-50 dark:bg-emerald-950/40 text-emerald-800 dark:text-emerald-300 rounded-xl text-center text-xs font-bold">
+                                                        🔓 Dispositivo sin ningún tipo de bloqueo de pantalla.
+                                                    </div>
+                                                ) : null}
+                                            </div>
+                                        </div>
+
+                                        {/* 2. INSPECCIÓN FÍSICA DE 12 ELEMENTOS */}
+                                        <div className="space-y-3">
+                                            <h4 className="text-xs font-black uppercase tracking-wider text-slate-500 dark:text-slate-400 flex items-center gap-2">
+                                                <Smartphone className="w-4 h-4 text-indigo-500" />
+                                                {__('2. Estado de Inspección Física (12 Puntos)')}
+                                            </h4>
+
+                                            {inspeccionData?.fisica ? (
+                                                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                                                    {Object.entries(inspeccionData.fisica).map(([itemKey, itemVal]: [string, any]) => {
+                                                        const st = itemVal?.estado ?? 'na';
+                                                        const obs = itemVal?.obs ?? '';
+                                                        return (
+                                                            <div
+                                                                key={itemKey}
+                                                                className={cn(
+                                                                    'p-3 rounded-xl border text-xs flex flex-col justify-between gap-1.5 transition-all shadow-xs',
+                                                                    st === 'malo'
+                                                                        ? 'bg-rose-50/70 border-rose-200 dark:bg-rose-950/30 dark:border-rose-900'
+                                                                        : st === 'bueno'
+                                                                        ? 'bg-emerald-50/50 border-emerald-200 dark:bg-emerald-950/20 dark:border-emerald-900'
+                                                                        : 'bg-slate-50 border-slate-200 dark:bg-slate-900 dark:border-slate-800'
+                                                                )}
+                                                            >
+                                                                <div className="flex items-center justify-between">
+                                                                    <span className="font-bold text-slate-900 dark:text-slate-100">{itemKey}</span>
+                                                                    {st === 'bueno' && (
+                                                                        <Badge className="bg-emerald-600 text-white text-[10px] px-2 font-extrabold">🟢 Bueno</Badge>
+                                                                    )}
+                                                                    {st === 'malo' && (
+                                                                        <Badge className="bg-rose-600 text-white text-[10px] px-2 font-extrabold">🔴 Dañado</Badge>
+                                                                    )}
+                                                                    {st === 'na' && (
+                                                                        <Badge variant="outline" className="text-[10px] text-slate-400 px-2">⚪ N/A</Badge>
+                                                                    )}
+                                                                </div>
+                                                                {obs && (
+                                                                    <p className="text-[11px] text-rose-700 dark:text-rose-300 font-semibold bg-white/70 dark:bg-slate-950/60 p-1.5 rounded border border-rose-100 dark:border-rose-900/40">
+                                                                        📝 {obs}
+                                                                    </p>
+                                                                )}
+                                                            </div>
+                                                        );
+                                                    })}
+                                                </div>
+                                            ) : (
+                                                <div className="p-4 rounded-xl bg-slate-50 dark:bg-slate-900 text-slate-400 text-xs italic text-center">
+                                                    {__('Sin datos detallados de inspección de componentes.')}
+                                                </div>
+                                            )}
+                                        </div>
+
+                                        {/* 3. ESTADO FUNCIONAL ELECTRÓNICO */}
+                                        <div className="space-y-3">
+                                            <h4 className="text-xs font-black uppercase tracking-wider text-slate-500 dark:text-slate-400 flex items-center gap-2">
+                                                <Activity className="w-4 h-4 text-indigo-500" />
+                                                {__('3. Estado Funcional Inicial')}
+                                            </h4>
+
+                                            {inspeccionData?.estado ? (
+                                                <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                                                    {Object.entries(inspeccionData.estado).map(([k, isOk]: [string, any]) => {
+                                                        const labels: Record<string, string> = {
+                                                            enciende: 'Enciende',
+                                                            carga_bateria: 'Carga batería',
+                                                            entra_sistema: 'Entra al sistema',
+                                                            tiene_bloqueo: 'Tiene bloqueo',
+                                                            cliente_proporciona_contrasena: 'Proporciona clave/patrón',
+                                                        };
+                                                        return (
+                                                            <div
+                                                                key={k}
+                                                                className={cn(
+                                                                    'p-3 rounded-xl border text-xs flex items-center justify-between font-bold shadow-xs',
+                                                                    isOk
+                                                                        ? 'bg-emerald-50 dark:bg-emerald-950/30 border-emerald-200 text-emerald-900 dark:text-emerald-200'
+                                                                        : 'bg-slate-50 dark:bg-slate-900 border-slate-200 text-slate-600 dark:text-slate-400'
+                                                                )}
+                                                            >
+                                                                <span>{labels[k] || k}</span>
+                                                                <span>{isOk ? '✅ Sí' : '❌ No'}</span>
+                                                            </div>
+                                                        );
+                                                    })}
+                                                </div>
+                                            ) : null}
+                                        </div>
+
+                                        {/* 4. OBSERVACIONES FÍSICAS */}
+                                        {orden.observaciones_fisicas && (
+                                            <div className="space-y-2">
+                                                <h4 className="text-xs font-black uppercase tracking-wider text-slate-500 dark:text-slate-400 flex items-center gap-2">
+                                                    <FileText className="w-4 h-4 text-indigo-500" />
+                                                    {__('4. Observaciones Físicas Adicionales')}
+                                                </h4>
+                                                <div className="p-4 rounded-xl bg-indigo-50/60 dark:bg-indigo-950/30 border border-indigo-100 dark:border-indigo-900 text-xs text-indigo-950 dark:text-indigo-200 leading-relaxed font-medium">
+                                                    {orden.observaciones_fisicas}
+                                                </div>
+                                            </div>
+                                        )}
+                                    </CardContent>
+                                </Card>
+                            )}
+                        </div>
+                    )}
+
+                        {/* PESTAÑA: POST-ATENCIÓN / VALIDACIÓN FINAL & CONTROL DE CALIDAD */}
+                        {activeTab === 'postservicio' && (
+                            <div className="space-y-6 animate-in fade-in duration-300">
+                                {!tienePostServicio ? (
+                                    <Card className="border-emerald-200 dark:border-emerald-900 shadow-sm bg-white dark:bg-slate-900">
+                                        <CardContent className="p-8 text-center space-y-4">
+                                            <div className="w-14 h-14 rounded-full bg-emerald-50 dark:bg-emerald-950/60 text-emerald-600 dark:text-emerald-400 flex items-center justify-center mx-auto text-3xl shadow-xs border border-emerald-100 dark:border-emerald-900">
+                                                ✅
+                                            </div>
+                                            <div className="space-y-1">
+                                                <h3 className="text-base font-bold text-slate-900 dark:text-slate-100">
+                                                    {__('La validación final y post-atención aún no ha sido registrada')}
+                                                </h3>
+                                                <p className="text-xs text-slate-500 max-w-md mx-auto">
+                                                    {__('Verifique las 24 funciones electrónicas finales, el protocolo de limpieza (5 puntos), los 6 controles de calidad y cargue las fotos finales del equipo reparado.')}
+                                                </p>
+                                            </div>
+                                            <Link href={`/admin/reparaciones/${orden.id}/post-servicio`}>
+                                                <Button
+                                                    type="button"
+                                                    className="bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-extrabold px-6 h-10 gap-2 rounded-xl shadow-lg shadow-emerald-200 dark:shadow-none"
+                                                >
+                                                    <CheckCircle2 className="w-4 h-4" />
+                                                    {__('Registrar Validación Final & Post-Atención')} ➔
+                                                </Button>
+                                            </Link>
+                                        </CardContent>
+                                    </Card>
+                                ) : (
+                                    <Card className="border-emerald-200 dark:border-emerald-900 shadow-sm bg-gradient-to-r from-emerald-50/50 via-white to-teal-50/50 dark:from-emerald-950/20 dark:via-slate-900 dark:to-teal-950/20">
+                                        <CardHeader className="py-4 border-b border-emerald-100 dark:border-emerald-900/50">
+                                            <div className="flex items-center justify-between flex-wrap gap-2">
+                                                <CardTitle className="text-base font-black flex items-center gap-2 text-emerald-950 dark:text-emerald-100">
+                                                    <CheckCircle2 className="w-5 h-5 text-emerald-600 dark:text-emerald-400" />
+                                                    {__('Ficha de Validación Final & Post-Atención')}
+                                                </CardTitle>
+                                                <div className="flex items-center gap-2">
+                                                    <Badge className="bg-emerald-600 text-white font-extrabold text-xs px-3 py-1">
+                                                        🟢 {__('Proceso Concluido')}
+                                                    </Badge>
+                                                    <Link href={`/admin/reparaciones/${orden.id}/post-servicio`}>
+                                                        <Button
+                                                            type="button"
+                                                            variant="outline"
+                                                            size="sm"
+                                                            className="text-xs font-bold border-emerald-300 dark:border-emerald-800 text-emerald-700 dark:text-emerald-300 gap-1.5"
+                                                        >
+                                                            ✨ {__('Editar Post-Atención & Fotos')}
+                                                        </Button>
+                                                    </Link>
+                                                    <Button
+                                                        type="button"
+                                                        size="sm"
+                                                        onClick={openPostServicioModal}
+                                                        className="text-xs font-bold bg-emerald-600 hover:bg-emerald-700 text-white h-8 gap-1.5 rounded-lg shadow-xs"
+                                                    >
+                                                        <Wrench className="w-3.5 h-3.5" />
+                                                        {__('Editar Post-Atención')}
+                                                    </Button>
+                                                </div>
+                                            </div>
+                                        </CardHeader>
+                                        <CardContent className="p-5 space-y-6">
+                                            {/* 1. TABLA VALIDACIÓN FINAL (24 FUNCIONES) */}
+                                            <div className="space-y-3">
+                                                <h4 className="text-xs font-black uppercase tracking-wider text-slate-500 dark:text-slate-400 flex items-center gap-2">
+                                                    <Activity className="w-4 h-4 text-emerald-500" />
+                                                    {__('1. Validación Final de Funciones (24 Puntos de Control)')}
+                                                </h4>
+
+                                                {postServicioData?.validacion ? (
+                                                    <div className="border border-slate-200 dark:border-slate-800 rounded-2xl overflow-hidden bg-white dark:bg-slate-950 shadow-xs">
+                                                        <div className="overflow-x-auto">
+                                                            <table className="w-full text-xs">
+                                                                <thead>
+                                                                    <tr className="bg-slate-100 dark:bg-slate-900 text-slate-700 dark:text-slate-300 font-extrabold border-b border-slate-200 dark:border-slate-800">
+                                                                        <th className="text-left py-2.5 px-4">{__('Función Evaluada')}</th>
+                                                                        <th className="text-center py-2.5 px-4">{__('Estado')}</th>
+                                                                        <th className="text-left py-2.5 px-4">{__('Observaciones')}</th>
+                                                                    </tr>
+                                                                </thead>
+                                                                <tbody className="divide-y divide-slate-100 dark:divide-slate-800/60">
+                                                                    {Object.entries(postServicioData.validacion).map(([fnKey, fnVal]: [string, any]) => {
+                                                                        const isCorrect = fnVal?.estado === 'correcto';
+                                                                        return (
+                                                                            <tr key={fnKey} className={isCorrect ? 'hover:bg-emerald-50/20' : 'bg-rose-50/30 hover:bg-rose-50/50'}>
+                                                                                <td className="py-2 px-4 font-bold text-slate-800 dark:text-slate-200">{fnKey}</td>
+                                                                                <td className="py-2 px-4 text-center">
+                                                                                    {isCorrect ? (
+                                                                                        <Badge className="bg-emerald-100 text-emerald-800 border-emerald-300 dark:bg-emerald-950 dark:text-emerald-300 text-[11px] font-black">
+                                                                                            ✓ {__('Correcto')}
+                                                                                        </Badge>
+                                                                                    ) : (
+                                                                                        <Badge className="bg-rose-100 text-rose-800 border-rose-300 dark:bg-rose-950 dark:text-rose-300 text-[11px] font-black">
+                                                                                            ✗ {__('Incorrecto')}
+                                                                                        </Badge>
+                                                                                    )}
+                                                                                </td>
+                                                                                <td className="py-2 px-4 text-slate-500 italic">
+                                                                                    {fnVal?.obs || '-'}
+                                                                                </td>
+                                                                            </tr>
+                                                                        );
+                                                                    })}
+                                                                </tbody>
+                                                            </table>
+                                                        </div>
+                                                    </div>
+                                                ) : null}
+                                            </div>
+
+                                            {/* 2. LIMPIEZA FINAL Y CONTROL DE CALIDAD */}
+                                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                                {/* LIMPIEZA FINAL (5 PUNTOS) */}
+                                                <div className="space-y-3">
+                                                    <h4 className="text-xs font-black uppercase tracking-wider text-slate-500 dark:text-slate-400 flex items-center gap-2">
+                                                        <Sparkles className="w-4 h-4 text-emerald-500" />
+                                                        {__('2. Limpieza Final (5 Puntos)')}
+                                                    </h4>
+
+                                                    {postServicioData?.limpieza ? (
+                                                        <div className="space-y-2 border border-slate-200 dark:border-slate-800 rounded-2xl p-3.5 bg-white dark:bg-slate-950">
+                                                            {Object.entries(postServicioData.limpieza).map(([limKey, isOk]: [string, any]) => (
+                                                                <div key={limKey} className="flex items-center justify-between p-2 rounded-xl bg-slate-50 dark:bg-slate-900/60 text-xs font-bold">
+                                                                    <span className="text-slate-800 dark:text-slate-200">{limKey}</span>
+                                                                    <span>{isOk ? '✅ Sí' : '❌ No'}</span>
+                                                                </div>
+                                                            ))}
+                                                        </div>
+                                                    ) : null}
+                                                </div>
+
+                                                {/* CONTROL DE CALIDAD (6 PUNTOS) */}
+                                                <div className="space-y-3">
+                                                    <h4 className="text-xs font-black uppercase tracking-wider text-slate-500 dark:text-slate-400 flex items-center gap-2">
+                                                        <ShieldCheck className="w-4 h-4 text-emerald-500" />
+                                                        {__('3. Control de Calidad (QC)')}
+                                                    </h4>
+
+                                                    {postServicioData?.qc ? (
+                                                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 border border-slate-200 dark:border-slate-800 rounded-2xl p-3.5 bg-white dark:bg-slate-950">
+                                                            {CONTROL_CALIDAD_LIST.map((item) => {
+                                                                const isChecked = postServicioData.qc[item.key] ?? false;
+                                                                return (
+                                                                    <div key={item.key} className={cn("flex items-center gap-2 p-2 rounded-xl text-xs font-bold border", isChecked ? "bg-emerald-50 border-emerald-200 text-emerald-900 dark:bg-emerald-950/40 dark:text-emerald-200" : "bg-slate-50 border-slate-200 text-slate-500")}>
+                                                                        <span>{isChecked ? '☑️' : '⬜'}</span>
+                                                                        <span>{item.label}</span>
+                                                                    </div>
+                                                                );
+                                                            })}
+                                                        </div>
+                                                    ) : null}
+                                                </div>
+                                            </div>
+
+                                            {/* 4. OBSERVACIONES FINALES */}
+                                            {postServicioData?.observaciones && (
+                                                <div className="space-y-2">
+                                                    <h4 className="text-xs font-black uppercase tracking-wider text-slate-500 dark:text-slate-400 flex items-center gap-2">
+                                                        <FileText className="w-4 h-4 text-emerald-500" />
+                                                        {__('4. Observaciones Finales')}
+                                                    </h4>
+                                                    <div className="p-4 rounded-xl bg-emerald-50/60 dark:bg-emerald-950/30 border border-emerald-100 dark:border-emerald-900 text-xs text-emerald-950 dark:text-emerald-200 leading-relaxed font-medium">
+                                                        {postServicioData.observaciones}
+                                                    </div>
+                                                </div>
+                                            )}
+
+                                            {/* 5. FOTOS POST-REPARACIÓN (5 ÁNGULOS DE INSPECCIÓN FÍSICA) */}
+                                            {postServicioData?.fotos_post && (
+                                                <div className="space-y-3">
+                                                    <h4 className="text-xs font-black uppercase tracking-wider text-slate-500 dark:text-slate-400 flex items-center gap-2">
+                                                        <Camera className="w-4 h-4 text-emerald-500" />
+                                                        {__('5. Evidencias Fotográficas Post-Reparación (5 Ángulos)')}
+                                                    </h4>
+                                                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3">
+                                                        {FOTOS_POST_REPARACION_ANGULOS.map((slot) => {
+                                                            const imgUrl = typeof postServicioData.fotos_post === 'object' && !Array.isArray(postServicioData.fotos_post)
+                                                                ? postServicioData.fotos_post[slot.key]
+                                                                : (Array.isArray(postServicioData.fotos_post) ? postServicioData.fotos_post.find((item: any) => item.key === slot.key || item.angulo === slot.key)?.url : null);
+                                                            return (
+                                                                <div key={slot.key} className="space-y-1.5">
+                                                                    <div className="text-[11px] font-bold text-slate-600 dark:text-slate-400 truncate flex items-center gap-1">
+                                                                        <span>{slot.icon}</span>
+                                                                        <span className="truncate">{slot.label}</span>
+                                                                    </div>
+                                                                    {imgUrl ? (
+                                                                        <div
+                                                                            onClick={() => setPreviewPhoto({ url: imgUrl, label: slot.label })}
+                                                                            className="group relative rounded-2xl overflow-hidden border border-emerald-200 dark:border-emerald-800 bg-black aspect-video cursor-pointer shadow-md"
+                                                                        >
+                                                                            <img src={imgUrl} alt={slot.label} className="w-full h-full object-cover group-hover:scale-105 transition-all" />
+                                                                            <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-all flex items-center justify-center text-white text-xs font-bold">
+                                                                                🔍 {__('Ampliar')}
+                                                                            </div>
+                                                                        </div>
+                                                                    ) : (
+                                                                        <div className="rounded-2xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900 aspect-video flex items-center justify-center text-[10px] text-slate-400 italic">
+                                                                            {__('Sin Foto')}
+                                                                        </div>
+                                                                    )}
+                                                                </div>
+                                                            );
+                                                        })}
+                                                    </div>
+                                                </div>
+                                            )}
+                                        </CardContent>
+                                    </Card>
+                                )}
                             </div>
                         )}
 
@@ -1025,6 +2270,928 @@ export default function ShowReparacion({ orden, productosRepuestos = [], tecnico
                         </div>
                     </DialogContent>
                 </Dialog>
+
+                {/* MODAL PROCESO DE PRESERVICIO EN DETALLE DE ORDEN */}
+                <Dialog open={isPreservicioModalOpen} onOpenChange={setIsPreservicioModalOpen}>
+                    <DialogContent className="w-[96vw] sm:max-w-[96vw] md:max-w-[92vw] h-[92vh] max-h-[92vh] p-0 flex flex-col overflow-hidden bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800">
+                        <DialogHeader className="p-4 sm:p-5 bg-gradient-to-r from-slate-900 via-indigo-950 to-slate-900 text-white shrink-0 border-b border-indigo-900/50">
+                            <div className="flex items-center justify-between">
+                                <div className="flex items-center gap-3">
+                                    <div className="p-2.5 rounded-xl bg-indigo-500/20 border border-indigo-400/30 text-indigo-300">
+                                        <ShieldCheck className="w-6 h-6" />
+                                    </div>
+                                    <div>
+                                        <DialogTitle className="text-lg font-black text-white flex items-center gap-2">
+                                            {__('Proceso de Preservicio e Inspección Inicial')}
+                                        </DialogTitle>
+                                        <p className="text-xs text-indigo-200/80">
+                                            {orden.numero_orden} • {orden.marca_nombre} {orden.modelo_nombre} ({orden.cliente_nombre})
+                                        </p>
+                                    </div>
+                                </div>
+
+                                <div className="flex items-center gap-2">
+                                    <div className="flex items-center bg-slate-800/80 p-1 rounded-xl border border-slate-700">
+                                        {[
+                                            { id: 'fisica', label: __('1. Inspección Física'), icon: '🔍' },
+                                            { id: 'estado', label: __('2. Estado Funcional'), icon: '⚡' },
+                                            { id: 'observaciones', label: __('3. Observaciones & Clave'), icon: '📝' },
+                                        ].map((tab) => (
+                                            <button
+                                                key={tab.id}
+                                                type="button"
+                                                onClick={() => setModalTab(tab.id as any)}
+                                                className={`px-3.5 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer ${
+                                                    modalTab === tab.id
+                                                        ? 'bg-indigo-600 text-white shadow-xs'
+                                                        : 'text-slate-300 hover:text-white hover:bg-slate-700/50'
+                                                }`}
+                                            >
+                                                <span>{tab.icon}</span>
+                                                <span>{tab.label}</span>
+                                            </button>
+                                        ))}
+                                    </div>
+                                    <Button
+                                        type="button"
+                                        variant="ghost"
+                                        size="sm"
+                                        onClick={() => setIsPreservicioModalOpen(false)}
+                                        className="h-8 w-8 p-0 text-slate-400 hover:text-white"
+                                    >
+                                        <X className="w-5 h-5" />
+                                    </Button>
+                                </div>
+                            </div>
+                        </DialogHeader>
+
+                        <form onSubmit={handleSavePreservicio} className="flex flex-col flex-1 overflow-hidden">
+                            <div className="flex-1 overflow-y-auto p-6 space-y-6">
+                                {/* PESTAÑA 1: INSPECCIÓN FÍSICA */}
+                                {modalTab === 'fisica' && (
+                                    <div className="space-y-4">
+                                        <div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-3">
+                                            <div>
+                                                <h3 className="text-base font-black text-slate-900 dark:text-slate-100 flex items-center gap-2">
+                                                    <span className="w-6 h-6 rounded-full bg-indigo-600 text-white flex items-center justify-center text-xs font-black shadow-xs">1</span>
+                                                    {__('Inspección Estética y Física del Dispositivo (12 Elementos)')}
+                                                </h3>
+                                                <p className="text-xs text-slate-500">
+                                                    {__('Marque el estado de cada componente e indique observaciones específicas si existe daño.')}
+                                                </p>
+                                            </div>
+
+                                            <Button
+                                                type="button"
+                                                variant="outline"
+                                                size="sm"
+                                                onClick={() => {
+                                                    setInspeccionFisica((prev) => {
+                                                        const copy = { ...prev };
+                                                        ELEMENTOS_INSPECCION_LIST.forEach((item) => {
+                                                            copy[item] = { ...copy[item], estado: 'bueno' };
+                                                        });
+                                                        return copy;
+                                                    });
+                                                }}
+                                                className="text-xs font-bold bg-emerald-50 text-emerald-700 border-emerald-200 hover:bg-emerald-100 dark:bg-emerald-950 dark:text-emerald-300 dark:border-emerald-800 gap-1 rounded-xl"
+                                            >
+                                                ✨ {__('Marcar Todos como Bueno')}
+                                            </Button>
+                                        </div>
+
+                                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+                                            {ELEMENTOS_INSPECCION_LIST.map((item) => {
+                                                const current = inspeccionFisica[item] || { estado: 'na', obs: '' };
+                                                return (
+                                                    <div
+                                                        key={item}
+                                                        className={`p-3.5 rounded-2xl border transition-all space-y-2.5 ${
+                                                            current.estado === 'malo'
+                                                                ? 'border-rose-300 bg-rose-50/50 dark:bg-rose-950/20 shadow-xs'
+                                                                : current.estado === 'bueno'
+                                                                ? 'border-emerald-300 bg-emerald-50/30 dark:bg-emerald-950/10'
+                                                                : 'border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/60'
+                                                        }`}
+                                                    >
+                                                        <div className="flex items-center justify-between">
+                                                            <span className="text-xs font-black text-slate-900 dark:text-slate-100">{item}</span>
+
+                                                            <div className="flex items-center gap-1 p-0.5 rounded-xl bg-slate-200/70 dark:bg-slate-800 border border-slate-300/60 dark:border-slate-700">
+                                                                <button
+                                                                    type="button"
+                                                                    onClick={() =>
+                                                                        setInspeccionFisica((prev) => ({
+                                                                            ...prev,
+                                                                            [item]: { ...prev[item], estado: 'bueno' },
+                                                                        }))
+                                                                    }
+                                                                    className={`px-2.5 py-1 rounded-lg text-[11px] font-extrabold transition-all ${
+                                                                        current.estado === 'bueno'
+                                                                            ? 'bg-emerald-600 text-white shadow-xs scale-105'
+                                                                            : 'text-slate-600 dark:text-slate-400 hover:text-slate-900'
+                                                                    }`}
+                                                                >
+                                                                    {__('Bueno')}
+                                                                </button>
+                                                                <button
+                                                                    type="button"
+                                                                    onClick={() =>
+                                                                        setInspeccionFisica((prev) => ({
+                                                                            ...prev,
+                                                                            [item]: { ...prev[item], estado: 'malo' },
+                                                                        }))
+                                                                    }
+                                                                    className={`px-2.5 py-1 rounded-lg text-[11px] font-extrabold transition-all ${
+                                                                        current.estado === 'malo'
+                                                                            ? 'bg-rose-600 text-white shadow-xs scale-105'
+                                                                            : 'text-slate-600 dark:text-slate-400 hover:text-slate-900'
+                                                                    }`}
+                                                                >
+                                                                    {__('Malo')}
+                                                                </button>
+                                                                <button
+                                                                    type="button"
+                                                                    onClick={() =>
+                                                                        setInspeccionFisica((prev) => ({
+                                                                            ...prev,
+                                                                            [item]: { ...prev[item], estado: 'na' },
+                                                                        }))
+                                                                    }
+                                                                    className={`px-2.5 py-1 rounded-lg text-[11px] font-extrabold transition-all ${
+                                                                        current.estado === 'na'
+                                                                            ? 'bg-slate-600 text-white shadow-xs'
+                                                                            : 'text-slate-600 dark:text-slate-400 hover:text-slate-900'
+                                                                    }`}
+                                                                >
+                                                                    {__('N/A')}
+                                                                </button>
+                                                            </div>
+                                                        </div>
+
+                                                        {current.estado === 'malo' && (
+                                                            <Input
+                                                                value={current.obs}
+                                                                onChange={(e) => {
+                                                                    const val = e.target.value;
+                                                                    setInspeccionFisica((prev) => ({
+                                                                        ...prev,
+                                                                        [item]: { ...prev[item], obs: val },
+                                                                    }));
+                                                                }}
+                                                                placeholder={__('Detalle del daño (ej: fisura en esquina superior)...')}
+                                                                className="text-xs h-8 border-rose-300 dark:border-rose-800 bg-white dark:bg-slate-900 text-rose-900 dark:text-rose-200"
+                                                            />
+                                                        )}
+                                                    </div>
+                                                );
+                                            })}
+                                        </div>
+                                    </div>
+                                )}
+
+                                {/* PESTAÑA 2: ESTADO FUNCIONAL */}
+                                {modalTab === 'estado' && (
+                                    <div className="space-y-5">
+                                        <div className="border-b border-slate-100 dark:border-slate-800 pb-3">
+                                            <h3 className="text-base font-black text-slate-900 dark:text-slate-100 flex items-center gap-2">
+                                                <span className="w-6 h-6 rounded-full bg-indigo-600 text-white flex items-center justify-center text-xs font-black shadow-xs">2</span>
+                                                {__('Estado Funcional Inicial del Equipo')}
+                                            </h3>
+                                            <p className="text-xs text-slate-500">
+                                                {__('Verifique las funciones electrónicas básicas al recibir el equipo.')}
+                                            </p>
+                                        </div>
+
+                                        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
+                                            {REVISIONES_ESTADO_LIST.map((rev) => {
+                                                const isChecked = estadoEquipo[rev.key] ?? false;
+                                                return (
+                                                    <div
+                                                        key={rev.key}
+                                                        className={`flex items-center justify-between p-4 rounded-2xl border transition-all ${
+                                                            isChecked
+                                                                ? 'border-emerald-300 bg-emerald-50/50 dark:bg-emerald-950/20 shadow-xs'
+                                                                : 'border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900'
+                                                        }`}
+                                                    >
+                                                        <span className="text-sm font-bold text-slate-800 dark:text-slate-200">{rev.label}</span>
+                                                        <div className="flex items-center gap-1.5 p-1 rounded-xl bg-slate-200/70 dark:bg-slate-800 border border-slate-300/60 dark:border-slate-700">
+                                                            <button
+                                                                type="button"
+                                                                onClick={() => setEstadoEquipo((prev) => ({ ...prev, [rev.key]: true }))}
+                                                                className={`px-3.5 py-1.5 rounded-lg text-xs font-extrabold transition-all ${
+                                                                    isChecked
+                                                                        ? 'bg-emerald-600 text-white shadow-xs scale-105'
+                                                                        : 'text-slate-600 dark:text-slate-400 hover:text-slate-900'
+                                                                }`}
+                                                            >
+                                                                {__('Sí')}
+                                                            </button>
+                                                            <button
+                                                                type="button"
+                                                                onClick={() => setEstadoEquipo((prev) => ({ ...prev, [rev.key]: false }))}
+                                                                className={`px-3.5 py-1.5 rounded-lg text-xs font-extrabold transition-all ${
+                                                                    !isChecked
+                                                                        ? 'bg-rose-600 text-white shadow-xs scale-105'
+                                                                        : 'text-slate-600 dark:text-slate-400 hover:text-slate-900'
+                                                                }`}
+                                                            >
+                                                                {__('No')}
+                                                            </button>
+                                                        </div>
+                                                    </div>
+                                                );
+                                            })}
+                                        </div>
+                                    </div>
+                                )}
+
+                                {/* PESTAÑA 3: OBSERVACIONES & CONTRASEÑA / PATRÓN */}
+                                {modalTab === 'observaciones' && (
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                        <div className="space-y-3">
+                                            <div className="border-b border-slate-100 dark:border-slate-800 pb-2">
+                                                <h3 className="text-sm font-black text-slate-900 dark:text-slate-100 flex items-center gap-2">
+                                                    <FileText className="w-4 h-4 text-indigo-500" />
+                                                    {__('Observaciones Físicas Adicionales')}
+                                                </h3>
+                                            </div>
+
+                                            <Textarea
+                                                value={observacionesFisicasInput}
+                                                onChange={(e) => setObservacionesFisicasInput(e.target.value)}
+                                                rows={5}
+                                                placeholder={__('Anotar rayones, raspones, golpes, humedad y demás detalles físicos...')}
+                                                className="text-xs border-slate-200 dark:border-slate-800 rounded-xl p-3"
+                                            />
+                                        </div>
+
+                                        <div className="space-y-4">
+                                            <div className="border-b border-slate-100 dark:border-slate-800 pb-2">
+                                                <h3 className="text-sm font-black text-slate-900 dark:text-slate-100 flex items-center gap-2">
+                                                    <Lock className="w-4 h-4 text-indigo-500" />
+                                                    {__('Tipo de Bloqueo & Claves de Acceso')}
+                                                </h3>
+                                            </div>
+
+                                            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                                                {[
+                                                    { id: 'sin_bloqueo', label: __('Sin Bloqueo'), icon: '🔓' },
+                                                    { id: 'pin', label: __('Código PIN'), icon: '🔢' },
+                                                    { id: 'contrasena', label: __('Contraseña'), icon: '🔠' },
+                                                    { id: 'patron', label: __('Patrón (3x3)'), icon: '🌀' },
+                                                ].map((t) => (
+                                                    <button
+                                                        key={t.id}
+                                                        type="button"
+                                                        onClick={() => setTipoBloqueo(t.id as any)}
+                                                        className={`p-3 rounded-xl border text-xs font-bold transition-all flex flex-col items-center gap-1 cursor-pointer ${
+                                                            tipoBloqueo === t.id
+                                                                ? 'border-indigo-600 bg-indigo-50 dark:bg-indigo-950/60 text-indigo-700 dark:text-indigo-300 shadow-xs ring-2 ring-indigo-500/20 font-black'
+                                                                : 'border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 text-slate-600 dark:text-slate-400 hover:bg-slate-50'
+                                                        }`}
+                                                    >
+                                                        <span className="text-lg">{t.icon}</span>
+                                                        <span>{t.label}</span>
+                                                    </button>
+                                                ))}
+                                            </div>
+
+                                            <div className="p-5 border border-slate-200 dark:border-slate-800 rounded-2xl bg-slate-50/60 dark:bg-slate-950/40 space-y-4">
+                                                {tipoBloqueo === 'sin_bloqueo' && (
+                                                    <div className="text-center py-4 text-xs font-medium text-slate-500">
+                                                        ✅ {__('El equipo no posee ningún bloqueo de pantalla.')}
+                                                    </div>
+                                                )}
+
+                                                {tipoBloqueo === 'pin' && (
+                                                    <div className="space-y-2">
+                                                        <Label className="text-xs font-bold text-slate-700 dark:text-slate-300">{__('Ingrese el código PIN numérico:')}</Label>
+                                                        <Input
+                                                            value={codigoPin}
+                                                            onChange={(e) => setCodigoPin(e.target.value)}
+                                                            placeholder={__('ej: 1234 o 0000')}
+                                                            className="text-center text-lg h-12 font-mono font-bold tracking-widest bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 rounded-xl"
+                                                        />
+                                                    </div>
+                                                )}
+
+                                                {tipoBloqueo === 'contrasena' && (
+                                                    <div className="space-y-2">
+                                                        <Label className="text-xs font-bold text-slate-700 dark:text-slate-300">{__('Ingrese la clave / contraseña alfanumérica:')}</Label>
+                                                        <Input
+                                                            value={claveTexto}
+                                                            onChange={(e) => setClaveTexto(e.target.value)}
+                                                            placeholder={__('ej: MiClaveSegura2026')}
+                                                            className="text-sm h-12 font-mono font-bold bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 rounded-xl"
+                                                        />
+                                                    </div>
+                                                )}
+
+                                                {tipoBloqueo === 'patron' && (
+                                                    <PatternLockCanvas
+                                                        pattern={patternDots}
+                                                        onChange={(newPattern) => setPatternDots(newPattern)}
+                                                    />
+                                                )}
+                                            </div>
+                                        </div>
+                                    </div>
+                                )}
+                            </div>
+
+                            <div className="flex items-center justify-between border-t border-slate-100 dark:border-slate-800 p-4 bg-slate-50/60 dark:bg-slate-950/40 shrink-0">
+                                <Button
+                                    type="button"
+                                    variant="outline"
+                                    onClick={() => setIsPreservicioModalOpen(false)}
+                                    disabled={isSubmittingPreservicio}
+                                    className="text-xs font-bold px-4"
+                                >
+                                    {__('Cancelar')}
+                                </Button>
+
+                                <Button
+                                    type="submit"
+                                    disabled={isSubmittingPreservicio}
+                                    className="text-xs font-extrabold bg-indigo-600 hover:bg-indigo-700 text-white px-5 h-10 gap-2 shadow-lg shadow-indigo-200 dark:shadow-none rounded-xl"
+                                >
+                                    <ShieldCheck className="w-4 h-4" />
+                                    {isSubmittingPreservicio ? __('Guardando...') : __('Guardar e Iniciar Preservicio')}
+                                </Button>
+                            </div>
+                        </form>
+                    </DialogContent>
+                </Dialog>
+
+                {/* MODAL PROCESO DE POST-ATENCIÓN & VALIDACIÓN FINAL */}
+                <Dialog open={isPostServicioModalOpen} onOpenChange={setIsPostServicioModalOpen}>
+                    <DialogContent className="w-[96vw] sm:max-w-[96vw] md:max-w-[92vw] h-[92vh] max-h-[92vh] p-0 flex flex-col overflow-hidden bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800">
+                        <DialogHeader className="p-4 sm:p-5 bg-gradient-to-r from-emerald-950 via-teal-950 to-slate-900 text-white shrink-0 border-b border-emerald-900/50">
+                            <div className="flex items-center justify-between">
+                                <div className="flex items-center gap-3">
+                                    <div className="p-2.5 rounded-xl bg-emerald-500/20 border border-emerald-400/30 text-emerald-300">
+                                        <CheckCircle2 className="w-6 h-6" />
+                                    </div>
+                                    <div>
+                                        <DialogTitle className="text-lg font-black text-white flex items-center gap-2">
+                                            {__('Post-Atención, Validación Final & Control de Calidad')}
+                                        </DialogTitle>
+                                        <p className="text-xs text-emerald-200/80">
+                                            {orden.numero_orden} • {orden.marca_nombre} {orden.modelo_nombre} ({orden.cliente_nombre})
+                                        </p>
+                                    </div>
+                                </div>
+
+                                <div className="flex items-center gap-2">
+                                    <div className="flex items-center bg-slate-800/80 p-1 rounded-xl border border-slate-700">
+                                        {[
+                                            { id: 'validacion', label: __('1. Validación Final (24)'), icon: '⚡' },
+                                            { id: 'limpieza_qc', label: __('2. Limpieza & QC'), icon: '✨' },
+                                            { id: 'fotos_obs', label: __('3. Fotos & Notas'), icon: '📸' },
+                                        ].map((tab) => (
+                                            <button
+                                                key={tab.id}
+                                                type="button"
+                                                onClick={() => setPostModalTab(tab.id as any)}
+                                                className={`px-3.5 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer ${
+                                                    postModalTab === tab.id
+                                                        ? 'bg-emerald-600 text-white shadow-xs'
+                                                        : 'text-slate-300 hover:text-white hover:bg-slate-700/50'
+                                                }`}
+                                            >
+                                                <span>{tab.icon}</span>
+                                                <span>{tab.label}</span>
+                                            </button>
+                                        ))}
+                                    </div>
+                                    <Button
+                                        type="button"
+                                        variant="ghost"
+                                        size="sm"
+                                        onClick={() => setIsPostServicioModalOpen(false)}
+                                        className="h-8 w-8 p-0 text-slate-400 hover:text-white"
+                                    >
+                                        <X className="w-5 h-5" />
+                                    </Button>
+                                </div>
+                            </div>
+                        </DialogHeader>
+
+                        <form onSubmit={handleSavePostServicio} className="flex flex-col flex-1 overflow-hidden">
+                            <div className="flex-1 overflow-y-auto p-6 space-y-6">
+                                {/* PESTAÑA 1: VALIDACIÓN FINAL DE 24 FUNCIONES */}
+                                {postModalTab === 'validacion' && (
+                                    <div className="space-y-4">
+                                        <div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-3">
+                                            <div>
+                                                <h3 className="text-base font-black text-slate-900 dark:text-slate-100 flex items-center gap-2">
+                                                    <span className="w-6 h-6 rounded-full bg-emerald-600 text-white flex items-center justify-center text-xs font-black shadow-xs">1</span>
+                                                    {__('Validación Final de Funciones (24 Puntos de Control)')}
+                                                </h3>
+                                                <p className="text-xs text-slate-500">
+                                                    {__('Verifique las 24 funciones al finalizar la reparación e indique si están correctas o presentan falla.')}
+                                                </p>
+                                            </div>
+
+                                            <Button
+                                                type="button"
+                                                variant="outline"
+                                                size="sm"
+                                                onClick={() => {
+                                                    setValidacionFinalState((prev) => {
+                                                        const copy = { ...prev };
+                                                        FUNCIONES_VALIDACION_FINAL.forEach((fn) => {
+                                                            copy[fn] = { ...copy[fn], estado: 'correcto' };
+                                                        });
+                                                        return copy;
+                                                    });
+                                                }}
+                                                className="text-xs font-bold bg-emerald-50 text-emerald-700 border-emerald-200 hover:bg-emerald-100 dark:bg-emerald-950 dark:text-emerald-300 dark:border-emerald-800 gap-1 rounded-xl"
+                                            >
+                                                ✨ {__('Marcar Todos Correctos')}
+                                            </Button>
+                                        </div>
+
+                                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+                                            {FUNCIONES_VALIDACION_FINAL.map((fn) => {
+                                                const current = validacionFinalState[fn] || { estado: 'correcto', obs: '' };
+                                                const isOk = current.estado === 'correcto';
+                                                return (
+                                                    <div
+                                                        key={fn}
+                                                        className={`p-3 rounded-2xl border transition-all space-y-2 ${
+                                                            !isOk
+                                                                ? 'border-rose-300 bg-rose-50/50 dark:bg-rose-950/20 shadow-xs'
+                                                                : 'border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/60'
+                                                        }`}
+                                                    >
+                                                        <div className="flex items-center justify-between">
+                                                            <span className="text-xs font-bold text-slate-900 dark:text-slate-100">{fn}</span>
+
+                                                            <div className="flex items-center gap-1 p-0.5 rounded-xl bg-slate-200/70 dark:bg-slate-800 border border-slate-300/60 dark:border-slate-700">
+                                                                <button
+                                                                    type="button"
+                                                                    onClick={() =>
+                                                                        setValidacionFinalState((prev) => ({
+                                                                            ...prev,
+                                                                            [fn]: { ...prev[fn], estado: 'correcto' },
+                                                                        }))
+                                                                    }
+                                                                    className={`px-2.5 py-1 rounded-lg text-[11px] font-extrabold transition-all ${
+                                                                        isOk
+                                                                            ? 'bg-emerald-600 text-white shadow-xs scale-105'
+                                                                            : 'text-slate-600 dark:text-slate-400 hover:text-slate-900'
+                                                                    }`}
+                                                                >
+                                                                    {__('Correcto')}
+                                                                </button>
+                                                                <button
+                                                                    type="button"
+                                                                    onClick={() =>
+                                                                        setValidacionFinalState((prev) => ({
+                                                                            ...prev,
+                                                                            [fn]: { ...prev[fn], estado: 'incorrecto' },
+                                                                        }))
+                                                                    }
+                                                                    className={`px-2.5 py-1 rounded-lg text-[11px] font-extrabold transition-all ${
+                                                                        !isOk
+                                                                            ? 'bg-rose-600 text-white shadow-xs scale-105'
+                                                                            : 'text-slate-600 dark:text-slate-400 hover:text-slate-900'
+                                                                    }`}
+                                                                >
+                                                                    {__('Incorrecto')}
+                                                                </button>
+                                                            </div>
+                                                        </div>
+
+                                                        {!isOk && (
+                                                            <Input
+                                                                value={current.obs}
+                                                                onChange={(e) => {
+                                                                    const val = e.target.value;
+                                                                    setValidacionFinalState((prev) => ({
+                                                                        ...prev,
+                                                                        [fn]: { ...prev[fn], obs: val },
+                                                                    }));
+                                                                }}
+                                                                placeholder={__('Detalle la falla o anomalía...')}
+                                                                className="text-xs h-8 border-rose-300 dark:border-rose-800 bg-white dark:bg-slate-900 text-rose-900 dark:text-rose-200"
+                                                            />
+                                                        )}
+                                                    </div>
+                                                );
+                                            })}
+                                        </div>
+                                    </div>
+                                )}
+
+                                {/* PESTAÑA 2: LIMPIEZA FINAL Y CONTROL DE CALIDAD */}
+                                {postModalTab === 'limpieza_qc' && (
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                        {/* LIMPIEZA FINAL */}
+                                        <div className="space-y-4">
+                                            <div className="border-b border-slate-100 dark:border-slate-800 pb-2">
+                                                <h3 className="text-sm font-black text-slate-900 dark:text-slate-100 flex items-center gap-2">
+                                                    <Sparkles className="w-4 h-4 text-emerald-500" />
+                                                    {__('Limpieza Final (5 Puntos)')}
+                                                </h3>
+                                            </div>
+
+                                            <div className="space-y-3">
+                                                {LIMPIEZA_FINAL_LIST.map((item) => {
+                                                    const isChecked = limpiezaFinalState[item] ?? true;
+                                                    return (
+                                                        <div
+                                                            key={item}
+                                                            className={`flex items-center justify-between p-3.5 rounded-2xl border transition-all ${
+                                                                isChecked
+                                                                    ? 'border-emerald-300 bg-emerald-50/40 dark:bg-emerald-950/20'
+                                                                    : 'border-slate-200 dark:border-slate-800 bg-slate-50'
+                                                            }`}
+                                                        >
+                                                            <span className="text-xs font-bold text-slate-800 dark:text-slate-200">{item}</span>
+                                                            <div className="flex items-center gap-1 p-0.5 rounded-xl bg-slate-200/70 dark:bg-slate-800 border border-slate-300/60 dark:border-slate-700">
+                                                                <button
+                                                                    type="button"
+                                                                    onClick={() => setLimpiezaFinalState((prev) => ({ ...prev, [item]: true }))}
+                                                                    className={`px-3 py-1 rounded-lg text-xs font-extrabold transition-all ${
+                                                                        isChecked
+                                                                            ? 'bg-emerald-600 text-white shadow-xs'
+                                                                            : 'text-slate-600 dark:text-slate-400'
+                                                                    }`}
+                                                                >
+                                                                    {__('Sí')}
+                                                                </button>
+                                                                <button
+                                                                    type="button"
+                                                                    onClick={() => setLimpiezaFinalState((prev) => ({ ...prev, [item]: false }))}
+                                                                    className={`px-3 py-1 rounded-lg text-xs font-extrabold transition-all ${
+                                                                        !isChecked
+                                                                            ? 'bg-rose-600 text-white shadow-xs'
+                                                                            : 'text-slate-600 dark:text-slate-400'
+                                                                    }`}
+                                                                >
+                                                                    {__('No')}
+                                                                </button>
+                                                            </div>
+                                                        </div>
+                                                    );
+                                                })}
+                                            </div>
+                                        </div>
+
+                                        {/* CONTROL DE CALIDAD (6 PUNTOS) */}
+                                        <div className="space-y-4">
+                                            <div className="border-b border-slate-100 dark:border-slate-800 pb-2">
+                                                <h3 className="text-sm font-black text-slate-900 dark:text-slate-100 flex items-center gap-2">
+                                                    <ShieldCheck className="w-4 h-4 text-emerald-500" />
+                                                    {__('Control de Calidad (6 Verificaciones)')}
+                                                </h3>
+                                            </div>
+
+                                            <div className="space-y-2.5">
+                                                {CONTROL_CALIDAD_LIST.map((qc) => {
+                                                    const isChecked = controlCalidadState[qc.key] ?? false;
+                                                    return (
+                                                        <label
+                                                            key={qc.key}
+                                                            onClick={() => setControlCalidadState((prev) => ({ ...prev, [qc.key]: !isChecked }))}
+                                                            className={`flex items-center justify-between p-3.5 rounded-2xl border cursor-pointer transition-all ${
+                                                                isChecked
+                                                                    ? 'border-emerald-300 bg-emerald-50/50 dark:bg-emerald-950/20 shadow-xs'
+                                                                    : 'border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900'
+                                                            }`}
+                                                        >
+                                                            <span className="text-xs font-bold text-slate-800 dark:text-slate-200">{qc.label}</span>
+                                                            <div className={`w-6 h-6 rounded-lg flex items-center justify-center font-bold text-xs ${isChecked ? 'bg-emerald-600 text-white' : 'bg-slate-200 text-transparent'}`}>
+                                                                ✓
+                                                            </div>
+                                                        </label>
+                                                    );
+                                                })}
+                                            </div>
+                                        </div>
+                                    </div>
+                                )}
+
+                                {/* PESTAÑA 3: FOTOS POST-REPARACIÓN & OBSERVACIONES FINALES */}
+                                {postModalTab === 'fotos_obs' && (
+                                    <div className="space-y-6">
+                                        <div className="space-y-3">
+                                            <div className="border-b border-slate-100 dark:border-slate-800 pb-2">
+                                                <h3 className="text-sm font-black text-slate-900 dark:text-slate-100 flex items-center gap-2">
+                                                    <Camera className="w-4 h-4 text-emerald-500" />
+                                                    {__('Evidencias Fotográficas Post-Reparación (5 Ángulos)')}
+                                                </h3>
+                                                <p className="text-xs text-slate-500">
+                                                    {__('Cargue la foto del teléfono reparado y los 4 ángulos de inspección final (Frontal, Trasero, Lat. Izquierdo, Lat. Derecho).')}
+                                                </p>
+                                            </div>
+
+                                            {/* Tarjeta principal: Foto del Teléfono Reparado (Resultado) */}
+                                            {(() => {
+                                                const mainSlot = FOTOS_POST_REPARACION_ANGULOS[0];
+                                                const mainImgUrl = fotosPostState[mainSlot.key];
+                                                return (
+                                                    <div className="p-4 rounded-2xl border-2 border-dashed border-emerald-300 dark:border-emerald-800 bg-emerald-50/30 dark:bg-emerald-950/20 space-y-3">
+                                                        <div className="flex items-center justify-between">
+                                                            <div className="flex items-center gap-2">
+                                                                <span className="text-xl">{mainSlot.icon}</span>
+                                                                <div>
+                                                                    <h4 className="text-xs font-black text-slate-900 dark:text-slate-100">{mainSlot.label}</h4>
+                                                                    <p className="text-[11px] text-slate-500">{mainSlot.desc}</p>
+                                                                </div>
+                                                            </div>
+                                                        </div>
+
+                                                        {mainImgUrl ? (
+                                                            <div className="relative rounded-xl overflow-hidden border border-emerald-200 dark:border-emerald-800 bg-black max-h-60 flex items-center justify-center group shadow-md">
+                                                                <img src={mainImgUrl} alt={mainSlot.label} className="max-h-60 w-auto object-contain" />
+                                                                <div className="absolute bottom-2 right-2 flex items-center gap-2 bg-black/60 p-1 rounded-xl backdrop-blur-sm">
+                                                                    <Button
+                                                                        type="button"
+                                                                        size="sm"
+                                                                        onClick={() => startPostCameraStream(mainSlot.key, mainSlot.label)}
+                                                                        className="h-7 px-2.5 text-[10px] font-bold bg-emerald-600 hover:bg-emerald-700 text-white gap-1"
+                                                                    >
+                                                                        <Camera className="w-3 h-3" />
+                                                                        {__('Recapturar')}
+                                                                    </Button>
+                                                                    <Button
+                                                                        type="button"
+                                                                        size="sm"
+                                                                        variant="destructive"
+                                                                        onClick={() => handleRemoveFotoPost(mainSlot.key)}
+                                                                        className="h-7 w-7 p-0"
+                                                                        title={__('Eliminar foto')}
+                                                                    >
+                                                                        <Trash2 className="w-3.5 h-3.5" />
+                                                                    </Button>
+                                                                </div>
+                                                            </div>
+                                                        ) : (
+                                                            <div className="w-full h-36 rounded-xl border-2 border-dashed border-emerald-200 dark:border-emerald-900/60 bg-white dark:bg-slate-950 flex flex-col items-center justify-center p-3 gap-2">
+                                                                <Button
+                                                                    type="button"
+                                                                    size="sm"
+                                                                    onClick={() => startPostCameraStream(mainSlot.key, mainSlot.label)}
+                                                                    className="h-9 px-6 text-xs font-extrabold bg-emerald-600 hover:bg-emerald-700 text-white gap-2 shadow-sm rounded-xl"
+                                                                >
+                                                                    <Camera className="w-4 h-4" />
+                                                                    {__('Tomar con Cámara')}
+                                                                </Button>
+
+                                                                <label className="text-center cursor-pointer">
+                                                                    <span className="text-[11px] font-bold text-slate-500 hover:text-emerald-600 dark:hover:text-emerald-400 flex items-center justify-center gap-1.5">
+                                                                        <Upload className="w-3.5 h-3.5" />
+                                                                        {__('Subir Archivo de Imagen')}
+                                                                    </span>
+                                                                    <input
+                                                                        type="file"
+                                                                        accept="image/*"
+                                                                        className="hidden"
+                                                                        onChange={(e) => handleSingleFotoPostUpload(mainSlot.key, e)}
+                                                                    />
+                                                                </label>
+                                                            </div>
+                                                        )}
+                                                    </div>
+                                                );
+                                            })()}
+
+                                            {/* Grilla con los 4 Ángulos Restantes (Frontal, Trasero, Lat. Izq, Lat. Der) */}
+                                            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+                                                {FOTOS_POST_REPARACION_ANGULOS.slice(1).map((slot) => {
+                                                    const imgUrl = fotosPostState[slot.key];
+                                                    return (
+                                                        <div key={slot.key} className="p-3 rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-950 space-y-2 shadow-xs">
+                                                            <div className="flex items-center justify-between">
+                                                                <div className="flex items-center gap-1.5 truncate">
+                                                                    <span>{slot.icon}</span>
+                                                                    <span className="text-xs font-bold text-slate-800 dark:text-slate-200 truncate">{slot.label}</span>
+                                                                </div>
+                                                            </div>
+
+                                                            {imgUrl ? (
+                                                                <div className="relative rounded-xl overflow-hidden border border-slate-200 dark:border-slate-800 bg-black aspect-video group shadow-xs">
+                                                                    <img src={imgUrl} alt={slot.label} className="w-full h-full object-cover" />
+                                                                    <div className="absolute bottom-1.5 right-1.5 flex items-center gap-1 bg-black/60 p-1 rounded-lg backdrop-blur-sm opacity-0 group-hover:opacity-100 transition-all">
+                                                                        <Button
+                                                                            type="button"
+                                                                            size="sm"
+                                                                            onClick={() => startPostCameraStream(slot.key, slot.label)}
+                                                                            className="h-6 px-2 text-[9px] font-bold bg-emerald-600 hover:bg-emerald-700 text-white gap-1"
+                                                                        >
+                                                                            <Camera className="w-2.5 h-2.5" />
+                                                                            {__('Recapturar')}
+                                                                        </Button>
+                                                                        <Button
+                                                                            type="button"
+                                                                            size="sm"
+                                                                            variant="destructive"
+                                                                            onClick={() => handleRemoveFotoPost(slot.key)}
+                                                                            className="h-6 w-6 p-0"
+                                                                            title={__('Eliminar foto')}
+                                                                        >
+                                                                            <Trash2 className="w-3 h-3" />
+                                                                        </Button>
+                                                                    </div>
+                                                                </div>
+                                                            ) : (
+                                                                <div className="w-full h-28 rounded-xl border-2 border-dashed border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-950 flex flex-col items-center justify-center p-2 gap-1.5">
+                                                                    <Button
+                                                                        type="button"
+                                                                        size="sm"
+                                                                        onClick={() => startPostCameraStream(slot.key, slot.label)}
+                                                                        className="w-full h-8 text-[11px] font-extrabold bg-emerald-600 hover:bg-emerald-700 text-white gap-1.5 shadow-sm rounded-lg"
+                                                                    >
+                                                                        <Camera className="w-3.5 h-3.5" />
+                                                                        {__('Tomar con Cámara')}
+                                                                    </Button>
+
+                                                                    <label className="w-full text-center cursor-pointer">
+                                                                        <span className="text-[10px] font-semibold text-slate-500 hover:text-emerald-600 dark:hover:text-emerald-400 flex items-center justify-center gap-1">
+                                                                            <Upload className="w-3 h-3" />
+                                                                            {__('Subir Archivo')}
+                                                                        </span>
+                                                                        <input
+                                                                            type="file"
+                                                                            accept="image/*"
+                                                                            className="hidden"
+                                                                            onChange={(e) => handleSingleFotoPostUpload(slot.key, e)}
+                                                                        />
+                                                                    </label>
+                                                                </div>
+                                                            )}
+                                                        </div>
+                                                    );
+                                                })}
+                                            </div>
+                                        </div>
+
+                                        <div className="space-y-3">
+                                            <div className="border-b border-slate-100 dark:border-slate-800 pb-2">
+                                                <h3 className="text-sm font-black text-slate-900 dark:text-slate-100 flex items-center gap-2">
+                                                    <FileText className="w-4 h-4 text-emerald-500" />
+                                                    {__('Observaciones Finales de Entrega')}
+                                                </h3>
+                                            </div>
+
+                                            <Textarea
+                                                value={observacionesFinalesInput}
+                                                onChange={(e) => setObservacionesFinalesInput(e.target.value)}
+                                                rows={3}
+                                                placeholder={__('Anotar detalles adicionales sobre el equipo reparado, recomendaciones para el cliente o detalles de garantía...')}
+                                                className="text-xs border-slate-200 dark:border-slate-800 rounded-xl p-3"
+                                            />
+                                        </div>
+                                    </div>
+                                )}
+                            </div>
+
+                            <div className="flex items-center justify-between border-t border-slate-100 dark:border-slate-800 p-4 bg-slate-50/60 dark:bg-slate-950/40 shrink-0">
+                                <Button
+                                    type="button"
+                                    variant="outline"
+                                    onClick={() => setIsPostServicioModalOpen(false)}
+                                    disabled={isSubmittingPostServicio}
+                                    className="text-xs font-bold px-4"
+                                >
+                                    {__('Cancelar')}
+                                </Button>
+
+                                <Button
+                                    type="submit"
+                                    disabled={isSubmittingPostServicio}
+                                    className="text-xs font-extrabold bg-emerald-600 hover:bg-emerald-700 text-white px-5 h-10 gap-2 shadow-lg shadow-emerald-200 dark:shadow-none rounded-xl"
+                                >
+                                    <CheckCircle2 className="w-4 h-4" />
+                                    {isSubmittingPostServicio ? __('Guardando...') : __('Guardar Validación Final & Post-Atención')}
+                                </Button>
+                            </div>
+                        </form>
+                    </DialogContent>
+                </Dialog>
+
+                {/* CÁMARA EN VIVO WEBCAM POST-REPARACIÓN (OVERLAY CUSTOM SIN DISMISS DE MODAL PADRE) */}
+                {activePostCameraSlot && (
+                    <div className="fixed inset-0 z-[100] bg-black/85 backdrop-blur-md flex items-center justify-center p-4 animate-in fade-in duration-200">
+                        <div className="w-full max-w-xl bg-slate-950 text-white rounded-2xl border border-slate-800 shadow-2xl overflow-hidden flex flex-col">
+                            <div className="p-4 bg-slate-900 border-b border-slate-800 flex items-center justify-between">
+                                <div className="flex items-center gap-2 text-sm font-bold text-white">
+                                    <Camera className="w-5 h-5 text-emerald-400" />
+                                    <span>{__('Capturar Evidencia Post-Reparación:')}</span>
+                                    <span className="text-emerald-300 font-mono">{postCameraSlotLabel}</span>
+                                </div>
+                                <Button type="button" variant="ghost" size="sm" onClick={stopPostCameraStream} className="h-8 w-8 p-0 text-slate-400 hover:text-white hover:bg-slate-800">
+                                    <X className="w-4 h-4" />
+                                </Button>
+                            </div>
+
+                            <div className="p-4 space-y-4">
+                                {postCameraError ? (
+                                    <div className="p-6 text-center space-y-3 bg-rose-950/40 border border-rose-800 rounded-xl">
+                                        <AlertCircle className="w-10 h-10 mx-auto text-rose-500" />
+                                        <p className="text-xs text-rose-200 font-medium">{postCameraError}</p>
+                                        <Button type="button" variant="outline" size="sm" onClick={stopPostCameraStream} className="text-xs text-white border-slate-700">
+                                            {__('Cerrar y usar subida de archivo')}
+                                        </Button>
+                                    </div>
+                                ) : (
+                                    <div className="relative w-full aspect-video bg-black rounded-xl overflow-hidden border border-slate-800 flex items-center justify-center shadow-2xl">
+                                        <canvas ref={postCanvasRef} className="hidden" />
+
+                                        {isPostCameraLoading && (
+                                            <div className="absolute inset-0 flex flex-col items-center justify-center bg-slate-950/90 gap-2 text-xs text-slate-300">
+                                                <RefreshCw className="w-8 h-8 animate-spin text-emerald-500" />
+                                                <span>{__('Iniciando cámara...')}</span>
+                                            </div>
+                                        )}
+
+                                        {postCapturedImage ? (
+                                            <div className="relative w-full h-full">
+                                                <img src={postCapturedImage} alt="Captura" className="w-full h-full object-contain" />
+                                                <div className="absolute top-3 left-3 bg-emerald-600/90 text-white text-[10px] font-bold px-2.5 py-1 rounded-md backdrop-blur-md">
+                                                    ✓ {__('Captura lista')}
+                                                </div>
+                                            </div>
+                                        ) : (
+                                            <video
+                                                id="post-camera-video"
+                                                ref={postVideoRef}
+                                                autoPlay
+                                                playsInline
+                                                muted
+                                                onLoadedMetadata={(e) => (e.target as HTMLVideoElement).play().catch(() => {})}
+                                                className="w-full h-full object-cover"
+                                            />
+                                        )}
+
+                                        {!postCapturedImage && !isPostCameraLoading && (
+                                            <div className="absolute inset-0 pointer-events-none border-2 border-emerald-500/30 m-4 rounded-lg flex items-center justify-center">
+                                                <div className="w-10 h-10 border-t-2 border-l-2 border-emerald-400 absolute top-0 left-0" />
+                                                <div className="w-10 h-10 border-t-2 border-r-2 border-emerald-400 absolute top-0 right-0" />
+                                                <div className="w-10 h-10 border-b-2 border-l-2 border-emerald-400 absolute bottom-0 left-0" />
+                                                <div className="w-10 h-10 border-b-2 border-r-2 border-emerald-400 absolute bottom-0 right-0" />
+                                            </div>
+                                        )}
+                                    </div>
+                                )}
+
+                                {!postCameraError && (
+                                    <div className="flex items-center justify-between pt-2">
+                                        <Button
+                                            type="button"
+                                            variant="outline"
+                                            size="sm"
+                                            onClick={togglePostFacingMode}
+                                            className="text-xs bg-slate-900 border-slate-700 text-slate-300 hover:text-white hover:bg-slate-800 gap-1.5"
+                                        >
+                                            <RefreshCw className="w-3.5 h-3.5" />
+                                            {__('Voltear Cámara')}
+                                        </Button>
+
+                                        {postCapturedImage ? (
+                                            <div className="flex items-center gap-2">
+                                                <Button
+                                                    type="button"
+                                                    variant="outline"
+                                                    size="sm"
+                                                    onClick={handleRetakePostSnapshot}
+                                                    className="text-xs bg-slate-900 border-slate-700 text-slate-300 hover:text-white"
+                                                >
+                                                    {__('Repetir Foto')}
+                                                </Button>
+                                                <Button
+                                                    type="button"
+                                                    size="sm"
+                                                    onClick={handleAcceptPostCapturedPhoto}
+                                                    className="text-xs font-bold bg-emerald-600 hover:bg-emerald-700 text-white gap-1.5 px-4"
+                                                >
+                                                    <Check className="w-4 h-4" />
+                                                    {__('Usar Esta Foto')}
+                                                </Button>
+                                            </div>
+                                        ) : (
+                                            <Button
+                                                type="button"
+                                                size="sm"
+                                                onClick={handleCapturePostSnapshot}
+                                                disabled={isPostCameraLoading}
+                                                className="h-10 px-6 font-extrabold bg-emerald-600 hover:bg-emerald-700 text-white shadow-lg rounded-full gap-2 text-xs"
+                                            >
+                                                <Camera className="w-4 h-4" />
+                                                {__('CAPTURAR FOTO')}
+                                            </Button>
+                                        )}
+                                    </div>
+                                )}
+                            </div>
+                        </div>
+                    </div>
+                )}
             </div>
         </>
     );
