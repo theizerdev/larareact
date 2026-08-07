@@ -19,6 +19,7 @@ import {
     Package,
     ShieldCheck,
     History,
+    Camera,
 } from 'lucide-react';
 import React, { useState } from 'react';
 import { Breadcrumbs } from '@/components/breadcrumbs';
@@ -432,6 +433,44 @@ export default function ShowReparacion({ orden, productosRepuestos, tecnicos, cu
                                                 {val.obs && <span className="text-[10px] text-slate-400 italic block truncate">{val.obs}</span>}
                                             </div>
                                         ))}
+                                    </div>
+                                </CardContent>
+                            </Card>
+                        )}
+
+                        {/* EVIDENCIAS FOTOGRÁFICAS DE RECEPCIÓN */}
+                        {orden.evidencias_fotos && Object.values(orden.evidencias_fotos).some((v) => !!v) && (
+                            <Card className="border-slate-200 dark:border-slate-800 shadow-sm">
+                                <CardHeader className="bg-slate-50 dark:bg-slate-900/50 border-b border-slate-100 dark:border-slate-800 py-3">
+                                    <CardTitle className="text-sm font-bold flex items-center gap-2 text-slate-800 dark:text-slate-200">
+                                        <Camera className="w-4 h-4 text-purple-600" />
+                                        {__('Evidencias Fotográficas de Recepción (4 Ángulos)')}
+                                    </CardTitle>
+                                </CardHeader>
+                                <CardContent className="p-4">
+                                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                                        {[
+                                            { key: 'frente', label: '📱 Frente / Pantalla' },
+                                            { key: 'trasero', label: '🔄 Tapa Trasera' },
+                                            { key: 'borde_sup', label: '📐 Borde Sup. / Izq.' },
+                                            { key: 'borde_inf', label: '🔌 Borde Inf. / Der.' },
+                                        ].map((item) => {
+                                            const imgUrl = (orden.evidencias_fotos as any)?.[item.key];
+                                            return (
+                                                <div key={item.key} className="flex flex-col items-center p-2 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-950 text-center gap-1.5">
+                                                    <span className="text-[11px] font-bold text-slate-700 dark:text-slate-300">{item.label}</span>
+                                                    {imgUrl ? (
+                                                        <a href={imgUrl} target="_blank" rel="noopener noreferrer" className="w-full h-32 rounded-lg overflow-hidden border border-slate-200 block">
+                                                            <img src={imgUrl} alt={item.label} className="w-full h-full object-cover hover:scale-105 transition-transform" />
+                                                        </a>
+                                                    ) : (
+                                                        <div className="w-full h-32 rounded-lg border border-dashed border-slate-200 dark:border-slate-800 flex flex-col items-center justify-center text-slate-400 text-[10px]">
+                                                            {__('Sin Foto')}
+                                                        </div>
+                                                    )}
+                                                </div>
+                                            );
+                                        })}
                                     </div>
                                 </CardContent>
                             </Card>

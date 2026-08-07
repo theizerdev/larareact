@@ -33,6 +33,9 @@ import {
     UserPlus,
     X,
     Tag,
+    Camera,
+    Upload,
+    Trash2,
 } from 'lucide-react';
 import React, { useState } from 'react';
 import { Breadcrumbs } from '@/components/breadcrumbs';
@@ -147,6 +150,39 @@ export default function CreateReparacion({ clientes: initialClientes, marcas, te
     // Estado del Patrón de Desbloqueo (Grid 3x3)
     const [tipoBloqueo, setTipoBloqueo] = useState<'password' | 'pattern' | 'none'>('password');
     const [patronSecuencia, setPatronSecuencia] = useState<number[]>([]);
+
+    // 4 Ángulos de Evidencias Fotográficas
+    const [fotosState, setFotosState] = useState<Record<string, string>>({
+        frente: '',
+        trasero: '',
+        borde_sup: '',
+        borde_inf: '',
+    });
+
+    const handleFotoUpload = (slotKey: string, e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
+        if (!file) return;
+
+        const reader = new FileReader();
+        reader.onloadend = () => {
+            const base64String = reader.result as string;
+            setFotosState((prev) => {
+                const next = { ...prev, [slotKey]: base64String };
+                setData('evidencias_fotos', next);
+                return next;
+            });
+            notifySuccess(__('Fotografía cargada correctamente.'));
+        };
+        reader.readAsDataURL(file);
+    };
+
+    const handleRemoveFoto = (slotKey: string) => {
+        setFotosState((prev) => {
+            const next = { ...prev, [slotKey]: '' };
+            setData('evidencias_fotos', next);
+            return next;
+        });
+    };
 
     const handleNodeClick = (nodeNum: number) => {
         if (!patronSecuencia.includes(nodeNum)) {
@@ -698,7 +734,7 @@ export default function CreateReparacion({ clientes: initialClientes, marcas, te
                                                         </Dialog>
                                                     </div>
 
-                                                    <Select onValueChange={handleSelectMarca}>
+                                                    <Select value={data.marca_id} onValueChange={handleSelectMarca}>
                                                         <SelectTrigger className="text-xs h-10 mt-1">
                                                             <SelectValue placeholder={__('Seleccionar marca...')} />
                                                         </SelectTrigger>
@@ -710,15 +746,6 @@ export default function CreateReparacion({ clientes: initialClientes, marcas, te
                                                             ))}
                                                         </SelectContent>
                                                     </Select>
-                                                    {!selectedMarcaId && (
-                                                        <Input
-                                                            value={data.marca_nombre}
-                                                            onChange={(e) => setData('marca_nombre', e.target.value)}
-                                                            placeholder={__('O escribir marca manual...')}
-                                                            className="text-xs h-9 mt-1.5"
-                                                            required
-                                                        />
-                                                    )}
                                                 </div>
 
                                                 {/* MODELO DE EQUIPO */}
@@ -784,28 +811,18 @@ export default function CreateReparacion({ clientes: initialClientes, marcas, te
                                                         </Dialog>
                                                     </div>
 
-                                                    {modelosFiltrados.length > 0 ? (
-                                                        <Select onValueChange={handleSelectModelo}>
-                                                            <SelectTrigger className="text-xs h-10 mt-1">
-                                                                <SelectValue placeholder={__('Seleccionar modelo...')} />
-                                                            </SelectTrigger>
-                                                            <SelectContent>
-                                                                {modelosFiltrados.map((mod) => (
-                                                                    <SelectItem key={mod.id} value={String(mod.id)} className="text-xs">
-                                                                        {mod.nombre_comercial}
-                                                                    </SelectItem>
-                                                                ))}
-                                                            </SelectContent>
-                                                        </Select>
-                                                    ) : (
-                                                        <Input
-                                                            value={data.modelo_nombre}
-                                                            onChange={(e) => setData('modelo_nombre', e.target.value)}
-                                                            placeholder={__('ej: iPhone 13 Pro / Redmi Note 11')}
-                                                            className="text-xs h-10 mt-1"
-                                                            required
-                                                        />
-                                                    )}
+                                                    <Select value={data.modelo_id} onValueChange={handleSelectModelo} disabled={!selectedMarcaId}>
+                                                        <SelectTrigger className="text-xs h-10 mt-1">
+                                                            <SelectValue placeholder={!selectedMarcaId ? __('Seleccione una marca primero...') : __('Seleccionar modelo...')} />
+                                                        </SelectTrigger>
+                                                        <SelectContent>
+                                                            {modelosFiltrados.map((mod) => (
+                                                                <SelectItem key={mod.id} value={String(mod.id)} className="text-xs">
+                                                                    {mod.nombre_comercial}
+                                                                </SelectItem>
+                                                            ))}
+                                                        </SelectContent>
+                                                    </Select>
                                                 </div>
 
                                                 <div>
@@ -1064,6 +1081,64 @@ export default function CreateReparacion({ clientes: initialClientes, marcas, te
                                                         </div>
                                                     </div>
                                                 )}
+                                            </div>
+                                        </CardContent>
+                                    </Card>
+
+                                    {/* PASO 8: EVIDENCIAS FOTOGRÁFICAS (4 ÁNGULOS) */}
+                                    <Card className="border-slate-200 dark:border-slate-800 shadow-sm">
+                                        <CardHeader className="bg-slate-50 dark:bg-slate-900/50 border-b border-slate-100 dark:border-slate-800 py-3">
+                                            <CardTitle className="text-sm font-bold flex items-center gap-2 text-slate-800 dark:text-slate-200">
+                                                <Camera className="w-4 h-4 text-purple-600" />
+                                                {__('8. Evidencias Fotográficas del Equipo (4 Ángulos)')}
+                                            </CardTitle>
+                                        </CardHeader>
+                                        <CardContent className="p-4 space-y-3">
+                                            <p className="text-xs text-slate-500">
+                                                {__('Tome o adjunte fotografías del equipo desde 4 ángulos clave para respaldar las condiciones físicas de recepción:')}
+                                            </p>
+
+                                            <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                                                {[
+                                                    { key: 'frente', label: '📱 1. Frente / Pantalla', desc: 'Display & Cristal' },
+                                                    { key: 'trasero', label: '🔄 2. Tapa Trasera', desc: 'Módulo de Cámaras' },
+                                                    { key: 'borde_sup', label: '📐 3. Borde Sup. / Izq.', desc: 'Bisel y Esquinas' },
+                                                    { key: 'borde_inf', label: '🔌 4. Borde Inf. / Der.', desc: 'Puerto de Carga' },
+                                                ].map((slot) => {
+                                                    const fotoUrl = fotosState[slot.key];
+                                                    return (
+                                                        <div key={slot.key} className="flex flex-col items-center p-3 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 gap-2 text-center">
+                                                            <span className="text-xs font-bold text-slate-800 dark:text-slate-200">{slot.label}</span>
+                                                            <span className="text-[10px] text-slate-400">{slot.desc}</span>
+
+                                                            {fotoUrl ? (
+                                                                <div className="relative w-full h-32 rounded-lg overflow-hidden border border-purple-300 dark:border-purple-800">
+                                                                    <img src={fotoUrl} alt={slot.label} className="w-full h-full object-cover" />
+                                                                    <button
+                                                                        type="button"
+                                                                        onClick={() => handleRemoveFoto(slot.key)}
+                                                                        className="absolute top-1.5 right-1.5 bg-rose-600 text-white p-1 rounded-full shadow hover:bg-rose-700 transition-colors"
+                                                                        title={__('Eliminar foto')}
+                                                                    >
+                                                                        <Trash2 className="w-3.5 h-3.5" />
+                                                                    </button>
+                                                                </div>
+                                                            ) : (
+                                                                <label className="w-full h-32 rounded-lg border-2 border-dashed border-slate-200 dark:border-slate-800 hover:border-purple-400 bg-slate-50 dark:bg-slate-950 flex flex-col items-center justify-center cursor-pointer transition-colors gap-1.5 p-2">
+                                                                    <Camera className="w-6 h-6 text-purple-600" />
+                                                                    <span className="text-[10px] font-bold text-purple-600">{__('Tomar / Adjuntar')}</span>
+                                                                    <input
+                                                                        type="file"
+                                                                        accept="image/*"
+                                                                        capture="environment"
+                                                                        className="hidden"
+                                                                        onChange={(e) => handleFotoUpload(slot.key, e)}
+                                                                    />
+                                                                </label>
+                                                            )}
+                                                        </div>
+                                                    );
+                                                })}
                                             </div>
                                         </CardContent>
                                     </Card>
