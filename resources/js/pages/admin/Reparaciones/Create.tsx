@@ -1,4 +1,5 @@
 import { Head, useForm, Link, router } from '@inertiajs/react';
+import axios from 'axios';
 import {
     Wrench,
     User,
@@ -78,10 +79,11 @@ interface Props {
     currencySymbol: string;
 }
 
-export default function CreateReparacion({ clientes: initialClientes, marcas, tecnicos, currencySymbol }: Props) {
+export default function CreateReparacion({ clientes: initialClientes, marcas: initialMarcas, tecnicos, currencySymbol }: Props) {
     const { __ } = useTranslate();
 
     const [clientesList, setClientesList] = useState<Cliente[]>(initialClientes || []);
+    const [marcasList, setMarcasList] = useState<MarcaItem[]>(initialMarcas || []);
     const [currentStep, setCurrentStep] = useState<number>(1);
 
     // Búsqueda en tiempo real de Cliente
@@ -255,8 +257,8 @@ export default function CreateReparacion({ clientes: initialClientes, marcas, te
         setSearchClienteTerm('');
     };
 
-    // Crear Nuevo Cliente desde el Modal
-    const handleCreateNewClient = (e?: React.SyntheticEvent) => {
+    // Crear Nuevo Cliente desde el Modal (sin recarga)
+    const handleCreateNewClient = async (e?: React.SyntheticEvent) => {
         if (e) {
             e.preventDefault();
             e.stopPropagation();
@@ -264,29 +266,31 @@ export default function CreateReparacion({ clientes: initialClientes, marcas, te
         if (!newClientData.nombre.trim()) return;
 
         setIsCreatingClient(true);
-        router.post('/admin/reparaciones/quick-cliente', newClientData, {
-            preserveScroll: true,
-            onSuccess: () => {
-                setIsCreatingClient(false);
-                setOpenNewClientModal(false);
+        try {
+            const response = await axios.post('/admin/reparaciones/quick-cliente', newClientData);
+            if (response.data.success) {
+                const newClient = response.data.cliente;
+                setClientesList((prev) => [newClient, ...prev]);
                 setData((prev) => ({
                     ...prev,
-                    cliente_nombre: newClientData.nombre,
-                    cliente_telefono: newClientData.telefono,
+                    cliente_id: String(newClient.id),
+                    cliente_nombre: newClient.nombre,
+                    cliente_telefono: newClient.telefono || '',
                 }));
-                setSearchClienteTerm(newClientData.nombre);
+                setSearchClienteTerm(newClient.nombre);
+                setOpenNewClientModal(false);
                 setNewClientData({ nombre: '', telefono: '', email: '', direccion: '' });
                 notifySuccess(__('Nuevo cliente registrado y seleccionado.'));
-            },
-            onError: () => {
-                setIsCreatingClient(false);
-                notifyError(__('Ocurrió un error al registrar el cliente.'));
-            },
-        });
+            }
+        } catch (error) {
+            notifyError(__('Ocurrió un error al registrar el cliente.'));
+        } finally {
+            setIsCreatingClient(false);
+        }
     };
 
-    // Crear Nueva Marca desde el Modal
-    const handleCreateNewMarca = (e?: React.SyntheticEvent) => {
+    // Crear Nueva Marca desde el Modal (sin recarga)
+    const handleCreateNewMarca = async (e?: React.SyntheticEvent) => {
         if (e) {
             e.preventDefault();
             e.stopPropagation();
@@ -294,24 +298,33 @@ export default function CreateReparacion({ clientes: initialClientes, marcas, te
         if (!newMarcaNombre.trim()) return;
 
         setIsCreatingMarca(true);
-        router.post('/admin/reparaciones/quick-marca', { nombre: newMarcaNombre.trim() }, {
-            preserveScroll: true,
-            onSuccess: () => {
-                setIsCreatingMarca(false);
+        try {
+            const response = await axios.post('/admin/reparaciones/quick-marca', { nombre: newMarcaNombre.trim() });
+            if (response.data.success) {
+                const newMarca: MarcaItem = response.data.marca;
+                setMarcasList((prev) => [...prev, newMarca]);
+                setSelectedMarcaId(String(newMarca.id));
+                setModelosFiltrados([]);
+                setData((prev) => ({
+                    ...prev,
+                    marca_id: String(newMarca.id),
+                    marca_nombre: newMarca.nombre,
+                    modelo_id: '',
+                    modelo_nombre: '',
+                }));
                 setOpenNewMarcaModal(false);
-                setData((prev) => ({ ...prev, marca_nombre: newMarcaNombre.trim() }));
                 setNewMarcaNombre('');
                 notifySuccess(__('Nueva marca registrada exitosamente.'));
-            },
-            onError: () => {
-                setIsCreatingMarca(false);
-                notifyError(__('Ocurrió un error al registrar la marca.'));
-            },
-        });
+            }
+        } catch (error) {
+            notifyError(__('Ocurrió un error al registrar la marca.'));
+        } finally {
+            setIsCreatingMarca(false);
+        }
     };
 
-    // Crear Nuevo Modelo desde el Modal
-    const handleCreateNewModelo = (e?: React.SyntheticEvent) => {
+    // Crear Nuevo Modelo desde el Modal (sin recarga)
+    const handleCreateNewModelo = async (e?: React.SyntheticEvent) => {
         if (e) {
             e.preventDefault();
             e.stopPropagation();
@@ -327,30 +340,43 @@ export default function CreateReparacion({ clientes: initialClientes, marcas, te
         }
 
         setIsCreatingModelo(true);
-        router.post('/admin/reparaciones/quick-modelo', {
-            marca_id: marcaIdToUse,
-            nombre_comercial: newModeloNombre.trim(),
-            codigo_modelo: newModeloCodigo.trim(),
-        }, {
-            preserveScroll: true,
-            onSuccess: () => {
-                setIsCreatingModelo(false);
+        try {
+            const response = await axios.post('/admin/reparaciones/quick-modelo', {
+                marca_id: marcaIdToUse,
+                nombre_comercial: newModeloNombre.trim(),
+                codigo_modelo: newModeloCodigo.trim(),
+            });
+            if (response.data.success) {
+                const newModelo: ModeloItem = response.data.modelo;
+                setModelosFiltrados((prev) => [...prev, newModelo]);
+                setMarcasList((prevMarcas) =>
+                    prevMarcas.map((m) =>
+                        String(m.id) === String(marcaIdToUse)
+                            ? { ...m, modelos: [...(m.modelos || []), newModelo] }
+                            : m
+                    )
+                );
+                setData((prev) => ({
+                    ...prev,
+                    marca_id: String(marcaIdToUse),
+                    modelo_id: String(newModelo.id),
+                    modelo_nombre: newModelo.nombre_comercial,
+                }));
                 setOpenNewModeloModal(false);
-                setData((prev) => ({ ...prev, modelo_nombre: newModeloNombre.trim() }));
                 setNewModeloNombre('');
                 setNewModeloCodigo('');
                 notifySuccess(__('Nuevo modelo registrado exitosamente.'));
-            },
-            onError: () => {
-                setIsCreatingModelo(false);
-                notifyError(__('Ocurrió un error al registrar el modelo.'));
-            },
-        });
+            }
+        } catch (error) {
+            notifyError(__('Ocurrió un error al registrar el modelo.'));
+        } finally {
+            setIsCreatingModelo(false);
+        }
     };
 
     // Manejar selección de Marca y filtrar Modelos
     const handleSelectMarca = (marcaId: string) => {
-        const m = marcas.find((item) => String(item.id) === marcaId);
+        const m = marcasList.find((item) => String(item.id) === marcaId);
         setSelectedMarcaId(marcaId);
         if (m) {
             setModelosFiltrados(m.modelos || []);
@@ -748,7 +774,7 @@ export default function CreateReparacion({ clientes: initialClientes, marcas, te
                                                             <SelectValue placeholder={__('Seleccionar marca...')} />
                                                         </SelectTrigger>
                                                         <SelectContent>
-                                                            {marcas.map((m) => (
+                                                            {marcasList.map((m) => (
                                                                 <SelectItem key={m.id} value={String(m.id)} className="text-xs">
                                                                     {m.nombre}
                                                                 </SelectItem>

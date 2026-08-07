@@ -351,6 +351,35 @@ class ReparacionController extends Controller
         ]);
     }
 
+    public function storeCliente(Request $request)
+    {
+        $validated = $request->validate([
+            'nombre' => 'required|string|max:255',
+            'telefono' => 'nullable|string|max:50',
+            'email' => 'nullable|email|max:255',
+            'direccion' => 'nullable|string|max:255',
+        ]);
+
+        $user = auth()->user();
+        $empresaId = $user->empresa_id;
+
+        $cliente = \App\Models\Cliente::create([
+            'empresa_id' => $empresaId,
+            'sucursal_id' => $user->sucursal_id,
+            'nombre' => $validated['nombre'],
+            'telefono' => $validated['telefono'] ?? null,
+            'email' => $validated['email'] ?? null,
+            'direccion' => $validated['direccion'] ?? null,
+            'estado' => true,
+        ]);
+
+        return response()->json([
+            'success' => true,
+            'cliente' => $cliente,
+            'message' => "Cliente '{$cliente->nombre}' registrado exitosamente.",
+        ]);
+    }
+
     public function storeMarca(Request $request)
     {
         $validated = $request->validate([
@@ -368,8 +397,11 @@ class ReparacionController extends Controller
             'estado' => true,
         ]);
 
-        return back()->with('notification', [
-            'type' => 'success',
+        $marca->setRelation('modelos', collect([]));
+
+        return response()->json([
+            'success' => true,
+            'marca' => $marca,
             'message' => "Marca '{$marca->nombre}' registrada exitosamente.",
         ]);
     }
@@ -419,8 +451,9 @@ class ReparacionController extends Controller
             'estado' => true,
         ]);
 
-        return back()->with('notification', [
-            'type' => 'success',
+        return response()->json([
+            'success' => true,
+            'modelo' => $modelo,
             'message' => "Modelo '{$modelo->nombre_comercial}' registrado exitosamente.",
         ]);
     }
