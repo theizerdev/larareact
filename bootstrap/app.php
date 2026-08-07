@@ -27,6 +27,12 @@ return Application::configure(basePath: dirname(__DIR__))
         },
     )
     ->withMiddleware(function (Middleware $middleware): void {
+        // La app corre detrás del Apache del host, que termina TLS y reenvía por HTTP
+        // a este contenedor (ver /etc/apache2/sites-available/*-le-ssl.conf, que ya
+        // envía X-Forwarded-Proto: https). Sin esto, Laravel genera URLs absolutas con
+        // esquema http:// y el navegador bloquea las peticiones por Mixed Content.
+        $middleware->trustProxies(at: '*');
+
         $middleware->web(prepend: [
             \App\Http\Middleware\RegionalConfiguration::class,
         ]);
