@@ -385,18 +385,28 @@ class ReparacionController extends Controller
         $user = auth()->user();
         $empresaId = $user->empresa_id;
 
-        $familia = \App\Models\Familia::where('empresa_id', $empresaId)->first() 
-            ?? \App\Models\Familia::firstOrCreate([
+        $familia = \App\Models\Familia::where('empresa_id', $empresaId)
+            ->where('marca_id', $validated['marca_id'])
+            ->first();
+
+        if (!$familia) {
+            $familia = \App\Models\Familia::create([
                 'nombre' => 'General',
                 'marca_id' => $validated['marca_id'],
                 'empresa_id' => $empresaId,
+                'sucursal_id' => $user->sucursal_id,
+                'estado' => true,
             ]);
+        }
 
-        $categoria = \App\Models\Categoria::where('empresa_id', $empresaId)->first() 
-            ?? \App\Models\Categoria::firstOrCreate([
+        $categoria = \App\Models\Categoria::where('empresa_id', $empresaId)->first();
+        if (!$categoria) {
+            $categoria = \App\Models\Categoria::create([
                 'nombre' => 'General',
                 'empresa_id' => $empresaId,
+                'estado' => true,
             ]);
+        }
 
         $modelo = \App\Models\Modelo::create([
             'empresa_id' => $empresaId,

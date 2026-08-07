@@ -256,28 +256,25 @@ export default function CreateReparacion({ clientes: initialClientes, marcas, te
     };
 
     // Crear Nuevo Cliente desde el Modal
-    const handleCreateNewClient = (e: React.FormEvent) => {
-        e.preventDefault();
-        if (!newClientData.nombre) return;
+    const handleCreateNewClient = (e?: React.SyntheticEvent) => {
+        if (e) {
+            e.preventDefault();
+            e.stopPropagation();
+        }
+        if (!newClientData.nombre.trim()) return;
 
         setIsCreatingClient(true);
-
-        // Envío mediante router POST
         router.post('/admin/reparaciones/quick-cliente', newClientData, {
             preserveScroll: true,
-            onSuccess: (page) => {
+            onSuccess: () => {
                 setIsCreatingClient(false);
                 setOpenNewClientModal(false);
-
-                // Asignar el nuevo cliente ingresado
                 setData((prev) => ({
                     ...prev,
                     cliente_nombre: newClientData.nombre,
                     cliente_telefono: newClientData.telefono,
                 }));
                 setSearchClienteTerm(newClientData.nombre);
-
-                // Resetear form modal
                 setNewClientData({ nombre: '', telefono: '', email: '', direccion: '' });
                 notifySuccess(__('Nuevo cliente registrado y seleccionado.'));
             },
@@ -289,17 +286,20 @@ export default function CreateReparacion({ clientes: initialClientes, marcas, te
     };
 
     // Crear Nueva Marca desde el Modal
-    const handleCreateNewMarca = (e: React.FormEvent) => {
-        e.preventDefault();
-        if (!newMarcaNombre) return;
+    const handleCreateNewMarca = (e?: React.SyntheticEvent) => {
+        if (e) {
+            e.preventDefault();
+            e.stopPropagation();
+        }
+        if (!newMarcaNombre.trim()) return;
 
         setIsCreatingMarca(true);
-        router.post('/admin/reparaciones/quick-marca', { nombre: newMarcaNombre }, {
+        router.post('/admin/reparaciones/quick-marca', { nombre: newMarcaNombre.trim() }, {
             preserveScroll: true,
             onSuccess: () => {
                 setIsCreatingMarca(false);
                 setOpenNewMarcaModal(false);
-                setData((prev) => ({ ...prev, marca_nombre: newMarcaNombre }));
+                setData((prev) => ({ ...prev, marca_nombre: newMarcaNombre.trim() }));
                 setNewMarcaNombre('');
                 notifySuccess(__('Nueva marca registrada exitosamente.'));
             },
@@ -311,21 +311,32 @@ export default function CreateReparacion({ clientes: initialClientes, marcas, te
     };
 
     // Crear Nuevo Modelo desde el Modal
-    const handleCreateNewModelo = (e: React.FormEvent) => {
-        e.preventDefault();
-        if (!newModeloNombre || !selectedMarcaId) return;
+    const handleCreateNewModelo = (e?: React.SyntheticEvent) => {
+        if (e) {
+            e.preventDefault();
+            e.stopPropagation();
+        }
+        const marcaIdToUse = selectedMarcaId || data.marca_id;
+        if (!marcaIdToUse) {
+            notifyError(__('Por favor seleccione una marca antes de crear un modelo.'));
+            return;
+        }
+        if (!newModeloNombre.trim()) {
+            notifyError(__('Por favor ingrese el nombre del modelo.'));
+            return;
+        }
 
         setIsCreatingModelo(true);
         router.post('/admin/reparaciones/quick-modelo', {
-            marca_id: selectedMarcaId,
-            nombre_comercial: newModeloNombre,
-            codigo_modelo: newModeloCodigo,
+            marca_id: marcaIdToUse,
+            nombre_comercial: newModeloNombre.trim(),
+            codigo_modelo: newModeloCodigo.trim(),
         }, {
             preserveScroll: true,
             onSuccess: () => {
                 setIsCreatingModelo(false);
                 setOpenNewModeloModal(false);
-                setData((prev) => ({ ...prev, modelo_nombre: newModeloNombre }));
+                setData((prev) => ({ ...prev, modelo_nombre: newModeloNombre.trim() }));
                 setNewModeloNombre('');
                 setNewModeloCodigo('');
                 notifySuccess(__('Nuevo modelo registrado exitosamente.'));
@@ -521,7 +532,7 @@ export default function CreateReparacion({ clientes: initialClientes, marcas, te
                                                         </DialogTitle>
                                                     </DialogHeader>
 
-                                                    <form onSubmit={handleCreateNewClient} className="space-y-4 py-2">
+                                                    <div className="space-y-4 py-2">
                                                         <div>
                                                             <Label className="text-xs font-semibold">{__('Nombre Completo *')}</Label>
                                                             <Input
@@ -529,7 +540,6 @@ export default function CreateReparacion({ clientes: initialClientes, marcas, te
                                                                 onChange={(e) => setNewClientData({ ...newClientData, nombre: e.target.value })}
                                                                 placeholder={__('ej: Carlos Mendoza')}
                                                                 className="text-xs h-9 mt-1"
-                                                                required
                                                             />
                                                         </div>
 
@@ -568,11 +578,11 @@ export default function CreateReparacion({ clientes: initialClientes, marcas, te
                                                             <Button type="button" variant="outline" size="sm" onClick={() => setOpenNewClientModal(false)} className="h-8 text-xs">
                                                                 {__('Cancelar')}
                                                             </Button>
-                                                            <Button type="submit" disabled={isCreatingClient} size="sm" className="h-8 text-xs font-bold bg-purple-600 hover:bg-purple-700 text-white">
+                                                            <Button type="button" onClick={(e) => handleCreateNewClient(e)} disabled={isCreatingClient} size="sm" className="h-8 text-xs font-bold bg-purple-600 hover:bg-purple-700 text-white">
                                                                 {__('Guardar Cliente')}
                                                             </Button>
                                                         </div>
-                                                    </form>
+                                                    </div>
                                                 </DialogContent>
                                             </Dialog>
                                         </CardHeader>
@@ -709,7 +719,7 @@ export default function CreateReparacion({ clientes: initialClientes, marcas, te
                                                                     </DialogTitle>
                                                                 </DialogHeader>
 
-                                                                <form onSubmit={handleCreateNewMarca} className="space-y-4 py-2">
+                                                                <div className="space-y-4 py-2">
                                                                     <div>
                                                                         <Label className="text-xs font-semibold">{__('Nombre de la Marca *')}</Label>
                                                                         <Input
@@ -717,7 +727,6 @@ export default function CreateReparacion({ clientes: initialClientes, marcas, te
                                                                             onChange={(e) => setNewMarcaNombre(e.target.value)}
                                                                             placeholder={__('ej: OPPO, Honor, Realme, Xiaomi, Apple')}
                                                                             className="text-xs h-9 mt-1"
-                                                                            required
                                                                         />
                                                                     </div>
 
@@ -725,11 +734,11 @@ export default function CreateReparacion({ clientes: initialClientes, marcas, te
                                                                         <Button type="button" variant="outline" size="sm" onClick={() => setOpenNewMarcaModal(false)} className="h-8 text-xs">
                                                                             {__('Cancelar')}
                                                                         </Button>
-                                                                        <Button type="submit" disabled={isCreatingMarca} size="sm" className="h-8 text-xs font-bold bg-purple-600 hover:bg-purple-700 text-white">
+                                                                        <Button type="button" onClick={(e) => handleCreateNewMarca(e)} disabled={isCreatingMarca} size="sm" className="h-8 text-xs font-bold bg-purple-600 hover:bg-purple-700 text-white">
                                                                             {__('Guardar Marca')}
                                                                         </Button>
                                                                     </div>
-                                                                </form>
+                                                                </div>
                                                             </DialogContent>
                                                         </Dialog>
                                                     </div>
@@ -767,7 +776,7 @@ export default function CreateReparacion({ clientes: initialClientes, marcas, te
                                                                     </DialogTitle>
                                                                 </DialogHeader>
 
-                                                                <form onSubmit={handleCreateNewModelo} className="space-y-4 py-2">
+                                                                <div className="space-y-4 py-2">
                                                                     <div>
                                                                         <Label className="text-xs font-semibold">{__('Marca Seleccionada')}</Label>
                                                                         <Input
@@ -784,7 +793,6 @@ export default function CreateReparacion({ clientes: initialClientes, marcas, te
                                                                             onChange={(e) => setNewModeloNombre(e.target.value)}
                                                                             placeholder={__('ej: Redmi Note 12 Pro / Reno 8 / Galaxy A54')}
                                                                             className="text-xs h-9 mt-1"
-                                                                            required
                                                                         />
                                                                     </div>
 
@@ -802,11 +810,11 @@ export default function CreateReparacion({ clientes: initialClientes, marcas, te
                                                                         <Button type="button" variant="outline" size="sm" onClick={() => setOpenNewModeloModal(false)} className="h-8 text-xs">
                                                                             {__('Cancelar')}
                                                                         </Button>
-                                                                        <Button type="submit" disabled={isCreatingModelo || !selectedMarcaId} size="sm" className="h-8 text-xs font-bold bg-purple-600 hover:bg-purple-700 text-white">
+                                                                        <Button type="button" onClick={(e) => handleCreateNewModelo(e)} disabled={isCreatingModelo || (!selectedMarcaId && !data.marca_id)} size="sm" className="h-8 text-xs font-bold bg-purple-600 hover:bg-purple-700 text-white">
                                                                             {__('Guardar Modelo')}
                                                                         </Button>
                                                                     </div>
-                                                                </form>
+                                                                </div>
                                                             </DialogContent>
                                                         </Dialog>
                                                     </div>
