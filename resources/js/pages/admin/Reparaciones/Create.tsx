@@ -390,12 +390,12 @@ export default function CreateReparacion({ clientes: initialClientes, marcas: in
 
     // Servicios filtrados por la búsqueda en tiempo real
     const serviciosFiltrados = serviciosList.filter((s) => {
-        if (!searchServicioTerm || searchServicioTerm.trim() === '') return false;
+        if (!searchServicioTerm || searchServicioTerm.trim() === '') return true;
         const term = searchServicioTerm.toLowerCase().trim();
         return (
             s.nombre.toLowerCase().includes(term) ||
-            s.codigo?.toLowerCase().includes(term) ||
-            s.categoria?.nombre.toLowerCase().includes(term)
+            (s.codigo && s.codigo.toLowerCase().includes(term)) ||
+            (s.categoria?.nombre && s.categoria.nombre.toLowerCase().includes(term))
         );
     });
 
@@ -1686,14 +1686,12 @@ export default function CreateReparacion({ clientes: initialClientes, marcas: in
                                                         onChange={(e) => {
                                                             const val = e.target.value;
                                                             setSearchServicioTerm(val);
-                                                            setIsServicioDropdownOpen(val.trim().length > 0);
+                                                            setIsServicioDropdownOpen(true);
                                                         }}
                                                         onFocus={() => {
-                                                            if (searchServicioTerm.trim().length > 0) {
-                                                                setIsServicioDropdownOpen(true);
-                                                            }
+                                                            setIsServicioDropdownOpen(true);
                                                         }}
-                                                        placeholder={__('Escriba para buscar un servicio (ej: Pantalla, Batería, Limpieza...)...')}
+                                                        placeholder={__('Haga clic o escriba para buscar un servicio (ej: Pantalla, Batería, Limpieza...)...')}
                                                         className="text-xs h-11 pl-9 pr-8 font-medium"
                                                     />
                                                     {searchServicioTerm && (
@@ -1711,40 +1709,49 @@ export default function CreateReparacion({ clientes: initialClientes, marcas: in
                                                 </div>
 
                                                 {/* LISTA DE RESULTADOS EN TIEMPO REAL */}
-                                                {isServicioDropdownOpen && serviciosFiltrados.length > 0 && (
+                                                {isServicioDropdownOpen && (
                                                     <div className="absolute left-0 right-0 z-50 mt-1 max-h-60 overflow-y-auto bg-white dark:bg-slate-900 rounded-lg border border-slate-200 dark:border-slate-800 shadow-xl divide-y divide-slate-100 dark:divide-slate-800">
-                                                        {serviciosFiltrados.map((s) => (
-                                                            <div
-                                                                key={s.id}
-                                                                className="p-3 hover:bg-purple-50 dark:hover:bg-purple-950/40 flex items-center justify-between transition-colors text-xs"
-                                                            >
-                                                                <div className="space-y-0.5">
-                                                                    <span className="font-bold text-slate-900 dark:text-slate-100 block">{s.nombre}</span>
-                                                                    <div className="flex items-center gap-2 text-[10px] text-slate-400">
-                                                                        {s.codigo && <span className="font-mono">Cód: {s.codigo}</span>}
-                                                                        {s.categoria && (
-                                                                            <Badge variant="outline" className="text-[10px] py-0 border-purple-200 text-purple-700">
-                                                                                {s.categoria.nombre}
-                                                                            </Badge>
-                                                                        )}
+                                                        {serviciosFiltrados.length > 0 ? (
+                                                            serviciosFiltrados.map((s) => (
+                                                                <div
+                                                                    key={s.id}
+                                                                    className="p-3 hover:bg-purple-50 dark:hover:bg-purple-950/40 flex items-center justify-between transition-colors text-xs"
+                                                                >
+                                                                    <div className="space-y-0.5">
+                                                                        <span className="font-bold text-slate-900 dark:text-slate-100 block">{s.nombre}</span>
+                                                                        <div className="flex items-center gap-2 text-[10px] text-slate-400">
+                                                                            {s.codigo && <span className="font-mono">Cód: {s.codigo}</span>}
+                                                                            {s.categoria && (
+                                                                                <Badge variant="outline" className="text-[10px] py-0 border-purple-200 text-purple-700">
+                                                                                    {s.categoria.nombre}
+                                                                                </Badge>
+                                                                            )}
+                                                                        </div>
+                                                                    </div>
+                                                                    <div className="flex items-center gap-3">
+                                                                        <span className="font-extrabold text-slate-900 dark:text-slate-100 font-mono">
+                                                                            {currencySymbol}{Number(s.precio).toFixed(2)}
+                                                                        </span>
+                                                                        <Button
+                                                                            type="button"
+                                                                            size="sm"
+                                                                            onClick={() => {
+                                                                                handleAddServicioToCart(s);
+                                                                                setIsServicioDropdownOpen(false);
+                                                                            }}
+                                                                            className="h-8 px-3 text-xs font-bold bg-purple-600 hover:bg-purple-700 text-white gap-1"
+                                                                        >
+                                                                            <Plus className="w-3.5 h-3.5" />
+                                                                            {__('Agregar')}
+                                                                        </Button>
                                                                     </div>
                                                                 </div>
-                                                                <div className="flex items-center gap-3">
-                                                                    <span className="font-extrabold text-slate-900 dark:text-slate-100 font-mono">
-                                                                        {currencySymbol}{Number(s.precio).toFixed(2)}
-                                                                    </span>
-                                                                    <Button
-                                                                        type="button"
-                                                                        size="sm"
-                                                                        onClick={() => handleAddServicioToCart(s)}
-                                                                        className="h-8 px-3 text-xs font-bold bg-purple-600 hover:bg-purple-700 text-white gap-1"
-                                                                    >
-                                                                        <Plus className="w-3.5 h-3.5" />
-                                                                        {__('Agregar')}
-                                                                    </Button>
-                                                                </div>
+                                                            ))
+                                                        ) : (
+                                                            <div className="p-4 text-center text-xs text-slate-500">
+                                                                {__('No se encontraron servicios que coincidan con la búsqueda.')}
                                                             </div>
-                                                        ))}
+                                                        )}
                                                     </div>
                                                 )}
                                             </div>

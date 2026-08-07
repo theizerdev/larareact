@@ -7,10 +7,13 @@ use App\Models\CashRegister;
 use App\Models\Sale;
 use App\Models\SaleItem;
 use App\Models\SalePayment;
+use App\Models\OrdenReparacion;
+use App\Models\User;
 use App\Services\CashRegisterService;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Inertia\Inertia;
 
 class DashboardController extends Controller
 {
@@ -22,6 +25,14 @@ class DashboardController extends Controller
         // ser redirigido directamente al dashboard exclusivo de suscripciones
         if ($user && ($user->empresa_id === 1 || $user->hasRole('Super Administrador') || $user->hasRole('super-admin'))) {
             return redirect('/superadministrador/dashboard0');
+        }
+
+        // Si el usuario tiene rol de Técnico (y no es Admin), renderizar el Dashboard exclusivo de Taller
+        $isTecnico = $user && ($user->hasRole('Técnico') || $user->hasRole('tecnico') || $user->hasRole('Tecnico'));
+        $isAdmin = $user && ($user->hasRole('Administrador') || $user->hasRole('Super Administrador') || $user->hasRole('super-admin') || $user->hasRole('Admin'));
+
+        if ($isTecnico && !$isAdmin) {
+            return $this->dashboardTecnico($user);
         }
 
         $startDate = $request->input('start_date') ? Carbon::parse($request->input('start_date'))->startOfDay() : Carbon::today()->subDays(6)->startOfDay();
@@ -211,5 +222,61 @@ class DashboardController extends Controller
             ],
             'recentSales' => $recentSales,
         ]);
+    }
+
+    public function dashboardTecnico(User $user)
+    {
+        $empresaId = $user->empresa_id;
+
+        // Conteos KPI exclusivos del técnico logueado
+        $counts = [
+            'en_diagnostico' => OrdenReparacion::where('empresa_id', $empresaId)->where('tecnico_id', $user->id)->where('estado_orden', 'en_diagnostico')->count(),
+            'en_reparacion' => OrdenReparacion::where('empresa_id', $empresaId)->where('tecnico_id', $user->id)->where('estado_orden', 'en_reparacion')->count(),
+            'esperando_repuesto' => OrdenReparacion::where('empresa_id', $empresaId)->where('tecnico_id', $user->id)->where('estado_orden', 'esperando_repuesto')->count(),
+            'reparado_mes' => OrdenReparacion::where('empresa_id', $empresaId)->where('tecnico_id', $user->id)->where('estado_orden', 'reparado')->where('updated_at', '>=', Carbon::now()->startOfMonth())->count(),
+            'total_asignados' => OrdenReparacion::where('empresa_id', $empresaId)->where('tecnico_id', $user->id)->whereNotIn('estado_orden', ['entregado', 'cancelado'])->count(),
+        ];
+
+        // Mis Equipos Pendientes de Trabajo
+        $misEquiposPendientes = OrdenReparacion::where('empresa_id', $empresaId)
+            ->where('tecnico_id', $user->id)
+            ->whereNotIn('estado_orden', ['entregado', 'cancelado'])
+            ->orderBy('created_at', 'asc')
+            ->limit(10)
+            ->get();
+
+        // Equipos de la empresa sin asignar (para que el técnico pueda tomar la orden)
+        $sinAsignar = OrdenReparacion::where('empresa_id', $empresaId)
+            ->whereNull('tecnico_id')
+            ->whereNotIn('estado_orden', ['entregado', 'cancelado'])
+            ->orderBy('created_at', 'desc')
+            ->limit(5)
+            ->get();
+
+        return Inertia::render('admin/DashboardTecnico', [
+            'tecnico' => [
+                'id' => $user->id,
+                'name' => $user->name,
+                'email' => $user->email,
+            ],
+            'counts' => $counts,
+            'misEquiposPendientes' => $misEquiposPendientes,
+            'sinAsignar' => $sinAsignar,
+            'currencySymbol' => $this->getCurrencySymbol(),
+        ]);
+    }
+
+    private function getCurrencySymbol(): string
+    {
+        $user = auth()->user();
+        if (!$user) return '$';
+        $empresa = $user->empresa ?? ($user->empresa_id ? \App\Models\Empresa::find($user->empresa_id) : null);
+        if ($empresa && $empresa->pais_id) {
+            $pais = \App\Models\Pais::find($empresa->pais_id);
+            if ($pais && !empty($pais->simbolo_moneda)) {
+                return $pais->simbolo_moneda;
+            }
+        }
+        return '$';
     }
 }

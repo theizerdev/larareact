@@ -13,14 +13,6 @@ class ServiciosReparacionSeeder extends Seeder
 {
     public function run(): void
     {
-        $empresa = Empresa::first();
-        if (!$empresa) {
-            return;
-        }
-
-        $empresaId = $empresa->id;
-        $sucursalId = Sucursal::where('empresa_id', $empresaId)->value('id');
-
         $serviciosPorCategoria = [
             'Smartphone' => [
                 [
@@ -184,35 +176,45 @@ class ServiciosReparacionSeeder extends Seeder
             ],
         ];
 
-        foreach ($serviciosPorCategoria as $categoriaNombre => $servicios) {
-            // Buscar o crear la categoría correspondiente en la base de datos
-            $categoria = Categoria::firstOrCreate(
-                [
-                    'empresa_id' => $empresaId,
-                    'nombre' => $categoriaNombre,
-                ],
-                [
-                    'sucursal_id' => $sucursalId,
-                    'slug' => Str::slug($categoriaNombre),
-                    'estado' => true,
-                ]
-            );
+        $empresas = Empresa::all();
+        if ($empresas->isEmpty()) {
+            return;
+        }
 
-            foreach ($servicios as $data) {
-                Servicio::updateOrCreate(
+        foreach ($empresas as $empresa) {
+            $sucursal = Sucursal::where('empresa_id', $empresa->id)->first();
+            $sucursalId = $sucursal ? $sucursal->id : 1;
+
+            foreach ($serviciosPorCategoria as $categoriaNombre => $servicios) {
+                // Buscar o crear la categoría correspondiente en la base de datos sin restricciones de tenant scope
+                $categoria = Categoria::withoutGlobalScope('multitenancy')->firstOrCreate(
                     [
-                        'empresa_id' => $empresaId,
-                        'codigo' => $data['codigo'],
+                        'empresa_id' => $empresa->id,
+                        'nombre' => $categoriaNombre,
                     ],
                     [
                         'sucursal_id' => $sucursalId,
-                        'categoria_id' => $categoria->id,
-                        'nombre' => $data['nombre'],
-                        'descripcion' => $data['descripcion'],
-                        'precio' => $data['precio'],
+                        'slug' => Str::slug($categoriaNombre),
                         'estado' => true,
                     ]
                 );
+
+                foreach ($servicios as $data) {
+                    Servicio::withoutGlobalScope('multitenancy')->updateOrCreate(
+                        [
+                            'empresa_id' => $empresa->id,
+                            'codigo' => $data['codigo'],
+                        ],
+                        [
+                            'sucursal_id' => $sucursalId,
+                            'categoria_id' => $categoria->id,
+                            'nombre' => $data['nombre'],
+                            'descripcion' => $data['descripcion'],
+                            'precio' => $data['precio'],
+                            'estado' => true,
+                        ]
+                    );
+                }
             }
         }
     }

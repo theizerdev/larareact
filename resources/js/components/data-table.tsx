@@ -71,6 +71,8 @@ export interface DataTableProps<T> {
     isLoading?: boolean;
     /** Callback para clic en una fila (excepto en celdas de checkbox/acciones) */
     onRowClick?: (row: T) => void;
+    /** Función para obtener clases CSS adicionales por fila */
+    rowClassName?: (row: T) => string;
     /** Acciones en lote personalizadas a mostrar en el banner de selección */
     bulkActions?: BulkAction[];
     /** Configuración para estado vacío ilustrativo */
@@ -93,6 +95,7 @@ export function DataTable<T>({
     emptyMessage,
     isLoading = false,
     onRowClick,
+    rowClassName,
     bulkActions,
     emptyState,
 }: DataTableProps<T>) {
@@ -383,7 +386,8 @@ return null;
                                         data-state={isSelected ? 'selected' : ''}
                                         className={cn(
                                             onRowClick &&
-                                                'cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-800/40'
+                                                'cursor-pointer',
+                                            rowClassName ? rowClassName(row) : 'hover:bg-slate-50 dark:hover:bg-slate-800/40'
                                         )}
                                         onClick={() => onRowClick && onRowClick(row)}
                                     >

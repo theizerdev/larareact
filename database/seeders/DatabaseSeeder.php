@@ -15,20 +15,17 @@ class DatabaseSeeder extends Seeder
      */
     public function run(): void
     {
-        // User::factory(10)->create();
-
         $this->call([
             PaisSeeder::class,
             PermissionSeeder::class,
             RoleSeeder::class,
+            SubscriptionPlansSeeder::class,
             EmpresaSeeder::class,
             SucursalSeeder::class,
             UsersSeeder::class,
-            SubscriptionPlansSeeder::class,
             TestimonioSeeder::class,
             EquiposInicialSeeder::class,
             ServiciosReparacionSeeder::class,
-            //EspecificacionesSeeder::class,
         ]);
     }
 }

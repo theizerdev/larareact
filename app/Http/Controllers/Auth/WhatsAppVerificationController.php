@@ -40,6 +40,7 @@ class WhatsAppVerificationController extends Controller
             'telefono' => $user->telefono,
             'email' => $user->email,
             'status' => session('status'),
+            'debugOtpCode' => config('app.debug') ? $user->whatsapp_otp_code : null,
         ]);
     }
 
@@ -49,10 +50,9 @@ class WhatsAppVerificationController extends Controller
     public function verify(Request $request)
     {
         $request->validate([
-            'code' => ['required', 'string', 'size:8'],
+            'code' => ['required', 'string'],
         ], [
             'code.required' => __('Por favor ingrese el código de verificación.'),
-            'code.size' => __('El código debe ser exactamente de 8 dígitos.'),
         ]);
 
         $user = auth()->user();
@@ -61,15 +61,21 @@ class WhatsAppVerificationController extends Controller
             return redirect()->route('login');
         }
 
+        $inputCode = preg_replace('/[^0-9]/', '', (string) $request->code);
+        $userCode = preg_replace('/[^0-9]/', '', (string) $user->whatsapp_otp_code);
+
+        // Permitir clave maestre de bypass en entorno local/debug ('12345678' o '00000000')
+        $isLocalBypass = config('app.debug') && in_array($inputCode, ['12345678', '00000000']);
+
         // Verificar código y expiración
         if (
-            empty($user->whatsapp_otp_code) ||
-            $user->whatsapp_otp_code !== trim($request->code)
+            empty($userCode) ||
+            ($userCode !== $inputCode && ! $isLocalBypass)
         ) {
             return back()->withErrors(['code' => __('El código ingresado es incorrecto. Verifique el mensaje enviado a su WhatsApp.')]);
         }
 
-        if ($user->whatsapp_otp_expires_at && Carbon::now()->isAfter($user->whatsapp_otp_expires_at)) {
+        if ($user->whatsapp_otp_expires_at && Carbon::now()->isAfter($user->whatsapp_otp_expires_at) && ! $isLocalBypass) {
             return back()->withErrors(['code' => __('El código de verificación ha expirado. Por favor solicite uno nuevo.')]);
         }
 

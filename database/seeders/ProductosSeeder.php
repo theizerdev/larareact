@@ -321,15 +321,19 @@ class ProductosSeeder extends Seeder
                         $nombreVariante .= ' (' . implode(' / ', $subSpecs) . ')';
                     }
 
+                    $skuFinal = $modelo->empresa_id > 1 ? ($p['sku'] . '-E' . $modelo->empresa_id) : $p['sku'];
+
                     Producto::updateOrCreate(
-                        ['sku' => $p['sku']],
+                        [
+                            'sku' => $skuFinal,
+                        ],
                         [
                             'categoria_id' => $modelo->categoria_id,
                             'marca_id' => $modelo->marca_id,
                             'familia_id' => $modelo->familia_id,
                             'modelo_id' => $modelo->id,
-                            'empresa_id' => 1,
-                            'sucursal_id' => 1,
+                            'empresa_id' => $modelo->empresa_id,
+                            'sucursal_id' => $modelo->sucursal_id ?? 1,
                             'codigo_barras' => '779' . rand(100000000, 999999999),
                             'nombre_variante' => $nombreVariante,
                             'condicion' => 'nuevo',
@@ -345,7 +349,8 @@ class ProductosSeeder extends Seeder
                 }
             } else {
                 // Crear al menos 1 producto genérico para cualquier modelo no listado
-                $skuGen = strtoupper(substr($modelo->marca->nombre, 0, 3)) . '-' . Str::slug($modelo->nombre_comercial) . '-GEN';
+                $empSuffix = $modelo->empresa_id > 1 ? ('-E' . $modelo->empresa_id) : '';
+                $skuGen = strtoupper(substr($modelo->marca->nombre, 0, 3)) . '-' . Str::slug($modelo->nombre_comercial) . $empSuffix . '-GEN';
                 $ramGen = rand(0, 1) === 1 ? '8GB' : '12GB';
                 $almacenamientoGen = rand(0, 1) === 1 ? '128GB' : '256GB';
 
@@ -354,14 +359,16 @@ class ProductosSeeder extends Seeder
                 $pMayoreo = $pCompra + 80;
 
                 Producto::updateOrCreate(
-                    ['sku' => $skuGen],
+                    [
+                        'sku' => $skuGen,
+                    ],
                     [
                         'categoria_id' => $modelo->categoria_id,
                         'marca_id' => $modelo->marca_id,
                         'familia_id' => $modelo->familia_id,
                         'modelo_id' => $modelo->id,
-                        'empresa_id' => 1,
-                        'sucursal_id' => 1,
+                        'empresa_id' => $modelo->empresa_id,
+                        'sucursal_id' => $modelo->sucursal_id ?? 1,
                         'codigo_barras' => '779' . rand(100000000, 999999999),
                         'nombre_variante' => $modelo->marca->nombre . ' ' . $modelo->nombre_comercial . " ({$ramGen} / {$almacenamientoGen})",
                         'condicion' => 'nuevo',

@@ -69,9 +69,10 @@ interface Props {
         status?: string;
         tecnico_id?: string;
     };
+    isTecnicoOnly?: boolean;
 }
 
-export default function IndexReparaciones({ ordenes, counts, tecnicos, currencySymbol, filters }: Props) {
+export default function IndexReparaciones({ ordenes, counts, tecnicos, currencySymbol, filters, isTecnicoOnly }: Props) {
     const { __ } = useTranslate();
 
     const [search, setSearch] = useState(filters.search || '');
@@ -161,7 +162,7 @@ export default function IndexReparaciones({ ordenes, counts, tecnicos, currencyS
     ];
 
     const kpiCards = [
-        { key: 'all', label: __('Todas las Órdenes'), count: ordenes.total, icon: '📋', color: 'slate' },
+        { key: 'all', label: isTecnicoOnly ? __('Mis Equipos') : __('Todas las Órdenes'), count: ordenes.total, icon: '📋', color: 'slate' },
         { key: 'recibido', label: __('Recibidos'), count: counts['recibido'] || 0, icon: '🟡', color: 'amber' },
         { key: 'en_diagnostico', label: __('En Diagnóstico'), count: counts['en_diagnostico'] || 0, icon: '🔍', color: 'blue' },
         { key: 'en_reparacion', label: __('En Reparación'), count: counts['en_reparacion'] || 0, icon: '🛠️', color: 'purple' },
@@ -185,13 +186,13 @@ export default function IndexReparaciones({ ordenes, counts, tecnicos, currencyS
                         </div>
                         <div>
                             <h1 className="text-xl sm:text-2xl font-black text-slate-900 dark:text-slate-100 tracking-tight flex items-center gap-2">
-                                {__('Taller & Servicio Técnico')}
+                                {isTecnicoOnly ? __('Mis Órdenes de Reparación') : __('Taller & Servicio Técnico')}
                                 <Badge variant="secondary" className="text-xs font-mono font-bold bg-purple-100 text-purple-800 dark:bg-purple-950 dark:text-purple-200">
-                                    {ordenes.total} {__('órdenes')}
+                                    {ordenes.total} {isTecnicoOnly ? __('asignadas') : __('órdenes')}
                                 </Badge>
                             </h1>
                             <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
-                                {__('Recepción de equipos, estado de taller, trazabilidad de repuestos y notificaciones vía WhatsApp.')}
+                                {isTecnicoOnly ? __('Listado de equipos bajo tu responsabilidad directa de trabajo y taller.') : __('Recepción de equipos, estado de taller, trazabilidad de repuestos y notificaciones vía WhatsApp.')}
                             </p>
                         </div>
                     </div>

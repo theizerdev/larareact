@@ -44,8 +44,18 @@ class ReparacionController extends Controller
         $status = $request->input('status');
         $tecnicoId = $request->input('tecnico_id');
 
+        $isTecnicoOnly = $user && ($user->hasRole('Técnico') || $user->hasRole('tecnico') || $user->hasRole('Tecnico') || $user->hasRole('Técnico de Reparaciones'));
+        $isAdmin = $user && ($user->hasRole('Administrador') || $user->hasRole('Super Administrador') || $user->hasRole('super-admin') || $user->hasRole('Admin'));
+
         $query = OrdenReparacion::with(['cliente', 'marca', 'modelo', 'tecnico'])
             ->where('empresa_id', $empresaId);
+
+        // Si es exclusivamente rol Técnico (sin permisos de Administrador), mostrar ÚNICAMENTE sus órdenes asignadas
+        if ($isTecnicoOnly && !$isAdmin) {
+            $query->where('tecnico_id', $user->id);
+        } elseif ($tecnicoId) {
+            $query->where('tecnico_id', $tecnicoId);
+        }
 
         if ($search) {
             $query->where(function ($q) use ($search) {
@@ -61,15 +71,15 @@ class ReparacionController extends Controller
             $query->where('estado_orden', $status);
         }
 
-        if ($tecnicoId) {
-            $query->where('tecnico_id', $tecnicoId);
-        }
-
         $ordenes = $query->orderBy('created_at', 'desc')->paginate(15)->withQueryString();
 
         // Conteo por Estados para Tablero / Filtros
-        $counts = OrdenReparacion::where('empresa_id', $empresaId)
-            ->select('estado_orden', DB::raw('count(*) as total'))
+        $countsQuery = OrdenReparacion::where('empresa_id', $empresaId);
+        if ($isTecnicoOnly && !$isAdmin) {
+            $countsQuery->where('tecnico_id', $user->id);
+        }
+
+        $counts = $countsQuery->select('estado_orden', DB::raw('count(*) as total'))
             ->groupBy('estado_orden')
             ->pluck('total', 'estado_orden')
             ->toArray();
@@ -82,6 +92,7 @@ class ReparacionController extends Controller
             'tecnicos' => $tecnicos,
             'currencySymbol' => $this->getCurrencySymbol(),
             'filters' => $request->only(['search', 'status', 'tecnico_id']),
+            'isTecnicoOnly' => $isTecnicoOnly && !$isAdmin,
         ]);
     }
 
@@ -93,8 +104,8 @@ class ReparacionController extends Controller
         $clientes = Cliente::where('empresa_id', $empresaId)->orderBy('nombre')->get(['id', 'nombre', 'telefono', 'email']);
         $marcas = Marca::with('modelos')->where('empresa_id', $empresaId)->orderBy('nombre')->get();
         $tecnicos = User::where('empresa_id', $empresaId)->get(['id', 'name']);
-        $categorias = \App\Models\Categoria::where('empresa_id', $empresaId)->where('estado', true)->orderBy('nombre')->get(['id', 'nombre']);
-        $servicios = \App\Models\Servicio::with('categoria:id,nombre')->where('empresa_id', $empresaId)->where('estado', true)->orderBy('nombre')->get(['id', 'codigo', 'nombre', 'precio', 'categoria_id']);
+        $categorias = \App\Models\Categoria::withoutGlobalScope('multitenancy')->where('empresa_id', $empresaId)->where('estado', true)->orderBy('nombre')->get(['id', 'nombre']);
+        $servicios = \App\Models\Servicio::withoutGlobalScope('multitenancy')->with(['categoria' => fn ($q) => $q->withoutGlobalScope('multitenancy')])->where('empresa_id', $empresaId)->where('estado', true)->orderBy('nombre')->get(['id', 'codigo', 'nombre', 'precio', 'categoria_id']);
 
         return Inertia::render('admin/Reparaciones/Create', [
             'clientes' => $clientes,

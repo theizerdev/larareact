@@ -32,10 +32,14 @@ class ProductoController extends Controller
         Gate::authorize('viewAny', Producto::class);
 
         $query = Producto::with([
-            'categoria',
-            'marca',
-            'familia',
-            'modelo',
+            'categoria' => fn ($q) => $q->withoutGlobalScope('multitenancy'),
+            'marca'     => fn ($q) => $q->withoutGlobalScope('multitenancy'),
+            'familia'   => fn ($q) => $q->withoutGlobalScope('multitenancy'),
+            'modelo'    => fn ($q) => $q->withoutGlobalScope('multitenancy')->with([
+                'marca'     => fn ($mq) => $mq->withoutGlobalScope('multitenancy'),
+                'categoria' => fn ($mq) => $mq->withoutGlobalScope('multitenancy'),
+                'familia'   => fn ($mq) => $mq->withoutGlobalScope('multitenancy'),
+            ]),
         ]);
 
         // Filtro de Búsqueda (SKU, Código de barras, Nombre de Variante)
@@ -45,7 +49,8 @@ class ProductoController extends Controller
                   ->orWhere('codigo_barras', 'like', "%{$search}%")
                   ->orWhere('nombre_variante', 'like', "%{$search}%")
                   ->orWhereHas('modelo', function ($m) use ($search) {
-                      $m->where('nombre_comercial', 'like', "%{$search}%")
+                      $m->withoutGlobalScope('multitenancy')
+                        ->where('nombre_comercial', 'like', "%{$search}%")
                         ->orWhere('codigo_modelo', 'like', "%{$search}%");
                   });
             });
@@ -100,19 +105,23 @@ class ProductoController extends Controller
             ->orderBy('nombre')
             ->get();
 
-        $modelos = Modelo::with(['marca', 'familia', 'categoria'])
+        $modelos = Modelo::with([
+                'marca' => fn ($q) => $q->withoutGlobalScope('multitenancy'),
+                'familia' => fn ($q) => $q->withoutGlobalScope('multitenancy'),
+                'categoria' => fn ($q) => $q->withoutGlobalScope('multitenancy'),
+            ])
             ->where('estado', true)
             ->get()
             ->map(fn ($m) => [
                 'id' => $m->id,
-                'nombre' => "{$m->marca->nombre} {$m->nombre_comercial}" . ($m->codigo_modelo ? " ({$m->codigo_modelo})" : ''),
+                'nombre' => (($m->marca?->nombre ? "{$m->marca->nombre} " : '') . $m->nombre_comercial) . ($m->codigo_modelo ? " ({$m->codigo_modelo})" : ''),
                 'nombre_comercial' => $m->nombre_comercial,
                 'codigo_modelo' => $m->codigo_modelo,
                 'marca_id' => $m->marca_id,
                 'familia_id' => $m->familia_id,
                 'categoria_id' => $m->categoria_id,
-                'marca' => $m->marca->nombre,
-                'familia' => $m->familia->nombre,
+                'marca' => $m->marca?->nombre ?? 'General',
+                'familia' => $m->familia?->nombre ?? 'General',
                 'categoria' => $m->categoria?->nombre ?? 'General',
                 'specs_json' => $m->specs_overrides ?? [],
             ]);
@@ -155,12 +164,23 @@ class ProductoController extends Controller
     {
         $validated = $request->validated();
 
-        $modelo = Modelo::findOrFail($validated['modelo_id']);
+        // If modelo_id is provided, inherit missing fields from the model
+        if (!empty($validated['modelo_id'])) {
+            $modelo = Modelo::withoutTenant()->find($validated['modelo_id']);
+            if ($modelo) {
+                $validated['marca_id']    = $request->input('marca_id') ?: ($validated['marca_id'] ?? $modelo->marca_id);
+                $validated['familia_id']  = $request->input('familia_id') ?: ($validated['familia_id'] ?? $modelo->familia_id);
+                $validated['categoria_id']= $request->input('categoria_id') ?: ($validated['categoria_id'] ?? $modelo->categoria_id);
+            }
+        } else {
+            // Repuesto sin modelo: use the directly submitted ids
+            $validated['modelo_id']    = null;
+            $validated['marca_id']     = $request->input('marca_id') ?: null;
+            $validated['familia_id']   = $request->input('familia_id') ?: null;
+            $validated['categoria_id'] = $request->input('categoria_id') ?: null;
+        }
 
-        $validated['marca_id'] = $modelo->marca_id;
-        $validated['familia_id'] = $modelo->familia_id;
-        $validated['categoria_id'] = $modelo->categoria_id;
-        $validated['empresa_id'] = $validated['empresa_id'] ?? auth()->user()->empresa_id;
+        $validated['empresa_id']  = $validated['empresa_id'] ?? auth()->user()->empresa_id;
         $validated['sucursal_id'] = $validated['sucursal_id'] ?? auth()->user()->sucursal_id;
         $validated['precio_mayoreo'] = $validated['precio_mayoreo'] ?? 0;
         $validated['usa_inventario'] = $request->boolean('usa_inventario', true);
@@ -188,11 +208,22 @@ class ProductoController extends Controller
     {
         $validated = $request->validated();
 
-        $modelo = Modelo::findOrFail($validated['modelo_id']);
+        // If modelo_id is provided, inherit missing fields from the model
+        if (!empty($validated['modelo_id'])) {
+            $modelo = Modelo::withoutTenant()->find($validated['modelo_id']);
+            if ($modelo) {
+                $validated['marca_id']    = $request->input('marca_id') ?: ($validated['marca_id'] ?? $modelo->marca_id);
+                $validated['familia_id']  = $request->input('familia_id') ?: ($validated['familia_id'] ?? $modelo->familia_id);
+                $validated['categoria_id']= $request->input('categoria_id') ?: ($validated['categoria_id'] ?? $modelo->categoria_id);
+            }
+        } else {
+            // Repuesto sin modelo: use the directly submitted ids
+            $validated['modelo_id']    = null;
+            $validated['marca_id']     = $request->input('marca_id') ?: null;
+            $validated['familia_id']   = $request->input('familia_id') ?: null;
+            $validated['categoria_id'] = $request->input('categoria_id') ?: null;
+        }
 
-        $validated['marca_id'] = $modelo->marca_id;
-        $validated['familia_id'] = $modelo->familia_id;
-        $validated['categoria_id'] = $modelo->categoria_id;
         $validated['precio_mayoreo'] = $validated['precio_mayoreo'] ?? 0;
         $validated['usa_inventario'] = $request->boolean('usa_inventario', true);
         $validated['stock'] = isset($validated['stock']) ? (float) $validated['stock'] : 0;

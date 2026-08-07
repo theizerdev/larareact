@@ -13,9 +13,10 @@ interface Props {
     telefono: string;
     email: string;
     status?: string;
+    debugOtpCode?: string | null;
 }
 
-export default function VerifyWhatsapp({ telefono, email, status }: Props) {
+export default function VerifyWhatsapp({ telefono, email, status, debugOtpCode }: Props) {
     const { __ } = useTranslate();
     const { data, setData, processing, errors } = useForm({
         code: '',
@@ -56,6 +57,22 @@ export default function VerifyWhatsapp({ telefono, email, status }: Props) {
                         </p>
                     </div>
                 </div>
+
+                {debugOtpCode && (
+                    <div className="p-2.5 bg-amber-50 dark:bg-amber-950/40 text-amber-800 dark:text-amber-300 rounded-lg border border-amber-200 dark:border-amber-900/50 text-xs font-mono font-bold flex items-center justify-between">
+                        <span>💡 Código generado (Modo Prueba): <strong>{debugOtpCode}</strong></span>
+                        <button
+                            type="button"
+                            onClick={() => {
+                                setData('code', debugOtpCode);
+                                handleSubmit(debugOtpCode);
+                            }}
+                            className="underline text-[11px] font-sans hover:text-amber-950"
+                        >
+                            Auto-rellenar
+                        </button>
+                    </div>
+                )}
 
                 {status && (
                     <div className="p-2.5 bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 rounded-lg border border-emerald-200 dark:border-emerald-900/50 text-xs font-bold flex items-center gap-2">

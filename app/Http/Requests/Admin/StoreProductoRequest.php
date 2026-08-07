@@ -22,7 +22,10 @@ class StoreProductoRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'modelo_id' => ['required', 'exists:modelos,id'],
+            'modelo_id' => ['nullable'],
+            'categoria_id' => ['nullable'],
+            'marca_id' => ['nullable'],
+            'familia_id' => ['nullable'],
             'sku' => ['required', 'string', 'max:100', 'unique:productos,sku'],
             'codigo_barras' => ['nullable', 'string', 'max:100', 'unique:productos,codigo_barras'],
             'nombre_variante' => ['required', 'string', 'max:255'],

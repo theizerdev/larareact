@@ -25,7 +25,9 @@ class UpdateProductoRequest extends FormRequest
         $productoId = $this->route('producto')?->id ?? $this->route('producto');
 
         return [
-            'modelo_id' => ['required', 'exists:modelos,id'],
+            'modelo_id' => ['nullable'],
+            'categoria_id' => ['nullable'],
+            'marca_id' => ['nullable'],
             'sku' => ['required', 'string', 'max:100', Rule::unique('productos', 'sku')->ignore($productoId)],
             'codigo_barras' => ['nullable', 'string', 'max:100', Rule::unique('productos', 'codigo_barras')->ignore($productoId)],
             'nombre_variante' => ['required', 'string', 'max:255'],

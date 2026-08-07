@@ -135,7 +135,10 @@ class PermissionSeeder extends Seeder
                 'clientes.edit' => 'Editar Clientes',
                 'clientes.delete' => 'Eliminar Clientes',
                 'clientes.abono' => 'Registrar Abonos de Crédito',
+            ],
 
+            // Sector: Servicio Técnico & Reparaciones
+            'reparaciones' => [
                 // Módulo: Taller & Reparaciones
                 'reparaciones.view' => 'Ver Ordenes de Reparación',
                 'reparaciones.create' => 'Recepcionar Equipos',

@@ -9,39 +9,53 @@ class EquiposInicialSeeder extends Seeder
 {
     public function run(): void
     {
-        // 1. Categorías
-        $catSmartphoneId = DB::table('categorias')->insertGetId([
-            'nombre' => 'Smartphone',
-            'slug' => 'smartphone',
-            'icono' => 'smartphone',
-            'estado' => true,
-            'created_at' => now(),
-            'empresa_id' => 1,
-            'sucursal_id' => 1,
-            'updated_at' => now(),
-        ]);
+        $empresas = DB::table('empresas')->get();
+        if ($empresas->isEmpty()) {
+            return;
+        }
 
-        $catTabletId = DB::table('categorias')->insertGetId([
-            'nombre' => 'Tablet',
-            'slug' => 'tablet',
-            'icono' => 'tablet',
-            'estado' => true,
-            'created_at' => now(),
-            'empresa_id' => 1,
-            'sucursal_id' => 1,
-            'updated_at' => now(),
-        ]);
+        foreach ($empresas as $empresa) {
+            $empresaId = $empresa->id;
+            $sucursalId = DB::table('sucursales')->where('empresa_id', $empresaId)->value('id') ?? $empresaId;
 
-        $catWatchId = DB::table('categorias')->insertGetId([
-            'nombre' => 'Smartwatch',
-            'slug' => 'smartwatch',
-            'icono' => 'watch',
-            'estado' => true,
-            'created_at' => now(),
-            'empresa_id' => 1,
-            'sucursal_id' => 1,
-            'updated_at' => now(),
-        ]);
+            // Evitar duplicados si ya existen categorías para esta empresa
+            if (DB::table('categorias')->where('empresa_id', $empresaId)->exists()) {
+                continue;
+            }
+
+            // 1. Categorías
+            $catSmartphoneId = DB::table('categorias')->insertGetId([
+                'nombre' => 'Smartphone',
+                'slug' => 'smartphone',
+                'icono' => 'smartphone',
+                'estado' => true,
+                'created_at' => now(),
+                'empresa_id' => $empresaId,
+                'sucursal_id' => $sucursalId,
+                'updated_at' => now(),
+            ]);
+
+            $catTabletId = DB::table('categorias')->insertGetId([
+                'nombre' => 'Tablet',
+                'slug' => 'tablet',
+                'icono' => 'tablet',
+                'estado' => true,
+                'created_at' => now(),
+                'empresa_id' => $empresaId,
+                'sucursal_id' => $sucursalId,
+                'updated_at' => now(),
+            ]);
+
+            $catWatchId = DB::table('categorias')->insertGetId([
+                'nombre' => 'Smartwatch',
+                'slug' => 'smartwatch',
+                'icono' => 'watch',
+                'estado' => true,
+                'created_at' => now(),
+                'empresa_id' => $empresaId,
+                'sucursal_id' => $sucursalId,
+                'updated_at' => now(),
+            ]);
 
         // 2. Marcas
         $marcas = [
@@ -64,8 +78,8 @@ class EquiposInicialSeeder extends Seeder
                 'slug' => $slug,
                 'estado' => true,
                 'created_at' => now(),
-                'empresa_id' => 1,
-                'sucursal_id' => 1,
+                'empresa_id' => $empresaId,
+                'sucursal_id' => $sucursalId,
                 'updated_at' => now(),
             ]);
         }
@@ -349,7 +363,7 @@ class EquiposInicialSeeder extends Seeder
             ],
         ];
 
-        // Insertar en la base de datos
+        // Insertar familias y modelos en la base de datos
         foreach ($catalogo as $marcaNombre => $familiasArray) {
             if (!isset($marcaIds[$marcaNombre])) continue;
 
@@ -363,8 +377,8 @@ class EquiposInicialSeeder extends Seeder
                     'descripcion' => $famData['descripcion'],
                     'estado' => true,
                     'created_at' => now(),
-                    'empresa_id' => 1,
-                    'sucursal_id' => 1,
+                    'empresa_id' => $empresaId,
+                    'sucursal_id' => $sucursalId,
                     'updated_at' => now(),
                 ]);
 
@@ -377,13 +391,14 @@ class EquiposInicialSeeder extends Seeder
                         'codigo_modelo' => $m['codigo'],
                         'estado' => true,
                         'created_at' => now(),
-                        'empresa_id' => 1,
-                        'sucursal_id' => 1,
+                        'empresa_id' => $empresaId,
+                        'sucursal_id' => $sucursalId,
                         'updated_at' => now(),
                     ]);
                 }
             }
         }
+        } // Fin foreach ($empresas as $empresa)
 
         // Aplicar especificaciones técnicas y poblar inventario inicial de productos
         $this->call(EspecificacionesSeeder::class);
