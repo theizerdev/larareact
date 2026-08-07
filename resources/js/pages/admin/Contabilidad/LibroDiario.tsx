@@ -279,12 +279,25 @@ export default function LibroDiario({ asientos, cuentasDisponibles = [], filters
 
                     <div className="flex items-center gap-2">
                         <Button
+                            size="sm"
+                            onClick={() => {
+                                const from = fromDate || new Date(new Date().getFullYear(), 0, 1).toISOString().split('T')[0];
+                                const to = toDate || new Date().toISOString().split('T')[0];
+                                window.location.href = `/admin/contabilidad/exportar-excel?from_date=${from}&to_date=${to}`;
+                            }}
+                            className="h-9 gap-1.5 text-xs font-bold bg-emerald-600 hover:bg-emerald-700 text-white shadow-sm"
+                        >
+                            <FileSpreadsheet className="w-4 h-4 text-emerald-100" />
+                            {__('Excel Completo (.xlsx)')}
+                        </Button>
+
+                        <Button
                             variant="outline"
                             size="sm"
                             onClick={exportToCSV}
                             className="h-9 gap-1.5 text-xs font-semibold"
                         >
-                            <FileSpreadsheet className="w-4 h-4 text-emerald-600" />
+                            <Download className="w-3.5 h-3.5 text-emerald-600" />
                             {__('Exportar CSV')}
                         </Button>
 

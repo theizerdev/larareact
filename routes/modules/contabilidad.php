@@ -43,5 +43,9 @@ Route::middleware(['verified'])->group(function () {
     Route::post('contabilidad/cierre-ejercicio', [ContabilidadController::class, 'cierreEjercicio'])
         ->name('contabilidad.cierre-ejercicio')
         ->middleware('permission:contabilidad.reportes');
+
+    Route::get('contabilidad/exportar-excel', [ContabilidadController::class, 'exportarExcelCompleto'])
+        ->name('contabilidad.exportar-excel')
+        ->middleware('permission:contabilidad.reportes');
 });
 

@@ -8,6 +8,7 @@ use App\Models\AsientoContable;
 use App\Models\ConfiguracionContable;
 use App\Models\CuentaContable;
 use App\Models\Empresa;
+use App\Services\AccountingExportService;
 use App\Services\AccountingService;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
@@ -474,4 +475,25 @@ class ContabilidadController extends Controller
             ],
         ]);
     }
+
+    /**
+     * Exportar Informe Contable y Fiscal Consolidado a Excel Multi-Pestaña
+     */
+    public function exportarExcelCompleto(Request $request, AccountingExportService $exportService)
+    {
+        $user = auth()->user();
+        $empresaId = $user?->empresa_id;
+
+        $fromDate = $request->input('from_date', date('Y-01-01'));
+        $toDate = $request->input('to_date', date('Y-m-d'));
+
+        $filePath = $exportService->generateFullAccountingExcel($empresaId, $fromDate, $toDate);
+
+        $empresa = $empresaId ? Empresa::find($empresaId) : null;
+        $slug = \Illuminate\Support\Str::slug($empresa?->razon_social ?? 'Empresa');
+        $fileName = "Contabilidad_Completa_{$slug}_{$fromDate}_al_{$toDate}.xlsx";
+
+        return response()->download($filePath, $fileName)->deleteFileAfterSend(true);
+    }
 }
+

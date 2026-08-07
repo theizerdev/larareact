@@ -59,6 +59,16 @@ export default function ReportesContables({ cuentasReporte, pnl }: Props) {
     const [openCierreModal, setOpenCierreModal] = useState(false);
     const [isClosing, setIsClosing] = useState(false);
 
+    // Estado Modal Exportar Excel Completo
+    const [openExcelModal, setOpenExcelModal] = useState(false);
+    const [excelFromDate, setExcelFromDate] = useState(new Date(new Date().getFullYear(), 0, 1).toISOString().split('T')[0]);
+    const [excelToDate, setExcelToDate] = useState(new Date().toISOString().split('T')[0]);
+
+    const handleDownloadExcel = () => {
+        window.location.href = `/admin/contabilidad/exportar-excel?from_date=${excelFromDate}&to_date=${excelToDate}`;
+        setOpenExcelModal(false);
+    };
+
     const breadcrumbs = [
         { title: __('Dashboard'), href: '/admin/dashboard' },
         { title: __('Contabilidad'), href: '#' },
@@ -158,12 +168,21 @@ export default function ReportesContables({ cuentasReporte, pnl }: Props) {
 
                     <div className="flex flex-wrap items-center gap-2">
                         <Button
+                            size="sm"
+                            onClick={() => setOpenExcelModal(true)}
+                            className="h-9 gap-1.5 text-xs font-bold bg-emerald-600 hover:bg-emerald-700 text-white shadow-sm"
+                        >
+                            <FileSpreadsheet className="w-4 h-4 text-emerald-100" />
+                            {__('Exportar Excel Completo (.xlsx)')}
+                        </Button>
+
+                        <Button
                             variant="outline"
                             size="sm"
                             onClick={exportCurrentTabToCSV}
                             className="h-9 gap-1.5 text-xs font-semibold"
                         >
-                            <FileSpreadsheet className="w-4 h-4 text-emerald-600" />
+                            <Download className="w-3.5 h-3.5 text-emerald-600" />
                             {__('Exportar a CSV')}
                         </Button>
 
@@ -176,6 +195,80 @@ export default function ReportesContables({ cuentasReporte, pnl }: Props) {
                             <Download className="w-3.5 h-3.5" />
                             {__('Imprimir Informe')}
                         </Button>
+
+                        {/* Modal para Seleccionar Rango de Fechas del Excel Completo */}
+                        <Dialog open={openExcelModal} onOpenChange={setOpenExcelModal}>
+                            <DialogContent className="sm:max-w-md">
+                                <DialogHeader>
+                                    <DialogTitle className="flex items-center gap-2 text-base font-bold text-slate-900 dark:text-slate-100">
+                                        <FileSpreadsheet className="w-5 h-5 text-emerald-600 dark:text-emerald-400" />
+                                        {__('Exportar Libro Contable y Fiscal a Excel')}
+                                    </DialogTitle>
+                                </DialogHeader>
+
+                                <div className="space-y-4 py-2">
+                                    <p className="text-xs text-slate-600 dark:text-slate-400">
+                                        {__('Se generará un único archivo Excel (.xlsx) con ')}<strong className="text-emerald-700 dark:text-emerald-400 font-bold">{__('10 pestañas consolidadas')}</strong>{__(': Dashboard Gerencial, Plan de Cuentas, Libro Diario, Libro Mayor, Balance Comprobación, P&L, Balance General, Ventas, Compras y Liquidación IVA/IGTF.')}
+                                    </p>
+
+                                    <div className="grid grid-cols-2 gap-3">
+                                        <div className="space-y-1.5">
+                                            <label className="text-xs font-medium text-slate-700 dark:text-slate-300">
+                                                {__('Fecha Desde')}
+                                            </label>
+                                            <input
+                                                type="date"
+                                                value={excelFromDate}
+                                                onChange={(e) => setExcelFromDate(e.target.value)}
+                                                className="w-full px-3 py-1.5 border border-slate-200 dark:border-slate-700 rounded-md text-xs bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100"
+                                            />
+                                        </div>
+                                        <div className="space-y-1.5">
+                                            <label className="text-xs font-medium text-slate-700 dark:text-slate-300">
+                                                {__('Fecha Hasta')}
+                                            </label>
+                                            <input
+                                                type="date"
+                                                value={excelToDate}
+                                                onChange={(e) => setExcelToDate(e.target.value)}
+                                                className="w-full px-3 py-1.5 border border-slate-200 dark:border-slate-700 rounded-md text-xs bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100"
+                                            />
+                                        </div>
+                                    </div>
+
+                                    <div className="p-3 bg-emerald-50 dark:bg-emerald-950/40 rounded-lg border border-emerald-200 dark:border-emerald-900/60 text-[11px] text-emerald-800 dark:text-emerald-300 space-y-1">
+                                        <div className="font-bold flex items-center gap-1.5">
+                                            <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
+                                            {__('Formato Profesional Incluido:')}
+                                        </div>
+                                        <ul className="list-disc list-inside space-y-0.5 text-slate-600 dark:text-slate-400 pl-1">
+                                            <li>{__('Membrete corporativo y rango de fechas')}</li>
+                                            <li>{__('Fórmulas de SUMA nativas de Excel')}</li>
+                                            <li>{__('Formato de moneda (#,##0.00) e identificación fiscal')}</li>
+                                        </ul>
+                                    </div>
+                                </div>
+
+                                <div className="flex items-center justify-end gap-2 pt-2 border-t border-slate-100 dark:border-slate-800">
+                                    <Button
+                                        variant="outline"
+                                        size="sm"
+                                        onClick={() => setOpenExcelModal(false)}
+                                        className="h-8 text-xs"
+                                    >
+                                        {__('Cancelar')}
+                                    </Button>
+                                    <Button
+                                        size="sm"
+                                        onClick={handleDownloadExcel}
+                                        className="h-8 text-xs font-bold bg-emerald-600 hover:bg-emerald-700 text-white gap-1.5"
+                                    >
+                                        <FileSpreadsheet className="w-4 h-4" />
+                                        {__('Descargar Documento Excel')}
+                                    </Button>
+                                </div>
+                            </DialogContent>
+                        </Dialog>
 
                         <Dialog open={openCierreModal} onOpenChange={setOpenCierreModal}>
                             <DialogTrigger asChild>
