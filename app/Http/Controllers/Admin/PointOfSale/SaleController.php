@@ -13,6 +13,7 @@ use App\Models\Pais;
 use App\Models\Producto;
 use App\Models\Sale;
 use App\Models\Servicio;
+use App\Models\OrdenReparacion;
 use App\Services\CashRegisterService;
 use App\Services\SaleService;
 use Illuminate\Http\Request;
@@ -125,7 +126,39 @@ class SaleController extends Controller
                 ];
             });
 
-        $catalog = $productos->concat($servicios)->values();
+        $reparaciones = OrdenReparacion::where('empresa_id', auth()->user()?->empresa_id)
+            ->where('estado_orden', 'reparado')
+            ->where(function ($query) {
+                $query->whereNull('sale_id')->orWhere('sale_id', 0);
+            })
+            ->get()
+            ->map(function ($reparacion) {
+                $displayName = trim((string) ($reparacion->cliente_nombre ?: 'Reparación'));
+                $numeroOrden = trim((string) ($reparacion->numero_orden ?: ''));
+                if ($numeroOrden !== '') {
+                    $displayName = "{$displayName} - {$numeroOrden}";
+                }
+
+                $precio = (float) max(
+                    $reparacion->saldo_restante ?? 0,
+                    ($reparacion->costo_mano_obra ?? 0) + ($reparacion->costo_repuestos ?? 0),
+                    $reparacion->costo_estimado ?? 0,
+                );
+
+                return [
+                    'id' => $reparacion->id,
+                    'tipo' => 'reparacion',
+                    'nombre' => $displayName,
+                    'codigo' => $numeroOrden !== '' ? $numeroOrden : "REP-{$reparacion->id}",
+                    'precio' => $precio,
+                    'stock' => null,
+                    'cliente_nombre' => $reparacion->cliente_nombre,
+                    'estado_orden' => $reparacion->estado_orden,
+                    'saldo_restante' => (float) ($reparacion->saldo_restante ?? 0),
+                ];
+            });
+
+        $catalog = $productos->concat($servicios)->concat($reparaciones)->values();
 
         // Get held sales for this user
         $heldSales = HeldSale::where('user_id', auth()->id())

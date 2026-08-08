@@ -5,6 +5,7 @@ namespace App\Services;
 use App\Models\CashRegister;
 use App\Models\Cliente;
 use App\Models\Empresa;
+use App\Models\OrdenReparacion;
 use App\Models\Producto;
 use App\Models\Sale;
 use App\Models\SaleItem;
@@ -131,6 +132,13 @@ class SaleService
                 } elseif (($item['concepto_tipo'] ?? 'servicio') === 'servicio' && !empty($item['itemable_id'])) {
                     $itemableType = Servicio::class;
                     $itemableId = $item['itemable_id'];
+                } elseif (($item['concepto_tipo'] ?? 'reparacion') === 'reparacion' && !empty($item['itemable_id'])) {
+                    $reparacion = OrdenReparacion::find($item['itemable_id']);
+                    if ($reparacion) {
+                        $reparacion->sale_id = $sale->id;
+                        $reparacion->saldo_restante = 0.00;
+                        $reparacion->save();
+                    }
                 }
 
                 SaleItem::create([

@@ -25,23 +25,26 @@ import { notifySuccess, notifyError } from '@/utils/notifications';
 
 interface CatalogItem {
     id: number;
-    tipo: 'producto' | 'servicio';
+    tipo: 'producto' | 'servicio' | 'reparacion';
     nombre: string;
     codigo: string;
     precio: number;
-    stock: number;
+    stock: number | null;
     usa_inventario: boolean;
     categoria?: string;
     familia?: string;
     marca?: string;
     modelo?: string;
+    cliente_nombre?: string;
+    estado_orden?: string;
+    saldo_restante?: number;
 }
 
 interface TicketItem {
     id: number | string;
     itemable_id?: number | null;
-    concepto_tipo?: 'producto' | 'servicio';
-    tipo?: 'producto' | 'servicio';
+    concepto_tipo?: 'producto' | 'servicio' | 'reparacion';
+    tipo?: 'producto' | 'servicio' | 'reparacion';
     nombre: string;
     codigo: string;
     precio_unitario: number;
@@ -55,7 +58,7 @@ interface TicketItem {
 interface CartItem {
     id: string;
     itemable_id: number | null;
-    concepto_tipo: 'producto' | 'servicio';
+    concepto_tipo: 'producto' | 'servicio' | 'reparacion';
     nombre: string;
     codigo: string;
     precio_unitario: number;
@@ -312,7 +315,7 @@ export default function Terminal({
     // Search Modal (F10)
     const [isSearchModalOpen, setIsSearchModalOpen] = useState(false);
     const [searchModalQuery, setSearchModalQuery] = useState('');
-    const [searchTypeFilter, setSearchTypeFilter] = useState<'all' | 'producto' | 'servicio'>('all');
+    const [searchTypeFilter, setSearchTypeFilter] = useState<'all' | 'producto' | 'servicio' | 'reparacion'>('all');
 
     // Payment modal (F12)
     const [isPaymentModalOpen, setIsPaymentModalOpen] = useState(false);
@@ -1882,6 +1885,7 @@ export default function Terminal({
                                     <Button type="button" variant={searchTypeFilter === 'all' ? 'default' : 'outline'} size="sm" onClick={() => setSearchTypeFilter('all')}>{__('Todos')}</Button>
                                     <Button type="button" variant={searchTypeFilter === 'producto' ? 'default' : 'outline'} size="sm" onClick={() => setSearchTypeFilter('producto')} className="gap-1"><Package className="w-3.5 h-3.5" />{__('Productos')}</Button>
                                     <Button type="button" variant={searchTypeFilter === 'servicio' ? 'default' : 'outline'} size="sm" onClick={() => setSearchTypeFilter('servicio')} className="gap-1"><Wrench className="w-3.5 h-3.5" />{__('Servicios')}</Button>
+                                    <Button type="button" variant={searchTypeFilter === 'reparacion' ? 'default' : 'outline'} size="sm" onClick={() => setSearchTypeFilter('reparacion')} className="gap-1"><Settings className="w-3.5 h-3.5" />{__('Reparaciones')}</Button>
                                 </div>
                             </div>
 

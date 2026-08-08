@@ -71,7 +71,7 @@ class ReparacionController extends Controller
             $query->where('estado_orden', $status);
         }
 
-        $ordenes = $query->orderBy('created_at', 'desc')->paginate(15)->withQueryString();
+        $ordenes = $query->latest('id')->paginate(15)->withQueryString();
 
         // Conteo por Estados para Tablero / Filtros
         $countsQuery = OrdenReparacion::where('empresa_id', $empresaId);
