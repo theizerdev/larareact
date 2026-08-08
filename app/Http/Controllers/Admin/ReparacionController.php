@@ -441,6 +441,9 @@ class ReparacionController extends Controller
             'comentario' => 'Orden de recepción registrada.',
         ]);
 
+        // Enviar notificaciones por WhatsApp al cliente y al técnico asociado
+        $this->sendWhatsAppNotificationsOnOrderCreation($orden);
+
         return redirect()->route('admin.reparaciones.show', $orden->id)->with('notification', [
             'type' => 'success',
             'message' => "Orden de Reparación {$numeroOrden} creada exitosamente.",
@@ -818,5 +821,123 @@ class ReparacionController extends Controller
 
         return redirect()->route('admin.reparaciones.show', $reparacion->id)
             ->with('success', 'Proceso de Post-Atención y Control de Calidad guardado exitosamente.');
+    }
+
+    private function sendWhatsAppNotificationsOnOrderCreation(OrdenReparacion $orden): void
+    {
+        try {
+            $user = auth()->user();
+            $empresaId = $orden->empresa_id ?? ($user ? $user->empresa_id : 1);
+            $whatsappService = new \App\Services\WhatsAppService($empresaId);
+            $currencySymbol = $this->getCurrencySymbol();
+
+            // 1. Obtener información del técnico asignado (si aplica)
+            $tecnicoNombre = 'Por Asignar';
+            $tecnicoObj = null;
+            if ($orden->tecnico_id) {
+                $tecnicoObj = \App\Models\User::find($orden->tecnico_id);
+                if ($tecnicoObj) {
+                    $tecnicoNombre = $tecnicoObj->name;
+                }
+            }
+
+            // 2. Notificación al Cliente
+            $clientePhone = $this->formatPhoneNumber($orden->cliente_telefono, $empresaId);
+            if (!$clientePhone && $orden->cliente_id) {
+                $clienteModel = \App\Models\Cliente::find($orden->cliente_id);
+                if ($clienteModel && !empty($clienteModel->telefono)) {
+                    $clientePhone = $this->formatPhoneNumber($clienteModel->telefono, $empresaId);
+                }
+            }
+
+            if ($clientePhone) {
+                $costoFmt = number_format((float) $orden->costo_estimado, 2);
+                $anticipoFmt = number_format((float) $orden->anticipo, 2);
+                $saldoFmt = number_format((float) $orden->saldo_restante, 2);
+
+                $mensajeCliente = "📲 *CONFIRMACIÓN DE ORDEN DE REPARACIÓN*\n\n"
+                    . "📋 *Orden:* #{$orden->numero_orden}\n"
+                    . "👤 *Cliente:* {$orden->cliente_nombre}\n"
+                    . "📱 *Equipo:* {$orden->marca_nombre} {$orden->modelo_nombre} ({$orden->tipo_dispositivo})\n"
+                    . (!empty($orden->imei_serie) ? "🔢 *IMEI/Serie:* {$orden->imei_serie}\n" : "")
+                    . "👨‍🔧 *Técnico Asignado:* {$tecnicoNombre}\n"
+                    . "⚠️ *Falla Reportada:* {$orden->descripcion_falla}\n"
+                    . "💰 *Costo Estimado:* {$currencySymbol}{$costoFmt}\n"
+                    . "💵 *Anticipo:* {$currencySymbol}{$anticipoFmt}\n"
+                    . "💳 *Saldo Restante:* {$currencySymbol}{$saldoFmt}\n\n"
+                    . "Estimado(a) *{$orden->cliente_nombre}*, su equipo ha sido recibido exitosamente en nuestro taller y ha sido asignado a nuestro técnico especializado *{$tecnicoNombre}*. Le mantendremos informado sobre el estatus de su reparación. ¡Gracias por su confianza!";
+
+                $whatsappService->sendMessage($clientePhone, $mensajeCliente);
+            }
+
+            // 3. Notificación al Técnico Asignado (si aplica)
+            if ($tecnicoObj && !empty($tecnicoObj->telefono)) {
+                $tecnicoPhone = $this->formatPhoneNumber($tecnicoObj->telefono, $empresaId);
+                if ($tecnicoPhone) {
+                    $mensajeTecnico = "🛠️ *NUEVA ÓRDEN DE REPARACIÓN ASIGNADA*\n\n"
+                        . "📋 *Orden:* #{$orden->numero_orden}\n"
+                        . "👤 *Técnico:* {$tecnicoObj->name}\n"
+                        . "📱 *Equipo:* {$orden->marca_nombre} {$orden->modelo_nombre} ({$orden->tipo_dispositivo})\n"
+                        . (!empty($orden->imei_serie) ? "🔢 *IMEI/Serie:* {$orden->imei_serie}\n" : "")
+                        . "👤 *Cliente:* {$orden->cliente_nombre}\n"
+                        . "⚠️ *Falla Reportada:* {$orden->descripcion_falla}\n"
+                        . (!empty($orden->observaciones_fisicas) ? "📝 *Observaciones:* {$orden->observaciones_fisicas}\n" : "")
+                        . "\nHola *{$tecnicoObj->name}*, se te ha asignado una nueva orden de servicio técnico. Por favor ingresa al sistema para iniciar el diagnóstico.";
+
+                    $whatsappService->sendMessage($tecnicoPhone, $mensajeTecnico);
+                }
+            }
+        } catch (\Throwable $e) {
+            \Illuminate\Support\Facades\Log::error('Error enviando notificaciones de WhatsApp en creación de orden: ' . $e->getMessage());
+        }
+    }
+
+    private function formatPhoneNumber(?string $phone, ?int $empresaId = null): ?string
+    {
+        if (empty($phone)) {
+            return null;
+        }
+
+        // 1. Eliminar cualquier carácter que no sea un número (elimina el signo +, espacios, guiones, etc.)
+        $cleanPhone = preg_replace('/[^0-9]/', '', $phone);
+        if (empty($cleanPhone)) {
+            return null;
+        }
+
+        // 2. Obtener el prefijo telefónico del país de la empresa
+        $codigoPais = null;
+        if ($empresaId) {
+            $empresa = \App\Models\Empresa::with('paisTelefono')->find($empresaId);
+            if ($empresa) {
+                if ($empresa->paisTelefono && !empty($empresa->paisTelefono->codigo_telefonico)) {
+                    $codigoPais = preg_replace('/[^0-9]/', '', $empresa->paisTelefono->codigo_telefonico);
+                } elseif ($empresa->pais_telefono_id) {
+                    $pais = \App\Models\Pais::find($empresa->pais_telefono_id);
+                    if ($pais && !empty($pais->codigo_telefonico)) {
+                        $codigoPais = preg_replace('/[^0-9]/', '', $pais->codigo_telefonico);
+                    }
+                }
+            }
+        }
+
+        // Fallback si no se especificó o no se encontró empresa: buscar país predeterminado activo
+        if (!$codigoPais) {
+            $paisDefault = \App\Models\Pais::where('activo', true)->first();
+            if ($paisDefault && !empty($paisDefault->codigo_telefonico)) {
+                $codigoPais = preg_replace('/[^0-9]/', '', $paisDefault->codigo_telefonico);
+            }
+        }
+
+        // 3. Formatear el número agregando el código de país si aún no lo tiene
+        if ($codigoPais) {
+            $phoneWithoutZero = ltrim($cleanPhone, '0');
+
+            if (!str_starts_with($cleanPhone, $codigoPais) && !str_starts_with($phoneWithoutZero, $codigoPais)) {
+                $cleanPhone = $codigoPais . $phoneWithoutZero;
+            }
+        }
+
+        // Retornar número limpio de sólo dígitos sin el signo +
+        return $cleanPhone;
     }
 }
