@@ -530,6 +530,13 @@ export default function ShowReparacion({ orden, productosRepuestos = [], tecnico
     const [isPrintModalOpen, setIsPrintModalOpen] = useState(false);
     const [printType, setPrintType] = useState<'cliente' | 'tecnico'>('cliente');
 
+    useEffect(() => {
+        const waUrl = pageProps.flash?.whatsapp_url || pageProps.whatsapp_url;
+        if (waUrl) {
+            window.open(waUrl, '_blank');
+        }
+    }, [pageProps]);
+
     const handleExecutePrint = (type: 'cliente' | 'tecnico') => {
         setPrintType(type);
         setIsPrintModalOpen(false);

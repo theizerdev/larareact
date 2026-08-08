@@ -819,8 +819,64 @@ class ReparacionController extends Controller
             'comentario' => 'Validación Final, Limpieza & Control de Calidad Post-Atención registrado.',
         ]);
 
-        return redirect()->route('admin.reparaciones.show', $reparacion->id)
-            ->with('success', 'Proceso de Post-Atención y Control de Calidad guardado exitosamente.');
+        // Enviar notificación de WhatsApp informando que el equipo está listo para retirar
+        $waUrl = $this->sendWhatsAppNotificationOnPostServicioCompleted($reparacion);
+
+        $redirect = redirect()->route('admin.reparaciones.show', $reparacion->id)
+            ->with('success', 'Proceso de Post-Atención guardado exitosamente. Notificación de retiro enviada al cliente.');
+
+        if ($waUrl) {
+            $redirect->with('whatsapp_url', $waUrl);
+        }
+
+        return $redirect;
+    }
+
+    private function sendWhatsAppNotificationOnPostServicioCompleted(OrdenReparacion $orden): ?string
+    {
+        try {
+            $user = auth()->user();
+            $empresaId = $orden->empresa_id ?? ($user ? $user->empresa_id : 1);
+            $whatsappService = new \App\Services\WhatsAppService($empresaId);
+            $currencySymbol = $this->getCurrencySymbol();
+
+            $orden->loadMissing(['cliente', 'marca', 'modelo', 'tecnico']);
+
+            $clientePhone = $this->formatPhoneNumber($orden->cliente_telefono, $empresaId);
+            if (!$clientePhone && $orden->cliente_id) {
+                $clienteModel = \App\Models\Cliente::find($orden->cliente_id);
+                if ($clienteModel && !empty($clienteModel->telefono)) {
+                    $clientePhone = $this->formatPhoneNumber($clienteModel->telefono, $empresaId);
+                }
+            }
+
+            if ($clientePhone) {
+                $clienteNombre = $orden->cliente ? $orden->cliente->nombre : ($orden->cliente_nombre ?? 'Estimado(a) Cliente');
+                $tecnicoNombre = $orden->tecnico ? $orden->tecnico->name : 'Servicio Técnico';
+                $marcaNombre = $orden->marca ? $orden->marca->nombre : ($orden->marca_nombre ?? 'Dispositivo');
+                $modeloNombre = $orden->modelo ? $orden->modelo->nombre_comercial : ($orden->modelo_nombre ?? '');
+                $saldoFmt = number_format((float) $orden->saldo_restante, 2);
+
+                $mensajeCliente = "🟢 *¡SU EQUIPO YA ESTÁ LISTO PARA RETIRAR!*\n\n"
+                    . "Estimado(a) *{$clienteNombre}*,\n"
+                    . "Le informamos que la reparación de su equipo ha finalizado exitosamente y ya se encuentra *DISPONIBLE PARA SU RETIRO* en nuestra sucursal.\n\n"
+                    . "📋 *DATOS DE LA ÓRDEN:*\n"
+                    . "• *Orden N°:* #{$orden->numero_orden}\n"
+                    . "• *Equipo:* {$marcaNombre} {$modeloNombre} ({$orden->tipo_dispositivo})\n"
+                    . (!empty($orden->imei_serie) ? "• *IMEI/Serie:* {$orden->imei_serie}\n" : "")
+                    . "• *Saldo Pendiente:* {$currencySymbol}{$saldoFmt}\n\n"
+                    . "🛠️ *TÉCNICO A CARGO:*\n"
+                    . "• *Nombre:* {$tecnicoNombre}\n\n"
+                    . "Puede pasar por nuestra sucursal en nuestros horarios de atención. ¡Agradecemos su confianza!";
+
+                $whatsappService->sendMessage($clientePhone, $mensajeCliente);
+
+                return "https://wa.me/{$clientePhone}?text=" . urlencode($mensajeCliente);
+            }
+        } catch (\Throwable $e) {
+            \Illuminate\Support\Facades\Log::error('Error enviando notificación de WhatsApp Post-Servicio: ' . $e->getMessage());
+        }
+        return null;
     }
 
     private function sendWhatsAppNotificationsOnOrderCreation(OrdenReparacion $orden): void

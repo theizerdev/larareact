@@ -96,27 +96,30 @@ export default function IndexReparaciones({ ordenes, counts, tecnicos, currencyS
     const [cameraStream, setCameraStream] = useState<MediaStream | null>(null);
     const [isCameraActive, setIsCameraActive] = useState(false);
     const [cameraError, setCameraError] = useState<string | null>(null);
-    const videoRef = useRef<HTMLVideoElement | null>(null);
-    const animationFrameRef = useRef<number | null>(null);
+    const html5QrCodeRef = useRef<any>(null);
 
-    // Asegurar la conexión constante del stream de video al elemento DOM <video>
-    useEffect(() => {
-        if (cameraStream && videoRef.current) {
-            if (videoRef.current.srcObject !== cameraStream) {
-                videoRef.current.srcObject = cameraStream;
+    const loadHtml5QrcodePlugin = (): Promise<any> => {
+        return new Promise((resolve) => {
+            if ((window as any).Html5Qrcode) {
+                resolve((window as any).Html5Qrcode);
+                return;
             }
-            videoRef.current.play().catch(() => {});
-        }
-    }, [cameraStream, isCameraActive, isScanModalOpen]);
+            const script = document.createElement('script');
+            script.src = 'https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js';
+            script.async = true;
+            script.onload = () => resolve((window as any).Html5Qrcode);
+            script.onerror = () => resolve(null);
+            document.body.appendChild(script);
+        });
+    };
 
-    const stopCamera = () => {
-        if (animationFrameRef.current) {
-            cancelAnimationFrame(animationFrameRef.current);
-            animationFrameRef.current = null;
-        }
-        if (cameraStream) {
-            cameraStream.getTracks().forEach((track) => track.stop());
-            setCameraStream(null);
+    const stopCamera = async () => {
+        if (html5QrCodeRef.current) {
+            try {
+                await html5QrCodeRef.current.stop();
+                html5QrCodeRef.current.clear();
+            } catch (e) {}
+            html5QrCodeRef.current = null;
         }
         setIsCameraActive(false);
     };
@@ -125,69 +128,63 @@ export default function IndexReparaciones({ ordenes, counts, tecnicos, currencyS
         setCameraError(null);
         setIsCameraActive(true);
         try {
-            const stream = await navigator.mediaDevices.getUserMedia({
-                video: { facingMode: 'environment', width: { ideal: 1280 }, height: { ideal: 720 } },
-                audio: false,
-            });
-            setCameraStream(stream);
-
-            let isDetectorSupported = false;
-            let detector: any = null;
-            if ('BarcodeDetector' in window) {
-                try {
-                    detector = new (window as any).BarcodeDetector({ formats: ['qr_code'] });
-                    isDetectorSupported = true;
-                } catch {}
+            const Html5Qrcode = await loadHtml5QrcodePlugin();
+            if (!Html5Qrcode) {
+                setCameraError(__('No se pudo cargar el plugin de escaneo QR. Usar la búsqueda manual.'));
+                setIsCameraActive(false);
+                return;
             }
 
-            const scanFrame = async () => {
-                if (videoRef.current && videoRef.current.readyState >= 2) {
-                    let detectedCode: string | null = null;
+            if (html5QrCodeRef.current) {
+                try {
+                    await html5QrCodeRef.current.stop();
+                } catch (e) {}
+            }
 
-                    // 1. Intentar con BarcodeDetector nativo del navegador si está soportado
-                    if (isDetectorSupported && detector) {
-                        try {
-                            const barcodes = await detector.detect(videoRef.current);
-                            if (barcodes && barcodes.length > 0 && barcodes[0].rawValue) {
-                                detectedCode = barcodes[0].rawValue;
+            setTimeout(async () => {
+                try {
+                    const container = document.getElementById('qr-reader-container');
+                    if (!container) return;
+
+                    const scanner = new Html5Qrcode('qr-reader-container');
+                    html5QrCodeRef.current = scanner;
+
+                    await scanner.start(
+                        { facingMode: 'environment' },
+                        {
+                            fps: 15,
+                            qrbox: (w: number, h: number) => {
+                                const min = Math.min(w, h);
+                                return { width: Math.floor(min * 0.85), height: Math.floor(min * 0.85) };
+                            },
+                        },
+                        (decodedText: string) => {
+                            if (decodedText) {
+                                handleSearchByCode(decodedText);
+                                stopCamera();
                             }
-                        } catch {}
-                    }
-
-                    // 2. Intentar con decodificador TypeScript en canvas de respaldo
-                    if (!detectedCode) {
-                        try {
-                            const canvas = document.createElement('canvas');
-                            const v = videoRef.current;
-                            canvas.width = Math.min(640, v.videoWidth || 640);
-                            canvas.height = Math.min(480, v.videoHeight || 480);
-                            const ctx = canvas.getContext('2d');
-                            if (ctx) {
-                                ctx.drawImage(v, 0, 0, canvas.width, canvas.height);
-                                const imgData = ctx.getImageData(0, 0, canvas.width, canvas.height);
-                                detectedCode = decodeQRCodeFromImageData(imgData);
-                            }
-                        } catch {}
-                    }
-
-                    if (detectedCode) {
-                        handleSearchByCode(detectedCode);
-                        stopCamera();
-                        return;
-                    }
+                        },
+                        () => {}
+                    );
+                } catch (err: any) {
+                    console.error('Plugin start error:', err);
+                    setCameraError(__('No se pudo acceder a la cámara o el permiso fue denegado.'));
+                    setIsCameraActive(false);
                 }
-                animationFrameRef.current = requestAnimationFrame(scanFrame);
-            };
-            animationFrameRef.current = requestAnimationFrame(scanFrame);
+            }, 150);
         } catch (err: any) {
-            console.error('Camera access error:', err);
-            setCameraError(__('No se pudo acceder a la cámara. Ingrese el folio manualmente o use su lector de barras.'));
+            console.error('Plugin load error:', err);
+            setCameraError(__('Error al iniciar la cámara.'));
             setIsCameraActive(false);
         }
     };
 
     const handleSearchByCode = async (codeToSearch?: string) => {
-        const query = (codeToSearch || scanInput).trim();
+        let query = (codeToSearch || scanInput).trim();
+        if (!query) return;
+
+        // Limpiar basura o ruídos de lectura
+        query = query.replace(/[^\w\s\/:?=#.-]/gi, '').trim();
         if (!query) return;
 
         setIsSearchingOrden(true);
@@ -623,40 +620,9 @@ export default function IndexReparaciones({ ordenes, counts, tecnicos, currencyS
                             {/* VISOR DE CÁMARA O BÚSQUEDA MANUAL */}
                             {!scannedOrden ? (
                                 <div className="space-y-4">
-                                    <div className="relative bg-slate-950 rounded-2xl overflow-hidden h-[320px] sm:h-[380px] w-full border-2 border-purple-500/50 flex flex-col items-center justify-center text-white shadow-lg">
+                                    <div className="relative bg-slate-950 rounded-2xl overflow-hidden min-h-[320px] sm:min-h-[360px] w-full border-2 border-purple-500/50 flex flex-col items-center justify-center text-white shadow-lg">
                                         {isCameraActive ? (
-                                            <>
-                                                <video
-                                                    ref={(el) => {
-                                                        videoRef.current = el;
-                                                        if (el && cameraStream && el.srcObject !== cameraStream) {
-                                                            el.srcObject = cameraStream;
-                                                            el.play().catch(() => {});
-                                                        }
-                                                    }}
-                                                    autoPlay
-                                                    playsInline
-                                                    muted
-                                                    className="w-full h-full object-cover"
-                                                />
-                                                {/* GUÍAS DE ESQUINA PANTALLA COMPLETA */}
-                                                <div className="absolute inset-4 pointer-events-none border border-purple-400/30 rounded-xl">
-                                                    <div className="absolute top-0 left-0 w-8 h-8 border-t-4 border-l-4 border-purple-400 rounded-tl-xl" />
-                                                    <div className="absolute top-0 right-0 w-8 h-8 border-t-4 border-r-4 border-purple-400 rounded-tr-xl" />
-                                                    <div className="absolute bottom-0 left-0 w-8 h-8 border-b-4 border-l-4 border-purple-400 rounded-bl-xl" />
-                                                    <div className="absolute bottom-0 right-0 w-8 h-8 border-b-4 border-r-4 border-purple-400 rounded-br-xl" />
-                                                </div>
-
-                                                {/* LÍNEA LÁSER ESCÁNER FULL ANCHO */}
-                                                <div className="absolute inset-x-4 top-1/2 -translate-y-1/2 pointer-events-none">
-                                                    <div className="w-full h-0.5 bg-gradient-to-r from-transparent via-purple-400 to-transparent animate-pulse shadow-[0_0_8px_#a855f7]" />
-                                                </div>
-
-                                                <div className="absolute bottom-3 bg-black/75 backdrop-blur-md px-4 py-1.5 rounded-full text-[11px] text-purple-200 font-mono flex items-center gap-2 shadow-md">
-                                                    <Camera className="w-3.5 h-3.5 text-purple-400 animate-spin" />
-                                                    {__('Escaneando pantalla completa - Muestre el QR en cualquier lugar')}
-                                                </div>
-                                            </>
+                                            <div id="qr-reader-container" className="w-full h-full min-h-[320px] sm:min-h-[360px] overflow-hidden rounded-2xl" />
                                         ) : (
                                             <div className="p-6 text-center space-y-3">
                                                 <div className="w-12 h-12 rounded-full bg-slate-900 flex items-center justify-center mx-auto text-purple-400 border border-slate-800">
