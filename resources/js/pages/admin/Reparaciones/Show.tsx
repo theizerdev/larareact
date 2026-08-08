@@ -1297,29 +1297,6 @@ export default function ShowReparacion({ orden, productosRepuestos = [], tecnico
 
                     <button
                         type="button"
-                        onClick={() => setActiveTab('postservicio')}
-                        className={cn(
-                            'px-4 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-2 whitespace-nowrap',
-                            activeTab === 'postservicio'
-                                ? 'bg-purple-600 text-white shadow-md shadow-purple-600/20'
-                                : 'bg-white dark:bg-slate-900 text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800'
-                        )}
-                    >
-                        <CheckCircle2 className="w-4 h-4 text-emerald-400" />
-                        {__('Post-Atención / QC')}
-                        {tienePostServicio ? (
-                            <Badge className="ml-1 text-[10px] h-4 px-1.5 bg-emerald-500 text-white border-0 font-bold">
-                                🟢 {__('Completado')}
-                            </Badge>
-                        ) : (
-                            <Badge variant="outline" className="ml-1 text-[10px] h-4 px-1.5">
-                                {__('Pendiente')}
-                            </Badge>
-                        )}
-                    </button>
-
-                    <button
-                        type="button"
                         onClick={() => setActiveTab('repuestos')}
                         className={cn(
                             'px-4 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-2 whitespace-nowrap',
@@ -1367,6 +1344,29 @@ export default function ShowReparacion({ orden, productosRepuestos = [], tecnico
                         <Badge variant="secondary" className="ml-1 text-[10px] h-4 px-1.5 bg-purple-100 dark:bg-purple-950 text-purple-800 dark:text-purple-200">
                             {orden.historial?.length || 0}
                         </Badge>
+                    </button>
+
+                    <button
+                        type="button"
+                        onClick={() => setActiveTab('postservicio')}
+                        className={cn(
+                            'px-4 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-2 whitespace-nowrap',
+                            activeTab === 'postservicio'
+                                ? 'bg-purple-600 text-white shadow-md shadow-purple-600/20'
+                                : 'bg-white dark:bg-slate-900 text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800'
+                        )}
+                    >
+                        <CheckCircle2 className="w-4 h-4 text-emerald-400" />
+                        {__('Post-Atención / QC')}
+                        {tienePostServicio ? (
+                            <Badge className="ml-1 text-[10px] h-4 px-1.5 bg-emerald-500 text-white border-0 font-bold">
+                                🟢 {__('Completado')}
+                            </Badge>
+                        ) : (
+                            <Badge variant="outline" className="ml-1 text-[10px] h-4 px-1.5">
+                                {__('Pendiente')}
+                            </Badge>
+                        )}
                     </button>
                 </div>
 

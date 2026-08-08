@@ -190,7 +190,7 @@ function PatternLockInput({
     const lastDot = pattern.length > 0 ? PATTERN_DOT_COORDS[pattern[pattern.length - 1]] : null;
 
     return (
-        <div className="space-y-3 select-none">
+        <div className="space-y-3 select-none mx-auto w-full max-w-[320px]">
             <div className="flex items-center justify-between">
                 <div className="text-[11px] text-slate-500">
                     {pattern.length > 0
@@ -208,7 +208,7 @@ function PatternLockInput({
                 </Button>
             </div>
 
-            <div className="inline-block rounded-2xl border border-slate-800 bg-slate-950 p-3 shadow-2xl">
+            <div className="mx-auto inline-block rounded-2xl border border-slate-800 bg-slate-950 p-3 shadow-2xl">
                 <svg
                     ref={svgRef}
                     className="w-[260px] h-[260px] touch-none cursor-crosshair"
@@ -2243,7 +2243,7 @@ export default function CreateReparacion({ clientes: initialClientes, marcas: in
                                                 )}
 
                                                 {tipoSeguridad === 'patron' && (
-                                                    <div className="space-y-3">
+                                                    <div className="space-y-3 flex flex-col items-center">
                                                         <Label className="text-xs font-semibold">{__('Patrón de desbloqueo (3x3)')}</Label>
                                                         <PatternLockInput
                                                             pattern={patronSecuencia}
