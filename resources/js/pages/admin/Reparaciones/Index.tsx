@@ -1,4 +1,4 @@
-import { Head, Link, router } from '@inertiajs/react';
+import { Head, Link, router, usePage } from '@inertiajs/react';
 import {
     Wrench,
     Plus,
@@ -19,19 +19,24 @@ import {
     XCircle,
     ChevronRight,
     Sparkles,
+    QrCode,
+    Camera,
+    Loader2,
 } from 'lucide-react';
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { Breadcrumbs } from '@/components/breadcrumbs';
 import { ModuleHeader } from '@/components/module-header';
 import Pagination from '@/components/pagination';
+import { decodeQRCodeFromImageData } from '@/components/qr-decoder';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useTranslate } from '@/hooks/use-translate';
 import { cleanParams, cn } from '@/lib/utils';
-import { notifySuccess } from '@/utils/notifications';
+import { notifySuccess, notifyError } from '@/utils/notifications';
 
 interface Orden {
     id: number;
@@ -74,10 +79,170 @@ interface Props {
 
 export default function IndexReparaciones({ ordenes, counts, tecnicos, currencySymbol, filters, isTecnicoOnly }: Props) {
     const { __ } = useTranslate();
+    const pageUser = usePage<any>().props.auth?.user;
+    const isUserTecnico = isTecnicoOnly || Boolean(pageUser?.roles?.some((r: any) => String(r.name).toLowerCase().includes('tecnic'))) || pageUser?.tipo_usuario === 'tecnico';
 
     const [search, setSearch] = useState(filters.search || '');
     const [status, setStatus] = useState(filters.status || 'all');
     const [tecnicoId, setTecnicoId] = useState(filters.tecnico_id || 'all');
+
+    // QR Code Camera Scanner States
+    const [isScanModalOpen, setIsScanModalOpen] = useState(false);
+    const [scanInput, setScanInput] = useState('');
+    const [scannedOrden, setScannedOrden] = useState<any | null>(null);
+    const [isSearchingOrden, setIsSearchingOrden] = useState(false);
+    const [isStartingReparacion, setIsStartingReparacion] = useState(false);
+
+    const [cameraStream, setCameraStream] = useState<MediaStream | null>(null);
+    const [isCameraActive, setIsCameraActive] = useState(false);
+    const [cameraError, setCameraError] = useState<string | null>(null);
+    const videoRef = useRef<HTMLVideoElement | null>(null);
+    const animationFrameRef = useRef<number | null>(null);
+
+    // Asegurar la conexión constante del stream de video al elemento DOM <video>
+    useEffect(() => {
+        if (cameraStream && videoRef.current) {
+            if (videoRef.current.srcObject !== cameraStream) {
+                videoRef.current.srcObject = cameraStream;
+            }
+            videoRef.current.play().catch(() => {});
+        }
+    }, [cameraStream, isCameraActive, isScanModalOpen]);
+
+    const stopCamera = () => {
+        if (animationFrameRef.current) {
+            cancelAnimationFrame(animationFrameRef.current);
+            animationFrameRef.current = null;
+        }
+        if (cameraStream) {
+            cameraStream.getTracks().forEach((track) => track.stop());
+            setCameraStream(null);
+        }
+        setIsCameraActive(false);
+    };
+
+    const startCamera = async () => {
+        setCameraError(null);
+        setIsCameraActive(true);
+        try {
+            const stream = await navigator.mediaDevices.getUserMedia({
+                video: { facingMode: 'environment', width: { ideal: 1280 }, height: { ideal: 720 } },
+                audio: false,
+            });
+            setCameraStream(stream);
+
+            let isDetectorSupported = false;
+            let detector: any = null;
+            if ('BarcodeDetector' in window) {
+                try {
+                    detector = new (window as any).BarcodeDetector({ formats: ['qr_code'] });
+                    isDetectorSupported = true;
+                } catch {}
+            }
+
+            const scanFrame = async () => {
+                if (videoRef.current && videoRef.current.readyState >= 2) {
+                    let detectedCode: string | null = null;
+
+                    // 1. Intentar con BarcodeDetector nativo del navegador si está soportado
+                    if (isDetectorSupported && detector) {
+                        try {
+                            const barcodes = await detector.detect(videoRef.current);
+                            if (barcodes && barcodes.length > 0 && barcodes[0].rawValue) {
+                                detectedCode = barcodes[0].rawValue;
+                            }
+                        } catch {}
+                    }
+
+                    // 2. Intentar con decodificador TypeScript en canvas de respaldo
+                    if (!detectedCode) {
+                        try {
+                            const canvas = document.createElement('canvas');
+                            const v = videoRef.current;
+                            canvas.width = Math.min(640, v.videoWidth || 640);
+                            canvas.height = Math.min(480, v.videoHeight || 480);
+                            const ctx = canvas.getContext('2d');
+                            if (ctx) {
+                                ctx.drawImage(v, 0, 0, canvas.width, canvas.height);
+                                const imgData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+                                detectedCode = decodeQRCodeFromImageData(imgData);
+                            }
+                        } catch {}
+                    }
+
+                    if (detectedCode) {
+                        handleSearchByCode(detectedCode);
+                        stopCamera();
+                        return;
+                    }
+                }
+                animationFrameRef.current = requestAnimationFrame(scanFrame);
+            };
+            animationFrameRef.current = requestAnimationFrame(scanFrame);
+        } catch (err: any) {
+            console.error('Camera access error:', err);
+            setCameraError(__('No se pudo acceder a la cámara. Ingrese el folio manualmente o use su lector de barras.'));
+            setIsCameraActive(false);
+        }
+    };
+
+    const handleSearchByCode = async (codeToSearch?: string) => {
+        const query = (codeToSearch || scanInput).trim();
+        if (!query) return;
+
+        setIsSearchingOrden(true);
+        try {
+            const res = await fetch(`/admin/reparaciones/api-find?query=${encodeURIComponent(query)}`);
+            const data = await res.json();
+            if (data.success && data.orden) {
+                setScannedOrden(data.orden);
+                notifySuccess(__('Orden de reparación encontrada.'));
+            } else {
+                notifyError(data.error || __('No se encontró ninguna reparación con ese folio o QR.'));
+                setScannedOrden(null);
+            }
+        } catch (err) {
+            notifyError(__('Error al consultar el servidor.'));
+            setScannedOrden(null);
+        } finally {
+            setIsSearchingOrden(false);
+        }
+    };
+
+    const handleStartReparacion = () => {
+        if (!scannedOrden) return;
+        setIsStartingReparacion(true);
+
+        router.post(
+            `/admin/reparaciones/${scannedOrden.id}/estado`,
+            {
+                estado_orden: 'en_reparacion',
+                comentario: __('Proceso de reparación iniciado desde escáner QR.'),
+            },
+            {
+                onSuccess: () => {
+                    setIsStartingReparacion(false);
+                    setScannedOrden((prev: any) => (prev ? { ...prev, estado_orden: 'en_reparacion' } : null));
+                    notifySuccess(__('Proceso de reparación iniciado correctamente. El equipo se encuentra En Reparación.'));
+                },
+                onError: () => {
+                    setIsStartingReparacion(false);
+                    notifyError(__('Ocurrió un error al iniciar la reparación.'));
+                },
+            }
+        );
+    };
+
+    useEffect(() => {
+        if (!isScanModalOpen) {
+            stopCamera();
+            setScannedOrden(null);
+            setScanInput('');
+        }
+        return () => {
+            stopCamera();
+        };
+    }, [isScanModalOpen]);
 
     const formatNum = (val: any): string => {
         if (val === null || val === undefined || val === '') return '0.00';
@@ -197,12 +362,27 @@ export default function IndexReparaciones({ ordenes, counts, tecnicos, currencyS
                         </div>
                     </div>
 
-                    <Link href="/admin/reparaciones/create">
-                        <Button className="h-10 px-5 gap-2 text-xs font-bold bg-purple-600 hover:bg-purple-700 text-white shadow-md shadow-purple-950/20 rounded-xl transition-all">
-                            <Plus className="w-4 h-4" />
-                            {__('Nueva Recepción')}
+                    <div className="flex items-center gap-2.5">
+                        <Button
+                            type="button"
+                            onClick={() => {
+                                setIsScanModalOpen(true);
+                                startCamera();
+                            }}
+                            variant="outline"
+                            className="h-10 px-4 gap-2 text-xs font-bold border-purple-300 dark:border-purple-800 text-purple-700 dark:text-purple-300 hover:bg-purple-50 dark:hover:bg-purple-950/50 rounded-xl shadow-xs"
+                        >
+                            <QrCode className="w-4 h-4 text-purple-600 dark:text-purple-400" />
+                            {__('Escanear QR')}
                         </Button>
-                    </Link>
+
+                        <Link href="/admin/reparaciones/create">
+                            <Button className="h-10 px-5 gap-2 text-xs font-bold bg-purple-600 hover:bg-purple-700 text-white shadow-md shadow-purple-950/20 rounded-xl transition-all">
+                                <Plus className="w-4 h-4" />
+                                {__('Nueva Recepción')}
+                            </Button>
+                        </Link>
+                    </div>
                 </div>
 
                 {/* STRIP DE KPIS / BOTONES NAVEGACIÓN ESTADO */}
@@ -426,6 +606,216 @@ export default function IndexReparaciones({ ordenes, counts, tecnicos, currencyS
                         </div>
                     )}
                 </Card>
+
+                {/* MODAL ESCANEAR CÓDIGO QR DE REPARACIÓN */}
+                <Dialog open={isScanModalOpen} onOpenChange={setIsScanModalOpen}>
+                    <DialogContent className="sm:max-w-xl p-6 rounded-2xl max-h-[90vh] overflow-y-auto">
+                        <DialogHeader>
+                            <DialogTitle className="flex items-center gap-2.5 text-lg font-extrabold text-slate-900 dark:text-slate-100">
+                                <div className="p-2 rounded-xl bg-purple-500/15 text-purple-600 dark:text-purple-400">
+                                    <QrCode className="w-5 h-5" />
+                                </div>
+                                {__('Escanear Código QR de Reparación')}
+                            </DialogTitle>
+                        </DialogHeader>
+
+                        <div className="space-y-5 py-2">
+                            {/* VISOR DE CÁMARA O BÚSQUEDA MANUAL */}
+                            {!scannedOrden ? (
+                                <div className="space-y-4">
+                                    <div className="relative bg-slate-950 rounded-2xl overflow-hidden h-[320px] sm:h-[380px] w-full border-2 border-purple-500/50 flex flex-col items-center justify-center text-white shadow-lg">
+                                        {isCameraActive ? (
+                                            <>
+                                                <video
+                                                    ref={(el) => {
+                                                        videoRef.current = el;
+                                                        if (el && cameraStream && el.srcObject !== cameraStream) {
+                                                            el.srcObject = cameraStream;
+                                                            el.play().catch(() => {});
+                                                        }
+                                                    }}
+                                                    autoPlay
+                                                    playsInline
+                                                    muted
+                                                    className="w-full h-full object-cover"
+                                                />
+                                                {/* GUÍAS DE ESQUINA PANTALLA COMPLETA */}
+                                                <div className="absolute inset-4 pointer-events-none border border-purple-400/30 rounded-xl">
+                                                    <div className="absolute top-0 left-0 w-8 h-8 border-t-4 border-l-4 border-purple-400 rounded-tl-xl" />
+                                                    <div className="absolute top-0 right-0 w-8 h-8 border-t-4 border-r-4 border-purple-400 rounded-tr-xl" />
+                                                    <div className="absolute bottom-0 left-0 w-8 h-8 border-b-4 border-l-4 border-purple-400 rounded-bl-xl" />
+                                                    <div className="absolute bottom-0 right-0 w-8 h-8 border-b-4 border-r-4 border-purple-400 rounded-br-xl" />
+                                                </div>
+
+                                                {/* LÍNEA LÁSER ESCÁNER FULL ANCHO */}
+                                                <div className="absolute inset-x-4 top-1/2 -translate-y-1/2 pointer-events-none">
+                                                    <div className="w-full h-0.5 bg-gradient-to-r from-transparent via-purple-400 to-transparent animate-pulse shadow-[0_0_8px_#a855f7]" />
+                                                </div>
+
+                                                <div className="absolute bottom-3 bg-black/75 backdrop-blur-md px-4 py-1.5 rounded-full text-[11px] text-purple-200 font-mono flex items-center gap-2 shadow-md">
+                                                    <Camera className="w-3.5 h-3.5 text-purple-400 animate-spin" />
+                                                    {__('Escaneando pantalla completa - Muestre el QR en cualquier lugar')}
+                                                </div>
+                                            </>
+                                        ) : (
+                                            <div className="p-6 text-center space-y-3">
+                                                <div className="w-12 h-12 rounded-full bg-slate-900 flex items-center justify-center mx-auto text-purple-400 border border-slate-800">
+                                                    <Camera className="w-6 h-6" />
+                                                </div>
+                                                <p className="text-xs text-slate-300 max-w-xs">
+                                                    {cameraError || __('Haga clic en Activar Cámara o ingrese manualmente el Folio.')}
+                                                </p>
+                                                <Button
+                                                    type="button"
+                                                    size="sm"
+                                                    onClick={startCamera}
+                                                    className="bg-purple-600 hover:bg-purple-700 text-white font-bold text-xs gap-1.5 rounded-xl"
+                                                >
+                                                    <Camera className="w-3.5 h-3.5" />
+                                                    {__('Activar Cámara')}
+                                                </Button>
+                                            </div>
+                                        )}
+                                    </div>
+
+                                    {/* BÚSQUEDA MANUAL / PISTOLA QR */}
+                                    <div className="space-y-1.5 pt-1">
+                                        <label className="text-xs font-semibold text-slate-700 dark:text-slate-300">
+                                            {__('O ingrese Folio / Pegue la URL del QR:')}
+                                        </label>
+                                        <form
+                                            onSubmit={(e) => {
+                                                e.preventDefault();
+                                                handleSearchByCode();
+                                            }}
+                                            className="flex gap-2"
+                                        >
+                                            <Input
+                                                value={scanInput}
+                                                onChange={(e) => {
+                                                    const val = e.target.value;
+                                                    setScanInput(val);
+                                                    if (val.includes('reparaciones/') || val.length >= 6) {
+                                                        handleSearchByCode(val);
+                                                    }
+                                                }}
+                                                placeholder={__('Ej: REP-000005 o URL')}
+                                                className="h-10 text-xs font-mono"
+                                            />
+                                            <Button
+                                                type="submit"
+                                                disabled={isSearchingOrden || !scanInput.trim()}
+                                                className="h-10 px-4 bg-purple-600 hover:bg-purple-700 text-white font-bold text-xs gap-1.5 rounded-xl shrink-0"
+                                            >
+                                                {isSearchingOrden ? <Loader2 className="w-4 h-4 animate-spin" /> : <Search className="w-4 h-4" />}
+                                                {__('Buscar')}
+                                            </Button>
+                                        </form>
+                                    </div>
+                                </div>
+                            ) : (
+                                /* DETALLE DE LA ORDEN LOCALIZADA */
+                                <div className="space-y-4 bg-slate-50 dark:bg-slate-900/80 p-4 rounded-2xl border border-slate-200 dark:border-slate-800">
+                                    <div className="flex items-center justify-between flex-wrap gap-2 pb-3 border-b border-slate-200 dark:border-slate-800">
+                                        <div>
+                                            <span className="text-[10px] font-mono text-purple-600 dark:text-purple-400 font-bold uppercase block">
+                                                {__('Orden de Reparación Localizada')}
+                                            </span>
+                                            <h3 className="text-xl font-black font-mono text-slate-900 dark:text-slate-100 flex items-center gap-2">
+                                                {scannedOrden.numero_orden}
+                                            </h3>
+                                        </div>
+                                        <div>{getStatusBadge(scannedOrden.estado_orden)}</div>
+                                    </div>
+
+                                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
+                                        <div className="bg-white dark:bg-slate-950 p-3 rounded-xl border border-slate-200 dark:border-slate-800 space-y-1">
+                                            <div className="font-bold text-slate-700 dark:text-slate-300 flex items-center gap-1.5">
+                                                <User className="w-3.5 h-3.5 text-purple-500" />
+                                                {__('Cliente:')}
+                                            </div>
+                                            <p className="font-semibold text-slate-900 dark:text-slate-100">{scannedOrden.cliente_nombre}</p>
+                                            {scannedOrden.cliente_telefono && (
+                                                <p className="text-[11px] text-slate-500 font-mono">{scannedOrden.cliente_telefono}</p>
+                                            )}
+                                        </div>
+
+                                        <div className="bg-white dark:bg-slate-950 p-3 rounded-xl border border-slate-200 dark:border-slate-800 space-y-1">
+                                            <div className="font-bold text-slate-700 dark:text-slate-300 flex items-center gap-1.5">
+                                                <Smartphone className="w-3.5 h-3.5 text-purple-500" />
+                                                {__('Equipo / Dispositivo:')}
+                                            </div>
+                                            <p className="font-semibold text-slate-900 dark:text-slate-100">
+                                                {scannedOrden.marca_nombre} {scannedOrden.modelo_nombre} ({scannedOrden.tipo_dispositivo})
+                                            </p>
+                                            {scannedOrden.imei_serie && (
+                                                <p className="text-[11px] text-slate-500 font-mono">IMEI: {scannedOrden.imei_serie}</p>
+                                            )}
+                                        </div>
+                                    </div>
+
+                                    <div className="bg-white dark:bg-slate-950 p-3 rounded-xl border border-slate-200 dark:border-slate-800 space-y-1 text-xs">
+                                        <div className="font-bold text-slate-700 dark:text-slate-300">{__('Falla Reportada:')}</div>
+                                        <p className="text-slate-800 dark:text-slate-200 italic bg-amber-50 dark:bg-amber-950/30 p-2 rounded-lg border border-amber-200 dark:border-amber-900/40">
+                                            "{scannedOrden.descripcion_falla}"
+                                        </p>
+                                    </div>
+
+                                    <div className="grid grid-cols-2 gap-3 text-xs font-mono bg-purple-50 dark:bg-purple-950/40 p-3 rounded-xl border border-purple-200 dark:border-purple-900/50">
+                                        <div>
+                                            <span className="text-[10px] text-slate-500 dark:text-slate-400 block">{__('Costo Estimado Total')}</span>
+                                            <span className="font-black text-slate-900 dark:text-slate-100">{currencySymbol}{formatNum(scannedOrden.costo_estimado)}</span>
+                                        </div>
+                                        <div>
+                                            <span className="text-[10px] text-slate-500 dark:text-slate-400 block">{__('Saldo Pendiente')}</span>
+                                            <span className="font-black text-purple-700 dark:text-purple-300">{currencySymbol}{formatNum(scannedOrden.saldo_restante)}</span>
+                                        </div>
+                                    </div>
+
+                                    <div className="pt-2 flex flex-wrap items-center justify-between gap-2.5">
+                                        <Button
+                                            type="button"
+                                            variant="outline"
+                                            size="sm"
+                                            onClick={() => { setScannedOrden(null); startCamera(); }}
+                                            className="h-10 text-xs font-bold rounded-xl gap-1.5"
+                                        >
+                                            <RefreshCw className="w-3.5 h-3.5" />
+                                            {__('Escanear Otro')}
+                                        </Button>
+
+                                        <div className="flex items-center gap-2">
+                                            {/* SI ES TÉCNICO: BOTÓN INICIAR REPARACIÓN */}
+                                            {isUserTecnico && scannedOrden.estado_orden !== 'en_reparacion' && scannedOrden.estado_orden !== 'reparado' && scannedOrden.estado_orden !== 'entregado' && (
+                                                <Button
+                                                    type="button"
+                                                    size="sm"
+                                                    onClick={handleStartReparacion}
+                                                    disabled={isStartingReparacion}
+                                                    className="h-10 px-4 bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold text-xs gap-2 rounded-xl shadow-md"
+                                                >
+                                                    {isStartingReparacion ? <Loader2 className="w-4 h-4 animate-spin" /> : <Wrench className="w-4 h-4" />}
+                                                    {__('Iniciar Reparación')}
+                                                </Button>
+                                            )}
+
+                                            <Link href={`/admin/reparaciones/${scannedOrden.id}`}>
+                                                <Button
+                                                    type="button"
+                                                    size="sm"
+                                                    className="h-10 px-4 bg-purple-600 hover:bg-purple-700 text-white font-bold text-xs gap-1.5 rounded-xl shadow-md"
+                                                >
+                                                    <Eye className="w-4 h-4" />
+                                                    {__('Ver Ficha Completa')}
+                                                </Button>
+                                            </Link>
+                                        </div>
+                                    </div>
+                                </div>
+                            )}
+                        </div>
+                    </DialogContent>
+                </Dialog>
             </div>
         </>
     );

@@ -932,4 +932,95 @@ class ReparacionController extends Controller
         // Retornar número limpio de sólo dígitos sin el signo +
         return $cleanPhone;
     }
+
+    public function apiFind(\Illuminate\Http\Request $request)
+    {
+        $rawQuery = trim(urldecode($request->input('query', '')));
+        if (!$rawQuery) {
+            return response()->json(['error' => 'Código o URL no proporcionado.'], 400);
+        }
+
+        $user = auth()->user();
+        $empresaId = $user ? $user->empresa_id : null;
+
+        // 1. Extraer ID directo de cualquier formato (ej: REP-000006, reparaciones/6, o 6)
+        $extractedId = null;
+        if (preg_match('/reparaciones\/(\d+)/i', $rawQuery, $matches)) {
+            $extractedId = (int)$matches[1];
+        } elseif (preg_match('/REP-0*(\d+)/i', $rawQuery, $matches)) {
+            $extractedId = (int)$matches[1];
+        } elseif (is_numeric($rawQuery)) {
+            $extractedId = (int)$rawQuery;
+        } elseif (preg_match('/(\d+)/', $rawQuery, $matches)) {
+            $extractedId = (int)$matches[1];
+        }
+
+        // 2. Consulta por código de reparación (numero_orden), IMEI o ID
+        $queryBuilder = OrdenReparacion::with(['cliente', 'marca', 'modelo', 'tecnico', 'items.producto', 'items.servicio']);
+
+        if ($empresaId) {
+            $queryBuilder->where('empresa_id', $empresaId);
+        }
+
+        $reparacion = $queryBuilder->where(function ($q) use ($rawQuery, $extractedId) {
+            $q->where('numero_orden', $rawQuery)
+                ->orWhere('numero_orden', 'like', "%{$rawQuery}%")
+                ->orWhere('imei_serie', 'like', "%{$rawQuery}%");
+            if ($extractedId) {
+                $q->orWhere('id', $extractedId);
+            }
+        })->first();
+
+        // 3. Fallback directo por ID si existe $extractedId
+        if (!$reparacion && $extractedId) {
+            $qFallback = OrdenReparacion::with(['cliente', 'marca', 'modelo', 'tecnico', 'items.producto', 'items.servicio']);
+            if ($empresaId) {
+                $qFallback->where('empresa_id', $empresaId);
+            }
+            $reparacion = $qFallback->find($extractedId);
+        }
+
+        // 4. Fallback final: Buscar por los dígitos extraídos
+        if (!$reparacion) {
+            $cleanCode = preg_replace('/[^0-9]/', '', $rawQuery);
+            if ($cleanCode) {
+                $qClean = OrdenReparacion::with(['cliente', 'marca', 'modelo', 'tecnico', 'items.producto', 'items.servicio']);
+                if ($empresaId) {
+                    $qClean->where('empresa_id', $empresaId);
+                }
+                $reparacion = $qClean->where('id', (int)$cleanCode)
+                    ->orWhere('numero_orden', 'like', "%{$cleanCode}%")
+                    ->first();
+            }
+        }
+
+        if (!$reparacion) {
+            return response()->json(['error' => "No se encontró ninguna orden de reparación con el código '{$rawQuery}'."], 404);
+        }
+
+        return response()->json([
+            'success' => true,
+            'orden' => [
+                'id' => $reparacion->id,
+                'numero_orden' => $reparacion->numero_orden,
+                'cliente_nombre' => $reparacion->cliente ? $reparacion->cliente->nombre : ($reparacion->cliente_nombre ?? 'Cliente General'),
+                'cliente_telefono' => $reparacion->cliente ? $reparacion->cliente->telefono : ($reparacion->cliente_telefono ?? ''),
+                'tipo_dispositivo' => $reparacion->tipo_dispositivo,
+                'marca_nombre' => $reparacion->marca ? $reparacion->marca->nombre : ($reparacion->marca_nombre ?? 'Dispositivo'),
+                'modelo_nombre' => $reparacion->modelo ? $reparacion->modelo->nombre_comercial : ($reparacion->modelo_nombre ?? ''),
+                'color' => $reparacion->color,
+                'imei_serie' => $reparacion->imei_serie,
+                'descripcion_falla' => $reparacion->descripcion_falla,
+                'observaciones_fisicas' => $reparacion->observaciones_fisicas,
+                'estado_orden' => $reparacion->estado_orden,
+                'costo_estimado' => (float)$reparacion->costo_estimado,
+                'anticipo' => (float)$reparacion->anticipo,
+                'saldo_restante' => (float)$reparacion->saldo_restante,
+                'fecha_recepcion' => (string)$reparacion->fecha_recepcion,
+                'fecha_estimada_entrega' => (string)$reparacion->fecha_estimada_entrega,
+                'contrasena_patron' => $reparacion->contrasena_patron,
+                'tecnico' => $reparacion->tecnico ? ['id' => $reparacion->tecnico->id, 'name' => $reparacion->tecnico->name] : null,
+            ],
+        ]);
+    }
 }

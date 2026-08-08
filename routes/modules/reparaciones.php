@@ -14,6 +14,8 @@ Route::middleware(['verified'])->group(function () {
         ->name('reparaciones.quick-servicio');
     Route::post('reparaciones/check-imei', [ReparacionController::class, 'checkImei'])
         ->name('reparaciones.check-imei');
+    Route::get('reparaciones/api-find', [ReparacionController::class, 'apiFind'])
+        ->name('reparaciones.api-find');
     Route::resource('reparaciones', ReparacionController::class);
     Route::post('reparaciones/{reparacion}/estado', [ReparacionController::class, 'updateEstado'])
         ->name('reparaciones.update-estado');
