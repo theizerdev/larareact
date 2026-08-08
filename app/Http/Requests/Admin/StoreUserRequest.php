@@ -27,6 +27,7 @@ class StoreUserRequest extends FormRequest
             'username' => ['nullable', 'string', 'max:255', 'unique:users,username'],
             'email' => ['required', 'string', 'email', 'max:255', 'unique:users,email'],
             'password' => ['required', 'string', 'min:8'],
+            'sueldo_base' => ['nullable', 'numeric', 'min:0'],
             'telefono' => ['nullable', 'string', 'max:255'],
             'pais_telefono_id' => ['nullable', 'exists:pais,id'],
             'status' => ['required', Rule::in(['activo', 'inactivo', 'suspendido'])],

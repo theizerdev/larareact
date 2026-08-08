@@ -39,7 +39,7 @@ use Spatie\Permission\Traits\HasRoles;
  * @property string|null $two_factor_recovery_codes
  * @property Carbon|null $two_factor_confirmed_at
  */
-#[Fillable(['name', 'username', 'status', 'email', 'password', 'telefono', 'pais_telefono_id', 'empresa_id', 'sucursal_id', 'layout_settings', 'whatsapp_otp_code', 'whatsapp_otp_expires_at', 'whatsapp_verified_at'])]
+#[Fillable(['name', 'username', 'status', 'email', 'password', 'sueldo_base', 'telefono', 'pais_telefono_id', 'empresa_id', 'sucursal_id', 'layout_settings', 'whatsapp_otp_code', 'whatsapp_otp_expires_at', 'whatsapp_verified_at'])]
 #[Hidden(['password', 'remember_token', 'whatsapp_otp', 'whatsapp_otp_code', 'two_factor_secret', 'two_factor_recovery_codes'])]
 class User extends Authenticatable implements PasskeyUser
 {
@@ -91,6 +91,7 @@ class User extends Authenticatable implements PasskeyUser
             'phone_verified_at' => 'datetime',
             'two_factor_confirmed_at' => 'datetime',
             'password' => 'hashed',
+            'sueldo_base' => 'decimal:2',
             'layout_settings' => 'array',
         ];
     }

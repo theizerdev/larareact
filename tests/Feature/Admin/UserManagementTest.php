@@ -33,6 +33,7 @@ class UserManagementTest extends TestCase
             'name' => 'Nuevo Usuario Test',
             'email' => 'testuser@example.com',
             'password' => 'Password123!',
+            'sueldo_base' => '1050.50',
             'status' => 'activo',
             'empresa_id' => $empresa->id,
         ];
@@ -43,6 +44,7 @@ class UserManagementTest extends TestCase
         $this->assertDatabaseHas('users', [
             'email' => 'testuser@example.com',
             'empresa_id' => $empresa->id,
+            'sueldo_base' => '1050.50',
         ]);
     }
 }

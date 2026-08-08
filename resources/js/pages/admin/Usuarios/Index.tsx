@@ -88,6 +88,7 @@ interface User {
     name: string;
     email: string;
     username?: string | null;
+    sueldo_base?: number | string | null;
     telefono?: string | null;
     pais_telefono_id?: number | null;
     status: 'activo' | 'inactivo' | 'suspendido';
@@ -129,6 +130,7 @@ const initialForm = {
     username: '',
     email: '',
     password: '',
+    sueldo_base: '' as string | number,
     telefono: '',
     pais_telefono_id: '' as string | number,
     status: 'activo' as 'activo' | 'inactivo' | 'suspendido',
@@ -219,6 +221,7 @@ return [];
             username: user.username || '',
             email: user.email,
             password: '',
+            sueldo_base: user.sueldo_base ?? '',
             telefono: user.telefono || '',
             pais_telefono_id: user.pais_telefono_id || '',
             status: user.status,
@@ -679,6 +682,21 @@ return;
                                     required={!editingUser}
                                 />
                                 {errors.password && <p className="text-red-500 text-xs mt-1">{errors.password}</p>}
+                            </div>
+
+                            {/* Sueldo base */}
+                            <div className="md:col-span-2">
+                                <Label htmlFor="sueldo_base">{__('Sueldo base')}</Label>
+                                <Input
+                                    id="sueldo_base"
+                                    type="number"
+                                    min="0"
+                                    step="0.01"
+                                    value={data.sueldo_base}
+                                    onChange={(e) => setData('sueldo_base', e.target.value)}
+                                    placeholder="0.00"
+                                />
+                                {errors.sueldo_base && <p className="text-red-500 text-xs mt-1">{errors.sueldo_base}</p>}
                             </div>
 
                             {/* Teléfono */}
