@@ -7,8 +7,6 @@ use App\Traits\HasSpanishActivityLog;
 use App\Traits\HasGroupRoles;
 use App\Traits\Multitenantable;
 use Database\Factories\UserFactory;
-use Illuminate\Database\Eloquent\Attributes\Fillable;
-use Illuminate\Database\Eloquent\Attributes\Hidden;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
@@ -39,10 +37,34 @@ use Spatie\Permission\Traits\HasRoles;
  * @property string|null $two_factor_recovery_codes
  * @property Carbon|null $two_factor_confirmed_at
  */
-#[Fillable(['name', 'username', 'status', 'email', 'password', 'sueldo_base', 'telefono', 'pais_telefono_id', 'empresa_id', 'sucursal_id', 'layout_settings', 'whatsapp_otp_code', 'whatsapp_otp_expires_at', 'whatsapp_verified_at'])]
-#[Hidden(['password', 'remember_token', 'whatsapp_otp', 'whatsapp_otp_code', 'two_factor_secret', 'two_factor_recovery_codes'])]
 class User extends Authenticatable implements PasskeyUser
 {
+    protected $fillable = [
+        'name',
+        'username',
+        'status',
+        'email',
+        'password',
+        'sueldo_base',
+        'telefono',
+        'pais_telefono_id',
+        'empresa_id',
+        'sucursal_id',
+        'layout_settings',
+        'whatsapp_otp_code',
+        'whatsapp_otp_expires_at',
+        'whatsapp_verified_at',
+    ];
+
+    protected $hidden = [
+        'password',
+        'remember_token',
+        'whatsapp_otp',
+        'whatsapp_otp_code',
+        'two_factor_secret',
+        'two_factor_recovery_codes',
+    ];
+
     /** @use HasFactory<UserFactory> */
     use HasFactory, HasRoles, HasGroupRoles, Notifiable, PasskeyAuthenticatable, TwoFactorAuthenticatable, HasSpanishActivityLog {
         HasRoles::hasRole as spatieHasRole;
