@@ -804,39 +804,11 @@ export default function ShowReparacion({ orden, productosRepuestos = [], tecnico
         cliente_proporciona_contrasena: false,
     });
 
-    const [tipoBloqueo, setTipoBloqueo] = useState<'sin_bloqueo' | 'pin' | 'contrasena' | 'patron'>('sin_bloqueo');
-    const [codigoPin, setCodigoPin] = useState('');
-    const [claveTexto, setClaveTexto] = useState('');
-    const [patternDots, setPatternDots] = useState<number[]>([]);
     const [observacionesFisicasInput, setObservacionesFisicasInput] = useState('');
     const [isSubmittingPreservicio, setIsSubmittingPreservicio] = useState(false);
 
     const openPreservicioModal = () => {
         setObservacionesFisicasInput(orden.observaciones_fisicas || '');
-
-        if (inspeccionData?.tipo_bloqueo) {
-            setTipoBloqueo(inspeccionData.tipo_bloqueo);
-            setCodigoPin(inspeccionData.codigo_pin || '');
-            setClaveTexto(inspeccionData.clave_texto || '');
-            if (inspeccionData.patron_dots) {
-                setPatternDots(inspeccionData.patron_dots);
-            }
-        } else if (orden.contrasena_patron) {
-            if (orden.contrasena_patron.startsWith('Patrón:')) {
-                setTipoBloqueo('patron');
-            } else if (orden.contrasena_patron.startsWith('PIN:')) {
-                setTipoBloqueo('pin');
-                setCodigoPin(orden.contrasena_patron.replace('PIN:', '').trim());
-            } else if (orden.contrasena_patron.startsWith('Clave:')) {
-                setTipoBloqueo('contrasena');
-                setClaveTexto(orden.contrasena_patron.replace('Clave:', '').trim());
-            }
-        } else {
-            setTipoBloqueo('sin_bloqueo');
-            setPatternDots([]);
-            setCodigoPin('');
-            setClaveTexto('');
-        }
 
         if (inspeccionData?.fisica) {
             setInspeccionFisica(inspeccionData.fisica);
@@ -868,31 +840,14 @@ export default function ShowReparacion({ orden, productosRepuestos = [], tecnico
         e.preventDefault();
         setIsSubmittingPreservicio(true);
 
-        let finalPasswordString = '';
-        if (tipoBloqueo === 'sin_bloqueo') {
-            finalPasswordString = __('Sin Bloqueo');
-        } else if (tipoBloqueo === 'pin') {
-            finalPasswordString = `PIN: ${codigoPin}`;
-        } else if (tipoBloqueo === 'contrasena') {
-            finalPasswordString = `Clave: ${claveTexto}`;
-        } else if (tipoBloqueo === 'patron') {
-            finalPasswordString = `Patrón: ${patternDots.join(' ➔ ')}`;
-        }
-
         const inspeccionPayload = {
             fisica: inspeccionFisica,
             estado: estadoEquipo,
-            tipo_bloqueo: tipoBloqueo,
-            codigo_pin: codigoPin,
-            clave_texto: claveTexto,
-            patron_dots: patternDots,
-            patron_secuencia: patternDots.join('-'),
         };
 
         router.post(`/admin/reparaciones/${orden.id}/estado`, {
             estado_orden: orden.estado_orden || 'en_diagnostico',
             observaciones_fisicas: observacionesFisicasInput,
-            contrasena_patron: finalPasswordString,
             inspeccion_json: inspeccionPayload,
             comentario: __('Inspección inicial de preservicio registrada / actualizada.'),
         }, {
@@ -2295,7 +2250,7 @@ export default function ShowReparacion({ orden, productosRepuestos = [], tecnico
                                         {[
                                             { id: 'fisica', label: __('1. Inspección Física'), icon: '🔍' },
                                             { id: 'estado', label: __('2. Estado Funcional'), icon: '⚡' },
-                                            { id: 'observaciones', label: __('3. Observaciones & Clave'), icon: '📝' },
+                                            { id: 'observaciones', label: __('3. Observaciones'), icon: '📝' },
                                         ].map((tab) => (
                                             <button
                                                 key={tab.id}
@@ -2507,96 +2462,23 @@ export default function ShowReparacion({ orden, productosRepuestos = [], tecnico
                                     </div>
                                 )}
 
-                                {/* PESTAÑA 3: OBSERVACIONES & CONTRASEÑA / PATRÓN */}
+                                {/* PESTAÑA 3: OBSERVACIONES */}
                                 {modalTab === 'observaciones' && (
-                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                                        <div className="space-y-3">
-                                            <div className="border-b border-slate-100 dark:border-slate-800 pb-2">
-                                                <h3 className="text-sm font-black text-slate-900 dark:text-slate-100 flex items-center gap-2">
-                                                    <FileText className="w-4 h-4 text-indigo-500" />
-                                                    {__('Observaciones Físicas Adicionales')}
-                                                </h3>
-                                            </div>
-
-                                            <Textarea
-                                                value={observacionesFisicasInput}
-                                                onChange={(e) => setObservacionesFisicasInput(e.target.value)}
-                                                rows={5}
-                                                placeholder={__('Anotar rayones, raspones, golpes, humedad y demás detalles físicos...')}
-                                                className="text-xs border-slate-200 dark:border-slate-800 rounded-xl p-3"
-                                            />
+                                    <div className="space-y-3">
+                                        <div className="border-b border-slate-100 dark:border-slate-800 pb-2">
+                                            <h3 className="text-sm font-black text-slate-900 dark:text-slate-100 flex items-center gap-2">
+                                                <FileText className="w-4 h-4 text-indigo-500" />
+                                                {__('Observaciones Físicas Adicionales')}
+                                            </h3>
                                         </div>
 
-                                        <div className="space-y-4">
-                                            <div className="border-b border-slate-100 dark:border-slate-800 pb-2">
-                                                <h3 className="text-sm font-black text-slate-900 dark:text-slate-100 flex items-center gap-2">
-                                                    <Lock className="w-4 h-4 text-indigo-500" />
-                                                    {__('Tipo de Bloqueo & Claves de Acceso')}
-                                                </h3>
-                                            </div>
-
-                                            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
-                                                {[
-                                                    { id: 'sin_bloqueo', label: __('Sin Bloqueo'), icon: '🔓' },
-                                                    { id: 'pin', label: __('Código PIN'), icon: '🔢' },
-                                                    { id: 'contrasena', label: __('Contraseña'), icon: '🔠' },
-                                                    { id: 'patron', label: __('Patrón (3x3)'), icon: '🌀' },
-                                                ].map((t) => (
-                                                    <button
-                                                        key={t.id}
-                                                        type="button"
-                                                        onClick={() => setTipoBloqueo(t.id as any)}
-                                                        className={`p-3 rounded-xl border text-xs font-bold transition-all flex flex-col items-center gap-1 cursor-pointer ${
-                                                            tipoBloqueo === t.id
-                                                                ? 'border-indigo-600 bg-indigo-50 dark:bg-indigo-950/60 text-indigo-700 dark:text-indigo-300 shadow-xs ring-2 ring-indigo-500/20 font-black'
-                                                                : 'border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 text-slate-600 dark:text-slate-400 hover:bg-slate-50'
-                                                        }`}
-                                                    >
-                                                        <span className="text-lg">{t.icon}</span>
-                                                        <span>{t.label}</span>
-                                                    </button>
-                                                ))}
-                                            </div>
-
-                                            <div className="p-5 border border-slate-200 dark:border-slate-800 rounded-2xl bg-slate-50/60 dark:bg-slate-950/40 space-y-4">
-                                                {tipoBloqueo === 'sin_bloqueo' && (
-                                                    <div className="text-center py-4 text-xs font-medium text-slate-500">
-                                                        ✅ {__('El equipo no posee ningún bloqueo de pantalla.')}
-                                                    </div>
-                                                )}
-
-                                                {tipoBloqueo === 'pin' && (
-                                                    <div className="space-y-2">
-                                                        <Label className="text-xs font-bold text-slate-700 dark:text-slate-300">{__('Ingrese el código PIN numérico:')}</Label>
-                                                        <Input
-                                                            value={codigoPin}
-                                                            onChange={(e) => setCodigoPin(e.target.value)}
-                                                            placeholder={__('ej: 1234 o 0000')}
-                                                            className="text-center text-lg h-12 font-mono font-bold tracking-widest bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 rounded-xl"
-                                                        />
-                                                    </div>
-                                                )}
-
-                                                {tipoBloqueo === 'contrasena' && (
-                                                    <div className="space-y-2">
-                                                        <Label className="text-xs font-bold text-slate-700 dark:text-slate-300">{__('Ingrese la clave / contraseña alfanumérica:')}</Label>
-                                                        <Input
-                                                            value={claveTexto}
-                                                            onChange={(e) => setClaveTexto(e.target.value)}
-                                                            placeholder={__('ej: MiClaveSegura2026')}
-                                                            className="text-sm h-12 font-mono font-bold bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 rounded-xl"
-                                                        />
-                                                    </div>
-                                                )}
-
-                                                {tipoBloqueo === 'patron' && (
-                                                    <PatternLockCanvas
-                                                        pattern={patternDots}
-                                                        onChange={(newPattern) => setPatternDots(newPattern)}
-                                                    />
-                                                )}
-                                            </div>
-                                        </div>
+                                        <Textarea
+                                            value={observacionesFisicasInput}
+                                            onChange={(e) => setObservacionesFisicasInput(e.target.value)}
+                                            rows={6}
+                                            placeholder={__('Anotar rayones, raspones, golpes, humedad y demás detalles físicos...')}
+                                            className="text-xs border-slate-200 dark:border-slate-800 rounded-xl p-3"
+                                        />
                                     </div>
                                 )}
                             </div>

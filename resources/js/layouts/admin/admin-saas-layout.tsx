@@ -583,6 +583,11 @@ export default function AdminSaasLayout({
                                             permission: 'fondo_mensual.view',
                                         },
                                         {
+                                            title: 'Nómina',
+                                            href: '/admin/nomina',
+                                            permission: 'nomina.view',
+                                        },
+                                        {
                                             title: 'Proveedores',
                                             href: '/admin/proveedores',
                                             permission: 'proveedores.view',

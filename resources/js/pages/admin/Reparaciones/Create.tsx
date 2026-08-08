@@ -105,6 +105,193 @@ interface Props {
     currencySymbol: string;
 }
 
+const PATTERN_DOT_COORDS: Record<number, { x: number; y: number }> = {
+    1: { x: 50, y: 50 },
+    2: { x: 150, y: 50 },
+    3: { x: 250, y: 50 },
+    4: { x: 50, y: 150 },
+    5: { x: 150, y: 150 },
+    6: { x: 250, y: 150 },
+    7: { x: 50, y: 250 },
+    8: { x: 150, y: 250 },
+    9: { x: 250, y: 250 },
+};
+
+function PatternLockInput({
+    pattern,
+    onChange,
+}: {
+    pattern: number[];
+    onChange: (next: number[]) => void;
+}) {
+    const { __ } = useTranslate();
+    const svgRef = useRef<SVGSVGElement | null>(null);
+    const [isDrawing, setIsDrawing] = useState(false);
+    const [cursorPoint, setCursorPoint] = useState<{ x: number; y: number } | null>(null);
+
+    const getLocalPoint = (event: React.PointerEvent<SVGSVGElement>) => {
+        if (!svgRef.current) return null;
+        const rect = svgRef.current.getBoundingClientRect();
+        const x = ((event.clientX - rect.left) / rect.width) * 300;
+        const y = ((event.clientY - rect.top) / rect.height) * 300;
+        return { x, y };
+    };
+
+    const findNearestDot = (point: { x: number; y: number }) => {
+        let bestDot: number | null = null;
+        let bestDist = Number.MAX_VALUE;
+
+        for (let dot = 1; dot <= 9; dot++) {
+            const coord = PATTERN_DOT_COORDS[dot];
+            const dx = point.x - coord.x;
+            const dy = point.y - coord.y;
+            const distance = Math.sqrt(dx * dx + dy * dy);
+            if (distance < bestDist) {
+                bestDist = distance;
+                bestDot = dot;
+            }
+        }
+
+        return bestDist <= 28 ? bestDot : null;
+    };
+
+    const appendDotIfNeeded = (dot: number | null) => {
+        if (!dot || pattern.includes(dot)) return;
+        onChange([...pattern, dot]);
+    };
+
+    const handlePointerDown = (event: React.PointerEvent<SVGSVGElement>) => {
+        const point = getLocalPoint(event);
+        if (!point) return;
+
+        setIsDrawing(true);
+        setCursorPoint(point);
+        event.currentTarget.setPointerCapture(event.pointerId);
+        appendDotIfNeeded(findNearestDot(point));
+    };
+
+    const handlePointerMove = (event: React.PointerEvent<SVGSVGElement>) => {
+        if (!isDrawing) return;
+        const point = getLocalPoint(event);
+        if (!point) return;
+
+        setCursorPoint(point);
+        appendDotIfNeeded(findNearestDot(point));
+    };
+
+    const handlePointerEnd = (event: React.PointerEvent<SVGSVGElement>) => {
+        if (event.currentTarget.hasPointerCapture(event.pointerId)) {
+            event.currentTarget.releasePointerCapture(event.pointerId);
+        }
+        setIsDrawing(false);
+        setCursorPoint(null);
+    };
+
+    const lastDot = pattern.length > 0 ? PATTERN_DOT_COORDS[pattern[pattern.length - 1]] : null;
+
+    return (
+        <div className="space-y-3 select-none">
+            <div className="flex items-center justify-between">
+                <div className="text-[11px] text-slate-500">
+                    {pattern.length > 0
+                        ? `${__('Secuencia')}: ${pattern.join(' - ')}`
+                        : __('Mantenga presionado y deslice el dedo para dibujar el patrón.')}
+                </div>
+                <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={() => onChange([])}
+                    className="h-7 text-[11px]"
+                >
+                    {__('Limpiar patrón')}
+                </Button>
+            </div>
+
+            <div className="inline-block rounded-2xl border border-slate-800 bg-slate-950 p-3 shadow-2xl">
+                <svg
+                    ref={svgRef}
+                    className="w-[260px] h-[260px] touch-none cursor-crosshair"
+                    viewBox="0 0 300 300"
+                    onPointerDown={handlePointerDown}
+                    onPointerMove={handlePointerMove}
+                    onPointerUp={handlePointerEnd}
+                    onPointerCancel={handlePointerEnd}
+                    onPointerLeave={handlePointerEnd}
+                >
+                    {pattern.map((dot, idx) => {
+                        if (idx === 0) return null;
+                        const prevDot = pattern[idx - 1];
+                        const from = PATTERN_DOT_COORDS[prevDot];
+                        const to = PATTERN_DOT_COORDS[dot];
+                        return (
+                            <g key={`line-${idx}`}>
+                                <line x1={from.x} y1={from.y} x2={to.x} y2={to.y} stroke="#6366f1" strokeWidth="9" strokeLinecap="round" opacity="0.9" />
+                                <line x1={from.x} y1={from.y} x2={to.x} y2={to.y} stroke="#a5b4fc" strokeWidth="4" strokeLinecap="round" />
+                            </g>
+                        );
+                    })}
+
+                    {isDrawing && lastDot && cursorPoint && (
+                        <line
+                            x1={lastDot.x}
+                            y1={lastDot.y}
+                            x2={cursorPoint.x}
+                            y2={cursorPoint.y}
+                            stroke="#818cf8"
+                            strokeWidth="3"
+                            strokeLinecap="round"
+                            opacity="0.8"
+                        />
+                    )}
+
+                    {Array.from({ length: 9 }, (_, i) => i + 1).map((dot) => {
+                        const coord = PATTERN_DOT_COORDS[dot];
+                        const selected = pattern.includes(dot);
+                        const order = pattern.indexOf(dot) + 1;
+
+                        return (
+                            <g key={dot}>
+                                <circle
+                                    cx={coord.x}
+                                    cy={coord.y}
+                                    r={selected ? 28 : 20}
+                                    fill={selected ? 'rgba(99, 102, 241, 0.28)' : 'rgba(255,255,255,0.07)'}
+                                    stroke={selected ? 'rgba(129, 140, 248, 0.55)' : 'rgba(148,163,184,0.2)'}
+                                    strokeWidth="2"
+                                />
+                                <circle
+                                    cx={coord.x}
+                                    cy={coord.y}
+                                    r={13}
+                                    fill={selected ? '#6366f1' : '#475569'}
+                                    stroke={selected ? '#c7d2fe' : '#334155'}
+                                    strokeWidth="3"
+                                />
+                                {selected ? (
+                                    <text
+                                        x={coord.x}
+                                        y={coord.y + 4}
+                                        textAnchor="middle"
+                                        fill="#ffffff"
+                                        fontSize="12"
+                                        fontWeight="900"
+                                        fontFamily="monospace"
+                                    >
+                                        {order}
+                                    </text>
+                                ) : (
+                                    <circle cx={coord.x} cy={coord.y} r={3.5} fill="#cbd5e1" />
+                                )}
+                            </g>
+                        );
+                    })}
+                </svg>
+            </div>
+        </div>
+    );
+}
+
 export default function CreateReparacion({ clientes: initialClientes, marcas: initialMarcas, tecnicos, categorias = [], servicios: initialServicios = [], currencySymbol }: Props) {
     const { __ } = useTranslate();
 
@@ -181,6 +368,10 @@ export default function CreateReparacion({ clientes: initialClientes, marcas: in
         ordenes: any[];
     } | null>(null);
     const [isCheckingImei, setIsCheckingImei] = useState(false);
+    const [tipoSeguridad, setTipoSeguridad] = useState<'sin_contrasena' | 'pin' | 'contrasena' | 'patron'>('sin_contrasena');
+    const [pinSeguridad, setPinSeguridad] = useState('');
+    const [claveSeguridad, setClaveSeguridad] = useState('');
+    const [patronSecuencia, setPatronSecuencia] = useState<number[]>([]);
 
     const videoRef = useRef<HTMLVideoElement | null>(null);
     const canvasRef = useRef<HTMLCanvasElement | null>(null);
@@ -278,30 +469,12 @@ export default function CreateReparacion({ clientes: initialClientes, marcas: in
         }
     };
 
-    // Algoritmo de Luhn para validación matemática de IMEI (15 dígitos)
-    const checkIMEILuhn = (val: string): { isValid: boolean; isCandidate: boolean } => {
-        const clean = val.replace(/\D/g, '');
-        if (clean.length !== 15) {
-            return { isValid: false, isCandidate: clean.length > 0 && /^\d+$/.test(val.trim()) };
-        }
-
-        let sum = 0;
-        for (let i = 0; i < 15; i++) {
-            let digit = parseInt(clean.charAt(i), 10);
-            if (i % 2 !== 0) {
-                digit *= 2;
-                if (digit > 9) digit -= 9;
-            }
-            sum += digit;
-        }
-        return { isValid: sum % 10 === 0, isCandidate: true };
-    };
-
-    // Búsqueda en tiempo real de Historial Previo por IMEI / Serie
+    // Búsqueda en tiempo real de historial por serie corta (5 dígitos)
     const handleImeiChange = (val: string) => {
-        setData('imei_serie', val);
+        const onlyDigits = val.replace(/\D/g, '').slice(0, 5);
+        setData('imei_serie', onlyDigits);
 
-        if (!val || val.trim().length < 4) {
+        if (!onlyDigits || onlyDigits.length < 5) {
             setImeiHistoryData(null);
             return;
         }
@@ -312,7 +485,7 @@ export default function CreateReparacion({ clientes: initialClientes, marcas: in
         (window as any)._imeiDebounceTimer = setTimeout(async () => {
             setIsCheckingImei(true);
             try {
-                const res = await postJson('/admin/reparaciones/check-imei', { imei: val.trim() });
+                const res = await postJson('/admin/reparaciones/check-imei', { imei: onlyDigits });
                 if (res.success && res.count > 0) {
                     setImeiHistoryData(res);
                 } else {
@@ -351,19 +524,6 @@ export default function CreateReparacion({ clientes: initialClientes, marcas: in
         });
     };
 
-    const handleNodeClick = (nodeNum: number) => {
-        if (!patronSecuencia.includes(nodeNum)) {
-            const newSeq = [...patronSecuencia, nodeNum];
-            setPatronSecuencia(newSeq);
-            setData('contrasena_patron', `Patrón: ${newSeq.join(' - ')}`);
-        }
-    };
-
-    const handleClearPatron = () => {
-        setPatronSecuencia([]);
-        setData('contrasena_patron', '');
-    };
-
     const [selectedMarcaId, setSelectedMarcaId] = useState<string>('');
     const [modelosFiltrados, setModelosFiltrados] = useState<ModeloItem[]>([]);
 
@@ -382,11 +542,31 @@ export default function CreateReparacion({ clientes: initialClientes, marcas: in
         descripcion_falla: '',
         observaciones_fisicas: '',
         tecnico_id: '',
+        comision_tecnico_pct: '0',
         costo_estimado: '0',
         anticipo: '0',
         garantia_dias: '30',
         fecha_prometida: new Date(Date.now() + 86400000 * 2).toISOString().split('T')[0],
     });
+
+    useEffect(() => {
+        if (tipoSeguridad === 'sin_contrasena') {
+            setData('contrasena_patron', 'Sin contraseña');
+            return;
+        }
+
+        if (tipoSeguridad === 'pin') {
+            setData('contrasena_patron', pinSeguridad ? `PIN: ${pinSeguridad}` : '');
+            return;
+        }
+
+        if (tipoSeguridad === 'contrasena') {
+            setData('contrasena_patron', claveSeguridad ? `Clave: ${claveSeguridad}` : '');
+            return;
+        }
+
+        setData('contrasena_patron', patronSecuencia.length > 0 ? `Patrón: ${patronSecuencia.join(' - ')}` : '');
+    }, [tipoSeguridad, pinSeguridad, claveSeguridad, patronSecuencia, setData]);
 
     // Servicios filtrados por la búsqueda en tiempo real
     const serviciosFiltrados = serviciosList.filter((s) => {
@@ -813,8 +993,8 @@ export default function CreateReparacion({ clientes: initialClientes, marcas: in
                     </Link>
                 </div>
 
-                {/* STEPPER PROGRESIVO EN 2 ETAPAS */}
-                <div className="grid grid-cols-2 gap-3 bg-white dark:bg-slate-900 p-2 rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm">
+                {/* STEPPER PROGRESIVO EN 3 ETAPAS */}
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 bg-white dark:bg-slate-900 p-2 rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm">
                     <button
                         type="button"
                         onClick={() => setCurrentStep(1)}
@@ -841,6 +1021,20 @@ export default function CreateReparacion({ clientes: initialClientes, marcas: in
                     >
                         <span className="w-5 h-5 rounded-full bg-white/20 flex items-center justify-center text-[10px]">2</span>
                         <span>{__('Presupuesto & Asignación')}</span>
+                    </button>
+
+                    <button
+                        type="button"
+                        onClick={() => setCurrentStep(3)}
+                        className={cn(
+                            'flex items-center justify-center gap-2 p-3 rounded-lg text-xs font-bold transition-all',
+                            currentStep === 3
+                                ? 'bg-purple-600 text-white shadow-md'
+                                : 'text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800'
+                        )}
+                    >
+                        <span className="w-5 h-5 rounded-full bg-white/20 flex items-center justify-center text-[10px]">3</span>
+                        <span>{__('Seguridad del Dispositivo')}</span>
                     </button>
                 </div>
 
@@ -1218,17 +1412,13 @@ export default function CreateReparacion({ clientes: initialClientes, marcas: in
                                                         <Label className="text-xs font-semibold">{__('Color / Serie / IMEI')}</Label>
                                                         {data.imei_serie && (
                                                             <span className="text-[10px] font-mono font-bold">
-                                                                {checkIMEILuhn(data.imei_serie).isValid ? (
+                                                                {data.imei_serie.length === 5 ? (
                                                                     <span className="text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/40 px-2 py-0.5 rounded border border-emerald-200 dark:border-emerald-800">
-                                                                        ✓ IMEI Válido (Luhn OK)
-                                                                    </span>
-                                                                ) : data.imei_serie.replace(/\D/g, '').length === 15 ? (
-                                                                    <span className="text-rose-600 dark:text-rose-400 bg-rose-50 dark:bg-rose-950/40 px-2 py-0.5 rounded border border-rose-200 dark:border-rose-800">
-                                                                        ✕ IMEI Inválido (Check Erróneo)
+                                                                        ✓ Serie corta válida (5 dígitos)
                                                                     </span>
                                                                 ) : (
-                                                                    <span className="text-slate-500 bg-slate-100 dark:bg-slate-800 px-2 py-0.5 rounded">
-                                                                        {data.imei_serie.length} chars (Serie)
+                                                                    <span className="text-rose-600 dark:text-rose-400 bg-rose-50 dark:bg-rose-950/40 px-2 py-0.5 rounded border border-rose-200 dark:border-rose-800">
+                                                                        {__('Debe tener exactamente 5 dígitos')}
                                                                     </span>
                                                                 )}
                                                             </span>
@@ -1238,12 +1428,14 @@ export default function CreateReparacion({ clientes: initialClientes, marcas: in
                                                         <Input
                                                             value={data.imei_serie}
                                                             onChange={(e) => handleImeiChange(e.target.value)}
-                                                            placeholder={__('IMEI (15 dígitos) o Serie del equipo...')}
+                                                            placeholder={__('Serie/IMEI corto (5 dígitos, opcional)')}
+                                                            inputMode="numeric"
+                                                            maxLength={5}
                                                             className={cn(
                                                                 "text-xs h-10 font-mono font-semibold pr-8",
-                                                                data.imei_serie && checkIMEILuhn(data.imei_serie).isValid
+                                                                data.imei_serie && data.imei_serie.length === 5
                                                                     ? "border-emerald-500 focus-visible:ring-emerald-500"
-                                                                    : data.imei_serie && data.imei_serie.replace(/\D/g, '').length === 15
+                                                                    : data.imei_serie && data.imei_serie.length > 0
                                                                     ? "border-rose-500 focus-visible:ring-rose-500"
                                                                     : ""
                                                             )}
@@ -1927,7 +2119,143 @@ export default function CreateReparacion({ clientes: initialClientes, marcas: in
                                                         </SelectContent>
                                                     </Select>
                                                 </div>
+
+                                                <div>
+                                                    <Label className="text-xs font-semibold">{__('11. Comisión Técnico (%)')}</Label>
+                                                    <div className="relative mt-1">
+                                                        <Input
+                                                            type="number"
+                                                            min="0"
+                                                            max="100"
+                                                            step="0.01"
+                                                            value={data.comision_tecnico_pct}
+                                                            onChange={(e) => setData('comision_tecnico_pct', e.target.value)}
+                                                            className="text-xs h-10 pr-8 font-mono font-bold text-slate-900 dark:text-slate-100"
+                                                        />
+                                                        <span className="absolute right-3 top-2.5 text-xs font-mono font-bold text-slate-400">%</span>
+                                                    </div>
+                                                    {errors.comision_tecnico_pct && (
+                                                        <p className="text-[11px] text-rose-600 mt-1">{errors.comision_tecnico_pct}</p>
+                                                    )}
+                                                </div>
                                             </div>
+                                        </CardContent>
+                                    </Card>
+
+                                    <div className="flex items-center justify-between">
+                                        <Button
+                                            type="button"
+                                            variant="outline"
+                                            onClick={() => setCurrentStep(1)}
+                                            className="h-10 px-5 text-xs font-bold gap-2"
+                                        >
+                                            <ChevronLeft className="w-4 h-4" />
+                                            {__('Anterior')}
+                                        </Button>
+
+                                        <Button
+                                            type="button"
+                                            onClick={() => setCurrentStep(3)}
+                                            className="h-10 px-6 font-bold bg-purple-600 hover:bg-purple-700 text-white gap-2 text-xs"
+                                        >
+                                            {__('Siguiente: Seguridad del Dispositivo')}
+                                            <ChevronRight className="w-4 h-4" />
+                                        </Button>
+                                    </div>
+                                </div>
+                            )}
+
+                            {/* ETAPA 3: SEGURIDAD DEL DISPOSITIVO */}
+                            {currentStep === 3 && (
+                                <div className="space-y-6 animate-in fade-in duration-300">
+                                    <Card className="border-slate-200 dark:border-slate-800 shadow-sm">
+                                        <CardHeader className="bg-slate-50 dark:bg-slate-900/50 border-b border-slate-100 dark:border-slate-800 py-3">
+                                            <CardTitle className="text-sm font-bold flex items-center gap-2 text-slate-800 dark:text-slate-200">
+                                                <Lock className="w-4 h-4 text-purple-600" />
+                                                {__('11. Seguridad del Dispositivo')}
+                                            </CardTitle>
+                                        </CardHeader>
+
+                                        <CardContent className="p-4 space-y-5">
+                                            <p className="text-xs text-slate-500">
+                                                {__('Seleccione el tipo de seguridad y registre la credencial de desbloqueo para diagnóstico técnico.')}
+                                            </p>
+
+                                            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                                                {[
+                                                    { id: 'sin_contrasena', label: __('Sin contraseña'), icon: '🔓' },
+                                                    { id: 'pin', label: __('PIN'), icon: '🔢' },
+                                                    { id: 'contrasena', label: __('Contraseña'), icon: '🔠' },
+                                                    { id: 'patron', label: __('Patrón 3x3'), icon: '🌀' },
+                                                ].map((item) => (
+                                                    <button
+                                                        key={item.id}
+                                                        type="button"
+                                                        onClick={() => {
+                                                            setTipoSeguridad(item.id as 'sin_contrasena' | 'pin' | 'contrasena' | 'patron');
+                                                            if (item.id !== 'patron') {
+                                                                setPatronSecuencia([]);
+                                                            }
+                                                        }}
+                                                        className={cn(
+                                                            'p-3 rounded-xl border text-xs font-bold transition-all flex flex-col items-center gap-1.5',
+                                                            tipoSeguridad === item.id
+                                                                ? 'border-purple-600 bg-purple-50 dark:bg-purple-950/40 text-purple-700 dark:text-purple-300 shadow-sm'
+                                                                : 'border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800'
+                                                        )}
+                                                    >
+                                                        <span className="text-lg">{item.icon}</span>
+                                                        <span>{item.label}</span>
+                                                    </button>
+                                                ))}
+                                            </div>
+
+                                            <div className="p-4 border border-slate-200 dark:border-slate-800 rounded-xl bg-slate-50/60 dark:bg-slate-950/40 space-y-4">
+                                                {tipoSeguridad === 'sin_contrasena' && (
+                                                    <div className="text-xs text-emerald-700 dark:text-emerald-300 font-semibold">
+                                                        {__('Este equipo se registra sin contraseña de bloqueo.')}
+                                                    </div>
+                                                )}
+
+                                                {tipoSeguridad === 'pin' && (
+                                                    <div>
+                                                        <Label className="text-xs font-semibold">{__('Ingrese el PIN')}</Label>
+                                                        <Input
+                                                            value={pinSeguridad}
+                                                            onChange={(e) => setPinSeguridad(e.target.value.replace(/\D/g, '').slice(0, 12))}
+                                                            placeholder={__('Ej: 1234')}
+                                                            inputMode="numeric"
+                                                            className="text-xs h-10 mt-1 font-mono"
+                                                        />
+                                                    </div>
+                                                )}
+
+                                                {tipoSeguridad === 'contrasena' && (
+                                                    <div>
+                                                        <Label className="text-xs font-semibold">{__('Ingrese la contraseña')}</Label>
+                                                        <Input
+                                                            value={claveSeguridad}
+                                                            onChange={(e) => setClaveSeguridad(e.target.value)}
+                                                            placeholder={__('Ej: ClaveDelCliente')}
+                                                            className="text-xs h-10 mt-1 font-mono"
+                                                        />
+                                                    </div>
+                                                )}
+
+                                                {tipoSeguridad === 'patron' && (
+                                                    <div className="space-y-3">
+                                                        <Label className="text-xs font-semibold">{__('Patrón de desbloqueo (3x3)')}</Label>
+                                                        <PatternLockInput
+                                                            pattern={patronSecuencia}
+                                                            onChange={setPatronSecuencia}
+                                                        />
+                                                    </div>
+                                                )}
+                                            </div>
+
+                                            {errors.contrasena_patron && (
+                                                <p className="text-[11px] text-rose-600">{errors.contrasena_patron}</p>
+                                            )}
                                         </CardContent>
                                     </Card>
 
