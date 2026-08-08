@@ -166,6 +166,13 @@ class PurchaseService
                 }
             }
 
+            // Contabilización Automática de Compra
+            try {
+                app(\App\Services\AccountingService::class)->recordPurchaseEntry($compra);
+            } catch (\Throwable $e) {
+                // Silencioso
+            }
+
             return $compra;
         });
     }

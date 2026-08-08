@@ -155,7 +155,7 @@ class SaleController extends Controller
                 'telefono' => $empresa->telefono,
                 'email' => $empresa->email,
                 'direccion' => $empresa->direccion,
-                'logo' => $empresa->logo ? "/storage/{$empresa->logo}" : '/image/logo/larareact_logo_transparent.png',
+                'logo' => $empresa->logo ? "/storage/{$empresa->logo}" : '/image/logo/5.png',
             ] : null,
         ]);
     }
@@ -214,7 +214,7 @@ class SaleController extends Controller
 
         $sales = $query->orderBy('created_at', 'desc')->paginate($perPage)->withQueryString();
 
-        if ($request->wantsJson()) {
+        if ($request->wantsJson() || $request->ajax() || $request->header('X-Requested-With') === 'XMLHttpRequest') {
             return response()->json([
                 'sales' => SaleResource::collection($sales),
             ]);
@@ -232,7 +232,7 @@ class SaleController extends Controller
                 'telefono' => $empresa->telefono,
                 'email' => $empresa->email,
                 'direccion' => $empresa->direccion,
-                'logo' => $empresa->logo ? "/storage/{$empresa->logo}" : '/image/logo/larareact_logo_transparent.png',
+                'logo' => $empresa->logo ? "/storage/{$empresa->logo}" : '/image/logo/5.png',
             ] : null,
             'filters' => $request->only(['search', 'status', 'perPage']),
         ]);

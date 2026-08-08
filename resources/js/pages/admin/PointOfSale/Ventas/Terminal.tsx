@@ -245,20 +245,25 @@ export default function Terminal({
                 headers: { 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest' },
             });
             const data = await res.json();
-            if (data?.sales?.data) {
-                setRecentSales(data.sales.data);
-            }
-        } catch {
-            // Silencioso
+            const rawSales =
+                data?.props?.sales?.data ??
+                data?.props?.sales ??
+                data?.sales?.data ??
+                data?.sales ??
+                (Array.isArray(data) ? data : []);
+
+            setRecentSales(Array.isArray(rawSales) ? rawSales : []);
+        } catch (error) {
+            console.error('Error fetching recent sales:', error);
         } finally {
             setIsLoadingRecentSales(false);
         }
     };
 
-    const handleOpenRecentSales = useCallback(() => {
+    const handleOpenRecentSales = () => {
         setIsRecentSalesOpen(true);
         fetchRecentSales();
-    }, []);
+    };
 
     // Valor del Dólar (Exchange Rate) Modal State
     const [isDolarModalOpen, setIsDolarModalOpen] = useState(false);

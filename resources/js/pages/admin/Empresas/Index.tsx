@@ -13,6 +13,7 @@ import {
     ImageIcon,
     Upload,
     X,
+    LocateFixed,
 } from 'lucide-react';
 import React, { useState, Suspense, lazy, useRef } from 'react';
 import { Breadcrumbs } from '@/components/breadcrumbs';
@@ -318,6 +319,50 @@ formData.append('logo_mini', logoMiniFile);
         }));
     };
 
+    const [isLocating, setIsLocating] = useState(false);
+
+    const handleGetCurrentLocation = () => {
+        if (!navigator.geolocation) {
+            notifyError(__('Geolocation is not supported by your browser.'));
+            return;
+        }
+
+        setIsLocating(true);
+        navigator.geolocation.getCurrentPosition(
+            async (position) => {
+                const lat = parseFloat(position.coords.latitude.toFixed(7));
+                const lng = parseFloat(position.coords.longitude.toFixed(7));
+
+                setData((prev) => ({
+                    ...prev,
+                    latitud: lat,
+                    longitud: lng,
+                }));
+
+                try {
+                    const res = await fetch(`https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=${lat}&lon=${lng}`);
+                    const geoData = await res.json();
+                    if (geoData && geoData.display_name) {
+                        setData((prev) => ({
+                            ...prev,
+                            direccion: geoData.display_name,
+                        }));
+                    }
+                } catch {
+                    // Silencioso
+                } finally {
+                    setIsLocating(false);
+                    notifySuccess(__('Current location obtained successfully.'));
+                }
+            },
+            (error) => {
+                setIsLocating(false);
+                notifyError(__('Unable to retrieve your location. Please check your browser permissions.'));
+            },
+            { enableHighAccuracy: true, timeout: 10000 }
+        );
+    };
+
     // ── Columnas de la tabla ──────────────────────────────────────────────────
 
     const columns: ColumnDef<Empresa>[] = [
@@ -544,14 +589,10 @@ formData.append('logo_mini', logoMiniFile);
 
                         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full mt-4">
                             {/* ── Navbar de tabs ── */}
-                            <TabsList className={`grid w-full mb-6 ${editingEmpresa ? 'grid-cols-4' : 'grid-cols-3'}`}>
+                            <TabsList className={`grid w-full mb-6 ${editingEmpresa ? 'grid-cols-3' : 'grid-cols-2'}`}>
                                 <TabsTrigger value="general" className="flex items-center gap-2">
                                     <Building2 className="h-4 w-4" />
-                                    {__('General')}
-                                </TabsTrigger>
-                                <TabsTrigger value="contacto" className="flex items-center gap-2">
-                                    <Phone className="h-4 w-4" />
-                                    {__('Contact')}
+                                    {__('General y Contacto')}
                                 </TabsTrigger>
                                 <TabsTrigger value="ubicacion" className="flex items-center gap-2">
                                     <MapPin className="h-4 w-4" />
@@ -565,7 +606,7 @@ formData.append('logo_mini', logoMiniFile);
                                 )}
                             </TabsList>
 
-                            {/* ══ Tab 1: Información General ══════════════════════════════════════ */}
+                            {/* ══ Tab 1: Información General y Contacto ════════════════════════════ */}
                             <TabsContent value="general" className="space-y-4">
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                     {/* Razón Social */}
@@ -622,6 +663,35 @@ formData.append('logo_mini', logoMiniFile);
                                         />
                                     </div>
 
+                                    {/* Teléfono unificado: [🏴 +58] [número] */}
+                                    <div>
+                                        <Label htmlFor="telefono">{__('Phone')}</Label>
+                                        <PhoneInputGroup
+                                            paises={paises}
+                                            selectedPaisId={data.pais_telefono_id}
+                                            phoneValue={data.telefono || ''}
+                                            onPaisChange={(v) => setData('pais_telefono_id', v)}
+                                            onPhoneChange={(v) => setData('telefono', v)}
+                                            placeholder="000-0000000"
+                                            error={errors.telefono}
+                                        />
+                                    </div>
+
+                                    {/* Email */}
+                                    <div>
+                                        <Label htmlFor="email">{__('Email')}</Label>
+                                        <Input
+                                            id="email"
+                                            type="email"
+                                            value={data.email || ''}
+                                            onChange={(e) => setData('email', e.target.value)}
+                                            placeholder="correo@empresa.com"
+                                        />
+                                        {errors.email && (
+                                            <p className="text-red-500 text-xs mt-1">{errors.email}</p>
+                                        )}
+                                    </div>
+
                                     {/* Status */}
                                     <div className="md:col-span-2">
                                         <Label htmlFor="status">{__('Status')}</Label>
@@ -636,38 +706,6 @@ formData.append('logo_mini', logoMiniFile);
                                             </span>
                                         </div>
                                     </div>
-                                </div>
-                            </TabsContent>
-
-                            {/* ══ Tab 2: Contacto ══════════════════════════════════════════════════ */}
-                            <TabsContent value="contacto" className="space-y-4">
-                                {/* Teléfono unificado: [🏴 +58] [número] */}
-                                <div>
-                                    <Label htmlFor="telefono">{__('Phone')}</Label>
-                                    <PhoneInputGroup
-                                        paises={paises}
-                                        selectedPaisId={data.pais_telefono_id}
-                                        phoneValue={data.telefono || ''}
-                                        onPaisChange={(v) => setData('pais_telefono_id', v)}
-                                        onPhoneChange={(v) => setData('telefono', v)}
-                                        placeholder="000-0000000"
-                                        error={errors.telefono}
-                                    />
-                                </div>
-
-                                {/* Email */}
-                                <div>
-                                    <Label htmlFor="email">{__('Email')}</Label>
-                                    <Input
-                                        id="email"
-                                        type="email"
-                                        value={data.email || ''}
-                                        onChange={(e) => setData('email', e.target.value)}
-                                        placeholder="correo@empresa.com"
-                                    />
-                                    {errors.email && (
-                                        <p className="text-red-500 text-xs mt-1">{errors.email}</p>
-                                    )}
                                 </div>
                             </TabsContent>
 
@@ -706,33 +744,50 @@ formData.append('logo_mini', logoMiniFile);
                                     )}
                                 </div>
 
-                                {/* Coordenadas manuales */}
-                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                    <div>
-                                        <Label htmlFor="latitud">{__('Latitude')}</Label>
-                                        <Input
-                                            id="latitud"
-                                            type="number"
-                                            step="any"
-                                            value={data.latitud ?? ''}
-                                            onChange={(e) =>
-                                                setData('latitud', e.target.value ? parseFloat(e.target.value) : null)
-                                            }
-                                            placeholder="10.48801"
-                                        />
+                                {/* Coordenadas manuales y Ubicación Actual */}
+                                <div className="space-y-2">
+                                    <div className="flex items-center justify-between">
+                                        <Label className="text-xs font-semibold text-slate-700 dark:text-slate-300">{__('Coordinates')}</Label>
+                                        <Button
+                                            type="button"
+                                            variant="outline"
+                                            size="sm"
+                                            disabled={isLocating}
+                                            onClick={handleGetCurrentLocation}
+                                            className="h-8 gap-1.5 text-xs font-semibold border-blue-200 text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-950/40"
+                                        >
+                                            <LocateFixed className={cn("w-3.5 h-3.5", isLocating && "animate-spin")} />
+                                            {isLocating ? __('Getting location...') : __('Use Current Location')}
+                                        </Button>
                                     </div>
-                                    <div>
-                                        <Label htmlFor="longitud">{__('Longitude')}</Label>
-                                        <Input
-                                            id="longitud"
-                                            type="number"
-                                            step="any"
-                                            value={data.longitud ?? ''}
-                                            onChange={(e) =>
-                                                setData('longitud', e.target.value ? parseFloat(e.target.value) : null)
-                                            }
-                                            placeholder="-66.87919"
-                                        />
+
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                        <div>
+                                            <Label htmlFor="latitud">{__('Latitude')}</Label>
+                                            <Input
+                                                id="latitud"
+                                                type="number"
+                                                step="any"
+                                                value={data.latitud ?? ''}
+                                                onChange={(e) =>
+                                                    setData('latitud', e.target.value ? parseFloat(e.target.value) : null)
+                                                }
+                                                placeholder="10.48801"
+                                            />
+                                        </div>
+                                        <div>
+                                            <Label htmlFor="longitud">{__('Longitude')}</Label>
+                                            <Input
+                                                id="longitud"
+                                                type="number"
+                                                step="any"
+                                                value={data.longitud ?? ''}
+                                                onChange={(e) =>
+                                                    setData('longitud', e.target.value ? parseFloat(e.target.value) : null)
+                                                }
+                                                placeholder="-66.87919"
+                                            />
+                                        </div>
                                     </div>
                                 </div>
 

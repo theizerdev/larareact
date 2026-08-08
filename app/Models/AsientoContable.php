@@ -7,31 +7,32 @@ use App\Traits\Multitenantable;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\MorphTo;
 
-class CashMovement extends Model
+class AsientoContable extends Model
 {
     use HasFactory, Multitenantable, HasSpanishActivityLog;
 
+    protected $table = 'asientos_contables';
+
     protected $fillable = [
-        'cash_register_id',
         'empresa_id',
         'sucursal_id',
-        'type',
-        'concepto',
-        'metodo_pago',
-        'amount',
-        'description',
+        'numero_asiento',
+        'fecha',
+        'glosa',
+        'origen_type',
+        'origen_id',
+        'tasa_cambio',
+        'estado',
         'created_by',
     ];
 
     protected $casts = [
-        'amount' => 'float',
+        'fecha' => 'datetime',
+        'tasa_cambio' => 'float',
     ];
-
-    public function cashRegister(): BelongsTo
-    {
-        return $this->belongsTo(CashRegister::class);
-    }
 
     public function empresa(): BelongsTo
     {
@@ -43,8 +44,18 @@ class CashMovement extends Model
         return $this->belongsTo(Sucursal::class);
     }
 
-    public function creator(): BelongsTo
+    public function origen(): MorphTo
+    {
+        return $this->morphTo();
+    }
+
+    public function user(): BelongsTo
     {
         return $this->belongsTo(User::class, 'created_by');
+    }
+
+    public function apuntes(): HasMany
+    {
+        return $this->hasMany(ApunteContable::class, 'asiento_id');
     }
 }

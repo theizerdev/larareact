@@ -168,12 +168,24 @@ class PermissionSeeder extends Seeder
                 'compras.cxp' => 'Gestionar Cuentas por Pagar',
                 'compras.cxp.pay' => 'Registrar Abonos a Proveedores',
             ],
+
+            // Sector: Contabilidad
+            'contabilidad' => [
+                'contabilidad.view' => 'Ver Módulo de Contabilidad',
+                'contabilidad.setup' => 'Configurar Rubro Comercial',
+                'contabilidad.plan_cuentas' => 'Gestionar Plan de Cuentas (PUC)',
+                'contabilidad.asientos' => 'Ver Libro Diario (Asientos)',
+                'contabilidad.mayor' => 'Ver Libro Mayor',
+                'contabilidad.reportes' => 'Ver Estados Financieros & P&L',
+                'contabilidad.impuestos' => 'Ver Impuestos & Libros Fiscales',
+            ],
         ];
 
         foreach ($permissions as $sector => $sectorPermissions) {
             foreach ($sectorPermissions as $permission => $slug) {
                 // Determinar el módulo basado en el prefijo del permiso
                 $module = match (true) {
+                    str_starts_with($permission, 'contabilidad.') => 'contabilidad',
                     str_starts_with($permission, 'dashboard.') => 'dashboard',
                     str_starts_with($permission, 'users.') => 'usuarios',
                     str_starts_with($permission, 'roles.') => 'roles',

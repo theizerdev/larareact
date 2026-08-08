@@ -4,6 +4,7 @@ namespace App\Services;
 
 use App\Models\CashRegister;
 use App\Models\Cliente;
+use App\Models\Empresa;
 use App\Models\Producto;
 use App\Models\Sale;
 use App\Models\SaleItem;
@@ -38,8 +39,19 @@ class SaleService
             foreach ($data['items'] as $item) {
                 $subtotal += $item['precio_unitario'] * $item['cantidad'];
             }
+            // Obtener país y tasa predeterminada de la empresa
+            $empresa = Empresa::with('pais')->find(\Auth::user()->empresa_id);
+            $tasaPais = (float) ($empresa?->pais?->impuesto_predeterminado ?? 16.00);
+
             $descuento = (float) ($data['descuento'] ?? 0);
-            $impuesto = (float) ($data['impuesto'] ?? 0);
+            
+            if (isset($data['impuesto']) && $data['impuesto'] !== null && $data['impuesto'] !== '') {
+                $impuesto = (float) $data['impuesto'];
+            } else {
+                // Calcular impuesto automáticamente basado en la tasa oficial del país de la empresa
+                $impuesto = round(($subtotal - $descuento) * ($tasaPais / 100), 2);
+            }
+
             $total = $subtotal + $impuesto - $descuento;
 
             // Determine if it's a credit sale
@@ -156,6 +168,13 @@ class SaleService
                 if ($cliente) {
                     $cliente->increment('saldo_pendiente', $saldoCredito);
                 }
+            }
+
+            // Contabilización Automática por Partida Doble
+            try {
+                app(\App\Services\AccountingService::class)->recordSaleEntry($sale);
+            } catch (\Throwable $e) {
+                // Registro contable silencioso ante fallos secundarios
             }
 
             return $sale;

@@ -3,6 +3,7 @@
 namespace App\Models;
 
 // use Illuminate\Contracts\Auth\MustVerifyEmail;
+use App\Traits\HasSpanishActivityLog;
 use App\Traits\HasGroupRoles;
 use App\Traits\Multitenantable;
 use Database\Factories\UserFactory;
@@ -43,7 +44,7 @@ use Spatie\Permission\Traits\HasRoles;
 class User extends Authenticatable implements PasskeyUser
 {
     /** @use HasFactory<UserFactory> */
-    use HasFactory, HasRoles, HasGroupRoles, Notifiable, PasskeyAuthenticatable, TwoFactorAuthenticatable {
+    use HasFactory, HasRoles, HasGroupRoles, Notifiable, PasskeyAuthenticatable, TwoFactorAuthenticatable, HasSpanishActivityLog {
         HasRoles::hasRole as spatieHasRole;
         HasRoles::hasAnyRole insteadof HasGroupRoles;
         HasRoles::hasAllRoles insteadof HasGroupRoles;

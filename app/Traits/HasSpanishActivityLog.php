@@ -3,9 +3,36 @@
 namespace App\Traits;
 
 use Spatie\Activitylog\Contracts\Activity;
+use Spatie\Activitylog\LogOptions;
+use Spatie\Activitylog\Traits\LogsActivity;
 
 trait HasSpanishActivityLog
 {
+    use LogsActivity;
+
+    public function getActivitylogOptions(): LogOptions
+    {
+        $className = class_basename(static::class);
+        $logName = match ($className) {
+            'Sale', 'HeldSale', 'SalePayment' => 'ventas',
+            'CashRegister', 'CashMovement' => 'caja',
+            'AsientoContable', 'ApunteContable', 'CuentaContable', 'ConfiguracionContable' => 'contabilidad',
+            'Producto', 'Product', 'Category', 'Brand', 'Familia', 'Modelo', 'Categoria', 'Marca' => 'inventario',
+            'User', 'Role', 'Permission' => 'seguridad',
+            'Compra', 'Proveedor', 'Supplier' => 'compras',
+            'Cliente', 'Customer' => 'clientes',
+            'Empresa' => 'empresas',
+            'Sucursal' => 'sucursales',
+            default => 'general',
+        };
+
+        return LogOptions::defaults()
+            ->useLogName($logName)
+            ->logAll()
+            ->logOnlyDirty()
+            ->dontSubmitEmptyLogs();
+    }
+
     public static $modelNamesMap = [
         'User' => 'Usuario',
         'Empresa' => 'Empresa',
@@ -249,6 +276,17 @@ trait HasSpanishActivityLog
     public function tapActivity(Activity $activity, string $eventName): void
     {
         $request = request();
+        $user = auth()->user();
+
+        $empresaId = $user?->empresa_id ?? ($this->empresa_id ?? null);
+        $sucursalId = $user?->sucursal_id ?? ($this->sucursal_id ?? null);
+
+        if ($empresaId) {
+            $activity->empresa_id = $empresaId;
+        }
+        if ($sucursalId) {
+            $activity->sucursal_id = $sucursalId;
+        }
 
         $properties = $activity->properties->toArray();
         $extra = [];
@@ -258,6 +296,8 @@ trait HasSpanishActivityLog
             $extra[$key] = $value;
         }
 
+        $extra['empresa_id'] = $empresaId;
+        $extra['sucursal_id'] = $sucursalId;
         $extra['ip_address'] = $request->ip();
         $extra['user_agent'] = $request->userAgent();
         $extra['url'] = $request->fullUrl();
