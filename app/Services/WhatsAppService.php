@@ -238,13 +238,39 @@ class WhatsAppService
             $normalized = substr($normalized, 2);
         }
 
-        // Algunos clientes guardan Mexico como 52 + 1 + 10 digitos.
-        // Este proveedor espera 52 + 10 digitos y falla con 521... .
-        if (str_starts_with($normalized, '521') && strlen($normalized) === 13) {
-            $normalized = '52'.substr($normalized, 3);
+        return $normalized;
+    }
+
+    private function recipientVariants(string $to): array
+    {
+        $normalized = $this->normalizeRecipient($to);
+
+        if ($normalized === '') {
+            return [''];
         }
 
-        return $normalized;
+        $variants = [$normalized];
+
+        // Mexico mantiene historicamente el identificador 521 para moviles en WhatsApp,
+        // pero algunos proveedores operan con 52 + 10 digitos. Probamos ambas variantes.
+        if (str_starts_with($normalized, '521') && strlen($normalized) === 13) {
+            $variants[] = '52'.substr($normalized, 3);
+        } elseif (str_starts_with($normalized, '52') && strlen($normalized) === 12) {
+            $variants[] = '521'.substr($normalized, 2);
+        }
+
+        return array_values(array_unique($variants));
+    }
+
+    private function shouldRetryWithAlternateRecipient($response): bool
+    {
+        if (! $response || $response->successful()) {
+            return false;
+        }
+
+        $body = strtolower($response->body());
+
+        return str_contains($body, 'no lid for user');
     }
 
     /**
@@ -252,41 +278,59 @@ class WhatsAppService
      */
     public function sendMessage(string $to, string $message, bool $isWelcome = false)
     {
-        $to = $this->normalizeRecipient($to);
-
         try {
             $url = "{$this->baseUrl}/api/message/send-text/{$this->instanceName}";
-            $response = Http::timeout($this->timeout)
-                ->withHeaders($this->getHeaders())
-                ->post($url, [
-                    'to' => $to,
-                    'message' => $message,
-                ]);
+            $recipients = $this->recipientVariants($to);
+            $lastResponse = null;
 
-            if ($response->successful()) {
-                Log::info('WhatsApp mensaje enviado', [
-                    'company_id' => $this->companyId,
-                    'instance' => $this->instanceName,
-                    'to' => $to,
-                ]);
+            foreach ($recipients as $index => $recipient) {
+                $response = Http::timeout($this->timeout)
+                    ->withHeaders($this->getHeaders())
+                    ->post($url, [
+                        'to' => $recipient,
+                        'message' => $message,
+                    ]);
 
-                return $response->json();
-            } else {
-                Log::error('WhatsApp Send Message Failed', [
-                    'company_id' => $this->companyId,
-                    'instance' => $this->instanceName,
-                    'to' => $to,
-                    'status' => $response->status(),
-                    'body' => $response->body(),
-                ]);
+                if ($response->successful()) {
+                    Log::info('WhatsApp mensaje enviado', [
+                        'company_id' => $this->companyId,
+                        'instance' => $this->instanceName,
+                        'to' => $recipient,
+                    ]);
 
-                return null;
+                    return $response->json();
+                }
+
+                $lastResponse = $response;
+
+                if ($index < count($recipients) - 1 && $this->shouldRetryWithAlternateRecipient($response)) {
+                    Log::warning('WhatsApp retrying with alternate recipient variant', [
+                        'company_id' => $this->companyId,
+                        'instance' => $this->instanceName,
+                        'to' => $recipient,
+                        'status' => $response->status(),
+                    ]);
+
+                    continue;
+                }
+
+                break;
             }
+
+            Log::error('WhatsApp Send Message Failed', [
+                'company_id' => $this->companyId,
+                'instance' => $this->instanceName,
+                'to' => $recipients[0] ?? $to,
+                'status' => $lastResponse?->status(),
+                'body' => $lastResponse?->body(),
+            ]);
+
+            return null;
         } catch (\Exception $e) {
             Log::error('WhatsApp Send Message Error: '.$e->getMessage(), [
                 'company_id' => $this->companyId,
                 'instance' => $this->instanceName,
-                'to' => $to,
+                'to' => $this->normalizeRecipient($to),
             ]);
 
             return null;
@@ -298,32 +342,50 @@ class WhatsAppService
      */
     public function sendMedia(string $to, string $mediaUrl, string $caption = '')
     {
-        $to = $this->normalizeRecipient($to);
-
         try {
             $url = "{$this->baseUrl}/api/message/send-media/{$this->instanceName}";
-            $response = Http::timeout($this->timeout)
-                ->withHeaders($this->getHeaders())
-                ->post($url, [
-                    'to' => $to,
-                    'url' => $mediaUrl,
-                    'caption' => $caption,
-                    'message' => $caption,
-                    'isWelcome' => true,
-                ]);
+            $recipients = $this->recipientVariants($to);
+            $lastResponse = null;
 
-            if ($response->successful()) {
-                Log::info('WhatsApp documento enviado exitosamente', [
-                    'company_id' => $this->companyId,
-                    'to' => $to,
-                    'response' => $response->json(),
-                ]);
-                return $response->json();
+            foreach ($recipients as $index => $recipient) {
+                $response = Http::timeout($this->timeout)
+                    ->withHeaders($this->getHeaders())
+                    ->post($url, [
+                        'to' => $recipient,
+                        'url' => $mediaUrl,
+                        'caption' => $caption,
+                        'message' => $caption,
+                        'isWelcome' => true,
+                    ]);
+
+                if ($response->successful()) {
+                    Log::info('WhatsApp documento enviado exitosamente', [
+                        'company_id' => $this->companyId,
+                        'to' => $recipient,
+                        'response' => $response->json(),
+                    ]);
+                    return $response->json();
+                }
+
+                $lastResponse = $response;
+
+                if ($index < count($recipients) - 1 && $this->shouldRetryWithAlternateRecipient($response)) {
+                    Log::warning('WhatsApp retrying media with alternate recipient variant', [
+                        'company_id' => $this->companyId,
+                        'instance' => $this->instanceName,
+                        'to' => $recipient,
+                        'status' => $response->status(),
+                    ]);
+
+                    continue;
+                }
+
+                break;
             }
 
             Log::error('WhatsApp Send Document Failed', [
-                'status' => $response->status(),
-                'body' => $response->body(),
+                'status' => $lastResponse?->status(),
+                'body' => $lastResponse?->body(),
             ]);
 
             return null;
@@ -331,7 +393,7 @@ class WhatsAppService
             Log::error('WhatsApp Send Media Error: '.$e->getMessage(), [
                 'company_id' => $this->companyId,
                 'instance' => $this->instanceName,
-                'to' => $to,
+                'to' => $this->normalizeRecipient($to),
             ]);
 
             return null;
