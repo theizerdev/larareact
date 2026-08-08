@@ -927,6 +927,10 @@ export default function ShowReparacion({ orden, productosRepuestos = [], tecnico
     // Formulario Mano de Obra y Anticipo
     const [manoObraInput, setManoObraInput] = useState(String(orden.costo_mano_obra || 0));
     const [anticipoInput, setAnticipoInput] = useState(String(orden.anticipo || 0));
+    const manoObraActual = Number(manoObraInput || 0);
+    const anticipoActual = Number(anticipoInput || 0);
+    const totalPresupuestoActual = Math.max(0, manoObraActual);
+    const saldoRestanteActual = Math.max(0, totalPresupuestoActual - anticipoActual);
 
     const handleUpdateEstado = () => {
         router.post(
@@ -978,11 +982,13 @@ export default function ShowReparacion({ orden, productosRepuestos = [], tecnico
     };
 
     const handleSaveCostos = () => {
-        router.put(
-            `/admin/reparaciones/${orden.id}`,
+        const normalizeDecimal = (value: string) => value.replace(',', '.').trim();
+
+        router.post(
+            `/admin/reparaciones/${orden.id}/costos`,
             {
-                costo_mano_obra: manoObraInput,
-                anticipo: anticipoInput,
+                costo_mano_obra: normalizeDecimal(manoObraInput),
+                anticipo: normalizeDecimal(anticipoInput),
             },
             {
                 onSuccess: () => notifySuccess(__('Ajustes financieros guardados.')),
@@ -1246,10 +1252,10 @@ export default function ShowReparacion({ orden, productosRepuestos = [], tecnico
                             <div className="min-w-0 flex-1">
                                 <span className="text-[10px] font-extrabold uppercase tracking-wider text-slate-400 block">{__('Saldo Restante a Cobrar')}</span>
                                 <h3 className="text-xl font-black font-mono text-emerald-600 dark:text-emerald-400">
-                                    {currencySymbol}{formatNum(orden.saldo_restante)}
+                                    {currencySymbol}{formatNum(saldoRestanteActual)}
                                 </h3>
                                 <p className="text-[10px] text-slate-400 font-mono">
-                                    {__('Total:')} {currencySymbol}{formatNum(orden.costo_estimado)} | {__('Adelanto:')} {currencySymbol}{formatNum(orden.anticipo)}
+                                    {__('Total:')} {currencySymbol}{formatNum(totalPresupuestoActual)} | {__('Adelanto:')} {currencySymbol}{formatNum(anticipoActual)}
                                 </p>
                             </div>
                         </CardContent>
@@ -1323,26 +1329,9 @@ export default function ShowReparacion({ orden, productosRepuestos = [], tecnico
                         )}
                     >
                         <Camera className="w-4 h-4" />
-                        {__('Evidencias Fotográficas')}
+                        {__('Evidencias Fotográficas (Pre-Reparación)')}
                         <Badge variant="secondary" className="ml-1 text-[10px] h-4 px-1.5 bg-purple-100 dark:bg-purple-950 text-purple-800 dark:text-purple-200">
                             {orden.fotos?.length || 0} / 4
-                        </Badge>
-                    </button>
-
-                    <button
-                        type="button"
-                        onClick={() => setActiveTab('historial')}
-                        className={cn(
-                            'px-4 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-2 whitespace-nowrap',
-                            activeTab === 'historial'
-                                ? 'bg-purple-600 text-white shadow-md shadow-purple-600/20'
-                                : 'bg-white dark:bg-slate-900 text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800'
-                        )}
-                    >
-                        <History className="w-4 h-4" />
-                        {__('Línea de Tiempo')}
-                        <Badge variant="secondary" className="ml-1 text-[10px] h-4 px-1.5 bg-purple-100 dark:bg-purple-950 text-purple-800 dark:text-purple-200">
-                            {orden.historial?.length || 0}
                         </Badge>
                     </button>
 
@@ -1367,6 +1356,23 @@ export default function ShowReparacion({ orden, productosRepuestos = [], tecnico
                                 {__('Pendiente')}
                             </Badge>
                         )}
+                    </button>
+
+                    <button
+                        type="button"
+                        onClick={() => setActiveTab('historial')}
+                        className={cn(
+                            'px-4 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-2 whitespace-nowrap',
+                            activeTab === 'historial'
+                                ? 'bg-purple-600 text-white shadow-md shadow-purple-600/20'
+                                : 'bg-white dark:bg-slate-900 text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800'
+                        )}
+                    >
+                        <History className="w-4 h-4" />
+                        {__('Línea de Tiempo')}
+                        <Badge variant="secondary" className="ml-1 text-[10px] h-4 px-1.5 bg-purple-100 dark:bg-purple-950 text-purple-800 dark:text-purple-200">
+                            {orden.historial?.length || 0}
+                        </Badge>
                     </button>
                 </div>
 
@@ -2127,7 +2133,12 @@ export default function ShowReparacion({ orden, productosRepuestos = [], tecnico
                                 <div className="space-y-3">
                                     <div className="flex justify-between items-center text-slate-600 dark:text-slate-400">
                                         <span>{__('Costo del Servicio:')}</span>
-                                        <span className="font-mono font-bold text-slate-900 dark:text-slate-100">{currencySymbol}{formatNum(orden.costo_repuestos)}</span>
+                                        <span className="font-mono font-bold text-slate-900 dark:text-slate-100">{currencySymbol}{formatNum(totalPresupuestoActual)}</span>
+                                    </div>
+
+                                    <div className="flex justify-between items-center text-slate-500 dark:text-slate-400 text-[11px]">
+                                        <span>{__('Repuestos (referencia interna):')}</span>
+                                        <span className="font-mono">{currencySymbol}{formatNum(orden.costo_repuestos)}</span>
                                     </div>
 
                                     <div className="space-y-1.5 pt-2 border-t border-slate-100 dark:border-slate-800">
@@ -2161,13 +2172,13 @@ export default function ShowReparacion({ orden, productosRepuestos = [], tecnico
                                 <div className="pt-4 border-t border-slate-200 dark:border-slate-800 space-y-3">
                                     <div className="flex justify-between items-center text-sm font-bold text-slate-900 dark:text-slate-100">
                                         <span>{__('Total Presupuesto:')}</span>
-                                        <span className="font-mono text-purple-700 dark:text-purple-400 text-lg font-black">{currencySymbol}{formatNum(orden.costo_estimado)}</span>
+                                        <span className="font-mono text-purple-700 dark:text-purple-400 text-lg font-black">{currencySymbol}{formatNum(totalPresupuestoActual)}</span>
                                     </div>
 
                                     <div className="p-3.5 bg-emerald-50 dark:bg-emerald-950/40 rounded-xl border border-emerald-200 dark:border-emerald-900 text-emerald-900 dark:text-emerald-300 space-y-1">
                                         <div className="flex justify-between items-center">
                                             <span className="font-bold text-xs">{__('Saldo Restante a Cobrar:')}</span>
-                                            <span className="font-mono font-black text-xl text-emerald-600 dark:text-emerald-400">{currencySymbol}{formatNum(orden.saldo_restante)}</span>
+                                            <span className="font-mono font-black text-xl text-emerald-600 dark:text-emerald-400">{currencySymbol}{formatNum(saldoRestanteActual)}</span>
                                         </div>
                                     </div>
                                 </div>

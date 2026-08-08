@@ -627,15 +627,22 @@ class ReparacionController extends Controller
 
     public function updateCostos(Request $request, OrdenReparacion $reparacion)
     {
+        $request->merge([
+            'costo_mano_obra' => str_replace(',', '.', (string) $request->input('costo_mano_obra', '0')),
+            'anticipo' => str_replace(',', '.', (string) $request->input('anticipo', '0')),
+        ]);
+
         $validated = $request->validate([
             'costo_mano_obra' => 'required|numeric|min:0',
             'anticipo' => 'nullable|numeric|min:0',
         ]);
 
-        $reparacion->costo_mano_obra = (float) $validated['costo_mano_obra'];
-        if (isset($validated['anticipo'])) {
-            $reparacion->anticipo = (float) $validated['anticipo'];
-        }
+        $reparacion->update([
+            'costo_mano_obra' => (float) $validated['costo_mano_obra'],
+            'anticipo' => isset($validated['anticipo']) ? (float) $validated['anticipo'] : (float) $reparacion->anticipo,
+        ]);
+
+        $reparacion->refresh();
 
         $this->recalcularTotales($reparacion);
 
@@ -645,11 +652,17 @@ class ReparacionController extends Controller
         ]);
     }
 
+    public function update(Request $request, OrdenReparacion $reparacion)
+    {
+        return $this->updateCostos($request, $reparacion);
+    }
+
     private function recalcularTotales(OrdenReparacion $reparacion)
     {
-        $costoRepuestos = (float) $reparacion->items()->sum('subtotal');
+        $costoRepuestos = (float) $reparacion->items()->whereNotNull('producto_id')->sum('subtotal');
         $costoManoObra = (float) $reparacion->costo_mano_obra;
-        $totalEstimado = $costoRepuestos + $costoManoObra;
+        // El total de la orden se cobra por servicio/mano de obra; los repuestos se registran aparte.
+        $totalEstimado = $costoManoObra;
         $anticipo = (float) $reparacion->anticipo;
         $saldo = max(0, $totalEstimado - $anticipo);
 
