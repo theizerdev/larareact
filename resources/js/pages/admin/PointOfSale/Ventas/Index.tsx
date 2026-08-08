@@ -1,6 +1,7 @@
 import { Head, router } from '@inertiajs/react';
 import { ShoppingCart, Receipt, CheckCircle, Eye, CreditCard, DollarSign, Calendar, User, Printer } from 'lucide-react';
 import React, { useState } from 'react';
+import { QRCodeSVG } from '@/components/qr-code-svg';
 import { Breadcrumbs } from '@/components/breadcrumbs';
 import type { ColumnDef } from '@/components/data-table';
 import { DataTable } from '@/components/data-table';
@@ -565,10 +566,9 @@ export default function Index({ sales, currencySymbol = '$', empresa, filters }:
 
                         {/* CÓDIGO QR PARA VALIDACIÓN */}
                         <div className="text-center pt-2 pb-1 flex flex-col items-center">
-                            <img
-                                src={`https://api.qrserver.com/v1/create-qr-code/?size=100x100&data=${encodeURIComponent(`TICKET:${selectedSale.codigo_ticket}|TOTAL:${selectedSale.total}`)}`}
-                                alt="QR Ticket"
-                                className="h-16 w-16 object-contain"
+                            <QRCodeSVG
+                                value={`TICKET:${selectedSale.codigo_ticket}|TOTAL:${selectedSale.total}`}
+                                size={100}
                             />
                             <div className="text-[8px] font-mono text-gray-600 mt-0.5">ESCANEAR PARA VALIDAR</div>
                         </div>

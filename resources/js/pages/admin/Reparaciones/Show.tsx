@@ -1,4 +1,4 @@
-import { Head, useForm, router, Link } from '@inertiajs/react';
+import { Head, useForm, router, Link, usePage } from '@inertiajs/react';
 import {
     Wrench,
     Printer,
@@ -32,6 +32,7 @@ import {
     RefreshCw,
 } from 'lucide-react';
 import React, { useState, useRef, useEffect } from 'react';
+import { QRCodeSVG } from '@/components/qr-code-svg';
 import { Breadcrumbs } from '@/components/breadcrumbs';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -237,6 +238,54 @@ function PatternLockViewer({ pattern = [] }: { pattern: number[] }) {
         </div>
     );
 }
+
+function PrintablePatternLock({ pattern = [] }: { pattern: number[] }) {
+    if (!pattern || pattern.length === 0) return null;
+    return (
+        <div className="flex flex-col items-center my-1.5 text-center">
+            <div className="text-[9px] font-bold uppercase mb-0.5">GRÁFICA DEL PATRÓN DE DESBLOQUEO</div>
+            <svg width="120" height="120" viewBox="0 0 300 300" className="border border-black bg-white mx-auto">
+                {pattern.map((dot, idx) => {
+                    if (idx === 0) return null;
+                    const prevDot = pattern[idx - 1];
+                    const from = DOT_COORDS_VIEW[prevDot];
+                    const to = DOT_COORDS_VIEW[dot];
+                    if (!from || !to) return null;
+                    return (
+                        <g key={`print-line-${idx}`}>
+                            <line x1={from.x} y1={from.y} x2={to.x} y2={to.y} stroke="black" strokeWidth="10" strokeLinecap="round" />
+                        </g>
+                    );
+                })}
+                {[1, 2, 3, 4, 5, 6, 7, 8, 9].map((dotNum) => {
+                    const coord = DOT_COORDS_VIEW[dotNum];
+                    const isSelected = pattern.includes(dotNum);
+                    const orderIndex = pattern.indexOf(dotNum);
+                    return (
+                        <g key={`print-dot-${dotNum}`}>
+                            <circle cx={coord.x} cy={coord.y} r={isSelected ? 18 : 12} fill={isSelected ? "black" : "white"} stroke="black" strokeWidth="3" />
+                            {isSelected && (
+                                <text x={coord.x} y={coord.y + 4} textAnchor="middle" fill="white" fontSize="12" fontWeight="bold" fontFamily="monospace">
+                                    {orderIndex + 1}
+                                </text>
+                            )}
+                        </g>
+                    );
+                })}
+            </svg>
+            <div className="text-[9px] font-mono font-bold mt-1">Secuencia: {pattern.join(' - ')}</div>
+        </div>
+    );
+}
+
+const extractPatternNumbers = (str?: string): number[] => {
+    if (!str) return [];
+    const matches = str.match(/\d/g);
+    if (matches && (str.toLowerCase().includes('patrón') || str.toLowerCase().includes('patron') || str.includes('-'))) {
+        return matches.map(Number).filter((n) => n >= 1 && n <= 9);
+    }
+    return [];
+};
 
 const ELEMENTOS_INSPECCION_LIST = [
     'Pantalla',
@@ -475,6 +524,20 @@ function PatternLockCanvas({
 
 export default function ShowReparacion({ orden, productosRepuestos = [], tecnicos, currencySymbol }: Props) {
     const { __ } = useTranslate();
+    const pageProps = usePage<any>().props;
+    const empresa = pageProps.empresa || pageProps.auth?.user?.empresa;
+
+    const [isPrintModalOpen, setIsPrintModalOpen] = useState(false);
+    const [printType, setPrintType] = useState<'cliente' | 'tecnico'>('cliente');
+
+    const handleExecutePrint = (type: 'cliente' | 'tecnico') => {
+        setPrintType(type);
+        setIsPrintModalOpen(false);
+        setTimeout(() => {
+            window.print();
+        }, 100);
+    };
+
     const [activeTab, setActiveTab] = useState<'general' | 'preservicio' | 'postservicio' | 'repuestos' | 'fotos' | 'historial'>('general');
     const [previewPhoto, setPreviewPhoto] = useState<{ url: string; label: string } | null>(null);
 
@@ -1110,7 +1173,7 @@ export default function ShowReparacion({ orden, productosRepuestos = [], tecnico
                                 </Button>
                             )}
 
-                            <Button size="sm" onClick={() => window.print()} variant="outline" className="h-10 gap-2 text-xs font-bold bg-white/10 hover:bg-white/20 border-white/20 text-white">
+                            <Button size="sm" onClick={() => setIsPrintModalOpen(true)} variant="outline" className="h-10 gap-2 text-xs font-bold bg-white/10 hover:bg-white/20 border-white/20 text-white">
                                 <Printer className="w-4 h-4 text-blue-400" />
                                 {__('Imprimir Ticket')}
                             </Button>
@@ -3085,6 +3148,300 @@ export default function ShowReparacion({ orden, productosRepuestos = [], tecnico
                         </div>
                     </div>
                 )}
+
+                {/* MODAL SELECCIONAR TIPO DE TICKET (CLIENTE O TÉCNICO) */}
+                <Dialog open={isPrintModalOpen} onOpenChange={setIsPrintModalOpen}>
+                    <DialogContent className="sm:max-w-2xl p-6 sm:p-8 rounded-2xl">
+                        <DialogHeader className="pb-2">
+                            <DialogTitle className="flex items-center gap-3 text-xl font-extrabold text-slate-900 dark:text-slate-100">
+                                <div className="w-10 h-10 rounded-xl bg-blue-500/15 flex items-center justify-center text-blue-600 dark:text-blue-400">
+                                    <Printer className="w-6 h-6" />
+                                </div>
+                                {__('Imprimir Ticket de Reparación')}
+                            </DialogTitle>
+                        </DialogHeader>
+
+                        <div className="py-4 space-y-6">
+                            <p className="text-sm text-slate-600 dark:text-slate-300 font-medium">
+                                {__('Seleccione el tipo de comprobante térmico (80mm) que desea generar para esta orden de servicio:')}
+                            </p>
+
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
+                                {/* OPCIÓN CLIENTE */}
+                                <button
+                                    type="button"
+                                    onClick={() => handleExecutePrint('cliente')}
+                                    className="p-6 rounded-2xl border-2 border-slate-200 dark:border-slate-800 hover:border-blue-500 dark:hover:border-blue-500 bg-slate-50/80 dark:bg-slate-900/60 hover:bg-blue-50/60 dark:hover:bg-blue-950/40 transition-all text-left group flex flex-col justify-between space-y-5 shadow-sm hover:shadow-xl hover:-translate-y-0.5"
+                                >
+                                    <div className="flex items-center justify-between">
+                                        <div className="w-14 h-14 rounded-2xl bg-blue-100 dark:bg-blue-900/50 flex items-center justify-center text-blue-600 dark:text-blue-400 group-hover:scale-110 transition-transform shadow-inner">
+                                            <User className="w-7 h-7" />
+                                        </div>
+                                        <Badge className="bg-blue-100 text-blue-800 dark:bg-blue-900/60 dark:text-blue-300 text-xs font-extrabold px-3 py-1">
+                                            80mm POS
+                                        </Badge>
+                                    </div>
+                                    <div className="space-y-1.5">
+                                        <h4 className="text-base font-extrabold text-slate-900 dark:text-slate-100 group-hover:text-blue-600 transition-colors">
+                                            {__('Ticket para el Cliente')}
+                                        </h4>
+                                        <p className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed">
+                                            {__('Comprobante oficial de entrega con datos del equipo, servicios contratados, resumen financiero, técnico asignado y datos de seguridad.')}
+                                        </p>
+                                    </div>
+                                </button>
+
+                                {/* OPCIÓN TÉCNICO */}
+                                <button
+                                    type="button"
+                                    onClick={() => handleExecutePrint('tecnico')}
+                                    className="p-6 rounded-2xl border-2 border-slate-200 dark:border-slate-800 hover:border-purple-500 dark:hover:border-purple-500 bg-slate-50/80 dark:bg-slate-900/60 hover:bg-purple-50/60 dark:hover:bg-purple-950/40 transition-all text-left group flex flex-col justify-between space-y-5 shadow-sm hover:shadow-xl hover:-translate-y-0.5"
+                                >
+                                    <div className="flex items-center justify-between">
+                                        <div className="w-14 h-14 rounded-2xl bg-purple-100 dark:bg-purple-900/50 flex items-center justify-center text-purple-600 dark:text-purple-400 group-hover:scale-110 transition-transform shadow-inner">
+                                            <Wrench className="w-7 h-7" />
+                                        </div>
+                                        <Badge className="bg-purple-100 text-purple-800 dark:bg-purple-900/60 dark:text-purple-300 text-xs font-extrabold px-3 py-1">
+                                            Con QR Local
+                                        </Badge>
+                                    </div>
+                                    <div className="space-y-1.5">
+                                        <h4 className="text-base font-extrabold text-slate-900 dark:text-slate-100 group-hover:text-purple-600 transition-colors">
+                                            {__('Ticket para el Técnico')}
+                                        </h4>
+                                        <p className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed">
+                                            {__('Ficha de trabajo de taller con descripción de la falla, observaciones físicas, patrón 3x3 y Código QR para escanear en móvil.')}
+                                        </p>
+                                    </div>
+                                </button>
+                            </div>
+                        </div>
+                    </DialogContent>
+                </Dialog>
+
+                {/* PLANTILLA DE IMPRESIÓN OFICIAL TICKET 80MM (REPARACIÓN: CLIENTE O TÉCNICO) */}
+                <div id="printable-ticket-reparacion" className="hidden print:block text-black bg-white font-sans p-4 text-xs w-[80mm] max-w-[80mm] mx-auto">
+                    <style>{`
+                        @media print {
+                            body * {
+                                visibility: hidden !important;
+                            }
+                            #printable-ticket-reparacion, #printable-ticket-reparacion * {
+                                visibility: visible !important;
+                            }
+                            #printable-ticket-reparacion {
+                                position: absolute !important;
+                                left: 0 !important;
+                                top: 0 !important;
+                                width: 80mm !important;
+                                max-width: 80mm !important;
+                                margin: 0 !important;
+                                padding: 4mm !important;
+                                background: white !important;
+                                color: black !important;
+                                font-family: Arial, sans-serif !important;
+                                font-size: 11px !important;
+                            }
+                            @page {
+                                size: 80mm auto;
+                                margin: 0;
+                            }
+                        }
+                    `}</style>
+
+                    {/* HEADER EMPRESA */}
+                    <div className="text-center mb-1">
+                        {empresa?.logo ? (
+                            <img
+                                src={empresa.logo}
+                                alt={empresa.razon_social || 'Logo'}
+                                className="h-10 max-w-[160px] mx-auto object-contain"
+                            />
+                        ) : (
+                            <div className="font-black text-sm uppercase">{empresa?.razon_social || 'Servicio Técnico'}</div>
+                        )}
+                    </div>
+
+                    {empresa?.razon_social && (
+                        <div className="text-center font-bold text-xs uppercase">{empresa.razon_social}</div>
+                    )}
+                    {empresa?.documento && (
+                        <div className="text-center text-[9px] font-mono">{empresa.documento}</div>
+                    )}
+                    <div className="text-center text-[9px] text-gray-700">
+                        {empresa?.telefono ? `Tel: ${empresa.telefono}` : ''} {empresa?.email ? `| ${empresa.email}` : ''}
+                    </div>
+                    {empresa?.direccion && (
+                        <div className="text-center text-[8px] text-gray-600">{empresa.direccion}</div>
+                    )}
+
+                    <div className="border-b border-dashed border-black my-1.5"></div>
+
+                    {printType === 'cliente' ? (
+                        /* ================= TICKET PARA EL CLIENTE ================= */
+                        <>
+                            <div className="text-center font-bold uppercase text-[11px] font-mono">
+                                COMPROBANTE DE RECEPCIÓN TÉCNICA
+                            </div>
+                            <div className="flex justify-between text-[10px] font-mono mt-1">
+                                <span>ORDEN: <strong>{orden.numero_orden}</strong></span>
+                                <span>{formatOnlyDate(orden.fecha_recepcion)}</span>
+                            </div>
+
+                            <div className="border-b border-dashed border-black my-1"></div>
+
+                            {/* DATOS DEL CLIENTE & TÉCNICO */}
+                            <div className="text-[10px] space-y-0.5">
+                                <div>CLIENTE: <strong className="uppercase">{clienteNombreDisplay}</strong></div>
+                                <div>TELÉFONO: <strong>{clienteTelefonoDisplay}</strong></div>
+                                <div>TÉCNICO ASIGNADO: <strong>{orden.tecnico?.name || 'Por Asignar'}</strong></div>
+                            </div>
+
+                            <div className="border-b border-dashed border-black my-1"></div>
+
+                            {/* DATOS DEL EQUIPO */}
+                            <div className="text-[10px] space-y-0.5">
+                                <div>EQUIPO: <strong>{marcaNombreDisplay} {modeloNombreDisplay} ({orden.tipo_dispositivo})</strong></div>
+                                {orden.color && <div>COLOR: <strong>{orden.color}</strong></div>}
+                                {orden.imei_serie && <div>IMEI / SERIE: <strong className="font-mono">{orden.imei_serie}</strong></div>}
+                                <div>FALLA: <em>"{orden.descripcion_falla}"</em></div>
+                            </div>
+
+                            <div className="border-b border-dashed border-black my-1"></div>
+
+                            {/* SERVICIOS / ITEMS REPARACIÓN */}
+                            <div className="font-bold text-[10px] uppercase mb-0.5">DETALLE DE SERVICIOS / REPUESTOS</div>
+                            <div className="grid grid-cols-12 text-[9px] font-bold border-b border-black pb-0.5">
+                                <span className="col-span-1">#</span>
+                                <span className="col-span-6">CONCEPTO</span>
+                                <span className="col-span-2 text-center">CANT</span>
+                                <span className="col-span-3 text-right">SUBTOTAL</span>
+                            </div>
+
+                            {orden.items && orden.items.length > 0 ? (
+                                orden.items.map((item, idx) => (
+                                    <div key={item.id} className="grid grid-cols-12 text-[9px] py-0.5 border-b border-dotted border-gray-400">
+                                        <span className="col-span-1">{idx + 1}</span>
+                                        <span className="col-span-6 truncate">{item.descripcion || item.servicio?.nombre || item.producto?.nombre || 'Servicio'}</span>
+                                        <span className="col-span-2 text-center">{item.cantidad}</span>
+                                        <span className="col-span-3 text-right font-bold">{currencySymbol}{formatNum(item.subtotal)}</span>
+                                    </div>
+                                ))
+                            ) : (
+                                <div className="text-[9px] italic text-center py-1">Revisión y diagnóstico técnico</div>
+                            )}
+
+                            <div className="border-b border-dashed border-black my-1"></div>
+
+                            {/* RESUMEN FINANCIERO */}
+                            <div className="space-y-0.5 text-[10px]">
+                                <div className="flex justify-between">
+                                    <span>COSTO ESTIMADO TOTAL:</span>
+                                    <span>{currencySymbol}{formatNum(orden.costo_estimado)}</span>
+                                </div>
+                                <div className="flex justify-between">
+                                    <span>ANTICIPO ABONADO:</span>
+                                    <span>{currencySymbol}{formatNum(orden.anticipo)}</span>
+                                </div>
+                                <div className="flex justify-between font-black text-xs border-t border-b border-black py-0.5 my-0.5">
+                                    <span>SALDO PENDIENTE:</span>
+                                    <span>{currencySymbol}{formatNum(orden.saldo_restante)}</span>
+                                </div>
+                            </div>
+
+                            <div className="border-b border-dashed border-black my-1"></div>
+
+                            {/* DATOS DE SEGURIDAD EN LA PARTE INFERIOR */}
+                            <div className="text-[10px] space-y-0.5">
+                                <div className="font-bold uppercase text-[9px] text-center">DATOS DE SEGURIDAD DEL TELÉFONO</div>
+                                <div>ESTADO BLOQUEO: <strong>{orden.contrasena_patron || 'Sin contraseña'}</strong></div>
+                            </div>
+
+                            {/* GRÁFICA DEL PATRÓN 3X3 */}
+                            {extractPatternNumbers(orden.contrasena_patron).length > 0 && (
+                                <PrintablePatternLock pattern={extractPatternNumbers(orden.contrasena_patron)} />
+                            )}
+
+                            <div className="border-b border-dashed border-black my-1.5"></div>
+
+                            {/* FIRMAS DE CONFORMIDAD */}
+                            <div className="pt-4 grid grid-cols-2 gap-4 text-center text-[8px]">
+                                <div>
+                                    <div className="border-t border-black pt-0.5">FIRMA CLIENTE</div>
+                                    <div>{clienteNombreDisplay}</div>
+                                </div>
+                                <div>
+                                    <div className="border-t border-black pt-0.5">RECIBIDO POR</div>
+                                    <div>{orden.tecnico?.name || 'Taller Técnico'}</div>
+                                </div>
+                            </div>
+
+                            <div className="text-center text-[8px] text-gray-500 mt-2">
+                                ¡Gracias por su confianza! Conserve este ticket para retirar su equipo.
+                            </div>
+                        </>
+                    ) : (
+                        /* ================= TICKET PARA EL TÉCNICO ================= */
+                        <>
+                            <div className="text-center font-bold uppercase text-[11px] font-mono bg-black text-white py-0.5">
+                                FICHA DE TRABAJO TÉCNICO DE TALLER
+                            </div>
+                            <div className="flex justify-between text-[10px] font-mono mt-1">
+                                <span>ORDEN: <strong>{orden.numero_orden}</strong></span>
+                                <span>{formatOnlyDate(orden.fecha_recepcion)}</span>
+                            </div>
+
+                            <div className="border-b border-dashed border-black my-1"></div>
+
+                            {/* DATOS DEL TÉCNICO Y CLIENTE */}
+                            <div className="text-[10px] space-y-0.5">
+                                <div>TÉCNICO ASIGNADO: <strong className="uppercase">{orden.tecnico?.name || 'Sin Asignar'}</strong></div>
+                                <div>CLIENTE: <strong>{clienteNombreDisplay}</strong> ({clienteTelefonoDisplay})</div>
+                            </div>
+
+                            <div className="border-b border-dashed border-black my-1"></div>
+
+                            {/* DATOS DEL EQUIPO Y FALLA */}
+                            <div className="text-[10px] space-y-0.5">
+                                <div>EQUIPO: <strong>{marcaNombreDisplay} {modeloNombreDisplay} ({orden.tipo_dispositivo})</strong></div>
+                                {orden.color && <div>COLOR: <strong>{orden.color}</strong></div>}
+                                {orden.imei_serie && <div>IMEI / SERIE: <strong className="font-mono">{orden.imei_serie}</strong></div>}
+                                <div className="pt-1">FALLA REPORTADA:</div>
+                                <div className="font-bold text-[10px] bg-gray-100 p-1 border border-black">{orden.descripcion_falla}</div>
+                                {orden.observaciones_fisicas && (
+                                    <>
+                                        <div className="pt-1">OBSERVACIONES FÍSICAS:</div>
+                                        <div className="italic text-[9px] bg-gray-50 p-1">{orden.observaciones_fisicas}</div>
+                                    </>
+                                )}
+                            </div>
+
+                            <div className="border-b border-dashed border-black my-1"></div>
+
+                            {/* SEGURIDAD DEL TELÉFONO Y PATRÓN 3X3 */}
+                            <div className="text-[10px] space-y-0.5">
+                                <div className="font-bold uppercase text-[9px] text-center">SEGURIDAD Y DESBLOQUEO DEL DISPOSITIVO</div>
+                                <div>SEGURIDAD: <strong>{orden.contrasena_patron || 'Sin contraseña'}</strong></div>
+                            </div>
+
+                            {extractPatternNumbers(orden.contrasena_patron).length > 0 && (
+                                <PrintablePatternLock pattern={extractPatternNumbers(orden.contrasena_patron)} />
+                            )}
+
+                            <div className="border-b border-dashed border-black my-1.5"></div>
+
+                            {/* CÓDIGO QR PARA ESCANEAR */}
+                            <div className="text-center pt-1 pb-1 flex flex-col items-center">
+                                <QRCodeSVG
+                                    value={typeof window !== 'undefined' ? window.location.href : `http://localhost/admin/reparaciones/${orden.id}`}
+                                    size={120}
+                                />
+                                <div className="text-[8px] font-bold uppercase mt-1">CÓDIGO QR DE ACCESO RÁPIDO</div>
+                                <div className="text-[7px] text-gray-600 font-mono">Escanear para abrir detalle en el sistema</div>
+                            </div>
+                        </>
+                    )}
+                </div>
             </div>
         </>
     );

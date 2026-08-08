@@ -230,11 +230,30 @@ class WhatsAppService
         return null;
     }
 
+    private function normalizeRecipient(string $to): string
+    {
+        $normalized = preg_replace('/[^0-9]/', '', trim($to)) ?? '';
+
+        if (str_starts_with($normalized, '00')) {
+            $normalized = substr($normalized, 2);
+        }
+
+        // Algunos clientes guardan Mexico como 52 + 1 + 10 digitos.
+        // Este proveedor espera 52 + 10 digitos y falla con 521... .
+        if (str_starts_with($normalized, '521') && strlen($normalized) === 13) {
+            $normalized = '52'.substr($normalized, 3);
+        }
+
+        return $normalized;
+    }
+
     /**
      * Enviar mensaje de texto
      */
     public function sendMessage(string $to, string $message, bool $isWelcome = false)
     {
+        $to = $this->normalizeRecipient($to);
+
         try {
             $url = "{$this->baseUrl}/api/message/send-text/{$this->instanceName}";
             $response = Http::timeout($this->timeout)
@@ -279,6 +298,8 @@ class WhatsAppService
      */
     public function sendMedia(string $to, string $mediaUrl, string $caption = '')
     {
+        $to = $this->normalizeRecipient($to);
+
         try {
             $url = "{$this->baseUrl}/api/message/send-media/{$this->instanceName}";
             $response = Http::timeout($this->timeout)

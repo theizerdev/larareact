@@ -1436,8 +1436,8 @@ export default function CreateReparacion({ clientes: initialClientes, marcas: in
                                                                 data.imei_serie && data.imei_serie.length === 5
                                                                     ? "border-emerald-500 focus-visible:ring-emerald-500"
                                                                     : data.imei_serie && data.imei_serie.length > 0
-                                                                    ? "border-rose-500 focus-visible:ring-rose-500"
-                                                                    : ""
+                                                                        ? "border-rose-500 focus-visible:ring-rose-500"
+                                                                        : ""
                                                             )}
                                                         />
                                                         {isCheckingImei && (
