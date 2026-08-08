@@ -960,6 +960,26 @@ export default function ShowReparacion({ orden, productosRepuestos = [], tecnico
         }
     };
 
+    const formatFullSpanishDate = (dateStr?: string): string => {
+        if (!dateStr) return __('No especificada');
+        try {
+            const cleanStr = String(dateStr).split('T')[0];
+            const parts = cleanStr.split('-');
+            if (parts.length === 3) {
+                const [year, month, day] = parts.map(Number);
+                const d = new Date(year, month - 1, day);
+                const dayName = d.toLocaleDateString('es-ES', { weekday: 'long' });
+                const monthName = d.toLocaleDateString('es-ES', { month: 'long' });
+                const capDay = dayName.charAt(0).toUpperCase() + dayName.slice(1);
+                const capMonth = monthName.charAt(0).toUpperCase() + monthName.slice(1);
+                return `${capDay} ${day} de ${capMonth} de ${year}`;
+            }
+            return dateStr;
+        } catch {
+            return dateStr || __('No especificada');
+        }
+    };
+
     const copyToClipboard = (text: string, label: string) => {
         navigator.clipboard.writeText(text);
         notifySuccess(`${label} ${__('copiado al portapapeles.')}`);
@@ -3223,6 +3243,11 @@ export default function ShowReparacion({ orden, productosRepuestos = [], tecnico
                 <div id="printable-ticket-reparacion" className="hidden print:block text-black bg-white font-sans p-4 text-xs w-[80mm] max-w-[80mm] mx-auto">
                     <style>{`
                         @media print {
+                            * {
+                                -webkit-print-color-adjust: exact !important;
+                                print-color-adjust: exact !important;
+                                color-adjust: exact !important;
+                            }
                             body * {
                                 visibility: hidden !important;
                             }
@@ -3236,10 +3261,10 @@ export default function ShowReparacion({ orden, productosRepuestos = [], tecnico
                                 width: 80mm !important;
                                 max-width: 80mm !important;
                                 margin: 0 !important;
-                                padding: 4mm !important;
+                                padding: 2mm !important;
                                 background: white !important;
                                 color: black !important;
-                                font-family: Arial, sans-serif !important;
+                                font-family: 'Courier New', Courier, monospace, Arial, sans-serif !important;
                                 font-size: 11px !important;
                             }
                             @page {
@@ -3249,137 +3274,119 @@ export default function ShowReparacion({ orden, productosRepuestos = [], tecnico
                         }
                     `}</style>
 
-                    {/* HEADER EMPRESA */}
-                    <div className="text-center mb-1">
-                        {empresa?.logo ? (
-                            <img
-                                src={empresa.logo}
-                                alt={empresa.razon_social || 'Logo'}
-                                className="h-10 max-w-[160px] mx-auto object-contain"
-                            />
-                        ) : (
-                            <div className="font-black text-sm uppercase">{empresa?.razon_social || 'Servicio Técnico'}</div>
-                        )}
-                    </div>
-
-                    {empresa?.razon_social && (
-                        <div className="text-center font-bold text-xs uppercase">{empresa.razon_social}</div>
-                    )}
-                    {empresa?.documento && (
-                        <div className="text-center text-[9px] font-mono">{empresa.documento}</div>
-                    )}
-                    <div className="text-center text-[9px] text-gray-700">
-                        {empresa?.telefono ? `Tel: ${empresa.telefono}` : ''} {empresa?.email ? `| ${empresa.email}` : ''}
-                    </div>
-                    {empresa?.direccion && (
-                        <div className="text-center text-[8px] text-gray-600">{empresa.direccion}</div>
-                    )}
-
-                    <div className="border-b border-dashed border-black my-1.5"></div>
-
                     {printType === 'cliente' ? (
-                        /* ================= TICKET PARA EL CLIENTE ================= */
-                        <>
-                            <div className="text-center font-bold uppercase text-[11px] font-mono">
-                                COMPROBANTE DE RECEPCIÓN TÉCNICA
-                            </div>
-                            <div className="flex justify-between text-[10px] font-mono mt-1">
-                                <span>ORDEN: <strong>{orden.numero_orden}</strong></span>
-                                <span>{formatOnlyDate(orden.fecha_recepcion)}</span>
-                            </div>
-
-                            <div className="border-b border-dashed border-black my-1"></div>
-
-                            {/* DATOS DEL CLIENTE & TÉCNICO */}
-                            <div className="text-[10px] space-y-0.5">
-                                <div>CLIENTE: <strong className="uppercase">{clienteNombreDisplay}</strong></div>
-                                <div>TELÉFONO: <strong>{clienteTelefonoDisplay}</strong></div>
-                                <div>TÉCNICO ASIGNADO: <strong>{orden.tecnico?.name || 'Por Asignar'}</strong></div>
+                        /* ================= TICKET PARA EL CLIENTE (CON BORDES NEGROS EXACTOS COMO REFERENCIA) ================= */
+                        <div className="font-mono text-black text-xs leading-tight border-2 border-black p-2 bg-white">
+                            {/* HEADER EMPRESA CON LOGO MINI */}
+                            <div className="text-center mb-1">
+                                {empresa?.logo_mini || empresa?.logo ? (
+                                    <img
+                                        src={empresa.logo_mini || empresa.logo}
+                                        alt={empresa.razon_social || 'Logo'}
+                                        className="h-16 max-w-[160px] mx-auto object-contain mb-1"
+                                    />
+                                ) : (
+                                    <div className="font-black text-base uppercase tracking-tight">{empresa?.razon_social || 'SERVITEC'}</div>
+                                )}
                             </div>
 
-                            <div className="border-b border-dashed border-black my-1"></div>
+                            {/* DIRECCIÓN Y TELÉFONO CENTRADOS */}
+                            {empresa?.direccion && (
+                                <div className="text-center font-bold text-[9px] uppercase px-1 leading-snug font-mono">
+                                    {empresa.direccion}
+                                </div>
+                            )}
+                            <div className="text-center font-bold text-[10px] mt-0.5 font-mono">
+                                TELEFONO: {empresa?.telefono || ''}
+                            </div>
+
+                            {/* BANNER NEGRO ORDEN N° CON BORDES NEGROS SÓLIDOS */}
+                            <div className="bg-black text-white text-center font-black text-sm py-1 my-2 uppercase tracking-wider border-y-2 border-black">
+                                ORDEN N° {orden.numero_orden}
+                            </div>
+
+                            {/* DATOS DEL CLIENTE */}
+                            <div className="text-center font-black text-[11px] uppercase mb-1">
+                                DATOS DEL CLIENTE
+                            </div>
+                            <div className="text-[10px] space-y-0.5 font-bold uppercase px-1">
+                                <div>NOMBRE: <span className="font-normal">{clienteNombreDisplay}</span></div>
+                                <div>TELEFONO: <span className="font-normal">{clienteTelefonoDisplay}</span></div>
+                            </div>
 
                             {/* DATOS DEL EQUIPO */}
-                            <div className="text-[10px] space-y-0.5">
-                                <div>EQUIPO: <strong>{marcaNombreDisplay} {modeloNombreDisplay} ({orden.tipo_dispositivo})</strong></div>
-                                {orden.color && <div>COLOR: <strong>{orden.color}</strong></div>}
-                                {orden.imei_serie && <div>IMEI / SERIE: <strong className="font-mono">{orden.imei_serie}</strong></div>}
-                                <div>FALLA: <em>"{orden.descripcion_falla}"</em></div>
+                            <div className="text-center font-black text-[11px] uppercase mt-3 mb-1">
+                                DATOS DEL EQUIPO
+                            </div>
+                            <div className="text-[10px] space-y-0.5 font-bold uppercase px-1">
+                                <div>EQUIPO: <span className="font-normal">{marcaNombreDisplay} {modeloNombreDisplay}</span></div>
+                                <div>IMEI/SN: <span className="font-normal">{orden.imei_serie || 'nv'}</span></div>
+                                <div>OBSERVACIONES: <span className="font-normal">{orden.observaciones_fisicas || 'equipo sin observaciones'}</span></div>
+                                <div>REPARACION: <span className="font-normal">{orden.descripcion_falla || (orden.items && orden.items.length > 0 ? orden.items.map((i) => i.descripcion || i.servicio?.nombre || i.producto?.nombre).join(', ') : 'Revisión y diagnóstico')}</span></div>
+                                <div>ACCESORIOS: <span className="font-normal">{orden.accesorios_incluidos || 'no deja'}</span></div>
                             </div>
 
-                            <div className="border-b border-dashed border-black my-1"></div>
-
-                            {/* SERVICIOS / ITEMS REPARACIÓN */}
-                            <div className="font-bold text-[10px] uppercase mb-0.5">DETALLE DE SERVICIOS / REPUESTOS</div>
-                            <div className="grid grid-cols-12 text-[9px] font-bold border-b border-black pb-0.5">
-                                <span className="col-span-1">#</span>
-                                <span className="col-span-6">CONCEPTO</span>
-                                <span className="col-span-2 text-center">CANT</span>
-                                <span className="col-span-3 text-right">SUBTOTAL</span>
+                            {/* BANNER COSTO REPARACION CON BORDES NEGROS SÓLIDOS */}
+                            <div className="bg-black text-white text-center font-black text-[10px] py-0.5 mt-3 uppercase tracking-wide border-y border-black">
+                                COSTO REPARACION
+                            </div>
+                            <div className="text-[10px] space-y-0.5 py-1 px-1 font-bold">
+                                <div className="flex justify-between">
+                                    <span>SUBTOTAL =</span>
+                                    <span>${formatNum(orden.costo_estimado)} {currencySymbol !== '$' ? currencySymbol : 'MXN'}</span>
+                                </div>
+                                <div className="flex justify-between">
+                                    <span>ANTICIPO =</span>
+                                    <span>${formatNum(orden.anticipo)} {currencySymbol !== '$' ? currencySymbol : 'MXN'}</span>
+                                </div>
+                                <div className="flex justify-between border-t border-dotted border-black pt-0.5 font-black">
+                                    <span>TOTAL =</span>
+                                    <span>${formatNum(orden.saldo_restante)} {currencySymbol !== '$' ? currencySymbol : 'MXN'}</span>
+                                </div>
                             </div>
 
-                            {orden.items && orden.items.length > 0 ? (
-                                orden.items.map((item, idx) => (
-                                    <div key={item.id} className="grid grid-cols-12 text-[9px] py-0.5 border-b border-dotted border-gray-400">
-                                        <span className="col-span-1">{idx + 1}</span>
-                                        <span className="col-span-6 truncate">{item.descripcion || item.servicio?.nombre || item.producto?.nombre || 'Servicio'}</span>
-                                        <span className="col-span-2 text-center">{item.cantidad}</span>
-                                        <span className="col-span-3 text-right font-bold">{currencySymbol}{formatNum(item.subtotal)}</span>
+                            {/* BANNER FECHA DE RECEPCION */}
+                            <div className="bg-black text-white text-center font-black text-[10px] py-0.5 mt-1 uppercase tracking-wide border-y border-black">
+                                FECHA DE RECEPCION
+                            </div>
+                            <div className="text-center text-[10px] font-bold py-1">
+                                {formatDate(orden.fecha_recepcion)}
+                            </div>
+
+                            {/* BANNER FECHA APROX DE ENTREGA */}
+                            <div className="bg-black text-white text-center font-black text-[10px] py-0.5 mt-1 uppercase tracking-wide border-y border-black">
+                                FECHA APROX DE ENTREGA
+                            </div>
+                            <div className="text-center text-[10px] font-bold py-1">
+                                {formatFullSpanishDate(orden.fecha_estimada_entrega || orden.fecha_recepcion)}
+                            </div>
+
+                            {/* BANNER CONTRASEÑA */}
+                            <div className="bg-black text-white text-center font-black text-[10px] py-0.5 mt-1 uppercase tracking-wide border-y border-black">
+                                CONTRASEÑA
+                            </div>
+                            <div className="py-2 border-b-2 border-black">
+                                {extractPatternNumbers(orden.contrasena_patron).length > 0 ? (
+                                    <PrintablePatternLock pattern={extractPatternNumbers(orden.contrasena_patron)} />
+                                ) : (
+                                    <div className="text-center font-bold text-xs py-1">
+                                        {orden.contrasena_patron || 'Sin contraseña'}
                                     </div>
-                                ))
-                            ) : (
-                                <div className="text-[9px] italic text-center py-1">Revisión y diagnóstico técnico</div>
-                            )}
-
-                            <div className="border-b border-dashed border-black my-1"></div>
-
-                            {/* RESUMEN FINANCIERO */}
-                            <div className="space-y-0.5 text-[10px]">
-                                <div className="flex justify-between">
-                                    <span>COSTO ESTIMADO TOTAL:</span>
-                                    <span>{currencySymbol}{formatNum(orden.costo_estimado)}</span>
-                                </div>
-                                <div className="flex justify-between">
-                                    <span>ANTICIPO ABONADO:</span>
-                                    <span>{currencySymbol}{formatNum(orden.anticipo)}</span>
-                                </div>
-                                <div className="flex justify-between font-black text-xs border-t border-b border-black py-0.5 my-0.5">
-                                    <span>SALDO PENDIENTE:</span>
-                                    <span>{currencySymbol}{formatNum(orden.saldo_restante)}</span>
-                                </div>
+                                )}
                             </div>
 
-                            <div className="border-b border-dashed border-black my-1"></div>
-
-                            {/* DATOS DE SEGURIDAD EN LA PARTE INFERIOR */}
-                            <div className="text-[10px] space-y-0.5">
-                                <div className="font-bold uppercase text-[9px] text-center">DATOS DE SEGURIDAD DEL TELÉFONO</div>
-                                <div>ESTADO BLOQUEO: <strong>{orden.contrasena_patron || 'Sin contraseña'}</strong></div>
-                            </div>
-
-                            {/* GRÁFICA DEL PATRÓN 3X3 */}
-                            {extractPatternNumbers(orden.contrasena_patron).length > 0 && (
-                                <PrintablePatternLock pattern={extractPatternNumbers(orden.contrasena_patron)} />
-                            )}
-
-                            <div className="border-b border-dashed border-black my-1.5"></div>
-
-                            {/* FIRMAS DE CONFORMIDAD */}
-                            <div className="pt-4 grid grid-cols-2 gap-4 text-center text-[8px]">
-                                <div>
-                                    <div className="border-t border-black pt-0.5">FIRMA CLIENTE</div>
-                                    <div>{clienteNombreDisplay}</div>
+                            {/* TÉRMINOS Y GARANTÍA CON RECUADRO DE FIRMA DE CONFORMIDAD */}
+                            <div className="pt-2">
+                                <div className="text-[9px] font-bold text-left mb-1 font-mono">
+                                    Términos y Condiciones de Garantía:
                                 </div>
-                                <div>
-                                    <div className="border-t border-black pt-0.5">RECIBIDO POR</div>
-                                    <div>{orden.tecnico?.name || 'Taller Técnico'}</div>
+                                <div className="border-2 border-black h-12 w-full mb-1 bg-white"></div>
+                                <div className="text-center font-black text-[10px] uppercase font-mono">
+                                    FIRMA DE CONFORMIDAD
                                 </div>
                             </div>
-
-                            <div className="text-center text-[8px] text-gray-500 mt-2">
-                                ¡Gracias por su confianza! Conserve este ticket para retirar su equipo.
-                            </div>
-                        </>
+                            <div className="border-b-2 border-black pt-2"></div>
+                        </div>
                     ) : (
                         /* ================= TICKET PARA EL TÉCNICO ================= */
                         <>
