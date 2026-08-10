@@ -46,5 +46,20 @@ class MultitenantableTest extends TestCase
         $this->assertNotNull($fetchedUser);
         $this->assertEquals($user->id, $fetchedUser->id);
     }
+
+    public function test_empresa_query_does_not_attempt_sucursal_id_filter()
+    {
+        $role = Role::firstOrCreate(['name' => 'operador', 'guard_name' => 'web']);
+        $user = User::factory()->create([
+            'empresa_id' => 1,
+            'sucursal_id' => 1,
+        ]);
+        $user->assignRole($role);
+
+        $this->actingAs($user);
+
+        $empresaQuerySql = \App\Models\Empresa::toRawSql();
+        $this->assertStringNotContainsString('sucursal_id', $empresaQuerySql);
+    }
 }
 
