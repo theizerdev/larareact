@@ -10,6 +10,7 @@ import { FilterBar, FilterField } from '@/components/filter-bar';
 import { ModuleHeader } from '@/components/module-header';
 import { Input } from '@/components/ui/input';
 import { Switch } from '@/components/ui/switch';
+import { useFilterSync } from '@/hooks/use-filter-search';
 import { useTranslate } from '@/hooks/use-translate';
 import { cleanParams, cn } from '@/lib/utils';
 import type { Paginated } from '@/types/app';
@@ -32,7 +33,10 @@ interface IvmsAccessEvent {
 interface PageProps {
     items: Paginated<IvmsAccessEvent>;
     filters: {
+        search?: string;
         employee_no?: string;
+        person_name?: string;
+        card_no?: string;
         include_system_events?: string;
         only_identity_matches?: string;
     };
@@ -42,7 +46,10 @@ interface PageProps {
 export default function ControlAccesoEventosPeatonales({ items, filters, error }: PageProps) {
     const { __ } = useTranslate();
 
+    const [search, setSearch] = React.useState(filters.search || '');
     const [employeeNo, setEmployeeNo] = React.useState(filters.employee_no || '');
+    const [personName, setPersonName] = React.useState(filters.person_name || '');
+    const [cardNo, setCardNo] = React.useState(filters.card_no || '');
     const [includeSystemEvents, setIncludeSystemEvents] = React.useState(
         filters.include_system_events === '1' || filters.include_system_events === 'true'
     );
@@ -62,19 +69,15 @@ export default function ControlAccesoEventosPeatonales({ items, filters, error }
     }, []);
 
     const currentFilters = cleanParams({
+        search: search || undefined,
         employee_no: employeeNo || undefined,
+        person_name: personName || undefined,
+        card_no: cardNo || undefined,
         include_system_events: includeSystemEvents ? '1' : undefined,
         only_identity_matches: onlyIdentityMatches ? '1' : undefined,
     });
 
-    React.useEffect(() => {
-        const timer = setTimeout(() => {
-            router.get(window.location.pathname, currentFilters, { preserveState: true, preserveScroll: true });
-        }, 300);
-
-        return () => clearTimeout(timer);
-        // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [employeeNo, includeSystemEvents, onlyIdentityMatches]);
+    useFilterSync(currentFilters);
 
     const breadcrumbs = [
         { title: __('Dashboard'), href: '/admin/dashboard' },
@@ -141,10 +144,32 @@ export default function ControlAccesoEventosPeatonales({ items, filters, error }
 
                 <FilterBar>
                     <div className="flex flex-wrap items-end gap-4">
+                        <FilterField label={__('Search')}>
+                            <Input
+                                placeholder={__('Search by name, employee or card number')}
+                                className="w-full md:w-80"
+                                value={search}
+                                onChange={(e) => setSearch(e.target.value)}
+                            />
+                        </FilterField>
+                        <FilterField label={__('Person')}>
+                            <Input
+                                className="w-full md:w-48"
+                                value={personName}
+                                onChange={(e) => setPersonName(e.target.value)}
+                            />
+                        </FilterField>
+                        <FilterField label={__('Card No.')}>
+                            <Input
+                                className="w-full md:w-40"
+                                value={cardNo}
+                                onChange={(e) => setCardNo(e.target.value)}
+                            />
+                        </FilterField>
                         <FilterField label={__('Employee No.')}>
                             <Input
                                 placeholder={__('Exact employee number')}
-                                className="w-full md:w-56"
+                                className="w-full md:w-48"
                                 value={employeeNo}
                                 onChange={(e) => setEmployeeNo(e.target.value)}
                             />

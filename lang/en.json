@@ -878,5 +878,10 @@
   "Verify Mode": "Verify Mode",
   "View Photo": "View Photo",
   "Yes": "Yes",
+  "Search by name, employee number or type": "Search by name, employee number or type",
+  "Search by card or employee number": "Search by card or employee number",
+  "Search by name, employee or card number": "Search by name, employee or card number",
+  "Search by plate, brand or employee number": "Search by plate, brand or employee number",
+  "Search by plate, camera, list type or direction": "Search by plate, camera, list type or direction",
   "e.g. 192.168.1.10": "e.g. 192.168.1.10"
 }

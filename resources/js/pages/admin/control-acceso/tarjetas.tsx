@@ -9,6 +9,7 @@ import { FilterBar, FilterField } from '@/components/filter-bar';
 import { ModuleHeader } from '@/components/module-header';
 import { Input } from '@/components/ui/input';
 import { Switch } from '@/components/ui/switch';
+import { useFilterSync } from '@/hooks/use-filter-search';
 import { useTranslate } from '@/hooks/use-translate';
 import { cleanParams } from '@/lib/utils';
 import type { Paginated } from '@/types/app';
@@ -24,7 +25,9 @@ interface IvmsAccessCard {
 interface PageProps {
     items: Paginated<IvmsAccessCard>;
     filters: {
+        search?: string;
         employee_no?: string;
+        card_no?: string;
         include_deleted?: string;
     };
     error: string | null;
@@ -33,7 +36,9 @@ interface PageProps {
 export default function ControlAccesoTarjetas({ items, filters, error }: PageProps) {
     const { __ } = useTranslate();
 
+    const [search, setSearch] = React.useState(filters.search || '');
     const [employeeNo, setEmployeeNo] = React.useState(filters.employee_no || '');
+    const [cardNo, setCardNo] = React.useState(filters.card_no || '');
     const [includeDeleted, setIncludeDeleted] = React.useState(
         filters.include_deleted === '1' || filters.include_deleted === 'true'
     );
@@ -50,18 +55,13 @@ export default function ControlAccesoTarjetas({ items, filters, error }: PagePro
     }, []);
 
     const currentFilters = cleanParams({
+        search: search || undefined,
         employee_no: employeeNo || undefined,
+        card_no: cardNo || undefined,
         include_deleted: includeDeleted ? '1' : undefined,
     });
 
-    React.useEffect(() => {
-        const timer = setTimeout(() => {
-            router.get(window.location.pathname, currentFilters, { preserveState: true, preserveScroll: true });
-        }, 300);
-
-        return () => clearTimeout(timer);
-        // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [employeeNo, includeDeleted]);
+    useFilterSync(currentFilters);
 
     const breadcrumbs = [
         { title: __('Dashboard'), href: '/admin/dashboard' },
@@ -108,10 +108,25 @@ export default function ControlAccesoTarjetas({ items, filters, error }: PagePro
 
                 <FilterBar>
                     <div className="flex flex-wrap items-end gap-4">
+                        <FilterField label={__('Search')}>
+                            <Input
+                                placeholder={__('Search by card or employee number')}
+                                className="w-full md:w-80"
+                                value={search}
+                                onChange={(e) => setSearch(e.target.value)}
+                            />
+                        </FilterField>
+                        <FilterField label={__('Card No.')}>
+                            <Input
+                                className="w-full md:w-48"
+                                value={cardNo}
+                                onChange={(e) => setCardNo(e.target.value)}
+                            />
+                        </FilterField>
                         <FilterField label={__('Employee No.')}>
                             <Input
                                 placeholder={__('Exact employee number')}
-                                className="w-full md:w-56"
+                                className="w-full md:w-48"
                                 value={employeeNo}
                                 onChange={(e) => setEmployeeNo(e.target.value)}
                             />

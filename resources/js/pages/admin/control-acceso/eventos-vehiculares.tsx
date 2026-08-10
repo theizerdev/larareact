@@ -9,6 +9,7 @@ import { DataTable } from '@/components/data-table';
 import { FilterBar, FilterField } from '@/components/filter-bar';
 import { ModuleHeader } from '@/components/module-header';
 import { Input } from '@/components/ui/input';
+import { useFilterSync } from '@/hooks/use-filter-search';
 import { useTranslate } from '@/hooks/use-translate';
 import { cleanParams } from '@/lib/utils';
 import type { Paginated } from '@/types/app';
@@ -33,7 +34,9 @@ interface IvmsPlateEvent {
 interface PageProps {
     items: Paginated<IvmsPlateEvent>;
     filters: {
+        search?: string;
         plate_number?: string;
+        brand_code?: string;
         camera_ip?: string;
         list_type?: string;
         direction?: string;
@@ -44,7 +47,9 @@ interface PageProps {
 export default function ControlAccesoEventosVehiculares({ items, filters, error }: PageProps) {
     const { __ } = useTranslate();
 
+    const [search, setSearch] = React.useState(filters.search || '');
     const [plateNumber, setPlateNumber] = React.useState(filters.plate_number || '');
+    const [brandCode, setBrandCode] = React.useState(filters.brand_code || '');
     const [cameraIp, setCameraIp] = React.useState(filters.camera_ip || '');
     const [listType, setListType] = React.useState(filters.list_type || '');
     const [direction, setDirection] = React.useState(filters.direction || '');
@@ -61,20 +66,15 @@ export default function ControlAccesoEventosVehiculares({ items, filters, error 
     }, []);
 
     const currentFilters = cleanParams({
+        search: search || undefined,
         plate_number: plateNumber || undefined,
+        brand_code: brandCode || undefined,
         camera_ip: cameraIp || undefined,
         list_type: listType || undefined,
         direction: direction || undefined,
     });
 
-    React.useEffect(() => {
-        const timer = setTimeout(() => {
-            router.get(window.location.pathname, currentFilters, { preserveState: true, preserveScroll: true });
-        }, 300);
-
-        return () => clearTimeout(timer);
-        // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [plateNumber, cameraIp, listType, direction]);
+    useFilterSync(currentFilters);
 
     const breadcrumbs = [
         { title: __('Dashboard'), href: '/admin/dashboard' },
@@ -132,12 +132,27 @@ export default function ControlAccesoEventosVehiculares({ items, filters, error 
 
                 <FilterBar>
                     <div className="flex flex-wrap items-end gap-4">
+                        <FilterField label={__('Search')}>
+                            <Input
+                                placeholder={__('Search by plate, camera, list type or direction')}
+                                className="w-full md:w-80"
+                                value={search}
+                                onChange={(e) => setSearch(e.target.value)}
+                            />
+                        </FilterField>
                         <FilterField label={__('Plate Number')}>
                             <Input
                                 placeholder={__('Search by plate')}
-                                className="w-full md:w-48"
+                                className="w-full md:w-40"
                                 value={plateNumber}
                                 onChange={(e) => setPlateNumber(e.target.value)}
+                            />
+                        </FilterField>
+                        <FilterField label={__('Brand')}>
+                            <Input
+                                className="w-full md:w-32"
+                                value={brandCode}
+                                onChange={(e) => setBrandCode(e.target.value)}
                             />
                         </FilterField>
                         <FilterField label={__('Camera IP')}>

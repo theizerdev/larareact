@@ -1447,5 +1447,10 @@
   "Verify Mode": "Modo de Verificación",
   "View Photo": "Ver Foto",
   "Yes": "Sí",
+  "Search by name, employee number or type": "Buscar por nombre, número de empleado o tipo",
+  "Search by card or employee number": "Buscar por tarjeta o número de empleado",
+  "Search by name, employee or card number": "Buscar por nombre, empleado o número de tarjeta",
+  "Search by plate, brand or employee number": "Buscar por placa, marca o número de empleado",
+  "Search by plate, camera, list type or direction": "Buscar por placa, cámara, tipo de lista o dirección",
   "e.g. 192.168.1.10": "ej. 192.168.1.10"
 }

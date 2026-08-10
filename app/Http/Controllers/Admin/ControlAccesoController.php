@@ -79,6 +79,10 @@ class ControlAccesoController extends Controller
             'admin/control-acceso/empleados',
             $service ? fn (array $q) => $service->listEmployees($q) : null,
             array_filter([
+                'search' => $request->input('search') ?: null,
+                'employee_no' => $request->input('employee_no') ?: null,
+                'full_name' => $request->input('full_name') ?: null,
+                'user_type' => $request->input('user_type') ?: null,
                 'include_system_accounts' => $request->boolean('include_system_accounts') ? 'true' : null,
                 'include_deleted' => $request->boolean('include_deleted') ? 'true' : null,
             ])
@@ -97,7 +101,10 @@ class ControlAccesoController extends Controller
             'admin/control-acceso/vehiculos',
             $service ? fn (array $q) => $service->listVehicles($q) : null,
             array_filter([
+                'search' => $request->input('search') ?: null,
                 'employee_no' => $request->input('employee_no') ?: null,
+                'plate_number' => $request->input('plate_number') ?: null,
+                'brand' => $request->input('brand') ?: null,
                 'include_deleted' => $request->boolean('include_deleted') ? 'true' : null,
             ])
         );
@@ -115,7 +122,9 @@ class ControlAccesoController extends Controller
             'admin/control-acceso/tarjetas',
             $service ? fn (array $q) => $service->listAccessCards($q) : null,
             array_filter([
+                'search' => $request->input('search') ?: null,
                 'employee_no' => $request->input('employee_no') ?: null,
+                'card_no' => $request->input('card_no') ?: null,
                 'include_deleted' => $request->boolean('include_deleted') ? 'true' : null,
             ])
         );
@@ -133,7 +142,10 @@ class ControlAccesoController extends Controller
             'admin/control-acceso/eventos-peatonales',
             $service ? fn (array $q) => $service->listAccessEvents($q) : null,
             array_filter([
+                'search' => $request->input('search') ?: null,
                 'employee_no' => $request->input('employee_no') ?: null,
+                'person_name' => $request->input('person_name') ?: null,
+                'card_no' => $request->input('card_no') ?: null,
                 'include_system_events' => $request->boolean('include_system_events') ? 'true' : null,
                 'only_identity_matches' => $request->boolean('only_identity_matches') ? 'true' : null,
             ])
@@ -152,7 +164,9 @@ class ControlAccesoController extends Controller
             'admin/control-acceso/eventos-vehiculares',
             $service ? fn (array $q) => $service->listPlateEvents($q) : null,
             array_filter([
+                'search' => $request->input('search') ?: null,
                 'plate_number' => $request->input('plate_number') ?: null,
+                'brand_code' => $request->input('brand_code') ?: null,
                 'camera_ip' => $request->input('camera_ip') ?: null,
                 'list_type' => $request->input('list_type') ?: null,
                 'direction' => $request->input('direction') ?: null,

@@ -7,7 +7,9 @@ import type { ColumnDef } from '@/components/data-table';
 import { DataTable } from '@/components/data-table';
 import { FilterBar, FilterField } from '@/components/filter-bar';
 import { ModuleHeader } from '@/components/module-header';
+import { Input } from '@/components/ui/input';
 import { Switch } from '@/components/ui/switch';
+import { useFilterSync } from '@/hooks/use-filter-search';
 import { useTranslate } from '@/hooks/use-translate';
 import { cleanParams, cn } from '@/lib/utils';
 import type { Paginated } from '@/types/app';
@@ -30,6 +32,10 @@ interface IvmsEmployee {
 interface PageProps {
     items: Paginated<IvmsEmployee>;
     filters: {
+        search?: string;
+        employee_no?: string;
+        full_name?: string;
+        user_type?: string;
         include_system_accounts?: string;
         include_deleted?: string;
     };
@@ -39,6 +45,10 @@ interface PageProps {
 export default function ControlAccesoEmpleados({ items, filters, error }: PageProps) {
     const { __ } = useTranslate();
 
+    const [search, setSearch] = React.useState(filters.search || '');
+    const [employeeNo, setEmployeeNo] = React.useState(filters.employee_no || '');
+    const [fullName, setFullName] = React.useState(filters.full_name || '');
+    const [userType, setUserType] = React.useState(filters.user_type || '');
     const [includeSystemAccounts, setIncludeSystemAccounts] = React.useState(
         filters.include_system_accounts === '1' || filters.include_system_accounts === 'true'
     );
@@ -58,14 +68,15 @@ export default function ControlAccesoEmpleados({ items, filters, error }: PagePr
     }, []);
 
     const currentFilters = cleanParams({
+        search: search || undefined,
+        employee_no: employeeNo || undefined,
+        full_name: fullName || undefined,
+        user_type: userType || undefined,
         include_system_accounts: includeSystemAccounts ? '1' : undefined,
         include_deleted: includeDeleted ? '1' : undefined,
     });
 
-    React.useEffect(() => {
-        router.get(window.location.pathname, currentFilters, { preserveState: true, preserveScroll: true });
-        // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [includeSystemAccounts, includeDeleted]);
+    useFilterSync(currentFilters);
 
     const breadcrumbs = [
         { title: __('Dashboard'), href: '/admin/dashboard' },
@@ -118,6 +129,38 @@ export default function ControlAccesoEmpleados({ items, filters, error }: PagePr
                 {error && <ControlAccesoErrorBanner message={error} />}
 
                 <FilterBar>
+                    <div className="flex flex-wrap items-end gap-4">
+                        <FilterField label={__('Search')}>
+                            <Input
+                                placeholder={__('Search by name, employee number or type')}
+                                className="w-full md:w-80"
+                                value={search}
+                                onChange={(e) => setSearch(e.target.value)}
+                            />
+                        </FilterField>
+                        <FilterField label={__('Full Name')}>
+                            <Input
+                                className="w-full md:w-48"
+                                value={fullName}
+                                onChange={(e) => setFullName(e.target.value)}
+                            />
+                        </FilterField>
+                        <FilterField label={__('Employee No.')}>
+                            <Input
+                                placeholder={__('Exact employee number')}
+                                className="w-full md:w-48"
+                                value={employeeNo}
+                                onChange={(e) => setEmployeeNo(e.target.value)}
+                            />
+                        </FilterField>
+                        <FilterField label={__('User Type')}>
+                            <Input
+                                className="w-full md:w-40"
+                                value={userType}
+                                onChange={(e) => setUserType(e.target.value)}
+                            />
+                        </FilterField>
+                    </div>
                     <div className="flex flex-wrap items-end gap-6">
                         <FilterField label={__('Include System Accounts')}>
                             <Switch checked={includeSystemAccounts} onCheckedChange={setIncludeSystemAccounts} />

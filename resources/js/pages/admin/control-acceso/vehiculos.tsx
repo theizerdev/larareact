@@ -9,6 +9,7 @@ import { FilterBar, FilterField } from '@/components/filter-bar';
 import { ModuleHeader } from '@/components/module-header';
 import { Input } from '@/components/ui/input';
 import { Switch } from '@/components/ui/switch';
+import { useFilterSync } from '@/hooks/use-filter-search';
 import { useTranslate } from '@/hooks/use-translate';
 import { cleanParams } from '@/lib/utils';
 import type { Paginated } from '@/types/app';
@@ -25,7 +26,10 @@ interface IvmsVehicle {
 interface PageProps {
     items: Paginated<IvmsVehicle>;
     filters: {
+        search?: string;
         employee_no?: string;
+        plate_number?: string;
+        brand?: string;
         include_deleted?: string;
     };
     error: string | null;
@@ -34,7 +38,10 @@ interface PageProps {
 export default function ControlAccesoVehiculos({ items, filters, error }: PageProps) {
     const { __ } = useTranslate();
 
+    const [search, setSearch] = React.useState(filters.search || '');
     const [employeeNo, setEmployeeNo] = React.useState(filters.employee_no || '');
+    const [plateNumber, setPlateNumber] = React.useState(filters.plate_number || '');
+    const [brand, setBrand] = React.useState(filters.brand || '');
     const [includeDeleted, setIncludeDeleted] = React.useState(
         filters.include_deleted === '1' || filters.include_deleted === 'true'
     );
@@ -51,18 +58,14 @@ export default function ControlAccesoVehiculos({ items, filters, error }: PagePr
     }, []);
 
     const currentFilters = cleanParams({
+        search: search || undefined,
         employee_no: employeeNo || undefined,
+        plate_number: plateNumber || undefined,
+        brand: brand || undefined,
         include_deleted: includeDeleted ? '1' : undefined,
     });
 
-    React.useEffect(() => {
-        const timer = setTimeout(() => {
-            router.get(window.location.pathname, currentFilters, { preserveState: true, preserveScroll: true });
-        }, 300);
-
-        return () => clearTimeout(timer);
-        // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [employeeNo, includeDeleted]);
+    useFilterSync(currentFilters);
 
     const breadcrumbs = [
         { title: __('Dashboard'), href: '/admin/dashboard' },
@@ -100,10 +103,33 @@ export default function ControlAccesoVehiculos({ items, filters, error }: PagePr
 
                 <FilterBar>
                     <div className="flex flex-wrap items-end gap-4">
+                        <FilterField label={__('Search')}>
+                            <Input
+                                placeholder={__('Search by plate, brand or employee number')}
+                                className="w-full md:w-80"
+                                value={search}
+                                onChange={(e) => setSearch(e.target.value)}
+                            />
+                        </FilterField>
+                        <FilterField label={__('Plate Number')}>
+                            <Input
+                                placeholder={__('Search by plate')}
+                                className="w-full md:w-40"
+                                value={plateNumber}
+                                onChange={(e) => setPlateNumber(e.target.value)}
+                            />
+                        </FilterField>
+                        <FilterField label={__('Brand')}>
+                            <Input
+                                className="w-full md:w-40"
+                                value={brand}
+                                onChange={(e) => setBrand(e.target.value)}
+                            />
+                        </FilterField>
                         <FilterField label={__('Employee No.')}>
                             <Input
                                 placeholder={__('Exact employee number')}
-                                className="w-full md:w-56"
+                                className="w-full md:w-48"
                                 value={employeeNo}
                                 onChange={(e) => setEmployeeNo(e.target.value)}
                             />
