@@ -11,6 +11,17 @@ use Illuminate\Pagination\LengthAwarePaginator;
 class ControlAccesoController extends Controller
 {
     /**
+     * El middleware ivms acepta un máximo de 200 registros por página (valida
+     * y rechaza con 422 cualquier limit mayor) y no soporta ningún filtro por
+     * query param — los ignora todos, solo respeta limit/offset. Por eso el
+     * filtrado de estos 5 módulos se hace acá: se trae hasta este tope de
+     * registros (los más recientes primero) y se filtra/pagina en PHP.
+     */
+    private const MAX_FETCH_ITEMS = 1000;
+
+    private const FETCH_PAGE_SIZE = 200;
+
+    /**
      * Resuelve el servicio de Control de Acceso para la empresa del usuario,
      * únicamente si la integración está activa y correctamente configurada.
      */
@@ -28,13 +39,73 @@ class ControlAccesoController extends Controller
     }
 
     /**
-     * Ejecuta un listado paginado (limit/offset) contra el middleware ivms y arma la vista Inertia.
+     * True si $needle es vacío/null (sin filtro aplicado) o si aparece dentro
+     * de $haystack sin importar mayúsculas/minúsculas.
      */
-    private function renderList(Request $request, string $view, ?callable $fetcher, array $extraFilters = [])
+    private function containsCi(?string $haystack, ?string $needle): bool
+    {
+        if ($needle === null || $needle === '') {
+            return true;
+        }
+
+        return $haystack !== null && stripos($haystack, $needle) !== false;
+    }
+
+    /**
+     * True si $needle es vacío/null, o si aparece en cualquiera de $haystacks.
+     */
+    private function matchesAny(array $haystacks, ?string $needle): bool
+    {
+        if ($needle === null || $needle === '') {
+            return true;
+        }
+
+        foreach ($haystacks as $haystack) {
+            if ($haystack !== null && stripos($haystack, $needle) !== false) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    /**
+     * Trae hasta self::MAX_FETCH_ITEMS registros del middleware, paginando
+     * internamente en bloques de self::FETCH_PAGE_SIZE (su máximo permitido).
+     */
+    private function fetchAll(callable $fetcher): array
+    {
+        $items = [];
+        $offset = 0;
+
+        while (count($items) < self::MAX_FETCH_ITEMS) {
+            $result = $fetcher(['limit' => self::FETCH_PAGE_SIZE, 'offset' => $offset]);
+
+            if (! $result['success']) {
+                return $result;
+            }
+
+            $batch = $result['data']['items'] ?? [];
+            $items = array_merge($items, $batch);
+            $total = $result['data']['total'] ?? count($items);
+            $offset += self::FETCH_PAGE_SIZE;
+
+            if (count($batch) < self::FETCH_PAGE_SIZE || $offset >= $total) {
+                break;
+            }
+        }
+
+        return ['success' => true, 'data' => ['items' => $items], 'error' => null];
+    }
+
+    /**
+     * Trae todo lo disponible del middleware (fetchAll), aplica $matcher
+     * localmente para filtrar y pagina el resultado ya filtrado.
+     */
+    private function renderFilteredList(Request $request, string $view, ?callable $fetcher, callable $matcher)
     {
         $page = max(1, (int) $request->input('page', 1));
         $perPage = min(100, max(5, (int) $request->input('perPage', 15)));
-        $offset = ($page - 1) * $perPage;
 
         $paginatorOptions = ['path' => $request->url(), 'query' => $request->query()];
 
@@ -46,8 +117,7 @@ class ControlAccesoController extends Controller
             ]);
         }
 
-        $query = array_merge($extraFilters, ['limit' => $perPage, 'offset' => $offset]);
-        $result = $fetcher($query);
+        $result = $this->fetchAll($fetcher);
 
         if (! $result['success']) {
             return inertia($view, [
@@ -57,11 +127,11 @@ class ControlAccesoController extends Controller
             ]);
         }
 
-        $items = $result['data']['items'] ?? [];
-        $total = $result['data']['total'] ?? count($items);
+        $filtered = array_values(array_filter($result['data']['items'], $matcher));
+        $pageItems = array_slice($filtered, ($page - 1) * $perPage, $perPage);
 
         return inertia($view, [
-            'items' => new LengthAwarePaginator($items, $total, $perPage, $page, $paginatorOptions),
+            'items' => new LengthAwarePaginator($pageItems, count($filtered), $perPage, $page, $paginatorOptions),
             'filters' => $request->query(),
             'error' => null,
         ]);
@@ -74,39 +144,82 @@ class ControlAccesoController extends Controller
     {
         $service = $this->resolveService($request);
 
-        return $this->renderList(
+        $search = $request->input('search');
+        $fullName = $request->input('full_name');
+        $employeeNo = $request->input('employee_no');
+        $userType = $request->input('user_type');
+        $includeSystemAccounts = $request->boolean('include_system_accounts');
+        $includeDeleted = $request->boolean('include_deleted');
+
+        return $this->renderFilteredList(
             $request,
             'admin/control-acceso/empleados',
             $service ? fn (array $q) => $service->listEmployees($q) : null,
-            array_filter([
-                'search' => $request->input('search') ?: null,
-                'employee_no' => $request->input('employee_no') ?: null,
-                'full_name' => $request->input('full_name') ?: null,
-                'user_type' => $request->input('user_type') ?: null,
-                'include_system_accounts' => $request->boolean('include_system_accounts') ? 'true' : null,
-                'include_deleted' => $request->boolean('include_deleted') ? 'true' : null,
-            ])
+            function (array $item) use ($search, $fullName, $employeeNo, $userType, $includeSystemAccounts, $includeDeleted) {
+                if (! $includeDeleted && ! empty($item['deleted_at'])) {
+                    return false;
+                }
+                if (! $includeSystemAccounts && ($item['is_system_account'] ?? false)) {
+                    return false;
+                }
+                if (! $this->containsCi($item['full_name'] ?? null, $fullName)) {
+                    return false;
+                }
+                if (! $this->containsCi($item['employee_no'] ?? null, $employeeNo)) {
+                    return false;
+                }
+                if (! $this->containsCi($item['user_type'] ?? null, $userType)) {
+                    return false;
+                }
+
+                return $this->matchesAny([
+                    $item['full_name'] ?? null,
+                    $item['employee_no'] ?? null,
+                    $item['user_type'] ?? null,
+                    $item['email'] ?? null,
+                ], $search);
+            }
         );
     }
 
     /**
-     * Vehículos registrados en el ivms.
+     * Directorio de vehículos (detectados por cámaras ANPR + registrados manualmente).
      */
     public function vehiculos(Request $request)
     {
         $service = $this->resolveService($request);
 
-        return $this->renderList(
+        $search = $request->input('search');
+        $employeeNo = $request->input('employee_no');
+        $plateNumber = $request->input('plate_number');
+        $brandCode = $request->input('brand_code');
+        $isRegistered = $request->has('is_registered') ? $request->boolean('is_registered') : null;
+
+        return $this->renderFilteredList(
             $request,
             'admin/control-acceso/vehiculos',
             $service ? fn (array $q) => $service->listVehicleDirectory($q) : null,
-            array_filter([
-                'search' => $request->input('search') ?: null,
-                'employee_no' => $request->input('employee_no') ?: null,
-                'plate_number' => $request->input('plate_number') ?: null,
-                'brand_code' => $request->input('brand_code') ?: null,
-                'is_registered' => $request->has('is_registered') ? ($request->boolean('is_registered') ? 'true' : 'false') : null,
-            ])
+            function (array $item) use ($search, $employeeNo, $plateNumber, $brandCode, $isRegistered) {
+                if ($isRegistered !== null && (bool) ($item['is_registered'] ?? false) !== $isRegistered) {
+                    return false;
+                }
+                if (! $this->containsCi($item['plate_number'] ?? null, $plateNumber)) {
+                    return false;
+                }
+                if (! $this->containsCi($item['employee_no'] ?? null, $employeeNo)) {
+                    return false;
+                }
+                if (! ($this->containsCi($item['brand'] ?? null, $brandCode) || $this->containsCi($item['detected_brand_code'] ?? null, $brandCode))) {
+                    return false;
+                }
+
+                return $this->matchesAny([
+                    $item['plate_number'] ?? null,
+                    $item['brand'] ?? null,
+                    $item['detected_brand_code'] ?? null,
+                    $item['employee_no'] ?? null,
+                ], $search);
+            }
         );
     }
 
@@ -117,16 +230,32 @@ class ControlAccesoController extends Controller
     {
         $service = $this->resolveService($request);
 
-        return $this->renderList(
+        $search = $request->input('search');
+        $employeeNo = $request->input('employee_no');
+        $cardNo = $request->input('card_no');
+        $includeDeleted = $request->boolean('include_deleted');
+
+        return $this->renderFilteredList(
             $request,
             'admin/control-acceso/tarjetas',
             $service ? fn (array $q) => $service->listAccessCards($q) : null,
-            array_filter([
-                'search' => $request->input('search') ?: null,
-                'employee_no' => $request->input('employee_no') ?: null,
-                'card_no' => $request->input('card_no') ?: null,
-                'include_deleted' => $request->boolean('include_deleted') ? 'true' : null,
-            ])
+            function (array $item) use ($search, $employeeNo, $cardNo, $includeDeleted) {
+                if (! $includeDeleted && ! empty($item['deleted_at'])) {
+                    return false;
+                }
+                if (! $this->containsCi($item['card_no'] ?? null, $cardNo)) {
+                    return false;
+                }
+                if (! $this->containsCi($item['employee_no'] ?? null, $employeeNo)) {
+                    return false;
+                }
+
+                return $this->matchesAny([
+                    $item['card_no'] ?? null,
+                    $item['employee_no'] ?? null,
+                    $item['card_type'] ?? null,
+                ], $search);
+            }
         );
     }
 
@@ -137,18 +266,37 @@ class ControlAccesoController extends Controller
     {
         $service = $this->resolveService($request);
 
-        return $this->renderList(
+        $search = $request->input('search');
+        $employeeNo = $request->input('employee_no');
+        $personName = $request->input('person_name');
+        $cardNo = $request->input('card_no');
+        $onlyIdentityMatches = $request->boolean('only_identity_matches');
+
+        return $this->renderFilteredList(
             $request,
             'admin/control-acceso/eventos-peatonales',
             $service ? fn (array $q) => $service->listAccessEvents($q) : null,
-            array_filter([
-                'search' => $request->input('search') ?: null,
-                'employee_no' => $request->input('employee_no') ?: null,
-                'person_name' => $request->input('person_name') ?: null,
-                'card_no' => $request->input('card_no') ?: null,
-                'include_system_events' => $request->boolean('include_system_events') ? 'true' : null,
-                'only_identity_matches' => $request->boolean('only_identity_matches') ? 'true' : null,
-            ])
+            function (array $item) use ($search, $employeeNo, $personName, $cardNo, $onlyIdentityMatches) {
+                if ($onlyIdentityMatches && ! ($item['is_identity_match'] ?? false)) {
+                    return false;
+                }
+                if (! $this->containsCi($item['person_name'] ?? null, $personName)) {
+                    return false;
+                }
+                if (! $this->containsCi($item['card_no'] ?? null, $cardNo)) {
+                    return false;
+                }
+                if (! $this->containsCi($item['employee_no'] ?? null, $employeeNo)) {
+                    return false;
+                }
+
+                return $this->matchesAny([
+                    $item['person_name'] ?? null,
+                    $item['employee_no'] ?? null,
+                    $item['card_no'] ?? null,
+                    $item['verify_mode'] ?? null,
+                ], $search);
+            }
         );
     }
 
@@ -159,18 +307,42 @@ class ControlAccesoController extends Controller
     {
         $service = $this->resolveService($request);
 
-        return $this->renderList(
+        $search = $request->input('search');
+        $plateNumber = $request->input('plate_number');
+        $brandCode = $request->input('brand_code');
+        $cameraIp = $request->input('camera_ip');
+        $listType = $request->input('list_type');
+        $direction = $request->input('direction');
+
+        return $this->renderFilteredList(
             $request,
             'admin/control-acceso/eventos-vehiculares',
             $service ? fn (array $q) => $service->listPlateEvents($q) : null,
-            array_filter([
-                'search' => $request->input('search') ?: null,
-                'plate_number' => $request->input('plate_number') ?: null,
-                'brand_code' => $request->input('brand_code') ?: null,
-                'camera_ip' => $request->input('camera_ip') ?: null,
-                'list_type' => $request->input('list_type') ?: null,
-                'direction' => $request->input('direction') ?: null,
-            ])
+            function (array $item) use ($search, $plateNumber, $brandCode, $cameraIp, $listType, $direction) {
+                if (! $this->containsCi($item['plate_number'] ?? null, $plateNumber)) {
+                    return false;
+                }
+                if (! $this->containsCi($item['brand_code'] ?? null, $brandCode)) {
+                    return false;
+                }
+                if (! $this->containsCi($item['camera_ip'] ?? null, $cameraIp)) {
+                    return false;
+                }
+                if (! $this->containsCi($item['list_type'] ?? null, $listType)) {
+                    return false;
+                }
+                if (! $this->containsCi($item['direction'] ?? null, $direction)) {
+                    return false;
+                }
+
+                return $this->matchesAny([
+                    $item['plate_number'] ?? null,
+                    $item['brand_code'] ?? null,
+                    $item['camera_ip'] ?? null,
+                    $item['list_type'] ?? null,
+                    $item['direction'] ?? null,
+                ], $search);
+            }
         );
     }
 
