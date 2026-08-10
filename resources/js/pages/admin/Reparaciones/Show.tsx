@@ -30,7 +30,7 @@ import {
     X,
     Upload,
     RefreshCw,
-    Pencil,
+    Search,
 } from 'lucide-react';
 import React, { useState, useRef, useEffect } from 'react';
 import { QRCodeSVG } from '@/components/qr-code-svg';
@@ -1571,18 +1571,59 @@ export default function ShowReparacion({ orden, productosRepuestos = [], tecnico
     const [comentarioEstado, setComentarioEstado] = useState('');
     const [tecnicoAsignadoId, setTecnicoAsignadoId] = useState(orden.tecnico?.id ? String(orden.tecnico.id) : '');
 
-    // Formulario de Repuesto
+    // Formulario de Repuesto (Select2 Buscador en tiempo real)
     const [selectedProductoId, setSelectedProductoId] = useState('');
+    const [selectedRepuestoNombre, setSelectedRepuestoNombre] = useState('');
+    const [searchRepuestoTerm, setSearchRepuestoTerm] = useState('');
+    const [isRepuestoDropdownOpen, setIsRepuestoDropdownOpen] = useState(false);
     const [cantidadRepuesto, setCantidadRepuesto] = useState('1');
     const [isSubmittingItem, setIsSubmittingItem] = useState(false);
+    const repuestoDropdownRef = useRef<HTMLDivElement | null>(null);
 
-    // Repuestos agrupados por compatibilidad
-    const repuestosCompatibles = productosRepuestos.filter(
-        (p) => (orden.modelo_id && p.modelo_id === orden.modelo_id) || (orden.marca_id && p.marca_id === orden.marca_id)
-    );
-    const otrosRepuestos = productosRepuestos.filter(
-        (p) => !((orden.modelo_id && p.modelo_id === orden.modelo_id) || (orden.marca_id && p.marca_id === orden.marca_id))
-    );
+    useEffect(() => {
+        const handleClickOutside = (event: MouseEvent) => {
+            if (repuestoDropdownRef.current && !repuestoDropdownRef.current.contains(event.target as Node)) {
+                setIsRepuestoDropdownOpen(false);
+            }
+        };
+        document.addEventListener('mousedown', handleClickOutside);
+        return () => document.removeEventListener('mousedown', handleClickOutside);
+    }, []);
+
+    // Repuestos agrupados por compatibilidad y filtrados por la búsqueda Select2
+    const { repuestosCompatibles, otrosRepuestos } = React.useMemo(() => {
+        const marcaId = orden.marca_id || orden.marca?.id;
+        const modeloId = orden.modelo_id || orden.modelo?.id;
+        const term = searchRepuestoTerm.toLowerCase().trim();
+
+        const compatibles: typeof productosRepuestos = [];
+        const otros: typeof productosRepuestos = [];
+
+        productosRepuestos.forEach((p) => {
+            if (term) {
+                const nombreProd = (p.nombre_variante || p.nombre || '').toLowerCase();
+                const sku = (p.sku || '').toLowerCase();
+                const cod = (p.codigo_barras || '').toLowerCase();
+                const marca = (p.marca?.nombre || '').toLowerCase();
+                const modelo = (p.modelo?.nombre_comercial || '').toLowerCase();
+
+                if (!nombreProd.includes(term) && !sku.includes(term) && !cod.includes(term) && !marca.includes(term) && !modelo.includes(term)) {
+                    return;
+                }
+            }
+
+            const isMarcaCompat = Boolean(marcaId && p.marca_id === marcaId);
+            const isModeloCompat = Boolean(modeloId && p.modelo_id === modeloId);
+
+            if (isMarcaCompat || isModeloCompat) {
+                compatibles.push(p);
+            } else {
+                otros.push(p);
+            }
+        });
+
+        return { repuestosCompatibles: compatibles, otrosRepuestos: otros };
+    }, [productosRepuestos, orden.marca_id, orden.marca, orden.modelo_id, orden.modelo, searchRepuestoTerm]);
 
     // Formulario Mano de Obra y Anticipo
     const [manoObraInput, setManoObraInput] = useState(String(orden.costo_mano_obra || 0));
@@ -1624,6 +1665,9 @@ export default function ShowReparacion({ orden, productosRepuestos = [], tecnico
             {
                 onSuccess: () => {
                     setSelectedProductoId('');
+                    setSelectedRepuestoNombre('');
+                    setSearchRepuestoTerm('');
+                    setIsRepuestoDropdownOpen(false);
                     setCantidadRepuesto('1');
                     notifySuccess(__('Repuesto asignado correctamente.'));
                 },
@@ -2353,8 +2397,8 @@ export default function ShowReparacion({ orden, productosRepuestos = [], tecnico
                                                                 st === 'malo'
                                                                     ? "bg-rose-50/70 border-rose-200 dark:bg-rose-950/30 dark:border-rose-900"
                                                                     : st === 'bueno'
-                                                                    ? "bg-emerald-50/50 border-emerald-200 dark:bg-emerald-950/20 dark:border-emerald-900"
-                                                                    : "bg-slate-50 border-slate-200 dark:bg-slate-900 dark:border-slate-800"
+                                                                        ? "bg-emerald-50/50 border-emerald-200 dark:bg-emerald-950/20 dark:border-emerald-900"
+                                                                        : "bg-slate-50 border-slate-200 dark:bg-slate-900 dark:border-slate-800"
                                                             )}
                                                         >
                                                             <div className="flex items-center justify-between">
@@ -2816,62 +2860,140 @@ export default function ShowReparacion({ orden, productosRepuestos = [], tecnico
                                     </CardTitle>
                                 </CardHeader>
                                 <CardContent className="p-4 space-y-4">
-                                    {/* FORMULARIO AGREGAR REPUESTO */}
+                                    {/* FORMULARIO AGREGAR REPUESTO SELECT2 CON BUSCADOR EN TIEMPO REAL */}
                                     <form onSubmit={handleAddItem} className="flex flex-col sm:flex-row items-center gap-2 p-3 bg-slate-50 dark:bg-slate-900/60 rounded-xl border border-slate-200 dark:border-slate-800">
-                                        <div className="flex-1 w-full">
-                                            <Select value={selectedProductoId} onValueChange={(val) => setSelectedProductoId(val)}>
-                                                <SelectTrigger className="text-xs h-10 bg-white dark:bg-slate-900">
-                                                    <SelectValue placeholder={__('Buscar repuesto en inventario...')} />
-                                                </SelectTrigger>
-                                                <SelectContent>
+                                        <div className="flex-1 w-full relative" ref={repuestoDropdownRef}>
+                                            <div className="relative">
+                                                <Search className="w-4 h-4 absolute left-3 top-3 text-purple-600 z-10 pointer-events-none" />
+                                                <Input
+                                                    type="text"
+                                                    value={isRepuestoDropdownOpen ? searchRepuestoTerm : (selectedRepuestoNombre || searchRepuestoTerm)}
+                                                    onChange={(e) => {
+                                                        const val = e.target.value;
+                                                        setSearchRepuestoTerm(val);
+                                                        setIsRepuestoDropdownOpen(true);
+                                                    }}
+                                                    onFocus={() => {
+                                                        setIsRepuestoDropdownOpen(true);
+                                                    }}
+                                                    placeholder={__('Buscar repuesto por SKU, Nombre, Marca, Modelo...')}
+                                                    className="text-xs h-10 pl-9 pr-8 bg-white dark:bg-slate-950 border-purple-200 dark:border-purple-900 font-medium"
+                                                />
+                                                {(selectedProductoId || searchRepuestoTerm) && (
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => {
+                                                            setSelectedProductoId('');
+                                                            setSelectedRepuestoNombre('');
+                                                            setSearchRepuestoTerm('');
+                                                            setIsRepuestoDropdownOpen(false);
+                                                        }}
+                                                        className="absolute right-3 top-3 text-slate-400 hover:text-slate-600 z-20"
+                                                        title={__('Limpiar búsqueda')}
+                                                    >
+                                                        <X className="w-4 h-4" />
+                                                    </button>
+                                                )}
+                                            </div>
+
+                                            {isRepuestoDropdownOpen && (
+                                                <div className="absolute left-0 right-0 top-full mt-1 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl shadow-2xl z-50 max-h-64 overflow-y-auto divide-y divide-slate-100 dark:divide-slate-800">
+                                                    {/* COMPATIBLES */}
                                                     {repuestosCompatibles.length > 0 && (
-                                                        <SelectGroup>
-                                                            <SelectLabel className="text-[11px] font-extrabold text-purple-700 dark:text-purple-300 bg-purple-50 dark:bg-purple-950/60 px-2 py-1 flex items-center gap-1">
+                                                        <div className="p-1">
+                                                            <div className="px-3 py-1.5 text-[11px] font-extrabold text-purple-700 dark:text-purple-300 bg-purple-50 dark:bg-purple-950/60 rounded-lg flex items-center gap-1">
                                                                 <Sparkles className="w-3.5 h-3.5 text-purple-600" />
                                                                 {__('🎯 Compatibles con')} {marcaNombreDisplay} {modeloNombreDisplay} ({repuestosCompatibles.length})
-                                                            </SelectLabel>
+                                                            </div>
                                                             {repuestosCompatibles.map((p) => {
                                                                 const nombreProd = p.nombre_variante || p.nombre || '';
                                                                 const cod = p.sku || p.codigo_barras || '';
                                                                 return (
-                                                                    <SelectItem key={p.id} value={String(p.id)} className="text-xs font-bold text-purple-950 dark:text-purple-100">
-                                                                        🎯 {nombreProd} {cod ? `(${cod})` : ''} - {currencySymbol}{Number(p.precio_venta).toFixed(2)} [Stock: {p.stock}]
-                                                                    </SelectItem>
+                                                                    <div
+                                                                        key={p.id}
+                                                                        onClick={() => {
+                                                                            setSelectedProductoId(String(p.id));
+                                                                            setSelectedRepuestoNombre(`🎯 ${nombreProd} ${cod ? `(${cod})` : ''}`);
+                                                                            setSearchRepuestoTerm('');
+                                                                            setIsRepuestoDropdownOpen(false);
+                                                                        }}
+                                                                        className="px-3 py-2 text-xs font-bold text-purple-950 dark:text-purple-100 hover:bg-purple-50 dark:hover:bg-purple-950/40 cursor-pointer rounded-lg flex items-center justify-between transition-colors mt-0.5"
+                                                                    >
+                                                                        <div>
+                                                                            <span>🎯 {nombreProd}</span>
+                                                                            {cod && <span className="text-[10px] text-purple-600 block font-mono">SKU: {cod}</span>}
+                                                                        </div>
+                                                                        <div className="text-right">
+                                                                            <span className="font-mono text-purple-700 dark:text-purple-300">{currencySymbol}{Number(p.precio_venta).toFixed(2)}</span>
+                                                                            <span className="text-[10px] text-slate-400 block font-normal">Stock: {p.stock}</span>
+                                                                        </div>
+                                                                    </div>
                                                                 );
                                                             })}
-                                                        </SelectGroup>
+                                                        </div>
                                                     )}
 
-                                                    <SelectGroup>
-                                                        <SelectLabel className="text-[11px] font-bold text-slate-500 bg-slate-100 dark:bg-slate-800 px-2 py-1">
-                                                            {__('📦 Todos los Repuestos de Inventario')} ({otrosRepuestos.length})
-                                                        </SelectLabel>
-                                                        {otrosRepuestos.map((p) => {
-                                                            const nombreProd = p.nombre_variante || p.nombre || '';
-                                                            const cod = p.sku || p.codigo_barras || '';
-                                                            const marcaInfo = p.marca?.nombre ? `[${p.marca.nombre}] ` : '';
-                                                            return (
-                                                                <SelectItem key={p.id} value={String(p.id)} className="text-xs">
-                                                                    {marcaInfo}{nombreProd} {cod ? `(${cod})` : ''} - {currencySymbol}{Number(p.precio_venta).toFixed(2)} [Stock: {p.stock}]
-                                                                </SelectItem>
-                                                            );
-                                                        })}
-                                                    </SelectGroup>
-                                                </SelectContent>
-                                            </Select>
+                                                    {/* OTROS REPUESTOS */}
+                                                    {otrosRepuestos.length > 0 && (
+                                                        <div className="p-1">
+                                                            <div className="px-3 py-1.5 text-[11px] font-bold text-slate-500 bg-slate-100 dark:bg-slate-800 rounded-lg">
+                                                                📦 {__('Otros Repuestos de Inventario')} ({otrosRepuestos.length})
+                                                            </div>
+                                                            {otrosRepuestos.map((p) => {
+                                                                const nombreProd = p.nombre_variante || p.nombre || '';
+                                                                const cod = p.sku || p.codigo_barras || '';
+                                                                const marcaInfo = p.marca?.nombre ? `[${p.marca.nombre}] ` : '';
+                                                                return (
+                                                                    <div
+                                                                        key={p.id}
+                                                                        onClick={() => {
+                                                                            setSelectedProductoId(String(p.id));
+                                                                            setSelectedRepuestoNombre(`${marcaInfo}${nombreProd} ${cod ? `(${cod})` : ''}`);
+                                                                            setSearchRepuestoTerm('');
+                                                                            setIsRepuestoDropdownOpen(false);
+                                                                        }}
+                                                                        className="px-3 py-2 text-xs hover:bg-slate-100 dark:hover:bg-slate-800 cursor-pointer rounded-lg flex items-center justify-between transition-colors mt-0.5"
+                                                                    >
+                                                                        <div>
+                                                                            <span className="font-medium text-slate-900 dark:text-slate-100">{marcaInfo}{nombreProd}</span>
+                                                                            {cod && <span className="text-[10px] text-slate-400 block font-mono">SKU: {cod}</span>}
+                                                                        </div>
+                                                                        <div className="text-right">
+                                                                            <span className="font-mono font-bold text-slate-800 dark:text-slate-200">{currencySymbol}{Number(p.precio_venta).toFixed(2)}</span>
+                                                                            <span className="text-[10px] text-slate-400 block font-normal">Stock: {p.stock}</span>
+                                                                        </div>
+                                                                    </div>
+                                                                );
+                                                            })}
+                                                        </div>
+                                                    )}
+
+                                                    {repuestosCompatibles.length === 0 && otrosRepuestos.length === 0 && (
+                                                        <div className="p-4 text-center text-xs text-slate-400 italic">
+                                                            {__('No se encontraron repuestos con el término')} "{searchRepuestoTerm}"
+                                                        </div>
+                                                    )}
+                                                </div>
+                                            )}
                                         </div>
-                                        <div className="w-24">
+
+                                        <div className="w-full sm:w-24">
                                             <Input
                                                 type="number"
                                                 min="1"
                                                 value={cantidadRepuesto}
                                                 onChange={(e) => setCantidadRepuesto(e.target.value)}
-                                                placeholder="Cant"
-                                                className="text-xs h-10 bg-white dark:bg-slate-900"
+                                                placeholder={__('Cant.')}
+                                                className="text-xs h-10 text-center font-bold bg-white dark:bg-slate-950"
                                             />
                                         </div>
-                                        <Button type="submit" disabled={isSubmittingItem || !selectedProductoId} size="sm" className="h-10 px-5 text-xs font-bold bg-purple-600 hover:bg-purple-700 text-white">
-                                            <Plus className="w-4 h-4 mr-1" />
+
+                                        <Button
+                                            type="submit"
+                                            disabled={isSubmittingItem || !selectedProductoId}
+                                            className="h-10 text-xs font-bold bg-purple-600 hover:bg-purple-700 text-white w-full sm:w-auto px-5 gap-1.5 rounded-xl shadow-md shadow-purple-200 dark:shadow-none"
+                                        >
+                                            <Plus className="w-4 h-4" />
                                             {__('Asignar Repuesto')}
                                         </Button>
                                     </form>
@@ -3117,100 +3239,100 @@ export default function ShowReparacion({ orden, productosRepuestos = [], tecnico
                     {/* COLUMNA DERECHA: RESUMEN FINANCIERO (SOLO SE MUESTRA EN PESTAÑA DE REPUESTOS) */}
                     {activeTab === 'repuestos' && (
                         <div className="space-y-6">
-                        {/* RESUMEN FINANCIERO Y CONTROL DE COSTOS */}
-                        <Card className="border-slate-200 dark:border-slate-800 shadow-sm bg-white dark:bg-slate-900">
-                            <CardHeader className="bg-slate-50 dark:bg-slate-900/50 border-b border-slate-100 dark:border-slate-800 py-3">
-                                <CardTitle className="text-sm font-bold flex items-center gap-2 text-slate-800 dark:text-slate-200">
-                                    <DollarSign className="w-4 h-4 text-emerald-600" />
-                                    {__('Resumen Financiero')}
-                                </CardTitle>
-                            </CardHeader>
-                            <CardContent className="p-5 space-y-5 text-xs">
-                                <div className="space-y-3">
-                                    <div className="flex justify-between items-center text-slate-600 dark:text-slate-400">
-                                        <span>{__('Costo del Servicio:')}</span>
-                                        <span className="font-mono font-bold text-slate-900 dark:text-slate-100">{currencySymbol}{formatNum(totalPresupuestoActual)}</span>
+                            {/* RESUMEN FINANCIERO Y CONTROL DE COSTOS */}
+                            <Card className="border-slate-200 dark:border-slate-800 shadow-sm bg-white dark:bg-slate-900">
+                                <CardHeader className="bg-slate-50 dark:bg-slate-900/50 border-b border-slate-100 dark:border-slate-800 py-3">
+                                    <CardTitle className="text-sm font-bold flex items-center gap-2 text-slate-800 dark:text-slate-200">
+                                        <DollarSign className="w-4 h-4 text-emerald-600" />
+                                        {__('Resumen Financiero')}
+                                    </CardTitle>
+                                </CardHeader>
+                                <CardContent className="p-5 space-y-5 text-xs">
+                                    <div className="space-y-3">
+                                        <div className="flex justify-between items-center text-slate-600 dark:text-slate-400">
+                                            <span>{__('Costo del Servicio:')}</span>
+                                            <span className="font-mono font-bold text-slate-900 dark:text-slate-100">{currencySymbol}{formatNum(totalPresupuestoActual)}</span>
+                                        </div>
+
+                                        <div className="flex justify-between items-center text-slate-500 dark:text-slate-400 text-[11px]">
+                                            <span>{__('Repuestos (referencia interna):')}</span>
+                                            <span className="font-mono">{currencySymbol}{formatNum(orden.costo_repuestos)}</span>
+                                        </div>
+
+                                        <div className="space-y-1.5 pt-2 border-t border-slate-100 dark:border-slate-800">
+                                            <Label className="text-[11px] font-semibold">{__('Costo Mano de Obra:')}</Label>
+                                            <Input
+                                                type="number"
+                                                step="0.01"
+                                                value={manoObraInput}
+                                                onChange={(e) => setManoObraInput(e.target.value)}
+                                                className="text-xs h-9 font-mono bg-white dark:bg-slate-950"
+                                            />
+                                        </div>
+
+                                        <div className="space-y-1.5">
+                                            <Label className="text-[11px] font-semibold">{__('Anticipo / Adelanto:')}</Label>
+                                            <Input
+                                                type="number"
+                                                step="0.01"
+                                                value={anticipoInput}
+                                                onChange={(e) => setAnticipoInput(e.target.value)}
+                                                className="text-xs h-9 font-mono text-emerald-600 dark:text-emerald-400 font-bold bg-white dark:bg-slate-950"
+                                            />
+                                        </div>
+
+                                        <Button onClick={handleSaveCostos} size="sm" variant="outline" className="w-full h-8 text-xs font-bold mt-2 border-purple-200 hover:bg-purple-50 text-purple-700 dark:border-purple-800 dark:text-purple-300">
+                                            <Save className="w-3.5 h-3.5 mr-1" />
+                                            {__('Guardar Ajustes de Costo')}
+                                        </Button>
                                     </div>
 
-                                    <div className="flex justify-between items-center text-slate-500 dark:text-slate-400 text-[11px]">
-                                        <span>{__('Repuestos (referencia interna):')}</span>
-                                        <span className="font-mono">{currencySymbol}{formatNum(orden.costo_repuestos)}</span>
-                                    </div>
+                                    <div className="pt-4 border-t border-slate-200 dark:border-slate-800 space-y-3">
+                                        <div className="flex justify-between items-center text-sm font-bold text-slate-900 dark:text-slate-100">
+                                            <span>{__('Total Presupuesto:')}</span>
+                                            <span className="font-mono text-purple-700 dark:text-purple-400 text-lg font-black">{currencySymbol}{formatNum(totalPresupuestoActual)}</span>
+                                        </div>
 
-                                    <div className="space-y-1.5 pt-2 border-t border-slate-100 dark:border-slate-800">
-                                        <Label className="text-[11px] font-semibold">{__('Costo Mano de Obra:')}</Label>
-                                        <Input
-                                            type="number"
-                                            step="0.01"
-                                            value={manoObraInput}
-                                            onChange={(e) => setManoObraInput(e.target.value)}
-                                            className="text-xs h-9 font-mono bg-white dark:bg-slate-950"
-                                        />
-                                    </div>
-
-                                    <div className="space-y-1.5">
-                                        <Label className="text-[11px] font-semibold">{__('Anticipo / Adelanto:')}</Label>
-                                        <Input
-                                            type="number"
-                                            step="0.01"
-                                            value={anticipoInput}
-                                            onChange={(e) => setAnticipoInput(e.target.value)}
-                                            className="text-xs h-9 font-mono text-emerald-600 dark:text-emerald-400 font-bold bg-white dark:bg-slate-950"
-                                        />
-                                    </div>
-
-                                    <Button onClick={handleSaveCostos} size="sm" variant="outline" className="w-full h-8 text-xs font-bold mt-2 border-purple-200 hover:bg-purple-50 text-purple-700 dark:border-purple-800 dark:text-purple-300">
-                                        <Save className="w-3.5 h-3.5 mr-1" />
-                                        {__('Guardar Ajustes de Costo')}
-                                    </Button>
-                                </div>
-
-                                <div className="pt-4 border-t border-slate-200 dark:border-slate-800 space-y-3">
-                                    <div className="flex justify-between items-center text-sm font-bold text-slate-900 dark:text-slate-100">
-                                        <span>{__('Total Presupuesto:')}</span>
-                                        <span className="font-mono text-purple-700 dark:text-purple-400 text-lg font-black">{currencySymbol}{formatNum(totalPresupuestoActual)}</span>
-                                    </div>
-
-                                    <div className="p-3.5 bg-emerald-50 dark:bg-emerald-950/40 rounded-xl border border-emerald-200 dark:border-emerald-900 text-emerald-900 dark:text-emerald-300 space-y-1">
-                                        <div className="flex justify-between items-center">
-                                            <span className="font-bold text-xs">{__('Saldo Restante a Cobrar:')}</span>
-                                            <span className="font-mono font-black text-xl text-emerald-600 dark:text-emerald-400">{currencySymbol}{formatNum(saldoRestanteActual)}</span>
+                                        <div className="p-3.5 bg-emerald-50 dark:bg-emerald-950/40 rounded-xl border border-emerald-200 dark:border-emerald-900 text-emerald-900 dark:text-emerald-300 space-y-1">
+                                            <div className="flex justify-between items-center">
+                                                <span className="font-bold text-xs">{__('Saldo Restante a Cobrar:')}</span>
+                                                <span className="font-mono font-black text-xl text-emerald-600 dark:text-emerald-400">{currencySymbol}{formatNum(saldoRestanteActual)}</span>
+                                            </div>
                                         </div>
                                     </div>
-                                </div>
-                            </CardContent>
-                        </Card>
+                                </CardContent>
+                            </Card>
 
-                        {/* HISTORIAL LATERAL RESUMIDO */}
-                        <Card className="border-slate-200 dark:border-slate-800 shadow-sm bg-white dark:bg-slate-900">
-                            <CardHeader className="bg-slate-50 dark:bg-slate-900/50 border-b border-slate-100 dark:border-slate-800 py-3">
-                                <CardTitle className="text-sm font-bold flex items-center justify-between text-slate-800 dark:text-slate-200">
-                                    <span className="flex items-center gap-2">
-                                        <History className="w-4 h-4 text-purple-600" />
-                                        {__('Historial Reciente')}
-                                    </span>
-                                    <button
-                                        type="button"
-                                        onClick={() => setActiveTab('historial')}
-                                        className="text-[11px] font-bold text-purple-600 hover:text-purple-800"
-                                    >
-                                        {__('Ver todo')} →
-                                    </button>
-                                </CardTitle>
-                            </CardHeader>
-                            <CardContent className="p-4 text-xs space-y-3">
-                                {orden.historial.slice(0, 3).map((h) => (
-                                    <div key={h.id} className="p-2.5 rounded-lg border border-slate-100 dark:border-slate-800 space-y-1">
-                                        <div className="flex items-center justify-between text-[11px]">
-                                            <span className="font-bold capitalize text-slate-800 dark:text-slate-200">{h.estado_nuevo.replace('_', ' ')}</span>
-                                            <span className="text-[10px] text-slate-400">{formatDate(h.created_at)}</span>
+                            {/* HISTORIAL LATERAL RESUMIDO */}
+                            <Card className="border-slate-200 dark:border-slate-800 shadow-sm bg-white dark:bg-slate-900">
+                                <CardHeader className="bg-slate-50 dark:bg-slate-900/50 border-b border-slate-100 dark:border-slate-800 py-3">
+                                    <CardTitle className="text-sm font-bold flex items-center justify-between text-slate-800 dark:text-slate-200">
+                                        <span className="flex items-center gap-2">
+                                            <History className="w-4 h-4 text-purple-600" />
+                                            {__('Historial Reciente')}
+                                        </span>
+                                        <button
+                                            type="button"
+                                            onClick={() => setActiveTab('historial')}
+                                            className="text-[11px] font-bold text-purple-600 hover:text-purple-800"
+                                        >
+                                            {__('Ver todo')} →
+                                        </button>
+                                    </CardTitle>
+                                </CardHeader>
+                                <CardContent className="p-4 text-xs space-y-3">
+                                    {orden.historial.slice(0, 3).map((h) => (
+                                        <div key={h.id} className="p-2.5 rounded-lg border border-slate-100 dark:border-slate-800 space-y-1">
+                                            <div className="flex items-center justify-between text-[11px]">
+                                                <span className="font-bold capitalize text-slate-800 dark:text-slate-200">{h.estado_nuevo.replace('_', ' ')}</span>
+                                                <span className="text-[10px] text-slate-400">{formatDate(h.created_at)}</span>
+                                            </div>
+                                            {h.comentario && <p className="text-[11px] text-slate-500 italic truncate">"{h.comentario}"</p>}
                                         </div>
-                                        {h.comentario && <p className="text-[11px] text-slate-500 italic truncate">"{h.comentario}"</p>}
-                                    </div>
-                                ))}
-                            </CardContent>
-                        </Card>
-                    </div>
+                                    ))}
+                                </CardContent>
+                            </Card>
+                        </div>
                     )}
                 </div>
 
@@ -3460,11 +3582,10 @@ export default function ShowReparacion({ orden, productosRepuestos = [], tecnico
                                                 key={tab.id}
                                                 type="button"
                                                 onClick={() => setModalTab(tab.id as any)}
-                                                className={`px-3.5 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer ${
-                                                    modalTab === tab.id
+                                                className={`px-3.5 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer ${modalTab === tab.id
                                                         ? 'bg-indigo-600 text-white shadow-xs'
                                                         : 'text-slate-300 hover:text-white hover:bg-slate-700/50'
-                                                }`}
+                                                    }`}
                                             >
                                                 <span>{tab.icon}</span>
                                                 <span>{tab.label}</span>
@@ -3525,13 +3646,12 @@ export default function ShowReparacion({ orden, productosRepuestos = [], tecnico
                                                 return (
                                                     <div
                                                         key={item}
-                                                        className={`p-3.5 rounded-2xl border transition-all space-y-2.5 ${
-                                                            current.estado === 'malo'
+                                                        className={`p-3.5 rounded-2xl border transition-all space-y-2.5 ${current.estado === 'malo'
                                                                 ? 'border-rose-300 bg-rose-50/50 dark:bg-rose-950/20 shadow-xs'
                                                                 : current.estado === 'bueno'
-                                                                ? 'border-emerald-300 bg-emerald-50/30 dark:bg-emerald-950/10'
-                                                                : 'border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/60'
-                                                        }`}
+                                                                    ? 'border-emerald-300 bg-emerald-50/30 dark:bg-emerald-950/10'
+                                                                    : 'border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/60'
+                                                            }`}
                                                     >
                                                         <div className="flex items-center justify-between">
                                                             <span className="text-xs font-black text-slate-900 dark:text-slate-100">{item}</span>
@@ -3545,11 +3665,10 @@ export default function ShowReparacion({ orden, productosRepuestos = [], tecnico
                                                                             [item]: { ...prev[item], estado: 'bueno' },
                                                                         }))
                                                                     }
-                                                                    className={`px-2.5 py-1 rounded-lg text-[11px] font-extrabold transition-all ${
-                                                                        current.estado === 'bueno'
+                                                                    className={`px-2.5 py-1 rounded-lg text-[11px] font-extrabold transition-all ${current.estado === 'bueno'
                                                                             ? 'bg-emerald-600 text-white shadow-xs scale-105'
                                                                             : 'text-slate-600 dark:text-slate-400 hover:text-slate-900'
-                                                                    }`}
+                                                                        }`}
                                                                 >
                                                                     {__('Bueno')}
                                                                 </button>
@@ -3561,11 +3680,10 @@ export default function ShowReparacion({ orden, productosRepuestos = [], tecnico
                                                                             [item]: { ...prev[item], estado: 'malo' },
                                                                         }))
                                                                     }
-                                                                    className={`px-2.5 py-1 rounded-lg text-[11px] font-extrabold transition-all ${
-                                                                        current.estado === 'malo'
+                                                                    className={`px-2.5 py-1 rounded-lg text-[11px] font-extrabold transition-all ${current.estado === 'malo'
                                                                             ? 'bg-rose-600 text-white shadow-xs scale-105'
                                                                             : 'text-slate-600 dark:text-slate-400 hover:text-slate-900'
-                                                                    }`}
+                                                                        }`}
                                                                 >
                                                                     {__('Malo')}
                                                                 </button>
@@ -3577,11 +3695,10 @@ export default function ShowReparacion({ orden, productosRepuestos = [], tecnico
                                                                             [item]: { ...prev[item], estado: 'na' },
                                                                         }))
                                                                     }
-                                                                    className={`px-2.5 py-1 rounded-lg text-[11px] font-extrabold transition-all ${
-                                                                        current.estado === 'na'
+                                                                    className={`px-2.5 py-1 rounded-lg text-[11px] font-extrabold transition-all ${current.estado === 'na'
                                                                             ? 'bg-slate-600 text-white shadow-xs'
                                                                             : 'text-slate-600 dark:text-slate-400 hover:text-slate-900'
-                                                                    }`}
+                                                                        }`}
                                                                 >
                                                                     {__('N/A')}
                                                                 </button>
@@ -3628,33 +3745,30 @@ export default function ShowReparacion({ orden, productosRepuestos = [], tecnico
                                                 return (
                                                     <div
                                                         key={rev.key}
-                                                        className={`flex items-center justify-between p-4 rounded-2xl border transition-all ${
-                                                            isChecked
+                                                        className={`flex items-center justify-between p-4 rounded-2xl border transition-all ${isChecked
                                                                 ? 'border-emerald-300 bg-emerald-50/50 dark:bg-emerald-950/20 shadow-xs'
                                                                 : 'border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900'
-                                                        }`}
+                                                            }`}
                                                     >
                                                         <span className="text-sm font-bold text-slate-800 dark:text-slate-200">{rev.label}</span>
                                                         <div className="flex items-center gap-1.5 p-1 rounded-xl bg-slate-200/70 dark:bg-slate-800 border border-slate-300/60 dark:border-slate-700">
                                                             <button
                                                                 type="button"
                                                                 onClick={() => setEstadoEquipo((prev) => ({ ...prev, [rev.key]: true }))}
-                                                                className={`px-3.5 py-1.5 rounded-lg text-xs font-extrabold transition-all ${
-                                                                    isChecked
+                                                                className={`px-3.5 py-1.5 rounded-lg text-xs font-extrabold transition-all ${isChecked
                                                                         ? 'bg-emerald-600 text-white shadow-xs scale-105'
                                                                         : 'text-slate-600 dark:text-slate-400 hover:text-slate-900'
-                                                                }`}
+                                                                    }`}
                                                             >
                                                                 {__('Sí')}
                                                             </button>
                                                             <button
                                                                 type="button"
                                                                 onClick={() => setEstadoEquipo((prev) => ({ ...prev, [rev.key]: false }))}
-                                                                className={`px-3.5 py-1.5 rounded-lg text-xs font-extrabold transition-all ${
-                                                                    !isChecked
+                                                                className={`px-3.5 py-1.5 rounded-lg text-xs font-extrabold transition-all ${!isChecked
                                                                         ? 'bg-rose-600 text-white shadow-xs scale-105'
                                                                         : 'text-slate-600 dark:text-slate-400 hover:text-slate-900'
-                                                                }`}
+                                                                    }`}
                                                             >
                                                                 {__('No')}
                                                             </button>
@@ -3741,11 +3855,10 @@ export default function ShowReparacion({ orden, productosRepuestos = [], tecnico
                                                 key={tab.id}
                                                 type="button"
                                                 onClick={() => setPostModalTab(tab.id as any)}
-                                                className={`px-3.5 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer ${
-                                                    postModalTab === tab.id
+                                                className={`px-3.5 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer ${postModalTab === tab.id
                                                         ? 'bg-emerald-600 text-white shadow-xs'
                                                         : 'text-slate-300 hover:text-white hover:bg-slate-700/50'
-                                                }`}
+                                                    }`}
                                             >
                                                 <span>{tab.icon}</span>
                                                 <span>{tab.label}</span>
@@ -3807,11 +3920,10 @@ export default function ShowReparacion({ orden, productosRepuestos = [], tecnico
                                                 return (
                                                     <div
                                                         key={fn}
-                                                        className={`p-3 rounded-2xl border transition-all space-y-2 ${
-                                                            !isOk
+                                                        className={`p-3 rounded-2xl border transition-all space-y-2 ${!isOk
                                                                 ? 'border-rose-300 bg-rose-50/50 dark:bg-rose-950/20 shadow-xs'
                                                                 : 'border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/60'
-                                                        }`}
+                                                            }`}
                                                     >
                                                         <div className="flex items-center justify-between">
                                                             <span className="text-xs font-bold text-slate-900 dark:text-slate-100">{fn}</span>
@@ -3825,11 +3937,10 @@ export default function ShowReparacion({ orden, productosRepuestos = [], tecnico
                                                                             [fn]: { ...prev[fn], estado: 'correcto' },
                                                                         }))
                                                                     }
-                                                                    className={`px-2.5 py-1 rounded-lg text-[11px] font-extrabold transition-all ${
-                                                                        isOk
+                                                                    className={`px-2.5 py-1 rounded-lg text-[11px] font-extrabold transition-all ${isOk
                                                                             ? 'bg-emerald-600 text-white shadow-xs scale-105'
                                                                             : 'text-slate-600 dark:text-slate-400 hover:text-slate-900'
-                                                                    }`}
+                                                                        }`}
                                                                 >
                                                                     {__('Correcto')}
                                                                 </button>
@@ -3841,11 +3952,10 @@ export default function ShowReparacion({ orden, productosRepuestos = [], tecnico
                                                                             [fn]: { ...prev[fn], estado: 'incorrecto' },
                                                                         }))
                                                                     }
-                                                                    className={`px-2.5 py-1 rounded-lg text-[11px] font-extrabold transition-all ${
-                                                                        !isOk
+                                                                    className={`px-2.5 py-1 rounded-lg text-[11px] font-extrabold transition-all ${!isOk
                                                                             ? 'bg-rose-600 text-white shadow-xs scale-105'
                                                                             : 'text-slate-600 dark:text-slate-400 hover:text-slate-900'
-                                                                    }`}
+                                                                        }`}
                                                                 >
                                                                     {__('Incorrecto')}
                                                                 </button>
@@ -3891,33 +4001,30 @@ export default function ShowReparacion({ orden, productosRepuestos = [], tecnico
                                                     return (
                                                         <div
                                                             key={item}
-                                                            className={`flex items-center justify-between p-3.5 rounded-2xl border transition-all ${
-                                                                isChecked
+                                                            className={`flex items-center justify-between p-3.5 rounded-2xl border transition-all ${isChecked
                                                                     ? 'border-emerald-300 bg-emerald-50/40 dark:bg-emerald-950/20'
                                                                     : 'border-slate-200 dark:border-slate-800 bg-slate-50'
-                                                            }`}
+                                                                }`}
                                                         >
                                                             <span className="text-xs font-bold text-slate-800 dark:text-slate-200">{item}</span>
                                                             <div className="flex items-center gap-1 p-0.5 rounded-xl bg-slate-200/70 dark:bg-slate-800 border border-slate-300/60 dark:border-slate-700">
                                                                 <button
                                                                     type="button"
                                                                     onClick={() => setLimpiezaFinalState((prev) => ({ ...prev, [item]: true }))}
-                                                                    className={`px-3 py-1 rounded-lg text-xs font-extrabold transition-all ${
-                                                                        isChecked
+                                                                    className={`px-3 py-1 rounded-lg text-xs font-extrabold transition-all ${isChecked
                                                                             ? 'bg-emerald-600 text-white shadow-xs'
                                                                             : 'text-slate-600 dark:text-slate-400'
-                                                                    }`}
+                                                                        }`}
                                                                 >
                                                                     {__('Sí')}
                                                                 </button>
                                                                 <button
                                                                     type="button"
                                                                     onClick={() => setLimpiezaFinalState((prev) => ({ ...prev, [item]: false }))}
-                                                                    className={`px-3 py-1 rounded-lg text-xs font-extrabold transition-all ${
-                                                                        !isChecked
+                                                                    className={`px-3 py-1 rounded-lg text-xs font-extrabold transition-all ${!isChecked
                                                                             ? 'bg-rose-600 text-white shadow-xs'
                                                                             : 'text-slate-600 dark:text-slate-400'
-                                                                    }`}
+                                                                        }`}
                                                                 >
                                                                     {__('No')}
                                                                 </button>
@@ -3944,11 +4051,10 @@ export default function ShowReparacion({ orden, productosRepuestos = [], tecnico
                                                         <label
                                                             key={qc.key}
                                                             onClick={() => setControlCalidadState((prev) => ({ ...prev, [qc.key]: !isChecked }))}
-                                                            className={`flex items-center justify-between p-3.5 rounded-2xl border cursor-pointer transition-all ${
-                                                                isChecked
+                                                            className={`flex items-center justify-between p-3.5 rounded-2xl border cursor-pointer transition-all ${isChecked
                                                                     ? 'border-emerald-300 bg-emerald-50/50 dark:bg-emerald-950/20 shadow-xs'
                                                                     : 'border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900'
-                                                            }`}
+                                                                }`}
                                                         >
                                                             <span className="text-xs font-bold text-slate-800 dark:text-slate-200">{qc.label}</span>
                                                             <div className={`w-6 h-6 rounded-lg flex items-center justify-center font-bold text-xs ${isChecked ? 'bg-emerald-600 text-white' : 'bg-slate-200 text-transparent'}`}>
@@ -4210,7 +4316,7 @@ export default function ShowReparacion({ orden, productosRepuestos = [], tecnico
                                                 autoPlay
                                                 playsInline
                                                 muted
-                                                onLoadedMetadata={(e) => (e.target as HTMLVideoElement).play().catch(() => {})}
+                                                onLoadedMetadata={(e) => (e.target as HTMLVideoElement).play().catch(() => { })}
                                                 className="w-full h-full object-cover"
                                             />
                                         )}
