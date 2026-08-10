@@ -74,6 +74,11 @@ class TipoServicioSeeder extends Seeder
         foreach ($empresas as $empresa) {
             $sucursal = Sucursal::where('empresa_id', $empresa->id)->first();
 
+            if (! $sucursal) {
+                $this->command->warn("Empresa '{$empresa->razon_social}' no tiene sucursales. Se omite el seeder de TipoServicio para esta empresa.");
+                continue;
+            }
+
             foreach ($tiposServicio as $tipo) {
                 TipoServicio::updateOrCreate(
                     [
@@ -81,7 +86,7 @@ class TipoServicioSeeder extends Seeder
                         'empresa_id' => $empresa->id,
                     ],
                     [
-                        'sucursal_id' => $sucursal?->id,
+                        'sucursal_id' => $sucursal->id,
                         'user_id'     => $user?->id ?? 1,
                         'status'      => 1,
                     ]
