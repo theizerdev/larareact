@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use App\Traits\HasSpanishActivityLog;
+use App\Traits\Multitenantable;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -11,7 +12,7 @@ use Spatie\Activitylog\Traits\LogsActivity;
 
 class VisitaAcceso extends Model
 {
-    use HasFactory, HasSpanishActivityLog, LogsActivity;
+    use HasFactory, HasSpanishActivityLog, LogsActivity, Multitenantable;
 
     protected $table = 'visitas_accesos';
 

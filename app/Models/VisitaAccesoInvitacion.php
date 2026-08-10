@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Traits\Multitenantable;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -9,7 +10,7 @@ use Illuminate\Support\Str;
 
 class VisitaAccesoInvitacion extends Model
 {
-    use HasFactory;
+    use HasFactory, Multitenantable;
 
     protected $table = 'visita_acceso_invitaciones';
 

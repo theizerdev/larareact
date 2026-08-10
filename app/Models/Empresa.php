@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use App\Traits\HasSpanishActivityLog;
+use App\Traits\Multitenantable;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Spatie\Activitylog\LogOptions;
@@ -10,7 +11,7 @@ use Spatie\Activitylog\Traits\LogsActivity;
 
 class Empresa extends Model
 {
-    use HasSpanishActivityLog, LogsActivity;
+    use HasSpanishActivityLog, LogsActivity, Multitenantable;
 
     protected $table = 'empresas';
 

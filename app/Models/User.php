@@ -3,6 +3,7 @@
 namespace App\Models;
 
 // use Illuminate\Contracts\Auth\MustVerifyEmail;
+use App\Traits\Multitenantable;
 use Database\Factories\UserFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Attributes\Hidden;
@@ -41,7 +42,15 @@ use Spatie\Permission\Traits\HasRoles;
 class User extends Authenticatable implements PasskeyUser
 {
     /** @use HasFactory<UserFactory> */
-    use HasFactory, HasRoles, Notifiable, PasskeyAuthenticatable, TwoFactorAuthenticatable;
+    use HasFactory, HasRoles, Multitenantable, Notifiable, PasskeyAuthenticatable, TwoFactorAuthenticatable;
+
+    /**
+     * Check if user is a Super Administrator.
+     */
+    public function isSuperAdmin(): bool
+    {
+        return $this->hasAnyRole(['Super Administrador', 'super-admin', 'Super Admin', 'super_admin']);
+    }
 
     /**
      * Get the attributes that should be cast.
@@ -74,3 +83,4 @@ class User extends Authenticatable implements PasskeyUser
         return $this->belongsTo(Pais::class, 'pais_telefono_id');
     }
 }
+

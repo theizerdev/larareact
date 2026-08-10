@@ -2,13 +2,14 @@
 
 namespace App\Models;
 
+use App\Traits\Multitenantable;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 
 class EmpleadoVehiculo extends Model
 {
-    use HasFactory;
+    use HasFactory, Multitenantable;
 
     protected $table = 'empleado_vehiculos';
 
