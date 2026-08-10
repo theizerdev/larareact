@@ -1282,75 +1282,7 @@ export default function ShowReparacion({ orden, productosRepuestos = [], tecnico
                     </div>
                 </div>
 
-                {/* 4 STRIPS METRICAS CLAVE DE LA ORDEN */}
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-                    {/* CLIENTE */}
-                    <Card className="border-slate-200 dark:border-slate-800 shadow-xs bg-white dark:bg-slate-900 hover:border-purple-300 dark:hover:border-purple-800 transition-colors">
-                        <CardContent className="p-4 flex items-center gap-3">
-                            <div className="p-3 rounded-xl bg-purple-50 dark:bg-purple-950/60 text-purple-600 dark:text-purple-400 shrink-0">
-                                <User className="w-5 h-5" />
-                            </div>
-                            <div className="min-w-0 flex-1">
-                                <span className="text-[10px] font-extrabold uppercase tracking-wider text-slate-400 block">{__('Cliente')}</span>
-                                <h3 className="text-sm font-bold text-slate-900 dark:text-slate-100 truncate" title={clienteNombreDisplay}>{clienteNombreDisplay}</h3>
-                                <p className="text-xs font-mono text-purple-700 dark:text-purple-300 font-semibold">{clienteTelefonoDisplay}</p>
-                            </div>
-                        </CardContent>
-                    </Card>
 
-                    {/* DISPOSITIVO */}
-                    <Card className="border-slate-200 dark:border-slate-800 shadow-xs bg-white dark:bg-slate-900 hover:border-purple-300 dark:hover:border-purple-800 transition-colors">
-                        <CardContent className="p-4 flex items-center gap-3">
-                            <div className="p-3 rounded-xl bg-indigo-50 dark:bg-indigo-950/60 text-indigo-600 dark:text-indigo-400 shrink-0">
-                                <Smartphone className="w-5 h-5" />
-                            </div>
-                            <div className="min-w-0 flex-1">
-                                <span className="text-[10px] font-extrabold uppercase tracking-wider text-slate-400 block">{__('Equipo / Modelo')}</span>
-                                <h3 className="text-sm font-bold text-slate-900 dark:text-slate-100 truncate" title={`${marcaNombreDisplay} ${modeloNombreDisplay}`}>{marcaNombreDisplay} {modeloNombreDisplay}</h3>
-                                <p className="text-[11px] text-slate-500 font-mono flex items-center gap-1 truncate">
-                                    IMEI: <strong className="text-slate-700 dark:text-slate-300 font-bold">{orden.imei_serie || 'N/A'}</strong>
-                                </p>
-                            </div>
-                        </CardContent>
-                    </Card>
-
-                    {/* DÍAS GARANTÍA / FECHA PROMETIDA */}
-                    <Card className="border-slate-200 dark:border-slate-800 shadow-xs bg-white dark:bg-slate-900 hover:border-purple-300 dark:hover:border-purple-800 transition-colors">
-                        <CardContent className="p-4 flex items-center gap-3">
-                            <div className="p-3 rounded-xl bg-amber-50 dark:bg-amber-950/60 text-amber-600 dark:text-amber-400 shrink-0">
-                                <Calendar className="w-5 h-5" />
-                            </div>
-                            <div className="min-w-0 flex-1 space-y-0.5">
-                                <span className="text-[10px] font-extrabold uppercase tracking-wider text-slate-400 block">{__('Compromiso & Garantía')}</span>
-                                <div className="text-sm font-black text-slate-900 dark:text-slate-100 font-mono">
-                                    {formatOnlyDate(orden.fecha_prometida)}
-                                </div>
-                                <span className="inline-flex items-center gap-1 text-[10px] font-extrabold text-emerald-700 dark:text-emerald-300 bg-emerald-50 dark:bg-emerald-950/60 px-2 py-0.5 rounded-full border border-emerald-200 dark:border-emerald-900">
-                                    <ShieldCheck className="w-3 h-3 text-emerald-600" />
-                                    {orden.garantia_dias} {__('días de garantía')}
-                                </span>
-                            </div>
-                        </CardContent>
-                    </Card>
-
-                    {/* SALDO PENDIENTE */}
-                    <Card className="border-slate-200 dark:border-slate-800 shadow-xs bg-white dark:bg-slate-900 border-l-4 border-l-emerald-500 hover:border-purple-300 dark:hover:border-purple-800 transition-colors">
-                        <CardContent className="p-4 flex items-center gap-3">
-                            <div className="p-3 rounded-xl bg-emerald-50 dark:bg-emerald-950/60 text-emerald-600 dark:text-emerald-400 shrink-0">
-                                <DollarSign className="w-5 h-5" />
-                            </div>
-                            <div className="min-w-0 flex-1">
-                                <span className="text-[10px] font-extrabold uppercase tracking-wider text-slate-400 block">{__('Saldo Restante a Cobrar')}</span>
-                                <h3 className="text-xl font-black font-mono text-emerald-600 dark:text-emerald-400">
-                                    {currencySymbol}{formatNum(saldoRestanteActual)}
-                                </h3>
-                                <p className="text-[10px] text-slate-400 font-mono">
-                                    {__('Total:')} {currencySymbol}{formatNum(totalPresupuestoActual)} | {__('Adelanto:')} {currencySymbol}{formatNum(anticipoActual)}
-                                </p>
-                            </div>
-                        </CardContent>
-                    </Card>
-                </div>
 
                 {/* BARRA NAVEGACIÓN TABBED MODERNA */}
                 <div className="flex items-center gap-2 border-b border-slate-200 dark:border-slate-800 pb-2 overflow-x-auto">
@@ -1470,22 +1402,50 @@ export default function ShowReparacion({ orden, productosRepuestos = [], tecnico
                 <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
                     {/* COLUMNA IZQUIERDA (2 ANCHOS) */}
                     <div className="lg:col-span-2 space-y-6">
-                        {/* TAB 1: RESUMEN Y DIAGNÓSTICO */}
+                        {/* TAB 1: RESUMEN GENERAL (EN EL MISMO ORDEN QUE RECEPCIÓN/CREATE) */}
                         {activeTab === 'general' && (
                             <div className="space-y-6 animate-in fade-in duration-300">
-                                {/* CARD DETALLE DISPOSITIVO & FALLA */}
+                                {/* 1. DATOS DEL CLIENTE */}
+                                <Card className="border-slate-200 dark:border-slate-800 shadow-sm">
+                                    <CardHeader className="bg-slate-50 dark:bg-slate-900/50 border-b border-slate-100 dark:border-slate-800 py-3">
+                                        <CardTitle className="text-sm font-bold flex items-center gap-2 text-slate-800 dark:text-slate-200">
+                                            <User className="w-4 h-4 text-purple-600" />
+                                            {__('1. Datos del Cliente')}
+                                        </CardTitle>
+                                    </CardHeader>
+                                    <CardContent className="p-5 text-xs">
+                                        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                                            <div>
+                                                <span className="text-slate-400 block text-[11px] font-medium">{__('Nombre del Cliente')}</span>
+                                                <span className="font-extrabold text-slate-900 dark:text-slate-100 text-sm">{clienteNombreDisplay}</span>
+                                            </div>
+                                            <div>
+                                                <span className="text-slate-400 block text-[11px] font-medium">{__('Teléfono de Contacto')}</span>
+                                                <span className="font-mono font-bold text-purple-700 dark:text-purple-300 text-sm flex items-center gap-1.5">
+                                                    <Phone className="w-3.5 h-3.5" /> {clienteTelefonoDisplay}
+                                                </span>
+                                            </div>
+                                            <div>
+                                                <span className="text-slate-400 block text-[11px] font-medium">{__('Correo Electrónico')}</span>
+                                                <span className="font-medium text-slate-800 dark:text-slate-200">{orden.cliente?.email || __('No registrado')}</span>
+                                            </div>
+                                        </div>
+                                    </CardContent>
+                                </Card>
+
+                                {/* 2. TIPO DE DISPOSITIVO, MARCA, MODELO E IMEI */}
                                 <Card className="border-slate-200 dark:border-slate-800 shadow-sm">
                                     <CardHeader className="bg-slate-50 dark:bg-slate-900/50 border-b border-slate-100 dark:border-slate-800 py-3">
                                         <CardTitle className="text-sm font-bold flex items-center justify-between text-slate-800 dark:text-slate-200">
                                             <span className="flex items-center gap-2">
                                                 <Smartphone className="w-4 h-4 text-purple-600" />
-                                                {__('Ficha Técnica del Equipo')}
+                                                {__('2. Tipo y Datos del Dispositivo')}
                                             </span>
-                                            <Badge variant="outline" className="font-mono text-[11px]">{orden.tipo_dispositivo || __('Smartphone')}</Badge>
+                                            <Badge variant="outline" className="font-mono text-[11px] bg-purple-50 dark:bg-purple-950 text-purple-700 border-purple-200">{orden.tipo_dispositivo || __('Smartphone')}</Badge>
                                         </CardTitle>
                                     </CardHeader>
                                     <CardContent className="p-5 space-y-5 text-xs">
-                                        <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
+                                        <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
                                             <div>
                                                 <span className="text-slate-400 block text-[11px] font-medium">{__('Marca')}</span>
                                                 <span className="font-bold text-slate-900 dark:text-slate-100 text-sm">{marcaNombreDisplay}</span>
@@ -1501,14 +1461,6 @@ export default function ShowReparacion({ orden, productosRepuestos = [], tecnico
                                             <div>
                                                 <span className="text-slate-400 block text-[11px] font-medium">{__('IMEI / Serie')}</span>
                                                 <span className="font-mono font-bold text-purple-700 dark:text-purple-400">{orden.imei_serie || 'N/A'}</span>
-                                            </div>
-                                            <div>
-                                                <span className="text-slate-400 block text-[11px] font-medium">{__('Fecha Prometida')}</span>
-                                                <span className="font-medium text-slate-800 dark:text-slate-200">{orden.fecha_prometida || __('No especificada')}</span>
-                                            </div>
-                                            <div>
-                                                <span className="text-slate-400 block text-[11px] font-medium">{__('Días Garantía')}</span>
-                                                <span className="font-bold text-emerald-600">{orden.garantia_dias} {__('Días')}</span>
                                             </div>
                                         </div>
 
@@ -1532,13 +1484,13 @@ export default function ShowReparacion({ orden, productosRepuestos = [], tecnico
                                     </CardContent>
                                 </Card>
 
-                                {/* TRABAJOS Y MANO DE OBRA ASIGNADA */}
+                                {/* 3. SERVICIOS DE REPARACIÓN REQUERIDOS */}
                                 <Card className="border-slate-200 dark:border-slate-800 shadow-sm">
                                     <CardHeader className="bg-slate-50 dark:bg-slate-900/50 border-b border-slate-100 dark:border-slate-800 py-3">
                                         <CardTitle className="text-sm font-bold flex items-center justify-between text-slate-800 dark:text-slate-200">
                                             <span className="flex items-center gap-2">
                                                 <Wrench className="w-4 h-4 text-purple-600" />
-                                                {__('Servicios de Mano de Obra Solicitados')}
+                                                {__('3. Servicios de Reparación Requeridos')}
                                             </span>
                                             <Badge variant="outline" className="font-mono text-purple-700 bg-purple-50 dark:bg-purple-950/50 font-bold border-purple-200">
                                                 {serviciosItems.length} {serviciosItems.length === 1 ? __('Servicio') : __('Servicios')}
@@ -1574,6 +1526,145 @@ export default function ShowReparacion({ orden, productosRepuestos = [], tecnico
                                         )}
                                     </CardContent>
                                 </Card>
+
+                                {/* 4. PRESUPUESTO, ADELANTO Y TÉCNICO ASIGNADO */}
+                                <Card className="border-slate-200 dark:border-slate-800 shadow-sm">
+                                    <CardHeader className="bg-slate-50 dark:bg-slate-900/50 border-b border-slate-100 dark:border-slate-800 py-3">
+                                        <CardTitle className="text-sm font-bold flex items-center gap-2 text-slate-800 dark:text-slate-200">
+                                            <DollarSign className="w-4 h-4 text-emerald-600" />
+                                            {__('4. Presupuesto, Adelanto y Técnico Asignado')}
+                                        </CardTitle>
+                                    </CardHeader>
+                                    <CardContent className="p-5 text-xs space-y-4">
+                                        <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+                                            <div>
+                                                <span className="text-slate-400 block text-[11px] font-medium">{__('Costo Estimado (Total)')}</span>
+                                                <span className="font-black text-slate-900 dark:text-slate-100 text-base font-mono">
+                                                    {currencySymbol}{formatNum(totalPresupuestoActual)}
+                                                </span>
+                                            </div>
+                                            <div>
+                                                <span className="text-slate-400 block text-[11px] font-medium">{__('Anticipo Recibido')}</span>
+                                                <span className="font-bold text-emerald-600 text-base font-mono">
+                                                    {currencySymbol}{formatNum(anticipoActual)}
+                                                </span>
+                                            </div>
+                                            <div>
+                                                <span className="text-slate-400 block text-[11px] font-medium">{__('Saldo Restante a Cobrar')}</span>
+                                                <span className="font-black text-emerald-600 text-base font-mono">
+                                                    {currencySymbol}{formatNum(saldoRestanteActual)}
+                                                </span>
+                                            </div>
+                                            <div>
+                                                <span className="text-slate-400 block text-[11px] font-medium">{__('Técnico Asignado')}</span>
+                                                <span className="font-bold text-purple-700 dark:text-purple-300 text-sm">
+                                                    🛠️ {orden.tecnico?.name || __('Sin Asignar')}
+                                                </span>
+                                            </div>
+                                        </div>
+
+                                        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 pt-3 border-t border-slate-100 dark:border-slate-800">
+                                            <div>
+                                                <span className="text-slate-400 block text-[11px] font-medium">{__('Fecha de Recepción')}</span>
+                                                <span className="font-medium text-slate-800 dark:text-slate-200">{formatDate(orden.fecha_recepcion)}</span>
+                                            </div>
+                                            <div>
+                                                <span className="text-slate-400 block text-[11px] font-medium">{__('Fecha Prometida de Entrega')}</span>
+                                                <span className="font-medium text-slate-800 dark:text-slate-200">{formatOnlyDate(orden.fecha_prometida)}</span>
+                                            </div>
+                                            <div>
+                                                <span className="text-slate-400 block text-[11px] font-medium">{__('Garantía Prometida')}</span>
+                                                <span className="font-bold text-emerald-600">{orden.garantia_dias} {__('días de garantía')}</span>
+                                            </div>
+                                        </div>
+                                    </CardContent>
+                                </Card>
+
+                                {/* 5. SEGURIDAD DEL DISPOSITIVO */}
+                                <Card className="border-slate-200 dark:border-slate-800 shadow-sm">
+                                    <CardHeader className="bg-slate-50 dark:bg-slate-900/50 border-b border-slate-100 dark:border-slate-800 py-3">
+                                        <CardTitle className="text-sm font-bold flex items-center gap-2 text-slate-800 dark:text-slate-200">
+                                            <Lock className="w-4 h-4 text-purple-600" />
+                                            {__('5. Seguridad del Dispositivo')}
+                                        </CardTitle>
+                                    </CardHeader>
+                                    <CardContent className="p-5 text-xs space-y-4">
+                                        <div className="flex items-center justify-between flex-wrap gap-3">
+                                            <div className="flex items-center gap-2">
+                                                <span className="text-xs font-bold text-slate-600 dark:text-slate-400">{__('Tipo de Bloqueo Registrado:')}</span>
+                                                <Badge className="bg-purple-600 text-white font-extrabold text-xs px-3 py-1">
+                                                    {inspeccionData?.tipo_bloqueo === 'patron' ? '🌀 Patrón (3x3)' :
+                                                     inspeccionData?.tipo_bloqueo === 'pin' ? '🔢 PIN / Contraseña' :
+                                                     inspeccionData?.tipo_bloqueo === 'contrasena' ? '🔑 PIN / Contraseña' :
+                                                     inspeccionData?.tipo_bloqueo === 'sin_bloqueo' ? '🔓 Sin Contraseña' :
+                                                     (orden.contrasena_patron ? '🔑 PIN / Contraseña' : '🔓 Sin Contraseña')}
+                                                </Badge>
+                                            </div>
+
+                                            {orden.contrasena_patron && (
+                                                <div className="font-mono text-xs font-bold text-purple-700 dark:text-purple-300 bg-purple-50 dark:bg-purple-950/60 px-3 py-1.5 rounded-lg border border-purple-200 dark:border-purple-800">
+                                                    🔑 Clave: {orden.contrasena_patron}
+                                                </div>
+                                            )}
+                                        </div>
+
+                                        {(inspeccionData?.tipo_bloqueo === 'patron' || (inspeccionData?.patron_dots && inspeccionData.patron_dots.length > 0)) && (
+                                            <div className="flex flex-col items-center justify-center p-4 rounded-xl bg-slate-950 text-white space-y-2">
+                                                <span className="text-xs font-bold text-slate-300 flex items-center gap-2">
+                                                    <span>🌀</span> {__('Lienzo de Patrón 3x3 Registrado:')}
+                                                </span>
+                                                <PatternLockViewer pattern={inspeccionData?.patron_dots || []} />
+                                            </div>
+                                        )}
+                                    </CardContent>
+                                </Card>
+
+                                {/* 6. EVIDENCIAS FOTOGRÁFICAS DEL EQUIPO (4 ÁNGULOS) */}
+                                {(orden.fotos?.length || orden.evidencias_fotos) ? (
+                                    <Card className="border-slate-200 dark:border-slate-800 shadow-sm">
+                                        <CardHeader className="bg-slate-50 dark:bg-slate-900/50 border-b border-slate-100 dark:border-slate-800 py-3">
+                                            <CardTitle className="text-sm font-bold flex items-center justify-between text-slate-800 dark:text-slate-200">
+                                                <span className="flex items-center gap-2">
+                                                    <Camera className="w-4 h-4 text-purple-600" />
+                                                    {__('6. Evidencias Fotográficas del Equipo (4 Ángulos)')}
+                                                </span>
+                                                <Badge variant="outline" className="font-mono text-xs">
+                                                    {orden.fotos?.length || 0} / 4 {__('Fotos')}
+                                                </Badge>
+                                            </CardTitle>
+                                        </CardHeader>
+                                        <CardContent className="p-4">
+                                            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                                                {fotoSlots.map((item) => {
+                                                    const fotoObj = orden.fotos?.find((f: any) => f.angulo === item.key);
+                                                    const imgUrl = fotoObj ? fotoObj.url : (orden.evidencias_fotos as any)?.[item.key];
+                                                    return (
+                                                        <div key={item.key} className="flex flex-col items-center p-2.5 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-950 text-center gap-1.5">
+                                                            <span className="text-[11px] font-bold text-slate-800 dark:text-slate-200">{item.label}</span>
+                                                            {imgUrl ? (
+                                                                <div
+                                                                    onClick={() => setPreviewPhoto({ url: imgUrl, label: item.label })}
+                                                                    className="w-full h-32 rounded-lg overflow-hidden border border-purple-200 dark:border-purple-900 block group relative cursor-pointer"
+                                                                >
+                                                                    <img src={imgUrl} alt={item.label} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-200" />
+                                                                    <div className="absolute inset-0 bg-slate-950/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center text-white text-[10px] font-bold gap-1">
+                                                                        <Eye className="w-3.5 h-3.5" />
+                                                                        {__('Ampliar')}
+                                                                    </div>
+                                                                </div>
+                                                            ) : (
+                                                                <div className="w-full h-32 rounded-lg border border-dashed border-slate-200 dark:border-slate-800 flex flex-col items-center justify-center text-slate-400 text-[10px] bg-slate-50 dark:bg-slate-900/40">
+                                                                    <Camera className="w-5 h-5 text-slate-300 mb-1" />
+                                                                    <span>{__('Sin Foto')}</span>
+                                                                </div>
+                                                            )}
+                                                        </div>
+                                                    );
+                                                })}
+                                            </div>
+                                        </CardContent>
+                                    </Card>
+                                ) : null}
                             </div>
                         )}
 
