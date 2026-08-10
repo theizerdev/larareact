@@ -23,7 +23,10 @@ class EmpresaController extends Controller
         if ($search) {
             $query->where(function ($q) use ($search) {
                 $q->where('razon_social', 'like', "%{$search}%")
+                    ->orWhere('nombre_comercial', 'like', "%{$search}%")
                     ->orWhere('documento', 'like', "%{$search}%")
+                    ->orWhere('representante_legal', 'like', "%{$search}%")
+                    ->orWhere('curp_representante_legal', 'like', "%{$search}%")
                     ->orWhere('email', 'like', "%{$search}%")
                     ->orWhere('telefono', 'like', "%{$search}%");
             });
@@ -55,6 +58,7 @@ class EmpresaController extends Controller
     {
         $validated = $request->validate([
             'razon_social' => 'required|string|max:255',
+            'nombre_comercial' => 'nullable|string|max:255',
             'documento' => 'required|string|max:255|unique:empresas,documento',
             'pais_id' => 'nullable|exists:pais,id',
             'direccion' => 'nullable|string',
@@ -64,6 +68,7 @@ class EmpresaController extends Controller
             'telefono' => 'nullable|string|max:255',
             'email' => 'nullable|email|max:255',
             'representante_legal' => 'nullable|string|max:255',
+            'curp_representante_legal' => 'nullable|string|max:18',
             'status' => 'boolean',
         ]);
 
@@ -91,6 +96,7 @@ class EmpresaController extends Controller
     {
         $validated = $request->validate([
             'razon_social' => 'required|string|max:255',
+            'nombre_comercial' => 'nullable|string|max:255',
             'documento' => 'required|string|max:255|unique:empresas,documento,'.$empresa->id,
             'pais_id' => 'nullable|exists:pais,id',
             'direccion' => 'nullable|string',
@@ -100,6 +106,7 @@ class EmpresaController extends Controller
             'telefono' => 'nullable|string|max:255',
             'email' => 'nullable|email|max:255',
             'representante_legal' => 'nullable|string|max:255',
+            'curp_representante_legal' => 'nullable|string|max:18',
             'status' => 'boolean',
         ]);
 

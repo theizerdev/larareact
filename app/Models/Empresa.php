@@ -26,6 +26,7 @@ class Empresa extends Model
     protected $fillable = [
         'pais_id',
         'razon_social',
+        'nombre_comercial',
         'documento',
         'pais_telefono_id',
         'zona_horaria',
@@ -35,6 +36,7 @@ class Empresa extends Model
         'latitud',
         'longitud',
         'representante_legal',
+        'curp_representante_legal',
         'telefono',
         'email',
         'status',

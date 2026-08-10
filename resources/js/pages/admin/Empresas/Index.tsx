@@ -69,6 +69,7 @@ interface Empresa {
     id: number;
     pais_id?: number | null;
     razon_social: string;
+    nombre_comercial?: string | null;
     documento: string;
     logo?: string | null;
     logo_mini?: string | null;
@@ -76,6 +77,7 @@ interface Empresa {
     latitud?: number | null;
     longitud?: number | null;
     representante_legal?: string | null;
+    curp_representante_legal?: string | null;
     telefono?: string | null;
     email?: string | null;
     status: boolean;
@@ -102,8 +104,10 @@ interface EmpresasPageProps {
 
 const initialForm = {
     razon_social: '',
+    nombre_comercial: '',
     documento: '',
     representante_legal: '',
+    curp_representante_legal: '',
     status: true as boolean,
     // Contacto
     pais_telefono_id: '' as string | number,  // UI only — selector de bandera/prefijo
@@ -200,18 +204,20 @@ export default function EmpresasIndexPage({ auth, empresas, stats, paises, filte
     const handleEditClick = (empresa: Empresa) => {
         setEditingEmpresa(empresa);
         setData({
-            razon_social:        empresa.razon_social || '',
-            documento:           empresa.documento || '',
-            representante_legal: empresa.representante_legal || '',
-            status:              empresa.status,
-            pais_telefono_id:    empresa.pais_id ?? '',
-            telefono:            empresa.telefono || '',
-            email:               empresa.email || '',
-            pais_id:             empresa.pais_id ?? '',
-            direccion:           empresa.direccion || '',
-            latitud:             empresa.latitud ?? null,
-            longitud:            empresa.longitud ?? null,
-            zona_horaria:        (empresa as any).zona_horaria || '',
+            razon_social:             empresa.razon_social || '',
+            nombre_comercial:         empresa.nombre_comercial || '',
+            documento:                empresa.documento || '',
+            representante_legal:      empresa.representante_legal || '',
+            curp_representante_legal: empresa.curp_representante_legal || '',
+            status:                   empresa.status,
+            pais_telefono_id:         empresa.pais_id ?? '',
+            telefono:                 empresa.telefono || '',
+            email:                    empresa.email || '',
+            pais_id:                  empresa.pais_id ?? '',
+            direccion:                empresa.direccion || '',
+            latitud:                  empresa.latitud ?? null,
+            longitud:                 empresa.longitud ?? null,
+            zona_horaria:             (empresa as any).zona_horaria || '',
         });
         setLogoFile(null);
         setLogoMiniFile(null);
@@ -550,14 +556,10 @@ formData.append('logo_mini', logoMiniFile);
 
                         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full mt-4">
                             {/* ── Navbar de tabs ── */}
-                            <TabsList className={`grid w-full mb-6 ${editingEmpresa ? 'grid-cols-4' : 'grid-cols-3'}`}>
+                            <TabsList className={`grid w-full mb-6 ${editingEmpresa ? 'grid-cols-3' : 'grid-cols-2'}`}>
                                 <TabsTrigger value="general" className="flex items-center gap-2">
                                     <Building2 className="h-4 w-4" />
                                     {__('General')}
-                                </TabsTrigger>
-                                <TabsTrigger value="contacto" className="flex items-center gap-2">
-                                    <Phone className="h-4 w-4" />
-                                    {__('Contact')}
                                 </TabsTrigger>
                                 <TabsTrigger value="ubicacion" className="flex items-center gap-2">
                                     <MapPin className="h-4 w-4" />
@@ -574,8 +576,8 @@ formData.append('logo_mini', logoMiniFile);
                             {/* ══ Tab 1: Información General ══════════════════════════════════════ */}
                             <TabsContent value="general" className="space-y-4">
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                    {/* Razón Social */}
-                                    <div className="md:col-span-2">
+                                    {/* 1. Razón social de la empresa */}
+                                    <div>
                                         <Label htmlFor="razon_social">{__('Company Name')} *</Label>
                                         <Input
                                             id="razon_social"
@@ -588,21 +590,35 @@ formData.append('logo_mini', logoMiniFile);
                                         )}
                                     </div>
 
-                                    {/* Documento */}
+                                    {/* 2. Nombre comercial */}
                                     <div>
-                                        <Label htmlFor="documento">{__('Document / Tax ID')} *</Label>
+                                        <Label htmlFor="nombre_comercial">{__('Trade Name')}</Label>
+                                        <Input
+                                            id="nombre_comercial"
+                                            value={data.nombre_comercial || ''}
+                                            onChange={(e) => setData('nombre_comercial', e.target.value)}
+                                            placeholder="Ej: Nombre Comercial"
+                                        />
+                                        {errors.nombre_comercial && (
+                                            <p className="text-red-500 text-xs mt-1">{errors.nombre_comercial}</p>
+                                        )}
+                                    </div>
+
+                                    {/* 3. Registro federal de contribuyentes (RFC) */}
+                                    <div>
+                                        <Label htmlFor="documento">{__('Registro federal de contribuyentes (RFC)')} *</Label>
                                         <Input
                                             id="documento"
                                             value={data.documento}
                                             onChange={(e) => setData('documento', e.target.value)}
-                                            placeholder="RIF, NIT, RFC..."
+                                            placeholder="RFC..."
                                         />
                                         {errors.documento && (
                                             <p className="text-red-500 text-xs mt-1">{errors.documento}</p>
                                         )}
                                     </div>
 
-                                    {/* Representante Legal */}
+                                    {/* 4. Representante legal */}
                                     <div>
                                         <Label htmlFor="representante_legal">{__('Legal Representative')}</Label>
                                         <Input
@@ -611,10 +627,57 @@ formData.append('logo_mini', logoMiniFile);
                                             onChange={(e) => setData('representante_legal', e.target.value)}
                                             placeholder="Nombre completo"
                                         />
+                                        {errors.representante_legal && (
+                                            <p className="text-red-500 text-xs mt-1">{errors.representante_legal}</p>
+                                        )}
                                     </div>
 
-                                    {/* Status */}
-                                    <div className="md:col-span-2">
+                                    {/* 5. Curp del representante legal */}
+                                    <div>
+                                        <Label htmlFor="curp_representante_legal">{__('Curp del representante legal')}</Label>
+                                        <Input
+                                            id="curp_representante_legal"
+                                            value={data.curp_representante_legal || ''}
+                                            onChange={(e) => setData('curp_representante_legal', e.target.value)}
+                                            placeholder="CURP (18 caracteres)"
+                                            maxLength={18}
+                                        />
+                                        {errors.curp_representante_legal && (
+                                            <p className="text-red-500 text-xs mt-1">{errors.curp_representante_legal}</p>
+                                        )}
+                                    </div>
+
+                                    {/* 6. Teléfono */}
+                                    <div>
+                                        <Label htmlFor="telefono">{__('Phone')}</Label>
+                                        <PhoneInputGroup
+                                            paises={paises}
+                                            selectedPaisId={data.pais_telefono_id}
+                                            phoneValue={data.telefono || ''}
+                                            onPaisChange={(v) => setData('pais_telefono_id', v)}
+                                            onPhoneChange={(v) => setData('telefono', v)}
+                                            placeholder="000-0000000"
+                                            error={errors.telefono}
+                                        />
+                                    </div>
+
+                                    {/* 7. Correo electrónico */}
+                                    <div>
+                                        <Label htmlFor="email">{__('Email')}</Label>
+                                        <Input
+                                            id="email"
+                                            type="email"
+                                            value={data.email || ''}
+                                            onChange={(e) => setData('email', e.target.value)}
+                                            placeholder="correo@empresa.com"
+                                        />
+                                        {errors.email && (
+                                            <p className="text-red-500 text-xs mt-1">{errors.email}</p>
+                                        )}
+                                    </div>
+
+                                    {/* 8. Status */}
+                                    <div>
                                         <Label htmlFor="status">{__('Status')}</Label>
                                         <div className="flex items-center space-x-2 pt-2">
                                             <Switch
@@ -627,38 +690,6 @@ formData.append('logo_mini', logoMiniFile);
                                             </span>
                                         </div>
                                     </div>
-                                </div>
-                            </TabsContent>
-
-                            {/* ══ Tab 2: Contacto ══════════════════════════════════════════════════ */}
-                            <TabsContent value="contacto" className="space-y-4">
-                                {/* Teléfono unificado: [🏴 +58] [número] */}
-                                <div>
-                                    <Label htmlFor="telefono">{__('Phone')}</Label>
-                                    <PhoneInputGroup
-                                        paises={paises}
-                                        selectedPaisId={data.pais_telefono_id}
-                                        phoneValue={data.telefono || ''}
-                                        onPaisChange={(v) => setData('pais_telefono_id', v)}
-                                        onPhoneChange={(v) => setData('telefono', v)}
-                                        placeholder="000-0000000"
-                                        error={errors.telefono}
-                                    />
-                                </div>
-
-                                {/* Email */}
-                                <div>
-                                    <Label htmlFor="email">{__('Email')}</Label>
-                                    <Input
-                                        id="email"
-                                        type="email"
-                                        value={data.email || ''}
-                                        onChange={(e) => setData('email', e.target.value)}
-                                        placeholder="correo@empresa.com"
-                                    />
-                                    {errors.email && (
-                                        <p className="text-red-500 text-xs mt-1">{errors.email}</p>
-                                    )}
                                 </div>
                             </TabsContent>
 
@@ -680,7 +711,7 @@ formData.append('logo_mini', logoMiniFile);
                                             });
                                         }}
                                     >
-                                        <SelectTrigger id="pais_id">
+                                        <SelectTrigger id="pais_id" className="w-full">
                                             <SelectValue placeholder={__('Select a country')} />
                                         </SelectTrigger>
                                         <SelectContent>
