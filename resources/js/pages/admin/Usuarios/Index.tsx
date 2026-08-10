@@ -12,6 +12,7 @@ import {
     GitBranch,
     ShieldAlert,
     Phone,
+    Copy,
 } from 'lucide-react';
 import React, { useState, useMemo } from 'react';
 import { Breadcrumbs } from '@/components/breadcrumbs';
@@ -146,6 +147,7 @@ export default function UsersIndexPage({
     // ── Estados ────────────────────────────────────────────────────────────────
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [editingUser, setEditingUser] = useState<User | null>(null);
+    const [duplicatingUser, setDuplicatingUser] = useState<User | null>(null);
     const [deletingUser, setDeletingUser] = useState<User | null>(null);
     const [isTableLoading, setIsTableLoading] = useState(false);
 
@@ -201,16 +203,36 @@ return [];
 
     const handleCreateClick = () => {
         setEditingUser(null);
+        setDuplicatingUser(null);
         reset();
         setIsModalOpen(true);
     };
 
     const handleEditClick = (user: User) => {
         setEditingUser(user);
+        setDuplicatingUser(null);
         setData({
             name: user.name,
             username: user.username || '',
             email: user.email,
+            password: '',
+            telefono: user.telefono || '',
+            pais_telefono_id: user.pais_telefono_id || '',
+            status: user.status,
+            empresa_id: user.empresa_id || '',
+            sucursal_id: user.sucursal_id || '',
+            roles: user.roles.map((r) => r.name),
+        });
+        setIsModalOpen(true);
+    };
+
+    const handleDuplicateClick = (user: User) => {
+        setEditingUser(null);
+        setDuplicatingUser(user);
+        setData({
+            name: `${user.name} (${__('Copy')})`,
+            username: user.username ? `${user.username}_copia` : '',
+            email: '',
             password: '',
             telefono: user.telefono || '',
             pais_telefono_id: user.pais_telefono_id || '',
@@ -230,6 +252,7 @@ return [];
                 onSuccess: () => {
                     setIsModalOpen(false);
                     setEditingUser(null);
+                    setDuplicatingUser(null);
                     reset();
                     notifySuccess(__('User updated successfully.'));
                 },
@@ -239,6 +262,7 @@ return [];
             post('/admin/usuarios', {
                 onSuccess: () => {
                     setIsModalOpen(false);
+                    setDuplicatingUser(null);
                     reset();
                     notifySuccess(__('User created successfully.'));
                 },
@@ -376,6 +400,10 @@ return;
                         <DropdownMenuItem onClick={() => handleEditClick(user)}>
                             <Pencil className="mr-2 h-4 w-4" />
                             {__('Edit')}
+                        </DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => handleDuplicateClick(user)}>
+                            <Copy className="mr-2 h-4 w-4" />
+                            {__('Duplicate')}
                         </DropdownMenuItem>
                         <DropdownMenuItem onClick={() => handleToggleStatus(user)}>
                             <ToggleRight className="mr-2 h-4 w-4" />
@@ -530,10 +558,16 @@ return;
                     <form onSubmit={handleSubmit}>
                         <DialogHeader>
                             <DialogTitle>
-                                {editingUser ? __('Edit User') : __('New User')}
+                                {editingUser
+                                    ? __('Edit User')
+                                    : duplicatingUser
+                                    ? __('Duplicate User')
+                                    : __('New User')}
                             </DialogTitle>
                             <DialogDescription>
-                                {__('Complete user credentials, personal details and select roles.')}
+                                {duplicatingUser
+                                    ? `${__('Duplicating user characteristics from')} ${duplicatingUser.name}. ${__('Please enter a new email and password.')}`
+                                    : __('Complete user credentials, personal details and select roles.')}
                             </DialogDescription>
                         </DialogHeader>
 

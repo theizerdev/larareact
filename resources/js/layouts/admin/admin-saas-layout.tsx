@@ -337,7 +337,7 @@ export default function AdminSaasLayout({
                                     collapsed && 'opacity-0',
                                 )}
                             >
-                                {(auth as any)?.user?.empresa?.razon_social || name}
+                                SICA
                             </span>
                         </Link>
                         <Button
