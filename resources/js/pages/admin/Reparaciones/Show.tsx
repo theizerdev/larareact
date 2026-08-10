@@ -560,6 +560,26 @@ export default function ShowReparacion({ orden, productosRepuestos = [], tecnico
         return orden.inspeccion_json;
     }, [orden.inspeccion_json]);
 
+    const rawContrasena = String(orden.contrasena_patron || '');
+    const isPatronByString = rawContrasena.toLowerCase().includes('patrón') || rawContrasena.toLowerCase().includes('patron');
+    const isSinContrasena = rawContrasena.toLowerCase().includes('sin contraseña') || rawContrasena.toLowerCase().includes('sin contrasena');
+
+    const isPatron = inspeccionData?.tipo_bloqueo === 'patron' || isPatronByString;
+    const isSinBloqueo = inspeccionData?.tipo_bloqueo === 'sin_bloqueo' || isSinContrasena || (!orden.contrasena_patron && !inspeccionData);
+
+    const patronDotsFromStr = React.useMemo(() => {
+        if (inspeccionData?.patron_dots && Array.isArray(inspeccionData.patron_dots) && inspeccionData.patron_dots.length > 0) {
+            return inspeccionData.patron_dots;
+        }
+        if (isPatronByString) {
+            const matches = rawContrasena.match(/\d+/g);
+            if (matches) {
+                return matches.map(Number).filter((n) => n >= 1 && n <= 9);
+            }
+        }
+        return [];
+    }, [inspeccionData, isPatronByString, rawContrasena]);
+
     const tienePreservicio = Boolean(
         inspeccionData || orden.contrasena_patron || orden.observaciones_fisicas
     );
@@ -618,6 +638,205 @@ export default function ShowReparacion({ orden, productosRepuestos = [], tecnico
     const [postCameraError, setPostCameraError] = useState<string | null>(null);
     const [isPostCameraLoading, setIsPostCameraLoading] = useState(false);
     const [postCameraFacingMode, setPostCameraFacingMode] = useState<'environment' | 'user'>('environment');
+
+    // ESTADO E INICIALIZACIÓN PARA FORMULARIO DIRECTO INTERACTIVO DE PRESERVICIO
+    const DEFAULT_FISICA_ITEMS = React.useMemo(() => [
+        'Pantalla',
+        'Cristal trasero',
+        'Marco',
+        'Botones',
+        'Bandeja SIM',
+        'Cámara trasera',
+        'Cámara frontal',
+        'Tornillos',
+        'Tapa trasera',
+        'Puerto de carga',
+        'Humedad visible',
+        'Equipo doblado',
+    ], []);
+
+    const [inspeccionFisicaForm, setInspeccionFisicaForm] = useState<Record<string, { estado: 'bueno' | 'malo' | 'na'; obs: string }>>(() => {
+        const init: Record<string, { estado: 'bueno' | 'malo' | 'na'; obs: string }> = {};
+        const existing = inspeccionData?.fisica || {};
+        DEFAULT_FISICA_ITEMS.forEach((k) => {
+            init[k] = existing[k] || { estado: 'bueno', obs: '' };
+        });
+        Object.keys(existing).forEach((k) => {
+            if (!init[k]) init[k] = existing[k];
+        });
+        return init;
+    });
+
+    const [inspeccionEstadoForm, setInspeccionEstadoForm] = useState<Record<string, boolean>>(() => {
+        const existing = inspeccionData?.estado || {};
+        return {
+            enciende: existing.enciende ?? true,
+            carga_bateria: existing.carga_bateria ?? true,
+            entra_sistema: existing.entra_sistema ?? true,
+            tiene_bloqueo: existing.tiene_bloqueo ?? false,
+            cliente_proporciona_contrasena: existing.cliente_proporciona_contrasena ?? true,
+        };
+    });
+
+    const [observacionesFisicasForm, setObservacionesFisicasForm] = useState<string>(orden.observaciones_fisicas || '');
+    const [openAddCustomItemModal, setOpenAddCustomItemModal] = useState(false);
+    const [newCustomItemName, setNewCustomItemName] = useState('');
+    const [isSavingPreservicioInline, setIsSavingPreservicioInline] = useState(false);
+
+    // ESTADO E INICIALIZACIÓN PARA FORMULARIO DIRECTO INTERACTIVO DE POST-ATENCIÓN (VALIDACIÓN FINAL & QC)
+    const FUNCIONES_VALIDACION_LIST = React.useMemo(() => [
+        'Pantalla / Touch Display',
+        'Prueba de Llamadas & Micrófono Audio',
+        'Altavoz Principal / Bocina Speaker',
+        'Micrófono Inferior de Voz',
+        'Conectividad Wi-Fi (Carga/Descarga)',
+        'Conectividad Bluetooth',
+        'Cámara Frontal & Grabación',
+        'Cámara Trasera Principal & Zoom',
+        'Botón Físico Power / Bloqueo',
+        'Botón Físico Volumen +',
+        'Botón Físico Volumen -',
+        'Lector de Huella Dactilar Fingerprint',
+        'Sensor de Reconocimiento Facial Face ID',
+        'Puerto de Carga / USB Data Transfer',
+        'Vibrador Interno Haptic Engine',
+        'Flash LED / Linterna',
+        'Sensor de Proximidad Llamadas',
+        'Lector de Tarjeta SIM',
+        'Lector de Tarjeta MicroSD',
+        'Módulo de Posicionamiento GPS',
+        'Sensor Giroscopio & Acelerómetro',
+        'Botón Físico Home / Inicio',
+        'Puerto / Jack de Audio 3.5mm',
+        'Carga Inalámbrica Qi',
+    ], []);
+
+    const [validacionFormState, setValidacionFormState] = useState<Record<string, { estado: 'correcto' | 'incorrecto'; obs: string }>>(() => {
+        const init: Record<string, { estado: 'correcto' | 'incorrecto'; obs: string }> = {};
+        const existing = postServicioData?.validacion || {};
+        FUNCIONES_VALIDACION_LIST.forEach((fn) => {
+            init[fn] = existing[fn] || { estado: 'correcto', obs: '' };
+        });
+        return init;
+    });
+
+    const [limpiezaFormState, setLimpiezaFormState] = useState<Record<string, boolean>>(() => {
+        const existing = postServicioData?.limpieza || {};
+        const init: Record<string, boolean> = {};
+        LIMPIEZA_FINAL_LIST.forEach((item) => {
+            init[item] = existing[item] ?? true;
+        });
+        return init;
+    });
+
+    const [qcFormState, setQcFormState] = useState<Record<string, boolean>>(() => {
+        const existing = postServicioData?.qc || {};
+        return {
+            reparacion_completada: existing.reparacion_completada ?? true,
+            equipo_probado: existing.equipo_probado ?? true,
+            equipo_limpio: existing.equipo_limpio ?? true,
+            garantia_registrada: existing.garantia_registrada ?? true,
+            cliente_notificado: existing.cliente_notificado ?? false,
+            equipo_listo_entrega: existing.equipo_listo_entrega ?? true,
+        };
+    });
+
+    const [observacionesPostInput, setObservacionesPostInput] = useState<string>(postServicioData?.observaciones || '');
+    const [isSavingPostInline, setIsSavingPostInline] = useState(false);
+
+    const handleMarkAllValidacionCorrecto = () => {
+        setValidacionFormState((prev) => {
+            const updated = { ...prev };
+            Object.keys(updated).forEach((key) => {
+                updated[key] = { estado: 'correcto', obs: '' };
+            });
+            return updated;
+        });
+        notifySuccess(__('Las 24 funciones fueron marcadas como Correcto 🟢'));
+    };
+
+    const handleSavePostServicioInline = () => {
+        setIsSavingPostInline(true);
+        const updatedPostJson = {
+            ...(postServicioData || {}),
+            validacion: validacionFormState,
+            limpieza: limpiezaFormState,
+            qc: qcFormState,
+            observaciones: observacionesPostInput,
+            fecha_validacion: new Date().toISOString(),
+        };
+
+        router.post(
+            `/admin/reparaciones/${orden.id}/estado`,
+            {
+                estado_orden: orden.estado_orden,
+                post_servicio_json: updatedPostJson,
+            },
+            {
+                onSuccess: () => {
+                    notifySuccess(__('Validación post-atención guardada correctamente.'));
+                },
+                onError: () => {
+                    notifyError(__('Ocurrió un error al guardar la validación final.'));
+                },
+                onFinish: () => setIsSavingPostInline(false),
+            }
+        );
+    };
+
+    const handleAddCustomItem = () => {
+        const trimmed = newCustomItemName.trim();
+        if (!trimmed) return;
+        if (!inspeccionFisicaForm[trimmed]) {
+            setInspeccionFisicaForm((prev) => ({
+                ...prev,
+                [trimmed]: { estado: 'bueno', obs: '' },
+            }));
+            notifySuccess(__('Nuevo punto de inspección añadido: ') + trimmed);
+        }
+        setNewCustomItemName('');
+        setOpenAddCustomItemModal(false);
+    };
+
+    const handleMarkAllFisicaBueno = () => {
+        setInspeccionFisicaForm((prev) => {
+            const updated = { ...prev };
+            Object.keys(updated).forEach((key) => {
+                updated[key] = { estado: 'bueno', obs: '' };
+            });
+            return updated;
+        });
+        notifySuccess(__('Todos los puntos de inspección fueron marcados como Bueno 🟢'));
+    };
+
+    const handleSavePreservicioInline = () => {
+        setIsSavingPreservicioInline(true);
+        const updatedInspeccionJson = {
+            ...(inspeccionData || {}),
+            tipo_bloqueo: isPatron ? 'patron' : isSinBloqueo ? 'sin_bloqueo' : 'pin',
+            patron_dots: patronDotsFromStr,
+            fisica: inspeccionFisicaForm,
+            estado: inspeccionEstadoForm,
+        };
+
+        router.post(
+            `/admin/reparaciones/${orden.id}/estado`,
+            {
+                estado_orden: orden.estado_orden,
+                inspeccion_json: updatedInspeccionJson,
+                observaciones_fisicas: observacionesFisicasForm,
+            },
+            {
+                onSuccess: () => {
+                    notifySuccess(__('Preservicio e inspección inicial guardados exitosamente.'));
+                },
+                onError: () => {
+                    notifyError(__('No se pudo guardar la inspección de preservicio.'));
+                },
+                onFinish: () => setIsSavingPreservicioInline(false),
+            }
+        );
+    };
 
     const postVideoRef = useRef<HTMLVideoElement | null>(null);
     const postCanvasRef = useRef<HTMLCanvasElement | null>(null);
@@ -1351,7 +1570,7 @@ export default function ShowReparacion({ orden, productosRepuestos = [], tecnico
                         )}
                     >
                         <Camera className="w-4 h-4" />
-                        {__('Evidencias Fotográficas (Pre-Reparación)')}
+                        {__('Evidencias Fotográficas (Recepción)')}
                         <Badge variant="secondary" className="ml-1 text-[10px] h-4 px-1.5 bg-purple-100 dark:bg-purple-950 text-purple-800 dark:text-purple-200">
                             {orden.fotos?.length || 0} / 4
                         </Badge>
@@ -1400,8 +1619,8 @@ export default function ShowReparacion({ orden, productosRepuestos = [], tecnico
 
                 {/* CONTENIDO PRINCIPAL SEGÚN TAB SELECCIONADA */}
                 <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                    {/* COLUMNA IZQUIERDA (2 ANCHOS) */}
-                    <div className="lg:col-span-2 space-y-6">
+                    {/* COLUMNA PRINCIPAL */}
+                    <div className={cn("space-y-6", activeTab === 'repuestos' ? "lg:col-span-2" : "lg:col-span-3")}>
                         {/* TAB 1: RESUMEN GENERAL (EN EL MISMO ORDEN QUE RECEPCIÓN/CREATE) */}
                         {activeTab === 'general' && (
                             <div className="space-y-6 animate-in fade-in duration-300">
@@ -1592,12 +1811,11 @@ export default function ShowReparacion({ orden, productosRepuestos = [], tecnico
                                         <div className="flex items-center justify-between flex-wrap gap-3">
                                             <div className="flex items-center gap-2">
                                                 <span className="text-xs font-bold text-slate-600 dark:text-slate-400">{__('Tipo de Bloqueo Registrado:')}</span>
-                                                <Badge className="bg-purple-600 text-white font-extrabold text-xs px-3 py-1">
-                                                    {inspeccionData?.tipo_bloqueo === 'patron' ? '🌀 Patrón (3x3)' :
-                                                     inspeccionData?.tipo_bloqueo === 'pin' ? '🔢 PIN / Contraseña' :
-                                                     inspeccionData?.tipo_bloqueo === 'contrasena' ? '🔑 PIN / Contraseña' :
-                                                     inspeccionData?.tipo_bloqueo === 'sin_bloqueo' ? '🔓 Sin Contraseña' :
-                                                     (orden.contrasena_patron ? '🔑 PIN / Contraseña' : '🔓 Sin Contraseña')}
+                                                <Badge className={cn(
+                                                    "font-extrabold text-xs px-3 py-1 text-white",
+                                                    isPatron ? "bg-purple-600" : isSinBloqueo ? "bg-slate-500" : "bg-indigo-600"
+                                                )}>
+                                                    {isPatron ? '🌀 Patrón (3x3)' : isSinBloqueo ? '🔓 Sin Contraseña' : '🔑 PIN / Contraseña'}
                                                 </Badge>
                                             </div>
 
@@ -1608,12 +1826,12 @@ export default function ShowReparacion({ orden, productosRepuestos = [], tecnico
                                             )}
                                         </div>
 
-                                        {(inspeccionData?.tipo_bloqueo === 'patron' || (inspeccionData?.patron_dots && inspeccionData.patron_dots.length > 0)) && (
+                                        {(isPatron || patronDotsFromStr.length > 0) && (
                                             <div className="flex flex-col items-center justify-center p-4 rounded-xl bg-slate-950 text-white space-y-2">
                                                 <span className="text-xs font-bold text-slate-300 flex items-center gap-2">
                                                     <span>🌀</span> {__('Lienzo de Patrón 3x3 Registrado:')}
                                                 </span>
-                                                <PatternLockViewer pattern={inspeccionData?.patron_dots || []} />
+                                                <PatternLockViewer pattern={patronDotsFromStr} />
                                             </div>
                                         )}
                                     </CardContent>
@@ -1671,424 +1889,431 @@ export default function ShowReparacion({ orden, productosRepuestos = [], tecnico
                         {/* PESTAÑA: PRESERVICIO / INSPECCIÓN INICIAL */}
                         {activeTab === 'preservicio' && (
                             <div className="space-y-6 animate-in fade-in duration-300">
-                                {!tienePreservicio ? (
-                                    <Card className="border-indigo-200 dark:border-indigo-900 shadow-sm bg-white dark:bg-slate-900">
-                                        <CardContent className="p-8 text-center space-y-4">
-                                            <div className="w-14 h-14 rounded-full bg-indigo-50 dark:bg-indigo-950/60 text-indigo-600 dark:text-indigo-400 flex items-center justify-center mx-auto text-3xl shadow-xs border border-indigo-100 dark:border-indigo-900">
-                                                🛡️
-                                            </div>
-                                            <div className="space-y-1">
-                                                <h3 className="text-base font-bold text-slate-900 dark:text-slate-100">
-                                                    {__('El preservicio e inspección inicial aún no ha sido completado')}
-                                                </h3>
-                                                <p className="text-xs text-slate-500 max-w-md mx-auto">
-                                                    {__('Registre la inspección estética (12 puntos), el estado funcional y el patrón de desbloqueo táctil 3x3.')}
-                                                </p>
-                                            </div>
-                                            <Button
-                                                type="button"
-                                                onClick={openPreservicioModal}
-                                                className="bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold px-6 h-10 gap-2 rounded-xl shadow-lg shadow-indigo-200 dark:shadow-none"
-                                            >
-                                                <ShieldCheck className="w-4 h-4" />
-                                                {__('Iniciar Proceso de Preservicio')} ➔
-                                            </Button>
-                                        </CardContent>
-                                    </Card>
-                                ) : (
-                                    <Card className="border-indigo-200 dark:border-indigo-900 shadow-sm bg-gradient-to-r from-indigo-50/50 via-white to-purple-50/50 dark:from-indigo-950/20 dark:via-slate-900 dark:to-purple-950/20">
-                                        <CardHeader className="py-4 border-b border-indigo-100 dark:border-indigo-900/50">
-                                            <div className="flex items-center justify-between flex-wrap gap-2">
-                                                <CardTitle className="text-base font-black flex items-center gap-2 text-indigo-950 dark:text-indigo-100">
+                                <Card className="border-indigo-200 dark:border-indigo-900 shadow-sm bg-white dark:bg-slate-900">
+                                    <CardHeader className="py-4 border-b border-slate-100 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/50">
+                                        <div className="flex items-center justify-between flex-wrap gap-3">
+                                            <div className="space-y-0.5">
+                                                <CardTitle className="text-base font-black flex items-center gap-2 text-slate-900 dark:text-slate-100">
                                                     <ShieldCheck className="w-5 h-5 text-indigo-600 dark:text-indigo-400" />
                                                     {__('Ficha de Preservicio e Inspección Inicial')}
                                                 </CardTitle>
-                                                <div className="flex items-center gap-2">
-                                                    {orden.tecnico && (
-                                                        <Badge variant="outline" className="text-xs bg-white dark:bg-slate-800 font-semibold text-indigo-700 dark:text-indigo-300 border-indigo-200">
-                                                            🛠️ {__('Inspeccionado por:')} {orden.tecnico.name}
-                                                        </Badge>
-                                                    )}
-                                                    <Button
-                                                        type="button"
-                                                        size="sm"
-                                                        onClick={openPreservicioModal}
-                                                        className="text-xs font-bold bg-indigo-600 hover:bg-indigo-700 text-white h-8 gap-1.5 rounded-lg shadow-xs"
-                                                    >
-                                                        <Wrench className="w-3.5 h-3.5" />
-                                                        {__('Editar Preservicio')}
-                                                    </Button>
-                                                </div>
+                                                <p className="text-xs text-slate-500">
+                                                    {__('Formulario directo e interactivo de revisión estética (componentes), pruebas funcionales y observaciones.')}
+                                                </p>
                                             </div>
-                                        </CardHeader>
-                                    <CardContent className="p-5 space-y-6">
-                                        {/* 1. CLAVE Y PATRÓN DE DESBLOQUEO */}
-                                        <div className="space-y-3">
-                                            <h4 className="text-xs font-black uppercase tracking-wider text-slate-500 dark:text-slate-400 flex items-center gap-2">
-                                                <Lock className="w-4 h-4 text-indigo-500" />
-                                                {__('1. Tipo de Bloqueo & Claves de Acceso')}
-                                            </h4>
 
-                                            <div className="p-4 rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-950 space-y-4 shadow-xs">
-                                                <div className="flex items-center justify-between flex-wrap gap-3 border-b border-slate-100 dark:border-slate-900 pb-3">
-                                                    <div className="flex items-center gap-2">
-                                                        <span className="text-xs font-bold text-slate-600 dark:text-slate-400">{__('Tipo de Bloqueo Registrado:')}</span>
-                                                        <Badge className="bg-indigo-600 text-white font-extrabold text-xs px-3 py-1">
-                                                            {inspeccionData?.tipo_bloqueo === 'patron' ? '🌀 Patrón (3x3)' :
-                                                             inspeccionData?.tipo_bloqueo === 'pin' ? '🔢 Código PIN' :
-                                                             inspeccionData?.tipo_bloqueo === 'contrasena' ? '🔠 Contraseña' :
-                                                             inspeccionData?.tipo_bloqueo === 'sin_bloqueo' ? '🔓 Sin Bloqueo' :
-                                                             (orden.contrasena_patron || __('No registrado'))}
-                                                        </Badge>
-                                                    </div>
-
-                                                    {orden.contrasena_patron && (
-                                                        <div className="font-mono text-xs font-bold text-indigo-700 dark:text-indigo-300 bg-indigo-50 dark:bg-indigo-950/60 px-3 py-1.5 rounded-lg border border-indigo-200 dark:border-indigo-800">
-                                                            🔑 {orden.contrasena_patron}
-                                                        </div>
-                                                    )}
-                                                </div>
-
-                                                {/* RENDERIZADO DEL LIENZO DE PATRÓN 3X3 SI ES UN PATRÓN */}
-                                                {(inspeccionData?.tipo_bloqueo === 'patron' || (inspeccionData?.patron_dots && inspeccionData.patron_dots.length > 0)) ? (
-                                                    <div className="flex flex-col items-center justify-center p-5 rounded-2xl bg-slate-950 text-white space-y-3 shadow-inner">
-                                                        <span className="text-xs font-bold text-slate-300 flex items-center gap-2">
-                                                            <span>🌀</span> {__('Lienzo de Patrón 3x3 Dibujado por el Técnico:')}
-                                                        </span>
-                                                        <PatternLockViewer pattern={inspeccionData?.patron_dots || []} />
-                                                    </div>
-                                                ) : inspeccionData?.tipo_bloqueo === 'pin' ? (
-                                                    <div className="p-3 bg-amber-50 dark:bg-amber-950/40 text-amber-900 dark:text-amber-200 rounded-xl text-center text-xs font-bold font-mono">
-                                                        🔑 PIN Numérico: {inspeccionData.codigo_pin || orden.contrasena_patron}
-                                                    </div>
-                                                ) : inspeccionData?.tipo_bloqueo === 'contrasena' ? (
-                                                    <div className="p-3 bg-indigo-50 dark:bg-indigo-950/40 text-indigo-900 dark:text-indigo-200 rounded-xl text-center text-xs font-bold font-mono">
-                                                        🔑 Clave Alfanumérica: {inspeccionData.clave_texto || orden.contrasena_patron}
-                                                    </div>
-                                                ) : inspeccionData?.tipo_bloqueo === 'sin_bloqueo' ? (
-                                                    <div className="p-3 bg-emerald-50 dark:bg-emerald-950/40 text-emerald-800 dark:text-emerald-300 rounded-xl text-center text-xs font-bold">
-                                                        🔓 Dispositivo sin ningún tipo de bloqueo de pantalla.
-                                                    </div>
-                                                ) : null}
+                                            <div className="flex items-center gap-2">
+                                                {orden.tecnico && (
+                                                    <Badge variant="outline" className="text-xs bg-purple-50 dark:bg-purple-950/50 text-purple-700 dark:text-purple-300 border-purple-200 font-bold">
+                                                        🛠️ {__('Técnico:')} {orden.tecnico.name}
+                                                    </Badge>
+                                                )}
+                                                <Button
+                                                    type="button"
+                                                    size="sm"
+                                                    onClick={handleMarkAllFisicaBueno}
+                                                    className="bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold gap-1.5 rounded-lg shadow-xs"
+                                                >
+                                                    <Sparkles className="w-3.5 h-3.5" />
+                                                    {__('Marcar Todos como Bueno 🟢')}
+                                                </Button>
                                             </div>
                                         </div>
+                                    </CardHeader>
 
-                                        {/* 2. INSPECCIÓN FÍSICA DE 12 ELEMENTOS */}
-                                        <div className="space-y-3">
-                                            <h4 className="text-xs font-black uppercase tracking-wider text-slate-500 dark:text-slate-400 flex items-center gap-2">
-                                                <Smartphone className="w-4 h-4 text-indigo-500" />
-                                                {__('2. Estado de Inspección Física (12 Puntos)')}
-                                            </h4>
+                                    <CardContent className="p-6 space-y-8">
+                                        {/* 1. INSPECCIÓN FÍSICA Y ESTÉTICA (CON CATÁLOGO Y BOTÓN DE AGREGAR) */}
+                                        <div className="space-y-4">
+                                            <div className="flex items-center justify-between flex-wrap gap-2 pb-2 border-b border-slate-100 dark:border-slate-800">
+                                                <div className="space-y-0.5">
+                                                    <h4 className="text-sm font-black text-slate-900 dark:text-slate-100 flex items-center gap-2">
+                                                        <Smartphone className="w-4 h-4 text-indigo-600" />
+                                                        {__('1. Inspección Física y Estética del Dispositivo')}
+                                                        <Badge className="bg-indigo-100 text-indigo-800 dark:bg-indigo-950 dark:text-indigo-200 text-xs font-mono font-bold">
+                                                            {Object.keys(inspeccionFisicaForm).length} {__('Puntos')}
+                                                        </Badge>
+                                                    </h4>
+                                                    <p className="text-xs text-slate-400">
+                                                        {__('Seleccione el estado de cada componente e ingrese observaciones específicas en caso de daño.')}
+                                                    </p>
+                                                </div>
 
-                                            {inspeccionData?.fisica ? (
-                                                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-                                                    {Object.entries(inspeccionData.fisica).map(([itemKey, itemVal]: [string, any]) => {
-                                                        const st = itemVal?.estado ?? 'na';
-                                                        const obs = itemVal?.obs ?? '';
-                                                        return (
-                                                            <div
-                                                                key={itemKey}
-                                                                className={cn(
-                                                                    'p-3 rounded-xl border text-xs flex flex-col justify-between gap-1.5 transition-all shadow-xs',
-                                                                    st === 'malo'
-                                                                        ? 'bg-rose-50/70 border-rose-200 dark:bg-rose-950/30 dark:border-rose-900'
-                                                                        : st === 'bueno'
-                                                                        ? 'bg-emerald-50/50 border-emerald-200 dark:bg-emerald-950/20 dark:border-emerald-900'
-                                                                        : 'bg-slate-50 border-slate-200 dark:bg-slate-900 dark:border-slate-800'
-                                                                )}
-                                                            >
-                                                                <div className="flex items-center justify-between">
-                                                                    <span className="font-bold text-slate-900 dark:text-slate-100">{itemKey}</span>
-                                                                    {st === 'bueno' && (
-                                                                        <Badge className="bg-emerald-600 text-white text-[10px] px-2 font-extrabold">🟢 Bueno</Badge>
-                                                                    )}
-                                                                    {st === 'malo' && (
-                                                                        <Badge className="bg-rose-600 text-white text-[10px] px-2 font-extrabold">🔴 Dañado</Badge>
-                                                                    )}
-                                                                    {st === 'na' && (
-                                                                        <Badge variant="outline" className="text-[10px] text-slate-400 px-2">⚪ N/A</Badge>
-                                                                    )}
+                                                <Button
+                                                    type="button"
+                                                    size="sm"
+                                                    variant="outline"
+                                                    onClick={() => setOpenAddCustomItemModal(true)}
+                                                    className="border-indigo-300 text-indigo-700 dark:border-indigo-800 dark:text-indigo-300 hover:bg-indigo-50 font-bold text-xs gap-1.5 rounded-lg"
+                                                >
+                                                    <Plus className="w-4 h-4 text-indigo-600" />
+                                                    {__('➕ Agregar Nuevo Punto de Inspección')}
+                                                </Button>
+                                            </div>
+
+                                            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                                                {Object.entries(inspeccionFisicaForm).map(([itemKey, itemVal]) => {
+                                                    const st = itemVal.estado;
+                                                    return (
+                                                        <div
+                                                            key={itemKey}
+                                                            className={cn(
+                                                                "p-3.5 rounded-xl border text-xs flex flex-col justify-between space-y-2.5 transition-all shadow-xs",
+                                                                st === 'malo'
+                                                                    ? "bg-rose-50/70 border-rose-200 dark:bg-rose-950/30 dark:border-rose-900"
+                                                                    : st === 'bueno'
+                                                                    ? "bg-emerald-50/50 border-emerald-200 dark:bg-emerald-950/20 dark:border-emerald-900"
+                                                                    : "bg-slate-50 border-slate-200 dark:bg-slate-900 dark:border-slate-800"
+                                                            )}
+                                                        >
+                                                            <div className="flex items-center justify-between">
+                                                                <span className="font-bold text-slate-900 dark:text-slate-100 text-xs">{itemKey}</span>
+                                                                <div className="flex items-center gap-1">
+                                                                    <button
+                                                                        type="button"
+                                                                        onClick={() => setInspeccionFisicaForm((prev) => ({ ...prev, [itemKey]: { ...prev[itemKey], estado: 'bueno' } }))}
+                                                                        className={cn(
+                                                                            "px-2 py-1 rounded-md text-[10px] font-bold transition-all",
+                                                                            st === 'bueno' ? "bg-emerald-600 text-white shadow-xs" : "bg-slate-200 text-slate-600 dark:bg-slate-800 dark:text-slate-400 hover:bg-slate-300"
+                                                                        )}
+                                                                    >
+                                                                        🟢 Bueno
+                                                                    </button>
+                                                                    <button
+                                                                        type="button"
+                                                                        onClick={() => setInspeccionFisicaForm((prev) => ({ ...prev, [itemKey]: { ...prev[itemKey], estado: 'malo' } }))}
+                                                                        className={cn(
+                                                                            "px-2 py-1 rounded-md text-[10px] font-bold transition-all",
+                                                                            st === 'malo' ? "bg-rose-600 text-white shadow-xs" : "bg-slate-200 text-slate-600 dark:bg-slate-800 dark:text-slate-400 hover:bg-slate-300"
+                                                                        )}
+                                                                    >
+                                                                        🔴 Dañado
+                                                                    </button>
+                                                                    <button
+                                                                        type="button"
+                                                                        onClick={() => setInspeccionFisicaForm((prev) => ({ ...prev, [itemKey]: { ...prev[itemKey], estado: 'na' } }))}
+                                                                        className={cn(
+                                                                            "px-2 py-1 rounded-md text-[10px] font-bold transition-all",
+                                                                            st === 'na' ? "bg-slate-700 text-white shadow-xs" : "bg-slate-200 text-slate-600 dark:bg-slate-800 dark:text-slate-400 hover:bg-slate-300"
+                                                                        )}
+                                                                    >
+                                                                        ⚪ N/A
+                                                                    </button>
                                                                 </div>
-                                                                {obs && (
-                                                                    <p className="text-[11px] text-rose-700 dark:text-rose-300 font-semibold bg-white/70 dark:bg-slate-950/60 p-1.5 rounded border border-rose-100 dark:border-rose-900/40">
-                                                                        📝 {obs}
-                                                                    </p>
-                                                                )}
                                                             </div>
-                                                        );
-                                                    })}
-                                                </div>
-                                            ) : (
-                                                <div className="p-4 rounded-xl bg-slate-50 dark:bg-slate-900 text-slate-400 text-xs italic text-center">
-                                                    {__('Sin datos detallados de inspección de componentes.')}
-                                                </div>
-                                            )}
-                                        </div>
 
-                                        {/* 3. ESTADO FUNCIONAL ELECTRÓNICO */}
-                                        <div className="space-y-3">
-                                            <h4 className="text-xs font-black uppercase tracking-wider text-slate-500 dark:text-slate-400 flex items-center gap-2">
-                                                <Activity className="w-4 h-4 text-indigo-500" />
-                                                {__('3. Estado Funcional Inicial')}
-                                            </h4>
-
-                                            {inspeccionData?.estado ? (
-                                                <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-                                                    {Object.entries(inspeccionData.estado).map(([k, isOk]: [string, any]) => {
-                                                        const labels: Record<string, string> = {
-                                                            enciende: 'Enciende',
-                                                            carga_bateria: 'Carga batería',
-                                                            entra_sistema: 'Entra al sistema',
-                                                            tiene_bloqueo: 'Tiene bloqueo',
-                                                            cliente_proporciona_contrasena: 'Proporciona clave/patrón',
-                                                        };
-                                                        return (
-                                                            <div
-                                                                key={k}
-                                                                className={cn(
-                                                                    'p-3 rounded-xl border text-xs flex items-center justify-between font-bold shadow-xs',
-                                                                    isOk
-                                                                        ? 'bg-emerald-50 dark:bg-emerald-950/30 border-emerald-200 text-emerald-900 dark:text-emerald-200'
-                                                                        : 'bg-slate-50 dark:bg-slate-900 border-slate-200 text-slate-600 dark:text-slate-400'
-                                                                )}
-                                                            >
-                                                                <span>{labels[k] || k}</span>
-                                                                <span>{isOk ? '✅ Sí' : '❌ No'}</span>
-                                                            </div>
-                                                        );
-                                                    })}
-                                                </div>
-                                            ) : null}
-                                        </div>
-
-                                        {/* 4. OBSERVACIONES FÍSICAS */}
-                                        {orden.observaciones_fisicas && (
-                                            <div className="space-y-2">
-                                                <h4 className="text-xs font-black uppercase tracking-wider text-slate-500 dark:text-slate-400 flex items-center gap-2">
-                                                    <FileText className="w-4 h-4 text-indigo-500" />
-                                                    {__('4. Observaciones Físicas Adicionales')}
-                                                </h4>
-                                                <div className="p-4 rounded-xl bg-indigo-50/60 dark:bg-indigo-950/30 border border-indigo-100 dark:border-indigo-900 text-xs text-indigo-950 dark:text-indigo-200 leading-relaxed font-medium">
-                                                    {orden.observaciones_fisicas}
-                                                </div>
+                                                            {st === 'malo' && (
+                                                                <Input
+                                                                    type="text"
+                                                                    placeholder={__('Escriba observación del daño (ej. Botón roto, pintura desgastada...)')}
+                                                                    value={itemVal.obs}
+                                                                    onChange={(e) => {
+                                                                        const val = e.target.value;
+                                                                        setInspeccionFisicaForm((prev) => ({
+                                                                            ...prev,
+                                                                            [itemKey]: { ...prev[itemKey], obs: val },
+                                                                        }));
+                                                                    }}
+                                                                    className="h-8 text-xs bg-white dark:bg-slate-950 border-rose-200 text-rose-900 dark:text-rose-100 placeholder:text-rose-300"
+                                                                />
+                                                            )}
+                                                        </div>
+                                                    );
+                                                })}
                                             </div>
-                                        )}
+                                        </div>
+
+                                        {/* 2. ESTADO FUNCIONAL INICIAL */}
+                                        <div className="space-y-4 pt-4 border-t border-slate-100 dark:border-slate-800">
+                                            <div className="space-y-0.5">
+                                                <h4 className="text-sm font-black text-slate-900 dark:text-slate-100 flex items-center gap-2">
+                                                    <Activity className="w-4 h-4 text-indigo-600" />
+                                                    {__('2. Estado Funcional Inicial')}
+                                                </h4>
+                                                <p className="text-xs text-slate-400">
+                                                    {__('Pruebas electrónicas iniciales antes de la intervención técnica.')}
+                                                </p>
+                                            </div>
+
+                                            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
+                                                {[
+                                                    { key: 'enciende', label: 'Enciende' },
+                                                    { key: 'carga_bateria', label: 'Carga batería' },
+                                                    { key: 'entra_sistema', label: 'Entra al sistema' },
+                                                    { key: 'tiene_bloqueo', label: 'Tiene bloqueo' },
+                                                    { key: 'cliente_proporciona_contrasena', label: 'Proporciona clave' },
+                                                ].map(({ key, label }) => {
+                                                    const isOk = Boolean(inspeccionEstadoForm[key]);
+                                                    return (
+                                                        <div
+                                                            key={key}
+                                                            onClick={() => setInspeccionEstadoForm((prev) => ({ ...prev, [key]: !prev[key] }))}
+                                                            className={cn(
+                                                                "p-3 rounded-xl border text-xs flex items-center justify-between font-bold cursor-pointer transition-all shadow-xs select-none",
+                                                                isOk
+                                                                    ? "bg-emerald-50 dark:bg-emerald-950/30 border-emerald-300 text-emerald-900 dark:text-emerald-200 hover:bg-emerald-100/80"
+                                                                    : "bg-rose-50 dark:bg-rose-950/30 border-rose-200 text-rose-900 dark:text-rose-200 hover:bg-rose-100/80"
+                                                            )}
+                                                        >
+                                                            <span>{label}</span>
+                                                            <Badge className={cn("text-[10px] font-extrabold px-2 py-0.5", isOk ? "bg-emerald-600 text-white" : "bg-rose-600 text-white")}>
+                                                                {isOk ? '✅ Sí' : '❌ No'}
+                                                            </Badge>
+                                                        </div>
+                                                    );
+                                                })}
+                                            </div>
+                                        </div>
+
+                                        {/* 3. OBSERVACIONES FÍSICAS Y ADICIONALES */}
+                                        <div className="space-y-3 pt-4 border-t border-slate-100 dark:border-slate-800">
+                                            <div className="space-y-0.5">
+                                                <h4 className="text-sm font-black text-slate-900 dark:text-slate-100 flex items-center gap-2">
+                                                    <FileText className="w-4 h-4 text-indigo-600" />
+                                                    {__('3. Observaciones Físicas y Notas Adicionales')}
+                                                </h4>
+                                                <p className="text-xs text-slate-400">
+                                                    {__('Comentarios generales sobre el estado estético o detalles acordados con el cliente.')}
+                                                </p>
+                                            </div>
+
+                                            <Textarea
+                                                rows={3}
+                                                placeholder={__('Escriba cualquier detalle o rasguño adicional previo a la reparación...')}
+                                                value={observacionesFisicasForm}
+                                                onChange={(e) => setObservacionesFisicasForm(e.target.value)}
+                                                className="text-xs bg-slate-50 dark:bg-slate-950 border-slate-200 dark:border-slate-800 focus:bg-white"
+                                            />
+                                        </div>
+
+                                        {/* BOTÓN DE GUARDADO */}
+                                        <div className="pt-4 border-t border-slate-100 dark:border-slate-800 flex justify-end">
+                                            <Button
+                                                type="button"
+                                                onClick={handleSavePreservicioInline}
+                                                disabled={isSavingPreservicioInline}
+                                                className="bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold px-6 h-11 gap-2 rounded-xl shadow-lg shadow-indigo-200 dark:shadow-none"
+                                            >
+                                                <Save className="w-4 h-4" />
+                                                {isSavingPreservicioInline ? __('Guardando Preservicio...') : __('💾 Guardar Cambios de Preservicio')}
+                                            </Button>
+                                        </div>
                                     </CardContent>
                                 </Card>
-                            )}
-                        </div>
-                    )}
+                            </div>
+                        )}
 
                         {/* PESTAÑA: POST-ATENCIÓN / VALIDACIÓN FINAL & CONTROL DE CALIDAD */}
                         {activeTab === 'postservicio' && (
                             <div className="space-y-6 animate-in fade-in duration-300">
-                                {!tienePostServicio ? (
-                                    <Card className="border-emerald-200 dark:border-emerald-900 shadow-sm bg-white dark:bg-slate-900">
-                                        <CardContent className="p-8 text-center space-y-4">
-                                            <div className="w-14 h-14 rounded-full bg-emerald-50 dark:bg-emerald-950/60 text-emerald-600 dark:text-emerald-400 flex items-center justify-center mx-auto text-3xl shadow-xs border border-emerald-100 dark:border-emerald-900">
-                                                ✅
-                                            </div>
-                                            <div className="space-y-1">
-                                                <h3 className="text-base font-bold text-slate-900 dark:text-slate-100">
-                                                    {__('La validación final y post-atención aún no ha sido registrada')}
-                                                </h3>
-                                                <p className="text-xs text-slate-500 max-w-md mx-auto">
-                                                    {__('Verifique las 24 funciones electrónicas finales, el protocolo de limpieza (5 puntos), los 6 controles de calidad y cargue las fotos finales del equipo reparado.')}
-                                                </p>
-                                            </div>
-                                            <Link href={`/admin/reparaciones/${orden.id}/post-servicio`}>
-                                                <Button
-                                                    type="button"
-                                                    className="bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-extrabold px-6 h-10 gap-2 rounded-xl shadow-lg shadow-emerald-200 dark:shadow-none"
-                                                >
-                                                    <CheckCircle2 className="w-4 h-4" />
-                                                    {__('Registrar Validación Final & Post-Atención')} ➔
-                                                </Button>
-                                            </Link>
-                                        </CardContent>
-                                    </Card>
-                                ) : (
-                                    <Card className="border-emerald-200 dark:border-emerald-900 shadow-sm bg-gradient-to-r from-emerald-50/50 via-white to-teal-50/50 dark:from-emerald-950/20 dark:via-slate-900 dark:to-teal-950/20">
-                                        <CardHeader className="py-4 border-b border-emerald-100 dark:border-emerald-900/50">
-                                            <div className="flex items-center justify-between flex-wrap gap-2">
-                                                <CardTitle className="text-base font-black flex items-center gap-2 text-emerald-950 dark:text-emerald-100">
+                                <Card className="border-emerald-200 dark:border-emerald-900 shadow-sm bg-white dark:bg-slate-900">
+                                    <CardHeader className="py-4 border-b border-slate-100 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/50">
+                                        <div className="flex items-center justify-between flex-wrap gap-3">
+                                            <div className="space-y-0.5">
+                                                <CardTitle className="text-base font-black flex items-center gap-2 text-slate-900 dark:text-slate-100">
                                                     <CheckCircle2 className="w-5 h-5 text-emerald-600 dark:text-emerald-400" />
                                                     {__('Ficha de Validación Final & Post-Atención')}
                                                 </CardTitle>
-                                                <div className="flex items-center gap-2">
-                                                    <Badge className="bg-emerald-600 text-white font-extrabold text-xs px-3 py-1">
-                                                        🟢 {__('Proceso Concluido')}
-                                                    </Badge>
-                                                    <Link href={`/admin/reparaciones/${orden.id}/post-servicio`}>
-                                                        <Button
-                                                            type="button"
-                                                            variant="outline"
-                                                            size="sm"
-                                                            className="text-xs font-bold border-emerald-300 dark:border-emerald-800 text-emerald-700 dark:text-emerald-300 gap-1.5"
+                                                <p className="text-xs text-slate-500">
+                                                    {__('Formulario directo e interactivo de validación de 24 funciones electrónicas, protocolo de limpieza y fotos finales.')}
+                                                </p>
+                                            </div>
+
+                                            <div className="flex items-center gap-2">
+                                                <Button
+                                                    type="button"
+                                                    size="sm"
+                                                    onClick={handleMarkAllValidacionCorrecto}
+                                                    className="bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold gap-1.5 rounded-lg shadow-xs"
+                                                >
+                                                    <Sparkles className="w-3.5 h-3.5" />
+                                                    {__('Marcar 24 Funciones como Correctas 🟢')}
+                                                </Button>
+                                            </div>
+                                        </div>
+                                    </CardHeader>
+
+                                    <CardContent className="p-6 space-y-8">
+                                        {/* 1. VALIDACIÓN FINAL (24 FUNCIONES DE CONTROL ELECTRÓNICO) */}
+                                        <div className="space-y-4">
+                                            <div className="flex items-center justify-between flex-wrap gap-2 pb-2 border-b border-slate-100 dark:border-slate-800">
+                                                <div className="space-y-0.5">
+                                                    <h4 className="text-sm font-black text-slate-900 dark:text-slate-100 flex items-center gap-2">
+                                                        <Activity className="w-4 h-4 text-emerald-600" />
+                                                        {__('1. Validación Final de Funciones Electrónicas (24 Puntos)')}
+                                                        <Badge className="bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-200 text-xs font-mono font-bold">
+                                                            24 / 24 {__('Puntos')}
+                                                        </Badge>
+                                                    </h4>
+                                                    <p className="text-xs text-slate-400">
+                                                        {__('Verifique el funcionamiento correcto de cada componente antes de la entrega final.')}
+                                                    </p>
+                                                </div>
+                                            </div>
+
+                                            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3.5">
+                                                {Object.entries(validacionFormState).map(([fnKey, fnVal]) => {
+                                                    const isOk = fnVal.estado === 'correcto';
+                                                    return (
+                                                        <div
+                                                            key={fnKey}
+                                                            className={cn(
+                                                                "p-3 rounded-xl border text-xs flex flex-col justify-between space-y-2 transition-all shadow-xs",
+                                                                isOk
+                                                                    ? "bg-emerald-50/60 border-emerald-200 dark:bg-emerald-950/20 dark:border-emerald-900"
+                                                                    : "bg-rose-50/70 border-rose-200 dark:bg-rose-950/30 dark:border-rose-900"
+                                                            )}
                                                         >
-                                                            ✨ {__('Editar Post-Atención & Fotos')}
-                                                        </Button>
-                                                    </Link>
-                                                    <Button
-                                                        type="button"
-                                                        size="sm"
-                                                        onClick={openPostServicioModal}
-                                                        className="text-xs font-bold bg-emerald-600 hover:bg-emerald-700 text-white h-8 gap-1.5 rounded-lg shadow-xs"
-                                                    >
-                                                        <Wrench className="w-3.5 h-3.5" />
-                                                        {__('Editar Post-Atención')}
-                                                    </Button>
-                                                </div>
-                                            </div>
-                                        </CardHeader>
-                                        <CardContent className="p-5 space-y-6">
-                                            {/* 1. TABLA VALIDACIÓN FINAL (24 FUNCIONES) */}
-                                            <div className="space-y-3">
-                                                <h4 className="text-xs font-black uppercase tracking-wider text-slate-500 dark:text-slate-400 flex items-center gap-2">
-                                                    <Activity className="w-4 h-4 text-emerald-500" />
-                                                    {__('1. Validación Final de Funciones (24 Puntos de Control)')}
-                                                </h4>
-
-                                                {postServicioData?.validacion ? (
-                                                    <div className="border border-slate-200 dark:border-slate-800 rounded-2xl overflow-hidden bg-white dark:bg-slate-950 shadow-xs">
-                                                        <div className="overflow-x-auto">
-                                                            <table className="w-full text-xs">
-                                                                <thead>
-                                                                    <tr className="bg-slate-100 dark:bg-slate-900 text-slate-700 dark:text-slate-300 font-extrabold border-b border-slate-200 dark:border-slate-800">
-                                                                        <th className="text-left py-2.5 px-4">{__('Función Evaluada')}</th>
-                                                                        <th className="text-center py-2.5 px-4">{__('Estado')}</th>
-                                                                        <th className="text-left py-2.5 px-4">{__('Observaciones')}</th>
-                                                                    </tr>
-                                                                </thead>
-                                                                <tbody className="divide-y divide-slate-100 dark:divide-slate-800/60">
-                                                                    {Object.entries(postServicioData.validacion).map(([fnKey, fnVal]: [string, any]) => {
-                                                                        const isCorrect = fnVal?.estado === 'correcto';
-                                                                        return (
-                                                                            <tr key={fnKey} className={isCorrect ? 'hover:bg-emerald-50/20' : 'bg-rose-50/30 hover:bg-rose-50/50'}>
-                                                                                <td className="py-2 px-4 font-bold text-slate-800 dark:text-slate-200">{fnKey}</td>
-                                                                                <td className="py-2 px-4 text-center">
-                                                                                    {isCorrect ? (
-                                                                                        <Badge className="bg-emerald-100 text-emerald-800 border-emerald-300 dark:bg-emerald-950 dark:text-emerald-300 text-[11px] font-black">
-                                                                                            ✓ {__('Correcto')}
-                                                                                        </Badge>
-                                                                                    ) : (
-                                                                                        <Badge className="bg-rose-100 text-rose-800 border-rose-300 dark:bg-rose-950 dark:text-rose-300 text-[11px] font-black">
-                                                                                            ✗ {__('Incorrecto')}
-                                                                                        </Badge>
-                                                                                    )}
-                                                                                </td>
-                                                                                <td className="py-2 px-4 text-slate-500 italic">
-                                                                                    {fnVal?.obs || '-'}
-                                                                                </td>
-                                                                            </tr>
-                                                                        );
-                                                                    })}
-                                                                </tbody>
-                                                            </table>
-                                                        </div>
-                                                    </div>
-                                                ) : null}
-                                            </div>
-
-                                            {/* 2. LIMPIEZA FINAL Y CONTROL DE CALIDAD */}
-                                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                                                {/* LIMPIEZA FINAL (5 PUNTOS) */}
-                                                <div className="space-y-3">
-                                                    <h4 className="text-xs font-black uppercase tracking-wider text-slate-500 dark:text-slate-400 flex items-center gap-2">
-                                                        <Sparkles className="w-4 h-4 text-emerald-500" />
-                                                        {__('2. Limpieza Final (5 Puntos)')}
-                                                    </h4>
-
-                                                    {postServicioData?.limpieza ? (
-                                                        <div className="space-y-2 border border-slate-200 dark:border-slate-800 rounded-2xl p-3.5 bg-white dark:bg-slate-950">
-                                                            {Object.entries(postServicioData.limpieza).map(([limKey, isOk]: [string, any]) => (
-                                                                <div key={limKey} className="flex items-center justify-between p-2 rounded-xl bg-slate-50 dark:bg-slate-900/60 text-xs font-bold">
-                                                                    <span className="text-slate-800 dark:text-slate-200">{limKey}</span>
-                                                                    <span>{isOk ? '✅ Sí' : '❌ No'}</span>
+                                                            <div className="flex items-center justify-between gap-2">
+                                                                <span className="font-bold text-slate-900 dark:text-slate-100 text-xs truncate">{fnKey}</span>
+                                                                <div className="flex items-center gap-1 shrink-0">
+                                                                    <button
+                                                                        type="button"
+                                                                        onClick={() => setValidacionFormState((prev) => ({ ...prev, [fnKey]: { ...prev[fnKey], estado: 'correcto' } }))}
+                                                                        className={cn(
+                                                                            "px-2 py-1 rounded-md text-[10px] font-bold transition-all",
+                                                                            isOk ? "bg-emerald-600 text-white shadow-xs" : "bg-slate-200 text-slate-600 dark:bg-slate-800 dark:text-slate-400 hover:bg-slate-300"
+                                                                        )}
+                                                                    >
+                                                                        🟢 Correcto
+                                                                    </button>
+                                                                    <button
+                                                                        type="button"
+                                                                        onClick={() => setValidacionFormState((prev) => ({ ...prev, [fnKey]: { ...prev[fnKey], estado: 'incorrecto' } }))}
+                                                                        className={cn(
+                                                                            "px-2 py-1 rounded-md text-[10px] font-bold transition-all",
+                                                                            !isOk ? "bg-rose-600 text-white shadow-xs" : "bg-slate-200 text-slate-600 dark:bg-slate-800 dark:text-slate-400 hover:bg-slate-300"
+                                                                        )}
+                                                                    >
+                                                                        🔴 Incorrecto
+                                                                    </button>
                                                                 </div>
-                                                            ))}
-                                                        </div>
-                                                    ) : null}
-                                                </div>
+                                                            </div>
 
-                                                {/* CONTROL DE CALIDAD (6 PUNTOS) */}
-                                                <div className="space-y-3">
-                                                    <h4 className="text-xs font-black uppercase tracking-wider text-slate-500 dark:text-slate-400 flex items-center gap-2">
-                                                        <ShieldCheck className="w-4 h-4 text-emerald-500" />
-                                                        {__('3. Control de Calidad (QC)')}
-                                                    </h4>
-
-                                                    {postServicioData?.qc ? (
-                                                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 border border-slate-200 dark:border-slate-800 rounded-2xl p-3.5 bg-white dark:bg-slate-950">
-                                                            {CONTROL_CALIDAD_LIST.map((item) => {
-                                                                const isChecked = postServicioData.qc[item.key] ?? false;
-                                                                return (
-                                                                    <div key={item.key} className={cn("flex items-center gap-2 p-2 rounded-xl text-xs font-bold border", isChecked ? "bg-emerald-50 border-emerald-200 text-emerald-900 dark:bg-emerald-950/40 dark:text-emerald-200" : "bg-slate-50 border-slate-200 text-slate-500")}>
-                                                                        <span>{isChecked ? '☑️' : '⬜'}</span>
-                                                                        <span>{item.label}</span>
-                                                                    </div>
-                                                                );
-                                                            })}
+                                                            {!isOk && (
+                                                                <Input
+                                                                    type="text"
+                                                                    placeholder={__('Escriba observación de la falla o detalle técnico...')}
+                                                                    value={fnVal.obs}
+                                                                    onChange={(e) => {
+                                                                        const val = e.target.value;
+                                                                        setValidacionFormState((prev) => ({
+                                                                            ...prev,
+                                                                            [fnKey]: { ...prev[fnKey], obs: val },
+                                                                        }));
+                                                                    }}
+                                                                    className="h-8 text-xs bg-white dark:bg-slate-950 border-rose-200 text-rose-900 dark:text-rose-100 placeholder:text-rose-300"
+                                                                />
+                                                            )}
                                                         </div>
-                                                    ) : null}
-                                                </div>
+                                                    );
+                                                })}
+                                            </div>
+                                        </div>
+
+                                        {/* 2. LIMPIEZA FINAL Y CONTROL DE CALIDAD */}
+                                        <div className="space-y-4 pt-4 border-t border-slate-100 dark:border-slate-800">
+                                            <div className="space-y-0.5">
+                                                <h4 className="text-sm font-black text-slate-900 dark:text-slate-100 flex items-center gap-2">
+                                                    <Sparkles className="w-4 h-4 text-emerald-600" />
+                                                    {__('2. Protocolo de Limpieza & Control de Calidad (QC)')}
+                                                </h4>
+                                                <p className="text-xs text-slate-400">
+                                                    {__('Verificación de acabados de limpieza y checklist de liberación.')}
+                                                </p>
                                             </div>
 
-                                            {/* 4. OBSERVACIONES FINALES */}
-                                            {postServicioData?.observaciones && (
-                                                <div className="space-y-2">
-                                                    <h4 className="text-xs font-black uppercase tracking-wider text-slate-500 dark:text-slate-400 flex items-center gap-2">
-                                                        <FileText className="w-4 h-4 text-emerald-500" />
-                                                        {__('4. Observaciones Finales')}
-                                                    </h4>
-                                                    <div className="p-4 rounded-xl bg-emerald-50/60 dark:bg-emerald-950/30 border border-emerald-100 dark:border-emerald-900 text-xs text-emerald-950 dark:text-emerald-200 leading-relaxed font-medium">
-                                                        {postServicioData.observaciones}
-                                                    </div>
+                                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                                {/* LIMPIEZA FINAL (5 PUNTOS) */}
+                                                <div className="space-y-2 border border-slate-200 dark:border-slate-800 rounded-2xl p-4 bg-slate-50/50 dark:bg-slate-950">
+                                                    <span className="text-xs font-black text-slate-700 dark:text-slate-300 uppercase tracking-wider block mb-2">
+                                                        ✨ Protocolo de Limpieza (5 Puntos)
+                                                    </span>
+                                                    {LIMPIEZA_FINAL_LIST.map((item) => {
+                                                        const isChecked = Boolean(limpiezaFormState[item]);
+                                                        return (
+                                                            <div
+                                                                key={item}
+                                                                onClick={() => setLimpiezaFormState((prev) => ({ ...prev, [item]: !prev[item] }))}
+                                                                className={cn(
+                                                                    "flex items-center justify-between p-2.5 rounded-xl border text-xs font-bold cursor-pointer transition-all shadow-xs select-none",
+                                                                    isChecked
+                                                                        ? "bg-emerald-50 dark:bg-emerald-950/30 border-emerald-300 text-emerald-900 dark:text-emerald-200"
+                                                                        : "bg-rose-50 dark:bg-rose-950/30 border-rose-200 text-rose-900 dark:text-rose-200"
+                                                                )}
+                                                            >
+                                                                <span>{item}</span>
+                                                                <Badge className={cn("text-[10px] font-extrabold px-2 py-0.5", isChecked ? "bg-emerald-600 text-white" : "bg-rose-600 text-white")}>
+                                                                    {isChecked ? '✅ Sí' : '❌ No'}
+                                                                </Badge>
+                                                            </div>
+                                                        );
+                                                    })}
                                                 </div>
-                                            )}
 
-                                            {/* 5. FOTOS POST-REPARACIÓN (5 ÁNGULOS DE INSPECCIÓN FÍSICA) */}
-                                            {postServicioData?.fotos_post && (
-                                                <div className="space-y-3">
-                                                    <h4 className="text-xs font-black uppercase tracking-wider text-slate-500 dark:text-slate-400 flex items-center gap-2">
-                                                        <Camera className="w-4 h-4 text-emerald-500" />
-                                                        {__('5. Evidencias Fotográficas Post-Reparación (5 Ángulos)')}
-                                                    </h4>
-                                                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3">
-                                                        {FOTOS_POST_REPARACION_ANGULOS.map((slot) => {
-                                                            const imgUrl = typeof postServicioData.fotos_post === 'object' && !Array.isArray(postServicioData.fotos_post)
-                                                                ? postServicioData.fotos_post[slot.key]
-                                                                : (Array.isArray(postServicioData.fotos_post) ? postServicioData.fotos_post.find((item: any) => item.key === slot.key || item.angulo === slot.key)?.url : null);
+                                                {/* CONTROL DE CALIDAD QC (6 PUNTOS) */}
+                                                <div className="space-y-2 border border-slate-200 dark:border-slate-800 rounded-2xl p-4 bg-slate-50/50 dark:bg-slate-950">
+                                                    <span className="text-xs font-black text-slate-700 dark:text-slate-300 uppercase tracking-wider block mb-2">
+                                                        🛡️ Liberación de Calidad (QC 6 Puntos)
+                                                    </span>
+                                                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                                                        {CONTROL_CALIDAD_LIST.map((item) => {
+                                                            const isChecked = Boolean(qcFormState[item.key]);
                                                             return (
-                                                                <div key={slot.key} className="space-y-1.5">
-                                                                    <div className="text-[11px] font-bold text-slate-600 dark:text-slate-400 truncate flex items-center gap-1">
-                                                                        <span>{slot.icon}</span>
-                                                                        <span className="truncate">{slot.label}</span>
-                                                                    </div>
-                                                                    {imgUrl ? (
-                                                                        <div
-                                                                            onClick={() => setPreviewPhoto({ url: imgUrl, label: slot.label })}
-                                                                            className="group relative rounded-2xl overflow-hidden border border-emerald-200 dark:border-emerald-800 bg-black aspect-video cursor-pointer shadow-md"
-                                                                        >
-                                                                            <img src={imgUrl} alt={slot.label} className="w-full h-full object-cover group-hover:scale-105 transition-all" />
-                                                                            <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-all flex items-center justify-center text-white text-xs font-bold">
-                                                                                🔍 {__('Ampliar')}
-                                                                            </div>
-                                                                        </div>
-                                                                    ) : (
-                                                                        <div className="rounded-2xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900 aspect-video flex items-center justify-center text-[10px] text-slate-400 italic">
-                                                                            {__('Sin Foto')}
-                                                                        </div>
+                                                                <div
+                                                                    key={item.key}
+                                                                    onClick={() => setQcFormState((prev) => ({ ...prev, [item.key]: !prev[item.key] }))}
+                                                                    className={cn(
+                                                                        "flex items-center gap-2 p-2.5 rounded-xl border text-xs font-bold cursor-pointer transition-all shadow-xs select-none",
+                                                                        isChecked
+                                                                            ? "bg-emerald-50 border-emerald-300 text-emerald-900 dark:bg-emerald-950/40 dark:text-emerald-200"
+                                                                            : "bg-slate-100 border-slate-200 text-slate-500"
                                                                     )}
+                                                                >
+                                                                    <span>{isChecked ? '☑️' : '⬜'}</span>
+                                                                    <span>{item.label}</span>
                                                                 </div>
                                                             );
                                                         })}
                                                     </div>
                                                 </div>
-                                            )}
-                                        </CardContent>
-                                    </Card>
-                                )}
+                                            </div>
+                                        </div>
+
+                                        {/* 3. FOTOS & OBSERVACIONES FINALES */}
+                                        <div className="space-y-3 pt-4 border-t border-slate-100 dark:border-slate-800">
+                                            <div className="space-y-0.5">
+                                                <h4 className="text-sm font-black text-slate-900 dark:text-slate-100 flex items-center gap-2">
+                                                    <FileText className="w-4 h-4 text-emerald-600" />
+                                                    {__('3. Observaciones Finales del Servicio')}
+                                                </h4>
+                                                <p className="text-xs text-slate-400">
+                                                    {__('Comentarios o recomendaciones finales enviadas al cliente o guardadas en la bitácora.')}
+                                                </p>
+                                            </div>
+
+                                            <Textarea
+                                                rows={3}
+                                                placeholder={__('Escriba observaciones finales o recomendaciones sobre la reparación efectuada...')}
+                                                value={observacionesPostInput}
+                                                onChange={(e) => setObservacionesPostInput(e.target.value)}
+                                                className="text-xs bg-slate-50 dark:bg-slate-950 border-slate-200 dark:border-slate-800 focus:bg-white"
+                                            />
+                                        </div>
+
+                                        {/* BOTÓN DE GUARDADO POST-SERVICO */}
+                                        <div className="pt-4 border-t border-slate-100 dark:border-slate-800 flex justify-end">
+                                            <Button
+                                                type="button"
+                                                onClick={handleSavePostServicioInline}
+                                                disabled={isSavingPostInline}
+                                                className="bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold px-6 h-11 gap-2 rounded-xl shadow-lg shadow-emerald-200 dark:shadow-none"
+                                            >
+                                                <Save className="w-4 h-4" />
+                                                {isSavingPostInline ? __('Guardando Post-Atención...') : __('💾 Guardar Validación Post-Atención')}
+                                            </Button>
+                                        </div>
+                                    </CardContent>
+                                </Card>
                             </div>
                         )}
 
@@ -2300,8 +2525,9 @@ export default function ShowReparacion({ orden, productosRepuestos = [], tecnico
                         )}
                     </div>
 
-                    {/* COLUMNA DERECHA: RESUMEN FINANCIERO E HISTORIAL (1 ANCHO) */}
-                    <div className="space-y-6">
+                    {/* COLUMNA DERECHA: RESUMEN FINANCIERO (SOLO SE MUESTRA EN PESTAÑA DE REPUESTOS) */}
+                    {activeTab === 'repuestos' && (
+                        <div className="space-y-6">
                         {/* RESUMEN FINANCIERO Y CONTROL DE COSTOS */}
                         <Card className="border-slate-200 dark:border-slate-800 shadow-sm bg-white dark:bg-slate-900">
                             <CardHeader className="bg-slate-50 dark:bg-slate-900/50 border-b border-slate-100 dark:border-slate-800 py-3">
@@ -2396,7 +2622,57 @@ export default function ShowReparacion({ orden, productosRepuestos = [], tecnico
                             </CardContent>
                         </Card>
                     </div>
+                    )}
                 </div>
+
+                {/* MODAL AGREGAR NUEVO PUNTO DE INSPECCIÓN CUSTÓMICO */}
+                <Dialog open={openAddCustomItemModal} onOpenChange={setOpenAddCustomItemModal}>
+                    <DialogContent className="sm:max-w-md bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800">
+                        <DialogHeader>
+                            <DialogTitle className="text-sm font-bold flex items-center gap-2 text-indigo-700 dark:text-indigo-300">
+                                <Plus className="w-4 h-4 text-indigo-600" />
+                                {__('Agregar Nuevo Punto de Inspección')}
+                            </DialogTitle>
+                        </DialogHeader>
+
+                        <div className="space-y-4 py-2">
+                            <div className="space-y-2">
+                                <Label className="text-xs font-bold text-slate-700 dark:text-slate-300">
+                                    {__('Nombre del Componente o Punto de Revisión')}
+                                </Label>
+                                <Input
+                                    type="text"
+                                    placeholder={__('Ej. Bocina Superior, Lector de Huella, Sensor de Proximidad...')}
+                                    value={newCustomItemName}
+                                    onChange={(e) => setNewCustomItemName(e.target.value)}
+                                    onKeyDown={(e) => {
+                                        if (e.key === 'Enter') handleAddCustomItem();
+                                    }}
+                                    className="text-xs"
+                                />
+                            </div>
+
+                            <div className="flex justify-end gap-2 pt-2">
+                                <Button
+                                    type="button"
+                                    variant="outline"
+                                    onClick={() => setOpenAddCustomItemModal(false)}
+                                    className="text-xs font-bold"
+                                >
+                                    {__('Cancelar')}
+                                </Button>
+                                <Button
+                                    type="button"
+                                    onClick={handleAddCustomItem}
+                                    className="bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold gap-1.5"
+                                >
+                                    <Plus className="w-4 h-4" />
+                                    {__('Agregar Punto')}
+                                </Button>
+                            </div>
+                        </div>
+                    </DialogContent>
+                </Dialog>
 
                 {/* MODAL AMPLIACIÓN FOTO */}
                 <Dialog open={!!previewPhoto} onOpenChange={(open) => { if (!open) setPreviewPhoto(null); }}>

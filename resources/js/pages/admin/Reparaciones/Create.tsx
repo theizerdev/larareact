@@ -960,6 +960,11 @@ export default function CreateReparacion({ clientes: initialClientes, marcas: in
         transform((prevData) => ({
             ...prevData,
             servicios_seleccionados: cartServicios,
+            inspeccion_json: {
+                tipo_bloqueo: tipoSeguridad === 'patron' ? 'patron' : tipoSeguridad === 'pin_contrasena' ? 'pin' : 'sin_bloqueo',
+                patron_dots: patronSecuencia,
+                codigo_pin: claveSeguridad,
+            },
         }));
 
         post('/admin/reparaciones', {
