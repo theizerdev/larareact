@@ -169,11 +169,20 @@ class ControlAccesoService
     }
 
     /**
-     * Lista vehículos registrados en el ivms.
+     * Lista vehículos registrados manualmente en el ivms (alta administrativa).
      */
     public function listVehicles(array $query = []): array
     {
         return $this->get('/vehicles', $query);
+    }
+
+    /**
+     * Directorio automático de vehículos detectados por las cámaras ANPR
+     * (incluye tanto detecciones no registradas como vehículos registrados).
+     */
+    public function listVehicleDirectory(array $query = []): array
+    {
+        return $this->get('/vehicles/directory', $query);
     }
 
     /**

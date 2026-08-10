@@ -99,13 +99,13 @@ class ControlAccesoController extends Controller
         return $this->renderList(
             $request,
             'admin/control-acceso/vehiculos',
-            $service ? fn (array $q) => $service->listVehicles($q) : null,
+            $service ? fn (array $q) => $service->listVehicleDirectory($q) : null,
             array_filter([
                 'search' => $request->input('search') ?: null,
                 'employee_no' => $request->input('employee_no') ?: null,
                 'plate_number' => $request->input('plate_number') ?: null,
-                'brand' => $request->input('brand') ?: null,
-                'include_deleted' => $request->boolean('include_deleted') ? 'true' : null,
+                'brand_code' => $request->input('brand_code') ?: null,
+                'is_registered' => $request->has('is_registered') ? ($request->boolean('is_registered') ? 'true' : 'false') : null,
             ])
         );
     }

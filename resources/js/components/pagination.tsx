@@ -1,4 +1,5 @@
 import { router } from '@inertiajs/react';
+import { ChevronLeft, ChevronRight } from 'lucide-react';
 import React from 'react';
 import { Button } from '@/components/ui/button';
 import { useTranslate } from '@/hooks/use-translate';
@@ -40,7 +41,7 @@ interface PaginationProps {
  * @returns {JSX.Element} Componente de paginación
  */
 const Pagination: React.FC<PaginationProps> = ({ paginatedData, filters = {} }) => {
-    const { current_page, last_page, from, to, total, links } = paginatedData;
+    const { last_page, from, to, total, links } = paginatedData;
     const { __ } = useTranslate();
 
     /**
@@ -116,6 +117,13 @@ return null;
                         return <span key={index} className="px-3 py-2">...</span>;
                     }
 
+                    // Los labels "previous"/"next" de Laravel vienen con entidades HTML
+                    // (&laquo;/&raquo;) y el texto varía según el idioma configurado
+                    // (lang/{locale}/pagination.php), así que detectamos por la entidad
+                    // en vez de comparar el string completo.
+                    const isPrevious = link.label.includes('&laquo;');
+                    const isNext = link.label.includes('&raquo;');
+
                     return (
                         <Button
                             key={index}
@@ -125,8 +133,19 @@ return null;
                             onClick={() => handlePageChange(link.url)}
                             className="min-w-[40px]"
                         >
-                            {link.label === "&laquo; Previous" ? __('Previous') :
-                                link.label === "Next &raquo;" ? __('Next') : link.label}
+                            {isPrevious ? (
+                                <span className="flex items-center gap-1">
+                                    <ChevronLeft className="h-4 w-4" />
+                                    {__('Previous')}
+                                </span>
+                            ) : isNext ? (
+                                <span className="flex items-center gap-1">
+                                    {__('Next')}
+                                    <ChevronRight className="h-4 w-4" />
+                                </span>
+                            ) : (
+                                link.label
+                            )}
                         </Button>
                     );
                 })}
