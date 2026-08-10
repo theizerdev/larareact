@@ -323,15 +323,7 @@ export default function IndexReparaciones({ ordenes, counts, tecnicos, currencyS
         { title: __('Servicio Técnico'), href: '/admin/reparaciones' },
     ];
 
-    const kpiCards = [
-        { key: 'all', label: isTecnicoOnly ? __('Mis Equipos') : __('Todas las Órdenes'), count: ordenes.total, icon: '📋', color: 'slate' },
-        { key: 'recibido', label: __('Recibidos'), count: counts['recibido'] || 0, icon: '🟡', color: 'amber' },
-        { key: 'en_diagnostico', label: __('En Diagnóstico'), count: counts['en_diagnostico'] || 0, icon: '🔍', color: 'blue' },
-        { key: 'en_reparacion', label: __('En Reparación'), count: counts['en_reparacion'] || 0, icon: '🛠️', color: 'purple' },
-        { key: 'esperando_repuesto', label: __('Esperando Repuesto'), count: counts['esperando_repuesto'] || 0, icon: '📦', color: 'orange' },
-        { key: 'reparado', label: __('Listo p/ Entrega'), count: counts['reparado'] || 0, icon: '🟢', color: 'emerald' },
-        { key: 'entregado', label: __('Entregados'), count: counts['entregado'] || 0, icon: '✅', color: 'slate' },
-    ];
+
 
     return (
         <>
@@ -380,42 +372,6 @@ export default function IndexReparaciones({ ordenes, counts, tecnicos, currencyS
                             </Button>
                         </Link>
                     </div>
-                </div>
-
-                {/* STRIP DE KPIS / BOTONES NAVEGACIÓN ESTADO */}
-                <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-7 gap-3">
-                    {kpiCards.map((card) => {
-                        const isActive = (status === card.key) || (status === '' && card.key === 'all');
-                        return (
-                            <button
-                                key={card.key}
-                                type="button"
-                                onClick={() => { setStatus(card.key); handleFilter(card.key); }}
-                                className={cn(
-                                    'p-3.5 rounded-xl border text-left transition-all flex flex-col justify-between cursor-pointer relative overflow-hidden group',
-                                    isActive
-                                        ? 'bg-purple-600 text-white border-purple-600 shadow-md shadow-purple-600/20 ring-2 ring-purple-600/30'
-                                        : 'bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 hover:border-purple-300 dark:hover:border-purple-800 text-slate-800 dark:text-slate-200'
-                                )}
-                            >
-                                <div className="flex items-center justify-between">
-                                    <span className="text-base">{card.icon}</span>
-                                    <span className={cn(
-                                        'text-lg font-black font-mono',
-                                        isActive ? 'text-white' : 'text-slate-900 dark:text-slate-100'
-                                    )}>
-                                        {card.count}
-                                    </span>
-                                </div>
-                                <span className={cn(
-                                    'text-[11px] font-bold mt-2 truncate block',
-                                    isActive ? 'text-purple-100' : 'text-slate-500 dark:text-slate-400 group-hover:text-purple-600'
-                                )}>
-                                    {card.label}
-                                </span>
-                            </button>
-                        );
-                    })}
                 </div>
 
                 {/* CARD DE FILTROS Y BÚSQUEDA AVANZADA */}

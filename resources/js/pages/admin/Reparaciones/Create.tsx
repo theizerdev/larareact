@@ -1003,9 +1003,7 @@ export default function CreateReparacion({ clientes: initialClientes, marcas: in
                 </div>
 
                 <form onSubmit={handleSubmit}>
-                    <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                        {/* COLUMNA PRINCIPAL DEL FORMULARIO UNIFICADO (2 COLUMNAS DE ANCHO) */}
-                        <div className="lg:col-span-2 space-y-6">
+                    <div className="max-w-4xl mx-auto space-y-6">
 
                             {/* SECCIÓN 1: DATOS DEL CLIENTE */}
                             <Card className="border-slate-200 dark:border-slate-800 shadow-sm overflow-visible">
@@ -1888,7 +1886,7 @@ export default function CreateReparacion({ clientes: initialClientes, marcas: in
                                     </CardTitle>
                                 </CardHeader>
                                 <CardContent className="p-4 space-y-4">
-                                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                                         <div>
                                             <Label className="text-xs font-semibold">{__('Costo Estimado (Total)')}</Label>
                                             <div className="relative mt-1">
@@ -1915,13 +1913,6 @@ export default function CreateReparacion({ clientes: initialClientes, marcas: in
                                                     onChange={(e) => setData('anticipo', e.target.value)}
                                                     className="text-xs h-10 pl-8 font-mono font-bold text-emerald-600"
                                                 />
-                                            </div>
-                                        </div>
-
-                                        <div>
-                                            <Label className="text-xs font-semibold">{__('Saldo Restante Pendiente')}</Label>
-                                            <div className="h-10 mt-1 px-3 border border-slate-200 dark:border-slate-700 rounded-md bg-emerald-50 dark:bg-emerald-950/30 flex items-center font-mono font-black text-emerald-700 dark:text-emerald-300 text-sm">
-                                                {currencySymbol}{saldoRestanteNum.toFixed(2)}
                                             </div>
                                         </div>
                                     </div>
@@ -2224,65 +2215,6 @@ export default function CreateReparacion({ clientes: initialClientes, marcas: in
                                 </Button>
                             </div>
 
-                        </div>
-
-                        {/* COLUMNA DERECHA: RESUMEN DE LA ORDEN / TICKET EN VIVO (1 COLUMNA DE ANCHO) */}
-                        <div className="space-y-6">
-                            <Card className="border-slate-200 dark:border-slate-800 shadow-md sticky top-6">
-                                <CardHeader className="bg-slate-900 text-white py-3.5 rounded-t-xl">
-                                    <CardTitle className="text-xs font-mono uppercase tracking-wider flex items-center justify-between">
-                                        <span>🧾 Resumen de la Orden</span>
-                                        <Badge className="bg-purple-500/20 text-purple-300 text-[10px]">EN BORRADOR</Badge>
-                                    </CardTitle>
-                                </CardHeader>
-                                <CardContent className="p-4 space-y-4 text-xs font-mono">
-                                    <div className="space-y-2 border-b border-slate-100 dark:border-slate-800 pb-3">
-                                        <div className="flex justify-between">
-                                            <span className="text-slate-400">Cliente:</span>
-                                            <span className="font-bold text-slate-800 dark:text-slate-200 truncate max-w-[150px]">{data.cliente_nombre || 'Sin Cliente'}</span>
-                                        </div>
-                                        <div className="flex justify-between">
-                                            <span className="text-slate-400">Teléfono:</span>
-                                            <span className="text-slate-700 dark:text-slate-300">{data.cliente_telefono || 'N/A'}</span>
-                                        </div>
-                                    </div>
-
-                                    <div className="space-y-2 border-b border-slate-100 dark:border-slate-800 pb-3">
-                                        <div className="flex justify-between">
-                                            <span className="text-slate-400">Equipo:</span>
-                                            <span className="font-bold text-purple-600 dark:text-purple-400 capitalize">{data.tipo_dispositivo}</span>
-                                        </div>
-                                        <div className="flex justify-between">
-                                            <span className="text-slate-400">Marca/Modelo:</span>
-                                            <span className="font-bold text-slate-800 dark:text-slate-200 truncate max-w-[150px]">{data.marca_nombre} {data.modelo_nombre}</span>
-                                        </div>
-                                        <div className="flex justify-between">
-                                            <span className="text-slate-400">IMEI/Serie:</span>
-                                            <span className="text-slate-700 dark:text-slate-300">{data.imei_serie || 'N/A'}</span>
-                                        </div>
-                                    </div>
-
-                                    <div className="space-y-2 pt-1">
-                                        <div className="flex justify-between text-slate-600 dark:text-slate-400">
-                                            <span>Presupuesto Total:</span>
-                                            <span className="font-bold">{currencySymbol}{costoEstimadoNum.toFixed(2)}</span>
-                                        </div>
-                                        <div className="flex justify-between text-emerald-600">
-                                            <span>Anticipo:</span>
-                                            <span className="font-bold">-{currencySymbol}{anticipoNum.toFixed(2)}</span>
-                                        </div>
-                                        <div className="flex justify-between text-sm font-black text-slate-900 dark:text-slate-100 pt-2 border-t border-slate-200 dark:border-slate-800">
-                                            <span>Saldo Pendiente:</span>
-                                            <span className="text-emerald-600">{currencySymbol}{saldoRestanteNum.toFixed(2)}</span>
-                                        </div>
-                                    </div>
-
-                                    <div className="pt-2 text-[10px] text-slate-400 font-sans italic text-center">
-                                        {__('El ticket de recepción y QR de consulta se generarán automáticamente al guardar.')}
-                                    </div>
-                                </CardContent>
-                            </Card>
-                        </div>
                     </div>
                 </form>
             </div>
