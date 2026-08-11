@@ -987,40 +987,22 @@ export default function Index({
                             )}
                         </div>
 
-                        <div className="grid grid-cols-3 gap-2">
-                            <div className="col-span-1">
-                                <Label htmlFor="pre_pais_telefono_id">{__('País')}</Label>
-                                <Select
-                                    value={preRegistroForm.data.pais_telefono_id}
-                                    onValueChange={(val) => preRegistroForm.setData('pais_telefono_id', val)}
-                                >
-                                    <SelectTrigger id="pre_pais_telefono_id" className="mt-1">
-                                        <SelectValue placeholder="País" />
-                                    </SelectTrigger>
-                                    <SelectContent>
-                                        {paises.map((p) => (
-                                            <SelectItem key={p.id} value={String(p.id)}>
-                                                {p.codigo_iso} ({p.codigo_telefonico})
-                                            </SelectItem>
-                                        ))}
-                                    </SelectContent>
-                                </Select>
-                            </div>
-                            <div className="col-span-2">
-                                <Label htmlFor="pre_telefono">{__('WhatsApp del Productor')}</Label>
-                                <Input
-                                    id="pre_telefono"
-                                    required
-                                    type="tel"
-                                    className="mt-1"
-                                    placeholder="ej. 3511234567"
-                                    value={preRegistroForm.data.telefono}
-                                    onChange={(e) => preRegistroForm.setData('telefono', e.target.value)}
+                        <div>
+                            <Label>{__('WhatsApp del Productor')}</Label>
+                            <div className="mt-1.5 w-full">
+                                <PhoneInputGroup
+                                    paises={paises}
+                                    selectedPaisId={preRegistroForm.data.pais_telefono_id ? String(preRegistroForm.data.pais_telefono_id) : ''}
+                                    phoneValue={preRegistroForm.data.telefono || ''}
+                                    onPaisChange={(id) => preRegistroForm.setData('pais_telefono_id', String(id))}
+                                    onPhoneChange={(phone) => preRegistroForm.setData('telefono', phone)}
+                                    placeholder="351-1234567"
+                                    className="w-full"
                                 />
-                                {preRegistroForm.errors.telefono && (
-                                    <p className="text-xs text-red-500 mt-1">{preRegistroForm.errors.telefono}</p>
-                                )}
                             </div>
+                            {preRegistroForm.errors.telefono && (
+                                <p className="text-xs text-red-500 mt-1">{preRegistroForm.errors.telefono}</p>
+                            )}
                         </div>
 
                         <DialogFooter className="pt-4 border-t border-slate-100 dark:border-slate-800">
