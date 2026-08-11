@@ -93,6 +93,10 @@ export default function ConfiguracionAsistenciaIndex({ configuracion, turnos, di
         porcentaje_prima_dominical: configuracion?.porcentaje_prima_dominical ?? '25.00',
         requiere_foto_marcaje: configuracion?.requiere_foto_marcaje ?? false,
         redondeo_marcaje_minutos: configuracion?.redondeo_marcaje_minutos ?? 0,
+        ley_silla_intervalo_horas: configuracion?.ley_silla_intervalo_horas ?? '2.00',
+        ley_silla_descanso_minutos: configuracion?.ley_silla_descanso_minutos ?? 5,
+        whatsapp_recordatorio_descanso: configuracion?.whatsapp_recordatorio_descanso ?? true,
+        whatsapp_recordatorio_horas_post_entrada: configuracion?.whatsapp_recordatorio_horas_post_entrada ?? '4.00',
     });
 
     const handleSaveConfig = (e: React.FormEvent) => {
@@ -430,6 +434,70 @@ export default function ConfiguracionAsistenciaIndex({ configuracion, turnos, di
                                                 <span className="absolute right-3 top-2.5 text-muted-foreground text-sm">%</span>
                                             </div>
                                             <p className="text-xs text-muted-foreground">Por ley es mínimo el 25% sobre el salario diario ordinario.</p>
+                                        </div>
+
+                                        {/* Ley Silla & Descansos */}
+                                        <div className="p-4 rounded-xl border space-y-4 bg-muted/20 border-emerald-500/30">
+                                            <h4 className="text-xs font-bold uppercase tracking-wider text-emerald-600 dark:text-emerald-400 flex items-center gap-2">
+                                                <Coffee className="w-4 h-4" />
+                                                Regla Ley Silla & Recordatorios de Descanso
+                                            </h4>
+
+                                            <div className="grid grid-cols-2 gap-4">
+                                                <div className="space-y-1.5">
+                                                    <Label className="text-xs">Intervalo de Trabajo (Horas)</Label>
+                                                    <Input
+                                                        type="number"
+                                                        step="0.5"
+                                                        min="1"
+                                                        max="10"
+                                                        value={configForm.data.ley_silla_intervalo_horas}
+                                                        onChange={(e) => configForm.setData('ley_silla_intervalo_horas', e.target.value)}
+                                                    />
+                                                    <p className="text-[11px] text-muted-foreground">Horas continuas de labor.</p>
+                                                </div>
+
+                                                <div className="space-y-1.5">
+                                                    <Label className="text-xs">Minutos Descanso Sentado</Label>
+                                                    <Input
+                                                        type="number"
+                                                        step="1"
+                                                        min="1"
+                                                        max="60"
+                                                        value={configForm.data.ley_silla_descanso_minutos}
+                                                        onChange={(e) => configForm.setData('ley_silla_descanso_minutos', parseInt(e.target.value) || 5)}
+                                                    />
+                                                    <p className="text-[11px] text-muted-foreground">Tiempo asignado por intervalo.</p>
+                                                </div>
+                                            </div>
+
+                                            <div className="pt-2 border-t space-y-3">
+                                                <div className="flex items-center justify-between">
+                                                    <div className="space-y-0.5">
+                                                        <Label className="text-xs font-semibold">Recordatorio de Descanso por WhatsApp</Label>
+                                                        <p className="text-[11px] text-muted-foreground">Notifica al empleado en su marcaje de entrada cuándo tomar su descanso.</p>
+                                                    </div>
+                                                    <Switch
+                                                        checked={configForm.data.whatsapp_recordatorio_descanso}
+                                                        onCheckedChange={(checked) => configForm.setData('whatsapp_recordatorio_descanso', checked)}
+                                                    />
+                                                </div>
+
+                                                {configForm.data.whatsapp_recordatorio_descanso && (
+                                                    <div className="space-y-1.5">
+                                                        <Label className="text-xs">Recordar a las (Horas post-entrada):</Label>
+                                                        <Input
+                                                            type="number"
+                                                            step="0.5"
+                                                            min="1"
+                                                            max="8"
+                                                            value={configForm.data.whatsapp_recordatorio_horas_post_entrada}
+                                                            onChange={(e) => configForm.setData('whatsapp_recordatorio_horas_post_entrada', e.target.value)}
+                                                        />
+                                                        <p className="text-[11px] text-muted-foreground">Ejemplo: 4.0 hrs (A las 4 horas de iniciada la jornada laboral).</p>
+                                                    </div>
+                                                )}
+                                            </div>
                                         </div>
                                     </CardContent>
                                 </Card>

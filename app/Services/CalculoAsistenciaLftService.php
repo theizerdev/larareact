@@ -186,4 +186,40 @@ class CalculoAsistenciaLftService
             ]
         );
     }
+
+    /**
+     * Devuelve la clasificación de semáforo semanal según horas laboradas.
+     */
+    public function obtenerSemaforoSemanal(float $totalHoras): array
+    {
+        if ($totalHoras <= 40.0) {
+            return [
+                'nivel' => 'verde',
+                'label' => 'Jornada Normal (1 - 40h)',
+                'color_class' => 'bg-emerald-500/20 text-emerald-300 border-emerald-500/40',
+                'alerta_explotacion' => false,
+            ];
+        } elseif ($totalHoras <= 48.0) {
+            return [
+                'nivel' => 'amarillo',
+                'label' => 'Horas Extra (41 - 48h)',
+                'color_class' => 'bg-amber-500/20 text-amber-300 border-amber-500/40',
+                'alerta_explotacion' => false,
+            ];
+        } elseif ($totalHoras <= 60.0) {
+            return [
+                'nivel' => 'rojo',
+                'label' => 'Exceso de Jornada (49 - 60h)',
+                'color_class' => 'bg-rose-500/20 text-rose-300 border-rose-500/40',
+                'alerta_explotacion' => false,
+            ];
+        } else {
+            return [
+                'nivel' => 'critico',
+                'label' => '¡Explotación Laboral! (>61h)',
+                'color_class' => 'bg-rose-950 text-white border-rose-600 animate-pulse font-black',
+                'alerta_explotacion' => true,
+            ];
+        }
+    }
 }

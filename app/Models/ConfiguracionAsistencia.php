@@ -42,6 +42,11 @@ class ConfiguracionAsistencia extends Model
         'porcentaje_prima_dominical',
         'requiere_foto_marcaje',
         'redondeo_marcaje_minutos',
+        'ley_silla_intervalo_horas',
+        'ley_silla_descanso_minutos',
+        'opciones_descanso_minutos',
+        'whatsapp_recordatorio_descanso',
+        'whatsapp_recordatorio_horas_post_entrada',
     ];
 
     protected function casts(): array
@@ -50,7 +55,12 @@ class ConfiguracionAsistencia extends Model
             'descanso_es_tiempo_efectivo' => 'boolean',
             'horas_extra_requieren_aprobacion' => 'boolean',
             'requiere_foto_marcaje' => 'boolean',
+            'whatsapp_recordatorio_descanso' => 'boolean',
+            'opciones_descanso_minutos' => 'array',
             'porcentaje_prima_dominical' => 'decimal:2',
+            'ley_silla_intervalo_horas' => 'decimal:2',
+            'whatsapp_recordatorio_horas_post_entrada' => 'decimal:2',
+            'ley_silla_descanso_minutos' => 'integer',
             'tolerancia_retardo_minutos' => 'integer',
             'tolerancia_falta_minutos' => 'integer',
             'redondeo_marcaje_minutos' => 'integer',

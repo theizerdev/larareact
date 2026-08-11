@@ -210,6 +210,7 @@ export default function CalculoNominaIndex({ resumenesSemanales, stats, filters 
                                     <tr>
                                         <th className="px-4 py-3">Empleado</th>
                                         <th className="px-4 py-3">Turno / Jornada</th>
+                                        <th className="px-4 py-3 text-center">Semáforo Semanal</th>
                                         <th className="px-4 py-3 text-right">Salario Diario</th>
                                         <th className="px-4 py-3 text-center">Hrs. Ordinarias</th>
                                         <th className="px-4 py-3 text-center">HE Dobles (+100%)</th>
@@ -222,51 +223,73 @@ export default function CalculoNominaIndex({ resumenesSemanales, stats, filters 
                                 <tbody className="divide-y">
                                     {resumenesSemanales.length === 0 ? (
                                         <tr>
-                                            <td colSpan={9} className="px-4 py-8 text-center text-muted-foreground">
+                                            <td colSpan={10} className="px-4 py-8 text-center text-muted-foreground">
                                                 No hay datos procesados para el período seleccionado. Haz clic en "Procesar Horas del Período" para ejecutar el cálculo.
                                             </td>
                                         </tr>
                                     ) : (
-                                        resumenesSemanales.map((r) => (
-                                            <tr key={r.id} className="hover:bg-muted/50 transition-colors">
-                                                <td className="px-4 py-3">
-                                                    <div className="font-semibold">{r.empleado.nombres} {r.empleado.apellidos}</div>
-                                                    <div className="text-xs text-muted-foreground">Doc: {r.empleado.documento_identidad} • {r.empleado.departamento?.nombre || 'General'}</div>
-                                                </td>
-                                                <td className="px-4 py-3">
-                                                    <div className="font-medium">{r.empleado.turnoLaboral?.nombre || 'Estándar'}</div>
-                                                    <Badge variant="secondary" className="text-[10px] capitalize">
-                                                        Jornada {r.empleado.turnoLaboral?.tipo_jornada || 'diurna'}
-                                                    </Badge>
-                                                </td>
-                                                <td className="px-4 py-3 text-right font-mono font-medium">
-                                                    {formatCurrency(r.empleado.salario_diario || 0)}
-                                                </td>
-                                                <td className="px-4 py-3 text-center font-mono font-medium">
-                                                    {r.total_horas_ordinarias} h
-                                                    <div className="text-[11px] text-muted-foreground">{formatCurrency(r.monto_horas_ordinarias)}</div>
-                                                </td>
-                                                <td className="px-4 py-3 text-center font-mono font-medium text-amber-600 dark:text-amber-400">
-                                                    {r.total_horas_extra_dobles} h
-                                                    <div className="text-[11px] opacity-80">{formatCurrency(r.monto_horas_dobles)}</div>
-                                                </td>
-                                                <td className="px-4 py-3 text-center font-mono font-medium text-rose-600 dark:text-rose-400">
-                                                    {r.total_horas_extra_triples} h
-                                                    <div className="text-[11px] opacity-80">{formatCurrency(r.monto_horas_triples)}</div>
-                                                </td>
-                                                <td className="px-4 py-3 text-center font-mono">
-                                                    <span className="font-medium">{r.primas_dominicales_aplicadas} días</span>
-                                                    <div className="text-[11px] text-muted-foreground">{formatCurrency(r.monto_primas_dominicales)}</div>
-                                                </td>
-                                                <td className="px-4 py-3 text-center font-mono">
-                                                    <span className="font-medium text-emerald-600 dark:text-emerald-400">{r.dias_festivos_trabajados} días</span>
-                                                    <div className="text-[11px] opacity-80">{formatCurrency(r.monto_festivos)}</div>
-                                                </td>
-                                                <td className="px-4 py-3 text-right font-mono font-bold text-base text-emerald-600 dark:text-emerald-400">
-                                                    {formatCurrency(r.monto_total_pagar)}
-                                                </td>
-                                            </tr>
-                                        ))
+                                        resumenesSemanales.map((r: any) => {
+                                            const totalH = (parseFloat(r.total_horas_ordinarias || 0) + parseFloat(r.total_horas_extra_dobles || 0) + parseFloat(r.total_horas_extra_triples || 0));
+                                            let semaforoBadgeClass = "bg-emerald-500/20 text-emerald-700 dark:text-emerald-300 border-emerald-500/40";
+                                            let semaforoText = `Verde (${totalH.toFixed(1)}h)`;
+
+                                            if (totalH > 60) {
+                                                semaforoBadgeClass = "bg-rose-950 text-rose-100 border-rose-600 animate-pulse font-black";
+                                                semaforoText = `🚨 ¡EXPLOTACIÓN! (${totalH.toFixed(1)}h)`;
+                                            } else if (totalH > 48) {
+                                                semaforoBadgeClass = "bg-rose-500/20 text-rose-700 dark:text-rose-300 border-rose-500/40 font-bold";
+                                                semaforoText = `Rojo (${totalH.toFixed(1)}h)`;
+                                            } else if (totalH > 40) {
+                                                semaforoBadgeClass = "bg-amber-500/20 text-amber-700 dark:text-amber-300 border-amber-500/40";
+                                                semaforoText = `Amarillo (${totalH.toFixed(1)}h)`;
+                                            }
+
+                                            return (
+                                                <tr key={r.id} className="hover:bg-muted/50 transition-colors">
+                                                    <td className="px-4 py-3">
+                                                        <div className="font-semibold">{r.empleado.nombres} {r.empleado.apellidos}</div>
+                                                        <div className="text-xs text-muted-foreground">Doc: {r.empleado.documento_identidad} • {r.empleado.departamento?.nombre || 'General'}</div>
+                                                    </td>
+                                                    <td className="px-4 py-3">
+                                                        <div className="font-medium">{r.empleado.turnoLaboral?.nombre || 'Estándar'}</div>
+                                                        <Badge variant="secondary" className="text-[10px] capitalize">
+                                                            Jornada {r.empleado.turnoLaboral?.tipo_jornada || 'diurna'}
+                                                        </Badge>
+                                                    </td>
+                                                    <td className="px-4 py-3 text-center">
+                                                        <Badge className={`text-xs px-2.5 py-1 border ${semaforoBadgeClass}`}>
+                                                            {r.semaforo?.label || semaforoText}
+                                                        </Badge>
+                                                    </td>
+                                                    <td className="px-4 py-3 text-right font-mono font-medium">
+                                                        {formatCurrency(r.empleado.salario_diario || 0)}
+                                                    </td>
+                                                    <td className="px-4 py-3 text-center font-mono font-medium">
+                                                        {r.total_horas_ordinarias} h
+                                                        <div className="text-[11px] text-muted-foreground">{formatCurrency(r.monto_horas_ordinarias)}</div>
+                                                    </td>
+                                                    <td className="px-4 py-3 text-center font-mono font-medium text-amber-600 dark:text-amber-400">
+                                                        {r.total_horas_extra_dobles} h
+                                                        <div className="text-[11px] opacity-80">{formatCurrency(r.monto_horas_dobles)}</div>
+                                                    </td>
+                                                    <td className="px-4 py-3 text-center font-mono font-medium text-rose-600 dark:text-rose-400">
+                                                        {r.total_horas_extra_triples} h
+                                                        <div className="text-[11px] opacity-80">{formatCurrency(r.monto_horas_triples)}</div>
+                                                    </td>
+                                                    <td className="px-4 py-3 text-center font-mono">
+                                                        <span className="font-medium">{r.primas_dominicales_aplicadas} días</span>
+                                                        <div className="text-[11px] text-muted-foreground">{formatCurrency(r.monto_primas_dominicales)}</div>
+                                                    </td>
+                                                    <td className="px-4 py-3 text-center font-mono">
+                                                        <span className="font-medium text-emerald-600 dark:text-emerald-400">{r.dias_festivos_trabajados} días</span>
+                                                        <div className="text-[11px] opacity-80">{formatCurrency(r.monto_festivos)}</div>
+                                                    </td>
+                                                    <td className="px-4 py-3 text-right font-mono font-bold text-base text-emerald-600 dark:text-emerald-400">
+                                                        {formatCurrency(r.monto_total_pagar)}
+                                                    </td>
+                                                </tr>
+                                            );
+                                        })
                                     )}
                                 </tbody>
                             </table>

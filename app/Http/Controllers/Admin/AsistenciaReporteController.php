@@ -82,12 +82,17 @@ class AsistenciaReporteController extends Controller
             }
         }
 
-        // Cargar resúmenes semanales procesados
+        // Cargar resúmenes semanales procesados y adjuntar semáforo
         $resumenesSemanales = AsistenciaResumenSemanal::with(['empleado.departamento', 'empleado.cargo', 'empleado.turnoLaboral'])
             ->when($empresaId, fn ($q) => $q->where('empresa_id', $empresaId))
             ->where('periodo_inicio', '>=', $fechaInicio)
             ->where('periodo_fin', '<=', $fechaFin)
-            ->get();
+            ->get()
+            ->map(function ($r) use ($calculoService) {
+                $totalH = (float)($r->total_horas_ordinarias + $r->total_horas_extra_dobles + $r->total_horas_extra_triples);
+                $r->semaforo = $calculoService->obtenerSemaforoSemanal($totalH);
+                return $r;
+            });
 
         // Tarjetas estadísticas consolidadas
         $stats = [

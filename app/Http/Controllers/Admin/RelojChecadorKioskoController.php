@@ -112,11 +112,14 @@ class RelojChecadorKioskoController extends Controller
     {
         $validated = $request->validate([
             'empleado_id' => 'required|exists:empleados,id',
-            'tipo_marcaje' => 'required|in:entrada,salida_comida,entrada_comida,salida',
+            'tipo_marcaje' => 'required|in:entrada,salida_comida,entrada_comida,salida,descanso_inicio,descanso_fin,incidente_inicio,incidente_fin,entrada_extraordinaria',
             'fotografia_base64' => 'nullable|string',
             'latitud' => 'nullable|numeric',
             'longitud' => 'nullable|numeric',
             'observaciones' => 'nullable|string|max:255',
+            'incidente_causa' => 'nullable|string|max:255',
+            'duracion_descanso_minutos' => 'nullable|integer|min:1|max:120',
+            'tipo_entrada' => 'nullable|string|in:normal,extraordinaria_doble,extraordinaria_triple',
         ]);
 
         $empleado = Empleado::findOrFail($validated['empleado_id']);
@@ -158,6 +161,9 @@ class RelojChecadorKioskoController extends Controller
             'latitud' => $validated['latitud'] ?? null,
             'longitud' => $validated['longitud'] ?? null,
             'observaciones' => $validated['observaciones'] ?? null,
+            'incidente_causa' => $validated['incidente_causa'] ?? null,
+            'duracion_descanso_minutos' => $validated['duracion_descanso_minutos'] ?? null,
+            'tipo_entrada' => $validated['tipo_entrada'] ?? 'normal',
             'registrado_por_user_id' => $request->user()?->id,
         ]);
 

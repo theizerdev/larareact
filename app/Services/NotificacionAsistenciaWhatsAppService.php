@@ -40,8 +40,10 @@ class NotificacionAsistenciaWhatsAppService
 
             switch ($marcaje->tipo_marcaje) {
                 case 'entrada':
+                case 'entrada_extraordinaria':
+                    $tipoEntradaTexto = $marcaje->tipo_marcaje === 'entrada_extraordinaria' ? 'Entrada Extraordinaria' : 'Entrada';
                     $mensaje = "🟢 *¡HOLA " . mb_strtoupper($empleado->nombres) . "!*\n\n";
-                    $mensaje .= "Se ha registrado tu *Entrada* a las *{$horaFormatted} hrs* el día {$fechaFormatted} (Vía {$origenNombre}).\n\n";
+                    $mensaje .= "Se ha registrado tu *{$tipoEntradaTexto}* a las *{$horaFormatted} hrs* el día {$fechaFormatted} (Vía {$origenNombre}).\n\n";
 
                     // Obtener resumen diario para verificar si hubo retardo
                     $resumen = AsistenciaResumenDiario::where('empleado_id', $empleado->id)
@@ -55,7 +57,55 @@ class NotificacionAsistenciaWhatsAppService
 
                     $turnoNombre = $empleado->turnoLaboral?->nombre ?? 'Jornada Regular';
                     $mensaje .= "📋 *Turno:* {$turnoNombre}\n\n";
+
+                    // Recordatorio de descanso configurado por la empresa
+                    $config = \App\Models\ConfiguracionAsistencia::where('empresa_id', $empleado->empresa_id)->first();
+                    if ($config && $config->whatsapp_recordatorio_descanso) {
+                        $hrsPost = (float) ($config->whatsapp_recordatorio_horas_post_entrada ?? 4.0);
+                        $horaDescansoRecordatorio = Carbon::parse($marcaje->fecha_hora)->addMinutes((int)($hrsPost * 60))->format('H:i');
+                        $minutosSilla = $config->ley_silla_descanso_minutos ?? 5;
+                        $intervaloSilla = (float)($config->ley_silla_intervalo_horas ?? 2.0);
+
+                        $mensaje .= "⏰ *Recordatorio de Descanso:*\n";
+                        $mensaje .= "• Descanso Sugerido / Almuerzo: *{$horaDescansoRecordatorio} hrs* (a las {$hrsPost}h de trabajo).\n";
+                        $mensaje .= "• Ley Silla: *{$minutosSilla} min de descanso* por cada *{$intervaloSilla}h continuas* de labor.\n\n";
+                    }
+
                     $mensaje .= "¡Te deseamos una excelente y productiva jornada laboral!";
+                    break;
+
+                case 'descanso_inicio':
+                    $minutosDescanso = $marcaje->duracion_descanso_minutos ?? 15;
+                    $horaRegreso = Carbon::parse($marcaje->fecha_hora)->addMinutes($minutosDescanso)->format('H:i');
+
+                    $mensaje = "☕ *¡DESCANSO INICIADO!*\n\n";
+                    $mensaje .= "Hola *{$empleado->nombres}*,\n";
+                    $mensaje .= "Tu descanso de *{$minutosDescanso} minutos* ha iniciado a las *{$horaFormatted} hrs*.\n\n";
+                    $mensaje .= "⏰ *Hora límite de regreso:* *{$horaRegreso} hrs*.\n\n";
+                    $mensaje .= "Recuerda marcar tu regreso al concluir tus minutos de descanso.";
+                    break;
+
+                case 'descanso_fin':
+                    $mensaje = "🟢 *¡FIN DE DESCANSO REGISTRADO!*\n\n";
+                    $mensaje .= "Hola *{$empleado->nombres}*,\n";
+                    $mensaje .= "Se ha registrado el fin de tu descanso a las *{$horaFormatted} hrs*.\n\n";
+                    $mensaje .= "¡Gracias por retornar a tiempo!";
+                    break;
+
+                case 'incidente_inicio':
+                    $causa = $marcaje->incidente_causa ?? 'No especificada';
+                    $mensaje = "⚠️ *REGISTRO DE INCIDENTE EN JORNADA*\n\n";
+                    $mensaje .= "Hola *{$empleado->nombres}*,\n";
+                    $mensaje .= "Se ha reportado una pausa por *Incidente* a las *{$horaFormatted} hrs*.\n";
+                    $mensaje .= "📌 *Causa registrada:* {$causa}.\n\n";
+                    $mensaje .= "Al resolver el incidente, no olvides registrar el fin del mismo en el Kiosko.";
+                    break;
+
+                case 'incidente_fin':
+                    $mensaje = "🟢 *FIN DE INCIDENTE REGISTRADO*\n\n";
+                    $mensaje .= "Hola *{$empleado->nombres}*,\n";
+                    $mensaje .= "Se ha registrado el fin del incidente a las *{$horaFormatted} hrs*.\n\n";
+                    $mensaje .= "Tu jornada continúa normalmente.";
                     break;
 
                 case 'salida_comida':

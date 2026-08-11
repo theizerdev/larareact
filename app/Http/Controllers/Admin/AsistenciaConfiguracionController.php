@@ -66,6 +66,10 @@ class AsistenciaConfiguracionController extends Controller
             'porcentaje_prima_dominical' => 'required|numeric|min:0|max:100',
             'requiere_foto_marcaje' => 'required|boolean',
             'redondeo_marcaje_minutos' => 'required|integer|in:0,5,10,15',
+            'ley_silla_intervalo_horas' => 'nullable|numeric|min:0.5|max:12',
+            'ley_silla_descanso_minutos' => 'nullable|integer|min:1|max:60',
+            'whatsapp_recordatorio_descanso' => 'nullable|boolean',
+            'whatsapp_recordatorio_horas_post_entrada' => 'nullable|numeric|min:0|max:12',
         ]);
 
         $configuracion = ConfiguracionAsistencia::firstOrCreate(['empresa_id' => $user->empresa_id]);

@@ -18,12 +18,15 @@ import {
     Volume2,
     X,
     Sparkles,
-    SwitchCamera
+    SwitchCamera,
+    AlertTriangle
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Label } from '@/components/ui/label';
+import { Input } from '@/components/ui/input';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 
 interface Configuracion {
     requiere_foto_marcaje?: boolean;
@@ -73,6 +76,12 @@ export default function RelojChecadorKiosko({ configuracion }: Props) {
     const qrStreamRef = useRef<MediaStream | null>(null);
     const [qrScanning, setQrScanning] = useState(false);
     const [qrDetectedNotice, setQrDetectedNotice] = useState<string | null>(null);
+
+    // Modales para Descansos e Incidentes
+    const [isDescansoModalOpen, setIsDescansoModalOpen] = useState(false);
+    const [selectedMinutosDescanso, setSelectedMinutosDescanso] = useState<number>(15);
+    const [isIncidenteModalOpen, setIsIncidenteModalOpen] = useState(false);
+    const [incidenteCausaInput, setIncidenteCausaInput] = useState<string>('');
 
     const inputRef = useRef<HTMLInputElement | null>(null);
 
@@ -320,7 +329,7 @@ export default function RelojChecadorKiosko({ configuracion }: Props) {
     };
 
     // Registrar Marcaje
-    const handleRegisterMarcaje = async (tipo: string) => {
+    const handleRegisterMarcaje = async (tipo: string, extraPayload: any = {}) => {
         if (!empleado) return;
 
         setLoadingSearch(true);
@@ -350,6 +359,7 @@ export default function RelojChecadorKiosko({ configuracion }: Props) {
                     empleado_id: empleado.id,
                     tipo_marcaje: tipo,
                     fotografia_base64: fotoBase64,
+                    ...extraPayload,
                 }),
             });
 
@@ -357,7 +367,9 @@ export default function RelojChecadorKiosko({ configuracion }: Props) {
 
             if (response.ok && data.success) {
                 playBeepSound();
-                setSuccessMessage(`¡Marcaje de ${tipo.toUpperCase()} registrado exitosamente para ${data.empleado_nombre}!`);
+                setSuccessMessage(`¡Marcaje de ${tipo.replace('_', ' ').toUpperCase()} registrado exitosamente para ${data.empleado_nombre}!`);
+                setIsDescansoModalOpen(false);
+                setIsIncidenteModalOpen(false);
                 setTimeout(() => {
                     handleNumpadClear();
                     setSuccessMessage(null);
@@ -538,57 +550,84 @@ export default function RelojChecadorKiosko({ configuracion }: Props) {
                                     SELECCIONE EL ACCIÓN A REGISTRAR:
                                 </Label>
 
-                                <div className="grid grid-cols-2 gap-3">
+                                <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
                                     <Button
-                                        onClick={() => handleRegisterMarcaje('entrada')}
+                                        onClick={() => handleRegisterMarcaje('entrada', { tipo_entrada: 'normal' })}
                                         disabled={loadingSearch}
-                                        className={`h-20 text-base font-bold flex flex-col items-center justify-center gap-1 rounded-xl transition-all ${
+                                        className={`h-20 text-xs sm:text-sm font-bold flex flex-col items-center justify-center gap-1 rounded-xl transition-all ${
                                             sugerenciaMarcaje === 'entrada'
-                                                ? 'bg-emerald-600 hover:bg-emerald-500 text-white ring-4 ring-emerald-500/40 shadow-lg shadow-emerald-950/50'
+                                                ? 'bg-emerald-600 hover:bg-emerald-500 text-white ring-4 ring-emerald-500/40 shadow-lg'
                                                 : 'bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700'
                                         }`}
                                     >
-                                        <LogIn className="w-6 h-6 text-emerald-400" />
-                                        <span>ENTRADA</span>
+                                        <LogIn className="w-5 h-5 text-emerald-400" />
+                                        <span>INICIO JORNADA</span>
+                                    </Button>
+
+                                    <Button
+                                        onClick={() => handleRegisterMarcaje('entrada_extraordinaria', { tipo_entrada: 'extraordinaria_doble' })}
+                                        disabled={loadingSearch}
+                                        className="h-20 text-xs sm:text-sm font-bold flex flex-col items-center justify-center gap-1 rounded-xl bg-purple-900/80 hover:bg-purple-800 text-purple-200 border border-purple-700/60 shadow-lg transition-all"
+                                    >
+                                        <Sparkles className="w-5 h-5 text-purple-400" />
+                                        <span>TIEMPO EXTRA</span>
+                                    </Button>
+
+                                    <Button
+                                        onClick={() => setIsDescansoModalOpen(true)}
+                                        disabled={loadingSearch}
+                                        className="h-20 text-xs sm:text-sm font-bold flex flex-col items-center justify-center gap-1 rounded-xl bg-teal-900/80 hover:bg-teal-800 text-teal-200 border border-teal-700/60 shadow-lg transition-all"
+                                    >
+                                        <Coffee className="w-5 h-5 text-teal-400" />
+                                        <span>DESCANSO</span>
                                     </Button>
 
                                     <Button
                                         onClick={() => handleRegisterMarcaje('salida_comida')}
                                         disabled={loadingSearch}
-                                        className={`h-20 text-base font-bold flex flex-col items-center justify-center gap-1 rounded-xl transition-all ${
+                                        className={`h-20 text-xs sm:text-sm font-bold flex flex-col items-center justify-center gap-1 rounded-xl transition-all ${
                                             sugerenciaMarcaje === 'salida_comida'
                                                 ? 'bg-amber-600 hover:bg-amber-500 text-white ring-4 ring-amber-500/40 shadow-lg'
                                                 : 'bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700'
                                         }`}
                                     >
-                                        <Utensils className="w-6 h-6 text-amber-400" />
-                                        <span>SALIDA COMIDA</span>
+                                        <Utensils className="w-5 h-5 text-amber-400" />
+                                        <span>INICIO COMIDA</span>
                                     </Button>
 
                                     <Button
                                         onClick={() => handleRegisterMarcaje('entrada_comida')}
                                         disabled={loadingSearch}
-                                        className={`h-20 text-base font-bold flex flex-col items-center justify-center gap-1 rounded-xl transition-all ${
+                                        className={`h-20 text-xs sm:text-sm font-bold flex flex-col items-center justify-center gap-1 rounded-xl transition-all ${
                                             sugerenciaMarcaje === 'entrada_comida'
                                                 ? 'bg-indigo-600 hover:bg-indigo-500 text-white ring-4 ring-indigo-500/40 shadow-lg'
                                                 : 'bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700'
                                         }`}
                                     >
-                                        <Coffee className="w-6 h-6 text-indigo-400" />
-                                        <span>REGRESO COMIDA</span>
+                                        <LogIn className="w-5 h-5 text-indigo-400" />
+                                        <span>FIN COMIDA</span>
+                                    </Button>
+
+                                    <Button
+                                        onClick={() => setIsIncidenteModalOpen(true)}
+                                        disabled={loadingSearch}
+                                        className="h-20 text-xs sm:text-sm font-bold flex flex-col items-center justify-center gap-1 rounded-xl bg-amber-950/80 hover:bg-amber-900 text-amber-200 border border-amber-800/60 shadow-lg transition-all"
+                                    >
+                                        <AlertTriangle className="w-5 h-5 text-amber-400" />
+                                        <span>INCIDENTE</span>
                                     </Button>
 
                                     <Button
                                         onClick={() => handleRegisterMarcaje('salida')}
                                         disabled={loadingSearch}
-                                        className={`h-20 text-base font-bold flex flex-col items-center justify-center gap-1 rounded-xl transition-all ${
+                                        className={`col-span-2 sm:col-span-3 h-16 text-base font-bold flex items-center justify-center gap-2 rounded-xl transition-all ${
                                             sugerenciaMarcaje === 'salida'
                                                 ? 'bg-rose-600 hover:bg-rose-500 text-white ring-4 ring-rose-500/40 shadow-lg'
                                                 : 'bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700'
                                         }`}
                                     >
                                         <LogOut className="w-6 h-6 text-rose-400" />
-                                        <span>SALIDA FINAL</span>
+                                        <span>SALIDA JORNADA</span>
                                     </Button>
                                 </div>
                             </div>
@@ -683,6 +722,121 @@ export default function RelojChecadorKiosko({ configuracion }: Props) {
                     </div>
                 </div>
             )}
+
+            {/* MODAL SELECCIÓN DE MINUTOS DE DESCANSO */}
+            <Dialog open={isDescansoModalOpen} onOpenChange={setIsDescansoModalOpen}>
+                <DialogContent className="max-w-md bg-slate-900 border border-teal-500/40 text-white">
+                    <DialogHeader>
+                        <DialogTitle className="flex items-center gap-2 text-lg font-bold text-teal-400">
+                            <Coffee className="w-5 h-5 text-teal-400" />
+                            Seleccionar Duración del Descanso
+                        </DialogTitle>
+                        <DialogDescription className="text-xs text-slate-400">
+                            Elija los minutos asignados para su pausa o descanso de jornada.
+                        </DialogDescription>
+                    </DialogHeader>
+
+                    <div className="space-y-4 pt-2">
+                        <div className="grid grid-cols-3 gap-3">
+                            {[5, 10, 15, 20, 30, 60].map((min) => (
+                                <button
+                                    key={min}
+                                    type="button"
+                                    onClick={() => setSelectedMinutosDescanso(min)}
+                                    className={`p-4 rounded-xl text-center border font-bold text-sm transition-all ${
+                                        selectedMinutosDescanso === min
+                                            ? 'bg-teal-600 border-teal-400 text-white shadow-lg ring-2 ring-teal-500/40'
+                                            : 'bg-slate-800 border-slate-700 text-slate-300 hover:bg-slate-700'
+                                    }`}
+                                >
+                                    {min} min
+                                </button>
+                            ))}
+                        </div>
+
+                        <div className="pt-2 flex justify-end gap-2">
+                            <Button
+                                type="button"
+                                variant="outline"
+                                onClick={() => setIsDescansoModalOpen(false)}
+                                className="border-slate-700 bg-slate-800 text-slate-300"
+                            >
+                                Cancelar
+                            </Button>
+                            <Button
+                                type="button"
+                                onClick={() => handleRegisterMarcaje('descanso_inicio', { duracion_descanso_minutos: selectedMinutosDescanso })}
+                                disabled={loadingSearch}
+                                className="bg-teal-600 hover:bg-teal-500 text-white font-bold"
+                            >
+                                Confirmar {selectedMinutosDescanso} min
+                            </Button>
+                        </div>
+                    </div>
+                </DialogContent>
+            </Dialog>
+
+            {/* MODAL REGISTRO DE INCIDENTES EN JORNADA */}
+            <Dialog open={isIncidenteModalOpen} onOpenChange={setIsIncidenteModalOpen}>
+                <DialogContent className="max-w-md bg-slate-900 border border-amber-500/40 text-white">
+                    <DialogHeader>
+                        <DialogTitle className="flex items-center gap-2 text-lg font-bold text-amber-400">
+                            <AlertTriangle className="w-5 h-5 text-amber-400" />
+                            Registro de Incidente en Jornada
+                        </DialogTitle>
+                        <DialogDescription className="text-xs text-slate-400">
+                            Seleccione o describa la causa del incidente que interrumpe la actividad.
+                        </DialogDescription>
+                    </DialogHeader>
+
+                    <div className="space-y-4 pt-2">
+                        <div className="space-y-2">
+                            <Label className="text-xs text-slate-300">Causas Frecuentes:</Label>
+                            <div className="flex flex-wrap gap-2">
+                                {['Falla Eléctrica / Maquinaria', 'Falta de Insumos', 'Cita / Atención Médica', 'Trámite Administrativo', 'Capacitación'].map((causa) => (
+                                    <button
+                                        key={causa}
+                                        type="button"
+                                        onClick={() => setIncidenteCausaInput(causa)}
+                                        className="text-xs px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-amber-900/50 border border-slate-700 text-amber-200 transition-colors"
+                                    >
+                                        {causa}
+                                    </button>
+                                ))}
+                            </div>
+                        </div>
+
+                        <div className="space-y-1.5">
+                            <Label className="text-xs text-slate-300">Causa o Detalle del Incidente:</Label>
+                            <Input
+                                value={incidenteCausaInput}
+                                onChange={(e) => setIncidenteCausaInput(e.target.value)}
+                                placeholder="Ej. Suspensión de energía en línea de empaque"
+                                className="bg-slate-950 border-slate-700 text-white text-xs"
+                            />
+                        </div>
+
+                        <div className="pt-2 flex justify-end gap-2">
+                            <Button
+                                type="button"
+                                variant="outline"
+                                onClick={() => setIsIncidenteModalOpen(false)}
+                                className="border-slate-700 bg-slate-800 text-slate-300"
+                            >
+                                Cancelar
+                            </Button>
+                            <Button
+                                type="button"
+                                onClick={() => handleRegisterMarcaje('incidente_inicio', { incidente_causa: incidenteCausaInput || 'Incidente General' })}
+                                disabled={loadingSearch || !incidenteCausaInput.trim()}
+                                className="bg-amber-600 hover:bg-amber-500 text-white font-bold"
+                            >
+                                Registrar Incidente
+                            </Button>
+                        </div>
+                    </div>
+                </DialogContent>
+            </Dialog>
 
             {/* PIE DE PÁGINA */}
             <div className="border-t border-slate-900 pt-4 flex flex-col sm:flex-row items-center justify-between text-xs text-slate-500 gap-2">

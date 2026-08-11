@@ -44,6 +44,10 @@ class AsistenciaMarcaje extends Model
         'dispositivo_id',
         'observaciones',
         'registrado_por_user_id',
+        'incidente_causa',
+        'duracion_descanso_minutos',
+        'geolocalizacion',
+        'tipo_entrada',
     ];
 
     protected function casts(): array
