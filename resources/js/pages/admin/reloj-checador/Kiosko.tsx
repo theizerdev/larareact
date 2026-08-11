@@ -565,84 +565,113 @@ export default function RelojChecadorKiosko({ configuracion, zona_horaria }: Pro
                                 </Label>
 
                                 <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-                                    <Button
-                                        onClick={() => handleRegisterMarcaje('entrada', { tipo_entrada: 'normal' })}
-                                        disabled={loadingSearch}
-                                        className={`h-20 text-xs sm:text-sm font-bold flex flex-col items-center justify-center gap-1 rounded-xl transition-all ${
-                                            sugerenciaMarcaje === 'entrada'
-                                                ? 'bg-emerald-600 hover:bg-emerald-500 text-white ring-4 ring-emerald-500/40 shadow-lg'
-                                                : 'bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700'
-                                        }`}
-                                    >
-                                        <LogIn className="w-5 h-5 text-emerald-400" />
-                                        <span>INICIO JORNADA</span>
-                                    </Button>
+                                    {(() => {
+                                        const esDescansoActivo = sugerenciaMarcaje === 'descanso_fin' || empleado?.ultimo_marcaje_tipo === 'descanso_inicio';
+                                        const esIncidenteActivo = sugerenciaMarcaje === 'incidente_fin' || empleado?.ultimo_marcaje_tipo === 'incidente_inicio';
 
-                                    <Button
-                                        onClick={() => handleRegisterMarcaje('entrada_extraordinaria', { tipo_entrada: 'extraordinaria_doble' })}
-                                        disabled={loadingSearch}
-                                        className="h-20 text-xs sm:text-sm font-bold flex flex-col items-center justify-center gap-1 rounded-xl bg-purple-900/80 hover:bg-purple-800 text-purple-200 border border-purple-700/60 shadow-lg transition-all"
-                                    >
-                                        <Sparkles className="w-5 h-5 text-purple-400" />
-                                        <span>TIEMPO EXTRA</span>
-                                    </Button>
+                                        return (
+                                            <>
+                                                <Button
+                                                    onClick={() => handleRegisterMarcaje('entrada', { tipo_entrada: 'normal' })}
+                                                    disabled={loadingSearch}
+                                                    className={`h-20 text-xs sm:text-sm font-bold flex flex-col items-center justify-center gap-1 rounded-xl transition-all ${
+                                                        sugerenciaMarcaje === 'entrada'
+                                                            ? 'bg-emerald-600 hover:bg-emerald-500 text-white ring-4 ring-emerald-500/40 shadow-lg'
+                                                            : 'bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700'
+                                                    }`}
+                                                >
+                                                    <LogIn className="w-5 h-5 text-emerald-400" />
+                                                    <span>INICIO JORNADA</span>
+                                                </Button>
 
-                                    <Button
-                                        onClick={() => setIsDescansoModalOpen(true)}
-                                        disabled={loadingSearch}
-                                        className="h-20 text-xs sm:text-sm font-bold flex flex-col items-center justify-center gap-1 rounded-xl bg-teal-900/80 hover:bg-teal-800 text-teal-200 border border-teal-700/60 shadow-lg transition-all"
-                                    >
-                                        <Coffee className="w-5 h-5 text-teal-400" />
-                                        <span>DESCANSO</span>
-                                    </Button>
+                                                <Button
+                                                    onClick={() => handleRegisterMarcaje('entrada_extraordinaria', { tipo_entrada: 'extraordinaria_doble' })}
+                                                    disabled={loadingSearch}
+                                                    className="h-20 text-xs sm:text-sm font-bold flex flex-col items-center justify-center gap-1 rounded-xl bg-purple-900/80 hover:bg-purple-800 text-purple-200 border border-purple-700/60 shadow-lg transition-all"
+                                                >
+                                                    <Sparkles className="w-5 h-5 text-purple-400" />
+                                                    <span>TIEMPO EXTRA</span>
+                                                </Button>
 
-                                    <Button
-                                        onClick={() => handleRegisterMarcaje('salida_comida')}
-                                        disabled={loadingSearch}
-                                        className={`h-20 text-xs sm:text-sm font-bold flex flex-col items-center justify-center gap-1 rounded-xl transition-all ${
-                                            sugerenciaMarcaje === 'salida_comida'
-                                                ? 'bg-amber-600 hover:bg-amber-500 text-white ring-4 ring-amber-500/40 shadow-lg'
-                                                : 'bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700'
-                                        }`}
-                                    >
-                                        <Utensils className="w-5 h-5 text-amber-400" />
-                                        <span>INICIO COMIDA</span>
-                                    </Button>
+                                                <Button
+                                                    onClick={() => {
+                                                        if (esDescansoActivo) {
+                                                            handleRegisterMarcaje('descanso_fin');
+                                                        } else {
+                                                            setIsDescansoModalOpen(true);
+                                                        }
+                                                    }}
+                                                    disabled={loadingSearch}
+                                                    className={`h-20 text-xs sm:text-sm font-bold flex flex-col items-center justify-center gap-1 rounded-xl transition-all ${
+                                                        esDescansoActivo
+                                                            ? 'bg-emerald-600 hover:bg-emerald-500 text-white ring-4 ring-emerald-500/40 shadow-lg animate-pulse'
+                                                            : 'bg-teal-900/80 hover:bg-teal-800 text-teal-200 border border-teal-700/60 shadow-lg'
+                                                    }`}
+                                                >
+                                                    <Coffee className="w-5 h-5 text-teal-400" />
+                                                    <span>{esDescansoActivo ? 'FIN DESCANSO' : 'DESCANSO'}</span>
+                                                </Button>
 
-                                    <Button
-                                        onClick={() => handleRegisterMarcaje('entrada_comida')}
-                                        disabled={loadingSearch}
-                                        className={`h-20 text-xs sm:text-sm font-bold flex flex-col items-center justify-center gap-1 rounded-xl transition-all ${
-                                            sugerenciaMarcaje === 'entrada_comida'
-                                                ? 'bg-indigo-600 hover:bg-indigo-500 text-white ring-4 ring-indigo-500/40 shadow-lg'
-                                                : 'bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700'
-                                        }`}
-                                    >
-                                        <LogIn className="w-5 h-5 text-indigo-400" />
-                                        <span>FIN COMIDA</span>
-                                    </Button>
+                                                <Button
+                                                    onClick={() => handleRegisterMarcaje('salida_comida')}
+                                                    disabled={loadingSearch}
+                                                    className={`h-20 text-xs sm:text-sm font-bold flex flex-col items-center justify-center gap-1 rounded-xl transition-all ${
+                                                        sugerenciaMarcaje === 'salida_comida'
+                                                            ? 'bg-amber-600 hover:bg-amber-500 text-white ring-4 ring-amber-500/40 shadow-lg'
+                                                            : 'bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700'
+                                                    }`}
+                                                >
+                                                    <Utensils className="w-5 h-5 text-amber-400" />
+                                                    <span>INICIO COMIDA</span>
+                                                </Button>
 
-                                    <Button
-                                        onClick={() => setIsIncidenteModalOpen(true)}
-                                        disabled={loadingSearch}
-                                        className="h-20 text-xs sm:text-sm font-bold flex flex-col items-center justify-center gap-1 rounded-xl bg-amber-950/80 hover:bg-amber-900 text-amber-200 border border-amber-800/60 shadow-lg transition-all"
-                                    >
-                                        <AlertTriangle className="w-5 h-5 text-amber-400" />
-                                        <span>INCIDENTE</span>
-                                    </Button>
+                                                <Button
+                                                    onClick={() => handleRegisterMarcaje('entrada_comida')}
+                                                    disabled={loadingSearch}
+                                                    className={`h-20 text-xs sm:text-sm font-bold flex flex-col items-center justify-center gap-1 rounded-xl transition-all ${
+                                                        sugerenciaMarcaje === 'entrada_comida'
+                                                            ? 'bg-indigo-600 hover:bg-indigo-500 text-white ring-4 ring-indigo-500/40 shadow-lg'
+                                                            : 'bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700'
+                                                    }`}
+                                                >
+                                                    <LogIn className="w-5 h-5 text-indigo-400" />
+                                                    <span>FIN COMIDA</span>
+                                                </Button>
 
-                                    <Button
-                                        onClick={() => handleRegisterMarcaje('salida')}
-                                        disabled={loadingSearch}
-                                        className={`col-span-2 sm:col-span-3 h-16 text-base font-bold flex items-center justify-center gap-2 rounded-xl transition-all ${
-                                            sugerenciaMarcaje === 'salida'
-                                                ? 'bg-rose-600 hover:bg-rose-500 text-white ring-4 ring-rose-500/40 shadow-lg'
-                                                : 'bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700'
-                                        }`}
-                                    >
-                                        <LogOut className="w-6 h-6 text-rose-400" />
-                                        <span>SALIDA JORNADA</span>
-                                    </Button>
+                                                <Button
+                                                    onClick={() => {
+                                                        if (esIncidenteActivo) {
+                                                            handleRegisterMarcaje('incidente_fin');
+                                                        } else {
+                                                            setIsIncidenteModalOpen(true);
+                                                        }
+                                                    }}
+                                                    disabled={loadingSearch}
+                                                    className={`h-20 text-xs sm:text-sm font-bold flex flex-col items-center justify-center gap-1 rounded-xl transition-all ${
+                                                        esIncidenteActivo
+                                                            ? 'bg-emerald-600 hover:bg-emerald-500 text-white ring-4 ring-emerald-500/40 shadow-lg animate-pulse'
+                                                            : 'bg-amber-950/80 hover:bg-amber-900 text-amber-200 border border-amber-800/60 shadow-lg'
+                                                    }`}
+                                                >
+                                                    <AlertTriangle className="w-5 h-5 text-amber-400" />
+                                                    <span>{esIncidenteActivo ? 'FIN INCIDENTE' : 'INCIDENTE'}</span>
+                                                </Button>
+
+                                                <Button
+                                                    onClick={() => handleRegisterMarcaje('salida')}
+                                                    disabled={loadingSearch}
+                                                    className={`col-span-2 sm:col-span-3 h-16 text-base font-bold flex items-center justify-center gap-2 rounded-xl transition-all ${
+                                                        sugerenciaMarcaje === 'salida'
+                                                            ? 'bg-rose-600 hover:bg-rose-500 text-white ring-4 ring-rose-500/40 shadow-lg'
+                                                            : 'bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700'
+                                                    }`}
+                                                >
+                                                    <LogOut className="w-6 h-6 text-rose-400" />
+                                                    <span>SALIDA JORNADA</span>
+                                                </Button>
+                                            </>
+                                        );
+                                    })()}
                                 </div>
                             </div>
                         </Card>

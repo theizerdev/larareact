@@ -87,6 +87,18 @@ class RelojChecadorKioskoController extends Controller
                 case 'entrada_comida':
                     $siguienteMarcaje = 'salida';
                     break;
+                case 'descanso_inicio':
+                    $siguienteMarcaje = 'descanso_fin';
+                    break;
+                case 'descanso_fin':
+                    $siguienteMarcaje = 'descanso_inicio';
+                    break;
+                case 'incidente_inicio':
+                    $siguienteMarcaje = 'incidente_fin';
+                    break;
+                case 'incidente_fin':
+                    $siguienteMarcaje = 'salida';
+                    break;
                 case 'salida':
                     $siguienteMarcaje = 'entrada';
                     break;
@@ -103,6 +115,7 @@ class RelojChecadorKioskoController extends Controller
                 'departamento' => $empleado->departamento?->nombre,
                 'cargo' => $empleado->cargo?->nombre,
                 'turno' => $empleado->turnoLaboral?->nombre ?? 'Sin turno asignado',
+                'ultimo_marcaje_tipo' => $ultimoMarcaje?->tipo_marcaje,
             ],
             'ultimo_marcaje' => $ultimoMarcaje ? [
                 'tipo' => $ultimoMarcaje->tipo_marcaje,
