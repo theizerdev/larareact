@@ -29,6 +29,7 @@ import {
 import React, { useState, useRef, useEffect } from 'react';
 import { Breadcrumbs } from '@/components/breadcrumbs';
 import { ImportWizardModal } from '@/components/admin/empleados/ImportWizardModal';
+import { validarCurp } from '@/utils/curpValidator';
 import PhoneInputGroup from '../Empresas/Partials/PhoneInputGroup';
 import type { ColumnDef } from '@/components/data-table';
 import { DataTable } from '@/components/data-table';
@@ -462,6 +463,51 @@ export default function EmpleadosIndexPage({
 
     // ── Handlers ───────────────────────────────────────────────────────────────
 
+    const [loadingRenapo, setLoadingRenapo] = useState(false);
+
+    const handleConsultarRenapo = async () => {
+        if (!data.curp || data.curp.length !== 18) {
+            notifyError(__('Please enter a valid 18-character CURP.'));
+            return;
+        }
+
+        setLoadingRenapo(true);
+        try {
+            const token = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '';
+            const res = await fetch('/admin/empleados/validar-curp', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Accept': 'application/json',
+                    'X-CSRF-TOKEN': token,
+                },
+                body: JSON.stringify({ curp: data.curp }),
+            });
+
+            const result = await res.json();
+            if (res.ok && result.success) {
+                if (result.nombres) {
+                    const apellidosCombined = [result.primer_apellido, result.segundo_apellido].filter(Boolean).join(' ');
+                    setData(prev => ({
+                        ...prev,
+                        nombres: result.nombres || prev.nombres,
+                        apellidos: apellidosCombined || prev.apellidos,
+                        genero: result.genero || prev.genero,
+                    }));
+                    notifySuccess(`¡Datos RENAPO obtenidos! Autocompletado: ${result.nombre_completo}`);
+                } else {
+                    notifySuccess(result.nota || 'CURP sintácticamente válida.');
+                }
+            } else {
+                notifyError(result.error || 'No se pudieron consultar los datos de la CURP.');
+            }
+        } catch (e) {
+            notifyError('Error al conectar con el servicio de validación de CURP.');
+        } finally {
+            setLoadingRenapo(false);
+        }
+    };
+
     const handleCreateClick = () => {
         setEditingEmpleado(null);
         reset();
@@ -550,7 +596,7 @@ export default function EmpleadosIndexPage({
     };
 
     const handleToggleStatus = (emp: Empleado) => {
-        router.patch(`/admin/empleados/${emp.id}/toggle-status`, {}, { 
+        router.patch(`/admin/empleados/${emp.id}/toggle-status`, {}, {
             preserveScroll: true,
             onSuccess: () => notifySuccess(__('Status updated successfully.')),
         });
@@ -989,17 +1035,52 @@ export default function EmpleadosIndexPage({
                                         )}
                                     </div>
 
-                                    {/* CURP */}
-                                    <div>
-                                        <Label htmlFor="curp" className="font-semibold text-xs">CURP (Clave Única de Registro de Población)</Label>
+                                    {/* CURP - Ocupa todo el ancho (md:col-span-2) */}
+                                    <div className="md:col-span-2 p-4 rounded-xl border border-indigo-500/30 bg-indigo-50/30 dark:bg-indigo-950/30 space-y-2 transition-all shadow-sm">
+                                        <div className="flex items-center justify-between">
+                                            <div className="flex items-center gap-2">
+                                                <FileText className="w-4 h-4 text-indigo-600 dark:text-indigo-400" />
+                                                <Label htmlFor="curp" className="font-semibold text-xs text-indigo-950 dark:text-indigo-200">
+                                                    CURP (Clave Única de Registro de Población)
+                                                </Label>
+                                            </div>
+                                            <button
+                                                type="button"
+                                                onClick={handleConsultarRenapo}
+                                                disabled={loadingRenapo || !data.curp || data.curp.length !== 18}
+                                                className="text-xs px-3 py-1 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white font-medium flex items-center gap-1.5 shadow-sm disabled:opacity-50 transition-all active:scale-95"
+                                            >
+                                                <RefreshCw className={`w-3.5 h-3.5 ${loadingRenapo ? 'animate-spin' : ''}`} />
+                                                {loadingRenapo ? 'Consultando en RENAPO...' : '🔍 Consultar y Autocompletar'}
+                                            </button>
+                                        </div>
                                         <Input
                                             id="curp"
                                             value={data.curp || ''}
                                             onChange={(e) => setData('curp', e.target.value.toUpperCase())}
                                             placeholder="ej. ABCD800101HDFRXX01"
                                             maxLength={18}
-                                            className="font-mono uppercase"
+                                            className="font-mono uppercase text-sm h-11 bg-white dark:bg-slate-900 tracking-wider"
                                         />
+                                        {data.curp && data.curp.length > 0 && (() => {
+                                            const res = validarCurp(data.curp);
+                                            if (res.isValid && res.datos) {
+                                                return (
+                                                    <div className="mt-2 text-xs text-emerald-700 dark:text-emerald-300 font-semibold flex items-center gap-2 bg-emerald-100/80 dark:bg-emerald-950/60 p-2.5 rounded-lg border border-emerald-300 dark:border-emerald-800 shadow-sm">
+                                                        <CheckCircle className="w-4 h-4 shrink-0 text-emerald-600 dark:text-emerald-400" />
+                                                        <span>✓ CURP Válida • Entidad: <strong>{res.datos.entidadNombre}</strong> • Fecha Nacimiento: <strong>{res.datos.fechaNacimiento}</strong></span>
+                                                    </div>
+                                                );
+                                            } else if (data.curp.length === 18) {
+                                                return (
+                                                    <div className="mt-1 text-[11px] text-rose-600 dark:text-rose-400 font-medium flex items-center gap-1.5 bg-rose-50 dark:bg-rose-950/40 p-1.5 rounded border border-rose-200 dark:border-rose-800">
+                                                        <XCircle className="w-3.5 h-3.5 shrink-0 text-rose-500" />
+                                                        <span>{res.error || 'CURP Inválida'}</span>
+                                                    </div>
+                                                );
+                                            }
+                                            return null;
+                                        })()}
                                         {errors.curp && (
                                             <p className="text-red-500 text-xs mt-1">{errors.curp}</p>
                                         )}
@@ -1303,7 +1384,7 @@ export default function EmpleadosIndexPage({
                                     {/* Foto del Empleado */}
                                     <div className="flex flex-col gap-2">
                                         <Label className="font-semibold">{__('Employee Photo')}</Label>
-                                        
+
                                         {activeCameraField === 'foto_empleado' ? (
                                             <CameraWidget
                                                 onCapture={(base64) => handleCameraCapture('foto_empleado', base64)}
@@ -1377,7 +1458,7 @@ export default function EmpleadosIndexPage({
                                     {/* Foto del Empleado 2 */}
                                     <div className="flex flex-col gap-2">
                                         <Label className="font-semibold">{__('Employee Photo 2')}</Label>
-                                        
+
                                         {activeCameraField === 'foto_empleado_2' ? (
                                             <CameraWidget
                                                 onCapture={(base64) => handleCameraCapture('foto_empleado_2', base64)}
@@ -1451,7 +1532,7 @@ export default function EmpleadosIndexPage({
                                     {/* Foto del Documento de Identidad */}
                                     <div className="flex flex-col gap-2">
                                         <Label className="font-semibold">{__('ID Document Photo')}</Label>
-                                        
+
                                         {activeCameraField === 'foto_documento' ? (
                                             <CameraWidget
                                                 onCapture={(base64) => handleCameraCapture('foto_documento', base64)}
@@ -1525,7 +1606,7 @@ export default function EmpleadosIndexPage({
                                     {/* Foto del Documento de Identidad (Reverso) */}
                                     <div className="flex flex-col gap-2">
                                         <Label className="font-semibold">{__('ID Document Photo (Reverse)')}</Label>
-                                        
+
                                         {activeCameraField === 'foto_documento_reverso' ? (
                                             <CameraWidget
                                                 onCapture={(base64) => handleCameraCapture('foto_documento_reverso', base64)}

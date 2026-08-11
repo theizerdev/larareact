@@ -574,5 +574,19 @@ class EmpleadoController extends Controller
 
         return response()->json($result);
     }
+
+    /**
+     * Consulta y valida una CURP contra Identity Data API / RENAPO.
+     */
+    public function validarCurpRenapo(Request $request, \App\Services\IdentityDataService $identityService)
+    {
+        $request->validate([
+            'curp' => 'required|string',
+        ]);
+
+        $result = $identityService->consultarCurp($request->curp);
+
+        return response()->json($result);
+    }
 }
 

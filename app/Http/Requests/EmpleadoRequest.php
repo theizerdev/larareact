@@ -27,7 +27,7 @@ class EmpleadoRequest extends FormRequest
             'nombres' => 'required|string|max:255',
             'apellidos' => 'required|string|max:255',
             'documento_identidad' => 'nullable|string|max:50|unique:empleados,documento_identidad,' . $empleadoId,
-            'curp' => 'nullable|string|max:50',
+            'curp' => ['nullable', 'string', new \App\Rules\ValidCurp()],
             'pais_telefono_id' => 'nullable|exists:pais,id',
             'telefono' => 'nullable|string|max:50',
             'correo' => 'nullable|email|max:255',
