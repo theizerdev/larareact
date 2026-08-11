@@ -82,8 +82,8 @@ export default function Validaciones({ jaak_api_key, jaak_environment, jaak_acti
                         <CardHeader>
                             <div className="flex items-center justify-between">
                                 <div className="flex items-center gap-2">
-                                    <div className="p-2 rounded bg-teal-50 dark:bg-teal-950/20 text-teal-600">
-                                        <IdCard className="h-5 w-5" />
+                                    <div className="p-2 rounded bg-white border border-teal-100 dark:border-teal-900/40">
+                                        <img src="/image/logo/integrations/jaak-logo.png" alt="JAAK" className="h-5 w-auto object-contain" />
                                     </div>
                                     <div>
                                         <CardTitle>{__('JAAK Identity Verification')}</CardTitle>
