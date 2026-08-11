@@ -463,7 +463,7 @@ export default function EmpleadosIndexPage({
 
     // ── Handlers ───────────────────────────────────────────────────────────────
 
-    const [loadingRenapo, setLoadingRenapo] = useState(false);
+    // const [loadingRenapo, setLoadingRenapo] = useState(false); // RENAPO validation removed
 
     const handleConsultarRenapo = async () => {
         if (!data.curp || data.curp.length !== 18) {
@@ -1005,7 +1005,7 @@ export default function EmpleadosIndexPage({
                                     </div>
 
                                     {/* Código de Empleado (6 dígitos) */}
-                                    <div className="md:col-span-2">
+                                    <div className="md:col-span-2 p-4 rounded-xl border border-indigo-500/30 bg-indigo-50/30 dark:bg-indigo-950/30 space-y-2 transition-all shadow-sm">
                                         <div className="flex items-center justify-between mb-1">
                                             <Label htmlFor="documento_identidad" className="font-semibold text-xs">
                                                 Código de Empleado (6 dígitos) *
@@ -1044,15 +1044,7 @@ export default function EmpleadosIndexPage({
                                                     CURP (Clave Única de Registro de Población)
                                                 </Label>
                                             </div>
-                                            <button
-                                                type="button"
-                                                onClick={handleConsultarRenapo}
-                                                disabled={loadingRenapo || !data.curp || data.curp.length !== 18}
-                                                className="text-xs px-3 py-1 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white font-medium flex items-center gap-1.5 shadow-sm disabled:opacity-50 transition-all active:scale-95"
-                                            >
-                                                <RefreshCw className={`w-3.5 h-3.5 ${loadingRenapo ? 'animate-spin' : ''}`} />
-                                                {loadingRenapo ? 'Consultando en RENAPO...' : '🔍 Consultar y Autocompletar'}
-                                            </button>
+                                            {/* RENAPO button removed – external validation disabled */}
                                         </div>
                                         <Input
                                             id="curp"
@@ -1123,7 +1115,7 @@ export default function EmpleadosIndexPage({
                                     </div>
 
                                     {/* Estado */}
-                                    <div className="md:col-span-2 flex items-center justify-between p-3 border rounded-lg bg-slate-50/50 dark:bg-slate-900/30">
+                                    <div className="md:col-span-2 p-4 rounded-xl border border-indigo-500/30 bg-indigo-50/30 dark:bg-indigo-950/30 space-y-2 transition-all shadow-sm flex items-center justify-between">
                                         <div>
                                             <Label htmlFor="status" className="font-semibold block">{__('Status')}</Label>
                                             <span className="text-xs text-muted-foreground">{__('Enable or disable employee access')}</span>
