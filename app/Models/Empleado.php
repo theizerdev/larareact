@@ -118,6 +118,16 @@ class Empleado extends Model
         return $this->hasMany(EmpleadoVehiculo::class, 'empleado_id');
     }
 
+    public function marcajes(): \Illuminate\Database\Eloquent\Relations\HasMany
+    {
+        return $this->hasMany(AsistenciaMarcaje::class, 'empleado_id');
+    }
+
+    public function asistenciaMarcajes(): \Illuminate\Database\Eloquent\Relations\HasMany
+    {
+        return $this->hasMany(AsistenciaMarcaje::class, 'empleado_id');
+    }
+
     /**
      * Get employee's full name.
      */
