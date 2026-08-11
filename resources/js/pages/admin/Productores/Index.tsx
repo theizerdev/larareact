@@ -941,6 +941,105 @@ export default function Index({
                 </DialogContent>
             </Dialog>
 
+            {/* Modal: Pre-registro Productor */}
+            <Dialog open={isPreRegistroModalOpen} onOpenChange={setIsPreRegistroModalOpen}>
+                <DialogContent className="max-w-md bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800">
+                    <DialogHeader>
+                        <div className="h-10 w-10 rounded-lg bg-emerald-50 dark:bg-emerald-950/40 text-emerald-600 dark:text-emerald-400 flex items-center justify-center mb-2">
+                            <Send className="h-5 w-5" />
+                        </div>
+                        <DialogTitle className="text-lg font-bold text-slate-900 dark:text-white">
+                            {__('Pre-registro de Productor / Rancho')}
+                        </DialogTitle>
+                        <DialogDescription className="text-xs text-slate-500">
+                            {__('Envía una invitación por WhatsApp al productor para que complete el formulario con los datos de su rancho, colaboradores y vehículos.')}
+                        </DialogDescription>
+                    </DialogHeader>
+
+                    <form onSubmit={handlePreRegistroSubmit} className="space-y-4 pt-2">
+                        <div>
+                            <Label htmlFor="pre_razon_social_rancho">{__('Razón Social del Rancho')}</Label>
+                            <Input
+                                id="pre_razon_social_rancho"
+                                required
+                                className="mt-1"
+                                placeholder="ej. Agrícola Driscoll's S.P.R. de R.L."
+                                value={preRegistroForm.data.razon_social_rancho}
+                                onChange={(e) => preRegistroForm.setData('razon_social_rancho', e.target.value)}
+                            />
+                            {preRegistroForm.errors.razon_social_rancho && (
+                                <p className="text-xs text-red-500 mt-1">{preRegistroForm.errors.razon_social_rancho}</p>
+                            )}
+                        </div>
+
+                        <div>
+                            <Label htmlFor="pre_nombre_comercial_rancho">{__('Nombre Comercial del Rancho / Predio')}</Label>
+                            <Input
+                                id="pre_nombre_comercial_rancho"
+                                required
+                                className="mt-1"
+                                placeholder="ej. Rancho Los Berries - Módulo 2"
+                                value={preRegistroForm.data.nombre_comercial_rancho}
+                                onChange={(e) => preRegistroForm.setData('nombre_comercial_rancho', e.target.value)}
+                            />
+                            {preRegistroForm.errors.nombre_comercial_rancho && (
+                                <p className="text-xs text-red-500 mt-1">{preRegistroForm.errors.nombre_comercial_rancho}</p>
+                            )}
+                        </div>
+
+                        <div className="grid grid-cols-3 gap-2">
+                            <div className="col-span-1">
+                                <Label htmlFor="pre_pais_telefono_id">{__('País')}</Label>
+                                <Select
+                                    value={preRegistroForm.data.pais_telefono_id}
+                                    onValueChange={(val) => preRegistroForm.setData('pais_telefono_id', val)}
+                                >
+                                    <SelectTrigger id="pre_pais_telefono_id" className="mt-1">
+                                        <SelectValue placeholder="País" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        {paises.map((p) => (
+                                            <SelectItem key={p.id} value={String(p.id)}>
+                                                {p.codigo_iso} ({p.codigo_telefonico})
+                                            </SelectItem>
+                                        ))}
+                                    </SelectContent>
+                                </Select>
+                            </div>
+                            <div className="col-span-2">
+                                <Label htmlFor="pre_telefono">{__('WhatsApp del Productor')}</Label>
+                                <Input
+                                    id="pre_telefono"
+                                    required
+                                    type="tel"
+                                    className="mt-1"
+                                    placeholder="ej. 3511234567"
+                                    value={preRegistroForm.data.telefono}
+                                    onChange={(e) => preRegistroForm.setData('telefono', e.target.value)}
+                                />
+                                {preRegistroForm.errors.telefono && (
+                                    <p className="text-xs text-red-500 mt-1">{preRegistroForm.errors.telefono}</p>
+                                )}
+                            </div>
+                        </div>
+
+                        <DialogFooter className="pt-4 border-t border-slate-100 dark:border-slate-800">
+                            <Button type="button" variant="outline" onClick={() => setIsPreRegistroModalOpen(false)}>
+                                {__('Cancelar')}
+                            </Button>
+                            <Button
+                                type="submit"
+                                disabled={preRegistroForm.processing}
+                                className="bg-[#104a29] hover:bg-[#0c371e] text-white font-semibold flex items-center gap-2"
+                            >
+                                <Send className="h-4 w-4" />
+                                {preRegistroForm.processing ? __('Enviando...') : __('Enviar Invitación')}
+                            </Button>
+                        </DialogFooter>
+                    </form>
+                </DialogContent>
+            </Dialog>
+
             {/* Modal Sub-component: Producer Collaborators */}
             <ProductorEmpleadosModal
                 isOpen={!!selectedProductorForEmployees}
