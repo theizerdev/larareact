@@ -1005,7 +1005,7 @@ export default function EmpleadosIndexPage({
                                     </div>
 
                                     {/* Código de Empleado (6 dígitos) */}
-                                    <div>
+                                    <div className="md:col-span-2">
                                         <div className="flex items-center justify-between mb-1">
                                             <Label htmlFor="documento_identidad" className="font-semibold text-xs">
                                                 Código de Empleado (6 dígitos) *
@@ -1123,7 +1123,7 @@ export default function EmpleadosIndexPage({
                                     </div>
 
                                     {/* Estado */}
-                                    <div className="flex items-center justify-between p-3 border rounded-lg bg-slate-50/50 dark:bg-slate-900/30">
+                                    <div className="md:col-span-2 flex items-center justify-between p-3 border rounded-lg bg-slate-50/50 dark:bg-slate-900/30">
                                         <div>
                                             <Label htmlFor="status" className="font-semibold block">{__('Status')}</Label>
                                             <span className="text-xs text-muted-foreground">{__('Enable or disable employee access')}</span>
