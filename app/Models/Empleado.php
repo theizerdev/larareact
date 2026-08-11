@@ -42,6 +42,7 @@ class Empleado extends Model
         'nombres',
         'apellidos',
         'documento_identidad',
+        'curp',
         'pais_telefono_id',
         'telefono',
         'correo',

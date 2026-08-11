@@ -77,6 +77,7 @@ class EmpleadoImportService
             $rowNum = $rowsData[$i]['row_number'];
 
             $doc = $this->getCellValueByMap($rowCells, $colIndexMap['documento_identidad']);
+            $curp = $this->getCellValueByMap($rowCells, $colIndexMap['curp']);
             $nombre = $this->getCellValueByMap($rowCells, $colIndexMap['nombres']);
             $paterno = $this->getCellValueByMap($rowCells, $colIndexMap['apellido_paterno']);
             $materno = $this->getCellValueByMap($rowCells, $colIndexMap['apellido_materno']);
@@ -94,7 +95,7 @@ class EmpleadoImportService
             if (empty($docClean)) {
                 $invalidRows[] = [
                     'row' => $rowNum,
-                    'reason' => 'Falta el Número de Empleado (Documento de Identidad).'
+                    'reason' => 'Falta el Código / Número de Empleado.'
                 ];
                 continue;
             }
@@ -125,6 +126,7 @@ class EmpleadoImportService
             if (!isset($groupedEmployees[$docClean])) {
                 $groupedEmployees[$docClean] = [
                     'documento_identidad' => $docClean,
+                    'curp' => trim((string)$curp),
                     'nombres' => trim((string)$nombre),
                     'apellidos' => $apellidos,
                     'correo' => trim((string)$correo),
@@ -290,6 +292,7 @@ class EmpleadoImportService
                     'nombres' => !empty($rec['nombres']) ? $rec['nombres'] : 'N/A',
                     'apellidos' => !empty($rec['apellidos']) ? $rec['apellidos'] : 'N/A',
                     'documento_identidad' => $doc,
+                    'curp' => !empty($rec['curp']) ? trim($rec['curp']) : null,
                     'pais_telefono_id' => $paisId,
                     'telefono' => $rec['telefono'] ?? null,
                     'correo' => !empty($rec['correo']) ? $rec['correo'] : null,
@@ -457,6 +460,7 @@ class EmpleadoImportService
     {
         $map = [
             'documento_identidad' => null,
+            'curp' => null,
             'nombres' => null,
             'apellido_paterno' => null,
             'apellido_materno' => null,
@@ -474,7 +478,21 @@ class EmpleadoImportService
         foreach ($headersMap as $colLetter => $headerName) {
             $h = $this->normalizeHeader($headerName);
 
-            if (str_contains($h, 'no. empleado') || str_contains($h, 'numero empleado') || str_contains($h, 'documento') || str_contains($h, 'cedula') || str_contains($h, 'dni')) {
+            if (str_contains($h, 'curp')) {
+                $map['curp'] = $colLetter;
+            } elseif (
+                str_contains($h, 'no. empleado') || 
+                str_contains($h, 'numero empleado') || 
+                str_contains($h, 'num. empleado') || 
+                str_contains($h, 'codigo empleado') || 
+                str_contains($h, 'codigo') || 
+                str_contains($h, 'documento') || 
+                str_contains($h, 'cedula') || 
+                str_contains($h, 'dni') ||
+                $h === 'id' ||
+                $h === 'no' ||
+                $h === 'num'
+            ) {
                 $map['documento_identidad'] = $colLetter;
             } elseif (str_contains($h, 'nombre') && !str_contains($h, 'apellido') && !str_contains($h, 'comercial')) {
                 $map['nombres'] = $colLetter;
