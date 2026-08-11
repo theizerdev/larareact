@@ -49,8 +49,8 @@ interface EmpleadoFound {
 }
 
 export default function RelojChecadorKiosko({ configuracion, zona_horaria }: Props) {
-    // Reloj digital en tiempo real (usa zona horaria de la empresa si está configurada)
-    const tz = zona_horaria ?? undefined;
+    // Reloj digital en tiempo real (usa la zona horaria de la empresa/sucursal o America/Mexico_City por defecto)
+    const tz = zona_horaria || 'America/Mexico_City';
     const [currentTime, setCurrentTime] = useState(new Date());
 
     useEffect(() => {
@@ -392,7 +392,7 @@ export default function RelojChecadorKiosko({ configuracion, zona_horaria }: Pro
             minute: '2-digit',
             second: '2-digit',
             hour12: true,
-            ...(tz ? { timeZone: tz } : {}),
+            timeZone: tz,
         });
     };
 
@@ -402,7 +402,7 @@ export default function RelojChecadorKiosko({ configuracion, zona_horaria }: Pro
             year: 'numeric',
             month: 'long',
             day: 'numeric',
-            ...(tz ? { timeZone: tz } : {}),
+            timeZone: tz,
         });
     };
 
@@ -425,7 +425,7 @@ export default function RelojChecadorKiosko({ configuracion, zona_horaria }: Pro
                 <div className="flex items-center gap-4">
                     <div className="text-right hidden sm:block">
                         <div className="text-2xl font-black text-emerald-400 font-mono tracking-wider">{formatTime(currentTime)}</div>
-                        <div className="text-xs text-slate-400 capitalize">{formatDate(currentTime)}</div>
+                        <div className="text-xs text-slate-400 capitalize">{formatDate(currentTime)} • {tz}</div>
                     </div>
 
                     <Link href="/dashboard">

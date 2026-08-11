@@ -25,11 +25,15 @@ class RelojChecadorKioskoController extends Controller
 
         $configuracion = ConfiguracionAsistencia::where('empresa_id', $empresaId)->first();
 
-        // Obtener la zona horaria de la empresa
-        $zonaHoraria = null;
-        if ($user && $user->empresa) {
-            $zonaHoraria = $user->empresa->zona_horaria;
-        }
+        // Obtener la zona horaria (Sucursal -> Empresa -> País -> App Config -> America/Mexico_City)
+        $empresa = $user ? $user->empresa : null;
+        $sucursal = ($user && !empty($user->sucursal_id)) ? \App\Models\Sucursal::find($user->sucursal_id) : null;
+
+        $zonaHoraria = $sucursal?->zona_horaria
+            ?? $empresa?->zona_horaria
+            ?? $empresa?->pais?->zona_horaria
+            ?? config('app.timezone')
+            ?? 'America/Mexico_City';
 
         return Inertia::render('admin/reloj-checador/Kiosko', [
             'configuracion' => $configuracion,
