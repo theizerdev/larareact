@@ -28,7 +28,7 @@ class AsistenciaReporteController extends Controller
 
         $empresaId = $user->empresa_id;
 
-        $query = AsistenciaMarcaje::with(['empleado.departamento', 'empleado.cargo', 'sucursal'])
+        $query = AsistenciaMarcaje::with(['empleado.departamento', 'empleado.cargo', 'empleado.turnoLaboral', 'sucursal'])
             ->when($empresaId, fn ($q) => $q->where('empresa_id', $empresaId))
             ->when($request->search, function ($q, $search) {
                 $q->whereHas('empleado', function ($sub) use ($search) {
@@ -45,11 +45,106 @@ class AsistenciaReporteController extends Controller
         $stats = [
             'total' => (clone $query)->count(),
             'entradas' => (clone $query)->where('tipo_marcaje', 'entrada')->count(),
-            'descansos' => (clone $query)->whereIn('tipo_marcaje', ['salida_comida', 'entrada_comida'])->count(),
+            'descansos' => (clone $query)->whereIn('tipo_marcaje', ['salida_comida', 'entrada_comida', 'descanso_inicio', 'descanso_fin'])->count(),
             'salidas' => (clone $query)->where('tipo_marcaje', 'salida')->count(),
         ];
 
         $marcajes = $query->latest('fecha_hora')->paginate($request->perPage ?? 15)->withQueryString();
+
+        $now = Carbon::now();
+        $configAsistencia = \App\Models\ConfiguracionAsistencia::where('empresa_id', $empresaId)->first();
+        $minutosLeySilla = $configAsistencia?->ley_silla_descanso_minutos ?? 15;
+
+        $marcajes->getCollection()->transform(function ($marcaje) use ($now, $minutosLeySilla) {
+            $marcaje->fecha_hora_iso = Carbon::parse($marcaje->fecha_hora)->toIso8601String();
+            $esAlmuerzo = $marcaje->tipo_marcaje === 'salida_comida';
+            $esDescanso = $marcaje->tipo_marcaje === 'descanso_inicio';
+
+            if ($esAlmuerzo || $esDescanso) {
+                $nombreConcepto = $esAlmuerzo ? 'Almuerzo' : 'Descanso';
+                $limiteMinutos = $esAlmuerzo 
+                    ? ($marcaje->empleado?->turnoLaboral?->minutos_descanso ?? 60)
+                    : $minutosLeySilla;
+
+                $tiposRegreso = $esAlmuerzo 
+                    ? ['entrada_comida', 'descanso_fin', 'salida', 'entrada_extraordinaria']
+                    : ['descanso_fin', 'entrada_comida', 'salida', 'entrada_extraordinaria'];
+
+                // Buscar marcaje de regreso posterior
+                $regreso = AsistenciaMarcaje::where('empleado_id', $marcaje->empleado_id)
+                    ->where('fecha_hora', '>', $marcaje->fecha_hora)
+                    ->whereDate('fecha_hora', Carbon::parse($marcaje->fecha_hora)->toDateString())
+                    ->whereIn('tipo_marcaje', $tiposRegreso)
+                    ->orderBy('fecha_hora', 'asc')
+                    ->first();
+
+                if ($regreso) {
+                    $duracion = (int) round(Carbon::parse($marcaje->fecha_hora)->diffInMinutes(Carbon::parse($regreso->fecha_hora)));
+                    $marcaje->tiempo_restante_info = [
+                        'estado' => 'completado',
+                        'concepto' => $nombreConcepto,
+                        'texto' => "Duración: {$duracion} min",
+                        'subtexto' => "Límite {$nombreConcepto}: {$limiteMinutos} min",
+                        'minutos_restantes' => 0,
+                        'limite_minutos' => $limiteMinutos,
+                        'duracion_real' => $duracion,
+                    ];
+                } else {
+                    $transcurridos = (int) round(Carbon::parse($marcaje->fecha_hora)->diffInMinutes($now));
+                    $restantes = $limiteMinutos - $transcurridos;
+
+                    if ($restantes > 0) {
+                        $marcaje->tiempo_restante_info = [
+                            'estado' => 'en_curso',
+                            'concepto' => $nombreConcepto,
+                            'texto' => "{$restantes} min restantes",
+                            'subtexto' => "{$nombreConcepto}: {$limiteMinutos} min permitidos",
+                            'minutos_restantes' => $restantes,
+                            'limite_minutos' => $limiteMinutos,
+                            'transcurridos' => $transcurridos,
+                        ];
+                    } else {
+                        $exceso = abs($restantes);
+                        $marcaje->tiempo_restante_info = [
+                            'estado' => 'excedido',
+                            'concepto' => $nombreConcepto,
+                            'texto' => "Excedido por {$exceso} min",
+                            'subtexto' => "Límite {$nombreConcepto}: {$limiteMinutos} min",
+                            'minutos_restantes' => $restantes,
+                            'limite_minutos' => $limiteMinutos,
+                            'transcurridos' => $transcurridos,
+                        ];
+                    }
+                }
+            } else if (in_array($marcaje->tipo_marcaje, ['entrada_comida', 'descanso_fin'])) {
+                $esRegresoAlmuerzo = $marcaje->tipo_marcaje === 'entrada_comida';
+                $nombreConcepto = $esRegresoAlmuerzo ? 'Almuerzo' : 'Descanso';
+                $limiteMinutos = $esRegresoAlmuerzo 
+                    ? ($marcaje->empleado?->turnoLaboral?->minutos_descanso ?? 60)
+                    : $minutosLeySilla;
+
+                $marcaje->tiempo_restante_info = [
+                    'estado' => 'normal',
+                    'concepto' => $nombreConcepto,
+                    'texto' => "Límite {$nombreConcepto}: {$limiteMinutos} min",
+                    'subtexto' => null,
+                    'minutos_restantes' => null,
+                    'limite_minutos' => $limiteMinutos,
+                ];
+            } else {
+                $limiteAlmuerzo = $marcaje->empleado?->turnoLaboral?->minutos_descanso ?? 60;
+                $marcaje->tiempo_restante_info = [
+                    'estado' => 'normal',
+                    'concepto' => 'General',
+                    'texto' => "Almuerzo: {$limiteAlmuerzo}m | Descanso: {$minutosLeySilla}m",
+                    'subtexto' => null,
+                    'minutos_restantes' => null,
+                    'limite_minutos' => $limiteAlmuerzo,
+                ];
+            }
+
+            return $marcaje;
+        });
 
         return Inertia::render('admin/asistencia/Bitacora', [
             'marcajes' => $marcajes,

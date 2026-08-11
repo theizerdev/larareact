@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Head, router } from '@inertiajs/react';
 import { Breadcrumbs } from '@/components/breadcrumbs';
 import { ModuleHeader } from '@/components/module-header';
@@ -20,7 +20,11 @@ import {
     ShieldCheck,
     Camera,
     MapPin,
-    FileText
+    FileText,
+    Timer,
+    AlertTriangle,
+    CheckCircle2,
+    Hourglass
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -31,14 +35,27 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } f
 import type { Paginated } from '@/types/app';
 import Pagination from '@/components/pagination';
 
+interface TiempoRestanteInfo {
+    estado: 'en_curso' | 'excedido' | 'completado' | 'normal';
+    concepto?: string;
+    texto: string;
+    subtexto?: string | null;
+    minutos_restantes?: number | null;
+    limite_minutos?: number;
+    transcurridos?: number;
+    duracion_real?: number;
+}
+
 interface Marcaje {
     id: number;
     empleado_id: number;
-    tipo_marcaje: 'entrada' | 'salida_comida' | 'entrada_comida' | 'salida';
+    tipo_marcaje: 'entrada' | 'salida_comida' | 'entrada_comida' | 'salida' | 'descanso_inicio' | 'descanso_fin' | 'entrada_extraordinaria';
     fecha_hora: string;
+    fecha_hora_iso?: string;
     origen: string;
     fotografia_path?: string | null;
     observaciones?: string | null;
+    tiempo_restante_info?: TiempoRestanteInfo;
     empleado: {
         id: number;
         nombres: string;
@@ -46,8 +63,83 @@ interface Marcaje {
         documento_identidad: string;
         departamento?: { nombre: string };
         cargo?: { nombre: string };
+        turnoLaboral?: { minutos_descanso?: number; nombre?: string };
     };
     sucursal?: { nombre: string };
+}
+
+/** Componente de Contador en Tiempo Real (Reloj en vivo segundo a segundo) */
+function LiveBreakTimer({ 
+    fechaHoraIso,
+    fechaHora, 
+    limiteMinutos = 15, 
+    subtexto 
+}: { 
+    fechaHoraIso?: string;
+    fechaHora: string; 
+    limiteMinutos?: number; 
+    subtexto?: string | null;
+}) {
+    const [now, setNow] = useState(Date.now());
+
+    useEffect(() => {
+        const interval = setInterval(() => {
+            setNow(Date.now());
+        }, 1000);
+        return () => clearInterval(interval);
+    }, []);
+
+    const dateStr = fechaHoraIso || fechaHora;
+    const startMs = new Date(dateStr).getTime();
+    const elapsedSeconds = Math.floor(Math.max(0, now - startMs) / 1000);
+    const limitSeconds = limiteMinutos * 60;
+    const remainingSeconds = limitSeconds - elapsedSeconds;
+
+    const formatTimeDuration = (totalSecs: number) => {
+        const hours = Math.floor(totalSecs / 3600);
+        const mins = Math.floor((totalSecs % 3600) / 60);
+        const secs = totalSecs % 60;
+
+        if (hours > 0) {
+            return `${hours}h ${mins}m`;
+        }
+        return `${String(mins).padStart(2, '0')}:${String(secs).padStart(2, '0')}`;
+    };
+
+    if (remainingSeconds > 0) {
+        const formatted = formatTimeDuration(remainingSeconds);
+        const suffix = remainingSeconds < 3600 ? ' min restantes' : ' restantes';
+        return (
+            <div>
+                <Badge className="bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border-emerald-500/30 gap-1.5 px-2.5 py-1 font-semibold text-xs font-mono">
+                    <Timer className="w-3.5 h-3.5 text-emerald-600 shrink-0 animate-pulse" />
+                    <span>{formatted}{suffix}</span>
+                </Badge>
+                {subtexto && (
+                    <div className="text-[11px] text-slate-500 dark:text-slate-400 font-medium mt-1">
+                        {subtexto}
+                    </div>
+                )}
+            </div>
+        );
+    } else {
+        const excessSeconds = Math.abs(remainingSeconds);
+        const formatted = formatTimeDuration(excessSeconds);
+        const suffix = excessSeconds < 3600 ? ' min' : '';
+        return (
+            <div>
+                <Badge className="bg-rose-500/15 text-rose-700 dark:text-rose-300 border-rose-500/30 gap-1.5 px-2.5 py-1 font-semibold text-xs font-mono">
+                    <AlertTriangle className="w-3.5 h-3.5 text-rose-600 shrink-0 animate-bounce" />
+                    <span>Excedido por {formatted}{suffix}</span>
+                </Badge>
+                {subtexto && (
+                    <div className="text-[11px] text-rose-600 dark:text-rose-400 font-medium mt-1">
+                        {subtexto}
+                    </div>
+                )}
+            </div>
+        );
+    }
 }
 
 interface Stats {
@@ -355,6 +447,7 @@ export default function AsistenciaBitacoraIndex({ marcajes, stats, filters }: Pr
                                         <th className="px-4 py-3.5">Empleado</th>
                                         <th className="px-4 py-3.5">Evento / Marcaje</th>
                                         <th className="px-4 py-3.5">Fecha y Hora</th>
+                                        <th className="px-4 py-3.5">Tiempo Restante / Estado</th>
                                         <th className="px-4 py-3.5">Origen / Canal</th>
                                         <th className="px-4 py-3.5">Sucursal</th>
                                         <th className="px-4 py-3.5 text-right">Acción</th>
@@ -363,7 +456,7 @@ export default function AsistenciaBitacoraIndex({ marcajes, stats, filters }: Pr
                                 <tbody className="divide-y">
                                     {marcajes.data.length === 0 ? (
                                         <tr>
-                                            <td colSpan={6} className="px-4 py-12 text-center text-muted-foreground">
+                                            <td colSpan={7} className="px-4 py-12 text-center text-muted-foreground">
                                                 <Clock className="w-8 h-8 mx-auto mb-2 opacity-40" />
                                                 <p className="font-medium">No se encontraron marcajes en la bitácora.</p>
                                                 <p className="text-xs text-muted-foreground mt-1">Prueba cambiando los filtros de fecha o búsqueda.</p>
@@ -374,6 +467,7 @@ export default function AsistenciaBitacoraIndex({ marcajes, stats, filters }: Pr
                                             const badge = getBadgeStyle(m.tipo_marcaje);
                                             const origenBadge = getOrigenBadge(m.origen);
                                             const IconComp = badge.icon;
+                                            const infoTiempo = m.tiempo_restante_info;
                                             
                                             // Avatar Initials
                                             const initials = `${m.empleado.nombres.charAt(0)}${m.empleado.apellidos.charAt(0)}`.toUpperCase();
@@ -409,6 +503,41 @@ export default function AsistenciaBitacoraIndex({ marcajes, stats, filters }: Pr
                                                         <div className="font-mono text-sm font-semibold text-slate-800 dark:text-slate-200">
                                                             {formatFechaHora(m.fecha_hora)}
                                                         </div>
+                                                    </td>
+
+                                                    {/* Renglon de Tiempo Restante según tiempo establecido (Tiempo Real) */}
+                                                    <td className="px-4 py-3.5">
+                                                        {infoTiempo ? (
+                                                            <div className="space-y-0.5">
+                                                                {(infoTiempo.estado === 'en_curso' || infoTiempo.estado === 'excedido') ? (
+                                                                    <LiveBreakTimer 
+                                                                        fechaHora={m.fecha_hora} 
+                                                                        fechaHoraIso={m.fecha_hora_iso}
+                                                                        limiteMinutos={infoTiempo.limite_minutos ?? 15}
+                                                                        subtexto={infoTiempo.subtexto}
+                                                                    />
+                                                                ) : infoTiempo.estado === 'completado' ? (
+                                                                    <div>
+                                                                        <Badge variant="outline" className="bg-slate-100 dark:bg-slate-800/80 text-slate-700 dark:text-slate-300 border-slate-300 dark:border-slate-700 gap-1.5 px-2.5 py-1 font-medium text-xs">
+                                                                            <CheckCircle2 className="w-3.5 h-3.5 text-blue-500 shrink-0" />
+                                                                            <span>{infoTiempo.texto}</span>
+                                                                        </Badge>
+                                                                        {infoTiempo.subtexto && (
+                                                                            <div className="text-[11px] text-muted-foreground mt-1">
+                                                                                {infoTiempo.subtexto}
+                                                                            </div>
+                                                                        )}
+                                                                    </div>
+                                                                ) : (
+                                                                    <div className="text-xs text-slate-600 dark:text-slate-400 font-mono flex items-center gap-1">
+                                                                        <Clock className="w-3.5 h-3.5 text-muted-foreground shrink-0" />
+                                                                        <span>{infoTiempo.texto}</span>
+                                                                    </div>
+                                                                )}
+                                                            </div>
+                                                        ) : (
+                                                            <span className="text-xs text-muted-foreground">-</span>
+                                                        )}
                                                     </td>
 
                                                     <td className="px-4 py-3.5">
@@ -525,6 +654,24 @@ export default function AsistenciaBitacoraIndex({ marcajes, stats, filters }: Pr
                                     <span className="text-muted-foreground">Sucursal:</span>
                                     <span>{selectedMarcaje.sucursal?.nombre || 'Matriz'}</span>
                                 </div>
+                                {selectedMarcaje.tiempo_restante_info && (
+                                    <div className="flex items-center justify-between pt-1.5 border-t border-dashed">
+                                        <span className="text-muted-foreground">Estado / Tiempo Restante:</span>
+                                        <div>
+                                            {(selectedMarcaje.tiempo_restante_info.estado === 'en_curso' || selectedMarcaje.tiempo_restante_info.estado === 'excedido') ? (
+                                                <LiveBreakTimer 
+                                                    fechaHora={selectedMarcaje.fecha_hora} 
+                                                    fechaHoraIso={selectedMarcaje.fecha_hora_iso}
+                                                    limiteMinutos={selectedMarcaje.tiempo_restante_info.limite_minutos ?? 15}
+                                                />
+                                            ) : (
+                                                <span className="font-semibold font-mono text-indigo-600 dark:text-indigo-400">
+                                                    {selectedMarcaje.tiempo_restante_info.texto}
+                                                </span>
+                                            )}
+                                        </div>
+                                    </div>
+                                )}
                                 {selectedMarcaje.observaciones && (
                                     <div className="pt-2 border-t mt-2">
                                         <span className="text-muted-foreground block mb-1">Observaciones:</span>

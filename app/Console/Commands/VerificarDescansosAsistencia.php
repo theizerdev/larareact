@@ -28,30 +28,28 @@ class VerificarDescansosAsistencia extends Command
         $today = Carbon::today();
         $now   = Carbon::now();
 
-        // Buscar todos los marcajes de salida_comida de hoy
-        $salidasComida = AsistenciaMarcaje::with(['empleado.turnoLaboral', 'empleado.paisTelefono'])
+        // Buscar todos los marcajes de salida_comida y descanso_inicio de hoy
+        $salidasDescanso = AsistenciaMarcaje::with(['empleado.turnoLaboral', 'empleado.paisTelefono'])
             ->whereDate('fecha_hora', $today)
-            ->where('tipo_marcaje', 'salida_comida')
+            ->whereIn('tipo_marcaje', ['salida_comida', 'descanso_inicio'])
             ->get();
 
         $alertados = 0;
 
-        foreach ($salidasComida as $marcajeSalida) {
+        foreach ($salidasDescanso as $marcajeSalida) {
             $empleado = $marcajeSalida->empleado;
             if (! $empleado || ! $empleado->status) {
                 continue;
             }
 
-            // Verificar si el empleado ya registró su regreso DESPUÉS de esta salida_comida.
-            // Comparamos por fecha_hora (más confiable que por ID) e incluimos
-            // todos los tipos que significan "ya regresó o terminó".
+            // Verificar si el empleado ya registró su regreso DESPUÉS de este marcaje
             $yaRegreso = AsistenciaMarcaje::where('empleado_id', $empleado->id)
                 ->where('fecha_hora', '>', $marcajeSalida->fecha_hora)
                 ->whereDate('fecha_hora', $today)
                 ->whereIn('tipo_marcaje', [
-                    'entrada_comida',        // Regreso estándar del descanso
-                    'descanso_fin',          // Fin de descanso genérico
-                    'salida',                // Ya terminó su jornada
+                    'entrada_comida',
+                    'descanso_fin',
+                    'salida',
                     'entrada_extraordinaria',
                 ])
                 ->exists();
@@ -60,9 +58,17 @@ class VerificarDescansosAsistencia extends Command
                 continue; // El empleado ya regresó, no notificar
             }
 
-            // Calcular minutos transcurridos desde salida_comida
-            $minutosTranscurridos      = Carbon::parse($marcajeSalida->fecha_hora)->diffInMinutes($now);
-            $minutosDescansoPermitidos = $empleado->turnoLaboral?->minutos_descanso ?? 30;
+            // Obtener el límite adecuado según el tipo de marcaje
+            $esAlmuerzo = $marcajeSalida->tipo_marcaje === 'salida_comida';
+            if ($esAlmuerzo) {
+                $minutosDescansoPermitidos = $empleado->turnoLaboral?->minutos_descanso ?? 60;
+            } else {
+                $config = \App\Models\ConfiguracionAsistencia::where('empresa_id', $empleado->empresa_id)->first();
+                $minutosDescansoPermitidos = $config?->ley_silla_descanso_minutos ?? 15;
+            }
+
+            // Calcular minutos transcurridos
+            $minutosTranscurridos = Carbon::parse($marcajeSalida->fecha_hora)->diffInMinutes($now);
 
             // Solo actuar si excedió por más de 5 minutos de margen
             if ($minutosTranscurridos <= ($minutosDescansoPermitidos + 5)) {
@@ -72,8 +78,6 @@ class VerificarDescansosAsistencia extends Command
             $minutosExcedidos = $minutosTranscurridos - $minutosDescansoPermitidos;
 
             // ── Deduplicación ────────────────────────────────────────────────
-            // La clave incluye el ID del marcaje para que sea específica por evento.
-            // Una vez notificado, no se vuelve a enviar hasta el día siguiente.
             $cacheKey = "alerta_descanso_excedido_{$marcajeSalida->id}";
             if (cache()->has($cacheKey)) {
                 continue; // Ya fue notificado hoy
@@ -87,7 +91,8 @@ class VerificarDescansosAsistencia extends Command
                 cache()->put($cacheKey, true, $ttl);
                 $alertados++;
 
-                $this->line("  → Notificado: {$empleado->nombre_completo} ({$minutosExcedidos} min excedidos)");
+                $conceptoStr = $esAlmuerzo ? 'Almuerzo' : 'Descanso (Ley Silla)';
+                $this->line("  → Notificado ({$conceptoStr}): {$empleado->nombre_completo} ({$minutosExcedidos} min excedidos)");
             }
         }
 
