@@ -57,6 +57,9 @@ class Empresa extends Model
         'control_acceso_app_token',
         'control_acceso_user_token',
         'control_acceso_active',
+        'jaak_api_key',
+        'jaak_environment',
+        'jaak_active',
     ];
 
     protected function casts(): array
@@ -71,6 +74,8 @@ class Empresa extends Model
             'mapbox_active' => 'boolean',
             'google_maps_active' => 'boolean',
             'control_acceso_active' => 'boolean',
+            'jaak_api_key' => 'encrypted',
+            'jaak_active' => 'boolean',
         ];
     }
 
