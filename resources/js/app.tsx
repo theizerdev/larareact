@@ -42,6 +42,7 @@ createInertiaApp({
             case name.toLowerCase().endsWith('/pasedigital'):
             case name === 'admin/VisitasAccesos/GaritaControl':
             case name.toLowerCase().endsWith('/garitacontrol'):
+            case name.toLowerCase().endsWith('/kiosko'):
             case name.toLowerCase().endsWith('/carnet'):
                 return null;
             case name.startsWith('auth/'):

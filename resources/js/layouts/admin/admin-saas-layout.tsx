@@ -523,6 +523,45 @@ export default function AdminSaasLayout({
                             );
                         })()}
 
+                        {/* Asistencia & Reloj Checador LFT Group */}
+                        {(() => {
+                            const asistenciaItems = [
+                                {
+                                    title: 'Kiosko Checador',
+                                    href: '/admin/reloj-checador/kiosko',
+                                    permission: 'asistencia.kiosko',
+                                },
+                                {
+                                    title: 'Pre-Nómina y Horas LFT',
+                                    href: '/admin/asistencia/calculo-nomina',
+                                    permission: 'asistencia.nomina',
+                                },
+                                {
+                                    title: 'Bitácora de Marcajes',
+                                    href: '/admin/asistencia/bitacora',
+                                    permission: 'asistencia.bitacora',
+                                },
+                                {
+                                    title: 'Configuración y Turnos LFT',
+                                    href: '/admin/asistencia/configuracion',
+                                    permission: 'asistencia.configuracion',
+                                },
+                            ].filter(item => hasPermission(item.permission) || hasPermission('asistencia.view'));
+
+                            if (asistenciaItems.length === 0) return null;
+
+                            return (
+                                <div className="pt-2">
+                                    <CollapsibleNavItem
+                                        title="Reloj Checador LFT"
+                                        icon={Activity}
+                                        collapsed={collapsed}
+                                        items={asistenciaItems}
+                                    />
+                                </div>
+                            );
+                        })()}
+
                         {/* Settings Group */}
                         {(() => {
                             const settingsItems = [

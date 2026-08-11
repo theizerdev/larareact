@@ -137,6 +137,15 @@ class PermissionSeeder extends Seeder
                 'control_acceso.view' => 'Ver Control de Acceso',
             ],
 
+            // Sector: Asistencia y Reloj Checador LFT
+            'asistencia' => [
+                'asistencia.view' => 'Ver Módulo de Asistencia',
+                'asistencia.kiosko' => 'Acceso al Kiosko Checador',
+                'asistencia.bitacora' => 'Ver Bitácora de Marcajes',
+                'asistencia.nomina' => 'Ver Pre-Nómina y Cálculo LFT',
+                'asistencia.configuracion' => 'Configurar Asistencia y Turnos LFT',
+            ],
+
         ];
 
         foreach ($permissions as $sector => $sectorPermissions) {
@@ -160,6 +169,7 @@ class PermissionSeeder extends Seeder
                     str_starts_with($permission, 'monitoreo.') => 'monitoreo',
                     str_starts_with($permission, 'visitas_temporales.') => 'visitas_temporales',
                     str_starts_with($permission, 'control_acceso.') => 'control_acceso',
+                    str_starts_with($permission, 'asistencia.') => 'asistencia',
 
                     default => 'general',
                 };

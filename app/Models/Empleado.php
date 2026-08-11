@@ -58,6 +58,8 @@ class Empleado extends Model
         'empresa_id',
         'sucursal_id',
         'user_id',
+        'salario_diario',
+        'turno_laboral_id',
         'status',
     ];
 
@@ -66,7 +68,13 @@ class Empleado extends Model
         return [
             'status' => 'boolean',
             'jornada_laboral' => 'array',
+            'salario_diario' => 'decimal:2',
         ];
+    }
+
+    public function turnoLaboral(): BelongsTo
+    {
+        return $this->belongsTo(TurnoLaboral::class, 'turno_laboral_id');
     }
 
     public function paisTelefono(): BelongsTo
