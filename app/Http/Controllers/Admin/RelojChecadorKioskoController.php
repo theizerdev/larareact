@@ -48,6 +48,7 @@ class RelojChecadorKioskoController extends Controller
             ->when($empresaId, fn ($q) => $q->where('empresa_id', $empresaId))
             ->where(function ($q) use ($query) {
                 $q->where('documento_identidad', $query)
+                    ->orWhere('curp', $query)
                     ->orWhere('telefono', $query)
                     ->orWhere('id', $query);
             })

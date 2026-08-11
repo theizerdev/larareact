@@ -13,13 +13,17 @@ import {
     Camera, 
     Delete, 
     ArrowLeft,
-    Building2,
+    QrCode,
+    Scan,
+    Volume2,
+    X,
     Sparkles
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Label } from '@/components/ui/label';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 
 interface Configuracion {
     requiere_foto_marcaje?: boolean;
@@ -58,9 +62,36 @@ export default function RelojChecadorKiosko({ configuracion }: Props) {
     const [errorMessage, setErrorMessage] = useState<string | null>(null);
     const [successMessage, setSuccessMessage] = useState<string | null>(null);
 
-    // Cámara de evidencia
+    // Cámara de evidencia de marcaje
     const videoRef = useRef<HTMLVideoElement | null>(null);
     const [cameraActive, setCameraActive] = useState(false);
+
+    // Estado y refs para Escáner QR de Gafete por Cámara
+    const [qrModalOpen, setQrModalOpen] = useState(false);
+    const qrVideoRef = useRef<HTMLVideoElement | null>(null);
+    const qrStreamRef = useRef<MediaStream | null>(null);
+    const [qrScanning, setQrScanning] = useState(false);
+    const [qrDetectedNotice, setQrDetectedNotice] = useState<string | null>(null);
+
+    const inputRef = useRef<HTMLInputElement | null>(null);
+
+    // Reproducir tono de confirmación tipo escáner pos
+    const playBeepSound = () => {
+        try {
+            const audioCtx = new (window.AudioContext || (window as any).webkitAudioContext)();
+            const osc = audioCtx.createOscillator();
+            const gain = audioCtx.createGain();
+            osc.type = 'sine';
+            osc.frequency.setValueAtTime(880, audioCtx.currentTime); // 880 Hz
+            gain.gain.setValueAtTime(0.15, audioCtx.currentTime);
+            osc.connect(gain);
+            gain.connect(audioCtx.destination);
+            osc.start();
+            osc.stop(audioCtx.currentTime + 0.15);
+        } catch (e) {
+            // Audio no soportado o silenciado
+        }
+    };
 
     useEffect(() => {
         if (configuracion?.requiere_foto_marcaje) {
@@ -75,8 +106,87 @@ export default function RelojChecadorKiosko({ configuracion }: Props) {
         }
     }, [configuracion]);
 
+    // Listener para Lectores Físicos (Pistolas USB/Bluetooth) con tecla Enter
+    useEffect(() => {
+        const handleKeyDown = (e: KeyboardEvent) => {
+            if (e.key === 'Enter' && !qrModalOpen) {
+                if (documentInput.trim()) {
+                    handleSearch();
+                }
+            }
+        };
+        window.addEventListener('keydown', handleKeyDown);
+        return () => window.removeEventListener('keydown', handleKeyDown);
+    }, [documentInput, qrModalOpen]);
+
+    // Iniciar / Detener cámara para lector de QR Gafete
+    const startQrCamera = async () => {
+        setQrModalOpen(true);
+        setQrDetectedNotice(null);
+        try {
+            const stream = await navigator.mediaDevices.getUserMedia({
+                video: { facingMode: 'environment', width: { ideal: 1280 }, height: { ideal: 720 } }
+            });
+            qrStreamRef.current = stream;
+            if (qrVideoRef.current) {
+                qrVideoRef.current.srcObject = stream;
+                setQrScanning(true);
+            }
+        } catch (err) {
+            setErrorMessage('No se pudo acceder a la cámara para escanear el gafete QR.');
+            setQrModalOpen(false);
+        }
+    };
+
+    const stopQrCamera = () => {
+        setQrScanning(false);
+        if (qrStreamRef.current) {
+            qrStreamRef.current.getTracks().forEach(track => track.stop());
+            qrStreamRef.current = null;
+        }
+        setQrModalOpen(false);
+    };
+
+    // Bucle de Detección QR por Cámara usando BarcodeDetector si está disponible
+    useEffect(() => {
+        let intervalId: any = null;
+
+        if (qrScanning && qrVideoRef.current) {
+            intervalId = setInterval(async () => {
+                if (!qrVideoRef.current || qrVideoRef.current.readyState !== 4) return;
+
+                if ('BarcodeDetector' in window) {
+                    try {
+                        const barcodeDetector = new (window as any).BarcodeDetector({
+                            formats: ['qr_code', 'code_128', 'code_39', 'data_matrix', 'ean_13']
+                        });
+                        const barcodes = await barcodeDetector.detect(qrVideoRef.current);
+
+                        if (barcodes.length > 0) {
+                            const rawCode = barcodes[0].rawValue;
+                            if (rawCode && rawCode.trim()) {
+                                playBeepSound();
+                                setQrDetectedNotice(`Gafete detectado: ${rawCode}`);
+                                setDocumentInput(rawCode.trim());
+                                stopQrCamera();
+                                // Ejecutar búsqueda automáticamente
+                                performSearch(rawCode.trim());
+                            }
+                        }
+                    } catch (e) {
+                        // Error de detección sostenido
+                    }
+                }
+            }, 300);
+        }
+
+        return () => {
+            if (intervalId) clearInterval(intervalId);
+        };
+    }, [qrScanning]);
+
     const handleNumpadPress = (val: string) => {
-        if (documentInput.length < 15) {
+        if (documentInput.length < 20) {
             setDocumentInput((prev) => prev + val);
         }
     };
@@ -89,6 +199,7 @@ export default function RelojChecadorKiosko({ configuracion }: Props) {
         setDocumentInput('');
         setEmpleado(null);
         setErrorMessage(null);
+        if (inputRef.current) inputRef.current.focus();
     };
 
     const getCsrfToken = () => {
@@ -96,10 +207,9 @@ export default function RelojChecadorKiosko({ configuracion }: Props) {
         return meta ? meta.getAttribute('content') || '' : '';
     };
 
-    // Buscar empleado por documento
-    const handleSearch = async (e?: React.FormEvent) => {
-        if (e) e.preventDefault();
-        if (!documentInput.trim()) return;
+    // Función Central de Búsqueda
+    const performSearch = async (queryValue: string) => {
+        if (!queryValue.trim()) return;
 
         setLoadingSearch(true);
         setErrorMessage(null);
@@ -113,25 +223,31 @@ export default function RelojChecadorKiosko({ configuracion }: Props) {
                     'Accept': 'application/json',
                     'X-CSRF-TOKEN': getCsrfToken(),
                 },
-                body: JSON.stringify({ query: documentInput }),
+                body: JSON.stringify({ query: queryValue.trim() }),
             });
 
             const data = await response.json();
 
             if (response.ok && data.success) {
+                playBeepSound();
                 setEmpleado(data.empleado);
                 setSugerenciaMarcaje(data.sugerencia_marcaje);
                 setTipoMarcajeSeleccionado(data.sugerencia_marcaje);
             } else {
                 setEmpleado(null);
-                setErrorMessage(data.message || 'No se encontró ningún empleado activo con ese documento.');
+                setErrorMessage(data.message || 'No se encontró ningún empleado activo con ese número o QR.');
             }
         } catch (err: any) {
             setEmpleado(null);
-            setErrorMessage('No se encontró ningún empleado activo con ese documento.');
+            setErrorMessage('No se encontró ningún empleado activo con ese número o QR.');
         } finally {
             setLoadingSearch(false);
         }
+    };
+
+    const handleSearch = (e?: React.FormEvent) => {
+        if (e) e.preventDefault();
+        performSearch(documentInput);
     };
 
     // Registrar Marcaje
@@ -171,6 +287,7 @@ export default function RelojChecadorKiosko({ configuracion }: Props) {
             const data = await response.json();
 
             if (response.ok && data.success) {
+                playBeepSound();
                 setSuccessMessage(`¡Marcaje de ${tipo.toUpperCase()} registrado exitosamente para ${data.empleado_nombre}!`);
                 setTimeout(() => {
                     handleNumpadClear();
@@ -196,7 +313,7 @@ export default function RelojChecadorKiosko({ configuracion }: Props) {
 
     return (
         <div className="min-h-screen bg-slate-950 text-white flex flex-col justify-between p-4 md:p-8 font-sans select-none">
-            <Head title="Kiosko Reloj Checador" />
+            <Head title="Kiosko Reloj Checador - Escáner QR Gafete" />
 
             {/* BARRA SUPERIOR */}
             <div className="flex items-center justify-between border-b border-slate-800 pb-4">
@@ -206,7 +323,7 @@ export default function RelojChecadorKiosko({ configuracion }: Props) {
                     </div>
                     <div>
                         <h1 className="text-xl font-bold text-white tracking-wide">RELOJ CHECADOR DIGITAL</h1>
-                        <p className="text-xs text-slate-400">Control de Asistencia & Jornadas Laborales (LFT México)</p>
+                        <p className="text-xs text-slate-400">Control de Asistencia por Numpad, QR Gafete & Pistola Lector</p>
                     </div>
                 </div>
 
@@ -227,23 +344,43 @@ export default function RelojChecadorKiosko({ configuracion }: Props) {
 
             {/* CONTENIDO CENTRAL */}
             <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 my-auto py-4 items-center">
-                {/* COLUMNA IZQUIERDA: NUMPAD & BUSQUEDA */}
+                {/* COLUMNA IZQUIERDA: INPUT, QR SCANNER Y NUMPAD */}
                 <div className="lg:col-span-6 space-y-6">
                     <Card className="bg-slate-900/80 border-slate-800 shadow-2xl backdrop-blur-xl">
                         <CardContent className="p-6 space-y-6">
-                            <div className="text-center space-y-2">
-                                <Label className="text-slate-300 text-sm font-semibold uppercase tracking-wider block">
-                                    Ingrese su N° de Documento de Identidad o Teléfono
-                                </Label>
+                            <div className="text-center space-y-3">
+                                <div className="flex items-center justify-between">
+                                    <Label className="text-slate-300 text-xs font-semibold uppercase tracking-wider block">
+                                        N° de Empleado, Documento o QR Gafete
+                                    </Label>
+                                    <Badge variant="outline" className="text-[10px] bg-indigo-950/60 text-indigo-300 border-indigo-800 flex items-center gap-1">
+                                        <Scan className="w-3 h-3" /> Lector USB listo
+                                    </Badge>
+                                </div>
+
                                 <div className="relative">
                                     <input
+                                        ref={inputRef}
                                         type="text"
-                                        readOnly
                                         value={documentInput}
-                                        placeholder="Pulse los números o escanee..."
-                                        className="w-full text-center text-3xl font-mono font-bold tracking-widest bg-slate-950 border-2 border-emerald-500/40 rounded-xl py-4 text-emerald-400 placeholder:text-slate-700 shadow-inner"
+                                        onChange={(e) => setDocumentInput(e.target.value)}
+                                        onKeyDown={(e) => { if (e.key === 'Enter') handleSearch(); }}
+                                        placeholder="Ingrese número o escanee código de barras/QR..."
+                                        className="w-full text-center text-2xl sm:text-3xl font-mono font-bold tracking-widest bg-slate-950 border-2 border-emerald-500/40 rounded-xl py-4 text-emerald-400 placeholder:text-slate-700 shadow-inner focus:outline-none focus:border-emerald-500"
+                                        autoFocus
                                     />
                                 </div>
+
+                                {/* BOTÓN DE ESCÁNER QR POR CÁMARA */}
+                                <Button
+                                    onClick={startQrCamera}
+                                    type="button"
+                                    variant="outline"
+                                    className="w-full h-12 border-indigo-500/40 bg-indigo-950/40 hover:bg-indigo-900/60 text-indigo-200 font-bold rounded-xl flex items-center justify-center gap-2 border"
+                                >
+                                    <QrCode className="w-5 h-5 text-indigo-400 animate-pulse" />
+                                    <span>ESCANEAR GAFETE QR (CÁMARA)</span>
+                                </Button>
                             </div>
 
                             {/* TECLADO TÁCTIL (NUMPAD) */}
@@ -253,7 +390,7 @@ export default function RelojChecadorKiosko({ configuracion }: Props) {
                                         key={num}
                                         type="button"
                                         onClick={() => handleNumpadPress(num)}
-                                        className="h-16 rounded-xl bg-slate-800/80 hover:bg-emerald-600 text-2xl font-bold text-white border border-slate-700 hover:border-emerald-500 transition-all active:scale-95 shadow-md flex items-center justify-center"
+                                        className="h-14 rounded-xl bg-slate-800/80 hover:bg-emerald-600 text-2xl font-bold text-white border border-slate-700 hover:border-emerald-500 transition-all active:scale-95 shadow-md flex items-center justify-center"
                                     >
                                         {num}
                                     </button>
@@ -261,21 +398,21 @@ export default function RelojChecadorKiosko({ configuracion }: Props) {
                                 <button
                                     type="button"
                                     onClick={handleNumpadClear}
-                                    className="h-16 rounded-xl bg-rose-950/60 hover:bg-rose-600 text-rose-300 hover:text-white text-xs font-bold border border-rose-900 transition-all active:scale-95 flex items-center justify-center"
+                                    className="h-14 rounded-xl bg-rose-950/60 hover:bg-rose-600 text-rose-300 hover:text-white text-xs font-bold border border-rose-900 transition-all active:scale-95 flex items-center justify-center"
                                 >
                                     LIMPIAR
                                 </button>
                                 <button
                                     type="button"
                                     onClick={() => handleNumpadPress('0')}
-                                    className="h-16 rounded-xl bg-slate-800/80 hover:bg-emerald-600 text-2xl font-bold text-white border border-slate-700 hover:border-emerald-500 transition-all active:scale-95 shadow-md flex items-center justify-center"
+                                    className="h-14 rounded-xl bg-slate-800/80 hover:bg-emerald-600 text-2xl font-bold text-white border border-slate-700 hover:border-emerald-500 transition-all active:scale-95 shadow-md flex items-center justify-center"
                                 >
                                     0
                                 </button>
                                 <button
                                     type="button"
                                     onClick={handleNumpadDelete}
-                                    className="h-16 rounded-xl bg-amber-950/60 hover:bg-amber-600 text-amber-300 hover:text-white border border-amber-900 transition-all active:scale-95 flex items-center justify-center"
+                                    className="h-14 rounded-xl bg-amber-950/60 hover:bg-amber-600 text-amber-300 hover:text-white border border-amber-900 transition-all active:scale-95 flex items-center justify-center"
                                 >
                                     <Delete className="w-6 h-6" />
                                 </button>
@@ -286,7 +423,7 @@ export default function RelojChecadorKiosko({ configuracion }: Props) {
                                 disabled={!documentInput.trim() || loadingSearch}
                                 className="w-full h-14 text-lg font-bold bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl shadow-lg shadow-emerald-950/50"
                             >
-                                {loadingSearch ? 'BUSCANDO EMPLEADO...' : 'VERIFICAR EMPLEADO'}
+                                {loadingSearch ? 'VERIFICANDO...' : 'VERIFICAR EMPLEADO'}
                             </Button>
                         </CardContent>
                     </Card>
@@ -305,7 +442,7 @@ export default function RelojChecadorKiosko({ configuracion }: Props) {
                         <Card className="bg-emerald-950/90 border-2 border-emerald-500 p-8 text-center space-y-4 shadow-2xl animate-bounce-short">
                             <CheckCircle2 className="w-20 h-20 text-emerald-400 mx-auto animate-pulse" />
                             <h2 className="text-2xl font-black text-white">{successMessage}</h2>
-                            <p className="text-emerald-200 text-sm">El sistema ha registrado el evento de asistencia y actualizado las horas laboradas.</p>
+                            <p className="text-emerald-200 text-sm">El sistema ha registrado el evento de asistencia y notificado por WhatsApp al empleado.</p>
                         </Card>
                     ) : empleado ? (
                         <Card className="bg-slate-900/90 border-2 border-emerald-500/40 shadow-2xl backdrop-blur-xl space-y-6 p-6">
@@ -390,8 +527,8 @@ export default function RelojChecadorKiosko({ configuracion }: Props) {
                     ) : (
                         <Card className="bg-slate-900/40 border-slate-800/80 p-8 text-center space-y-4">
                             <UserCheck className="w-16 h-16 text-slate-700 mx-auto" />
-                            <h3 className="text-slate-400 font-medium">En espera de ingreso de documento...</h3>
-                            <p className="text-xs text-slate-600">Al ingresar el número de empleado o escanear el carnet, aparecerá el perfil con las opciones de marcaje.</p>
+                            <h3 className="text-slate-400 font-medium">En espera de ingreso de documento o lectura de QR...</h3>
+                            <p className="text-xs text-slate-600">Al ingresar el número de empleado o acercar el QR del gafete a la cámara/lector, aparecerá el perfil con las opciones de marcaje.</p>
                         </Card>
                     )}
 
@@ -410,9 +547,64 @@ export default function RelojChecadorKiosko({ configuracion }: Props) {
                 </div>
             </div>
 
+            {/* MODAL DE ESCÁNER DE CÁMARA QR GAFETE */}
+            <Dialog open={qrModalOpen} onOpenChange={(open) => { if (!open) stopQrCamera(); }}>
+                <DialogContent className="max-w-md bg-slate-900 border border-slate-800 text-white">
+                    <DialogHeader>
+                        <DialogTitle className="flex items-center gap-2 text-lg font-bold text-indigo-400">
+                            <QrCode className="w-6 h-6 text-indigo-400 animate-pulse" />
+                            Escáner de Gafete QR
+                        </DialogTitle>
+                        <DialogDescription className="text-xs text-slate-400">
+                            Alinee el código QR del gafete del empleado dentro del recuadro del visor de la cámara.
+                        </DialogDescription>
+                    </DialogHeader>
+
+                    <div className="space-y-4 pt-2">
+                        <div className="relative rounded-2xl overflow-hidden border-2 border-indigo-500/50 bg-slate-950 h-64 flex items-center justify-center">
+                            <video
+                                ref={qrVideoRef}
+                                autoPlay
+                                playsInline
+                                muted
+                                className="w-full h-full object-cover"
+                            />
+                            {/* Overlay de Enfoque QR */}
+                            <div className="absolute inset-0 border-[40px] border-slate-950/60 pointer-events-none flex items-center justify-center">
+                                <div className="w-44 h-44 border-2 border-indigo-400 rounded-2xl relative animate-pulse shadow-2xl">
+                                    <div className="absolute -top-1 -left-1 w-4 h-4 border-t-4 border-l-4 border-indigo-400 rounded-tl"></div>
+                                    <div className="absolute -top-1 -right-1 w-4 h-4 border-t-4 border-r-4 border-indigo-400 rounded-tr"></div>
+                                    <div className="absolute -bottom-1 -left-1 w-4 h-4 border-b-4 border-l-4 border-indigo-400 rounded-bl"></div>
+                                    <div className="absolute -bottom-1 -right-1 w-4 h-4 border-b-4 border-r-4 border-indigo-400 rounded-br"></div>
+                                </div>
+                            </div>
+                        </div>
+
+                        {qrDetectedNotice && (
+                            <div className="p-3 bg-emerald-950/90 border border-emerald-500 text-emerald-200 text-xs font-bold text-center rounded-xl flex items-center justify-center gap-2">
+                                <CheckCircle2 className="w-4 h-4 text-emerald-400" />
+                                <span>{qrDetectedNotice}</span>
+                            </div>
+                        )}
+
+                        <div className="flex justify-between items-center text-xs text-slate-400">
+                            <span>Estado: {qrScanning ? 'Buscando código QR...' : 'Detenido'}</span>
+                            <Button
+                                type="button"
+                                variant="outline"
+                                onClick={stopQrCamera}
+                                className="border-slate-700 bg-slate-800 hover:bg-slate-700 text-slate-200"
+                            >
+                                Cancelar Escaneo
+                            </Button>
+                        </div>
+                    </div>
+                </DialogContent>
+            </Dialog>
+
             {/* PIE DE PÁGINA */}
             <div className="border-t border-slate-900 pt-4 flex flex-col sm:flex-row items-center justify-between text-xs text-slate-500 gap-2">
-                <div>Sistema Kiosko Checador LFT • Empresa Multi-Sucursal</div>
+                <div>Sistema Kiosko Checador LFT • Soporte para Teclado, Pistola USB y QR Gafete</div>
                 <div className="flex items-center gap-2">
                     <ShieldCheck className="w-4 h-4 text-emerald-500" />
                     <span>Cumplimiento Ley Federal del Trabajo Art. 60-75</span>

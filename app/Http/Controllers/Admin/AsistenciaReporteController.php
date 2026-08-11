@@ -9,6 +9,7 @@ use App\Models\AsistenciaResumenSemanal;
 use App\Models\Empleado;
 
 use App\Services\CalculoAsistenciaLftService;
+use App\Services\RegionalConfigurationService;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
@@ -21,6 +22,10 @@ class AsistenciaReporteController extends Controller
     public function bitacoraMarcajes(Request $request)
     {
         $user = $request->user();
+        if ($user && $user->empresa) {
+            RegionalConfigurationService::setRegionalConfiguration($user->empresa);
+        }
+
         $empresaId = $user->empresa_id;
 
         $query = AsistenciaMarcaje::with(['empleado.departamento', 'empleado.cargo', 'sucursal'])
@@ -33,14 +38,23 @@ class AsistenciaReporteController extends Controller
                 });
             })
             ->when($request->tipo_marcaje, fn ($q, $t) => $q->where('tipo_marcaje', $t))
+            ->when($request->origen, fn ($q, $o) => $q->where('origen', $o))
             ->when($request->fecha_inicio, fn ($q, $f) => $q->whereDate('fecha_hora', '>=', $f))
             ->when($request->fecha_fin, fn ($q, $f) => $q->whereDate('fecha_hora', '<=', $f));
+
+        $stats = [
+            'total' => (clone $query)->count(),
+            'entradas' => (clone $query)->where('tipo_marcaje', 'entrada')->count(),
+            'descansos' => (clone $query)->whereIn('tipo_marcaje', ['salida_comida', 'entrada_comida'])->count(),
+            'salidas' => (clone $query)->where('tipo_marcaje', 'salida')->count(),
+        ];
 
         $marcajes = $query->latest('fecha_hora')->paginate($request->perPage ?? 15)->withQueryString();
 
         return Inertia::render('admin/asistencia/Bitacora', [
             'marcajes' => $marcajes,
-            'filters' => $request->only('search', 'tipo_marcaje', 'fecha_inicio', 'fecha_fin', 'perPage'),
+            'stats' => $stats,
+            'filters' => $request->only('search', 'tipo_marcaje', 'origen', 'fecha_inicio', 'fecha_fin', 'perPage'),
         ]);
     }
 

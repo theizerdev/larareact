@@ -55,6 +55,15 @@ class AsistenciaMarcaje extends Model
         ];
     }
 
+    /**
+     * Formatear fecha y hora respetando la zona horaria local de la empresa/sistema
+     */
+    protected function serializeDate(\DateTimeInterface $date): string
+    {
+        $timezone = config('app.timezone', 'America/Mexico_City');
+        return \Carbon\Carbon::instance($date)->timezone($timezone)->format('Y-m-d H:i:s');
+    }
+
     public function empleado(): BelongsTo
     {
         return $this->belongsTo(Empleado::class);
