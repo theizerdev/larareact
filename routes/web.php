@@ -6,7 +6,12 @@ use App\Http\Controllers\Auth\ForgotPasswordOtpController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 
-Route::inertia('/', 'welcome')->name('home');
+Route::get('/', function () {
+    if (Auth::check()) {
+        return redirect()->route('dashboard');
+    }
+    return redirect()->route('login');
+})->name('home');
 
 // Módulo de Control de Garita (Lector QR)
 Route::get('/garita', [VisitaAccesoController::class, 'garita'])->name('garita.show');
