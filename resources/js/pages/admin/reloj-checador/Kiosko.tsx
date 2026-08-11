@@ -17,13 +17,13 @@ import {
     Scan,
     Volume2,
     X,
-    Sparkles
+    Sparkles,
+    SwitchCamera
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Label } from '@/components/ui/label';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 
 interface Configuracion {
     requiere_foto_marcaje?: boolean;
@@ -68,6 +68,7 @@ export default function RelojChecadorKiosko({ configuracion }: Props) {
 
     // Estado y refs para Escáner QR de Gafete por Cámara
     const [qrModalOpen, setQrModalOpen] = useState(false);
+    const [facingMode, setFacingMode] = useState<'environment' | 'user'>('environment');
     const qrVideoRef = useRef<HTMLVideoElement | null>(null);
     const qrStreamRef = useRef<MediaStream | null>(null);
     const [qrScanning, setQrScanning] = useState(false);
@@ -119,71 +120,139 @@ export default function RelojChecadorKiosko({ configuracion }: Props) {
         return () => window.removeEventListener('keydown', handleKeyDown);
     }, [documentInput, qrModalOpen]);
 
-    // Iniciar / Detener cámara para lector de QR Gafete
-    const startQrCamera = async () => {
-        setQrModalOpen(true);
-        setQrDetectedNotice(null);
-        try {
-            const stream = await navigator.mediaDevices.getUserMedia({
-                video: { facingMode: 'environment', width: { ideal: 1280 }, height: { ideal: 720 } }
-            });
-            qrStreamRef.current = stream;
-            if (qrVideoRef.current) {
-                qrVideoRef.current.srcObject = stream;
-                setQrScanning(true);
-            }
-        } catch (err) {
-            setErrorMessage('No se pudo acceder a la cámara para escanear el gafete QR.');
-            setQrModalOpen(false);
+    // Cargar jsQR dinámicamente si el navegador no tiene BarcodeDetector nativo (idéntico a Garita Control)
+    useEffect(() => {
+        if (typeof window !== 'undefined' && !('BarcodeDetector' in window) && !(window as any).jsQR) {
+            const script = document.createElement('script');
+            script.src = 'https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.js';
+            script.async = true;
+            document.head.appendChild(script);
         }
+    }, []);
+
+    // Procesar texto escaneado por cámara
+    const handleProcessScannedCode = (scannedText: string) => {
+        let clean = scannedText.trim();
+        if (clean.includes('/pase-digital/')) {
+            const parts = clean.split('/pase-digital/');
+            clean = parts[parts.length - 1];
+        }
+        stopQrCamera();
+        setDocumentInput(clean);
+        performSearch(clean);
+    };
+
+    const startQrCamera = (mode: 'environment' | 'user' = facingMode) => {
+        setFacingMode(mode);
+        setQrModalOpen(true);
+    };
+
+    const toggleCameraFacing = () => {
+        const nextMode = facingMode === 'environment' ? 'user' : 'environment';
+        setFacingMode(nextMode);
     };
 
     const stopQrCamera = () => {
-        setQrScanning(false);
-        if (qrStreamRef.current) {
-            qrStreamRef.current.getTracks().forEach(track => track.stop());
-            qrStreamRef.current = null;
-        }
         setQrModalOpen(false);
     };
 
-    // Bucle de Detección QR por Cámara usando BarcodeDetector si está disponible
+    // Efecto de cámara en vivo (Escaneo Omnidireccional 360° con BarcodeDetector + jsQR)
     useEffect(() => {
-        let intervalId: any = null;
+        let animationFrameId: number;
+        let active = true;
 
-        if (qrScanning && qrVideoRef.current) {
-            intervalId = setInterval(async () => {
-                if (!qrVideoRef.current || qrVideoRef.current.readyState !== 4) return;
+        if (qrModalOpen) {
+            setErrorMessage(null);
+            navigator.mediaDevices.getUserMedia({
+                video: { facingMode: facingMode, width: { ideal: 1280 }, height: { ideal: 720 } }
+            })
+                .then((stream) => {
+                    if (!active) {
+                        stream.getTracks().forEach(t => t.stop());
+                        return;
+                    }
+                    qrStreamRef.current = stream;
+                    if (qrVideoRef.current) {
+                        qrVideoRef.current.srcObject = stream;
+                        qrVideoRef.current.setAttribute('playsinline', 'true');
+                        qrVideoRef.current.play().catch(() => {});
+                    }
 
-                if ('BarcodeDetector' in window) {
-                    try {
-                        const barcodeDetector = new (window as any).BarcodeDetector({
-                            formats: ['qr_code', 'code_128', 'code_39', 'data_matrix', 'ean_13']
-                        });
-                        const barcodes = await barcodeDetector.detect(qrVideoRef.current);
+                    const hasBarcodeDetector = 'BarcodeDetector' in window;
+                    let detector: any = null;
+                    if (hasBarcodeDetector) {
+                        try {
+                            detector = new (window as any).BarcodeDetector({ formats: ['qr_code', 'code_128', 'code_39', 'data_matrix', 'ean_13'] });
+                        } catch (e) {
+                            detector = null;
+                        }
+                    }
 
-                        if (barcodes.length > 0) {
-                            const rawCode = barcodes[0].rawValue;
-                            if (rawCode && rawCode.trim()) {
-                                playBeepSound();
-                                setQrDetectedNotice(`Gafete detectado: ${rawCode}`);
-                                setDocumentInput(rawCode.trim());
-                                stopQrCamera();
-                                // Ejecutar búsqueda automáticamente
-                                performSearch(rawCode.trim());
+                    const canvas = document.createElement('canvas');
+                    const ctx = canvas.getContext('2d', { willReadFrequently: true });
+
+                    const scanFrame = async () => {
+                        if (!active || !qrVideoRef.current) return;
+                        const video = qrVideoRef.current;
+
+                        if (video.readyState === video.HAVE_ENOUGH_DATA) {
+                            // 1. Detección por BarcodeDetector (si disponible) en todo el campo visual
+                            if (detector) {
+                                try {
+                                    const barcodes = await detector.detect(video);
+                                    if (barcodes && barcodes.length > 0) {
+                                        const detectedRaw = barcodes[0].rawValue;
+                                        if (detectedRaw) {
+                                            playBeepSound();
+                                            handleProcessScannedCode(detectedRaw);
+                                            return;
+                                        }
+                                    }
+                                } catch (err) {}
+                            }
+
+                            // 2. Detección por jsQR en 100% del cuadro de imagen (Escaneo omnidireccional 360°)
+                            const jsQR = (window as any).jsQR;
+                            if (jsQR && video.videoWidth > 0 && video.videoHeight > 0) {
+                                canvas.width = video.videoWidth;
+                                canvas.height = video.videoHeight;
+                                if (ctx) {
+                                    ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+                                    const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+                                    const code = jsQR(imageData.data, imageData.width, imageData.height, {
+                                        inversionAttempts: 'dontInvert',
+                                    });
+                                    if (code && code.data) {
+                                        playBeepSound();
+                                        handleProcessScannedCode(code.data);
+                                        return;
+                                    }
+                                }
                             }
                         }
-                    } catch (e) {
-                        // Error de detección sostenido
-                    }
-                }
-            }, 300);
+
+                        if (active) {
+                            animationFrameId = requestAnimationFrame(scanFrame);
+                        }
+                    };
+
+                    animationFrameId = requestAnimationFrame(scanFrame);
+                })
+                .catch((err) => {
+                    setErrorMessage('No se pudo acceder a la cámara para escanear el gafete QR.');
+                    setQrModalOpen(false);
+                });
         }
 
         return () => {
-            if (intervalId) clearInterval(intervalId);
+            active = false;
+            if (animationFrameId) cancelAnimationFrame(animationFrameId);
+            if (qrStreamRef.current) {
+                qrStreamRef.current.getTracks().forEach(t => t.stop());
+                qrStreamRef.current = null;
+            }
         };
-    }, [qrScanning]);
+    }, [qrModalOpen, facingMode]);
 
     const handleNumpadPress = (val: string) => {
         if (documentInput.length < 20) {
@@ -547,60 +616,73 @@ export default function RelojChecadorKiosko({ configuracion }: Props) {
                 </div>
             </div>
 
-            {/* MODAL DE ESCÁNER DE CÁMARA QR GAFETE */}
-            <Dialog open={qrModalOpen} onOpenChange={(open) => { if (!open) stopQrCamera(); }}>
-                <DialogContent className="max-w-md bg-slate-900 border border-slate-800 text-white">
-                    <DialogHeader>
-                        <DialogTitle className="flex items-center gap-2 text-lg font-bold text-indigo-400">
-                            <QrCode className="w-6 h-6 text-indigo-400 animate-pulse" />
-                            Escáner de Gafete QR
-                        </DialogTitle>
-                        <DialogDescription className="text-xs text-slate-400">
-                            Alinee el código QR del gafete del empleado dentro del recuadro del visor de la cámara.
-                        </DialogDescription>
-                    </DialogHeader>
+            {/* Modal de Escáner QR con Cámara en Vivo (idéntico al de Garita Control) */}
+            {qrModalOpen && (
+                <div className="fixed inset-0 z-50 bg-black/95 backdrop-blur-md flex items-center justify-center p-4">
+                    <div className="relative max-w-xl w-full bg-slate-900 border border-emerald-500/40 rounded-3xl overflow-hidden shadow-2xl space-y-4 p-5 text-center">
+                        <div className="flex items-center justify-between border-b border-slate-800 pb-3">
+                            <div className="flex items-center gap-2">
+                                <Camera className="w-5 h-5 text-emerald-400 animate-pulse" />
+                                <h3 className="text-sm font-extrabold text-white">
+                                    Escáner QR de Cámara en Vivo
+                                </h3>
+                            </div>
 
-                    <div className="space-y-4 pt-2">
-                        <div className="relative rounded-2xl overflow-hidden border-2 border-indigo-500/50 bg-slate-950 h-64 flex items-center justify-center">
+                            <div className="flex items-center gap-2">
+                                <Button
+                                    type="button"
+                                    size="sm"
+                                    variant="outline"
+                                    onClick={toggleCameraFacing}
+                                    className="bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs rounded-xl border-slate-700 gap-1.5"
+                                >
+                                    <SwitchCamera className="w-4 h-4 text-emerald-400" />
+                                    {facingMode === 'environment' ? 'Cámara Trasera' : 'Cámara Frontal'}
+                                </Button>
+
+                                <button
+                                    type="button"
+                                    onClick={stopQrCamera}
+                                    className="p-2 text-slate-400 hover:text-white bg-slate-800 hover:bg-slate-700 rounded-full transition-colors"
+                                >
+                                    <X className="w-5 h-5" />
+                                </button>
+                            </div>
+                        </div>
+
+                        <div className="relative aspect-[4/3] w-full max-w-xl mx-auto bg-black rounded-2xl overflow-hidden border-2 border-emerald-500/50 shadow-inner group">
                             <video
                                 ref={qrVideoRef}
-                                autoPlay
+                                className="w-full h-full object-cover"
                                 playsInline
                                 muted
-                                className="w-full h-full object-cover"
+                                autoPlay
                             />
-                            {/* Overlay de Enfoque QR */}
-                            <div className="absolute inset-0 border-[40px] border-slate-950/60 pointer-events-none flex items-center justify-center">
-                                <div className="w-44 h-44 border-2 border-indigo-400 rounded-2xl relative animate-pulse shadow-2xl">
-                                    <div className="absolute -top-1 -left-1 w-4 h-4 border-t-4 border-l-4 border-indigo-400 rounded-tl"></div>
-                                    <div className="absolute -top-1 -right-1 w-4 h-4 border-t-4 border-r-4 border-indigo-400 rounded-tr"></div>
-                                    <div className="absolute -bottom-1 -left-1 w-4 h-4 border-b-4 border-l-4 border-indigo-400 rounded-bl"></div>
-                                    <div className="absolute -bottom-1 -right-1 w-4 h-4 border-b-4 border-r-4 border-indigo-400 rounded-br"></div>
+
+                            {/* Escáner Láser Omnidireccional en Toda la Pantalla */}
+                            <div className="absolute inset-0 pointer-events-none flex flex-col justify-between p-4">
+                                <div className="flex justify-between">
+                                    <div className="w-8 h-8 border-t-4 border-l-4 border-emerald-400 rounded-tl-xl" />
+                                    <div className="w-8 h-8 border-t-4 border-r-4 border-emerald-400 rounded-tr-xl" />
+                                </div>
+
+                                {/* Línea Láser Verde Animada en Toda la Pantalla */}
+                                <div className="w-full h-0.5 bg-emerald-400 shadow-[0_0_12px_#34d399] animate-pulse" />
+
+                                <div className="flex justify-between">
+                                    <div className="w-8 h-8 border-b-4 border-l-4 border-emerald-400 rounded-bl-xl" />
+                                    <div className="w-8 h-8 border-b-4 border-r-4 border-emerald-400 rounded-br-xl" />
                                 </div>
                             </div>
-                        </div>
 
-                        {qrDetectedNotice && (
-                            <div className="p-3 bg-emerald-950/90 border border-emerald-500 text-emerald-200 text-xs font-bold text-center rounded-xl flex items-center justify-center gap-2">
-                                <CheckCircle2 className="w-4 h-4 text-emerald-400" />
-                                <span>{qrDetectedNotice}</span>
+                            <div className="absolute bottom-3 left-1/2 -translate-x-1/2 bg-black/80 backdrop-blur-md px-4 py-2 rounded-full border border-emerald-500/40 text-xs font-bold text-emerald-300 flex items-center gap-2 shadow-lg w-11/12 justify-center text-center">
+                                <Sparkles className="w-4 h-4 text-emerald-400 shrink-0 animate-spin" />
+                                <span>Escaneo 360° Activo: Acerque el QR a cualquier lugar de la pantalla</span>
                             </div>
-                        )}
-
-                        <div className="flex justify-between items-center text-xs text-slate-400">
-                            <span>Estado: {qrScanning ? 'Buscando código QR...' : 'Detenido'}</span>
-                            <Button
-                                type="button"
-                                variant="outline"
-                                onClick={stopQrCamera}
-                                className="border-slate-700 bg-slate-800 hover:bg-slate-700 text-slate-200"
-                            >
-                                Cancelar Escaneo
-                            </Button>
                         </div>
                     </div>
-                </DialogContent>
-            </Dialog>
+                </div>
+            )}
 
             {/* PIE DE PÁGINA */}
             <div className="border-t border-slate-900 pt-4 flex flex-col sm:flex-row items-center justify-between text-xs text-slate-500 gap-2">

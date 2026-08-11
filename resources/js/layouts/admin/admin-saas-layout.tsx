@@ -523,7 +523,7 @@ export default function AdminSaasLayout({
                             );
                         })()}
 
-                        {/* Asistencia & Reloj Checador LFT Group */}
+                        {/* Asistencia & Reloj Checador Group */}
                         {(() => {
                             const asistenciaItems = [
                                 {
@@ -532,7 +532,7 @@ export default function AdminSaasLayout({
                                     permission: 'asistencia.kiosko',
                                 },
                                 {
-                                    title: 'Pre-Nómina y Horas LFT',
+                                    title: 'Pre-Nómina y Horas Extra',
                                     href: '/admin/asistencia/calculo-nomina',
                                     permission: 'asistencia.nomina',
                                 },
@@ -542,7 +542,7 @@ export default function AdminSaasLayout({
                                     permission: 'asistencia.bitacora',
                                 },
                                 {
-                                    title: 'Configuración y Turnos LFT',
+                                    title: 'Configuración y Turnos',
                                     href: '/admin/asistencia/configuracion',
                                     permission: 'asistencia.configuracion',
                                 },
@@ -553,7 +553,7 @@ export default function AdminSaasLayout({
                             return (
                                 <div className="pt-2">
                                     <CollapsibleNavItem
-                                        title="Reloj Checador LFT"
+                                        title="Reloj Checador"
                                         icon={Activity}
                                         collapsed={collapsed}
                                         items={asistenciaItems}
