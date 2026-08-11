@@ -40,6 +40,7 @@ export default defineConfig({
             workbox: {
                 // Solo cachear assets estáticos; las requests API siguen al servidor
                 globPatterns: ['**/*.{js,css,html}'],
+                maximumFileSizeToCacheInBytes: 6 * 1024 * 1024,
                 runtimeCaching: [
                     {
                         urlPattern: /^\/icons\//,
