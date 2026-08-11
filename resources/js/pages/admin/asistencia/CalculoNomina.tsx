@@ -89,12 +89,12 @@ export default function CalculoNominaIndex({ resumenesSemanales, stats, filters 
 
     const breadcrumbs = [
         { title: 'Dashboard', href: '/dashboard' },
-        { title: 'Cálculo de Nómina LFT', href: '/admin/asistencia/calculo-nomina' },
+        { title: 'Cálculo de Nómina', href: '/admin/asistencia/calculo-nomina' },
     ];
 
     return (
         <>
-            <Head title="Pre-Nómina y Horas Pagables LFT" />
+            <Head title="Pre-Nómina y Horas Extra" />
 
             <div className="space-y-6">
                 <Breadcrumbs breadcrumbs={breadcrumbs} />
@@ -102,36 +102,50 @@ export default function CalculoNominaIndex({ resumenesSemanales, stats, filters 
                 {/* Encabezado Estándar del Sistema */}
                 <ModuleHeader
                     icon={<FileSpreadsheet className="h-6 w-6 text-white" />}
-                    title="Pre-Nómina y Horas Pagables LFT"
-                    description="Consolidación de horas ordinarias, extras dobles (Art. 67), extras triples (Art. 68), prima dominical y días festivos."
+                    title="Pre-Nómina y Horas Extra"
+                    description="Consolidación de horas ordinarias, extras dobles, extras triples, prima dominical y días festivos."
                     colorClassName="bg-emerald-600"
                 >
                     <Button onClick={handleProcesar} className="gap-2">
                         <RefreshCw className="h-4 w-4" />
-                        <span>Procesar Horas del Período</span>
+                        Procesar Horas del Período
                     </Button>
                 </ModuleHeader>
 
-                {/* Filtro por Rango de Fechas */}
-                <FilterBar>
-                    <div className="flex flex-wrap items-end justify-between gap-4 w-full">
-                        <div className="flex flex-wrap items-end gap-4">
-                            <FilterField label="Fecha Inicio Período">
-                                <Input
-                                    type="date"
-                                    value={fechaInicio}
-                                    onChange={(e) => setFechaInicio(e.target.value)}
-                                    className="w-full sm:w-44"
-                                />
-                            </FilterField>
+                {/* Filtros Estándar */}
+                <FilterBar title="Filtros del Período">
+                    <div className="flex flex-wrap items-end gap-4">
+                        <FilterField label="Fecha Inicio">
+                            <Input
+                                type="date"
+                                value={fechaInicio}
+                                onChange={(e) => setFechaInicio(e.target.value)}
+                            />
+                        </FilterField>
 
-                            <FilterField label="Fecha Fin Período">
-                                <Input
-                                    type="date"
-                                    value={fechaFin}
-                                    onChange={(e) => setFechaFin(e.target.value)}
-                                    className="w-full sm:w-44"
-                                />
+                        <FilterField label="Fecha Fin">
+                            <Input
+                                type="date"
+                                value={fechaFin}
+                                onChange={(e) => setFechaFin(e.target.value)}
+                            />
+                        </FilterField>
+
+                        <div className="flex items-center gap-2">
+                            <FilterField label="Empleado">
+                                <Select value={empleadoId} onValueChange={setEmpleadoId}>
+                                    <SelectTrigger className="w-[200px]">
+                                        <SelectValue placeholder="Todos los empleados" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        <SelectItem value="todos">Todos los empleados</SelectItem>
+                                        {empleados.map((emp) => (
+                                            <SelectItem key={emp.id} value={emp.id.toString()}>
+                                                {emp.nombres} {emp.apellidos}
+                                            </SelectItem>
+                                        ))}
+                                    </SelectContent>
+                                </Select>
                             </FilterField>
 
                             <Button onClick={handleFilter} variant="outline">
@@ -140,7 +154,7 @@ export default function CalculoNominaIndex({ resumenesSemanales, stats, filters 
                         </div>
 
                         <div className="text-xs text-muted-foreground self-center">
-                            * Regla 3x3 LFT: Primeras 9h extra al 100% (dobles); excedentes al 200% (triples).
+                            * Regla de Horas Extra: Primeras 9h extra al 100% (dobles); excedentes al 200% (triples).
                         </div>
                     </div>
                 </FilterBar>
@@ -209,7 +223,7 @@ export default function CalculoNominaIndex({ resumenesSemanales, stats, filters 
                                     {resumenesSemanales.length === 0 ? (
                                         <tr>
                                             <td colSpan={9} className="px-4 py-8 text-center text-muted-foreground">
-                                                No hay datos procesados para el período seleccionado. Haz clic en "Procesar Horas del Período" para ejecutar el cálculo LFT.
+                                                No hay datos procesados para el período seleccionado. Haz clic en "Procesar Horas del Período" para ejecutar el cálculo.
                                             </td>
                                         </tr>
                                     ) : (

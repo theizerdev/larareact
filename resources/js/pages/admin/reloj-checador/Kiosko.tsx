@@ -686,10 +686,10 @@ export default function RelojChecadorKiosko({ configuracion }: Props) {
 
             {/* PIE DE PÁGINA */}
             <div className="border-t border-slate-900 pt-4 flex flex-col sm:flex-row items-center justify-between text-xs text-slate-500 gap-2">
-                <div>Sistema Kiosko Checador LFT • Soporte para Teclado, Pistola USB y QR Gafete</div>
+                <div>Sistema Kiosko Checador • Soporte para Teclado, Pistola USB y QR Gafete</div>
                 <div className="flex items-center gap-2">
                     <ShieldCheck className="w-4 h-4 text-emerald-500" />
-                    <span>Cumplimiento Ley Federal del Trabajo Art. 60-75</span>
+                    <span>Control de Asistencia & Horarios</span>
                 </div>
             </div>
         </div>

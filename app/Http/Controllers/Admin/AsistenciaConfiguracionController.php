@@ -73,7 +73,7 @@ class AsistenciaConfiguracionController extends Controller
 
         return back()->with('notification', [
             'type' => 'success',
-            'message' => 'Configuración de asistencia y reglas LFT actualizada con éxito.',
+            'message' => 'Configuración de asistencia actualizada con éxito.',
         ]);
     }
 
@@ -246,7 +246,7 @@ class AsistenciaConfiguracionController extends Controller
 
         return back()->with('notification', [
             'type' => 'success',
-            'message' => "Se han precargado los días festivos oficiales LFT para el año {$year}.",
+            'message' => "Se han precargado los días festivos oficiales para el año {$year}.",
         ]);
     }
 }

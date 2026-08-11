@@ -265,12 +265,12 @@ export default function ConfiguracionAsistenciaIndex({ configuracion, turnos, di
 
     const breadcrumbs = [
         { title: 'Dashboard', href: '/dashboard' },
-        { title: 'Configuración de Asistencia y LFT', href: '/admin/asistencia/configuracion' },
+        { title: 'Configuración de Asistencia', href: '/admin/asistencia/configuracion' },
     ];
 
     return (
         <>
-            <Head title="Configuración de Asistencia LFT" />
+            <Head title="Configuración de Asistencia" />
 
             <div className="space-y-6">
                 <Breadcrumbs breadcrumbs={breadcrumbs} />
@@ -278,8 +278,8 @@ export default function ConfiguracionAsistenciaIndex({ configuracion, turnos, di
                 {/* ModuleHeader Estándar del Sistema */}
                 <ModuleHeader
                     icon={<Clock className="h-6 w-6 text-white" />}
-                    title="Configuración de Asistencia & LFT"
-                    description="Políticas de tolerancia, catálogo de turnos por jornada (Diurna, Nocturna, Mixta), descansos (Art. 64) y días festivos."
+                    title="Configuración de Asistencia & Turnos"
+                    description="Políticas de tolerancia, catálogo de turnos por jornada (Diurna, Nocturna, Mixta), descansos y días festivos."
                     colorClassName="bg-slate-900 dark:bg-slate-800"
                 />
 
@@ -296,7 +296,7 @@ export default function ConfiguracionAsistenciaIndex({ configuracion, turnos, di
                         </TabsTrigger>
                         <TabsTrigger value="festivos" className="flex items-center gap-2">
                             <Calendar className="w-4 h-4" />
-                            <span>Días Festivos LFT ({diasFestivos.length})</span>
+                            <span>Días Festivos ({diasFestivos.length})</span>
                         </TabsTrigger>
                     </TabsList>
 
@@ -374,19 +374,19 @@ export default function ConfiguracionAsistenciaIndex({ configuracion, turnos, di
                                     <CardHeader>
                                         <CardTitle className="text-base flex items-center gap-2">
                                             <ShieldCheck className="w-5 h-5 text-emerald-600 dark:text-emerald-400" />
-                                            Reglas LFT & Horas Extras
+                                            Reglas de Horas Extras
                                         </CardTitle>
                                         <CardDescription>
-                                            Cálculo legal de descansos, horas extra dobles/triples y primas.
+                                            Cálculo de descansos, horas extra dobles/triples y primas.
                                         </CardDescription>
                                     </CardHeader>
                                     <CardContent className="space-y-5">
-                                        {/* Art. 64 LFT Switch */}
+                                        {/* Descanso Switch */}
                                         <div className="p-4 rounded-xl border space-y-3 bg-muted/40">
                                             <div className="flex items-center justify-between">
                                                 <div className="flex items-center gap-2">
                                                     <Coffee className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
-                                                    <Label className="font-semibold">Descanso es Tiempo Efectivo (Art. 64 LFT)</Label>
+                                                    <Label className="font-semibold">Descanso es Tiempo Efectivo</Label>
                                                 </div>
                                                 <Switch
                                                     checked={configForm.data.descanso_es_tiempo_efectivo}
@@ -416,7 +416,7 @@ export default function ConfiguracionAsistenciaIndex({ configuracion, turnos, di
 
                                         {/* Prima Dominical */}
                                         <div className="space-y-2 pt-2 border-t">
-                                            <Label>Porcentaje Prima Dominical (% Art. 71 LFT)</Label>
+                                            <Label>Porcentaje Prima Dominical (%)</Label>
                                             <div className="relative">
                                                 <Input
                                                     type="number"
@@ -449,7 +449,7 @@ export default function ConfiguracionAsistenciaIndex({ configuracion, turnos, di
                         <div className="flex items-center justify-between p-4 rounded-xl border bg-card">
                             <div>
                                 <h3 className="text-base font-semibold">Catálogo de Turnos Laborales</h3>
-                                <p className="text-muted-foreground text-xs">Clasificación de jornadas en Diurna (max 8h), Nocturna (max 7h) y Mixta (max 7.5h) según Art. 60 y 61 LFT.</p>
+                                <p className="text-muted-foreground text-xs">Clasificación de jornadas en Diurna (max 8h), Nocturna (max 7h) y Mixta (max 7.5h) según el tipo de jornada.</p>
                             </div>
                             <Button onClick={openTurnoCreate} className="gap-2">
                                 <Plus className="w-4 h-4" />
@@ -529,13 +529,13 @@ export default function ConfiguracionAsistenciaIndex({ configuracion, turnos, di
                     <TabsContent value="festivos" className="space-y-4">
                         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-4 rounded-xl border bg-card">
                             <div>
-                                <h3 className="text-base font-semibold">Días Festivos Obligatorios (Art. 74 LFT)</h3>
+                                <h3 className="text-base font-semibold">Días Festivos Obligatorios</h3>
                                 <p className="text-muted-foreground text-xs">Los días festivos trabajados se pagan al 200% adicional (Pago Triple total).</p>
                             </div>
                             <div className="flex items-center gap-2">
                                 <Button onClick={handlePrecargarLft} variant="outline" className="gap-2">
                                     <Sparkles className="w-4 h-4" />
-                                    <span>Precargar Festivos LFT</span>
+                                    <span>Precargar Festivos Oficiales</span>
                                 </Button>
                                 <Button onClick={openFestivoCreate} className="gap-2">
                                     <Plus className="w-4 h-4" />
@@ -560,7 +560,7 @@ export default function ConfiguracionAsistenciaIndex({ configuracion, turnos, di
                                         {diasFestivos.length === 0 ? (
                                             <tr>
                                                 <td colSpan={5} className="px-4 py-8 text-center text-muted-foreground">
-                                                    No hay días festivos registrados. Haz clic en "Precargar Festivos LFT" para cargar los oficiales de Ley.
+                                                    No hay días festivos registrados. Haz clic en "Precargar Festivos Oficiales" para cargar los oficiales de Ley.
                                                 </td>
                                             </tr>
                                         ) : (
@@ -573,7 +573,7 @@ export default function ConfiguracionAsistenciaIndex({ configuracion, turnos, di
                                                     <td className="px-4 py-3">
                                                         {f.es_oficial_lft ? (
                                                             <Badge className="bg-emerald-100 text-emerald-800 dark:bg-emerald-900/30 dark:text-emerald-400 text-[11px]">
-                                                                Oficial Ley (Art. 74)
+                                                                Oficial Ley
                                                             </Badge>
                                                         ) : (
                                                             <Badge variant="outline" className="text-[11px]">
@@ -626,7 +626,7 @@ export default function ConfiguracionAsistenciaIndex({ configuracion, turnos, di
 
                         <div className="grid grid-cols-2 gap-4">
                             <div className="space-y-2">
-                                <Label>Tipo de Jornada LFT</Label>
+                                <Label>Tipo de Jornada</Label>
                                 <Select
                                     value={turnoForm.data.tipo_jornada}
                                     onValueChange={(val: any) => handleTipoJornadaChange(val)}
@@ -780,7 +780,7 @@ export default function ConfiguracionAsistenciaIndex({ configuracion, turnos, di
                         </div>
 
                         <div className="flex items-center justify-between p-3 rounded-lg border bg-muted/30">
-                            <Label className="text-xs">Es Festivo Oficial (Art. 74 LFT)</Label>
+                            <Label className="text-xs">Es Festivo Oficial de Ley</Label>
                             <Switch
                                 checked={festivoForm.data.es_oficial_lft}
                                 onCheckedChange={(checked) => festivoForm.setData('es_oficial_lft', checked)}
