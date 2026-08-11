@@ -89,6 +89,13 @@ class EmpleadoController extends Controller
     {
         $data = $request->validated();
 
+        if (empty($data['documento_identidad'])) {
+            do {
+                $code = (string) mt_rand(100000, 999999);
+            } while (Empleado::where('documento_identidad', $code)->exists());
+            $data['documento_identidad'] = $code;
+        }
+
         $data['foto_empleado'] = $this->handleImageUpload($request->input('foto_empleado'), 'foto_empleado');
         $data['foto_empleado_2'] = $this->handleImageUpload($request->input('foto_empleado_2'), 'foto_empleado_2');
         $data['foto_documento'] = $this->handleImageUpload($request->input('foto_documento'), 'foto_documento');

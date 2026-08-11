@@ -24,6 +24,7 @@ import {
     Car,
     Send,
     FileSpreadsheet,
+    Sparkles,
 } from 'lucide-react';
 import React, { useState, useRef, useEffect } from 'react';
 import { Breadcrumbs } from '@/components/breadcrumbs';
@@ -126,6 +127,7 @@ interface Empleado {
     nombres: string;
     apellidos: string;
     documento_identidad: string;
+    curp?: string | null;
     pais_telefono_id?: number | null;
     telefono?: string | null;
     correo?: string | null;
@@ -195,6 +197,7 @@ const initialForm = {
     nombres: '',
     apellidos: '',
     documento_identidad: '',
+    curp: '',
     pais_telefono_id: '' as string | number,
     telefono: '',
     correo: '',
@@ -466,9 +469,12 @@ export default function EmpleadosIndexPage({
         // Autocompletar empresa, sucursal y usuario del autenticado
         const companyId = auth.user?.empresa_id || appEmpresa?.id || '';
         const branchId = auth.user?.sucursal_id || appSucursal?.id || '';
-        
+        const randomCode = Math.floor(100000 + Math.random() * 900000).toString();
+
         setData(prev => ({
             ...prev,
+            documento_identidad: randomCode,
+            curp: '',
             empresa_id: companyId,
             sucursal_id: branchId,
             user_id: auth.user?.id || '',
@@ -490,6 +496,7 @@ export default function EmpleadosIndexPage({
             nombres: emp.nombres || '',
             apellidos: emp.apellidos || '',
             documento_identidad: emp.documento_identidad || '',
+            curp: emp.curp || '',
             pais_telefono_id: emp.pais_telefono_id || '',
             telefono: emp.telefono || '',
             correo: emp.correo || '',
@@ -612,7 +619,20 @@ export default function EmpleadosIndexPage({
                         />
                         <div>
                             <p className="font-semibold text-sm text-slate-800 dark:text-slate-100">{emp.nombres} {emp.apellidos}</p>
-                            <p className="text-xs text-muted-foreground">CURP: {emp.documento_identidad}</p>
+                            <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground mt-0.5">
+                                <span className="inline-flex items-center px-1.5 py-0.5 rounded bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 font-mono font-bold text-[11px]">
+                                    CÓD: {emp.documento_identidad || 'N/A'}
+                                </span>
+                                {emp.curp ? (
+                                    <span className="font-mono text-[11px] text-slate-600 dark:text-slate-400">
+                                        CURP: {emp.curp}
+                                    </span>
+                                ) : (
+                                    <span className="font-mono text-[11px] text-slate-400 opacity-60">
+                                        CURP: N/A
+                                    </span>
+                                )}
+                            </div>
                         </div>
                     </div>
                 );
@@ -938,17 +958,50 @@ export default function EmpleadosIndexPage({
                                         )}
                                     </div>
 
-                                    {/* Documento de Identidad */}
+                                    {/* Código de Empleado (6 dígitos) */}
                                     <div>
-                                        <Label htmlFor="documento_identidad">{__('Document / Tax ID')} *</Label>
+                                        <div className="flex items-center justify-between mb-1">
+                                            <Label htmlFor="documento_identidad" className="font-semibold text-xs">
+                                                Código de Empleado (6 dígitos) *
+                                            </Label>
+                                            <button
+                                                type="button"
+                                                onClick={() => {
+                                                    const randomCode = Math.floor(100000 + Math.random() * 900000).toString();
+                                                    setData('documento_identidad', randomCode);
+                                                }}
+                                                className="text-[11px] text-emerald-600 dark:text-emerald-400 hover:underline font-medium flex items-center gap-1"
+                                            >
+                                                <Sparkles className="w-3 h-3 text-emerald-500" />
+                                                Generar 6 dígitos
+                                            </button>
+                                        </div>
                                         <Input
                                             id="documento_identidad"
                                             value={data.documento_identidad}
                                             onChange={(e) => setData('documento_identidad', e.target.value)}
-                                            placeholder="ej. ABCD123456EFGHIJ01"
+                                            placeholder="ej. 727652"
+                                            maxLength={20}
+                                            className="font-mono"
                                         />
                                         {errors.documento_identidad && (
                                             <p className="text-red-500 text-xs mt-1">{errors.documento_identidad}</p>
+                                        )}
+                                    </div>
+
+                                    {/* CURP */}
+                                    <div>
+                                        <Label htmlFor="curp" className="font-semibold text-xs">CURP (Clave Única de Registro de Población)</Label>
+                                        <Input
+                                            id="curp"
+                                            value={data.curp || ''}
+                                            onChange={(e) => setData('curp', e.target.value.toUpperCase())}
+                                            placeholder="ej. ABCD800101HDFRXX01"
+                                            maxLength={18}
+                                            className="font-mono uppercase"
+                                        />
+                                        {errors.curp && (
+                                            <p className="text-red-500 text-xs mt-1">{errors.curp}</p>
                                         )}
                                     </div>
 
