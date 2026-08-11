@@ -226,10 +226,44 @@ class WhatsAppService
     }
 
     /**
+     * Normaliza y formatea el número de teléfono con código de país.
+     * En México (+52), la API de WhatsApp requiere el prefijo 521 para números móviles de 10 dígitos.
+     */
+    public static function formatPhoneNumber(string $phone): string
+    {
+        $digits = preg_replace('/[^0-9]/', '', $phone);
+
+        if (empty($digits)) {
+            return '';
+        }
+
+        if (str_starts_with($digits, '0')) {
+            $digits = substr($digits, 1);
+        }
+
+        // Formateo automático de móviles en México (+52)
+        if (strlen($digits) === 10) {
+            return '521' . $digits;
+        }
+
+        if (strlen($digits) === 12 && str_starts_with($digits, '52')) {
+            return '521' . substr($digits, 2);
+        }
+
+        if (strlen($digits) === 13 && str_starts_with($digits, '521')) {
+            return $digits;
+        }
+
+        return $digits;
+    }
+
+    /**
      * Enviar mensaje de texto
      */
     public function sendMessage(string $to, string $message, bool $isWelcome = false)
     {
+        $to = self::formatPhoneNumber($to);
+
         try {
             $url = "{$this->baseUrl}/api/message/send-text/{$this->instanceName}";
             $response = Http::timeout($this->timeout)
@@ -274,6 +308,7 @@ class WhatsAppService
      */
     public function sendMedia(string $to, string $mediaUrl, string $caption = '')
     {
+        $to = self::formatPhoneNumber($to);
         try {
             $url = "{$this->baseUrl}/api/message/send-media/{$this->instanceName}";
             $response = Http::timeout($this->timeout)
