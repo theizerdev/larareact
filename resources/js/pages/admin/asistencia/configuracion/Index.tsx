@@ -97,7 +97,7 @@ export default function ConfiguracionAsistenciaIndex({ configuracion, turnos, di
 
     const handleSaveConfig = (e: React.FormEvent) => {
         e.preventDefault();
-        configForm.put('/asistencia/configuracion', {
+        configForm.put('/admin/asistencia/configuracion', {
             preserveScroll: true,
             onSuccess: () => notifySuccess('Configuración de asistencia guardada correctamente.'),
         });
@@ -163,7 +163,7 @@ export default function ConfiguracionAsistenciaIndex({ configuracion, turnos, di
     const handleSaveTurno = (e: React.FormEvent) => {
         e.preventDefault();
         if (editingTurno) {
-            turnoForm.put(`/asistencia/turnos/${editingTurno.id}`, {
+            turnoForm.put(`/admin/asistencia/turnos/${editingTurno.id}`, {
                 preserveScroll: true,
                 onSuccess: () => {
                     setIsTurnoModalOpen(false);
@@ -171,7 +171,7 @@ export default function ConfiguracionAsistenciaIndex({ configuracion, turnos, di
                 },
             });
         } else {
-            turnoForm.post('/asistencia/turnos', {
+            turnoForm.post('/admin/asistencia/turnos', {
                 preserveScroll: true,
                 onSuccess: () => {
                     setIsTurnoModalOpen(false);
@@ -182,14 +182,14 @@ export default function ConfiguracionAsistenciaIndex({ configuracion, turnos, di
     };
 
     const handleToggleTurno = (turno: TurnoLaboral) => {
-        router.patch(`/asistencia/turnos/${turno.id}/toggle`, {}, { preserveScroll: true });
+        router.patch(`/admin/asistencia/turnos/${turno.id}/toggle`, {}, { preserveScroll: true });
     };
 
     const [deletingTurno, setDeletingTurno] = useState<TurnoLaboral | null>(null);
 
     const handleDeleteTurno = () => {
         if (!deletingTurno) return;
-        router.delete(`/asistencia/turnos/${deletingTurno.id}`, {
+        router.delete(`/admin/asistencia/turnos/${deletingTurno.id}`, {
             preserveScroll: true,
             onSuccess: () => setDeletingTurno(null),
         });
@@ -231,7 +231,7 @@ export default function ConfiguracionAsistenciaIndex({ configuracion, turnos, di
     const handleSaveFestivo = (e: React.FormEvent) => {
         e.preventDefault();
         if (editingFestivo) {
-            festivoForm.put(`/asistencia/festivos/${editingFestivo.id}`, {
+            festivoForm.put(`/admin/asistencia/festivos/${editingFestivo.id}`, {
                 preserveScroll: true,
                 onSuccess: () => {
                     setIsFestivoModalOpen(false);
@@ -239,7 +239,7 @@ export default function ConfiguracionAsistenciaIndex({ configuracion, turnos, di
                 },
             });
         } else {
-            festivoForm.post('/asistencia/festivos', {
+            festivoForm.post('/admin/asistencia/festivos', {
                 preserveScroll: true,
                 onSuccess: () => {
                     setIsFestivoModalOpen(false);
@@ -253,19 +253,19 @@ export default function ConfiguracionAsistenciaIndex({ configuracion, turnos, di
 
     const handleDeleteFestivo = () => {
         if (!deletingFestivo) return;
-        router.delete(`/asistencia/festivos/${deletingFestivo.id}`, {
+        router.delete(`/admin/asistencia/festivos/${deletingFestivo.id}`, {
             preserveScroll: true,
             onSuccess: () => setDeletingFestivo(null),
         });
     };
 
     const handlePrecargarLft = () => {
-        router.post('/asistencia/festivos/precargar-lft', {}, { preserveScroll: true });
+        router.post('/admin/asistencia/festivos/precargar-lft', {}, { preserveScroll: true });
     };
 
     const breadcrumbs = [
         { title: 'Dashboard', href: '/dashboard' },
-        { title: 'Configuración de Asistencia y LFT', href: '/asistencia/configuracion' },
+        { title: 'Configuración de Asistencia y LFT', href: '/admin/asistencia/configuracion' },
     ];
 
     return (

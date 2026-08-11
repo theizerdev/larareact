@@ -7,6 +7,7 @@ use App\Models\AsistenciaMarcaje;
 use App\Models\ConfiguracionAsistencia;
 use App\Models\Empleado;
 use App\Services\CalculoAsistenciaLftService;
+use App\Services\NotificacionAsistenciaWhatsAppService;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
@@ -161,6 +162,13 @@ class RelojChecadorKioskoController extends Controller
 
         // Recalcular asistencia del día automáticamente
         $calculoService->calcularHorasDiarias($empleado, $now->toDateString());
+
+        // Enviar notificación instantánea por WhatsApp al empleado
+        try {
+            app(NotificacionAsistenciaWhatsAppService::class)->notificarMarcaje($empleado, $marcaje);
+        } catch (\Exception $e) {
+            \Illuminate\Support\Facades\Log::error("Error enviando WhatsApp marcaje: " . $e->getMessage());
+        }
 
         return response()->json([
             'success' => true,

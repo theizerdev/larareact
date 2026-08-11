@@ -106,7 +106,7 @@ export default function RelojChecadorKiosko({ configuracion }: Props) {
         setSuccessMessage(null);
 
         try {
-            const response = await fetch('/api/reloj-checador/buscar', {
+            const response = await fetch('/admin/api/reloj-checador/buscar', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
@@ -154,7 +154,7 @@ export default function RelojChecadorKiosko({ configuracion }: Props) {
         }
 
         try {
-            const response = await fetch('/api/reloj-checador/registrar', {
+            const response = await fetch('/admin/api/reloj-checador/registrar', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',

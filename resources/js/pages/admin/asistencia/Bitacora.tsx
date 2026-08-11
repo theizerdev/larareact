@@ -56,7 +56,7 @@ export default function AsistenciaBitacoraIndex({ marcajes, filters }: Props) {
     const [fechaFin, setFechaFin] = useState(filters.fecha_fin || '');
 
     const handleFilter = () => {
-        router.get('/asistencia/bitacora', {
+        router.get('/admin/asistencia/bitacora', {
             search,
             tipo_marcaje: tipoMarcaje !== 'todos' ? tipoMarcaje : undefined,
             fecha_inicio: fechaInicio || undefined,
@@ -81,7 +81,7 @@ export default function AsistenciaBitacoraIndex({ marcajes, filters }: Props) {
 
     const breadcrumbs = [
         { title: 'Dashboard', href: '/dashboard' },
-        { title: 'Bitácora de Marcajes', href: '/asistencia/bitacora' },
+        { title: 'Bitácora de Marcajes', href: '/admin/asistencia/bitacora' },
     ];
 
     return (

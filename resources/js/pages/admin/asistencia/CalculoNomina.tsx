@@ -68,14 +68,14 @@ export default function CalculoNominaIndex({ resumenesSemanales, stats, filters 
     const [fechaFin, setFechaFin] = useState(filters.fecha_fin);
 
     const handleFilter = () => {
-        router.get('/asistencia/calculo-nomina', {
+        router.get('/admin/asistencia/calculo-nomina', {
             fecha_inicio: fechaInicio,
             fecha_fin: fechaFin,
         }, { preserveState: true });
     };
 
     const handleProcesar = () => {
-        router.get('/asistencia/calculo-nomina', {
+        router.get('/admin/asistencia/calculo-nomina', {
             fecha_inicio: fechaInicio,
             fecha_fin: fechaFin,
             procesar: true,
@@ -89,7 +89,7 @@ export default function CalculoNominaIndex({ resumenesSemanales, stats, filters 
 
     const breadcrumbs = [
         { title: 'Dashboard', href: '/dashboard' },
-        { title: 'Cálculo de Nómina LFT', href: '/asistencia/calculo-nomina' },
+        { title: 'Cálculo de Nómina LFT', href: '/admin/asistencia/calculo-nomina' },
     ];
 
     return (

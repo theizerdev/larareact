@@ -19,6 +19,8 @@ use App\Models\Pais;
 use App\Models\TipoServicio;
 use App\Models\Empresa;
 use App\Models\Sucursal;
+use App\Models\AsistenciaMarcaje;
+use App\Services\CalculoAsistenciaLftService;
 use App\Services\WhatsAppService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
@@ -338,6 +340,28 @@ class VisitaAccesoController extends Controller
 
         $acceso = VisitaAcceso::create($validated);
 
+        // Integración con Reloj Checador: Si es un empleado, registrar marcaje de entrada automático
+        if ($validated['tipo_acceso'] === 'empleado' && !empty($validated['empleado_id'])) {
+            $empleado = Empleado::find($validated['empleado_id']);
+            if ($empleado) {
+                $now = now();
+                $marcaje = AsistenciaMarcaje::create([
+                    'empresa_id'             => $empleado->empresa_id,
+                    'sucursal_id'            => $empleado->sucursal_id,
+                    'empleado_id'            => $empleado->id,
+                    'tipo_marcaje'           => 'entrada',
+                    'fecha_hora'             => $now,
+                    'origen'                 => 'garita',
+                    'observaciones'          => "Marcaje automático por ingreso en Garita Principal (Pase N° {$acceso->codigo_visitante})",
+                    'registrado_por_user_id' => $user?->id,
+                ]);
+                app(CalculoAsistenciaLftService::class)->calcularHorasDiarias($empleado, $now->toDateString());
+                try {
+                    app(\App\Services\NotificacionAsistenciaWhatsAppService::class)->notificarMarcaje($empleado, $marcaje);
+                } catch (\Exception $e) {}
+            }
+        }
+
         return redirect()->back()->with('success', "Acceso a instalaciones registrado correctamente con Código de Visitante N° {$acceso->codigo_visitante}.");
     }
 
@@ -348,6 +372,28 @@ class VisitaAccesoController extends Controller
             'hora_salida'  => now()->toTimeString(),
             'status'       => 2, // Finalizado
         ]);
+
+        // Integración con Reloj Checador: Si es un empleado, registrar marcaje de salida automático
+        if ($visitaAcceso->tipo_acceso === 'empleado' && $visitaAcceso->empleado_id) {
+            $empleado = Empleado::find($visitaAcceso->empleado_id);
+            if ($empleado) {
+                $now = now();
+                $marcaje = AsistenciaMarcaje::create([
+                    'empresa_id'             => $empleado->empresa_id,
+                    'sucursal_id'            => $empleado->sucursal_id,
+                    'empleado_id'            => $empleado->id,
+                    'tipo_marcaje'           => 'salida',
+                    'fecha_hora'             => $now,
+                    'origen'                 => 'garita',
+                    'observaciones'          => "Marcaje automático por salida en Garita Principal (Pase N° {$visitaAcceso->codigo_visitante})",
+                    'registrado_por_user_id' => auth()->id(),
+                ]);
+                app(CalculoAsistenciaLftService::class)->calcularHorasDiarias($empleado, $now->toDateString());
+                try {
+                    app(\App\Services\NotificacionAsistenciaWhatsAppService::class)->notificarMarcaje($empleado, $marcaje);
+                } catch (\Exception $e) {}
+            }
+        }
 
         return redirect()->back()->with('success', "Salida marcada correctamente para el Código de Visitante N° {$visitaAcceso->codigo_visitante}.");
     }
@@ -636,6 +682,25 @@ class VisitaAccesoController extends Controller
         ]);
 
         $invitacion->update(['status' => 'ingresado']);
+
+        // Integración con Reloj Checador: Si el pase/invitación es de un empleado, registrar marcaje de entrada
+        if ($tipoAcceso === 'empleado' && $invitacion->empleado_id) {
+            $empleado = Empleado::find($invitacion->empleado_id);
+            if ($empleado) {
+                $now = now();
+                AsistenciaMarcaje::create([
+                    'empresa_id'             => $empleado->empresa_id,
+                    'sucursal_id'            => $empleado->sucursal_id,
+                    'empleado_id'            => $empleado->id,
+                    'tipo_marcaje'           => 'entrada',
+                    'fecha_hora'             => $now,
+                    'origen'                 => 'garita',
+                    'observaciones'          => "Marcaje automático por ingreso desde Pase Garita (N° {$acceso->codigo_visitante})",
+                    'registrado_por_user_id' => $user?->id,
+                ]);
+                app(CalculoAsistenciaLftService::class)->calcularHorasDiarias($empleado, $now->toDateString());
+            }
+        }
 
         // NOTIFICACIÓN AUTOMÁTICA DE LLEGADA EN TIEMPO REAL AL ANFITRIÓN
         if ($invitacion->anfitrion_id) {
