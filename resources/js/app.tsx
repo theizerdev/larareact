@@ -71,3 +71,13 @@ createInertiaApp({
 
 // This will set light / dark mode on load...
 initializeTheme();
+
+// Register PWA service worker (Kiosko offline support)
+if ('serviceWorker' in navigator) {
+    window.addEventListener('load', () => {
+        navigator.serviceWorker
+            .register('/sw.js', { scope: '/' })
+            .then((r) => console.info('[PWA] Service Worker registrado:', r.scope))
+            .catch((e) => console.warn('[PWA] SW no disponible en dev:', e));
+    });
+}

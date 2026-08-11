@@ -105,6 +105,13 @@ class Kernel extends ConsoleKernel
             ->everyMinute()
             ->withoutOverlapping()
             ->onOneServer();
+
+        // Verificar tiempos de descanso de empleados y notificar si exceden límite
+        $schedule->command('asistencia:verificar-descansos')
+            ->everyMinute()
+            ->withoutOverlapping()
+            ->onOneServer()
+            ->appendOutputTo(storage_path('logs/asistencia-descansos.log'));
     }
 
     /**

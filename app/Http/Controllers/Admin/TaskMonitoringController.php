@@ -3,8 +3,6 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
-use Cron\CronExpression;
-use Illuminate\Console\Scheduling\Schedule;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Artisan;
 
@@ -13,41 +11,33 @@ class TaskMonitoringController extends Controller
     /**
      * Muestra las tareas programadas en el programador de tareas (Laravel Scheduler).
      */
-    public function index(Schedule $schedule)
+    public function index()
     {
-        $tasks = collect($schedule->events())->map(function ($event, $index) {
-            // Obtener comando o descripción legible
-            $command = $event->command;
+        // En Laravel 11 el Schedule no se puebla en contexto HTTP.
+        // Usamos `schedule:list --json` que siempre devuelve la lista real.
+        Artisan::call('schedule:list', ['--json' => true]);
+        $raw = json_decode(Artisan::output(), true) ?? [];
 
-            // Si es un comando de Artisan, limpiamos la ruta del binario PHP
-            if (preg_match('/artisan[\'"]?\s+([^\s]+)/', $command, $matches)) {
-                $command = 'artisan '.$matches[1];
-            } else {
-                $command = $event->description ?: ($event->callback instanceof \Closure ? 'Closure Callback' : 'Command Task');
+        $tasks = collect($raw)->values()->map(function ($item, $index) {
+            $command = $item['command'] ?? '';
+
+            // Limpiar prefijo "php artisan " para mostrar solo el comando
+            if (str_starts_with($command, 'php artisan ')) {
+                $command = 'artisan '.substr($command, strlen('php artisan '));
             }
 
-            // Traducir o describir expresión cron
-            $expression = $event->expression;
+            $expression   = $item['expression'] ?? '';
             $humanReadable = $this->translateCron($expression);
 
-            // Calcular siguiente ejecución usando la librería CronExpression
-            $nextRun = 'Unknown';
-            try {
-                $cron = new CronExpression($expression);
-                $nextRun = $cron->getNextRunDate()->format('Y-m-d H:i:s');
-            } catch (\Exception $e) {
-                // Silencioso
-            }
-
             return [
-                'id' => $index,
-                'command' => $command,
-                'expression' => $expression,
-                'schedule' => $humanReadable,
-                'next_run' => $nextRun,
-                'timezone' => $event->timezone ?? config('app.timezone'),
-                'without_overlapping' => $event->withoutOverlapping,
-                'on_one_server' => $event->onOneServer,
+                'id'                 => $index,
+                'command'            => $command,
+                'expression'         => $expression,
+                'schedule'           => $humanReadable,
+                'next_run'           => $item['next_due_date'] ?? 'Unknown',
+                'timezone'           => $item['timezone'] ?? config('app.timezone'),
+                'without_overlapping'=> $item['has_mutex'] ?? false,
+                'on_one_server'      => false,
             ];
         });
 
@@ -55,6 +45,7 @@ class TaskMonitoringController extends Controller
             'tasks' => $tasks,
         ]);
     }
+
 
     /**
      * Ejecuta una tarea programada manualmente bajo demanda.

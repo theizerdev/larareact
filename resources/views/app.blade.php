@@ -53,6 +53,16 @@
         <link rel="icon" href="{{ $favicon }}" type="image/png">
         <link rel="apple-touch-icon" href="{{ $favicon }}">
 
+        @if(request()->is('admin/reloj-checador/kiosko*'))
+        {{-- PWA Kiosko --}}
+        <link rel="manifest" href="/pwa/manifest.json">
+        <meta name="theme-color" content="#1a5c38">
+        <meta name="mobile-web-app-capable" content="yes">
+        <meta name="apple-mobile-web-app-capable" content="yes">
+        <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+        <meta name="apple-mobile-web-app-title" content="Kiosko Checador">
+        @endif
+
         @fonts
 
         @viteReactRefresh

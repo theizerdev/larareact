@@ -35,6 +35,7 @@ interface Configuracion {
 
 interface Props {
     configuracion?: Configuracion;
+    zona_horaria?: string | null;
 }
 
 interface EmpleadoFound {
@@ -47,8 +48,9 @@ interface EmpleadoFound {
     turno?: string;
 }
 
-export default function RelojChecadorKiosko({ configuracion }: Props) {
-    // Reloj digital en tiempo real
+export default function RelojChecadorKiosko({ configuracion, zona_horaria }: Props) {
+    // Reloj digital en tiempo real (usa zona horaria de la empresa si está configurada)
+    const tz = zona_horaria ?? undefined;
     const [currentTime, setCurrentTime] = useState(new Date());
 
     useEffect(() => {
@@ -385,11 +387,23 @@ export default function RelojChecadorKiosko({ configuracion }: Props) {
     };
 
     const formatTime = (date: Date) => {
-        return date.toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: true });
+        return date.toLocaleTimeString('es-MX', {
+            hour: '2-digit',
+            minute: '2-digit',
+            second: '2-digit',
+            hour12: true,
+            ...(tz ? { timeZone: tz } : {}),
+        });
     };
 
     const formatDate = (date: Date) => {
-        return date.toLocaleDateString('es-MX', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
+        return date.toLocaleDateString('es-MX', {
+            weekday: 'long',
+            year: 'numeric',
+            month: 'long',
+            day: 'numeric',
+            ...(tz ? { timeZone: tz } : {}),
+        });
     };
 
     return (

@@ -26,7 +26,7 @@ class VerificarDescansosAsistencia extends Command
     public function handle(NotificacionAsistenciaWhatsAppService $notifService): int
     {
         $today = Carbon::today();
-        $now = Carbon::now();
+        $now   = Carbon::now();
 
         // Buscar todos los marcajes de salida_comida de hoy
         $salidasComida = AsistenciaMarcaje::with(['empleado.turnoLaboral', 'empleado.paisTelefono'])
@@ -38,38 +38,61 @@ class VerificarDescansosAsistencia extends Command
 
         foreach ($salidasComida as $marcajeSalida) {
             $empleado = $marcajeSalida->empleado;
-            if (!$empleado || !$empleado->status) {
+            if (! $empleado || ! $empleado->status) {
                 continue;
             }
 
-            // Verificar si el empleado ya registró entrada_comida o salida posterior a este marcaje
-            $marcajePosterior = AsistenciaMarcaje::where('empleado_id', $empleado->id)
+            // Verificar si el empleado ya registró su regreso DESPUÉS de esta salida_comida.
+            // Comparamos por fecha_hora (más confiable que por ID) e incluimos
+            // todos los tipos que significan "ya regresó o terminó".
+            $yaRegreso = AsistenciaMarcaje::where('empleado_id', $empleado->id)
+                ->where('fecha_hora', '>', $marcajeSalida->fecha_hora)
                 ->whereDate('fecha_hora', $today)
-                ->where('id', '>', $marcajeSalida->id)
-                ->whereIn('tipo_marcaje', ['entrada_comida', 'salida'])
+                ->whereIn('tipo_marcaje', [
+                    'entrada_comida',        // Regreso estándar del descanso
+                    'descanso_fin',          // Fin de descanso genérico
+                    'salida',                // Ya terminó su jornada
+                    'entrada_extraordinaria',
+                ])
                 ->exists();
 
-            if ($marcajePosterior) {
-                continue; // El empleado ya regresó o terminó su jornada
+            if ($yaRegreso) {
+                continue; // El empleado ya regresó, no notificar
             }
 
-            // Calcular minutos transcurridos
-            $minutosTranscurridos = Carbon::parse($marcajeSalida->fecha_hora)->diffInMinutes($now);
+            // Calcular minutos transcurridos desde salida_comida
+            $minutosTranscurridos      = Carbon::parse($marcajeSalida->fecha_hora)->diffInMinutes($now);
             $minutosDescansoPermitidos = $empleado->turnoLaboral?->minutos_descanso ?? 30;
 
-            // Si ha excedido por más de 5 minutos el tiempo permitido
-            if ($minutosTranscurridos > ($minutosDescansoPermitidos + 5)) {
-                $minutosExcedidos = $minutosTranscurridos - $minutosDescansoPermitidos;
+            // Solo actuar si excedió por más de 5 minutos de margen
+            if ($minutosTranscurridos <= ($minutosDescansoPermitidos + 5)) {
+                continue;
+            }
 
-                // Evitar notificar múltiples veces agregando una bandera temporal o verificando logs
-                $enviado = $notifService->notificarExcesoDescanso($empleado, $marcajeSalida, $minutosExcedidos);
-                if ($enviado) {
-                    $alertados++;
-                }
+            $minutosExcedidos = $minutosTranscurridos - $minutosDescansoPermitidos;
+
+            // ── Deduplicación ────────────────────────────────────────────────
+            // La clave incluye el ID del marcaje para que sea específica por evento.
+            // Una vez notificado, no se vuelve a enviar hasta el día siguiente.
+            $cacheKey = "alerta_descanso_excedido_{$marcajeSalida->id}";
+            if (cache()->has($cacheKey)) {
+                continue; // Ya fue notificado hoy
+            }
+
+            $enviado = $notifService->notificarExcesoDescanso($empleado, $marcajeSalida, $minutosExcedidos);
+
+            if ($enviado) {
+                // Guardar en caché hasta medianoche
+                $ttl = max($now->secondsUntilEndOfDay(), 60);
+                cache()->put($cacheKey, true, $ttl);
+                $alertados++;
+
+                $this->line("  → Notificado: {$empleado->nombre_completo} ({$minutosExcedidos} min excedidos)");
             }
         }
 
-        $this->info("Verificación de descansos completada. Notificaciones enviadas: {$alertados}");
+        $this->info("Verificación completada. Notificaciones enviadas: {$alertados}");
+
         return Command::SUCCESS;
     }
 }

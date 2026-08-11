@@ -68,6 +68,22 @@ Route::get('/carnet-productor/{productor}', [\App\Http\Controllers\Admin\Product
 Route::get('/admin/productores/{productor}/carnet', [\App\Http\Controllers\Admin\ProductorController::class, 'carnet'])->name('productores.carnet');
 Route::post('/admin/productores/{productor}/send-carnet-whatsapp', [\App\Http\Controllers\Admin\ProductorController::class, 'sendCarnetWhatsApp'])->name('productores.send-carnet-whatsapp')->middleware(['auth','verified'])->can('productores.send-carnet-whatsapp');
 
+
+use App\Http\Controllers\Admin\RelojChecadorKioskoController;
+
+
+    Route::get('admin/reloj-checador/kiosko', [RelojChecadorKioskoController::class, 'kioskoView'])
+        ->name('reloj-checador.kiosko');
+
+    Route::post('admin/api/reloj-checador/buscar', [RelojChecadorKioskoController::class, 'buscarEmpleado'])
+        ->name('api.reloj-checador.buscar');
+
+    Route::post('admin/api/reloj-checador/registrar', [RelojChecadorKioskoController::class, 'registrarMarcaje'])
+        ->name('api.reloj-checador.registrar');
+
+
+
+
 if (file_exists(__DIR__.'/larareact-settings.php')) {
     require __DIR__.'/larareact-settings.php';
 }
