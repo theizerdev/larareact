@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Head, useForm, router } from '@inertiajs/react';
 import { Breadcrumbs } from '@/components/breadcrumbs';
+import { ModuleHeader } from '@/components/module-header';
 import { 
     Clock, 
     ShieldCheck, 
@@ -539,9 +540,6 @@ export default function ConfiguracionAsistenciaIndex({ configuracion, turnos, di
                                 <Button onClick={openFestivoCreate} className="gap-2">
                                     <Plus className="w-4 h-4" />
                                     <span>Agregar Festivo</span>
-                                </Button>
-                            </div>
-                        </div>
                                 </Button>
                             </div>
                         </div>
