@@ -176,14 +176,6 @@ class AsistenciaConfiguracionController extends Controller
         }
     }
 
-        $turno->update($validated);
-
-        return back()->with('notification', [
-            'type' => 'success',
-            'message' => 'Turno laboral actualizado correctamente.',
-        ]);
-    }
-
     /**
      * Alterna el estado activo/inactivo del turno.
      */
