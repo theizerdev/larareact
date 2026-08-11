@@ -9,6 +9,7 @@ use App\Models\EmpleadoVehiculo;
 use App\Models\Empresa;
 use App\Models\Pais;
 use App\Models\Sucursal;
+use App\Models\TurnoLaboral;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use ZipArchive;
@@ -218,6 +219,30 @@ class EmpleadoImportService
             ->first();
 
         $paisId = $paisMx ? $paisMx->id : null;
+
+        // Obtener o crear el Turno Laboral por defecto: Lunes a Viernes de 8:00 AM a 5:00 PM (8h ordinarias + 1h comida)
+        $defaultTurno = TurnoLaboral::where('empresa_id', $empresaId)
+            ->where('hora_entrada', '08:00:00')
+            ->where('hora_salida', '17:00:00')
+            ->first();
+
+        if (!$defaultTurno) {
+            $defaultTurno = TurnoLaboral::firstOrCreate([
+                'empresa_id' => $empresaId,
+                'nombre' => 'Turno Regular (L-V 08:00 AM - 05:00 PM)',
+            ], [
+                'sucursal_id' => $sucursalId,
+                'tipo_jornada' => 'diurna',
+                'hora_entrada' => '08:00:00',
+                'hora_salida' => '17:00:00',
+                'horas_diarias_ley' => 8.00,
+                'minutos_descanso' => 60,
+                'descanso_pagado' => false,
+                'dias_laborables' => [1, 2, 3, 4, 5],
+                'status' => true,
+            ]);
+        }
+
         $createdCount = 0;
         $updatedCount = 0;
         $skippedCount = 0;
@@ -269,6 +294,7 @@ class EmpleadoImportService
                     'telefono' => $rec['telefono'] ?? null,
                     'correo' => !empty($rec['correo']) ? $rec['correo'] : null,
                     'departamento_id' => $departamentoId,
+                    'turno_laboral_id' => $defaultTurno->id,
                     'empresa_id' => $empresaId,
                     'sucursal_id' => $sucursalId,
                     'status' => true,
