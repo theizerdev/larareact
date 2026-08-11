@@ -88,6 +88,8 @@ class AsistenciaConfiguracionController extends Controller
     {
         $user = $request->user();
 
+        $this->normalizarDiasLaborables($request);
+
         $validated = $request->validate([
             'nombre' => 'required|string|max:100',
             'tipo_jornada' => 'required|string|in:diurna,nocturna,mixta,personalizada',
@@ -97,7 +99,7 @@ class AsistenciaConfiguracionController extends Controller
             'minutos_descanso' => 'required|integer|min:0|max:180',
             'descanso_pagado' => 'required|boolean',
             'dias_laborables' => 'required|array',
-            'dias_laborables.*' => 'integer|between:1,7',
+            'dias_laborables.*' => 'numeric|between:1,7',
         ]);
 
         $validated['empresa_id'] = $user->empresa_id;
@@ -116,6 +118,8 @@ class AsistenciaConfiguracionController extends Controller
      */
     public function updateTurno(Request $request, TurnoLaboral $turno)
     {
+        $this->normalizarDiasLaborables($request);
+
         $validated = $request->validate([
             'nombre' => 'required|string|max:100',
             'tipo_jornada' => 'required|string|in:diurna,nocturna,mixta,personalizada',
@@ -125,8 +129,52 @@ class AsistenciaConfiguracionController extends Controller
             'minutos_descanso' => 'required|integer|min:0|max:180',
             'descanso_pagado' => 'required|boolean',
             'dias_laborables' => 'required|array',
-            'dias_laborables.*' => 'integer|between:1,7',
+            'dias_laborables.*' => 'numeric|between:1,7',
         ]);
+
+        $turno->update($validated);
+
+        return back()->with('notification', [
+            'type' => 'success',
+            'message' => 'Turno laboral actualizado correctamente.',
+        ]);
+    }
+
+    /**
+     * Normaliza los días laborables recibidos para convertir nombres de días o números en enteros 1..7.
+     */
+    private function normalizarDiasLaborables(Request $request): void
+    {
+        if ($request->has('dias_laborables') && is_array($request->dias_laborables)) {
+            $diaMap = [
+                'lunes' => 1,
+                'martes' => 2,
+                'miércoles' => 3,
+                'miercoles' => 3,
+                'jueves' => 4,
+                'viernes' => 5,
+                'sábado' => 6,
+                'sabado' => 6,
+                'domingo' => 7,
+            ];
+
+            $mapped = array_filter(array_map(function ($dia) use ($diaMap) {
+                if (is_numeric($dia)) {
+                    $val = (int) $dia;
+                    return ($val >= 1 && $val <= 7) ? $val : null;
+                }
+                if (is_string($dia)) {
+                    $key = mb_strtolower(trim($dia));
+                    return $diaMap[$key] ?? null;
+                }
+                return null;
+            }, $request->dias_laborables));
+
+            $request->merge([
+                'dias_laborables' => array_values(array_unique($mapped)),
+            ]);
+        }
+    }
 
         $turno->update($validated);
 

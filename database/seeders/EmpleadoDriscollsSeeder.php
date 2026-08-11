@@ -52,7 +52,7 @@ class EmpleadoDriscollsSeeder extends Seeder
                 'horas_diarias_ley' => 8.00,
                 'minutos_descanso' => 60,
                 'descanso_pagado' => true,
-                'dias_laborables' => ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'],
+                'dias_laborables' => [1, 2, 3, 4, 5, 6],
                 'status' => true,
             ]
         );
@@ -70,7 +70,7 @@ class EmpleadoDriscollsSeeder extends Seeder
                 'horas_diarias_ley' => 8.00,
                 'minutos_descanso' => 45,
                 'descanso_pagado' => true,
-                'dias_laborables' => ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'],
+                'dias_laborables' => [1, 2, 3, 4, 5, 6],
                 'status' => true,
             ]
         );
