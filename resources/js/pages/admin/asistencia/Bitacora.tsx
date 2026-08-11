@@ -483,7 +483,18 @@ export default function AsistenciaBitacoraIndex({ marcajes, stats, filters }: Pr
                                                     </td>
                                                     <td className="px-4 py-3.5">
                                                         {infoTiempo && ultimo ? (
-                                                            <LiveBreakTimer fechaHora={ultimo.fecha_hora} fechaHoraIso={ultimo.fecha_hora_iso} limiteMinutos={infoTiempo.limite_minutos ?? 15} subtexto={infoTiempo.subtexto} />
+                                                            ultimo.tipo_marcaje === 'salida' ? (
+                                                                <div>
+                                                                    <Badge variant="outline" className="bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 border-slate-300 font-medium text-xs">
+                                                                        Jornada Finalizada
+                                                                    </Badge>
+                                                                    {infoTiempo.subtexto && (
+                                                                        <div className="text-[11px] text-slate-500 mt-1">{infoTiempo.subtexto}</div>
+                                                                    )}
+                                                                </div>
+                                                            ) : (
+                                                                <LiveBreakTimer fechaHora={ultimo.fecha_hora} fechaHoraIso={ultimo.fecha_hora_iso} limiteMinutos={infoTiempo.limite_minutos ?? 15} subtexto={infoTiempo.subtexto} />
+                                                            )
                                                         ) : <span className="text-xs text-muted-foreground">-</span>}
                                                     </td>
                                                     <td className="px-4 py-3.5">

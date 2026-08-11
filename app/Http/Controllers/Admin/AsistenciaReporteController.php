@@ -72,8 +72,10 @@ class AsistenciaReporteController extends Controller
         $now = Carbon::now();
         $configAsistencia = \App\Models\ConfiguracionAsistencia::where('empresa_id', $empresaId)->first();
         $minutosLeySilla = $configAsistencia?->ley_silla_descanso_minutos ?? 15;
+        $intervaloHorasLeySilla = (float) ($configAsistencia?->ley_silla_intervalo_horas ?? 2.00);
+        $intervaloMinutosLeySilla = (int) round($intervaloHorasLeySilla * 60);
 
-        $empleadosPaginados->getCollection()->transform(function ($emp) use ($now, $minutosLeySilla, $request, $empresaId) {
+        $empleadosPaginados->getCollection()->transform(function ($emp) use ($now, $minutosLeySilla, $intervaloHorasLeySilla, $intervaloMinutosLeySilla, $request, $empresaId) {
             // Cargar historial de marcajes de este empleado ordenados cronológicamente
             $historialMarcajes = AsistenciaMarcaje::with('sucursal')
                 ->where('empleado_id', $emp->id)
@@ -95,6 +97,7 @@ class AsistenciaReporteController extends Controller
             if ($ultimoMarcaje) {
                 $esAlmuerzo = $ultimoMarcaje->tipo_marcaje === 'salida_comida';
                 $esDescanso = $ultimoMarcaje->tipo_marcaje === 'descanso_inicio';
+                $esSalida = $ultimoMarcaje->tipo_marcaje === 'salida';
 
                 if ($esAlmuerzo || $esDescanso) {
                     $nombreConcepto = $esAlmuerzo ? 'Almuerzo' : 'Descanso';
@@ -151,16 +154,44 @@ class AsistenciaReporteController extends Controller
                             ];
                         }
                     }
-                } else {
-                    $limiteAlmuerzo = $emp->turnoLaboral?->minutos_descanso ?? 60;
+                } elseif ($esSalida) {
                     $tiempoRestanteInfo = [
-                        'estado' => 'normal',
-                        'concepto' => 'General',
-                        'texto' => "Almuerzo: {$limiteAlmuerzo}m | Descanso: {$minutosLeySilla}m",
-                        'subtexto' => null,
-                        'minutos_restantes' => null,
-                        'limite_minutos' => $limiteAlmuerzo,
+                        'estado' => 'completado',
+                        'concepto' => 'Jornada',
+                        'texto' => 'Jornada Finalizada',
+                        'subtexto' => 'Marcaje de salida registrado',
+                        'minutos_restantes' => 0,
+                        'limite_minutos' => 0,
                     ];
+                } else {
+                    // El empleado está laborando (entrada, descanso_fin, entrada_comida, entrada_extraordinaria)
+                    // Se calcula el conteo regresivo hasta el próximo llamado a descanso según el intervalo configurado
+                    $transcurridos = (int) round(Carbon::parse($ultimoMarcaje->fecha_hora)->diffInMinutes($now));
+                    $restantes = $intervaloMinutosLeySilla - $transcurridos;
+                    $intervaloFormatted = number_format($intervaloHorasLeySilla, 2);
+
+                    if ($restantes > 0) {
+                        $tiempoRestanteInfo = [
+                            'estado' => 'en_curso',
+                            'concepto' => 'Próximo Descanso',
+                            'texto' => "{$restantes} min para descanso",
+                            'subtexto' => "Próximo descanso (Cada {$intervaloFormatted}h continuas)",
+                            'minutos_restantes' => $restantes,
+                            'limite_minutos' => $intervaloMinutosLeySilla,
+                            'transcurridos' => $transcurridos,
+                        ];
+                    } else {
+                        $exceso = abs($restantes);
+                        $tiempoRestanteInfo = [
+                            'estado' => 'excedido',
+                            'concepto' => 'Próximo Descanso',
+                            'texto' => "Llamado a descanso pendiente ({$exceso} min)",
+                            'subtexto' => "Superado intervalo de {$intervaloFormatted}h continuas",
+                            'minutos_restantes' => $restantes,
+                            'limite_minutos' => $intervaloMinutosLeySilla,
+                            'transcurridos' => $transcurridos,
+                        ];
+                    }
                 }
             }
 
