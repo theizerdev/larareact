@@ -506,5 +506,20 @@
         </tr>
     </table>
 
+    <!-- 8. CÓDIGO QR DE VERIFICACIÓN / REPORTE COMPLETO -->
+    @php
+        $fullReportUrl = url("/admin/reparaciones/{$orden->id}/reporte-pdf");
+        $qrCodeApiUrl = "https://api.qrserver.com/v1/create-qr-code/?size=120x120&data=" . urlencode($fullReportUrl);
+    @endphp
+    <div style="margin-top: 20px; text-align: center; border-top: 1px dashed #cbd5e1; padding-top: 10px; page-break-inside: avoid;">
+        <img src="{{ $qrCodeApiUrl }}" alt="QR Reporte" style="width: 85px; height: 85px;">
+        <div style="font-size: 8.5px; font-weight: 800; text-transform: uppercase; color: #1e293b; margin-top: 4px;">
+            CÓDIGO DE REPARACIÓN: {{ $orden->numero_orden }}
+        </div>
+        <div style="font-size: 7.5px; color: #64748b; font-family: monospace;">
+            Escanee el código QR para consultar el reporte oficial y fotografías
+        </div>
+    </div>
+
 </body>
 </html>

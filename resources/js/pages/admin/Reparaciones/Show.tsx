@@ -4488,14 +4488,14 @@ export default function ShowReparacion({ orden, productosRepuestos = [], tecnico
                             {/* CÓDIGO QR Y CÓDIGO DE REPARACIÓN PARA CONSULTA Y BÚSQUEDA */}
                             <div className="text-center py-2.5 border-b-2 border-black flex flex-col items-center bg-gray-50/50">
                                 <QRCodeSVG
-                                    value={orden.numero_orden}
+                                    value={`${typeof window !== 'undefined' ? window.location.origin : ''}/admin/reparaciones/${orden.id}/reporte-pdf`}
                                     size={110}
                                 />
                                 <div className="text-[9px] font-black uppercase mt-1.5 font-mono tracking-wider">
                                     CÓDIGO DE REPARACIÓN: {orden.numero_orden}
                                 </div>
                                 <div className="text-[7.5px] text-gray-700 font-semibold font-mono">
-                                    Escanee para consultar estado o procesar equipo
+                                    Escanee para consultar estado o ver reporte completo
                                 </div>
                             </div>
 
@@ -4564,11 +4564,13 @@ export default function ShowReparacion({ orden, productosRepuestos = [], tecnico
                             {/* CÓDIGO QR PARA ESCANEAR */}
                             <div className="text-center pt-1 pb-1 flex flex-col items-center">
                                 <QRCodeSVG
-                                    value={orden.numero_orden}
+                                    value={`${typeof window !== 'undefined' ? window.location.origin : ''}/admin/reparaciones/${orden.id}/reporte-pdf`}
                                     size={120}
                                 />
                                 <div className="text-[8px] font-bold uppercase mt-1">CÓDIGO DE REPARACIÓN: {orden.numero_orden}</div>
-                                <div className="text-[7px] text-gray-600 font-mono">Escanear para abrir detalle en el sistema</div>
+                                <div className="text-[7px] text-gray-600 font-mono">
+                                    Escanear para consultar estado o abrir detalle en el sistema
+                                </div>
                             </div>
                         </>
                     )}

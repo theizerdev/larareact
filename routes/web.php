@@ -65,6 +65,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
 use App\Http\Controllers\ProveedorPreRegistroController;
 use App\Http\Controllers\EmpleadoPreRegistroController;
 use App\Http\Controllers\VisitaTemporalPreRegistroController;
+use App\Http\Controllers\Admin\ReparacionController;
 
 Route::get('/preregistro/{token}', [ProveedorPreRegistroController::class, 'showWizard'])->name('preregistro.wizard');
 Route::post('/preregistro/{token}', [ProveedorPreRegistroController::class, 'submitWizard'])->name('preregistro.submit');
@@ -75,6 +76,9 @@ Route::post('/preregistro-empleado/{token}', [EmpleadoPreRegistroController::cla
 Route::get('/preregistro-visita/{token}', [VisitaTemporalPreRegistroController::class, 'showWizard'])->name('preregistro-visita.wizard');
 Route::post('/preregistro-visita/{token}', [VisitaTemporalPreRegistroController::class, 'submitWizard'])->name('preregistro-visita.submit');
 Route::post('/preregistro-visita/{token}/tipo-servicio', [VisitaTemporalPreRegistroController::class, 'storeTipoServicio'])->name('preregistro-visita.tipo-servicio.store');
+
+  Route::get('admin/reparaciones/{reparacion}/reporte-pdf', [ReparacionController::class, 'reportePdf'])
+        ->name('reparaciones.reporte-pdf');
 
 if (file_exists(__DIR__.'/larareact-settings.php')) {
     require __DIR__.'/larareact-settings.php';
