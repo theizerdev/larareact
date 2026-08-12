@@ -52,6 +52,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { useTranslate } from '@/hooks/use-translate';
 import { cn } from '@/lib/utils';
 import { notifySuccess, notifyError } from '@/utils/notifications';
+import { compressImage } from '@/utils/imageOptimizer';
 
 interface Cliente {
     id: number;
@@ -363,7 +364,14 @@ export default function CreateReparacion({ clientes: initialClientes, marcas: in
     const [isCreatingServicio, setIsCreatingServicio] = useState(false);
 
     // 4 Ángulos de Evidencias Fotográficas
-    const [fotosState, setFotosState] = useState<Record<string, string>>({
+    type EvidenciasFotos = {
+        frente: string;
+        trasero: string;
+        borde_sup: string;
+        borde_inf: string;
+        [key: string]: string;
+    };
+    const [fotosState, setFotosState] = useState<EvidenciasFotos>({
         frente: '',
         trasero: '',
         borde_sup: '',
@@ -495,7 +503,7 @@ export default function CreateReparacion({ clientes: initialClientes, marcas: in
         if (capturedImage && activeCameraSlot) {
             setFotosState((prev) => {
                 const next = { ...prev, [activeCameraSlot]: capturedImage };
-                setData('evidencias_fotos', next);
+                setData('evidencias_fotos', next as any);
                 return next;
             });
             notifySuccess(__('Fotografía capturada y guardada.'));
@@ -549,27 +557,28 @@ export default function CreateReparacion({ clientes: initialClientes, marcas: in
         }, 400);
     };
 
-    const handleFotoUpload = (slotKey: string, e: React.ChangeEvent<HTMLInputElement>) => {
+    const handleFotoUpload = async (slotKey: string, e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0];
         if (!file) return;
 
-        const reader = new FileReader();
-        reader.onloadend = () => {
-            const base64String = reader.result as string;
+        try {
+            const compressedBase64 = await compressImage(file, { maxWidth: 1280, maxHeight: 1280, quality: 0.8 });
             setFotosState((prev) => {
-                const next = { ...prev, [slotKey]: base64String };
-                setData('evidencias_fotos', next);
+                const next = { ...prev, [slotKey]: compressedBase64 };
+                setData('evidencias_fotos', next as any);
                 return next;
             });
             notifySuccess(__('Fotografía cargada correctamente.'));
-        };
-        reader.readAsDataURL(file);
+        } catch (err) {
+            console.error('Error al procesar la fotografía:', err);
+            notifyError(__('Error al procesar la fotografía.'));
+        }
     };
 
     const handleRemoveFoto = (slotKey: string) => {
         setFotosState((prev) => {
             const next = { ...prev, [slotKey]: '' };
-            setData('evidencias_fotos', next);
+            setData('evidencias_fotos', next as any);
             return next;
         });
     };

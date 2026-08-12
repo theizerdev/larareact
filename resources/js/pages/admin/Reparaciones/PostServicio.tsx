@@ -23,6 +23,7 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { useTranslate } from '@/hooks/use-translate';
 import { notifySuccess, notifyError } from '@/utils/notifications';
+import { compressImage } from '@/utils/imageOptimizer';
 import { cn } from '@/lib/utils';
 
 interface Props {
@@ -299,21 +300,21 @@ export default function PostServicio({ orden, currencySymbol }: Props) {
         }
     };
 
-    const handleSingleFotoPostUpload = (slotKey: string, e: React.ChangeEvent<HTMLInputElement>) => {
+    const handleSingleFotoPostUpload = async (slotKey: string, e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0];
         if (!file) return;
 
-        const reader = new FileReader();
-        reader.onloadend = () => {
-            if (reader.result) {
-                setFotosPostState((prev) => ({
-                    ...prev,
-                    [slotKey]: reader.result as string,
-                }));
-                notifySuccess(__('Fotografía cargada correctamente.'));
-            }
-        };
-        reader.readAsDataURL(file);
+        try {
+            const compressedBase64 = await compressImage(file, { maxWidth: 1280, maxHeight: 1280, quality: 0.8 });
+            setFotosPostState((prev) => ({
+                ...prev,
+                [slotKey]: compressedBase64,
+            }));
+            notifySuccess(__('Fotografía cargada correctamente.'));
+        } catch (err) {
+            console.error('Error optimizando fotografía:', err);
+            notifyError(__('Error al procesar la fotografía.'));
+        }
     };
 
     const handleRemoveFotoPost = (slotKey: string) => {

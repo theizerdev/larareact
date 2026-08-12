@@ -486,10 +486,25 @@ class ReparacionController extends Controller
             if ($hasFotosTable) {
                 foreach ($evidenciasFotos as $angulo => $url) {
                     if (!empty($url)) {
+                        $storedUrl = $url;
+                        if (str_starts_with($url, 'data:image')) {
+                            try {
+                                preg_match('/data:image\/(?<type>.*?);base64,(?<data>.*)/', $url, $matches);
+                                $imageType = isset($matches['type']) && in_array($matches['type'], ['png', 'webp', 'jpeg', 'jpg']) ? $matches['type'] : 'jpeg';
+                                $imageData = base64_decode($matches['data'] ?? '');
+
+                                $filename = 'reparaciones/' . $orden->id . '/recepcion_' . $angulo . '_' . time() . '.' . $imageType;
+                                \Illuminate\Support\Facades\Storage::disk('public')->put($filename, $imageData);
+                                $storedUrl = \Illuminate\Support\Facades\Storage::url($filename);
+                            } catch (\Throwable $e) {
+                                \Illuminate\Support\Facades\Log::error('Error guardando evidencia fotográfica de recepción: ' . $e->getMessage());
+                            }
+                        }
+
                         OrdenReparacionFoto::create([
                             'orden_id' => $orden->id,
                             'angulo' => $angulo,
-                            'url' => $url,
+                            'url' => $storedUrl,
                             'descripcion' => "Fotografía de recepción - " . ucfirst(str_replace('_', ' ', $angulo)),
                         ]);
                     }
@@ -630,8 +645,9 @@ class ReparacionController extends Controller
         \App\Models\OrdenReparacionHistorial::create([
             'orden_id' => $reparacion->id,
             'user_id' => auth()->id(),
-            'estado' => $reparacion->estado_orden,
-            'notas' => $mensajeHistorial,
+            'estado_anterior' => $reparacion->estado_orden,
+            'estado_nuevo' => $reparacion->estado_orden,
+            'comentario' => $mensajeHistorial,
         ]);
 
         return back()->with('notification', [
@@ -677,8 +693,9 @@ class ReparacionController extends Controller
         OrdenReparacionHistorial::create([
             'orden_id' => $reparacion->id,
             'user_id' => auth()->id(),
-            'estado' => $reparacion->estado_orden,
-            'notas' => "Se agregó evidencia fotográfica de reparación: '{$descripcion}'",
+            'estado_anterior' => $reparacion->estado_orden,
+            'estado_nuevo' => $reparacion->estado_orden,
+            'comentario' => "Se agregó evidencia fotográfica de reparación: '{$descripcion}'",
         ]);
 
         return back()->with('notification', [

@@ -31,6 +31,7 @@ import {
     Upload,
     RefreshCw,
     Search,
+    Pencil,
 } from 'lucide-react';
 import React, { useState, useRef, useEffect } from 'react';
 import { QRCodeSVG } from '@/components/qr-code-svg';
@@ -45,6 +46,7 @@ import { Select, SelectContent, SelectGroup, SelectItem, SelectLabel, SelectTrig
 import { Textarea } from '@/components/ui/textarea';
 import { useTranslate } from '@/hooks/use-translate';
 import { notifySuccess, notifyError } from '@/utils/notifications';
+import { compressImage } from '@/utils/imageOptimizer';
 import { cn } from '@/lib/utils';
 
 interface Item {
@@ -83,14 +85,18 @@ interface Orden {
     cliente_nombre: string;
     cliente_telefono?: string;
     tipo_dispositivo: string;
+    marca_id?: number;
     marca_nombre: string;
+    modelo_id?: number;
     modelo_nombre: string;
     color?: string;
     imei_serie?: string;
     descripcion_falla: string;
     observaciones_fisicas?: string;
+    accesorios_incluidos?: string;
     contrasena_patron?: string;
     inspeccion_json?: any;
+    post_servicio_json?: any;
     estado_orden: string;
     costo_mano_obra: number;
     costo_repuestos: number;
@@ -100,6 +106,7 @@ interface Orden {
     garantia_dias: number;
     fecha_recepcion: string;
     fecha_prometida?: string;
+    fecha_estimada_entrega?: string;
     fecha_entrega?: string;
     tecnico?: { id: number; name: string };
     cliente?: { id: number; nombre: string; telefono?: string; email?: string };
@@ -679,14 +686,16 @@ export default function ShowReparacion({ orden, productosRepuestos = [], tecnico
         }
     };
 
-    const handleRepairFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const handleRepairFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0];
         if (!file) return;
-        const reader = new FileReader();
-        reader.onloadend = () => {
-            setNewFotoDataUrl(reader.result as string);
-        };
-        reader.readAsDataURL(file);
+        try {
+            const compressedBase64 = await compressImage(file, { maxWidth: 1280, maxHeight: 1280, quality: 0.8 });
+            setNewFotoDataUrl(compressedBase64);
+        } catch (err) {
+            console.error('Error optimizando imagen:', err);
+            notifyError(__('Error al procesar la fotografía.'));
+        }
     };
 
     const handleSaveRepairFoto = (e: React.FormEvent) => {
@@ -1371,21 +1380,21 @@ export default function ShowReparacion({ orden, productosRepuestos = [], tecnico
         setIsPostServicioModalOpen(true);
     };
 
-    const handleSingleFotoPostUpload = (slotKey: string, e: React.ChangeEvent<HTMLInputElement>) => {
+    const handleSingleFotoPostUpload = async (slotKey: string, e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0];
         if (!file) return;
 
-        const reader = new FileReader();
-        reader.onloadend = () => {
-            if (reader.result) {
-                setFotosPostState((prev) => ({
-                    ...prev,
-                    [slotKey]: reader.result as string,
-                }));
-                notifySuccess(__('Fotografía cargada correctamente.'));
-            }
-        };
-        reader.readAsDataURL(file);
+        try {
+            const compressedBase64 = await compressImage(file, { maxWidth: 1280, maxHeight: 1280, quality: 0.8 });
+            setFotosPostState((prev) => ({
+                ...prev,
+                [slotKey]: compressedBase64,
+            }));
+            notifySuccess(__('Fotografía cargada correctamente.'));
+        } catch (err) {
+            console.error('Error optimizando fotografía:', err);
+            notifyError(__('Error al procesar la fotografía.'));
+        }
     };
 
     const handleRemoveFotoPost = (slotKey: string) => {
