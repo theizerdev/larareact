@@ -603,20 +603,54 @@ export default function ShowReparacion({ orden, productosRepuestos = [], tecnico
     const repairVideoRef = useRef<HTMLVideoElement | null>(null);
     const repairCanvasRef = useRef<HTMLCanvasElement | null>(null);
 
-    const startRepairCamera = async () => {
-        setIsRepairCameraActive(true);
+    const [availableCameras, setAvailableCameras] = useState<MediaDeviceInfo[]>([]);
+    const [selectedCameraDeviceId, setSelectedCameraDeviceId] = useState<string>('');
+
+    const refreshCameraDevices = async () => {
         try {
-            const stream = await navigator.mediaDevices.getUserMedia({
-                video: { facingMode: 'environment', width: { ideal: 1280 }, height: { ideal: 720 } },
-                audio: false,
-            });
-            setRepairCameraStream(stream);
-            if (repairVideoRef.current) {
-                repairVideoRef.current.srcObject = stream;
-                repairVideoRef.current.play();
+            if (!navigator.mediaDevices?.enumerateDevices) return;
+            const devices = await navigator.mediaDevices.enumerateDevices();
+            const videoInputs = devices.filter((d) => d.kind === 'videoinput');
+            setAvailableCameras(videoInputs);
+            if (videoInputs.length > 0 && !selectedCameraDeviceId) {
+                setSelectedCameraDeviceId(videoInputs[0].deviceId);
             }
-        } catch {
-            notifyError(__('No se pudo acceder a la cámara. Seleccione una imagen de sus archivos.'));
+        } catch (err) {
+            console.error('Error enumerating cameras:', err);
+        }
+    };
+
+    useEffect(() => {
+        refreshCameraDevices();
+    }, []);
+
+    const startRepairCamera = async (overrideDeviceId?: string) => {
+        const targetDeviceId = overrideDeviceId || selectedCameraDeviceId;
+        setIsRepairCameraActive(true);
+        if (repairCameraStream) {
+            repairCameraStream.getTracks().forEach((track) => track.stop());
+            setRepairCameraStream(null);
+        }
+        try {
+            const constraints: MediaStreamConstraints = {
+                video: targetDeviceId
+                    ? { deviceId: { exact: targetDeviceId }, width: { ideal: 1920 }, height: { ideal: 1080 } }
+                    : { facingMode: 'environment', width: { ideal: 1920 }, height: { ideal: 1080 } },
+                audio: false,
+            };
+            const stream = await navigator.mediaDevices.getUserMedia(constraints);
+            setRepairCameraStream(stream);
+
+            setTimeout(async () => {
+                await refreshCameraDevices();
+                if (repairVideoRef.current) {
+                    repairVideoRef.current.srcObject = stream;
+                    repairVideoRef.current.play().catch((e) => console.log('Video play error:', e));
+                }
+            }, 150);
+        } catch (err) {
+            console.error('Error starting repair camera:', err);
+            notifyError(__('No se pudo acceder a la cámara seleccionada. Por favor verifique los permisos o conexiones USB.'));
             setIsRepairCameraActive(false);
         }
     };
@@ -4734,6 +4768,53 @@ export default function ShowReparacion({ orden, productosRepuestos = [], tecnico
                                     <span>{__('Subir de Galería')}</span>
                                     <input type="file" accept="image/*" onChange={handleRepairFileUpload} className="hidden" />
                                 </label>
+                            </div>
+
+                            {/* SELECCIONADOR DE CÁMARAS DISPONIBLES / MICROSCOPIOS USB */}
+                            <div className="space-y-1.5 bg-slate-900/90 border border-purple-900/50 p-2.5 rounded-xl">
+                                <div className="flex items-center justify-between">
+                                    <Label className="text-[11px] font-bold text-purple-300 flex items-center gap-1.5">
+                                        <Camera className="w-3.5 h-3.5 text-purple-400" />
+                                        {__('Dispositivo de Video / Microscopio USB:')}
+                                    </Label>
+                                    <button
+                                        type="button"
+                                        onClick={() => {
+                                            refreshCameraDevices();
+                                            notifySuccess(__('Lista de cámaras actualizada.'));
+                                        }}
+                                        className="text-[10px] text-purple-400 hover:text-purple-200 font-semibold flex items-center gap-1 cursor-pointer"
+                                    >
+                                        <RefreshCw className="w-3 h-3 text-purple-400" />
+                                        {__('Escanear Dispositivos')}
+                                    </button>
+                                </div>
+                                <Select
+                                    value={selectedCameraDeviceId}
+                                    onValueChange={(val) => {
+                                        setSelectedCameraDeviceId(val);
+                                        if (isRepairCameraActive) {
+                                            startRepairCamera(val);
+                                        }
+                                    }}
+                                >
+                                    <SelectTrigger className="w-full h-9 text-xs bg-slate-950 border-slate-700 text-white font-medium focus:ring-2 focus:ring-purple-500">
+                                        <SelectValue placeholder={__('Seleccionar Cámara / Microscopio...')} />
+                                    </SelectTrigger>
+                                    <SelectContent className="bg-slate-900 border-slate-800 text-white">
+                                        {availableCameras.length === 0 ? (
+                                            <SelectItem value="default" className="text-xs focus:bg-purple-900/50 focus:text-white">
+                                                📷 {__('Cámara Predeterminada del Sistema')}
+                                            </SelectItem>
+                                        ) : (
+                                            availableCameras.map((cam, idx) => (
+                                                <SelectItem key={cam.deviceId || idx} value={cam.deviceId} className="text-xs focus:bg-purple-900/50 focus:text-white">
+                                                    📷 {cam.label || `${__('Cámara / Microscopio')} ${idx + 1}`}
+                                                </SelectItem>
+                                            ))
+                                        )}
+                                    </SelectContent>
+                                </Select>
                             </div>
 
                             {/* CÁMARA EN VIVO WEBCAM */}
