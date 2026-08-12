@@ -882,6 +882,9 @@ export default function ShowReparacion({ orden, productosRepuestos = [], tecnico
         FUNCIONES_VALIDACION_LIST.forEach((fn) => {
             init[fn] = existing[fn] || { estado: 'correcto', obs: '' };
         });
+        Object.keys(existing).forEach((fn) => {
+            if (!init[fn]) init[fn] = existing[fn];
+        });
         return init;
     });
 
@@ -891,8 +894,16 @@ export default function ShowReparacion({ orden, productosRepuestos = [], tecnico
         LIMPIEZA_FINAL_LIST.forEach((item) => {
             init[item] = existing[item] ?? true;
         });
+        Object.keys(existing).forEach((item) => {
+            if (init[item] === undefined) init[item] = Boolean(existing[item]);
+        });
         return init;
     });
+
+    const [openAddCustomValidacionModal, setOpenAddCustomValidacionModal] = useState(false);
+    const [newCustomValidacionName, setNewCustomValidacionName] = useState('');
+    const [openAddCustomLimpiezaModal, setOpenAddCustomLimpiezaModal] = useState(false);
+    const [newCustomLimpiezaName, setNewCustomLimpiezaName] = useState('');
 
     const [qcFormState, setQcFormState] = useState<Record<string, boolean>>(() => {
         const existing = postServicioData?.qc || {};
@@ -917,7 +928,53 @@ export default function ShowReparacion({ orden, productosRepuestos = [], tecnico
             });
             return updated;
         });
-        notifySuccess(__('Las 24 funciones fueron marcadas como Correcto 🟢'));
+        notifySuccess(__('Todas las funciones fueron marcadas como Correcto 🟢'));
+    };
+
+    const handleDeleteValidacionItem = (keyToDelete: string) => {
+        setValidacionFormState((prev) => {
+            const updated = { ...prev };
+            delete updated[keyToDelete];
+            return updated;
+        });
+        notifySuccess(__('Punto de validación eliminado: ') + keyToDelete);
+    };
+
+    const handleAddCustomValidacionItem = () => {
+        const trimmed = newCustomValidacionName.trim();
+        if (!trimmed) return;
+        if (!validacionFormState[trimmed]) {
+            setValidacionFormState((prev) => ({
+                ...prev,
+                [trimmed]: { estado: 'correcto', obs: '' },
+            }));
+            notifySuccess(__('Nuevo punto de validación añadido: ') + trimmed);
+        }
+        setNewCustomValidacionName('');
+        setOpenAddCustomValidacionModal(false);
+    };
+
+    const handleDeleteLimpiezaItem = (keyToDelete: string) => {
+        setLimpiezaFormState((prev) => {
+            const updated = { ...prev };
+            delete updated[keyToDelete];
+            return updated;
+        });
+        notifySuccess(__('Paso de limpieza eliminado: ') + keyToDelete);
+    };
+
+    const handleAddCustomLimpiezaItem = () => {
+        const trimmed = newCustomLimpiezaName.trim();
+        if (!trimmed) return;
+        if (limpiezaFormState[trimmed] === undefined) {
+            setLimpiezaFormState((prev) => ({
+                ...prev,
+                [trimmed]: true,
+            }));
+            notifySuccess(__('Nuevo paso de limpieza añadido: ') + trimmed);
+        }
+        setNewCustomLimpiezaName('');
+        setOpenAddCustomLimpiezaModal(false);
     };
 
     const handleSavePostServicioInline = () => {
@@ -2392,15 +2449,26 @@ export default function ShowReparacion({ orden, productosRepuestos = [], tecnico
                                                 <div className="space-y-0.5">
                                                     <h4 className="text-sm font-black text-slate-900 dark:text-slate-100 flex items-center gap-2">
                                                         <Activity className="w-4 h-4 text-emerald-600" />
-                                                        {__('1. Validación Final de Funciones Electrónicas (24 Puntos)')}
+                                                        {__('1. Validación Final de Funciones Electrónicas')}
                                                         <Badge className="bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-200 text-xs font-mono font-bold">
-                                                            24 / 24 {__('Puntos')}
+                                                            {Object.keys(validacionFormState).length} {__('Puntos')}
                                                         </Badge>
                                                     </h4>
                                                     <p className="text-xs text-slate-400">
                                                         {__('Verifique el funcionamiento correcto de cada componente antes de la entrega final.')}
                                                     </p>
                                                 </div>
+
+                                                <Button
+                                                    type="button"
+                                                    size="sm"
+                                                    variant="outline"
+                                                    onClick={() => setOpenAddCustomValidacionModal(true)}
+                                                    className="border-emerald-300 text-emerald-700 dark:border-emerald-800 dark:text-emerald-300 hover:bg-emerald-50 font-bold text-xs gap-1.5 rounded-lg"
+                                                >
+                                                    <Plus className="w-4 h-4 text-emerald-600" />
+                                                    {__('➕ Agregar Punto de Validación')}
+                                                </Button>
                                             </div>
 
                                             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3.5">
@@ -2439,6 +2507,14 @@ export default function ShowReparacion({ orden, productosRepuestos = [], tecnico
                                                                     >
                                                                         🔴 Incorrecto
                                                                     </button>
+                                                                    <button
+                                                                        type="button"
+                                                                        onClick={() => handleDeleteValidacionItem(fnKey)}
+                                                                        className="p-1 rounded-md text-slate-400 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/50 transition-colors ml-1"
+                                                                        title={__('Eliminar este punto de validación')}
+                                                                    >
+                                                                        <Trash2 className="w-3.5 h-3.5" />
+                                                                    </button>
                                                                 </div>
                                                             </div>
 
@@ -2476,13 +2552,24 @@ export default function ShowReparacion({ orden, productosRepuestos = [], tecnico
                                             </div>
 
                                             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                                {/* LIMPIEZA FINAL (5 PUNTOS) */}
+                                                {/* LIMPIEZA FINAL */}
                                                 <div className="space-y-2 border border-slate-200 dark:border-slate-800 rounded-2xl p-4 bg-slate-50/50 dark:bg-slate-950">
-                                                    <span className="text-xs font-black text-slate-700 dark:text-slate-300 uppercase tracking-wider block mb-2">
-                                                        ✨ Protocolo de Limpieza (5 Puntos)
-                                                    </span>
-                                                    {LIMPIEZA_FINAL_LIST.map((item) => {
-                                                        const isChecked = Boolean(limpiezaFormState[item]);
+                                                    <div className="flex items-center justify-between gap-2 mb-2">
+                                                        <span className="text-xs font-black text-slate-700 dark:text-slate-300 uppercase tracking-wider">
+                                                            ✨ Protocolo de Limpieza ({Object.keys(limpiezaFormState).length} Puntos)
+                                                        </span>
+                                                        <Button
+                                                            type="button"
+                                                            size="sm"
+                                                            variant="ghost"
+                                                            onClick={() => setOpenAddCustomLimpiezaModal(true)}
+                                                            className="h-6 text-[10px] font-bold text-emerald-600 hover:text-emerald-700 p-0"
+                                                        >
+                                                            <Plus className="w-3 h-3 mr-1" />
+                                                            {__('+ Agregar Paso')}
+                                                        </Button>
+                                                    </div>
+                                                    {Object.entries(limpiezaFormState).map(([item, isChecked]) => {
                                                         return (
                                                             <div
                                                                 key={item}
@@ -2494,10 +2581,23 @@ export default function ShowReparacion({ orden, productosRepuestos = [], tecnico
                                                                         : "bg-rose-50 dark:bg-rose-950/30 border-rose-200 text-rose-900 dark:text-rose-200"
                                                                 )}
                                                             >
-                                                                <span>{item}</span>
-                                                                <Badge className={cn("text-[10px] font-extrabold px-2 py-0.5", isChecked ? "bg-emerald-600 text-white" : "bg-rose-600 text-white")}>
-                                                                    {isChecked ? '✅ Sí' : '❌ No'}
-                                                                </Badge>
+                                                                <span className="truncate pr-1">{item}</span>
+                                                                <div className="flex items-center gap-1.5 shrink-0">
+                                                                    <Badge className={cn("text-[10px] font-extrabold px-2 py-0.5", isChecked ? "bg-emerald-600 text-white" : "bg-rose-600 text-white")}>
+                                                                        {isChecked ? '✅ Sí' : '❌ No'}
+                                                                    </Badge>
+                                                                    <button
+                                                                        type="button"
+                                                                        onClick={(e) => {
+                                                                            e.stopPropagation();
+                                                                            handleDeleteLimpiezaItem(item);
+                                                                        }}
+                                                                        className="p-0.5 rounded text-slate-400 hover:text-rose-600 hover:bg-rose-100/50 transition-colors"
+                                                                        title={__('Eliminar este paso de limpieza')}
+                                                                    >
+                                                                        <Trash2 className="w-3.5 h-3.5" />
+                                                                    </button>
+                                                                </div>
                                                             </div>
                                                         );
                                                     })}
@@ -3032,7 +3132,7 @@ export default function ShowReparacion({ orden, productosRepuestos = [], tecnico
                     </DialogContent>
                 </Dialog>
 
-                {/* MODAL AGREGAR PUNTO FUNCIONAL NUEVO */}
+                {/* MODAL AGREGAR PUNTO FUNCIONAL PRESERVICIO */}
                 <Dialog open={openAddCustomEstadoModal} onOpenChange={setOpenAddCustomEstadoModal}>
                     <DialogContent className="sm:max-w-md bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800">
                         <DialogHeader>
@@ -3075,6 +3175,104 @@ export default function ShowReparacion({ orden, productosRepuestos = [], tecnico
                                 >
                                     <Plus className="w-4 h-4" />
                                     {__('Agregar Prueba')}
+                                </Button>
+                            </div>
+                        </div>
+                    </DialogContent>
+                </Dialog>
+
+                {/* MODAL AGREGAR PUNTO DE VALIDACIÓN POST-ATENCIÓN */}
+                <Dialog open={openAddCustomValidacionModal} onOpenChange={setOpenAddCustomValidacionModal}>
+                    <DialogContent className="sm:max-w-md bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800">
+                        <DialogHeader>
+                            <DialogTitle className="text-sm font-bold flex items-center gap-2 text-emerald-700 dark:text-emerald-300">
+                                <Plus className="w-4 h-4 text-emerald-600" />
+                                {__('Agregar Punto de Validación Final')}
+                            </DialogTitle>
+                        </DialogHeader>
+
+                        <div className="space-y-4 py-2">
+                            <div className="space-y-2">
+                                <Label className="text-xs font-bold text-slate-700 dark:text-slate-300">
+                                    {__('Nombre del Componente o Prueba de Salida')}
+                                </Label>
+                                <Input
+                                    type="text"
+                                    placeholder={__('Ej. Prueba de Carga Rápida, Calibración de Pantalla...')}
+                                    value={newCustomValidacionName}
+                                    onChange={(e) => setNewCustomValidacionName(e.target.value)}
+                                    onKeyDown={(e) => {
+                                        if (e.key === 'Enter') handleAddCustomValidacionItem();
+                                    }}
+                                    className="text-xs"
+                                />
+                            </div>
+
+                            <div className="flex justify-end gap-2 pt-2">
+                                <Button
+                                    type="button"
+                                    variant="outline"
+                                    onClick={() => setOpenAddCustomValidacionModal(false)}
+                                    className="text-xs font-bold"
+                                >
+                                    {__('Cancelar')}
+                                </Button>
+                                <Button
+                                    type="button"
+                                    onClick={handleAddCustomValidacionItem}
+                                    className="bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold gap-1.5"
+                                >
+                                    <Plus className="w-4 h-4" />
+                                    {__('Agregar Punto')}
+                                </Button>
+                            </div>
+                        </div>
+                    </DialogContent>
+                </Dialog>
+
+                {/* MODAL AGREGAR PASO DE LIMPIEZA POST-ATENCIÓN */}
+                <Dialog open={openAddCustomLimpiezaModal} onOpenChange={setOpenAddCustomLimpiezaModal}>
+                    <DialogContent className="sm:max-w-md bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800">
+                        <DialogHeader>
+                            <DialogTitle className="text-sm font-bold flex items-center gap-2 text-emerald-700 dark:text-emerald-300">
+                                <Plus className="w-4 h-4 text-emerald-600" />
+                                {__('Agregar Paso al Protocolo de Limpieza')}
+                            </DialogTitle>
+                        </DialogHeader>
+
+                        <div className="space-y-4 py-2">
+                            <div className="space-y-2">
+                                <Label className="text-xs font-bold text-slate-700 dark:text-slate-300">
+                                    {__('Descripción del Paso o Acabado de Limpieza')}
+                                </Label>
+                                <Input
+                                    type="text"
+                                    placeholder={__('Ej. Desinfección UV, Pulido de Cristal, Soplado de Bocina...')}
+                                    value={newCustomLimpiezaName}
+                                    onChange={(e) => setNewCustomLimpiezaName(e.target.value)}
+                                    onKeyDown={(e) => {
+                                        if (e.key === 'Enter') handleAddCustomLimpiezaItem();
+                                    }}
+                                    className="text-xs"
+                                />
+                            </div>
+
+                            <div className="flex justify-end gap-2 pt-2">
+                                <Button
+                                    type="button"
+                                    variant="outline"
+                                    onClick={() => setOpenAddCustomLimpiezaModal(false)}
+                                    className="text-xs font-bold"
+                                >
+                                    {__('Cancelar')}
+                                </Button>
+                                <Button
+                                    type="button"
+                                    onClick={handleAddCustomLimpiezaItem}
+                                    className="bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold gap-1.5"
+                                >
+                                    <Plus className="w-4 h-4" />
+                                    {__('Agregar Paso')}
                                 </Button>
                             </div>
                         </div>
