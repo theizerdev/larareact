@@ -828,18 +828,24 @@ export default function ShowReparacion({ orden, productosRepuestos = [], tecnico
 
     const [inspeccionEstadoForm, setInspeccionEstadoForm] = useState<Record<string, boolean>>(() => {
         const existing = inspeccionData?.estado || {};
-        return {
+        const init: Record<string, boolean> = {
             enciende: existing.enciende ?? true,
             carga_bateria: existing.carga_bateria ?? true,
             entra_sistema: existing.entra_sistema ?? true,
             tiene_bloqueo: existing.tiene_bloqueo ?? false,
             cliente_proporciona_contrasena: existing.cliente_proporciona_contrasena ?? true,
         };
+        Object.keys(existing).forEach((k) => {
+            if (init[k] === undefined) init[k] = Boolean(existing[k]);
+        });
+        return init;
     });
 
     const [observacionesFisicasForm, setObservacionesFisicasForm] = useState<string>(orden.observaciones_fisicas || '');
     const [openAddCustomItemModal, setOpenAddCustomItemModal] = useState(false);
     const [newCustomItemName, setNewCustomItemName] = useState('');
+    const [openAddCustomEstadoModal, setOpenAddCustomEstadoModal] = useState(false);
+    const [newCustomEstadoName, setNewCustomEstadoName] = useState('');
     const [isSavingPreservicioInline, setIsSavingPreservicioInline] = useState(false);
 
     // ESTADO E INICIALIZACIÓN PARA FORMULARIO DIRECTO INTERACTIVO DE POST-ATENCIÓN (VALIDACIÓN FINAL & QC)
@@ -955,6 +961,38 @@ export default function ShowReparacion({ orden, productosRepuestos = [], tecnico
         }
         setNewCustomItemName('');
         setOpenAddCustomItemModal(false);
+    };
+
+    const handleDeleteFisicaItem = (keyToDelete: string) => {
+        setInspeccionFisicaForm((prev) => {
+            const updated = { ...prev };
+            delete updated[keyToDelete];
+            return updated;
+        });
+        notifySuccess(__('Punto de inspección física eliminado: ') + keyToDelete);
+    };
+
+    const handleAddCustomEstadoItem = () => {
+        const trimmed = newCustomEstadoName.trim();
+        if (!trimmed) return;
+        if (inspeccionEstadoForm[trimmed] === undefined) {
+            setInspeccionEstadoForm((prev) => ({
+                ...prev,
+                [trimmed]: true,
+            }));
+            notifySuccess(__('Nuevo punto funcional añadido: ') + trimmed);
+        }
+        setNewCustomEstadoName('');
+        setOpenAddCustomEstadoModal(false);
+    };
+
+    const handleDeleteEstadoItem = (keyToDelete: string) => {
+        setInspeccionEstadoForm((prev) => {
+            const updated = { ...prev };
+            delete updated[keyToDelete];
+            return updated;
+        });
+        notifySuccess(__('Punto funcional eliminado: ') + keyToDelete);
     };
 
     const handleMarkAllFisicaBueno = () => {
@@ -2174,6 +2212,14 @@ export default function ShowReparacion({ orden, productosRepuestos = [], tecnico
                                                                     >
                                                                         ⚪ N/A
                                                                     </button>
+                                                                    <button
+                                                                        type="button"
+                                                                        onClick={() => handleDeleteFisicaItem(itemKey)}
+                                                                        className="p-1 rounded-md text-slate-400 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/50 transition-colors ml-1"
+                                                                        title={__('Eliminar este punto de inspección')}
+                                                                    >
+                                                                        <Trash2 className="w-3.5 h-3.5" />
+                                                                    </button>
                                                                 </div>
                                                             </div>
 
@@ -2200,25 +2246,43 @@ export default function ShowReparacion({ orden, productosRepuestos = [], tecnico
 
                                         {/* 2. ESTADO FUNCIONAL INICIAL */}
                                         <div className="space-y-4 pt-4 border-t border-slate-100 dark:border-slate-800">
-                                            <div className="space-y-0.5">
-                                                <h4 className="text-sm font-black text-slate-900 dark:text-slate-100 flex items-center gap-2">
-                                                    <Activity className="w-4 h-4 text-indigo-600" />
-                                                    {__('2. Estado Funcional Inicial')}
-                                                </h4>
-                                                <p className="text-xs text-slate-400">
-                                                    {__('Pruebas electrónicas iniciales antes de la intervención técnica.')}
-                                                </p>
+                                            <div className="flex items-center justify-between flex-wrap gap-2">
+                                                <div className="space-y-0.5">
+                                                    <h4 className="text-sm font-black text-slate-900 dark:text-slate-100 flex items-center gap-2">
+                                                        <Activity className="w-4 h-4 text-indigo-600" />
+                                                        {__('2. Estado Funcional Inicial')}
+                                                        <Badge className="bg-indigo-100 text-indigo-800 dark:bg-indigo-950 dark:text-indigo-200 text-xs font-mono font-bold">
+                                                            {Object.keys(inspeccionEstadoForm).length} {__('Pruebas')}
+                                                        </Badge>
+                                                    </h4>
+                                                    <p className="text-xs text-slate-400">
+                                                        {__('Pruebas electrónicas iniciales antes de la intervención técnica.')}
+                                                    </p>
+                                                </div>
+
+                                                <Button
+                                                    type="button"
+                                                    size="sm"
+                                                    variant="outline"
+                                                    onClick={() => setOpenAddCustomEstadoModal(true)}
+                                                    className="border-indigo-300 text-indigo-700 dark:border-indigo-800 dark:text-indigo-300 hover:bg-indigo-50 font-bold text-xs gap-1.5 rounded-lg"
+                                                >
+                                                    <Plus className="w-4 h-4 text-indigo-600" />
+                                                    {__('➕ Agregar Punto Funcional')}
+                                                </Button>
                                             </div>
 
-                                            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
-                                                {[
-                                                    { key: 'enciende', label: 'Enciende' },
-                                                    { key: 'carga_bateria', label: 'Carga batería' },
-                                                    { key: 'entra_sistema', label: 'Entra al sistema' },
-                                                    { key: 'tiene_bloqueo', label: 'Tiene bloqueo' },
-                                                    { key: 'cliente_proporciona_contrasena', label: 'Proporciona clave' },
-                                                ].map(({ key, label }) => {
-                                                    const isOk = Boolean(inspeccionEstadoForm[key]);
+                                            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
+                                                {Object.entries(inspeccionEstadoForm).map(([key, isOk]) => {
+                                                    const labelMap: Record<string, string> = {
+                                                        enciende: 'Enciende',
+                                                        carga_bateria: 'Carga batería',
+                                                        entra_sistema: 'Entra al sistema',
+                                                        tiene_bloqueo: 'Tiene bloqueo',
+                                                        cliente_proporciona_contrasena: 'Proporciona clave',
+                                                    };
+                                                    const labelDisplay = labelMap[key] || key;
+
                                                     return (
                                                         <div
                                                             key={key}
@@ -2230,10 +2294,23 @@ export default function ShowReparacion({ orden, productosRepuestos = [], tecnico
                                                                     : "bg-rose-50 dark:bg-rose-950/30 border-rose-200 text-rose-900 dark:text-rose-200 hover:bg-rose-100/80"
                                                             )}
                                                         >
-                                                            <span>{label}</span>
-                                                            <Badge className={cn("text-[10px] font-extrabold px-2 py-0.5", isOk ? "bg-emerald-600 text-white" : "bg-rose-600 text-white")}>
-                                                                {isOk ? '✅ Sí' : '❌ No'}
-                                                            </Badge>
+                                                            <span className="truncate pr-1">{labelDisplay}</span>
+                                                            <div className="flex items-center gap-1.5 shrink-0">
+                                                                <Badge className={cn("text-[10px] font-extrabold px-2 py-0.5", isOk ? "bg-emerald-600 text-white" : "bg-rose-600 text-white")}>
+                                                                    {isOk ? '✅ Sí' : '❌ No'}
+                                                                </Badge>
+                                                                <button
+                                                                    type="button"
+                                                                    onClick={(e) => {
+                                                                        e.stopPropagation();
+                                                                        handleDeleteEstadoItem(key);
+                                                                    }}
+                                                                    className="p-0.5 rounded text-slate-400 hover:text-rose-600 hover:bg-rose-100/50 transition-colors"
+                                                                    title={__('Eliminar este punto funcional')}
+                                                                >
+                                                                    <Trash2 className="w-3.5 h-3.5" />
+                                                                </button>
+                                                            </div>
                                                         </div>
                                                     );
                                                 })}
@@ -2949,6 +3026,55 @@ export default function ShowReparacion({ orden, productosRepuestos = [], tecnico
                                 >
                                     <Plus className="w-4 h-4" />
                                     {__('Agregar Punto')}
+                                </Button>
+                            </div>
+                        </div>
+                    </DialogContent>
+                </Dialog>
+
+                {/* MODAL AGREGAR PUNTO FUNCIONAL NUEVO */}
+                <Dialog open={openAddCustomEstadoModal} onOpenChange={setOpenAddCustomEstadoModal}>
+                    <DialogContent className="sm:max-w-md bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800">
+                        <DialogHeader>
+                            <DialogTitle className="text-sm font-bold flex items-center gap-2 text-indigo-700 dark:text-indigo-300">
+                                <Plus className="w-4 h-4 text-indigo-600" />
+                                {__('Agregar Nuevo Punto Funcional')}
+                            </DialogTitle>
+                        </DialogHeader>
+
+                        <div className="space-y-4 py-2">
+                            <div className="space-y-2">
+                                <Label className="text-xs font-bold text-slate-700 dark:text-slate-300">
+                                    {__('Nombre de la Prueba o Componente Electrónico')}
+                                </Label>
+                                <Input
+                                    type="text"
+                                    placeholder={__('Ej. Wi-Fi / Bluetooth, Lector SIM, Cámara Frontal, Micrófono...')}
+                                    value={newCustomEstadoName}
+                                    onChange={(e) => setNewCustomEstadoName(e.target.value)}
+                                    onKeyDown={(e) => {
+                                        if (e.key === 'Enter') handleAddCustomEstadoItem();
+                                    }}
+                                    className="text-xs"
+                                />
+                            </div>
+
+                            <div className="flex justify-end gap-2 pt-2">
+                                <Button
+                                    type="button"
+                                    variant="outline"
+                                    onClick={() => setOpenAddCustomEstadoModal(false)}
+                                    className="text-xs font-bold"
+                                >
+                                    {__('Cancelar')}
+                                </Button>
+                                <Button
+                                    type="button"
+                                    onClick={handleAddCustomEstadoItem}
+                                    className="bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold gap-1.5"
+                                >
+                                    <Plus className="w-4 h-4" />
+                                    {__('Agregar Prueba')}
                                 </Button>
                             </div>
                         </div>

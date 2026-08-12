@@ -85,11 +85,31 @@ class ReparacionController extends Controller
             ->toArray();
 
         $tecnicos = User::where('empresa_id', $empresaId)->get(['id', 'name']);
+        $clientes = Cliente::where('empresa_id', $empresaId)->orderBy('nombre')->get(['id', 'nombre', 'telefono', 'email']);
+        $marcas = Marca::with('modelos')->where('empresa_id', $empresaId)->orderBy('nombre')->get();
+        $categorias = \App\Models\Categoria::withoutGlobalScope('multitenancy')
+            ->where(function ($q) use ($empresaId) {
+                $q->where('empresa_id', $empresaId)
+                  ->orWhereNull('empresa_id');
+            })
+            ->orderBy('nombre')
+            ->get(['id', 'nombre']);
+
+        $servicios = \App\Models\Servicio::withoutGlobalScope('multitenancy')
+            ->with(['categoria' => fn ($q) => $q->withoutGlobalScope('multitenancy')])
+            ->where('empresa_id', $empresaId)
+            ->where('estado', true)
+            ->orderBy('nombre')
+            ->get(['id', 'codigo', 'nombre', 'precio', 'categoria_id']);
 
         return Inertia::render('admin/Reparaciones/Index', [
             'ordenes' => $ordenes,
             'counts' => $counts,
             'tecnicos' => $tecnicos,
+            'clientes' => $clientes,
+            'marcas' => $marcas,
+            'categorias' => $categorias,
+            'servicios' => $servicios,
             'currencySymbol' => $this->getCurrencySymbol(),
             'filters' => $request->only(['search', 'status', 'tecnico_id']),
             'isTecnicoOnly' => $isTecnicoOnly && !$isAdmin,

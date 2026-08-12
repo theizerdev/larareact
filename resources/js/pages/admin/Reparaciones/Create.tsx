@@ -106,6 +106,13 @@ interface Props {
     currencySymbol: string;
 }
 
+const FOTO_SLOTS = [
+    { key: 'frente', label: 'Frente / Pantalla', desc: 'Frontal & Cristal Display' },
+    { key: 'trasero', label: 'Tapa Trasera', desc: 'Carcasa & Cámaras' },
+    { key: 'borde_sup', label: 'Borde Sup. / Izq.', desc: 'Marco, Botones y Bisel' },
+    { key: 'borde_inf', label: 'Borde Inf. / Der.', desc: 'Puerto Carga & Altavoz' },
+];
+
 const PATTERN_DOT_COORDS: Record<number, { x: number; y: number }> = {
     1: { x: 50, y: 50 },
     2: { x: 150, y: 50 },
@@ -118,7 +125,7 @@ const PATTERN_DOT_COORDS: Record<number, { x: number; y: number }> = {
     9: { x: 250, y: 250 },
 };
 
-function PatternLockInput({
+function PatternLockCanvas({
     pattern,
     onChange,
 }: {
@@ -1023,41 +1030,52 @@ export default function CreateReparacion({ clientes: initialClientes, marcas: in
             <div className="space-y-6 w-full pb-16">
                 <Breadcrumbs breadcrumbs={breadcrumbs} />
 
-                {/* HEADER COMPACTO Y LIMPIO */}
-                <div className="flex items-center justify-between pb-3 border-b border-slate-200 dark:border-slate-800">
-                    <div className="space-y-0.5">
-                        <h1 className="text-xl font-black tracking-tight text-slate-900 dark:text-slate-100 flex items-center gap-2">
-                            <Wrench className="w-5 h-5 text-purple-600" />
-                            {__('Recepción de Equipo para Reparación')}
-                        </h1>
-                        <p className="text-xs text-slate-500">{__('Formulario de ingreso y recepción de orden de servicio técnico.')}</p>
+                <form onSubmit={handleSubmit} className="w-full space-y-4">
+                    {/* HEADER COMPACTO Y LIMPIO */}
+                    <div className="flex items-center justify-between pb-3 border-b border-slate-200 dark:border-slate-800">
+                        <div className="space-y-0.5">
+                            <h1 className="text-xl font-black tracking-tight text-slate-900 dark:text-slate-100 flex items-center gap-2">
+                                <Wrench className="w-5 h-5 text-purple-600" />
+                                {__('Recepción de Equipo para Reparación')}
+                            </h1>
+                            <p className="text-xs text-slate-500">{__('Formulario de ingreso y recepción de orden de servicio técnico.')}</p>
+                        </div>
+
+                        <div className="flex items-center gap-2">
+                            <Link href="/admin/reparaciones">
+                                <Button type="button" variant="outline" size="sm" className="gap-2 text-xs font-semibold">
+                                    <ArrowLeft className="w-4 h-4" />
+                                    {__('Volver')}
+                                </Button>
+                            </Link>
+                            <Button
+                                type="submit"
+                                disabled={processing}
+                                className="h-9 px-4 gap-2 text-xs font-bold bg-emerald-600 hover:bg-emerald-700 text-white shadow-md shadow-emerald-950/20 rounded-xl transition-all"
+                            >
+                                <Save className="w-4 h-4" />
+                                {processing ? __('Guardando...') : __('Guardar Orden de Reparación')}
+                            </Button>
+                        </div>
                     </div>
 
-                    <Link href="/admin/reparaciones">
-                        <Button variant="outline" size="sm" className="gap-2 text-xs font-semibold">
-                            <ArrowLeft className="w-4 h-4" />
-                            {__('Volver al Listado')}
-                        </Button>
-                    </Link>
-                </div>
-
-                <form onSubmit={handleSubmit}>
-                    <div className="max-w-4xl mx-auto space-y-6">
-
-                            {/* SECCIÓN 1: DATOS DEL CLIENTE */}
+                    <div className="grid grid-cols-1 lg:grid-cols-12 gap-3 max-w-[1600px] mx-auto items-start text-xs">
+                        {/* COLUMNA IZQUIERDA (7 COLS): CLIENTE, DISPOSITIVO Y DIAGNÓSTICO */}
+                        <div className="lg:col-span-7 space-y-2.5">
+                            {/* BLOQUE 1: DATOS DEL CLIENTE Y DISPOSITIVO */}
                             <Card className="border-slate-200 dark:border-slate-800 shadow-sm overflow-visible">
-                                <CardHeader className="bg-slate-50 dark:bg-slate-900/50 border-b border-slate-100 dark:border-slate-800 py-3 flex flex-row items-center justify-between">
-                                    <CardTitle className="text-sm font-bold flex items-center gap-2 text-slate-800 dark:text-slate-200">
-                                        <User className="w-4 h-4 text-purple-600" />
-                                        {__('1. Datos del Cliente')}
+                                <CardHeader className="bg-slate-50 dark:bg-slate-900/50 border-b border-slate-100 dark:border-slate-800 py-2 px-3 flex flex-row items-center justify-between">
+                                    <CardTitle className="text-xs font-bold flex items-center gap-1.5 text-slate-800 dark:text-slate-200">
+                                        <User className="w-3.5 h-3.5 text-purple-600" />
+                                        {__('1. Datos del Cliente y Dispositivo')}
                                     </CardTitle>
 
                                     {/* MODAL REGISTRAR CLIENTE NUEVO */}
                                     <Dialog open={openNewClientModal} onOpenChange={setOpenNewClientModal}>
                                         <DialogTrigger asChild>
-                                            <Button type="button" size="sm" variant="outline" className="h-8 gap-1.5 text-xs font-bold text-purple-700 border-purple-300 hover:bg-purple-50 dark:text-purple-300 dark:border-purple-800">
-                                                <UserPlus className="w-4 h-4 text-purple-600" />
-                                                {__('+ Crear Nuevo Cliente')}
+                                            <Button type="button" size="sm" variant="ghost" className="h-6 text-[10px] font-bold text-purple-600 hover:text-purple-700 p-0">
+                                                <UserPlus className="w-3 h-3 mr-1" />
+                                                {__('+ Crear Cliente')}
                                             </Button>
                                         </DialogTrigger>
                                         <DialogContent className="sm:max-w-md">
@@ -1068,27 +1086,25 @@ export default function CreateReparacion({ clientes: initialClientes, marcas: in
                                                 </DialogTitle>
                                             </DialogHeader>
 
-                                            <div className="space-y-4 py-2">
+                                            <div className="space-y-3 py-2 text-xs">
                                                 <div>
                                                     <Label className="text-xs font-semibold">{__('Nombre Completo *')}</Label>
                                                     <Input
                                                         value={newClientData.nombre}
                                                         onChange={(e) => setNewClientData({ ...newClientData, nombre: e.target.value })}
                                                         placeholder={__('ej: Carlos Mendoza')}
-                                                        className="text-xs h-9 mt-1"
+                                                        className="text-xs h-8 mt-1"
                                                     />
                                                 </div>
-
                                                 <div>
                                                     <Label className="text-xs font-semibold">{__('Teléfono WhatsApp')}</Label>
                                                     <Input
                                                         value={newClientData.telefono}
                                                         onChange={(e) => setNewClientData({ ...newClientData, telefono: e.target.value })}
-                                                        placeholder={__('ej: +58 412 0000000')}
-                                                        className="text-xs h-9 mt-1"
+                                                        placeholder={__('ej: 77123456')}
+                                                        className="text-xs h-8 mt-1"
                                                     />
                                                 </div>
-
                                                 <div>
                                                     <Label className="text-xs font-semibold">{__('Correo Electrónico')}</Label>
                                                     <Input
@@ -1096,20 +1112,9 @@ export default function CreateReparacion({ clientes: initialClientes, marcas: in
                                                         value={newClientData.email}
                                                         onChange={(e) => setNewClientData({ ...newClientData, email: e.target.value })}
                                                         placeholder={__('cliente@correo.com')}
-                                                        className="text-xs h-9 mt-1"
+                                                        className="text-xs h-8 mt-1"
                                                     />
                                                 </div>
-
-                                                <div>
-                                                    <Label className="text-xs font-semibold">{__('Dirección')}</Label>
-                                                    <Input
-                                                        value={newClientData.direccion}
-                                                        onChange={(e) => setNewClientData({ ...newClientData, direccion: e.target.value })}
-                                                        placeholder={__('Ciudad, Dirección de residencia')}
-                                                        className="text-xs h-9 mt-1"
-                                                    />
-                                                </div>
-
                                                 <div className="flex items-center justify-end gap-2 pt-2 border-t border-slate-100 dark:border-slate-800">
                                                     <Button type="button" variant="outline" size="sm" onClick={() => setOpenNewClientModal(false)} className="h-8 text-xs">
                                                         {__('Cancelar')}
@@ -1123,173 +1128,134 @@ export default function CreateReparacion({ clientes: initialClientes, marcas: in
                                     </Dialog>
                                 </CardHeader>
 
-                                <CardContent className="p-4 space-y-4">
-                                    {/* BUSCADOR DE CLIENTE ANCHO COMPLETO */}
-                                    <div ref={clienteRef} className="relative w-full">
-                                        <Label className="text-xs font-semibold">{__('Búsqueda de Cliente en Tiempo Real *')}</Label>
-                                        <div className="relative mt-1">
-                                            <Search className="w-4 h-4 absolute left-3 top-3.5 text-purple-600" />
-                                            <Input
-                                                value={searchClienteTerm}
-                                                onChange={(e) => {
-                                                    const val = e.target.value;
-                                                    setSearchClienteTerm(val);
-                                                    setData('cliente_nombre', val);
-                                                    setIsClientDropdownOpen(val.trim().length > 0);
-                                                }}
-                                                onFocus={() => {
-                                                    if (searchClienteTerm.trim().length > 0) {
-                                                        setIsClientDropdownOpen(true);
-                                                    }
-                                                }}
-                                                placeholder={__('Escriba el nombre o teléfono para buscar un cliente...')}
-                                                className="text-xs h-11 pl-9 pr-8 font-medium"
-                                                required
-                                            />
-                                            {(data.cliente_nombre || searchClienteTerm) && (
-                                                <button
-                                                    type="button"
-                                                    onClick={handleClearCliente}
-                                                    className="absolute right-3 top-3.5 text-slate-400 hover:text-slate-600"
-                                                    title={__('Limpiar cliente')}
-                                                >
-                                                    <X className="w-4 h-4" />
-                                                </button>
-                                            )}
-                                        </div>
-
-                                        {/* RESULTADOS CLIENTE DROPDOWN */}
-                                        {isClientDropdownOpen && clientesFiltrados.length > 0 && (
-                                            <div className="absolute left-0 right-0 z-50 mt-1 max-h-56 overflow-y-auto bg-white dark:bg-slate-900 rounded-lg border border-slate-200 dark:border-slate-800 shadow-xl divide-y divide-slate-100 dark:divide-slate-800">
-                                                {clientesFiltrados.map((c) => (
-                                                    <button
-                                                        key={c.id}
-                                                        type="button"
-                                                        onClick={() => handleSelectClienteObj(c)}
-                                                        className="w-full px-4 py-3 text-left text-xs hover:bg-purple-50 dark:hover:bg-purple-950/40 flex items-center justify-between transition-colors"
-                                                    >
-                                                        <div>
-                                                            <span className="font-bold text-slate-900 dark:text-slate-100 block">{c.nombre}</span>
-                                                            {c.email && <span className="text-[10px] text-slate-400 block">{c.email}</span>}
-                                                        </div>
-                                                        {c.telefono && (
-                                                            <Badge variant="outline" className="text-purple-600 border-purple-200 font-mono text-[11px]">
-                                                                📞 {c.telefono}
-                                                            </Badge>
-                                                        )}
-                                                    </button>
-                                                ))}
-                                            </div>
-                                        )}
-                                    </div>
-                                </CardContent>
-                            </Card>
-
-                            {/* SECCIÓN 2: TIPO DE DISPOSITIVO */}
-                            <Card className="border-slate-200 dark:border-slate-800 shadow-sm">
-                                <CardHeader className="bg-slate-50 dark:bg-slate-900/50 border-b border-slate-100 dark:border-slate-800 py-3">
-                                    <CardTitle className="text-sm font-bold flex items-center gap-2 text-slate-800 dark:text-slate-200">
-                                        <Smartphone className="w-4 h-4 text-purple-600" />
-                                        {__('2. Tipo de Dispositivo')}
-                                    </CardTitle>
-                                </CardHeader>
-                                <CardContent className="p-4 space-y-4">
-                                    <div ref={categoriaRef} className="relative w-full">
-                                        <Label className="text-xs font-semibold">{__('Seleccionar Categoría / Tipo de Dispositivo *')}</Label>
-                                        <div className="relative mt-1">
-                                            <Layers className="w-4 h-4 absolute left-3 top-3.5 text-purple-600 z-10 pointer-events-none" />
-                                            <Input
-                                                value={isCategoriaDropdownOpen ? searchCategoriaTerm : data.tipo_dispositivo}
-                                                onChange={(e) => {
-                                                    const val = e.target.value;
-                                                    setSearchCategoriaTerm(val);
-                                                    setData('tipo_dispositivo', val);
-                                                    setIsCategoriaDropdownOpen(true);
-                                                }}
-                                                onFocus={() => {
-                                                    setSearchCategoriaTerm('');
-                                                    setIsCategoriaDropdownOpen(true);
-                                                }}
-                                                placeholder={__('Escriba para buscar o seleccione una categoría...')}
-                                                className="text-xs h-11 pl-9 pr-8 font-medium"
-                                                required
-                                            />
-                                            {data.tipo_dispositivo && (
-                                                <button
-                                                    type="button"
-                                                    onClick={() => {
-                                                        setSearchCategoriaTerm('');
-                                                        setData('tipo_dispositivo', '');
-                                                        setIsCategoriaDropdownOpen(false);
+                                <CardContent className="p-3 space-y-2.5">
+                                    {/* FILA 1: CLIENTE Y TELÉFONO */}
+                                    <div className="grid grid-cols-1 sm:grid-cols-12 gap-2 items-center">
+                                        <div ref={clienteRef} className="sm:col-span-8 relative">
+                                            <Label className="text-[11px] font-bold text-purple-700 dark:text-purple-300">{__('Cliente *')}</Label>
+                                            <div className="relative mt-0.5">
+                                                <Search className="w-3.5 h-3.5 absolute left-2.5 top-2.5 text-purple-600 pointer-events-none" />
+                                                <Input
+                                                    value={searchClienteTerm}
+                                                    onChange={(e) => {
+                                                        const val = e.target.value;
+                                                        setSearchClienteTerm(val);
+                                                        setData('cliente_nombre', val);
+                                                        setIsClientDropdownOpen(val.trim().length > 0);
                                                     }}
-                                                    className="absolute right-3 top-3.5 text-slate-400 hover:text-slate-600"
-                                                    title={__('Limpiar selección')}
-                                                >
-                                                    <X className="w-4 h-4" />
-                                                </button>
-                                            )}
-                                        </div>
-
-                                        {/* DROPDOWN CATEGORÍAS */}
-                                        {isCategoriaDropdownOpen && (
-                                            <div className="absolute left-0 right-0 z-50 mt-1 max-h-56 overflow-y-auto bg-white dark:bg-slate-900 rounded-lg border border-slate-200 dark:border-slate-800 shadow-xl divide-y divide-slate-100 dark:divide-slate-800">
-                                                {categoriasFiltradas.length > 0 ? (
-                                                    categoriasFiltradas.map((cat) => (
-                                                        <button
-                                                            key={cat.id}
-                                                            type="button"
-                                                            onClick={() => {
-                                                                setData('tipo_dispositivo', cat.nombre);
-                                                                setSearchCategoriaTerm(cat.nombre);
-                                                                setIsCategoriaDropdownOpen(false);
-                                                            }}
-                                                            className={cn(
-                                                                'w-full px-4 py-2.5 text-left text-xs flex items-center justify-between transition-colors',
-                                                                data.tipo_dispositivo === cat.nombre
-                                                                    ? 'bg-purple-50 dark:bg-purple-950/50 text-purple-700 font-bold'
-                                                                    : 'hover:bg-slate-50 dark:hover:bg-slate-800 text-slate-800 dark:text-slate-200'
-                                                            )}
-                                                        >
-                                                            <span className="flex items-center gap-2">
-                                                                <Layers className="w-3.5 h-3.5 text-purple-600" />
-                                                                {cat.nombre}
-                                                            </span>
-                                                            {data.tipo_dispositivo === cat.nombre && (
-                                                                <Check className="w-4 h-4 text-purple-600" />
-                                                            )}
-                                                        </button>
-                                                    ))
-                                                ) : (
-                                                    <div className="p-3 text-xs text-slate-400 text-center">
-                                                        {__('No se encontraron categorías. Se usará el texto ingresado.')}
-                                                    </div>
+                                                    onFocus={() => {
+                                                        if (searchClienteTerm.trim().length > 0) setIsClientDropdownOpen(true);
+                                                    }}
+                                                    placeholder={__('Escriba nombre o teléfono...')}
+                                                    className="text-xs h-8 pl-8 pr-7 font-medium"
+                                                    required
+                                                />
+                                                {(data.cliente_nombre || searchClienteTerm) && (
+                                                    <button type="button" onClick={handleClearCliente} className="absolute right-2 top-2 text-slate-400 hover:text-slate-600">
+                                                        <X className="w-3.5 h-3.5" />
+                                                    </button>
                                                 )}
                                             </div>
-                                        )}
-                                    </div>
-                                </CardContent>
-                            </Card>
 
-                            {/* SECCIÓN 3: MARCA, MODELO Y SERIE / IMEI */}
-                            <Card className="border-slate-200 dark:border-slate-800 shadow-sm overflow-visible">
-                                <CardHeader className="bg-slate-50 dark:bg-slate-900/50 border-b border-slate-100 dark:border-slate-800 py-3">
-                                    <CardTitle className="text-sm font-bold flex items-center gap-2 text-slate-800 dark:text-slate-200">
-                                        <Tag className="w-4 h-4 text-purple-600" />
-                                        {__('3. Marca, Modelo e IMEI/Serie')}
-                                    </CardTitle>
-                                </CardHeader>
-                                <CardContent className="p-4 space-y-4">
-                                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                                        {/* BUSCADOR SELECT2 MARCA CON OPCIÓN CREAR */}
-                                        <div className="relative">
-                                            <div className="flex items-center justify-between mb-1">
-                                                <Label className="text-xs font-semibold">{__('Marca del Equipo *')}</Label>
+                                            {/* RESULTADOS CLIENTE DROPDOWN */}
+                                            {isClientDropdownOpen && clientesFiltrados.length > 0 && (
+                                                <div className="absolute left-0 right-0 z-50 mt-1 max-h-48 overflow-y-auto bg-white dark:bg-slate-900 rounded-lg border border-slate-200 dark:border-slate-800 shadow-xl divide-y divide-slate-100 dark:divide-slate-800">
+                                                    {clientesFiltrados.map((c) => (
+                                                        <button
+                                                            key={c.id}
+                                                            type="button"
+                                                            onClick={() => handleSelectClienteObj(c)}
+                                                            className="w-full px-3 py-2 text-left text-xs hover:bg-purple-50 dark:hover:bg-purple-950/40 flex items-center justify-between transition-colors"
+                                                        >
+                                                            <div>
+                                                                <span className="font-bold text-slate-900 dark:text-slate-100 block">{c.nombre}</span>
+                                                            </div>
+                                                            {c.telefono && (
+                                                                <Badge variant="outline" className="text-purple-600 border-purple-200 font-mono text-[10px]">
+                                                                    📞 {c.telefono}
+                                                                </Badge>
+                                                            )}
+                                                        </button>
+                                                    ))}
+                                                </div>
+                                            )}
+                                        </div>
+
+                                        <div className="sm:col-span-4">
+                                            <Label className="text-[11px] font-bold text-slate-700 dark:text-slate-300">{__('Teléfono WhatsApp')}</Label>
+                                            <Input
+                                                value={data.cliente_telefono}
+                                                onChange={(e) => setData('cliente_telefono', e.target.value)}
+                                                placeholder="ej: 77123456"
+                                                className="text-xs h-8 mt-0.5 font-medium"
+                                            />
+                                        </div>
+                                    </div>
+
+                                    {/* FILA 2: CATEGORÍA, MARCA, MODELO */}
+                                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                                        {/* CATEGORÍA */}
+                                        <div ref={categoriaRef} className="relative">
+                                            <Label className="text-[11px] font-bold text-slate-700 dark:text-slate-300">{__('Tipo / Categoría *')}</Label>
+                                            <div className="relative mt-0.5">
+                                                <Input
+                                                    value={isCategoriaDropdownOpen ? searchCategoriaTerm : data.tipo_dispositivo}
+                                                    onChange={(e) => {
+                                                        const val = e.target.value;
+                                                        setSearchCategoriaTerm(val);
+                                                        setData('tipo_dispositivo', val);
+                                                        setIsCategoriaDropdownOpen(true);
+                                                    }}
+                                                    onFocus={() => {
+                                                        setSearchCategoriaTerm('');
+                                                        setIsCategoriaDropdownOpen(true);
+                                                    }}
+                                                    placeholder={__('Smartphone, Laptop...')}
+                                                    className="text-xs h-8 pr-7 font-medium"
+                                                    required
+                                                />
+                                                {data.tipo_dispositivo && (
+                                                    <button type="button" onClick={() => { setSearchCategoriaTerm(''); setData('tipo_dispositivo', ''); setIsCategoriaDropdownOpen(false); }} className="absolute right-2 top-2 text-slate-400 hover:text-slate-600">
+                                                        <X className="w-3.5 h-3.5" />
+                                                    </button>
+                                                )}
+                                            </div>
+
+                                            {/* DROPDOWN CATEGORÍAS */}
+                                            {isCategoriaDropdownOpen && (
+                                                <div className="absolute left-0 right-0 z-50 mt-1 max-h-48 overflow-y-auto bg-white dark:bg-slate-900 rounded-lg border border-slate-200 dark:border-slate-800 shadow-xl divide-y divide-slate-100 dark:divide-slate-800">
+                                                    {categoriasFiltradas.length > 0 ? (
+                                                        categoriasFiltradas.map((cat) => (
+                                                            <button
+                                                                key={cat.id}
+                                                                type="button"
+                                                                onClick={() => {
+                                                                    setData('tipo_dispositivo', cat.nombre);
+                                                                    setSearchCategoriaTerm(cat.nombre);
+                                                                    setIsCategoriaDropdownOpen(false);
+                                                                }}
+                                                                className={cn(
+                                                                    'w-full px-3 py-1.5 text-left text-xs flex items-center justify-between transition-colors',
+                                                                    data.tipo_dispositivo === cat.nombre ? 'bg-purple-50 dark:bg-purple-950/50 text-purple-700 font-bold' : 'hover:bg-slate-50 dark:hover:bg-slate-800 text-slate-800 dark:text-slate-200'
+                                                                )}
+                                                            >
+                                                                <span>{cat.nombre}</span>
+                                                            </button>
+                                                        ))
+                                                    ) : (
+                                                        <div className="p-2 text-[10px] text-slate-400 text-center">{__('Sin resultados. Se usará el texto ingresado.')}</div>
+                                                    )}
+                                                </div>
+                                            )}
+                                        </div>
+
+                                        {/* MARCA */}
+                                        <div ref={marcaRef} className="relative">
+                                            <div className="flex items-center justify-between">
+                                                <Label className="text-[11px] font-bold text-slate-700 dark:text-slate-300">{__('Marca *')}</Label>
                                                 <Dialog open={openNewMarcaModal} onOpenChange={setOpenNewMarcaModal}>
                                                     <DialogTrigger asChild>
-                                                        <button type="button" className="text-[11px] font-bold text-purple-600 hover:text-purple-800 flex items-center gap-1">
-                                                            <Plus className="w-3 h-3" />
-                                                            {__('Crear Marca')}
-                                                        </button>
+                                                        <button type="button" className="text-[9px] font-bold text-purple-600 hover:underline">+ Crear</button>
                                                     </DialogTrigger>
                                                     <DialogContent className="sm:max-w-md">
                                                         <DialogHeader>
@@ -1298,33 +1264,26 @@ export default function CreateReparacion({ clientes: initialClientes, marcas: in
                                                                 {__('Crear Nueva Marca')}
                                                             </DialogTitle>
                                                         </DialogHeader>
-
-                                                        <div className="space-y-4 py-2">
+                                                        <div className="space-y-3 py-2 text-xs">
                                                             <div>
                                                                 <Label className="text-xs font-semibold">{__('Nombre de la Marca *')}</Label>
                                                                 <Input
                                                                     value={newMarcaNombre}
                                                                     onChange={(e) => setNewMarcaNombre(e.target.value)}
-                                                                    placeholder={__('ej: OPPO, Honor, Realme, Xiaomi, Apple')}
-                                                                    className="text-xs h-9 mt-1"
+                                                                    placeholder={__('ej: OPPO, Honor, Realme, Apple')}
+                                                                    className="text-xs h-8 mt-1"
                                                                 />
                                                             </div>
-
                                                             <div className="flex items-center justify-end gap-2 pt-2 border-t border-slate-100 dark:border-slate-800">
-                                                                <Button type="button" variant="outline" size="sm" onClick={() => setOpenNewMarcaModal(false)} className="h-8 text-xs">
-                                                                    {__('Cancelar')}
-                                                                </Button>
-                                                                <Button type="button" onClick={(e) => handleCreateNewMarca(e)} disabled={isCreatingMarca} size="sm" className="h-8 text-xs font-bold bg-purple-600 hover:bg-purple-700 text-white">
-                                                                    {__('Guardar Marca')}
-                                                                </Button>
+                                                                <Button type="button" variant="outline" size="sm" onClick={() => setOpenNewMarcaModal(false)} className="h-8 text-xs">{__('Cancelar')}</Button>
+                                                                <Button type="button" onClick={(e) => handleCreateNewMarca(e)} disabled={isCreatingMarca} size="sm" className="h-8 text-xs font-bold bg-purple-600 hover:bg-purple-700 text-white">{__('Guardar Marca')}</Button>
                                                             </div>
                                                         </div>
                                                     </DialogContent>
                                                 </Dialog>
                                             </div>
 
-                                            <div ref={marcaRef} className="relative">
-                                                <Search className="w-4 h-4 absolute left-3 top-3.5 text-purple-600 z-10 pointer-events-none" />
+                                            <div className="relative mt-0.5">
                                                 <Input
                                                     value={isMarcaDropdownOpen ? searchMarcaTerm : data.marca_nombre}
                                                     onChange={(e) => {
@@ -1336,25 +1295,20 @@ export default function CreateReparacion({ clientes: initialClientes, marcas: in
                                                         setSearchMarcaTerm('');
                                                         setIsMarcaDropdownOpen(true);
                                                     }}
-                                                    placeholder={__('Buscar o seleccionar marca...')}
-                                                    className="text-xs h-10 pl-9 pr-8 font-medium"
+                                                    placeholder={__('Apple, Samsung...')}
+                                                    className="text-xs h-8 pr-7 font-medium"
                                                     required
                                                 />
                                                 {data.marca_nombre && (
-                                                    <button
-                                                        type="button"
-                                                        onClick={handleClearMarca}
-                                                        className="absolute right-3 top-3 text-slate-400 hover:text-slate-600"
-                                                        title={__('Limpiar marca')}
-                                                    >
-                                                        <X className="w-4 h-4" />
+                                                    <button type="button" onClick={handleClearMarca} className="absolute right-2 top-2 text-slate-400 hover:text-slate-600">
+                                                        <X className="w-3.5 h-3.5" />
                                                     </button>
                                                 )}
                                             </div>
 
-                                            {/* DROPDOWN SELECT2 MARCAS */}
+                                            {/* DROPDOWN MARCAS */}
                                             {isMarcaDropdownOpen && (
-                                                <div className="absolute left-0 right-0 z-50 mt-1 max-h-56 overflow-y-auto bg-white dark:bg-slate-900 rounded-lg border border-slate-200 dark:border-slate-800 shadow-xl divide-y divide-slate-100 dark:divide-slate-800">
+                                                <div className="absolute left-0 right-0 z-50 mt-1 max-h-48 overflow-y-auto bg-white dark:bg-slate-900 rounded-lg border border-slate-200 dark:border-slate-800 shadow-xl divide-y divide-slate-100 dark:divide-slate-800">
                                                     {marcasFiltradas.length > 0 ? (
                                                         marcasFiltradas.map((m) => (
                                                             <button
@@ -1362,51 +1316,29 @@ export default function CreateReparacion({ clientes: initialClientes, marcas: in
                                                                 type="button"
                                                                 onClick={() => handleSelectMarcaObj(m)}
                                                                 className={cn(
-                                                                    'w-full px-4 py-2.5 text-left text-xs flex items-center justify-between transition-colors',
-                                                                    String(m.id) === selectedMarcaId
-                                                                        ? 'bg-purple-50 dark:bg-purple-950/50 text-purple-700 font-bold'
-                                                                        : 'hover:bg-slate-50 dark:hover:bg-slate-800 text-slate-800 dark:text-slate-200'
+                                                                    'w-full px-3 py-1.5 text-left text-xs flex items-center justify-between transition-colors',
+                                                                    String(m.id) === selectedMarcaId ? 'bg-purple-50 dark:bg-purple-950/50 text-purple-700 font-bold' : 'hover:bg-slate-50 dark:hover:bg-slate-800 text-slate-800 dark:text-slate-200'
                                                                 )}
                                                             >
                                                                 <span>{m.nombre}</span>
-                                                                {String(m.id) === selectedMarcaId && (
-                                                                    <Check className="w-4 h-4 text-purple-600" />
-                                                                )}
                                                             </button>
                                                         ))
                                                     ) : (
-                                                        <div className="p-3 text-xs text-center text-slate-400 space-y-2">
-                                                            <span>{__('No se encontró la marca.')}</span>
-                                                            <Button
-                                                                type="button"
-                                                                size="sm"
-                                                                variant="outline"
-                                                                onClick={() => {
-                                                                    setNewMarcaNombre(searchMarcaTerm);
-                                                                    setOpenNewMarcaModal(true);
-                                                                    setIsMarcaDropdownOpen(false);
-                                                                }}
-                                                                className="w-full text-xs text-purple-700 border-purple-300"
-                                                            >
-                                                                <Plus className="w-3.5 h-3.5 mr-1" />
-                                                                {__('Crear')} "{searchMarcaTerm}"
-                                                            </Button>
+                                                        <div className="p-2 text-[10px] text-center text-slate-400">
+                                                            <button type="button" onClick={() => { setNewMarcaNombre(searchMarcaTerm); setOpenNewMarcaModal(true); setIsMarcaDropdownOpen(false); }} className="text-purple-600 font-bold hover:underline">+ Crear "{searchMarcaTerm}"</button>
                                                         </div>
                                                     )}
                                                 </div>
                                             )}
                                         </div>
 
-                                        {/* BUSCADOR SELECT2 MODELO CON OPCIÓN CREAR */}
-                                        <div className="relative">
-                                            <div className="flex items-center justify-between mb-1">
-                                                <Label className="text-xs font-semibold">{__('Modelo del Equipo *')}</Label>
+                                        {/* MODELO */}
+                                        <div ref={modeloRef} className="relative">
+                                            <div className="flex items-center justify-between">
+                                                <Label className="text-[11px] font-bold text-slate-700 dark:text-slate-300">{__('Modelo *')}</Label>
                                                 <Dialog open={openNewModeloModal} onOpenChange={setOpenNewModeloModal}>
                                                     <DialogTrigger asChild>
-                                                        <button type="button" className="text-[11px] font-bold text-purple-600 hover:text-purple-800 flex items-center gap-1">
-                                                            <Plus className="w-3 h-3" />
-                                                            {__('Crear Modelo')}
-                                                        </button>
+                                                        <button type="button" disabled={!selectedMarcaId} className="text-[9px] font-bold text-purple-600 hover:underline disabled:opacity-40">+ Crear</button>
                                                     </DialogTrigger>
                                                     <DialogContent className="sm:max-w-md">
                                                         <DialogHeader>
@@ -1415,52 +1347,26 @@ export default function CreateReparacion({ clientes: initialClientes, marcas: in
                                                                 {__('Crear Nuevo Modelo')}
                                                             </DialogTitle>
                                                         </DialogHeader>
-
-                                                        <div className="space-y-4 py-2">
+                                                        <div className="space-y-3 py-2 text-xs">
                                                             <div>
-                                                                <Label className="text-xs font-semibold">{__('Marca Seleccionada')}</Label>
-                                                                <Input
-                                                                    value={data.marca_nombre || __('Seleccione una marca primero')}
-                                                                    disabled
-                                                                    className="text-xs h-9 mt-1 bg-slate-100 dark:bg-slate-800"
-                                                                />
-                                                            </div>
-
-                                                            <div>
-                                                                <Label className="text-xs font-semibold">{__('Nombre Comercial del Modelo *')}</Label>
+                                                                <Label className="text-xs font-semibold">{__('Nombre Comercial *')}</Label>
                                                                 <Input
                                                                     value={newModeloNombre}
                                                                     onChange={(e) => setNewModeloNombre(e.target.value)}
-                                                                    placeholder={__('ej: Redmi Note 12 Pro / Reno 8 / Galaxy A54')}
-                                                                    className="text-xs h-9 mt-1"
+                                                                    placeholder={__('ej: iPhone 14 Pro, Galaxy S23')}
+                                                                    className="text-xs h-8 mt-1"
                                                                 />
                                                             </div>
-
-                                                            <div>
-                                                                <Label className="text-xs font-semibold">{__('Código de Modelo (Opcional)')}</Label>
-                                                                <Input
-                                                                    value={newModeloCodigo}
-                                                                    onChange={(e) => setNewModeloCodigo(e.target.value)}
-                                                                    placeholder={__('ej: SM-A546B / CPH2359')}
-                                                                    className="text-xs h-9 mt-1 font-mono"
-                                                                />
-                                                            </div>
-
                                                             <div className="flex items-center justify-end gap-2 pt-2 border-t border-slate-100 dark:border-slate-800">
-                                                                <Button type="button" variant="outline" size="sm" onClick={() => setOpenNewModeloModal(false)} className="h-8 text-xs">
-                                                                    {__('Cancelar')}
-                                                                </Button>
-                                                                <Button type="button" onClick={(e) => handleCreateNewModelo(e)} disabled={isCreatingModelo || (!selectedMarcaId && !data.marca_id)} size="sm" className="h-8 text-xs font-bold bg-purple-600 hover:bg-purple-700 text-white">
-                                                                    {__('Guardar Modelo')}
-                                                                </Button>
+                                                                <Button type="button" variant="outline" size="sm" onClick={() => setOpenNewModeloModal(false)} className="h-8 text-xs">{__('Cancelar')}</Button>
+                                                                <Button type="button" onClick={(e) => handleCreateNewModelo(e)} disabled={isCreatingModelo} size="sm" className="h-8 text-xs font-bold bg-purple-600 hover:bg-purple-700 text-white">{__('Guardar Modelo')}</Button>
                                                             </div>
                                                         </div>
                                                     </DialogContent>
                                                 </Dialog>
                                             </div>
 
-                                            <div ref={modeloRef} className="relative">
-                                                <Search className="w-4 h-4 absolute left-3 top-3.5 text-purple-600 z-10 pointer-events-none" />
+                                            <div className="relative mt-0.5">
                                                 <Input
                                                     value={isModeloDropdownOpen ? searchModeloTerm : data.modelo_nombre}
                                                     onChange={(e) => {
@@ -1474,26 +1380,21 @@ export default function CreateReparacion({ clientes: initialClientes, marcas: in
                                                             setIsModeloDropdownOpen(true);
                                                         }
                                                     }}
-                                                    placeholder={!selectedMarcaId && !data.marca_id ? __('Seleccione una marca primero...') : __('Buscar o seleccionar modelo...')}
+                                                    placeholder={!selectedMarcaId && !data.marca_id ? __('Elija marca...') : __('iPhone 14, PS5...')}
                                                     disabled={!selectedMarcaId && !data.marca_id}
-                                                    className="text-xs h-10 pl-9 pr-8 font-medium"
+                                                    className="text-xs h-8 pr-7 font-medium"
                                                     required
                                                 />
                                                 {data.modelo_nombre && (
-                                                    <button
-                                                        type="button"
-                                                        onClick={handleClearModelo}
-                                                        className="absolute right-3 top-3 text-slate-400 hover:text-slate-600"
-                                                        title={__('Limpiar modelo')}
-                                                    >
-                                                        <X className="w-4 h-4" />
+                                                    <button type="button" onClick={handleClearModelo} className="absolute right-2 top-2 text-slate-400 hover:text-slate-600">
+                                                        <X className="w-3.5 h-3.5" />
                                                     </button>
                                                 )}
                                             </div>
 
-                                            {/* DROPDOWN SELECT2 MODELOS */}
+                                            {/* DROPDOWN MODELOS */}
                                             {isModeloDropdownOpen && (
-                                                <div className="absolute left-0 right-0 z-50 mt-1 max-h-56 overflow-y-auto bg-white dark:bg-slate-900 rounded-lg border border-slate-200 dark:border-slate-800 shadow-xl divide-y divide-slate-100 dark:divide-slate-800">
+                                                <div className="absolute left-0 right-0 z-50 mt-1 max-h-48 overflow-y-auto bg-white dark:bg-slate-900 rounded-lg border border-slate-200 dark:border-slate-800 shadow-xl divide-y divide-slate-100 dark:divide-slate-800">
                                                     {modelosFiltradosBusqueda.length > 0 ? (
                                                         modelosFiltradosBusqueda.map((mod) => (
                                                             <button
@@ -1501,35 +1402,16 @@ export default function CreateReparacion({ clientes: initialClientes, marcas: in
                                                                 type="button"
                                                                 onClick={() => handleSelectModeloObj(mod)}
                                                                 className={cn(
-                                                                    'w-full px-4 py-2.5 text-left text-xs flex items-center justify-between transition-colors',
-                                                                    String(mod.id) === data.modelo_id
-                                                                        ? 'bg-purple-50 dark:bg-purple-950/50 text-purple-700 font-bold'
-                                                                        : 'hover:bg-slate-50 dark:hover:bg-slate-800 text-slate-800 dark:text-slate-200'
+                                                                    'w-full px-3 py-1.5 text-left text-xs flex items-center justify-between transition-colors',
+                                                                    String(mod.id) === data.modelo_id ? 'bg-purple-50 dark:bg-purple-950/50 text-purple-700 font-bold' : 'hover:bg-slate-50 dark:hover:bg-slate-800 text-slate-800 dark:text-slate-200'
                                                                 )}
                                                             >
                                                                 <span>{mod.nombre_comercial}</span>
-                                                                {String(mod.id) === data.modelo_id && (
-                                                                    <Check className="w-4 h-4 text-purple-600" />
-                                                                )}
                                                             </button>
                                                         ))
                                                     ) : (
-                                                        <div className="p-3 text-xs text-center text-slate-400 space-y-2">
-                                                            <span>{__('No se encontró el modelo.')}</span>
-                                                            <Button
-                                                                type="button"
-                                                                size="sm"
-                                                                variant="outline"
-                                                                onClick={() => {
-                                                                    setNewModeloNombre(searchModeloTerm);
-                                                                    setOpenNewModeloModal(true);
-                                                                    setIsModeloDropdownOpen(false);
-                                                                }}
-                                                                className="w-full text-xs text-purple-700 border-purple-300"
-                                                            >
-                                                                <Plus className="w-3.5 h-3.5 mr-1" />
-                                                                {__('Crear')} "{searchModeloTerm}"
-                                                            </Button>
+                                                        <div className="p-2 text-[10px] text-center text-slate-400">
+                                                            <button type="button" onClick={() => { setNewModeloNombre(searchModeloTerm); setOpenNewModeloModal(true); setIsModeloDropdownOpen(false); }} className="text-purple-600 font-bold hover:underline">+ Crear "{searchModeloTerm}"</button>
                                                         </div>
                                                     )}
                                                 </div>
@@ -1537,398 +1419,248 @@ export default function CreateReparacion({ clientes: initialClientes, marcas: in
                                         </div>
                                     </div>
 
-                                    {/* SERIE / IMEI CORTO */}
-                                    <div>
-                                        <div className="flex items-center justify-between mb-1">
-                                            <Label className="text-xs font-semibold">{__('Serie / IMEI Corto (5 dígitos)')}</Label>
-                                            {data.imei_serie && (
-                                                <span className="text-[10px] font-mono font-bold">
-                                                    {data.imei_serie.length === 5 ? (
-                                                        <span className="text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/40 px-2 py-0.5 rounded border border-emerald-200 dark:border-emerald-800">
-                                                            ✓ Serie corta válida (5 dígitos)
-                                                        </span>
-                                                    ) : (
-                                                        <span className="text-rose-600 dark:text-rose-400 bg-rose-50 dark:bg-rose-950/40 px-2 py-0.5 rounded border border-rose-200 dark:border-rose-800">
-                                                            {__('Debe tener exactamente 5 dígitos')}
-                                                        </span>
-                                                    )}
-                                                </span>
-                                            )}
+                                    {/* FILA 3: COLOR, IMEI (5 DÍGITOS), SEGURIDAD */}
+                                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                                        <div>
+                                            <Label className="text-[11px] font-bold text-slate-700 dark:text-slate-300">{__('Color / Estética')}</Label>
+                                            <Input
+                                                value={data.color}
+                                                onChange={(e) => setData('color', e.target.value)}
+                                                placeholder="ej: Negro, Rayado"
+                                                className="text-xs h-8 mt-0.5 font-medium"
+                                            />
                                         </div>
-                                        <div className="relative">
+                                        <div>
+                                            <Label className="text-[11px] font-bold text-slate-700 dark:text-slate-300">{__('IMEI / Serie (5 Dígitos)')}</Label>
                                             <Input
                                                 value={data.imei_serie}
                                                 onChange={(e) => handleImeiChange(e.target.value)}
-                                                placeholder={__('Serie/IMEI corto (5 dígitos, opcional)')}
-                                                inputMode="numeric"
+                                                placeholder="ej: 12345"
                                                 maxLength={5}
-                                                className={cn(
-                                                    "text-xs h-10 font-mono font-semibold pr-8",
-                                                    data.imei_serie && data.imei_serie.length === 5
-                                                        ? "border-emerald-500 focus-visible:ring-emerald-500"
-                                                        : data.imei_serie && data.imei_serie.length > 0
-                                                            ? "border-rose-500 focus-visible:ring-rose-500"
-                                                            : ""
-                                                )}
+                                                className="text-xs h-8 mt-0.5 font-mono font-bold"
                                             />
-                                            {isCheckingImei && (
-                                                <RefreshCw className="w-3.5 h-3.5 animate-spin absolute right-3 top-3 text-purple-600" />
-                                            )}
                                         </div>
-
-                                        {/* DETECCIÓN POR INTERNET TAC / GSMA */}
-                                        {imeiHistoryData?.onlineDevice && (!imeiHistoryData.count || imeiHistoryData.count === 0) && (
-                                            <div className="mt-2.5 p-3 rounded-xl bg-purple-50 dark:bg-purple-950/40 border border-purple-200 dark:border-purple-800 text-xs flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 animate-in fade-in duration-300">
-                                                <div className="flex items-center gap-2 text-purple-900 dark:text-purple-200 font-medium">
-                                                    <Sparkles className="w-4 h-4 text-purple-600 flex-shrink-0" />
-                                                    <span>
-                                                        {__('Dispositivo Detectado por Internet (TAC GSMA):')} <strong className="font-bold text-purple-700 dark:text-purple-300">{imeiHistoryData.onlineDevice.brand} {imeiHistoryData.onlineDevice.model}</strong>
-                                                    </span>
-                                                </div>
-                                                <Button
-                                                    type="button"
-                                                    size="sm"
-                                                    onClick={() => {
-                                                        const dev = imeiHistoryData.onlineDevice;
-                                                        if (dev) {
-                                                            if (dev.marca_id) {
-                                                                handleSelectMarcaObj(dev);
-                                                            } else {
-                                                                setData((prev) => ({ ...prev, marca_nombre: dev.brand }));
-                                                                setSearchMarcaTerm(dev.brand);
-                                                            }
-                                                            setTimeout(() => {
-                                                                setData((prev) => ({
-                                                                    ...prev,
-                                                                    modelo_id: dev.modelo_id ? String(dev.modelo_id) : '',
-                                                                    modelo_nombre: dev.model || dev.modelo_nombre || '',
-                                                                }));
-                                                                setSearchModeloTerm(dev.model || dev.modelo_nombre || '');
-                                                            }, 50);
-                                                            notifySuccess(__('Marca y Modelo autocompletados desde la consulta en internet.'));
-                                                        }
-                                                    }}
-                                                    className="h-7 text-[10px] font-bold bg-purple-600 hover:bg-purple-700 text-white gap-1 flex-shrink-0 w-full sm:w-auto"
-                                                >
-                                                    <Check className="w-3 h-3" />
-                                                    {__('Cargar Marca & Modelo')}
-                                                </Button>
-                                            </div>
-                                        )}
-
-                                        {/* TARJETA DE HISTORIAL PREVIO DEL EQUIPO SI EXISTE */}
-                                        {imeiHistoryData && imeiHistoryData.count > 0 && (
-                                            <div className="mt-2.5 p-3 rounded-xl bg-amber-50 dark:bg-amber-950/40 border border-amber-300 dark:border-amber-800 text-xs space-y-2 animate-in fade-in duration-300">
-                                                <div className="flex items-center justify-between font-bold text-amber-900 dark:text-amber-200">
-                                                    <span className="flex items-center gap-1.5">
-                                                        <ShieldAlert className="w-4 h-4 text-amber-600" />
-                                                        {__('¡Equipo Registrado Anteriormente!')}
-                                                    </span>
-                                                    <Badge variant="outline" className="bg-amber-100 text-amber-800 border-amber-300 font-mono text-[10px]">
-                                                        {imeiHistoryData.count} {imeiHistoryData.count === 1 ? __('Ingreso Previo') : __('Ingresos Previos')}
-                                                    </Badge>
-                                                </div>
-
-                                                <p className="text-[11px] text-amber-800 dark:text-amber-300">
-                                                    {__('Última recepción:')} <strong className="font-mono">{imeiHistoryData.ultimaOrden?.numero_orden}</strong> - {imeiHistoryData.ultimaOrden?.fecha_recepcion?.split('T')[0]} ({imeiHistoryData.ultimaOrden?.estado_orden?.replace('_', ' ')})
-                                                    <br />
-                                                    {__('Cliente previo:')} <strong>{imeiHistoryData.ultimaOrden?.cliente_nombre}</strong> | {__('Falla:')} <em>"{imeiHistoryData.ultimaOrden?.descripcion_falla}"</em>
-                                                </p>
-                                            </div>
-                                        )}
+                                        <div>
+                                            <Label className="text-[11px] font-bold text-slate-700 dark:text-slate-300">{__('Seguridad / Clave')}</Label>
+                                            <Select value={tipoSeguridad} onValueChange={(val: any) => setTipoSeguridad(val)}>
+                                                <SelectTrigger className="text-xs h-8 mt-0.5 font-medium">
+                                                    <SelectValue />
+                                                </SelectTrigger>
+                                                <SelectContent>
+                                                    <SelectItem value="sin_contrasena">🔓 Sin contraseña</SelectItem>
+                                                    <SelectItem value="pin_contrasena">🔑 PIN / Clave</SelectItem>
+                                                    <SelectItem value="patron">✏️ Patrón 3x3</SelectItem>
+                                                </SelectContent>
+                                            </Select>
+                                        </div>
                                     </div>
 
-                                    {/* DESCRIPCIÓN DE LA FALLA */}
-                                    <div className="pt-2">
-                                        <Label className="text-xs font-semibold">{__('Descripción de la Falla Reportada *')}</Label>
-                                        <Textarea
-                                            value={data.descripcion_falla}
-                                            onChange={(e) => setData('descripcion_falla', e.target.value)}
-                                            placeholder={__('Describa en detalle qué problema presenta el dispositivo...')}
-                                            rows={3}
-                                            className="text-xs mt-1"
-                                            required
-                                        />
-                                    </div>
+                                    {/* INPUT PIN / PATRÓN SI SE SELECCIONA */}
+                                    {tipoSeguridad === 'pin_contrasena' && (
+                                        <div>
+                                            <Input
+                                                value={claveSeguridad}
+                                                onChange={(e) => setClaveSeguridad(e.target.value)}
+                                                placeholder={__('PIN o Contraseña del cliente...')}
+                                                className="text-xs h-8 font-mono"
+                                            />
+                                        </div>
+                                    )}
+                                    {tipoSeguridad === 'patron' && (
+                                        <div className="flex items-center justify-between bg-slate-50 dark:bg-slate-900 p-2 rounded-lg border">
+                                            <span className="text-[11px] font-bold text-slate-600">Patrón: {patronSecuencia.join('-') || 'Dibuje abajo'}</span>
+                                            <PatternLockCanvas pattern={patronSecuencia} onChange={setPatronSecuencia} />
+                                        </div>
+                                    )}
                                 </CardContent>
                             </Card>
 
-                            {/* SECCIÓN 4: SERVICIOS DE REPARACIÓN REQUERIDOS (CARRITO) */}
-                            <Card className="border-slate-200 dark:border-slate-800 shadow-sm overflow-visible">
-                                <CardHeader className="bg-slate-50 dark:bg-slate-900/50 border-b border-slate-100 dark:border-slate-800 py-3 flex flex-row items-center justify-between">
-                                    <CardTitle className="text-sm font-bold flex items-center gap-2 text-slate-800 dark:text-slate-200">
-                                        <Wrench className="w-4 h-4 text-purple-600" />
-                                        {__('4. Servicios de Reparación Requeridos')}
+                            {/* BLOQUE 2: DIAGNÓSTICO Y FALLA REPORTADA */}
+                            <Card className="border-slate-200 dark:border-slate-800 shadow-sm">
+                                <CardHeader className="bg-slate-50 dark:bg-slate-900/50 border-b border-slate-100 dark:border-slate-800 py-2 px-3">
+                                    <CardTitle className="text-xs font-bold flex items-center gap-1.5 text-slate-800 dark:text-slate-200">
+                                        <FileText className="w-3.5 h-3.5 text-purple-600" />
+                                        {__('2. Diagnóstico Inicial & Observaciones')}
                                     </CardTitle>
+                                </CardHeader>
+                                <CardContent className="p-3">
+                                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                                        <div>
+                                            <Label className="text-[11px] font-bold text-purple-700 dark:text-purple-300">{__('Falla Reportada por Cliente *')}</Label>
+                                            <Textarea
+                                                value={data.descripcion_falla}
+                                                onChange={(e) => setData('descripcion_falla', e.target.value)}
+                                                rows={2}
+                                                placeholder={__('ej: No enciende, pantalla rota, no carga...')}
+                                                className="text-xs mt-0.5 font-medium resize-none"
+                                                required
+                                            />
+                                        </div>
+                                        <div>
+                                            <Label className="text-[11px] font-bold text-slate-700 dark:text-slate-300">{__('Observaciones Físicas / Accesorios')}</Label>
+                                            <Textarea
+                                                value={data.observaciones_fisicas}
+                                                onChange={(e) => setData('observaciones_fisicas', e.target.value)}
+                                                rows={2}
+                                                placeholder={__('ej: Rayón en tapa trasera, incluye funda...')}
+                                                className="text-xs mt-0.5 font-medium resize-none"
+                                            />
+                                        </div>
+                                    </div>
+                                </CardContent>
+                            </Card>
+                        </div>
 
-                                    {/* MODAL CREAR NUEVO SERVICIO RÁPIDO */}
+                        {/* COLUMNA DERECHA (5 COLS): SERVICIOS, PRESUPUESTO & ACCIONES */}
+                        <div className="lg:col-span-5 space-y-2.5">
+                            {/* SERVICIOS DE REPARACIÓN */}
+                            <Card className="border-slate-200 dark:border-slate-800 shadow-sm overflow-visible">
+                                <CardHeader className="bg-slate-50 dark:bg-slate-900/50 border-b border-slate-100 dark:border-slate-800 py-2 px-3 flex flex-row items-center justify-between">
+                                    <CardTitle className="text-xs font-bold flex items-center gap-1.5 text-slate-800 dark:text-slate-200">
+                                        <Tag className="w-3.5 h-3.5 text-purple-600" />
+                                        {__('3. Servicios Requeridos')}
+                                    </CardTitle>
                                     <Dialog open={openNewServicioModal} onOpenChange={setOpenNewServicioModal}>
                                         <DialogTrigger asChild>
-                                            <Button type="button" size="sm" variant="outline" className="h-8 gap-1.5 text-xs font-bold text-purple-700 border-purple-300 hover:bg-purple-50 dark:text-purple-300 dark:border-purple-800">
-                                                <Plus className="w-4 h-4 text-purple-600" />
-                                                {__('+ Crear Nuevo Servicio')}
-                                            </Button>
+                                            <button type="button" className="text-[9px] font-bold text-purple-600 hover:underline">+ Nuevo Servicio</button>
                                         </DialogTrigger>
                                         <DialogContent className="sm:max-w-md">
                                             <DialogHeader>
                                                 <DialogTitle className="flex items-center gap-2 text-base font-bold text-slate-900 dark:text-slate-100">
-                                                    <Wrench className="w-5 h-5 text-purple-600" />
-                                                    {__('Crear Nuevo Servicio de Reparación')}
+                                                    <Tag className="w-5 h-5 text-purple-600" />
+                                                    {__('Crear Nuevo Servicio en Catálogo')}
                                                 </DialogTitle>
                                             </DialogHeader>
-
-                                            <div className="space-y-4 py-2">
-                                                <div>
-                                                    <Label className="text-xs font-semibold">{__('Categoría de Dispositivo / Servicio *')}</Label>
-                                                    <Select
-                                                        value={newServicioData.categoria_id}
-                                                        onValueChange={(val) => setNewServicioData({ ...newServicioData, categoria_id: val })}
-                                                    >
-                                                        <SelectTrigger className="text-xs h-9 mt-1 w-full">
-                                                            <SelectValue placeholder={__('Seleccionar Categoría...')} />
-                                                        </SelectTrigger>
-                                                        <SelectContent>
-                                                            {categorias.map((cat) => (
-                                                                <SelectItem key={cat.id} value={String(cat.id)}>
-                                                                    {cat.nombre}
-                                                                </SelectItem>
-                                                            ))}
-                                                        </SelectContent>
-                                                    </Select>
-                                                </div>
-
-                                                <div className="grid grid-cols-2 gap-3">
-                                                    <div>
-                                                        <Label className="text-xs font-semibold">{__('Código / SKU')}</Label>
-                                                        <Input
-                                                            value={newServicioData.codigo}
-                                                            onChange={(e) => setNewServicioData({ ...newServicioData, codigo: e.target.value })}
-                                                            placeholder="Ej: SRV-001"
-                                                            className="text-xs h-9 mt-1 font-mono"
-                                                        />
-                                                    </div>
-                                                    <div>
-                                                        <Label className="text-xs font-semibold">{__('Precio Base *')} ({currencySymbol})</Label>
-                                                        <Input
-                                                            type="number"
-                                                            step="0.01"
-                                                            min="0"
-                                                            value={newServicioData.precio}
-                                                            onChange={(e) => setNewServicioData({ ...newServicioData, precio: e.target.value })}
-                                                            placeholder="Ej: 25.00"
-                                                            className="text-xs h-9 mt-1 font-mono font-bold"
-                                                        />
-                                                    </div>
-                                                </div>
-
+                                            <div className="space-y-3 py-2 text-xs">
                                                 <div>
                                                     <Label className="text-xs font-semibold">{__('Nombre del Servicio *')}</Label>
                                                     <Input
                                                         value={newServicioData.nombre}
                                                         onChange={(e) => setNewServicioData({ ...newServicioData, nombre: e.target.value })}
-                                                        placeholder={__('ej: Cambio de Pantalla OLED, Pin de Carga')}
-                                                        className="text-xs h-9 mt-1"
+                                                        placeholder={__('ej: Cambio de Pantalla iPhone 14')}
+                                                        className="text-xs h-8 mt-1"
                                                     />
                                                 </div>
-
                                                 <div>
-                                                    <Label className="text-xs font-semibold">{__('Descripción (Opcional)')}</Label>
-                                                    <Textarea
-                                                        value={newServicioData.descripcion}
-                                                        onChange={(e) => setNewServicioData({ ...newServicioData, descripcion: e.target.value })}
-                                                        placeholder={__('Detalles del trabajo a realizar...')}
-                                                        rows={2}
-                                                        className="text-xs mt-1"
+                                                    <Label className="text-xs font-semibold">{__('Precio Sugerido')}</Label>
+                                                    <Input
+                                                        type="number"
+                                                        step="0.01"
+                                                        value={newServicioData.precio}
+                                                        onChange={(e) => setNewServicioData({ ...newServicioData, precio: e.target.value })}
+                                                        placeholder="0.00"
+                                                        className="text-xs h-8 mt-1"
                                                     />
                                                 </div>
-
                                                 <div className="flex items-center justify-end gap-2 pt-2 border-t border-slate-100 dark:border-slate-800">
-                                                    <Button type="button" variant="outline" size="sm" onClick={() => setOpenNewServicioModal(false)} className="h-8 text-xs">
-                                                        {__('Cancelar')}
-                                                    </Button>
-                                                    <Button type="button" onClick={(e) => handleCreateNewServicio(e)} disabled={isCreatingServicio} size="sm" className="h-8 text-xs font-bold bg-purple-600 hover:bg-purple-700 text-white">
-                                                        {__('Guardar y Agregar a la Orden')}
-                                                    </Button>
+                                                    <Button type="button" variant="outline" size="sm" onClick={() => setOpenNewServicioModal(false)} className="h-8 text-xs">{__('Cancelar')}</Button>
+                                                    <Button type="button" onClick={(e) => handleCreateNewServicio(e)} disabled={isCreatingServicio} size="sm" className="h-8 text-xs font-bold bg-purple-600 hover:bg-purple-700 text-white">{__('Guardar Servicio')}</Button>
                                                 </div>
                                             </div>
                                         </DialogContent>
                                     </Dialog>
                                 </CardHeader>
-
-                                <CardContent className="p-4 space-y-4">
-                                    {/* BUSCADOR DE SERVICIOS EN TIEMPO REAL */}
-                                    <div ref={servicioRef} className="relative w-full">
-                                        <Label className="text-xs font-semibold">{__('Buscar y Agregar Servicios a la Orden *')}</Label>
-                                        <div className="relative mt-1">
-                                            <Search className="w-4 h-4 absolute left-3 top-3.5 text-purple-600" />
+                                <CardContent className="p-3 space-y-2">
+                                    <div ref={servicioRef} className="relative">
+                                        <div className="relative">
+                                            <Search className="w-3.5 h-3.5 absolute left-2.5 top-2.5 text-purple-600 pointer-events-none" />
                                             <Input
                                                 value={searchServicioTerm}
                                                 onChange={(e) => {
-                                                    const val = e.target.value;
-                                                    setSearchServicioTerm(val);
+                                                    setSearchServicioTerm(e.target.value);
                                                     setIsServicioDropdownOpen(true);
                                                 }}
-                                                onFocus={() => {
-                                                    setIsServicioDropdownOpen(true);
-                                                }}
-                                                placeholder={__('Haga clic o escriba para buscar un servicio (ej: Pantalla, Batería, Limpieza...)...')}
-                                                className="text-xs h-11 pl-9 pr-8 font-medium"
+                                                onFocus={() => setIsServicioDropdownOpen(true)}
+                                                placeholder={__('Buscar servicio (ej: Pantalla, Limpieza)...')}
+                                                className="text-xs h-8 pl-8 font-medium"
                                             />
-                                            {searchServicioTerm && (
-                                                <button
-                                                    type="button"
-                                                    onClick={() => {
-                                                        setSearchServicioTerm('');
-                                                        setIsServicioDropdownOpen(false);
-                                                    }}
-                                                    className="absolute right-3 top-3.5 text-slate-400 hover:text-slate-600"
-                                                >
-                                                    <X className="w-4 h-4" />
-                                                </button>
-                                            )}
                                         </div>
 
                                         {/* DROPDOWN SERVICIOS */}
                                         {isServicioDropdownOpen && (
-                                            <div className="absolute left-0 right-0 z-50 mt-1 max-h-60 overflow-y-auto bg-white dark:bg-slate-900 rounded-lg border border-slate-200 dark:border-slate-800 shadow-xl divide-y divide-slate-100 dark:divide-slate-800">
+                                            <div className="absolute left-0 right-0 z-50 mt-1 max-h-48 overflow-y-auto bg-white dark:bg-slate-900 rounded-lg border border-slate-200 dark:border-slate-800 shadow-xl divide-y divide-slate-100 dark:divide-slate-800">
                                                 {serviciosFiltrados.length > 0 ? (
                                                     serviciosFiltrados.map((s) => (
                                                         <button
                                                             key={s.id}
                                                             type="button"
-                                                            onClick={() => handleAddServicioToCart(s)}
-                                                            className="w-full px-4 py-3 text-left text-xs hover:bg-purple-50 dark:hover:bg-purple-950/40 flex items-center justify-between transition-colors"
+                                                            onClick={() => {
+                                                                handleAddServicioToCart(s);
+                                                                setIsServicioDropdownOpen(false);
+                                                                setSearchServicioTerm('');
+                                                            }}
+                                                            className="w-full px-3 py-1.5 text-left text-xs hover:bg-purple-50 dark:hover:bg-purple-950/40 flex items-center justify-between transition-colors"
                                                         >
                                                             <div>
                                                                 <span className="font-bold text-slate-900 dark:text-slate-100 block">{s.nombre}</span>
-                                                                {s.categoria?.nombre && (
-                                                                    <span className="text-[10px] text-purple-600 dark:text-purple-400 font-semibold block">
-                                                                        📁 {s.categoria.nombre}
-                                                                    </span>
-                                                                )}
                                                             </div>
-                                                            <div className="text-right">
-                                                                <span className="font-extrabold text-purple-700 dark:text-purple-300 font-mono text-sm block">
-                                                                    {currencySymbol}{Number(s.precio).toFixed(2)}
-                                                                </span>
-                                                                <span className="text-[10px] text-emerald-600 font-bold">+ Agregar</span>
-                                                            </div>
+                                                            <Badge variant="outline" className="font-mono text-purple-600 border-purple-200 text-[10px]">
+                                                                {currencySymbol}{s.precio}
+                                                            </Badge>
                                                         </button>
                                                     ))
                                                 ) : (
-                                                    <div className="p-4 text-center text-xs text-slate-400">
-                                                        {__('No se encontraron servicios registrados.')}
-                                                    </div>
+                                                    <div className="p-2 text-[10px] text-center text-slate-400">{__('No se encontraron servicios.')}</div>
                                                 )}
                                             </div>
                                         )}
                                     </div>
 
-                                    {/* TABLA DEL CARRITO DE SERVICIOS */}
-                                    <div className="space-y-2">
-                                        <Label className="text-xs font-semibold">{__('Servicios Seleccionados en esta Orden:')}</Label>
-                                        {cartServicios.length > 0 ? (
-                                            <div className="border border-slate-200 dark:border-slate-800 rounded-xl overflow-hidden shadow-sm">
-                                                <table className="w-full text-left text-xs">
-                                                    <thead className="bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 font-bold uppercase text-[10px]">
-                                                        <tr>
-                                                            <th className="p-3">{__('Servicio')}</th>
-                                                            <th className="p-3 text-right">{__('Precio Unit.')}</th>
-                                                            <th className="p-3 text-center">{__('Cant.')}</th>
-                                                            <th className="p-3 text-right">{__('Subtotal')}</th>
-                                                            <th className="p-3 text-center"></th>
-                                                        </tr>
-                                                    </thead>
-                                                    <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
-                                                        {cartServicios.map((item, idx) => (
-                                                            <tr key={idx} className="hover:bg-slate-50 dark:hover:bg-slate-900/50">
-                                                                <td className="p-3 font-semibold text-slate-900 dark:text-slate-100">
-                                                                    {item.nombre}
-                                                                    {item.categoria_nombre && (
-                                                                        <span className="text-[10px] text-purple-600 block font-normal">{item.categoria_nombre}</span>
-                                                                    )}
-                                                                </td>
-                                                                <td className="p-3 text-right font-mono">
-                                                                    <input
-                                                                        type="number"
-                                                                        step="0.01"
-                                                                        value={item.precio}
-                                                                        onChange={(e) => handleUpdateCartItemPrecio(idx, parseFloat(e.target.value) || 0)}
-                                                                        className="w-20 text-right h-7 text-xs font-mono font-semibold border rounded px-1"
-                                                                    />
-                                                                </td>
-                                                                <td className="p-3 text-center">
-                                                                    <div className="flex items-center justify-center gap-1">
-                                                                        <button
-                                                                            type="button"
-                                                                            onClick={() => handleUpdateCartItemCantidad(idx, item.cantidad - 1)}
-                                                                            className="w-6 h-6 rounded bg-slate-200 dark:bg-slate-700 text-slate-800 dark:text-slate-200 font-bold flex items-center justify-center hover:bg-slate-300"
-                                                                        >
-                                                                            -
-                                                                        </button>
-                                                                        <span className="w-8 text-center font-mono font-bold">{item.cantidad}</span>
-                                                                        <button
-                                                                            type="button"
-                                                                            onClick={() => handleUpdateCartItemCantidad(idx, item.cantidad + 1)}
-                                                                            className="w-6 h-6 rounded bg-slate-200 dark:bg-slate-700 text-slate-800 dark:text-slate-200 font-bold flex items-center justify-center hover:bg-slate-300"
-                                                                        >
-                                                                            +
-                                                                        </button>
-                                                                    </div>
-                                                                </td>
-                                                                <td className="p-3 text-right font-extrabold text-purple-700 dark:text-purple-300 font-mono">
-                                                                    {currencySymbol}{item.subtotal.toFixed(2)}
-                                                                </td>
-                                                                <td className="p-3 text-center">
-                                                                    <button
-                                                                        type="button"
-                                                                        onClick={() => handleRemoveCartItem(idx)}
-                                                                        className="p-1.5 text-rose-500 hover:text-rose-700 hover:bg-rose-50 dark:hover:bg-rose-950/30 rounded-lg transition-colors"
-                                                                        title={__('Eliminar del carrito')}
-                                                                    >
-                                                                        <Trash2 className="w-4 h-4" />
-                                                                    </button>
-                                                                </td>
-                                                            </tr>
-                                                        ))}
-                                                    </tbody>
-                                                    <tfoot className="bg-purple-50/70 dark:bg-purple-950/40 font-bold text-xs">
-                                                        <tr>
-                                                            <td colSpan={3} className="p-3 text-right font-bold text-purple-900 dark:text-purple-200">
-                                                                {__('Total Servicios en la Orden:')}
+                                    {/* TABLA DEL CARRITO COMPACTA */}
+                                    {cartServicios.length > 0 ? (
+                                        <div className="border border-slate-200 dark:border-slate-800 rounded-lg overflow-hidden max-h-28 overflow-y-auto">
+                                            <table className="w-full text-left text-[11px]">
+                                                <thead className="bg-slate-100 dark:bg-slate-800 text-slate-600 font-bold uppercase text-[9px]">
+                                                    <tr>
+                                                        <th className="p-1">{__('Servicio')}</th>
+                                                        <th className="p-1 text-right">{__('Precio')}</th>
+                                                        <th className="p-1 text-center"></th>
+                                                    </tr>
+                                                </thead>
+                                                <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
+                                                    {cartServicios.map((item, idx) => (
+                                                        <tr key={idx} className="hover:bg-slate-50 dark:hover:bg-slate-900/50">
+                                                            <td className="p-1 font-bold text-slate-800 dark:text-slate-200 truncate max-w-[120px]">{item.nombre}</td>
+                                                            <td className="p-1 text-right font-mono font-bold">
+                                                                <input
+                                                                    type="number"
+                                                                    step="0.01"
+                                                                    value={item.precio}
+                                                                    onChange={(e) => handleUpdateCartItemPrecio(idx, parseFloat(e.target.value) || 0)}
+                                                                    className="w-16 text-right h-6 text-xs font-mono border rounded px-1"
+                                                                />
                                                             </td>
-                                                            <td className="p-3 text-right font-black text-purple-700 dark:text-purple-300 text-sm font-mono">
-                                                                {currencySymbol}{totalCartServicios.toFixed(2)}
+                                                            <td className="p-1 text-center">
+                                                                <button type="button" onClick={() => handleRemoveCartItem(idx)} className="text-slate-400 hover:text-rose-600">
+                                                                    <Trash2 className="w-3.5 h-3.5" />
+                                                                </button>
                                                             </td>
-                                                            <td></td>
                                                         </tr>
-                                                    </tfoot>
-                                                </table>
-                                            </div>
-                                        ) : (
-                                            <div className="p-6 border-2 border-dashed border-slate-200 dark:border-slate-800 rounded-xl text-center text-slate-400 space-y-1">
-                                                <Wrench className="w-8 h-8 mx-auto text-slate-300 dark:text-slate-700" />
-                                                <p className="text-xs font-semibold">{__('No se ha agregado ningún servicio a esta orden.')}</p>
-                                                <p className="text-[11px] text-slate-400">{__('Utilice el buscador arriba para agregar servicios o cree uno nuevo.')}</p>
-                                            </div>
-                                        )}
-                                    </div>
+                                                    ))}
+                                                </tbody>
+                                            </table>
+                                        </div>
+                                    ) : (
+                                        <div className="p-2 text-center text-[10px] text-slate-400 border border-dashed rounded-lg bg-slate-50/50">
+                                            {__('Opcional: Seleccione servicios del catálogo')}
+                                        </div>
+                                    )}
                                 </CardContent>
                             </Card>
 
-                            {/* SECCIÓN 5: PRESUPUESTO, ADELANTO Y TÉCNICO ASIGNADO */}
+                            {/* BLOQUE 4: PRESUPUESTO & TÉCNICO */}
                             <Card className="border-slate-200 dark:border-slate-800 shadow-sm">
-                                <CardHeader className="bg-slate-50 dark:bg-slate-900/50 border-b border-slate-100 dark:border-slate-800 py-3">
-                                    <CardTitle className="text-sm font-bold flex items-center gap-2 text-slate-800 dark:text-slate-200">
-                                        <DollarSign className="w-4 h-4 text-emerald-600" />
-                                        {__('5. Presupuesto, Adelanto y Técnico Asignado')}
+                                <CardHeader className="bg-slate-50 dark:bg-slate-900/50 border-b border-slate-100 dark:border-slate-800 py-2 px-3">
+                                    <CardTitle className="text-xs font-bold flex items-center gap-1.5 text-slate-800 dark:text-slate-200">
+                                        <DollarSign className="w-3.5 h-3.5 text-emerald-600" />
+                                        {__('4. Presupuesto & Asignación')}
                                     </CardTitle>
                                 </CardHeader>
-                                <CardContent className="p-4 space-y-4">
-                                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                <CardContent className="p-3 space-y-2">
+                                    <div className="grid grid-cols-2 gap-2">
                                         <div>
                                             <div className="flex items-center justify-between">
-                                                <Label className="text-xs font-semibold">{__('Costo Estimado (Total)')}</Label>
+                                                <Label className="text-[10px] font-bold text-slate-700 dark:text-slate-300">{__('Costo Estimado *')}</Label>
                                                 {cartServicios.length > 0 && (
                                                     <button
                                                         type="button"
@@ -1936,16 +1668,14 @@ export default function CreateReparacion({ clientes: initialClientes, marcas: in
                                                             setData('costo_estimado', String(totalCartServicios));
                                                             setIsCostoEstimadoManual(false);
                                                         }}
-                                                        className="text-[10px] text-purple-600 dark:text-purple-400 hover:text-purple-800 font-bold flex items-center gap-1 transition-colors"
-                                                        title={__('Igualar a la suma de los servicios seleccionados')}
+                                                        className="text-[9px] text-purple-600 font-bold hover:underline"
                                                     >
-                                                        <Calculator className="w-3 h-3" />
-                                                        {__('Suma:')} {currencySymbol}{totalCartServicios.toFixed(2)}
+                                                        Suma: {currencySymbol}{totalCartServicios.toFixed(2)}
                                                     </button>
                                                 )}
                                             </div>
-                                            <div className="relative mt-1">
-                                                <span className="absolute left-3 top-2.5 text-xs font-mono font-bold text-slate-400">{currencySymbol}</span>
+                                            <div className="relative mt-0.5">
+                                                <span className="absolute left-2.5 top-2 text-xs font-mono font-bold text-slate-400">{currencySymbol}</span>
                                                 <Input
                                                     type="number"
                                                     step="0.01"
@@ -1954,190 +1684,87 @@ export default function CreateReparacion({ clientes: initialClientes, marcas: in
                                                         setIsCostoEstimadoManual(true);
                                                         setData('costo_estimado', e.target.value);
                                                     }}
-                                                    className="text-xs h-10 pl-8 font-mono font-bold text-slate-900 dark:text-slate-100"
+                                                    className="text-xs h-8 pl-6 font-mono font-bold"
                                                     required
                                                 />
                                             </div>
                                         </div>
 
                                         <div>
-                                            <Label className="text-xs font-semibold">{__('Anticipo / Adelanto Recibido')}</Label>
-                                            <div className="relative mt-1">
-                                                <span className="absolute left-3 top-2.5 text-xs font-mono font-bold text-emerald-600">{currencySymbol}</span>
+                                            <Label className="text-[10px] font-bold text-slate-700 dark:text-slate-300">{__('Anticipo / Adelanto')}</Label>
+                                            <div className="relative mt-0.5">
+                                                <span className="absolute left-2.5 top-2 text-xs font-mono font-bold text-emerald-600">{currencySymbol}</span>
                                                 <Input
                                                     type="number"
                                                     step="0.01"
                                                     value={data.anticipo}
                                                     onChange={(e) => setData('anticipo', e.target.value)}
-                                                    className="text-xs h-10 pl-8 font-mono font-bold text-emerald-600"
+                                                    className="text-xs h-8 pl-6 font-mono font-bold text-emerald-600"
                                                 />
                                             </div>
                                         </div>
                                     </div>
 
-                                    <div>
-                                        <Label className="text-xs font-semibold">{__('Técnico de Taller Asignado')}</Label>
-                                        <Select value={data.tecnico_id} onValueChange={(val) => setData('tecnico_id', val)}>
-                                            <SelectTrigger className="text-xs h-10 mt-1">
-                                                <SelectValue placeholder={__('Seleccionar técnico de la lista...')} />
-                                            </SelectTrigger>
-                                            <SelectContent>
-                                                {tecnicos.map((t) => (
-                                                    <SelectItem key={t.id} value={String(t.id)} className="text-xs">
-                                                        🛠️ {t.name}
-                                                    </SelectItem>
-                                                ))}
-                                            </SelectContent>
-                                        </Select>
+                                    <div className="grid grid-cols-2 gap-2">
+                                        <div>
+                                            <Label className="text-[10px] font-bold text-slate-700 dark:text-slate-300">{__('Técnico Asignado')}</Label>
+                                            <Select value={data.tecnico_id} onValueChange={(val) => setData('tecnico_id', val)}>
+                                                <SelectTrigger className="text-xs h-8 mt-0.5">
+                                                    <SelectValue placeholder={__('Seleccionar...')} />
+                                                </SelectTrigger>
+                                                <SelectContent>
+                                                    {tecnicos.map((t) => (
+                                                        <SelectItem key={t.id} value={String(t.id)} className="text-xs">
+                                                            🛠️ {t.name}
+                                                        </SelectItem>
+                                                    ))}
+                                                </SelectContent>
+                                            </Select>
+                                        </div>
+
+                                        <div>
+                                            <Label className="text-[10px] font-bold text-slate-700 dark:text-slate-300">{__('Fecha Entrega')}</Label>
+                                            <Input
+                                                type="date"
+                                                value={data.fecha_prometida}
+                                                onChange={(e) => setData('fecha_prometida', e.target.value)}
+                                                className="text-xs h-8 mt-0.5 font-mono"
+                                            />
+                                        </div>
                                     </div>
                                 </CardContent>
                             </Card>
 
-                            {/* SECCIÓN 6: SEGURIDAD DEL DISPOSITIVO (3 OPCIONES COMPACTAS) */}
+                            {/* BLOQUE 5: EVIDENCIAS FOTOGRÁFICAS RÁPIDAS */}
                             <Card className="border-slate-200 dark:border-slate-800 shadow-sm">
-                                <CardHeader className="bg-slate-50 dark:bg-slate-900/50 border-b border-slate-100 dark:border-slate-800 py-3">
-                                    <CardTitle className="text-sm font-bold flex items-center gap-2 text-slate-800 dark:text-slate-200">
-                                        <Lock className="w-4 h-4 text-purple-600" />
-                                        {__('6. Seguridad del Dispositivo')}
+                                <CardHeader className="bg-slate-50 dark:bg-slate-900/50 border-b border-slate-100 dark:border-slate-800 py-1.5 px-3">
+                                    <CardTitle className="text-xs font-bold flex items-center gap-1.5 text-slate-800 dark:text-slate-200">
+                                        <Camera className="w-3.5 h-3.5 text-purple-600" />
+                                        {__('5. Evidencias (4 Ángulos)')}
                                     </CardTitle>
                                 </CardHeader>
-
-                                <CardContent className="p-4 space-y-4">
-                                    {/* SELECTOR COMPACTO DE 3 OPCIONES */}
-                                    <div className="grid grid-cols-3 gap-2">
-                                        {[
-                                            { id: 'sin_contrasena', label: __('Sin contraseña'), icon: '🔓' },
-                                            { id: 'pin_contrasena', label: __('PIN / Contraseña'), icon: '🔑' },
-                                            { id: 'patron', label: __('Patrón 3x3'), icon: '🌀' },
-                                        ].map((item) => (
-                                            <button
-                                                key={item.id}
-                                                type="button"
-                                                onClick={() => {
-                                                    setTipoSeguridad(item.id as 'sin_contrasena' | 'pin_contrasena' | 'patron');
-                                                    if (item.id !== 'patron') {
-                                                        setPatronSecuencia([]);
-                                                    }
-                                                }}
-                                                className={cn(
-                                                    'p-2.5 rounded-xl border text-xs font-bold transition-all flex items-center justify-center gap-2',
-                                                    tipoSeguridad === item.id
-                                                        ? 'border-purple-600 bg-purple-50 dark:bg-purple-950/40 text-purple-700 dark:text-purple-300 shadow-sm'
-                                                        : 'border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800'
-                                                )}
-                                            >
-                                                <span>{item.icon}</span>
-                                                <span>{item.label}</span>
-                                            </button>
-                                        ))}
-                                    </div>
-
-                                    <div className="p-3 border border-slate-200 dark:border-slate-800 rounded-xl bg-slate-50/60 dark:bg-slate-950/40">
-                                        {tipoSeguridad === 'sin_contrasena' && (
-                                            <div className="text-xs text-emerald-700 dark:text-emerald-300 font-semibold text-center py-1">
-                                                {__('Este equipo se registra sin clave o patrón de bloqueo.')}
-                                            </div>
-                                        )}
-
-                                        {tipoSeguridad === 'pin_contrasena' && (
-                                            <div>
-                                                <Label className="text-xs font-semibold">{__('Ingrese el PIN o Contraseña de desbloqueo')}</Label>
-                                                <Input
-                                                    value={claveSeguridad}
-                                                    onChange={(e) => setClaveSeguridad(e.target.value)}
-                                                    placeholder={__('Ej: 1234 o ClaveCliente')}
-                                                    className="text-xs h-10 mt-1 font-mono"
-                                                />
-                                            </div>
-                                        )}
-
-                                        {tipoSeguridad === 'patron' && (
-                                            <div className="space-y-3 flex flex-col items-center">
-                                                <Label className="text-xs font-semibold">{__('Dibujar Patrón 3x3')}</Label>
-                                                <PatternLockInput
-                                                    pattern={patronSecuencia}
-                                                    onChange={setPatronSecuencia}
-                                                />
-                                            </div>
-                                        )}
-                                    </div>
-                                </CardContent>
-                            </Card>
-
-                            {/* SECCIÓN 7: EVIDENCIAS FOTOGRÁFICAS DEL EQUIPO (4 ÁNGULOS) */}
-                            <Card className="border-slate-200 dark:border-slate-800 shadow-sm">
-                                <CardHeader className="bg-slate-50 dark:bg-slate-900/50 border-b border-slate-100 dark:border-slate-800 py-3">
-                                    <CardTitle className="text-sm font-bold flex items-center gap-2 text-slate-800 dark:text-slate-200">
-                                        <Camera className="w-4 h-4 text-purple-600" />
-                                        {__('7. Evidencias Fotográficas del Equipo (4 Ángulos)')}
-                                    </CardTitle>
-                                </CardHeader>
-                                <CardContent className="p-4 space-y-3">
-                                    <p className="text-xs text-slate-500">
-                                        {__('Tome o adjunte fotografías del equipo desde 4 ángulos clave para respaldar las condiciones físicas de recepción:')}
-                                    </p>
-
-                                    <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-                                        {[
-                                            { key: 'frente', label: '📱 1. Frente / Pantalla', desc: 'Display & Cristal' },
-                                            { key: 'trasero', label: '🔄 2. Tapa Trasera', desc: 'Módulo de Cámaras' },
-                                            { key: 'borde_sup', label: '📐 3. Borde Sup. / Izq.', desc: 'Bisel y Esquinas' },
-                                            { key: 'borde_inf', label: '🔌 4. Borde Inf. / Der.', desc: 'Puerto de Carga' },
-                                        ].map((slot) => {
-                                            const fotoUrl = fotosState[slot.key];
+                                <CardContent className="p-2">
+                                    <div className="grid grid-cols-4 gap-1.5">
+                                        {FOTO_SLOTS.map((slot) => {
+                                            const hasFoto = Boolean(fotosState[slot.key]);
                                             return (
-                                                <div key={slot.key} className="flex flex-col items-center p-3 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 gap-2 text-center">
-                                                    <span className="text-xs font-bold text-slate-800 dark:text-slate-200">{slot.label}</span>
-                                                    <span className="text-[10px] text-slate-400">{slot.desc}</span>
-
-                                                    {fotoUrl ? (
-                                                        <div className="relative w-full h-32 rounded-lg overflow-hidden border border-purple-300 dark:border-purple-800 group">
-                                                            <img src={fotoUrl} alt={slot.label} className="w-full h-full object-cover" />
-                                                            <div className="absolute inset-0 bg-slate-950/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-1.5">
-                                                                <Button
-                                                                    type="button"
-                                                                    size="sm"
-                                                                    onClick={() => startCameraStream(slot.key, slot.label)}
-                                                                    className="h-7 px-2 text-[10px] font-bold bg-purple-600 hover:bg-purple-700 text-white gap-1"
-                                                                >
-                                                                    <Camera className="w-3 h-3" />
-                                                                    {__('Recapturar')}
-                                                                </Button>
-                                                                <Button
-                                                                    type="button"
-                                                                    size="sm"
-                                                                    variant="destructive"
-                                                                    onClick={() => handleRemoveFoto(slot.key)}
-                                                                    className="h-7 w-7 p-0"
-                                                                    title={__('Eliminar foto')}
-                                                                >
-                                                                    <Trash2 className="w-3.5 h-3.5" />
-                                                                </Button>
-                                                            </div>
+                                                <div key={slot.key} className="flex flex-col items-center p-1 rounded border text-center bg-slate-50 dark:bg-slate-950">
+                                                    <span className="text-[9px] font-bold text-slate-700 truncate w-full">{slot.label}</span>
+                                                    {hasFoto ? (
+                                                        <div className="relative w-full h-10 rounded mt-1 overflow-hidden group">
+                                                            <img src={fotosState[slot.key]} alt={slot.label} className="w-full h-full object-cover" />
+                                                            <button type="button" onClick={() => handleRemoveFoto(slot.key)} className="absolute inset-0 bg-rose-950/70 text-white opacity-0 group-hover:opacity-100 flex items-center justify-center text-[9px] font-bold">
+                                                                <X className="w-3 h-3" />
+                                                            </button>
                                                         </div>
                                                     ) : (
-                                                        <div className="w-full h-32 rounded-lg border-2 border-dashed border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-950 flex flex-col items-center justify-center p-2 gap-2">
-                                                            <Button
-                                                                type="button"
-                                                                size="sm"
-                                                                onClick={() => startCameraStream(slot.key, slot.label)}
-                                                                className="w-full h-9 text-[11px] font-extrabold bg-purple-600 hover:bg-purple-700 text-white gap-1.5 shadow-sm"
-                                                            >
-                                                                <Camera className="w-3.5 h-3.5" />
-                                                                {__('Tomar Foto')}
-                                                            </Button>
-
-                                                            <label className="w-full text-center">
-                                                                <span className="text-[10px] font-semibold text-slate-500 hover:text-purple-600 dark:hover:text-purple-400 cursor-pointer flex items-center justify-center gap-1">
-                                                                    <Upload className="w-3 h-3" />
-                                                                    {__('Subir Archivo')}
-                                                                </span>
-                                                                <input
-                                                                    type="file"
-                                                                    accept="image/*"
-                                                                    className="hidden"
-                                                                    onChange={(e) => handleFotoUpload(slot.key, e)}
-                                                                />
+                                                        <div className="flex gap-1 mt-1">
+                                                            <button type="button" onClick={() => startCameraStream(slot.key, slot.label)} className="p-1 rounded bg-purple-100 text-purple-700 hover:bg-purple-200" title="Cámara">
+                                                                <Camera className="w-3 h-3" />
+                                                            </button>
+                                                            <label className="p-1 rounded bg-slate-200 text-slate-700 hover:bg-slate-300 cursor-pointer" title="Archivo">
+                                                                <Upload className="w-3 h-3" />
+                                                                <input type="file" accept="image/*" onChange={(e) => handleFotoUpload(slot.key, e)} className="hidden" />
                                                             </label>
                                                         </div>
                                                     )}
@@ -2148,111 +1775,57 @@ export default function CreateReparacion({ clientes: initialClientes, marcas: in
                                 </CardContent>
                             </Card>
 
-                            {/* MODAL CÁMARA WEBCAM EN VIVO */}
-                            <Dialog open={!!activeCameraSlot} onOpenChange={(open) => { if (!open) stopCameraStream(); }}>
-                                <DialogContent className="sm:max-w-xl p-0 overflow-hidden bg-slate-950 text-white border-slate-800">
-                                    <DialogHeader className="p-4 bg-slate-900 border-b border-slate-800 flex flex-row items-center justify-between">
-                                        <DialogTitle className="flex items-center gap-2 text-sm font-bold text-white">
-                                            <Camera className="w-5 h-5 text-purple-400" />
-                                            {__('Capturar Evidencia Fotográfica:')} <span className="text-purple-300 font-mono">{cameraSlotLabel}</span>
+                            {/* MODAL CÁMARA LIVE STREAM */}
+                            <Dialog open={Boolean(activeCameraSlot)} onOpenChange={(open) => { if (!open) stopCameraStream(); }}>
+                                <DialogContent className="sm:max-w-md bg-slate-950 text-white border-slate-800">
+                                    <DialogHeader>
+                                        <DialogTitle className="text-sm font-bold flex items-center gap-2">
+                                            <Camera className="w-4 h-4 text-purple-400" />
+                                            {__('Tomar Foto')} - {cameraSlotLabel}
                                         </DialogTitle>
-                                        <Button type="button" variant="ghost" size="sm" onClick={stopCameraStream} className="h-8 w-8 p-0 text-slate-400 hover:text-white hover:bg-slate-800">
-                                            <X className="w-4 h-4" />
-                                        </Button>
                                     </DialogHeader>
 
-                                    <div className="p-4 space-y-4">
+                                    <div className="space-y-3 py-2 text-xs">
                                         {cameraError ? (
-                                            <div className="p-6 text-center space-y-3 bg-rose-950/40 border border-rose-800 rounded-xl">
-                                                <ShieldAlert className="w-10 h-10 mx-auto text-rose-500" />
-                                                <p className="text-xs text-rose-200 font-medium">{cameraError}</p>
-                                                <Button type="button" variant="outline" size="sm" onClick={stopCameraStream} className="text-xs text-white border-slate-700">
-                                                    {__('Cerrar y usar subida de archivo')}
-                                                </Button>
+                                            <div className="p-3 rounded-lg bg-rose-950/50 border border-rose-800 text-rose-300 text-center">
+                                                {cameraError}
                                             </div>
                                         ) : (
-                                            <div className="relative w-full aspect-video bg-black rounded-xl overflow-hidden border border-slate-800 flex items-center justify-center shadow-2xl">
-                                                <canvas ref={canvasRef} className="hidden" />
-
+                                            <div className="relative rounded-xl overflow-hidden bg-black aspect-video flex items-center justify-center border border-slate-800">
                                                 {isCameraLoading && (
-                                                    <div className="absolute inset-0 flex flex-col items-center justify-center bg-slate-950/90 gap-2 text-xs text-slate-300">
-                                                        <RefreshCw className="w-8 h-8 animate-spin text-purple-500" />
-                                                        <span>{__('Iniciando cámara...')}</span>
+                                                    <div className="absolute inset-0 flex items-center justify-center bg-black/80 z-20">
+                                                        <RefreshCw className="w-6 h-6 animate-spin text-purple-500" />
                                                     </div>
                                                 )}
-
-                                                {capturedImage ? (
-                                                    <div className="relative w-full h-full">
-                                                        <img src={capturedImage} alt="Captura" className="w-full h-full object-contain" />
-                                                        <div className="absolute top-3 left-3 bg-emerald-600/90 text-white text-[10px] font-bold px-2.5 py-1 rounded-md backdrop-blur-md">
-                                                            ✓ {__('Captura lista')}
-                                                        </div>
-                                                    </div>
-                                                ) : (
-                                                    <video
-                                                        ref={videoRef}
-                                                        autoPlay
-                                                        playsInline
-                                                        muted
-                                                        className="w-full h-full object-cover"
-                                                    />
-                                                )}
-
-                                                {!capturedImage && !isCameraLoading && (
-                                                    <div className="absolute inset-0 pointer-events-none border-2 border-purple-500/30 m-4 rounded-lg flex items-center justify-center">
-                                                        <div className="w-10 h-10 border-t-2 border-l-2 border-purple-400 absolute top-0 left-0" />
-                                                        <div className="w-10 h-10 border-t-2 border-r-2 border-purple-400 absolute top-0 right-0" />
-                                                        <div className="w-10 h-10 border-b-2 border-l-2 border-purple-400 absolute bottom-0 left-0" />
-                                                        <div className="w-10 h-10 border-b-2 border-r-2 border-purple-400 absolute bottom-0 right-0" />
-                                                    </div>
+                                                <video ref={videoRef} className={cn('w-full h-full object-cover', capturedImage && 'hidden')} autoPlay playsInline muted />
+                                                <canvas ref={canvasRef} className="hidden" />
+                                                {capturedImage && (
+                                                    <img src={capturedImage} alt="Foto capturada" className="w-full h-full object-cover" />
                                                 )}
                                             </div>
                                         )}
 
                                         {!cameraError && (
                                             <div className="flex items-center justify-between pt-2">
-                                                <Button
-                                                    type="button"
-                                                    variant="outline"
-                                                    size="sm"
-                                                    onClick={toggleFacingMode}
-                                                    className="text-xs bg-slate-900 border-slate-700 text-slate-300 hover:text-white hover:bg-slate-800 gap-1.5"
-                                                >
-                                                    <RefreshCw className="w-3.5 h-3.5" />
-                                                    {__('Voltear Cámara')}
+                                                <Button type="button" variant="outline" size="sm" onClick={toggleFacingMode} className="text-xs bg-slate-900 border-slate-700 text-slate-300 hover:text-white">
+                                                    <RefreshCw className="w-3.5 h-3.5 mr-1" />
+                                                    {__('Voltear')}
                                                 </Button>
 
                                                 {capturedImage ? (
                                                     <div className="flex items-center gap-2">
-                                                        <Button
-                                                            type="button"
-                                                            variant="outline"
-                                                            size="sm"
-                                                            onClick={handleRetakeSnapshot}
-                                                            className="text-xs bg-slate-900 border-slate-700 text-slate-300 hover:text-white"
-                                                        >
-                                                            {__('Repetir Foto')}
+                                                        <Button type="button" variant="outline" size="sm" onClick={handleRetakeSnapshot} className="text-xs bg-slate-900 border-slate-700 text-slate-300 hover:text-white">
+                                                            {__('Repetir')}
                                                         </Button>
-                                                        <Button
-                                                            type="button"
-                                                            size="sm"
-                                                            onClick={handleAcceptCapturedPhoto}
-                                                            className="text-xs font-bold bg-emerald-600 hover:bg-emerald-700 text-white gap-1.5 px-4"
-                                                        >
-                                                            <Check className="w-4 h-4" />
-                                                            {__('Usar Esta Foto')}
+                                                        <Button type="button" size="sm" onClick={handleAcceptCapturedPhoto} className="text-xs font-bold bg-emerald-600 hover:bg-emerald-700 text-white gap-1">
+                                                            <Check className="w-3.5 h-3.5" />
+                                                            {__('Usar Foto')}
                                                         </Button>
                                                     </div>
                                                 ) : (
-                                                    <Button
-                                                        type="button"
-                                                        size="sm"
-                                                        onClick={handleCaptureSnapshot}
-                                                        disabled={isCameraLoading}
-                                                        className="h-10 px-6 font-extrabold bg-purple-600 hover:bg-purple-700 text-white shadow-lg rounded-full gap-2 text-xs"
-                                                    >
-                                                        <Camera className="w-4 h-4" />
-                                                        {__('CAPTURAR FOTO')}
+                                                    <Button type="button" size="sm" onClick={handleCaptureSnapshot} disabled={isCameraLoading} className="h-8 px-4 font-bold bg-purple-600 hover:bg-purple-700 text-white rounded-full text-xs">
+                                                        <Camera className="w-3.5 h-3.5 mr-1" />
+                                                        {__('Capturar')}
                                                     </Button>
                                                 )}
                                             </div>
@@ -2261,18 +1834,19 @@ export default function CreateReparacion({ clientes: initialClientes, marcas: in
                                 </DialogContent>
                             </Dialog>
 
-                            {/* BOTÓN FINAL DE GUARDAR ORDEN */}
+                            {/* BOTÓN PRINCIPAL DE GUARDAR ORDEN */}
                             <div className="pt-2">
                                 <Button
                                     type="submit"
                                     disabled={processing}
-                                    className="w-full h-12 text-sm font-extrabold bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white shadow-xl gap-2 rounded-xl"
+                                    className="w-full h-11 text-xs font-black uppercase tracking-wider bg-emerald-600 hover:bg-emerald-700 text-white shadow-lg shadow-emerald-950/30 rounded-xl gap-2 transition-all"
                                 >
-                                    <Save className="w-5 h-5" />
-                                    {__('FINALIZAR Y REGISTRAR ORDEN DE REPARACIÓN')}
+                                    <Save className="w-4 h-4" />
+                                    {processing ? __('Guardando Orden...') : __('Guardar Orden de Reparación')}
                                 </Button>
                             </div>
 
+                        </div>
                     </div>
                 </form>
             </div>
