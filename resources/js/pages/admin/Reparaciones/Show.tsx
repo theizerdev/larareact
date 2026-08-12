@@ -758,6 +758,46 @@ export default function ShowReparacion({ orden, productosRepuestos = [], tecnico
     const tienePostServicio = Boolean(postServicioData);
 
     const [isPostServicioModalOpen, setIsPostServicioModalOpen] = useState(false);
+    const [isReporteModalOpen, setIsReporteModalOpen] = useState(false);
+
+    const reporteFotosList = React.useMemo(() => {
+        const list: { title: string; url: string; category: string }[] = [];
+
+        if (inspeccionData?.fotos_recepcion) {
+            Object.entries(inspeccionData.fotos_recepcion).forEach(([k, v]) => {
+                if (v && typeof v === 'string') {
+                    const label = k.replace(/_/g, ' ').toUpperCase();
+                    list.push({ title: `Recepción: ${label}`, url: v, category: 'Recepción' });
+                }
+            });
+        }
+
+        if (Array.isArray(orden.fotos)) {
+            orden.fotos.forEach((f: any) => {
+                if (f.url) {
+                    const isPost = f.angulo && f.angulo.startsWith('post_');
+                    const cat = isPost ? 'Post-Reparación' : 'Proceso de Reparación';
+                    const desc = f.descripcion || (f.angulo ? f.angulo.replace(/_/g, ' ') : 'Evidencia Taller');
+                    list.push({ title: desc, url: f.url, category: cat });
+                }
+            });
+        }
+
+        if (postServicioData?.fotos_post) {
+            if (typeof postServicioData.fotos_post === 'object' && !Array.isArray(postServicioData.fotos_post)) {
+                Object.entries(postServicioData.fotos_post).forEach(([k, v]) => {
+                    if (v && typeof v === 'string') {
+                        const label = k.replace(/_/g, ' ').toUpperCase();
+                        if (!list.some((item) => item.url === v)) {
+                            list.push({ title: `Post-Atención: ${label}`, url: v, category: 'Post-Reparación' });
+                        }
+                    }
+                });
+            }
+        }
+
+        return list;
+    }, [inspeccionData, orden.fotos, postServicioData]);
     const [postModalTab, setPostModalTab] = useState<'validacion' | 'limpieza_qc' | 'fotos_obs'>('validacion');
 
     const [validacionFinalState, setValidacionFinalState] = useState<Record<string, { estado: 'correcto' | 'incorrecto'; obs: string }>>(() => {
@@ -815,30 +855,29 @@ export default function ShowReparacion({ orden, productosRepuestos = [], tecnico
     ], []);
 
     const [inspeccionFisicaForm, setInspeccionFisicaForm] = useState<Record<string, { estado: 'bueno' | 'malo' | 'na'; obs: string }>>(() => {
+        const existing = inspeccionData?.fisica;
+        if (existing !== undefined && existing !== null && typeof existing === 'object') {
+            return existing;
+        }
         const init: Record<string, { estado: 'bueno' | 'malo' | 'na'; obs: string }> = {};
-        const existing = inspeccionData?.fisica || {};
         DEFAULT_FISICA_ITEMS.forEach((k) => {
-            init[k] = existing[k] || { estado: 'bueno', obs: '' };
-        });
-        Object.keys(existing).forEach((k) => {
-            if (!init[k]) init[k] = existing[k];
+            init[k] = { estado: 'bueno', obs: '' };
         });
         return init;
     });
 
     const [inspeccionEstadoForm, setInspeccionEstadoForm] = useState<Record<string, boolean>>(() => {
-        const existing = inspeccionData?.estado || {};
-        const init: Record<string, boolean> = {
-            enciende: existing.enciende ?? true,
-            carga_bateria: existing.carga_bateria ?? true,
-            entra_sistema: existing.entra_sistema ?? true,
-            tiene_bloqueo: existing.tiene_bloqueo ?? false,
-            cliente_proporciona_contrasena: existing.cliente_proporciona_contrasena ?? true,
+        const existing = inspeccionData?.estado;
+        if (existing !== undefined && existing !== null && typeof existing === 'object') {
+            return existing;
+        }
+        return {
+            enciende: true,
+            carga_bateria: true,
+            entra_sistema: true,
+            tiene_bloqueo: false,
+            cliente_proporciona_contrasena: true,
         };
-        Object.keys(existing).forEach((k) => {
-            if (init[k] === undefined) init[k] = Boolean(existing[k]);
-        });
-        return init;
     });
 
     const [observacionesFisicasForm, setObservacionesFisicasForm] = useState<string>(orden.observaciones_fisicas || '');
@@ -877,25 +916,25 @@ export default function ShowReparacion({ orden, productosRepuestos = [], tecnico
     ], []);
 
     const [validacionFormState, setValidacionFormState] = useState<Record<string, { estado: 'correcto' | 'incorrecto'; obs: string }>>(() => {
+        const existing = postServicioData?.validacion;
+        if (existing !== undefined && existing !== null && typeof existing === 'object') {
+            return existing;
+        }
         const init: Record<string, { estado: 'correcto' | 'incorrecto'; obs: string }> = {};
-        const existing = postServicioData?.validacion || {};
         FUNCIONES_VALIDACION_LIST.forEach((fn) => {
-            init[fn] = existing[fn] || { estado: 'correcto', obs: '' };
-        });
-        Object.keys(existing).forEach((fn) => {
-            if (!init[fn]) init[fn] = existing[fn];
+            init[fn] = { estado: 'correcto', obs: '' };
         });
         return init;
     });
 
     const [limpiezaFormState, setLimpiezaFormState] = useState<Record<string, boolean>>(() => {
-        const existing = postServicioData?.limpieza || {};
+        const existing = postServicioData?.limpieza;
+        if (existing !== undefined && existing !== null && typeof existing === 'object') {
+            return existing;
+        }
         const init: Record<string, boolean> = {};
         LIMPIEZA_FINAL_LIST.forEach((item) => {
-            init[item] = existing[item] ?? true;
-        });
-        Object.keys(existing).forEach((item) => {
-            if (init[item] === undefined) init[item] = Boolean(existing[item]);
+            init[item] = true;
         });
         return init;
     });
@@ -919,6 +958,30 @@ export default function ShowReparacion({ orden, productosRepuestos = [], tecnico
 
     const [observacionesPostInput, setObservacionesPostInput] = useState<string>(postServicioData?.observaciones || '');
     const [isSavingPostInline, setIsSavingPostInline] = useState(false);
+
+    useEffect(() => {
+        if (postServicioData?.validacion !== undefined && postServicioData?.validacion !== null && typeof postServicioData.validacion === 'object') {
+            setValidacionFormState(postServicioData.validacion);
+        }
+    }, [postServicioData?.validacion]);
+
+    useEffect(() => {
+        if (postServicioData?.limpieza !== undefined && postServicioData?.limpieza !== null && typeof postServicioData.limpieza === 'object') {
+            setLimpiezaFormState(postServicioData.limpieza);
+        }
+    }, [postServicioData?.limpieza]);
+
+    useEffect(() => {
+        if (inspeccionData?.fisica !== undefined && inspeccionData?.fisica !== null && typeof inspeccionData.fisica === 'object') {
+            setInspeccionFisicaForm(inspeccionData.fisica);
+        }
+    }, [inspeccionData?.fisica]);
+
+    useEffect(() => {
+        if (inspeccionData?.estado !== undefined && inspeccionData?.estado !== null && typeof inspeccionData.estado === 'object') {
+            setInspeccionEstadoForm(inspeccionData.estado);
+        }
+    }, [inspeccionData?.estado]);
 
     const handleMarkAllValidacionCorrecto = () => {
         setValidacionFormState((prev) => {
@@ -1683,6 +1746,25 @@ export default function ShowReparacion({ orden, productosRepuestos = [], tecnico
                                 {__('Imprimir Ticket')}
                             </Button>
 
+                            <a
+                                href={`/admin/reparaciones/${orden.id}/reporte-pdf`}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                            >
+                                <Button
+                                    size="sm"
+                                    className={cn(
+                                        "h-10 gap-2 text-xs font-bold text-white shadow-lg transition-all",
+                                        orden.estado_orden === 'reparado' || orden.estado_orden === 'entregado'
+                                            ? "bg-emerald-600 hover:bg-emerald-500 shadow-emerald-950/40 ring-2 ring-emerald-400/50"
+                                            : "bg-teal-600 hover:bg-teal-500 shadow-teal-950/40"
+                                    )}
+                                >
+                                    <FileText className="w-4 h-4 text-emerald-100" />
+                                    {__('Reporte PDF')}
+                                </Button>
+                            </a>
+
                             <Dialog open={openStatusModal} onOpenChange={setOpenStatusModal}>
                                 <DialogTrigger asChild>
                                     <Button size="sm" className="h-10 gap-2 text-xs font-bold bg-purple-600 hover:bg-purple-500 text-white shadow-lg shadow-purple-950/50">
@@ -2174,11 +2256,6 @@ export default function ShowReparacion({ orden, productosRepuestos = [], tecnico
                                             </div>
 
                                             <div className="flex items-center gap-2">
-                                                {orden.tecnico && (
-                                                    <Badge variant="outline" className="text-xs bg-purple-50 dark:bg-purple-950/50 text-purple-700 dark:text-purple-300 border-purple-200 font-bold">
-                                                        🛠️ {__('Técnico:')} {orden.tecnico.name}
-                                                    </Badge>
-                                                )}
                                                 <Button
                                                     type="button"
                                                     size="sm"
@@ -2187,6 +2264,16 @@ export default function ShowReparacion({ orden, productosRepuestos = [], tecnico
                                                 >
                                                     <Sparkles className="w-3.5 h-3.5" />
                                                     {__('Marcar Todos como Bueno 🟢')}
+                                                </Button>
+                                                <Button
+                                                    type="button"
+                                                    size="sm"
+                                                    onClick={handleSavePreservicioInline}
+                                                    disabled={isSavingPreservicioInline}
+                                                    className="bg-emerald-700 hover:bg-emerald-800 text-white text-xs font-black gap-1.5 rounded-lg shadow-md"
+                                                >
+                                                    <Save className="w-4 h-4" />
+                                                    {isSavingPreservicioInline ? __('Guardando...') : __('💾 Guardar')}
                                                 </Button>
                                             </div>
                                         </div>
@@ -2436,7 +2523,17 @@ export default function ShowReparacion({ orden, productosRepuestos = [], tecnico
                                                     className="bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold gap-1.5 rounded-lg shadow-xs"
                                                 >
                                                     <Sparkles className="w-3.5 h-3.5" />
-                                                    {__('Marcar 24 Funciones como Correctas 🟢')}
+                                                    {__('Marcar Todos como Correctos 🟢')}
+                                                </Button>
+                                                <Button
+                                                    type="button"
+                                                    size="sm"
+                                                    onClick={handleSavePostServicioInline}
+                                                    disabled={isSavingPostInline}
+                                                    className="bg-emerald-700 hover:bg-emerald-800 text-white text-xs font-black gap-1.5 rounded-lg shadow-md"
+                                                >
+                                                    <Save className="w-4 h-4" />
+                                                    {isSavingPostInline ? __('Guardando...') : __('💾 Guardar Cambios en BD')}
                                                 </Button>
                                             </div>
                                         </div>
@@ -4697,6 +4794,8 @@ export default function ShowReparacion({ orden, productosRepuestos = [], tecnico
                     </form>
                 </DialogContent>
             </Dialog>
+
+
         </>
     );
 }

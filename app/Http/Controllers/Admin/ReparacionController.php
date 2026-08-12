@@ -497,7 +497,7 @@ class ReparacionController extends Controller
     public function show($id)
     {
         $reparacion = OrdenReparacion::find($id);
-        $relations = ['cliente', 'marca', 'modelo', 'tecnico', 'items.producto', 'items.servicio', 'historial.user', 'sale'];
+        $relations = ['empresa', 'sucursal', 'cliente', 'marca', 'modelo', 'tecnico', 'items.producto', 'items.servicio', 'historial.user', 'sale'];
         if (\Illuminate\Support\Facades\Schema::hasTable('orden_reparacion_fotos')) {
             $relations[] = 'fotos';
         }
@@ -528,6 +528,41 @@ class ReparacionController extends Controller
             'tecnicos' => $tecnicos,
             'marcas' => $marcas,
             'categorias' => $categorias,
+            'currencySymbol' => $this->getCurrencySymbol(),
+        ]);
+    }
+
+    public function reportePdf(OrdenReparacion $reparacion)
+    {
+        $relations = ['empresa', 'sucursal', 'cliente', 'marca', 'modelo', 'tecnico', 'items.producto', 'items.servicio'];
+        if (\Illuminate\Support\Facades\Schema::hasTable('orden_reparacion_fotos')) {
+            $relations[] = 'fotos';
+        }
+        $reparacion->load($relations);
+
+        $empresa = $reparacion->empresa 
+            ?? \App\Models\Empresa::find($reparacion->empresa_id) 
+            ?? \App\Models\Empresa::find(auth()->user()->empresa_id);
+
+        $sucursal = $reparacion->sucursal 
+            ?? \App\Models\Sucursal::find($reparacion->sucursal_id) 
+            ?? \App\Models\Sucursal::where('empresa_id', $empresa?->id)->first();
+
+        if (class_exists(\Barryvdh\DomPDF\Facade\Pdf::class)) {
+            $pdf = \Barryvdh\DomPDF\Facade\Pdf::loadView('pdf.reparacion_reporte', [
+                'orden' => $reparacion,
+                'empresa' => $empresa,
+                'sucursal' => $sucursal,
+                'currencySymbol' => $this->getCurrencySymbol(),
+            ])->setPaper('a4', 'portrait');
+
+            return $pdf->stream("Reporte_Reparacion_{$reparacion->numero_orden}.pdf");
+        }
+
+        return view('pdf.reparacion_reporte', [
+            'orden' => $reparacion,
+            'empresa' => $empresa,
+            'sucursal' => $sucursal,
             'currencySymbol' => $this->getCurrencySymbol(),
         ]);
     }

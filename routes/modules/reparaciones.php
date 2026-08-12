@@ -36,4 +36,6 @@ Route::middleware(['verified'])->group(function () {
         ->name('reparaciones.post-servicio');
     Route::post('reparaciones/{reparacion}/post-servicio', [ReparacionController::class, 'savePostServicio'])
         ->name('reparaciones.save-post-servicio');
+    Route::get('reparaciones/{reparacion}/reporte-pdf', [ReparacionController::class, 'reportePdf'])
+        ->name('reparaciones.reporte-pdf');
 });
