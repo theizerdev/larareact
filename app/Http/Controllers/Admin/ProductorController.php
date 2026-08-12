@@ -246,8 +246,10 @@ class ProductorController extends Controller
 
             $link = url("/preregistro-productor/{$token}");
 
+            $sucursalNombre = $user->sucursal?->nombre ?? ($empresa->razon_social ?? 'Instalaciones Principales');
+
             $message = "Estimado Productor del Rancho *{$request->nombre_comercial_rancho}*, le invitamos a completar su pre-registro de datos para su acceso a nuestras instalaciones con la siguiente información:\n\n"
-                . "Ubicación: {$user->sucursal->nombre}\n"
+                . "Ubicación: {$sucursalNombre}\n"
                 . "Rancho: {$request->nombre_comercial_rancho}\n"
                 . "Colaboradores: Indicar todos los que acudirán\n"
                 . "Vehículos: En los que acudirán.\n\n"

@@ -81,6 +81,33 @@ const DIAS_SEMANA = [
     { id: 7, label: 'Domingo' },
 ];
 
+const DIA_MAP: Record<string, number> = {
+    lunes: 1,
+    martes: 2,
+    miércoles: 3,
+    miercoles: 3,
+    jueves: 4,
+    viernes: 5,
+    sábado: 6,
+    sabado: 6,
+    domingo: 7,
+};
+
+function normalizeDiasLaborables(dias: any[]): number[] {
+    if (!Array.isArray(dias)) return [1, 2, 3, 4, 5];
+    const res = dias.map((d) => {
+        if (typeof d === 'number') return d;
+        if (typeof d === 'string') {
+            const num = parseInt(d, 10);
+            if (!isNaN(num) && num >= 1 && num <= 7) return num;
+            const key = d.trim().toLowerCase();
+            return DIA_MAP[key] ?? null;
+        }
+        return null;
+    }).filter((v): v is number => v !== null && v >= 1 && v <= 7);
+    return res.length > 0 ? res : [1, 2, 3, 4, 5];
+}
+
 export default function ConfiguracionAsistenciaIndex({ configuracion, turnos, diasFestivos }: Props) {
     const [activeTab, setActiveTab] = useState('politicas');
 
@@ -147,7 +174,7 @@ export default function ConfiguracionAsistenciaIndex({ configuracion, turnos, di
             horas_diarias_ley: turno.horas_diarias_ley,
             minutos_descanso: turno.minutos_descanso,
             descanso_pagado: turno.descanso_pagado,
-            dias_laborables: turno.dias_laborables ?? [1, 2, 3, 4, 5],
+            dias_laborables: normalizeDiasLaborables(turno.dias_laborables),
         });
         setIsTurnoModalOpen(true);
     };
@@ -562,16 +589,19 @@ export default function ConfiguracionAsistenciaIndex({ configuracion, turnos, di
                                         <div className="pt-1">
                                             <span className="text-muted-foreground block mb-1">Días Laborables:</span>
                                             <div className="flex flex-wrap gap-1">
-                                                {DIAS_SEMANA.map((d) => {
-                                                    const isLab = t.dias_laborables?.includes(d.id);
-                                                    return (
-                                                        <span key={d.id} className={`px-2 py-0.5 rounded text-[10px] font-medium ${
-                                                            isLab ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-900/30 dark:text-emerald-400' : 'bg-muted text-muted-foreground'
-                                                        }`}>
-                                                            {d.label.substring(0, 3)}
-                                                        </span>
-                                                    );
-                                                })}
+                                                {(() => {
+                                                    const norm = normalizeDiasLaborables(t.dias_laborables);
+                                                    return DIAS_SEMANA.map((d) => {
+                                                        const isLab = norm.includes(d.id);
+                                                        return (
+                                                            <span key={d.id} className={`px-2 py-0.5 rounded text-[10px] font-medium ${
+                                                                isLab ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-900/30 dark:text-emerald-400' : 'bg-muted text-muted-foreground'
+                                                            }`}>
+                                                                {d.label.substring(0, 3)}
+                                                            </span>
+                                                        );
+                                                    });
+                                                })()}
                                             </div>
                                         </div>
 

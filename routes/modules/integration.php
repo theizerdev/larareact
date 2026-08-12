@@ -22,4 +22,9 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::post('/integrations/whatsapp/disconnect', [IntegrationController::class, 'whatsappDisconnect'])->name('integrations.whatsapp.disconnect')->can('integrations.edit');
     Route::post('/integrations/whatsapp/reconnect', [IntegrationController::class, 'whatsappReconnect'])->name('integrations.whatsapp.reconnect')->can('integrations.edit');
     Route::post('/integrations/whatsapp/send-message', [IntegrationController::class, 'whatsappSendMessage'])->name('integrations.whatsapp.send-message')->can('integrations.edit');
+
+    // JAAK (Validaciones) Integration Routes
+    Route::get('/integrations/validaciones', [IntegrationController::class, 'validacionesIndex'])->name('integrations.validaciones.index')->can('jaak.view');
+    Route::put('/integrations/jaak', [IntegrationController::class, 'updateJaak'])->name('integrations.jaak.update')->can('jaak.manage');
+    Route::post('/integrations/jaak/test', [IntegrationController::class, 'jaakTest'])->name('integrations.jaak.test')->can('jaak.manage');
 });

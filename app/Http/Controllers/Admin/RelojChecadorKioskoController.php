@@ -25,11 +25,15 @@ class RelojChecadorKioskoController extends Controller
 
         $configuracion = ConfiguracionAsistencia::where('empresa_id', $empresaId)->first();
 
-        // Obtener la zona horaria de la empresa
-        $zonaHoraria = null;
-        if ($user && $user->empresa) {
-            $zonaHoraria = $user->empresa->zona_horaria;
-        }
+        // Obtener la zona horaria (Sucursal -> Empresa -> País -> App Config -> America/Mexico_City)
+        $empresa = $user ? $user->empresa : null;
+        $sucursal = ($user && !empty($user->sucursal_id)) ? \App\Models\Sucursal::find($user->sucursal_id) : null;
+
+        $zonaHoraria = $sucursal?->zona_horaria
+            ?? $empresa?->zona_horaria
+            ?? $empresa?->pais?->zona_horaria
+            ?? config('app.timezone')
+            ?? 'America/Mexico_City';
 
         return Inertia::render('admin/reloj-checador/Kiosko', [
             'configuracion' => $configuracion,
@@ -87,6 +91,18 @@ class RelojChecadorKioskoController extends Controller
                 case 'entrada_comida':
                     $siguienteMarcaje = 'salida';
                     break;
+                case 'descanso_inicio':
+                    $siguienteMarcaje = 'descanso_fin';
+                    break;
+                case 'descanso_fin':
+                    $siguienteMarcaje = 'descanso_inicio';
+                    break;
+                case 'incidente_inicio':
+                    $siguienteMarcaje = 'incidente_fin';
+                    break;
+                case 'incidente_fin':
+                    $siguienteMarcaje = 'salida';
+                    break;
                 case 'salida':
                     $siguienteMarcaje = 'entrada';
                     break;
@@ -103,6 +119,7 @@ class RelojChecadorKioskoController extends Controller
                 'departamento' => $empleado->departamento?->nombre,
                 'cargo' => $empleado->cargo?->nombre,
                 'turno' => $empleado->turnoLaboral?->nombre ?? 'Sin turno asignado',
+                'ultimo_marcaje_tipo' => $ultimoMarcaje?->tipo_marcaje,
             ],
             'ultimo_marcaje' => $ultimoMarcaje ? [
                 'tipo' => $ultimoMarcaje->tipo_marcaje,

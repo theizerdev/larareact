@@ -605,6 +605,11 @@ export default function AdminSaasLayout({
                                     href: integrationsIndex.url(),
                                     permission: 'integrations.view',
                                 },
+                                {
+                                    title: 'Validations',
+                                    href: '/admin/integrations/validaciones',
+                                    permission: 'jaak.view',
+                                },
                             ].filter(item => hasPermission(item.permission));
 
                             if (integrationsItems.length === 0) return null;

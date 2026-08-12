@@ -197,4 +197,38 @@ class NotificacionAsistenciaWhatsAppService
             return false;
         }
     }
+
+    /**
+     * Envía notificación por WhatsApp al empleado advirtiendo que su jornada laboral está por concluir.
+     */
+    public function notificarProximoFinJornada(Empleado $empleado, string $horaSalidaTurno, int $minutosRestantes): bool
+    {
+        if (empty($empleado->telefono)) {
+            return false;
+        }
+
+        try {
+            $empresa = Empresa::find($empleado->empresa_id) ?: Empresa::first();
+            $cleanPhone = preg_replace('/[^0-9]/', '', $empleado->telefono);
+            if (strlen($cleanPhone) < 8) {
+                return false;
+            }
+
+            $pais = $empleado->paisTelefono ?: Pais::find($empleado->pais_telefono_id);
+            $prefix = $pais ? preg_replace('/[^0-9]/', '', $pais->codigo_telefonico) : '52';
+            $fullPhone = $prefix . $cleanPhone;
+
+            $mensaje = "⏰ *AVISO DE PRÓXIMO FIN DE JORNADA*\n\n";
+            $mensaje .= "Hola *{$empleado->nombres}*,\n";
+            $mensaje .= "Te recordamos que tu jornada laboral finaliza a las *{$horaSalidaTurno} hrs* (quedan aproximadamente *{$minutosRestantes} minutos*).\n\n";
+            $mensaje .= "📌 Recuerda acudir al Reloj Checador o Garita a registrar tu *Marcaje de Salida* al concluir tu horario.";
+
+            $ws = new WhatsAppService($empresa);
+            $ws->sendMessage($fullPhone, $mensaje, true);
+            return true;
+        } catch (\Exception $e) {
+            Log::error("Error enviando aviso próximo fin de jornada a empleado ID {$empleado->id}: " . $e->getMessage());
+            return false;
+        }
+    }
 }

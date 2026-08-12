@@ -28,8 +28,8 @@ class AsistenciaReporteController extends Controller
 
         $empresaId = $user->empresa_id;
 
-        $query = AsistenciaMarcaje::with(['empleado.departamento', 'empleado.cargo', 'sucursal'])
-            ->when($empresaId, fn ($q) => $q->where('empresa_id', $empresaId))
+        // Base query para calcular estadísticas globales
+        $statsQuery = AsistenciaMarcaje::when($empresaId, fn ($q) => $q->where('empresa_id', $empresaId))
             ->when($request->search, function ($q, $search) {
                 $q->whereHas('empleado', function ($sub) use ($search) {
                     $sub->where('nombres', 'like', "%{$search}%")
@@ -43,16 +43,173 @@ class AsistenciaReporteController extends Controller
             ->when($request->fecha_fin, fn ($q, $f) => $q->whereDate('fecha_hora', '<=', $f));
 
         $stats = [
-            'total' => (clone $query)->count(),
-            'entradas' => (clone $query)->where('tipo_marcaje', 'entrada')->count(),
-            'descansos' => (clone $query)->whereIn('tipo_marcaje', ['salida_comida', 'entrada_comida'])->count(),
-            'salidas' => (clone $query)->where('tipo_marcaje', 'salida')->count(),
+            'total' => (clone $statsQuery)->count(),
+            'entradas' => (clone $statsQuery)->where('tipo_marcaje', 'entrada')->count(),
+            'descansos' => (clone $statsQuery)->whereIn('tipo_marcaje', ['salida_comida', 'entrada_comida', 'descanso_inicio', 'descanso_fin'])->count(),
+            'salidas' => (clone $statsQuery)->where('tipo_marcaje', 'salida')->count(),
         ];
 
-        $marcajes = $query->latest('fecha_hora')->paginate($request->perPage ?? 15)->withQueryString();
+        // Obtener empleados agrupados que tienen marcajes en el filtro
+        $empleadosQuery = Empleado::with(['departamento', 'cargo', 'turnoLaboral'])
+            ->whereHas('marcajes', function ($q) use ($empresaId, $request) {
+                $q->when($empresaId, fn ($sub) => $sub->where('empresa_id', $empresaId))
+                  ->when($request->tipo_marcaje, fn ($sub, $t) => $sub->where('tipo_marcaje', $t))
+                  ->when($request->origen, fn ($sub, $o) => $sub->where('origen', $o))
+                  ->when($request->fecha_inicio, fn ($sub, $f) => $sub->whereDate('fecha_hora', '>=', $f))
+                  ->when($request->fecha_fin, fn ($sub, $f) => $sub->whereDate('fecha_hora', '<=', $f));
+            })
+            ->when($empresaId, fn ($q) => $q->where('empresa_id', $empresaId))
+            ->when($request->search, function ($q, $search) {
+                $q->where(function ($sub) use ($search) {
+                    $sub->where('nombres', 'like', "%{$search}%")
+                        ->orWhere('apellidos', 'like', "%{$search}%")
+                        ->orWhere('documento_identidad', 'like', "%{$search}%");
+                });
+            });
+
+        $empleadosPaginados = $empleadosQuery->paginate($request->perPage ?? 15)->withQueryString();
+
+        $now = Carbon::now();
+        $configAsistencia = \App\Models\ConfiguracionAsistencia::where('empresa_id', $empresaId)->first();
+        $minutosLeySilla = $configAsistencia?->ley_silla_descanso_minutos ?? 15;
+        $intervaloHorasLeySilla = (float) ($configAsistencia?->ley_silla_intervalo_horas ?? 2.00);
+        $intervaloMinutosLeySilla = (int) round($intervaloHorasLeySilla * 60);
+
+        $empleadosPaginados->getCollection()->transform(function ($emp) use ($now, $minutosLeySilla, $intervaloHorasLeySilla, $intervaloMinutosLeySilla, $request, $empresaId) {
+            // Cargar historial de marcajes de este empleado ordenados cronológicamente
+            $historialMarcajes = AsistenciaMarcaje::with('sucursal')
+                ->where('empleado_id', $emp->id)
+                ->when($empresaId, fn ($q) => $q->where('empresa_id', $empresaId))
+                ->when($request->tipo_marcaje, fn ($q, $t) => $q->where('tipo_marcaje', $t))
+                ->when($request->origen, fn ($q, $o) => $q->where('origen', $o))
+                ->when($request->fecha_inicio, fn ($q, $f) => $q->whereDate('fecha_hora', '>=', $f))
+                ->when($request->fecha_fin, fn ($q, $f) => $q->whereDate('fecha_hora', '<=', $f))
+                ->latest('fecha_hora')
+                ->get()
+                ->map(function ($m) {
+                    $m->fecha_hora_iso = Carbon::parse($m->fecha_hora)->toIso8601String();
+                    return $m;
+                });
+
+            $ultimoMarcaje = $historialMarcajes->first();
+
+            $tiempoRestanteInfo = null;
+            if ($ultimoMarcaje) {
+                $esAlmuerzo = $ultimoMarcaje->tipo_marcaje === 'salida_comida';
+                $esDescanso = $ultimoMarcaje->tipo_marcaje === 'descanso_inicio';
+                $esSalida = $ultimoMarcaje->tipo_marcaje === 'salida';
+
+                if ($esAlmuerzo || $esDescanso) {
+                    $nombreConcepto = $esAlmuerzo ? 'Almuerzo' : 'Descanso';
+                    $limiteMinutos = $esAlmuerzo 
+                        ? ($emp->turnoLaboral?->minutos_descanso ?? 60)
+                        : $minutosLeySilla;
+
+                    $tiposRegreso = $esAlmuerzo 
+                        ? ['entrada_comida', 'descanso_fin', 'salida', 'entrada_extraordinaria']
+                        : ['descanso_fin', 'entrada_comida', 'salida', 'entrada_extraordinaria'];
+
+                    $regreso = AsistenciaMarcaje::where('empleado_id', $emp->id)
+                        ->where('fecha_hora', '>', $ultimoMarcaje->fecha_hora)
+                        ->whereDate('fecha_hora', Carbon::parse($ultimoMarcaje->fecha_hora)->toDateString())
+                        ->whereIn('tipo_marcaje', $tiposRegreso)
+                        ->orderBy('fecha_hora', 'asc')
+                        ->first();
+
+                    if ($regreso) {
+                        $duracion = (int) round(Carbon::parse($ultimoMarcaje->fecha_hora)->diffInMinutes(Carbon::parse($regreso->fecha_hora)));
+                        $tiempoRestanteInfo = [
+                            'estado' => 'completado',
+                            'concepto' => $nombreConcepto,
+                            'texto' => "Duración: {$duracion} min",
+                            'subtexto' => "Límite {$nombreConcepto}: {$limiteMinutos} min",
+                            'minutos_restantes' => 0,
+                            'limite_minutos' => $limiteMinutos,
+                            'duracion_real' => $duracion,
+                        ];
+                    } else {
+                        $transcurridos = (int) round(Carbon::parse($ultimoMarcaje->fecha_hora)->diffInMinutes($now));
+                        $restantes = $limiteMinutos - $transcurridos;
+
+                        if ($restantes > 0) {
+                            $tiempoRestanteInfo = [
+                                'estado' => 'en_curso',
+                                'concepto' => $nombreConcepto,
+                                'texto' => "{$restantes} min restantes",
+                                'subtexto' => "{$nombreConcepto}: {$limiteMinutos} min permitidos",
+                                'minutos_restantes' => $restantes,
+                                'limite_minutos' => $limiteMinutos,
+                                'transcurridos' => $transcurridos,
+                            ];
+                        } else {
+                            $exceso = abs($restantes);
+                            $tiempoRestanteInfo = [
+                                'estado' => 'excedido',
+                                'concepto' => $nombreConcepto,
+                                'texto' => "Excedido por {$exceso} min",
+                                'subtexto' => "Límite {$nombreConcepto}: {$limiteMinutos} min",
+                                'minutos_restantes' => $restantes,
+                                'limite_minutos' => $limiteMinutos,
+                                'transcurridos' => $transcurridos,
+                            ];
+                        }
+                    }
+                } elseif ($esSalida) {
+                    $tiempoRestanteInfo = [
+                        'estado' => 'completado',
+                        'concepto' => 'Jornada',
+                        'texto' => 'Jornada Finalizada',
+                        'subtexto' => 'Marcaje de salida registrado',
+                        'minutos_restantes' => 0,
+                        'limite_minutos' => 0,
+                    ];
+                } else {
+                    // El empleado está laborando (entrada, descanso_fin, entrada_comida, entrada_extraordinaria)
+                    // Se calcula el conteo regresivo hasta el próximo llamado a descanso según el intervalo configurado
+                    $transcurridos = (int) round(Carbon::parse($ultimoMarcaje->fecha_hora)->diffInMinutes($now));
+                    $restantes = $intervaloMinutosLeySilla - $transcurridos;
+                    $intervaloFormatted = number_format($intervaloHorasLeySilla, 2);
+
+                    if ($restantes > 0) {
+                        $tiempoRestanteInfo = [
+                            'estado' => 'en_curso',
+                            'concepto' => 'Próximo Descanso',
+                            'texto' => "{$restantes} min para descanso",
+                            'subtexto' => "Próximo descanso (Cada {$intervaloFormatted}h continuas)",
+                            'minutos_restantes' => $restantes,
+                            'limite_minutos' => $intervaloMinutosLeySilla,
+                            'transcurridos' => $transcurridos,
+                        ];
+                    } else {
+                        $exceso = abs($restantes);
+                        $tiempoRestanteInfo = [
+                            'estado' => 'excedido',
+                            'concepto' => 'Próximo Descanso',
+                            'texto' => "Llamado a descanso pendiente ({$exceso} min)",
+                            'subtexto' => "Superado intervalo de {$intervaloFormatted}h continuas",
+                            'minutos_restantes' => $restantes,
+                            'limite_minutos' => $intervaloMinutosLeySilla,
+                            'transcurridos' => $transcurridos,
+                        ];
+                    }
+                }
+            }
+
+            $emp->ultimo_marcaje = $ultimoMarcaje;
+            $emp->tiempo_restante_info = $tiempoRestanteInfo;
+            $emp->historial_marcajes = $historialMarcajes;
+            $emp->conteo_eventos = [
+                'total' => $historialMarcajes->count(),
+                'entradas' => $historialMarcajes->where('tipo_marcaje', 'entrada')->count(),
+                'descansos' => $historialMarcajes->whereIn('tipo_marcaje', ['salida_comida', 'entrada_comida', 'descanso_inicio', 'descanso_fin'])->count(),
+                'salidas' => $historialMarcajes->where('tipo_marcaje', 'salida')->count(),
+            ];
+
+            return $emp;
+        });
 
         return Inertia::render('admin/asistencia/Bitacora', [
-            'marcajes' => $marcajes,
+            'marcajes' => $empleadosPaginados,
             'stats' => $stats,
             'filters' => $request->only('search', 'tipo_marcaje', 'origen', 'fecha_inicio', 'fecha_fin', 'perPage'),
         ]);

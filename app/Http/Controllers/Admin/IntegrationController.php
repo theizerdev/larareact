@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\Empresa;
 use App\Models\Pais;
 use App\Services\ControlAccesoService;
+use App\Services\JaakService;
 use App\Services\WhatsAppService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Artisan;
@@ -525,6 +526,88 @@ class IntegrationController extends Controller
         return back()->with('notification', [
             'type' => 'error',
             'message' => __('Error: ').$error,
+        ]);
+    }
+
+    /**
+     * Muestra el panel de Validaciones (identidad/KYC) para la empresa del usuario.
+     */
+    public function validacionesIndex(Request $request)
+    {
+        $empresa = $request->user()->empresa;
+
+        if (! $empresa) {
+            return redirect()->route('dashboard')->with('notification', [
+                'type' => 'error',
+                'message' => __('No active company associated with your user.'),
+            ]);
+        }
+
+        return inertia('admin/integrations/validaciones', [
+            'jaak_api_key' => $empresa->jaak_api_key,
+            'jaak_environment' => $empresa->jaak_environment ?? 'sandbox',
+            'jaak_active' => (bool) $empresa->jaak_active,
+        ]);
+    }
+
+    /**
+     * Actualiza la configuración de JAAK (KYC) de la empresa del usuario.
+     */
+    public function updateJaak(Request $request)
+    {
+        $empresa = $request->user()->empresa;
+
+        if (! $empresa) {
+            return back()->with('notification', [
+                'type' => 'error',
+                'message' => __('No active company associated with your user.'),
+            ]);
+        }
+
+        $validated = $request->validate([
+            'jaak_api_key' => 'nullable|string|max:4000',
+            'jaak_environment' => 'required|in:sandbox,production',
+            'jaak_active' => 'required|boolean',
+        ]);
+
+        $empresa->update([
+            'jaak_api_key' => $validated['jaak_api_key'] ? trim($validated['jaak_api_key']) : null,
+            'jaak_environment' => $validated['jaak_environment'],
+            'jaak_active' => $validated['jaak_active'],
+        ]);
+
+        return back()->with('notification', [
+            'type' => 'success',
+            'message' => __('JAAK integration settings updated successfully.'),
+        ]);
+    }
+
+    /**
+     * Prueba la conexión con JAAK usando las credenciales guardadas.
+     */
+    public function jaakTest(Request $request)
+    {
+        $empresa = $request->user()->empresa;
+
+        if (! $empresa) {
+            return back()->with('notification', [
+                'type' => 'error',
+                'message' => __('No active company associated with your user.'),
+            ]);
+        }
+
+        if (empty($empresa->jaak_api_key)) {
+            return back()->with('notification', [
+                'type' => 'error',
+                'message' => __('Please configure and save the App Key before testing the connection.'),
+            ]);
+        }
+
+        $result = (new JaakService($empresa))->testConnection();
+
+        return back()->with('notification', [
+            'type' => $result['success'] ? 'success' : 'error',
+            'message' => $result['message'],
         ]);
     }
 

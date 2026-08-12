@@ -25,6 +25,8 @@ class DatabaseSeeder extends Seeder
             UsersSeeder::class,
             DepartamentoDriscollsSeeder::class,
             CargoDriscollsSeeder::class,
+            ResponsableDriscollsSeeder::class,
+            EmpleadoDriscollsSeeder::class,
             TipoServicioSeeder::class,
         ]);
     }

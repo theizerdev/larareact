@@ -15,6 +15,7 @@ import {
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 
@@ -46,6 +47,7 @@ interface ResumenSemanal {
     monto_festivos: string;
     monto_total_pagar: string;
     empleado: Empleado;
+    semaforo?: { color: string; label: string };
 }
 
 interface Props {
@@ -66,6 +68,18 @@ interface Props {
 export default function CalculoNominaIndex({ resumenesSemanales, stats, filters }: Props) {
     const [fechaInicio, setFechaInicio] = useState(filters.fecha_inicio);
     const [fechaFin, setFechaFin] = useState(filters.fecha_fin);
+    const [empleadoId, setEmpleadoId] = useState('todos');
+
+    const empleados = Array.from(
+        new Map(resumenesSemanales.map(r => [r.empleado.id, r.empleado])).values()
+    );
+
+    const filteredResumenes = resumenesSemanales.filter(r => {
+        if (empleadoId !== 'todos' && r.empleado_id.toString() !== empleadoId) {
+            return false;
+        }
+        return true;
+    });
 
     const handleFilter = () => {
         router.get('/admin/asistencia/calculo-nomina', {
@@ -200,7 +214,7 @@ export default function CalculoNominaIndex({ resumenesSemanales, stats, filters 
                             Desglose de Asistencia y Remuneraciones por Empleado
                         </CardTitle>
                         <Badge variant="outline">
-                            {resumenesSemanales.length} Registros
+                            {filteredResumenes.length} Registros
                         </Badge>
                     </CardHeader>
                     <CardContent className="p-0">
@@ -221,14 +235,14 @@ export default function CalculoNominaIndex({ resumenesSemanales, stats, filters 
                                     </tr>
                                 </thead>
                                 <tbody className="divide-y">
-                                    {resumenesSemanales.length === 0 ? (
+                                    {filteredResumenes.length === 0 ? (
                                         <tr>
                                             <td colSpan={10} className="px-4 py-8 text-center text-muted-foreground">
                                                 No hay datos procesados para el período seleccionado. Haz clic en "Procesar Horas del Período" para ejecutar el cálculo.
                                             </td>
                                         </tr>
                                     ) : (
-                                        resumenesSemanales.map((r: any) => {
+                                        filteredResumenes.map((r: any) => {
                                             const totalH = (parseFloat(r.total_horas_ordinarias || 0) + parseFloat(r.total_horas_extra_dobles || 0) + parseFloat(r.total_horas_extra_triples || 0));
                                             let semaforoBadgeClass = "bg-emerald-500/20 text-emerald-700 dark:text-emerald-300 border-emerald-500/40";
                                             let semaforoText = `Verde (${totalH.toFixed(1)}h)`;
