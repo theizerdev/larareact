@@ -20,6 +20,12 @@ Route::middleware(['verified'])->group(function () {
     Route::post('reparaciones/{reparacion}/estado', [ReparacionController::class, 'updateEstado'])
         ->name('reparaciones.update-estado');
     Route::post('reparaciones/{reparacion}/update-estado', [ReparacionController::class, 'updateEstado']);
+    Route::post('reparaciones/{reparacion}/update-datos', [ReparacionController::class, 'updateDatos'])
+        ->name('reparaciones.update-datos');
+    Route::post('reparaciones/{reparacion}/add-foto', [ReparacionController::class, 'uploadFotoProceso'])
+        ->name('reparaciones.add-foto');
+    Route::delete('reparaciones/{reparacion}/fotos/{foto}', [ReparacionController::class, 'deleteFoto'])
+        ->name('reparaciones.delete-foto');
     Route::post('reparaciones/{reparacion}/items', [ReparacionController::class, 'addItem'])
         ->name('reparaciones.add-item');
     Route::delete('reparaciones/{reparacion}/items/{item}', [ReparacionController::class, 'removeItem'])

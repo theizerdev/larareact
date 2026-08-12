@@ -30,6 +30,7 @@ import {
     X,
     Upload,
     RefreshCw,
+    Pencil,
 } from 'lucide-react';
 import React, { useState, useRef, useEffect } from 'react';
 import { QRCodeSVG } from '@/components/qr-code-svg';
@@ -125,11 +126,24 @@ interface ProductoRepuesto {
     modelo?: { id: number; nombre_comercial: string };
 }
 
+interface MarcaItem {
+    id: number;
+    nombre: string;
+    modelos?: { id: number; nombre_comercial: string; codigo_modelo?: string }[];
+}
+
+interface CategoriaItem {
+    id: number;
+    nombre: string;
+}
+
 interface Props {
     orden: Orden;
     productosRepuestos: ProductoRepuesto[];
     tecnicos: { id: number; name: string }[];
     currencySymbol: string;
+    marcas?: MarcaItem[];
+    categorias?: CategoriaItem[];
 }
 
 const DOT_COORDS_VIEW: Record<number, { x: number; y: number }> = {
@@ -529,6 +543,151 @@ export default function ShowReparacion({ orden, productosRepuestos = [], tecnico
 
     const [isPrintModalOpen, setIsPrintModalOpen] = useState(false);
     const [printType, setPrintType] = useState<'cliente' | 'tecnico'>('cliente');
+
+    // MODAL DE EDICIÓN / CORRECCIÓN DE DATOS DE LA ORDEN
+    const [openEditDatosModal, setOpenEditDatosModal] = useState(false);
+    const [editDatosForm, setEditDatosForm] = useState({
+        cliente_nombre: orden.cliente_nombre || '',
+        cliente_telefono: orden.cliente_telefono || '',
+        tipo_dispositivo: orden.tipo_dispositivo || '',
+        marca_nombre: orden.marca_nombre || '',
+        modelo_nombre: orden.modelo_nombre || '',
+        color: orden.color || '',
+        imei_serie: orden.imei_serie || '',
+        contrasena_patron: orden.contrasena_patron || '',
+        descripcion_falla: orden.descripcion_falla || '',
+        observaciones_fisicas: orden.observaciones_fisicas || '',
+        tecnico_id: orden.tecnico?.id ? String(orden.tecnico.id) : (orden as any).tecnico_id ? String((orden as any).tecnico_id) : '',
+    });
+    const [isSavingDatos, setIsSavingDatos] = useState(false);
+
+    const handleOpenEditDatosModal = () => {
+        setEditDatosForm({
+            cliente_nombre: orden.cliente_nombre || '',
+            cliente_telefono: orden.cliente_telefono || '',
+            tipo_dispositivo: orden.tipo_dispositivo || '',
+            marca_nombre: orden.marca_nombre || '',
+            modelo_nombre: orden.modelo_nombre || '',
+            color: orden.color || '',
+            imei_serie: orden.imei_serie || '',
+            contrasena_patron: orden.contrasena_patron || '',
+            descripcion_falla: orden.descripcion_falla || '',
+            observaciones_fisicas: orden.observaciones_fisicas || '',
+            tecnico_id: orden.tecnico?.id ? String(orden.tecnico.id) : (orden as any).tecnico_id ? String((orden as any).tecnico_id) : '',
+        });
+        setOpenEditDatosModal(true);
+    };
+
+    const handleSaveEditDatos = (e: React.FormEvent) => {
+        e.preventDefault();
+        setIsSavingDatos(true);
+        router.post(`/admin/reparaciones/${orden.id}/update-datos`, editDatosForm, {
+            onSuccess: () => {
+                notifySuccess(__('Datos de la orden actualizados correctamente.'));
+                setOpenEditDatosModal(false);
+            },
+            onError: () => {
+                notifyError(__('Error al actualizar los datos de la orden.'));
+            },
+            onFinish: () => setIsSavingDatos(false),
+        });
+    };
+
+    // FOTOS Y EVIDENCIAS DE REPARACIÓN EN TALLER (PROCESO TÉCNICO)
+    const [openAddFotoModal, setOpenAddFotoModal] = useState(false);
+    const [fotoDescripcion, setFotoDescripcion] = useState('');
+    const [newFotoDataUrl, setNewFotoDataUrl] = useState<string | null>(null);
+    const [isUploadingFoto, setIsUploadingFoto] = useState(false);
+    const [isRepairCameraActive, setIsRepairCameraActive] = useState(false);
+    const [repairCameraStream, setRepairCameraStream] = useState<MediaStream | null>(null);
+    const repairVideoRef = useRef<HTMLVideoElement | null>(null);
+    const repairCanvasRef = useRef<HTMLCanvasElement | null>(null);
+
+    const startRepairCamera = async () => {
+        setIsRepairCameraActive(true);
+        try {
+            const stream = await navigator.mediaDevices.getUserMedia({
+                video: { facingMode: 'environment', width: { ideal: 1280 }, height: { ideal: 720 } },
+                audio: false,
+            });
+            setRepairCameraStream(stream);
+            if (repairVideoRef.current) {
+                repairVideoRef.current.srcObject = stream;
+                repairVideoRef.current.play();
+            }
+        } catch {
+            notifyError(__('No se pudo acceder a la cámara. Seleccione una imagen de sus archivos.'));
+            setIsRepairCameraActive(false);
+        }
+    };
+
+    const stopRepairCamera = () => {
+        if (repairCameraStream) {
+            repairCameraStream.getTracks().forEach((track) => track.stop());
+            setRepairCameraStream(null);
+        }
+        setIsRepairCameraActive(false);
+    };
+
+    const captureRepairSnapshot = () => {
+        if (repairVideoRef.current && repairCanvasRef.current) {
+            const video = repairVideoRef.current;
+            const canvas = repairCanvasRef.current;
+            canvas.width = video.videoWidth || 1280;
+            canvas.height = video.videoHeight || 720;
+            const ctx = canvas.getContext('2d');
+            if (ctx) {
+                ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+                const dataUrl = canvas.toDataURL('image/jpeg', 0.85);
+                setNewFotoDataUrl(dataUrl);
+                stopRepairCamera();
+            }
+        }
+    };
+
+    const handleRepairFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
+        if (!file) return;
+        const reader = new FileReader();
+        reader.onloadend = () => {
+            setNewFotoDataUrl(reader.result as string);
+        };
+        reader.readAsDataURL(file);
+    };
+
+    const handleSaveRepairFoto = (e: React.FormEvent) => {
+        e.preventDefault();
+        if (!newFotoDataUrl) {
+            notifyError(__('Por favor tome o seleccione una fotografía primero.'));
+            return;
+        }
+        setIsUploadingFoto(true);
+        router.post(`/admin/reparaciones/${orden.id}/add-foto`, {
+            foto: newFotoDataUrl,
+            descripcion: fotoDescripcion || __('Evidencia de reparación en taller'),
+        }, {
+            onSuccess: () => {
+                notifySuccess(__('Foto de reparación guardada exitosamente.'));
+                setOpenAddFotoModal(false);
+                setNewFotoDataUrl(null);
+                setFotoDescripcion('');
+                stopRepairCamera();
+            },
+            onError: () => {
+                notifyError(__('Error al guardar la foto.'));
+            },
+            onFinish: () => setIsUploadingFoto(false),
+        });
+    };
+
+    const handleDeleteFoto = (fotoId: number) => {
+        if (confirm(__('¿Desea eliminar esta evidencia fotográfica?'))) {
+            router.delete(`/admin/reparaciones/${orden.id}/fotos/${fotoId}`, {
+                onSuccess: () => notifySuccess(__('Foto eliminada.')),
+                onError: () => notifyError(__('Error al eliminar la foto.')),
+            });
+        }
+    };
 
     useEffect(() => {
         const waUrl = pageProps.flash?.whatsapp_url || pageProps.whatsapp_url;
@@ -1419,6 +1578,11 @@ export default function ShowReparacion({ orden, productosRepuestos = [], tecnico
                                 </Button>
                             )}
 
+                            <Button size="sm" onClick={handleOpenEditDatosModal} variant="outline" className="h-10 gap-2 text-xs font-bold bg-purple-500/20 hover:bg-purple-500/30 border-purple-400/40 text-purple-100">
+                                <Pencil className="w-4 h-4 text-purple-300" />
+                                {__('Editar Datos')}
+                            </Button>
+
                             <Button size="sm" onClick={() => setIsPrintModalOpen(true)} variant="outline" className="h-10 gap-2 text-xs font-bold bg-white/10 hover:bg-white/20 border-white/20 text-white">
                                 <Printer className="w-4 h-4 text-blue-400" />
                                 {__('Imprimir Ticket')}
@@ -1570,9 +1734,9 @@ export default function ShowReparacion({ orden, productosRepuestos = [], tecnico
                         )}
                     >
                         <Camera className="w-4 h-4" />
-                        {__('Evidencias Fotográficas (Recepción)')}
+                        {__('Evidencias Fotográficas (Recepción & Taller)')}
                         <Badge variant="secondary" className="ml-1 text-[10px] h-4 px-1.5 bg-purple-100 dark:bg-purple-950 text-purple-800 dark:text-purple-200">
-                            {orden.fotos?.length || 0} / 4
+                            {orden.fotos?.length || 0}
                         </Badge>
                     </button>
 
@@ -1627,9 +1791,15 @@ export default function ShowReparacion({ orden, productosRepuestos = [], tecnico
                                 {/* 1. DATOS DEL CLIENTE */}
                                 <Card className="border-slate-200 dark:border-slate-800 shadow-sm">
                                     <CardHeader className="bg-slate-50 dark:bg-slate-900/50 border-b border-slate-100 dark:border-slate-800 py-3">
-                                        <CardTitle className="text-sm font-bold flex items-center gap-2 text-slate-800 dark:text-slate-200">
-                                            <User className="w-4 h-4 text-purple-600" />
-                                            {__('1. Datos del Cliente')}
+                                        <CardTitle className="text-sm font-bold flex items-center justify-between text-slate-800 dark:text-slate-200 w-full">
+                                            <span className="flex items-center gap-2">
+                                                <User className="w-4 h-4 text-purple-600" />
+                                                {__('1. Datos del Cliente')}
+                                            </span>
+                                            <Button variant="ghost" size="sm" onClick={handleOpenEditDatosModal} className="h-7 text-xs text-purple-600 font-bold hover:bg-purple-50 dark:hover:bg-purple-950/50">
+                                                <Pencil className="w-3.5 h-3.5 mr-1" />
+                                                {__('Editar Datos')}
+                                            </Button>
                                         </CardTitle>
                                     </CardHeader>
                                     <CardContent className="p-5 text-xs">
@@ -1655,12 +1825,18 @@ export default function ShowReparacion({ orden, productosRepuestos = [], tecnico
                                 {/* 2. TIPO DE DISPOSITIVO, MARCA, MODELO E IMEI */}
                                 <Card className="border-slate-200 dark:border-slate-800 shadow-sm">
                                     <CardHeader className="bg-slate-50 dark:bg-slate-900/50 border-b border-slate-100 dark:border-slate-800 py-3">
-                                        <CardTitle className="text-sm font-bold flex items-center justify-between text-slate-800 dark:text-slate-200">
+                                        <CardTitle className="text-sm font-bold flex items-center justify-between text-slate-800 dark:text-slate-200 w-full">
                                             <span className="flex items-center gap-2">
                                                 <Smartphone className="w-4 h-4 text-purple-600" />
                                                 {__('2. Tipo y Datos del Dispositivo')}
                                             </span>
-                                            <Badge variant="outline" className="font-mono text-[11px] bg-purple-50 dark:bg-purple-950 text-purple-700 border-purple-200">{orden.tipo_dispositivo || __('Smartphone')}</Badge>
+                                            <div className="flex items-center gap-2">
+                                                <Badge variant="outline" className="font-mono text-[11px] bg-purple-50 dark:bg-purple-950 text-purple-700 border-purple-200">{orden.tipo_dispositivo || __('Smartphone')}</Badge>
+                                                <Button variant="ghost" size="sm" onClick={handleOpenEditDatosModal} className="h-7 text-xs text-purple-600 font-bold hover:bg-purple-50 dark:hover:bg-purple-950/50">
+                                                    <Pencil className="w-3.5 h-3.5 mr-1" />
+                                                    {__('Editar Datos')}
+                                                </Button>
+                                            </div>
                                         </CardTitle>
                                     </CardHeader>
                                     <CardContent className="p-5 space-y-5 text-xs">
@@ -2440,51 +2616,156 @@ export default function ShowReparacion({ orden, productosRepuestos = [], tecnico
 
                         {/* TAB 3: EVIDENCIAS FOTOGRÁFICAS */}
                         {activeTab === 'fotos' && (
-                            <Card className="border-slate-200 dark:border-slate-800 shadow-sm animate-in fade-in duration-300">
-                                <CardHeader className="bg-slate-50 dark:bg-slate-900/50 border-b border-slate-100 dark:border-slate-800 py-3">
-                                    <CardTitle className="text-sm font-bold flex items-center justify-between text-slate-800 dark:text-slate-200">
-                                        <span className="flex items-center gap-2">
-                                            <Camera className="w-4 h-4 text-purple-600" />
-                                            {__('Evidencias Fotográficas de Recepción (4 Ángulos)')}
-                                        </span>
-                                        <Badge variant="outline" className="font-mono text-xs">
-                                            {orden.fotos?.length || 0} / 4 {__('Capturadas')}
-                                        </Badge>
-                                    </CardTitle>
-                                </CardHeader>
-                                <CardContent className="p-5">
-                                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-                                        {fotoSlots.map((item) => {
-                                            const fotoObj = orden.fotos?.find((f: any) => f.angulo === item.key);
-                                            const imgUrl = fotoObj ? fotoObj.url : (orden.evidencias_fotos as any)?.[item.key];
-                                            return (
-                                                <div key={item.key} className="flex flex-col items-center p-3 rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-950 text-center gap-2 shadow-sm hover:border-purple-300 transition-colors">
-                                                    <span className="text-xs font-bold text-slate-800 dark:text-slate-200">{item.label}</span>
-                                                    <span className="text-[10px] text-slate-400">{item.desc}</span>
+                            <div className="space-y-6 animate-in fade-in duration-300">
+                                {/* SECCIÓN 1: EVIDENCIAS DE RECEPCIÓN */}
+                                <Card className="border-slate-200 dark:border-slate-800 shadow-sm">
+                                    <CardHeader className="bg-slate-50 dark:bg-slate-900/50 border-b border-slate-100 dark:border-slate-800 py-3">
+                                        <CardTitle className="text-sm font-bold flex items-center justify-between text-slate-800 dark:text-slate-200">
+                                            <span className="flex items-center gap-2">
+                                                <Camera className="w-4 h-4 text-purple-600" />
+                                                {__('Evidencias Fotográficas de Recepción (4 Ángulos)')}
+                                            </span>
+                                            <Badge variant="outline" className="font-mono text-xs">
+                                                {orden.fotos?.filter((f: any) => ['frente', 'trasero', 'borde_sup', 'borde_inf', 'tapa_trasera', 'borde_superior', 'borde_inferior'].includes(f.angulo)).length || 0} / 4 {__('Capturadas')}
+                                            </Badge>
+                                        </CardTitle>
+                                    </CardHeader>
+                                    <CardContent className="p-5">
+                                        <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+                                            {fotoSlots.map((item) => {
+                                                const fotoObj = orden.fotos?.find((f: any) => f.angulo === item.key);
+                                                const imgUrl = fotoObj ? fotoObj.url : (orden.evidencias_fotos as any)?.[item.key];
+                                                return (
+                                                    <div key={item.key} className="flex flex-col items-center p-3 rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-950 text-center gap-2 shadow-sm hover:border-purple-300 transition-colors">
+                                                        <span className="text-xs font-bold text-slate-800 dark:text-slate-200">{item.label}</span>
+                                                        <span className="text-[10px] text-slate-400">{item.desc}</span>
 
-                                                    {imgUrl ? (
-                                                        <div
-                                                            onClick={() => setPreviewPhoto({ url: imgUrl, label: item.label })}
-                                                            className="w-full h-40 rounded-xl overflow-hidden border border-purple-200 dark:border-purple-900 block group relative cursor-pointer shadow-inner"
+                                                        {imgUrl ? (
+                                                            <div
+                                                                onClick={() => setPreviewPhoto({ url: imgUrl, label: item.label })}
+                                                                className="w-full h-40 rounded-xl overflow-hidden border border-purple-200 dark:border-purple-900 block group relative cursor-pointer shadow-inner"
+                                                            >
+                                                                <img src={imgUrl} alt={item.label} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-300" />
+                                                                <div className="absolute inset-0 bg-slate-950/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center text-white text-xs font-bold gap-1 backdrop-blur-[2px]">
+                                                                    <Eye className="w-4 h-4" />
+                                                                    {__('Ampliar')}
+                                                                </div>
+                                                            </div>
+                                                        ) : (
+                                                            <div className="w-full h-40 rounded-xl border-2 border-dashed border-slate-200 dark:border-slate-800 flex flex-col items-center justify-center text-slate-400 text-xs bg-slate-50 dark:bg-slate-900/40 gap-1">
+                                                                <Camera className="w-6 h-6 text-slate-300" />
+                                                                <span className="font-semibold text-[11px]">{__('Sin Fotografía')}</span>
+                                                            </div>
+                                                        )}
+                                                    </div>
+                                                );
+                                            })}
+                                        </div>
+                                    </CardContent>
+                                </Card>
+
+                                {/* SECCIÓN 2: EVIDENCIAS DE PROCESO DE REPARACIÓN Y TRABAJO TÉCNICO */}
+                                <Card className="border-slate-200 dark:border-slate-800 shadow-sm">
+                                    <CardHeader className="bg-slate-50 dark:bg-slate-900/50 border-b border-slate-100 dark:border-slate-800 py-3">
+                                        <CardTitle className="text-sm font-bold flex items-center justify-between text-slate-800 dark:text-slate-200 w-full">
+                                            <span className="flex items-center gap-2">
+                                                <Sparkles className="w-4 h-4 text-purple-600" />
+                                                {__('Evidencias Fotográficas del Trabajo y Proceso Técnico (En Taller)')}
+                                            </span>
+                                            <Button
+                                                size="sm"
+                                                onClick={() => {
+                                                    setNewFotoDataUrl(null);
+                                                    setFotoDescripcion('');
+                                                    setOpenAddFotoModal(true);
+                                                }}
+                                                className="h-8 gap-1.5 text-xs font-bold bg-purple-600 hover:bg-purple-700 text-white shadow-sm"
+                                            >
+                                                <Plus className="w-4 h-4" />
+                                                {__('Capturar / Subir Foto de Reparación')}
+                                            </Button>
+                                        </CardTitle>
+                                    </CardHeader>
+                                    <CardContent className="p-5">
+                                        {(() => {
+                                            const fotosProceso = (orden.fotos || []).filter((f: any) =>
+                                                !['frente', 'trasero', 'borde_sup', 'borde_inf', 'tapa_trasera', 'borde_superior', 'borde_inferior'].includes(f.angulo)
+                                            );
+                                            if (fotosProceso.length === 0) {
+                                                return (
+                                                    <div className="p-8 text-center border-2 border-dashed border-slate-200 dark:border-slate-800 rounded-2xl bg-slate-50/50 dark:bg-slate-900/20 space-y-3">
+                                                        <div className="w-12 h-12 rounded-full bg-purple-100 dark:bg-purple-950/60 text-purple-600 flex items-center justify-center mx-auto">
+                                                            <Camera className="w-6 h-6" />
+                                                        </div>
+                                                        <div className="space-y-1">
+                                                            <p className="font-bold text-slate-800 dark:text-slate-200 text-xs">
+                                                                {__('Aún no hay fotos del proceso de reparación registradas')}
+                                                            </p>
+                                                            <p className="text-[11px] text-slate-400 max-w-md mx-auto">
+                                                                {__('El técnico puede tomar fotos en tiempo real con la cámara o subir evidencias de las piezas reemplazadas, componentes intervenidos o pruebas finalizadas.')}
+                                                            </p>
+                                                        </div>
+                                                        <Button
+                                                            size="sm"
+                                                            onClick={() => {
+                                                                setNewFotoDataUrl(null);
+                                                                setFotoDescripcion('');
+                                                                setOpenAddFotoModal(true);
+                                                            }}
+                                                            className="h-8 gap-1.5 text-xs font-bold bg-purple-600 hover:bg-purple-700 text-white"
                                                         >
-                                                            <img src={imgUrl} alt={item.label} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-300" />
-                                                            <div className="absolute inset-0 bg-slate-950/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center text-white text-xs font-bold gap-1 backdrop-blur-[2px]">
-                                                                <Eye className="w-4 h-4" />
-                                                                {__('Ampliar')}
+                                                            <Plus className="w-3.5 h-3.5" />
+                                                            {__('Agregar Primera Foto de Reparación')}
+                                                        </Button>
+                                                    </div>
+                                                );
+                                            }
+
+                                            return (
+                                                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                                                    {fotosProceso.map((foto: any) => (
+                                                        <div key={foto.id} className="flex flex-col p-3 rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-950 gap-2 shadow-sm relative group">
+                                                            <div className="flex items-center justify-between">
+                                                                <Badge variant="secondary" className="text-[10px] bg-purple-100 dark:bg-purple-950 text-purple-700 font-bold">
+                                                                    🛠️ {__('Proceso Técnico')}
+                                                                </Badge>
+                                                                <button
+                                                                    type="button"
+                                                                    onClick={() => handleDeleteFoto(foto.id)}
+                                                                    className="text-slate-400 hover:text-rose-600 p-1 rounded transition-colors"
+                                                                    title={__('Eliminar foto')}
+                                                                >
+                                                                    <Trash2 className="w-3.5 h-3.5" />
+                                                                </button>
+                                                            </div>
+
+                                                            <div
+                                                                onClick={() => setPreviewPhoto({ url: foto.url, label: foto.descripcion || __('Foto de Reparación') })}
+                                                                className="w-full h-48 rounded-xl overflow-hidden border border-purple-100 dark:border-purple-900 block group relative cursor-pointer shadow-inner bg-slate-900"
+                                                            >
+                                                                <img src={foto.url} alt={foto.descripcion} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" />
+                                                                <div className="absolute inset-0 bg-slate-950/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center text-white text-xs font-bold gap-1 backdrop-blur-[2px]">
+                                                                    <Eye className="w-4 h-4" />
+                                                                    {__('Ampliar')}
+                                                                </div>
+                                                            </div>
+
+                                                            <div className="space-y-1 pt-1">
+                                                                <p className="text-xs font-bold text-slate-800 dark:text-slate-200 line-clamp-2">
+                                                                    {foto.descripcion || __('Sin descripción')}
+                                                                </p>
+                                                                <span className="text-[10px] text-slate-400 font-mono block">
+                                                                    🕒 {formatDate(foto.created_at)}
+                                                                </span>
                                                             </div>
                                                         </div>
-                                                    ) : (
-                                                        <div className="w-full h-40 rounded-xl border-2 border-dashed border-slate-200 dark:border-slate-800 flex flex-col items-center justify-center text-slate-400 text-xs bg-slate-50 dark:bg-slate-900/40 gap-1">
-                                                            <Camera className="w-6 h-6 text-slate-300" />
-                                                            <span className="font-semibold text-[11px]">{__('Sin Fotografía')}</span>
-                                                        </div>
-                                                    )}
+                                                    ))}
                                                 </div>
                                             );
-                                        })}
-                                    </div>
-                                </CardContent>
-                            </Card>
+                                        })()}
+                                    </CardContent>
+                                </Card>
+                            </div>
                         )}
 
                         {/* TAB 4: LÍNEA DE TIEMPO / HISTORIAL */}
@@ -3838,6 +4119,260 @@ export default function ShowReparacion({ orden, productosRepuestos = [], tecnico
                     )}
                 </div>
             </div>
+            {/* MODAL DIALOG PARA EDITAR/CORREGIR DATOS DE LA ORDEN */}
+            <Dialog open={openEditDatosModal} onOpenChange={setOpenEditDatosModal}>
+                <DialogContent className="sm:max-w-2xl max-h-[90vh] overflow-y-auto">
+                    <DialogHeader>
+                        <DialogTitle className="flex items-center gap-2 text-base font-bold text-slate-900 dark:text-slate-100">
+                            <Pencil className="w-5 h-5 text-purple-600" />
+                            {__('Editar Datos de la Orden (Corrección de Captura)')}
+                        </DialogTitle>
+                    </DialogHeader>
+
+                    <form onSubmit={handleSaveEditDatos} className="space-y-4 py-2 text-xs">
+                        {/* SECCIÓN CLIENTE */}
+                        <div className="bg-slate-50 dark:bg-slate-900/50 p-3.5 rounded-xl space-y-3 border border-slate-100 dark:border-slate-800">
+                            <span className="font-bold text-purple-700 dark:text-purple-300 block text-xs">1. Datos del Cliente</span>
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                                <div>
+                                    <Label className="text-xs font-semibold">{__('Nombre del Cliente *')}</Label>
+                                    <Input
+                                        value={editDatosForm.cliente_nombre}
+                                        onChange={(e) => setEditDatosForm({ ...editDatosForm, cliente_nombre: e.target.value })}
+                                        className="text-xs h-9 mt-1 font-medium"
+                                        required
+                                    />
+                                </div>
+                                <div>
+                                    <Label className="text-xs font-semibold">{__('Teléfono de Contacto')}</Label>
+                                    <Input
+                                        value={editDatosForm.cliente_telefono}
+                                        onChange={(e) => setEditDatosForm({ ...editDatosForm, cliente_telefono: e.target.value })}
+                                        className="text-xs h-9 mt-1 font-medium"
+                                    />
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* SECCIÓN DISPOSITIVO */}
+                        <div className="bg-slate-50 dark:bg-slate-900/50 p-3.5 rounded-xl space-y-3 border border-slate-100 dark:border-slate-800">
+                            <span className="font-bold text-purple-700 dark:text-purple-300 block text-xs">2. Datos del Dispositivo</span>
+                            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                                <div>
+                                    <Label className="text-xs font-semibold">{__('Tipo / Categoría *')}</Label>
+                                    <Input
+                                        value={editDatosForm.tipo_dispositivo}
+                                        onChange={(e) => setEditDatosForm({ ...editDatosForm, tipo_dispositivo: e.target.value })}
+                                        placeholder={__('ej: Smartphone, Consola, Laptop')}
+                                        className="text-xs h-9 mt-1 font-medium"
+                                        required
+                                    />
+                                </div>
+                                <div>
+                                    <Label className="text-xs font-semibold">{__('Marca del Equipo *')}</Label>
+                                    <Input
+                                        value={editDatosForm.marca_nombre}
+                                        onChange={(e) => setEditDatosForm({ ...editDatosForm, marca_nombre: e.target.value })}
+                                        placeholder={__('ej: Apple, Samsung, Nintendo')}
+                                        className="text-xs h-9 mt-1 font-medium"
+                                        required
+                                    />
+                                </div>
+                                <div>
+                                    <Label className="text-xs font-semibold">{__('Modelo del Equipo *')}</Label>
+                                    <Input
+                                        value={editDatosForm.modelo_nombre}
+                                        onChange={(e) => setEditDatosForm({ ...editDatosForm, modelo_nombre: e.target.value })}
+                                        placeholder={__('ej: iPhone 14, PS5, Galaxy S23')}
+                                        className="text-xs h-9 mt-1 font-medium"
+                                        required
+                                    />
+                                </div>
+                            </div>
+
+                            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                                <div>
+                                    <Label className="text-xs font-semibold">{__('Color / Estética')}</Label>
+                                    <Input
+                                        value={editDatosForm.color}
+                                        onChange={(e) => setEditDatosForm({ ...editDatosForm, color: e.target.value })}
+                                        placeholder={__('ej: Negro, Azul, Rayones leves')}
+                                        className="text-xs h-9 mt-1 font-medium"
+                                    />
+                                </div>
+                                <div>
+                                    <Label className="text-xs font-semibold">{__('IMEI / Serie')}</Label>
+                                    <Input
+                                        value={editDatosForm.imei_serie}
+                                        onChange={(e) => setEditDatosForm({ ...editDatosForm, imei_serie: e.target.value })}
+                                        placeholder={__('5 dígitos o número completo')}
+                                        className="text-xs h-9 mt-1 font-medium"
+                                    />
+                                </div>
+                                <div>
+                                    <Label className="text-xs font-semibold">{__('Clave / Patrón')}</Label>
+                                    <Input
+                                        value={editDatosForm.contrasena_patron}
+                                        onChange={(e) => setEditDatosForm({ ...editDatosForm, contrasena_patron: e.target.value })}
+                                        placeholder={__('Sin contraseña, PIN: 1234, etc.')}
+                                        className="text-xs h-9 mt-1 font-medium"
+                                    />
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* SECCIÓN FALLA Y ASIGNACIÓN */}
+                        <div className="bg-slate-50 dark:bg-slate-900/50 p-3.5 rounded-xl space-y-3 border border-slate-100 dark:border-slate-800">
+                            <span className="font-bold text-purple-700 dark:text-purple-300 block text-xs">3. Falla y Asignación</span>
+                            <div>
+                                <Label className="text-xs font-semibold">{__('Falla Reportada por el Cliente *')}</Label>
+                                <Textarea
+                                    value={editDatosForm.descripcion_falla}
+                                    onChange={(e) => setEditDatosForm({ ...editDatosForm, descripcion_falla: e.target.value })}
+                                    rows={2}
+                                    className="text-xs mt-1 font-medium"
+                                    required
+                                />
+                            </div>
+                            <div>
+                                <Label className="text-xs font-semibold">{__('Observaciones Físicas')}</Label>
+                                <Textarea
+                                    value={editDatosForm.observaciones_fisicas}
+                                    onChange={(e) => setEditDatosForm({ ...editDatosForm, observaciones_fisicas: e.target.value })}
+                                    rows={2}
+                                    className="text-xs mt-1 font-medium"
+                                />
+                            </div>
+                            <div>
+                                <Label className="text-xs font-semibold">{__('Técnico Asignado')}</Label>
+                                <Select
+                                    value={editDatosForm.tecnico_id}
+                                    onValueChange={(val) => setEditDatosForm({ ...editDatosForm, tecnico_id: val })}
+                                >
+                                    <SelectTrigger className="text-xs h-9 mt-1 font-medium">
+                                        <SelectValue placeholder={__('Seleccionar técnico...')} />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        {tecnicos.map((t) => (
+                                            <SelectItem key={t.id} value={String(t.id)} className="text-xs">
+                                                🛠️ {t.name}
+                                            </SelectItem>
+                                        ))}
+                                    </SelectContent>
+                                </Select>
+                            </div>
+                        </div>
+
+                        <div className="flex items-center justify-end gap-2 pt-2 border-t border-slate-100 dark:border-slate-800">
+                            <Button type="button" variant="outline" size="sm" onClick={() => setOpenEditDatosModal(false)} className="h-8 text-xs">
+                                {__('Cancelar')}
+                            </Button>
+                            <Button type="submit" disabled={isSavingDatos} size="sm" className="h-8 text-xs font-bold bg-purple-600 hover:bg-purple-700 text-white">
+                                {isSavingDatos ? __('Guardando...') : __('Guardar Cambios')}
+                            </Button>
+                        </div>
+                    </form>
+                </DialogContent>
+            </Dialog>
+            {/* MODAL PARA AGREGAR / CAPTURAR FOTO DE REPARACIÓN EN TALLER */}
+            <Dialog open={openAddFotoModal} onOpenChange={(open) => {
+                if (!open) stopRepairCamera();
+                setOpenAddFotoModal(open);
+            }}>
+                <DialogContent className="sm:max-w-lg max-h-[90vh] overflow-y-auto">
+                    <DialogHeader>
+                        <DialogTitle className="flex items-center gap-2 text-base font-bold text-slate-900 dark:text-slate-100">
+                            <Camera className="w-5 h-5 text-purple-600" />
+                            {__('Capturar / Subir Evidencia de Reparación')}
+                        </DialogTitle>
+                    </DialogHeader>
+
+                    <form onSubmit={handleSaveRepairFoto} className="space-y-4 py-2 text-xs">
+                        {/* VISOR DE FOTO / VISTA PREVIA O CÁMARA */}
+                        <div className="space-y-3">
+                            <Label className="text-xs font-semibold">{__('Seleccionar Método de Captura *')}</Label>
+
+                            {/* OPCIONES: CÁMARA O ARCHIVO */}
+                            <div className="grid grid-cols-2 gap-2">
+                                <Button
+                                    type="button"
+                                    variant={isRepairCameraActive ? 'default' : 'outline'}
+                                    size="sm"
+                                    onClick={() => {
+                                        setNewFotoDataUrl(null);
+                                        startRepairCamera();
+                                    }}
+                                    className={cn("h-9 text-xs font-bold gap-1.5", isRepairCameraActive && "bg-purple-600 text-white")}
+                                >
+                                    <Camera className="w-4 h-4" />
+                                    {__('Cámara en Vivo')}
+                                </Button>
+
+                                <label className="h-9 border border-slate-200 dark:border-slate-800 rounded-lg flex items-center justify-center gap-1.5 text-xs font-bold cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-900 transition-colors">
+                                    <Upload className="w-4 h-4 text-purple-600" />
+                                    <span>{__('Subir de Galería')}</span>
+                                    <input type="file" accept="image/*" onChange={handleRepairFileUpload} className="hidden" />
+                                </label>
+                            </div>
+
+                            {/* CÁMARA EN VIVO WEBCAM */}
+                            {isRepairCameraActive && (
+                                <div className="space-y-2 border border-purple-200 dark:border-purple-900 p-2 rounded-xl bg-slate-950 text-center">
+                                    <video ref={repairVideoRef} className="w-full h-56 rounded-lg object-cover bg-black" autoPlay playsInline muted />
+                                    <canvas ref={repairCanvasRef} className="hidden" />
+                                    <div className="flex items-center justify-center gap-2 pt-1">
+                                        <Button type="button" size="sm" onClick={captureRepairSnapshot} className="h-8 text-xs font-bold bg-emerald-600 hover:bg-emerald-700 text-white gap-1">
+                                            <Camera className="w-3.5 h-3.5" />
+                                            {__('Tomar Fotografía')}
+                                        </Button>
+                                        <Button type="button" variant="outline" size="sm" onClick={stopRepairCamera} className="h-8 text-xs text-slate-300 border-slate-700 hover:bg-slate-800">
+                                            {__('Cancelar Cámara')}
+                                        </Button>
+                                    </div>
+                                </div>
+                            )}
+
+                            {/* VISTA PREVIA DE LA FOTO CAPTURADA / SELECCIONADA */}
+                            {newFotoDataUrl && (
+                                <div className="relative rounded-xl overflow-hidden border-2 border-purple-500 shadow-md">
+                                    <img src={newFotoDataUrl} alt="Vista previa" className="w-full h-56 object-cover bg-slate-900" />
+                                    <button
+                                        type="button"
+                                        onClick={() => setNewFotoDataUrl(null)}
+                                        className="absolute top-2 right-2 bg-rose-600 text-white rounded-full p-1 shadow-md hover:bg-rose-700"
+                                        title={__('Quitar foto')}
+                                    >
+                                        <X className="w-4 h-4" />
+                                    </button>
+                                </div>
+                            )}
+                        </div>
+
+                        {/* CAMPO DE DESCRIPCIÓN */}
+                        <div>
+                            <Label className="text-xs font-semibold">{__('Descripción / Detalle del Trabajo Realizado')}</Label>
+                            <Input
+                                value={fotoDescripcion}
+                                onChange={(e) => setFotoDescripcion(e.target.value)}
+                                placeholder={__('ej: Placa madre intervenida, reemplazo de flex de carga, etc.')}
+                                className="text-xs h-9 mt-1 font-medium"
+                            />
+                        </div>
+
+                        <div className="flex items-center justify-end gap-2 pt-2 border-t border-slate-100 dark:border-slate-800">
+                            <Button type="button" variant="outline" size="sm" onClick={() => {
+                                stopRepairCamera();
+                                setOpenAddFotoModal(false);
+                            }} className="h-8 text-xs">
+                                {__('Cancelar')}
+                            </Button>
+                            <Button type="submit" disabled={!newFotoDataUrl || isUploadingFoto} size="sm" className="h-8 text-xs font-bold bg-purple-600 hover:bg-purple-700 text-white">
+                                {isUploadingFoto ? __('Guardando...') : __('Guardar Evidencia')}
+                            </Button>
+                        </div>
+                    </form>
+                </DialogContent>
+            </Dialog>
         </>
     );
 }

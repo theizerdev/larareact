@@ -37,6 +37,7 @@ import {
     Upload,
     Trash2,
     RefreshCw,
+    Calculator,
 } from 'lucide-react';
 import React, { useState, useEffect, useRef } from 'react';
 import { Breadcrumbs } from '@/components/breadcrumbs';
@@ -341,6 +342,7 @@ export default function CreateReparacion({ clientes: initialClientes, marcas: in
     const [cartServicios, setCartServicios] = useState<CartServicio[]>([]);
     const [searchServicioTerm, setSearchServicioTerm] = useState('');
     const [isServicioDropdownOpen, setIsServicioDropdownOpen] = useState(false);
+    const [isCostoEstimadoManual, setIsCostoEstimadoManual] = useState(false);
 
     // Modal Crear Nuevo Servicio
     const [openNewServicioModal, setOpenNewServicioModal] = useState(false);
@@ -385,6 +387,11 @@ export default function CreateReparacion({ clientes: initialClientes, marcas: in
 
     const videoRef = useRef<HTMLVideoElement | null>(null);
     const canvasRef = useRef<HTMLCanvasElement | null>(null);
+    const categoriaRef = useRef<HTMLDivElement | null>(null);
+    const marcaRef = useRef<HTMLDivElement | null>(null);
+    const modeloRef = useRef<HTMLDivElement | null>(null);
+    const clienteRef = useRef<HTMLDivElement | null>(null);
+    const servicioRef = useRef<HTMLDivElement | null>(null);
 
     const stopCameraStream = () => {
         if (cameraStream) {
@@ -538,7 +545,7 @@ export default function CreateReparacion({ clientes: initialClientes, marcas: in
         cliente_id: '',
         cliente_nombre: '',
         cliente_telefono: '',
-        tipo_dispositivo: (categorias && categorias.length > 0) ? categorias[0].nombre : 'Smartphone',
+        tipo_dispositivo: '',
         marca_id: '',
         marca_nombre: '',
         modelo_id: '',
@@ -569,6 +576,30 @@ export default function CreateReparacion({ clientes: initialClientes, marcas: in
 
         setData('contrasena_patron', patronSecuencia.length > 0 ? `Patrón: ${patronSecuencia.join(' - ')}` : '');
     }, [tipoSeguridad, claveSeguridad, patronSecuencia, setData]);
+
+    useEffect(() => {
+        const handleClickOutside = (event: MouseEvent) => {
+            if (categoriaRef.current && !categoriaRef.current.contains(event.target as Node)) {
+                setIsCategoriaDropdownOpen(false);
+            }
+            if (marcaRef.current && !marcaRef.current.contains(event.target as Node)) {
+                setIsMarcaDropdownOpen(false);
+            }
+            if (modeloRef.current && !modeloRef.current.contains(event.target as Node)) {
+                setIsModeloDropdownOpen(false);
+            }
+            if (clienteRef.current && !clienteRef.current.contains(event.target as Node)) {
+                setIsClientDropdownOpen(false);
+            }
+            if (servicioRef.current && !servicioRef.current.contains(event.target as Node)) {
+                setIsServicioDropdownOpen(false);
+            }
+        };
+        document.addEventListener('mousedown', handleClickOutside);
+        return () => {
+            document.removeEventListener('mousedown', handleClickOutside);
+        };
+    }, []);
 
     // Servicios filtrados por la búsqueda en tiempo real
     const serviciosFiltrados = serviciosList.filter((s) => {
@@ -618,7 +649,10 @@ export default function CreateReparacion({ clientes: initialClientes, marcas: in
 
     const updateCostoEstimadoWithCart = (newCart: CartServicio[]) => {
         const total = newCart.reduce((acc, item) => acc + item.subtotal, 0);
-        if (total > 0) {
+        if (newCart.length === 0) {
+            setData('costo_estimado', '0');
+            setIsCostoEstimadoManual(false);
+        } else if (!isCostoEstimadoManual && total > 0) {
             setData('costo_estimado', String(total));
         }
     };
@@ -1091,7 +1125,7 @@ export default function CreateReparacion({ clientes: initialClientes, marcas: in
 
                                 <CardContent className="p-4 space-y-4">
                                     {/* BUSCADOR DE CLIENTE ANCHO COMPLETO */}
-                                    <div className="relative w-full">
+                                    <div ref={clienteRef} className="relative w-full">
                                         <Label className="text-xs font-semibold">{__('Búsqueda de Cliente en Tiempo Real *')}</Label>
                                         <div className="relative mt-1">
                                             <Search className="w-4 h-4 absolute left-3 top-3.5 text-purple-600" />
@@ -1160,7 +1194,7 @@ export default function CreateReparacion({ clientes: initialClientes, marcas: in
                                     </CardTitle>
                                 </CardHeader>
                                 <CardContent className="p-4 space-y-4">
-                                    <div className="relative w-full">
+                                    <div ref={categoriaRef} className="relative w-full">
                                         <Label className="text-xs font-semibold">{__('Seleccionar Categoría / Tipo de Dispositivo *')}</Label>
                                         <div className="relative mt-1">
                                             <Layers className="w-4 h-4 absolute left-3 top-3.5 text-purple-600 z-10 pointer-events-none" />
@@ -1173,7 +1207,7 @@ export default function CreateReparacion({ clientes: initialClientes, marcas: in
                                                     setIsCategoriaDropdownOpen(true);
                                                 }}
                                                 onFocus={() => {
-                                                    setSearchCategoriaTerm(data.tipo_dispositivo || '');
+                                                    setSearchCategoriaTerm('');
                                                     setIsCategoriaDropdownOpen(true);
                                                 }}
                                                 placeholder={__('Escriba para buscar o seleccione una categoría...')}
@@ -1289,7 +1323,7 @@ export default function CreateReparacion({ clientes: initialClientes, marcas: in
                                                 </Dialog>
                                             </div>
 
-                                            <div className="relative">
+                                            <div ref={marcaRef} className="relative">
                                                 <Search className="w-4 h-4 absolute left-3 top-3.5 text-purple-600 z-10 pointer-events-none" />
                                                 <Input
                                                     value={isMarcaDropdownOpen ? searchMarcaTerm : data.marca_nombre}
@@ -1299,7 +1333,7 @@ export default function CreateReparacion({ clientes: initialClientes, marcas: in
                                                         setIsMarcaDropdownOpen(true);
                                                     }}
                                                     onFocus={() => {
-                                                        setSearchMarcaTerm(data.marca_nombre || '');
+                                                        setSearchMarcaTerm('');
                                                         setIsMarcaDropdownOpen(true);
                                                     }}
                                                     placeholder={__('Buscar o seleccionar marca...')}
@@ -1425,7 +1459,7 @@ export default function CreateReparacion({ clientes: initialClientes, marcas: in
                                                 </Dialog>
                                             </div>
 
-                                            <div className="relative">
+                                            <div ref={modeloRef} className="relative">
                                                 <Search className="w-4 h-4 absolute left-3 top-3.5 text-purple-600 z-10 pointer-events-none" />
                                                 <Input
                                                     value={isModeloDropdownOpen ? searchModeloTerm : data.modelo_nombre}
@@ -1436,7 +1470,7 @@ export default function CreateReparacion({ clientes: initialClientes, marcas: in
                                                     }}
                                                     onFocus={() => {
                                                         if (data.marca_id || selectedMarcaId) {
-                                                            setSearchModeloTerm(data.modelo_nombre || '');
+                                                            setSearchModeloTerm('');
                                                             setIsModeloDropdownOpen(true);
                                                         }
                                                     }}
@@ -1723,7 +1757,7 @@ export default function CreateReparacion({ clientes: initialClientes, marcas: in
 
                                 <CardContent className="p-4 space-y-4">
                                     {/* BUSCADOR DE SERVICIOS EN TIEMPO REAL */}
-                                    <div className="relative w-full">
+                                    <div ref={servicioRef} className="relative w-full">
                                         <Label className="text-xs font-semibold">{__('Buscar y Agregar Servicios a la Orden *')}</Label>
                                         <div className="relative mt-1">
                                             <Search className="w-4 h-4 absolute left-3 top-3.5 text-purple-600" />
@@ -1893,14 +1927,33 @@ export default function CreateReparacion({ clientes: initialClientes, marcas: in
                                 <CardContent className="p-4 space-y-4">
                                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                                         <div>
-                                            <Label className="text-xs font-semibold">{__('Costo Estimado (Total)')}</Label>
+                                            <div className="flex items-center justify-between">
+                                                <Label className="text-xs font-semibold">{__('Costo Estimado (Total)')}</Label>
+                                                {cartServicios.length > 0 && (
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => {
+                                                            setData('costo_estimado', String(totalCartServicios));
+                                                            setIsCostoEstimadoManual(false);
+                                                        }}
+                                                        className="text-[10px] text-purple-600 dark:text-purple-400 hover:text-purple-800 font-bold flex items-center gap-1 transition-colors"
+                                                        title={__('Igualar a la suma de los servicios seleccionados')}
+                                                    >
+                                                        <Calculator className="w-3 h-3" />
+                                                        {__('Suma:')} {currencySymbol}{totalCartServicios.toFixed(2)}
+                                                    </button>
+                                                )}
+                                            </div>
                                             <div className="relative mt-1">
                                                 <span className="absolute left-3 top-2.5 text-xs font-mono font-bold text-slate-400">{currencySymbol}</span>
                                                 <Input
                                                     type="number"
                                                     step="0.01"
                                                     value={data.costo_estimado}
-                                                    onChange={(e) => setData('costo_estimado', e.target.value)}
+                                                    onChange={(e) => {
+                                                        setIsCostoEstimadoManual(true);
+                                                        setData('costo_estimado', e.target.value);
+                                                    }}
                                                     className="text-xs h-10 pl-8 font-mono font-bold text-slate-900 dark:text-slate-100"
                                                     required
                                                 />

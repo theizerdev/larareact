@@ -493,13 +493,134 @@ class ReparacionController extends Controller
             ->get(['id', 'sku', 'codigo_barras', 'nombre_variante', 'precio_venta', 'precio_compra', 'stock', 'marca_id', 'modelo_id', 'condicion', 'tipo_producto']);
 
         $tecnicos = User::where('empresa_id', $empresaId)->get(['id', 'name']);
+        $marcas = Marca::with('modelos')->where('empresa_id', $empresaId)->orderBy('nombre')->get();
+        $categorias = \App\Models\Categoria::withoutGlobalScope('multitenancy')
+            ->where(function ($q) use ($empresaId) {
+                $q->where('empresa_id', $empresaId)
+                  ->orWhereNull('empresa_id');
+            })
+            ->orderBy('nombre')
+            ->get(['id', 'nombre']);
 
         return Inertia::render('admin/Reparaciones/Show', [
             'orden' => $reparacion,
             'productosRepuestos' => $productosRepuestos,
             'tecnicos' => $tecnicos,
+            'marcas' => $marcas,
+            'categorias' => $categorias,
             'currencySymbol' => $this->getCurrencySymbol(),
         ]);
+    }
+
+    public function updateDatos(Request $request, OrdenReparacion $reparacion)
+    {
+        $validated = $request->validate([
+            'cliente_nombre' => 'required|string|max:255',
+            'cliente_telefono' => 'nullable|string|max:50',
+            'tipo_dispositivo' => 'required|string|max:255',
+            'marca_id' => 'nullable|exists:marcas,id',
+            'marca_nombre' => 'required|string|max:255',
+            'modelo_id' => 'nullable|exists:modelos,id',
+            'modelo_nombre' => 'required|string|max:255',
+            'color' => 'nullable|string|max:100',
+            'imei_serie' => 'nullable|string|max:100',
+            'contrasena_patron' => 'nullable|string|max:255',
+            'descripcion_falla' => 'required|string',
+            'observaciones_fisicas' => 'nullable|string',
+            'tecnico_id' => 'nullable|exists:users,id',
+        ]);
+
+        $oldMarca = $reparacion->marca_nombre;
+        $oldModelo = $reparacion->modelo_nombre;
+        $oldCliente = $reparacion->cliente_nombre;
+
+        $reparacion->update($validated);
+
+        $cambios = [];
+        if ($oldMarca !== $validated['marca_nombre']) {
+            $cambios[] = "Marca: '{$oldMarca}' ➔ '{$validated['marca_nombre']}'";
+        }
+        if ($oldModelo !== $validated['modelo_nombre']) {
+            $cambios[] = "Modelo: '{$oldModelo}' ➔ '{$validated['modelo_nombre']}'";
+        }
+        if ($oldCliente !== $validated['cliente_nombre']) {
+            $cambios[] = "Cliente: '{$oldCliente}' ➔ '{$validated['cliente_nombre']}'";
+        }
+
+        $mensajeHistorial = !empty($cambios)
+            ? "Se editaron los datos de la orden (" . implode(', ', $cambios) . ")"
+            : "Se actualizaron los datos generales de la orden de reparación.";
+
+        \App\Models\OrdenReparacionHistorial::create([
+            'orden_id' => $reparacion->id,
+            'user_id' => auth()->id(),
+            'estado' => $reparacion->estado_orden,
+            'notas' => $mensajeHistorial,
+        ]);
+
+        return back()->with('notification', [
+            'type' => 'success',
+            'message' => __('Datos de la orden actualizados correctamente.'),
+        ]);
+    }
+
+    public function uploadFotoProceso(Request $request, OrdenReparacion $reparacion)
+    {
+        $request->validate([
+            'foto' => 'required|string',
+            'descripcion' => 'nullable|string|max:255',
+        ]);
+
+        $fotoData = $request->input('foto');
+        $descripcion = $request->input('descripcion') ?: 'Evidencia de proceso de reparación en taller';
+
+        $url = $fotoData;
+        if (str_starts_with($fotoData, 'data:image')) {
+            try {
+                preg_match('/data:image\/(?<type>.*?);base64,(?<data>.*)/', $fotoData, $matches);
+                $imageType = isset($matches['type']) && in_array($matches['type'], ['png', 'webp', 'jpeg', 'jpg']) ? $matches['type'] : 'jpeg';
+                $imageData = base64_decode($matches['data'] ?? '');
+
+                $filename = 'reparaciones/' . $reparacion->id . '/proceso_' . time() . '_' . uniqid() . '.' . $imageType;
+                \Illuminate\Support\Facades\Storage::disk('public')->put($filename, $imageData);
+                $url = \Illuminate\Support\Facades\Storage::url($filename);
+            } catch (\Throwable $e) {
+                $url = $fotoData;
+            }
+        }
+
+        if (\Illuminate\Support\Facades\Schema::hasTable('orden_reparacion_fotos')) {
+            OrdenReparacionFoto::create([
+                'orden_id' => $reparacion->id,
+                'angulo' => 'proceso_' . time(),
+                'url' => $url,
+                'descripcion' => $descripcion,
+            ]);
+        }
+
+        OrdenReparacionHistorial::create([
+            'orden_id' => $reparacion->id,
+            'user_id' => auth()->id(),
+            'estado' => $reparacion->estado_orden,
+            'notas' => "Se agregó evidencia fotográfica de reparación: '{$descripcion}'",
+        ]);
+
+        return back()->with('notification', [
+            'type' => 'success',
+            'message' => __('Evidencia de reparación guardada correctamente.'),
+        ]);
+    }
+
+    public function deleteFoto(Request $request, OrdenReparacion $reparacion, OrdenReparacionFoto $foto)
+    {
+        if ($foto->orden_id === $reparacion->id) {
+            $foto->delete();
+            return back()->with('notification', [
+                'type' => 'success',
+                'message' => __('Fotografía eliminada correctamente.'),
+            ]);
+        }
+        return back()->withErrors(['message' => __('Acceso denegado.')]);
     }
 
     public function updateEstado(Request $request, OrdenReparacion $reparacion)
