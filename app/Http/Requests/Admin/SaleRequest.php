@@ -34,7 +34,7 @@ class SaleRequest extends FormRequest
             'payments.*.monto' => ['required_with:payments', 'numeric', 'min:0'],
             'items' => ['required', 'array', 'min:1'],
             'items.*.itemable_id' => ['nullable', 'integer'],
-            'items.*.concepto_tipo' => ['required', 'in:producto,servicio,reparacion'],
+            'items.*.concepto_tipo' => ['required', 'in:producto,servicio,reparacion,reparacion_anticipo,reparacion_liquidacion'],
             'items.*.nombre' => ['required', 'string', 'max:255'],
             'items.*.cantidad' => ['required', 'integer', 'min:1'],
             'items.*.precio_unitario' => ['required', 'numeric', 'min:0'],

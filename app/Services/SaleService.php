@@ -81,6 +81,22 @@ class SaleService
                 $primaryMethod = $payments[0]['metodo_pago'];
             }
 
+            // Autodetectar cliente desde la orden de reparación si no se especificó un cliente en el ticket POS
+            if (empty($data['cliente_id']) || empty($data['cliente_nombre']) || $data['cliente_nombre'] === 'Cliente General') {
+                foreach ($data['items'] as $item) {
+                    if (in_array($item['concepto_tipo'] ?? '', ['reparacion', 'reparacion_anticipo', 'reparacion_liquidacion']) && !empty($item['itemable_id'])) {
+                        $repObj = OrdenReparacion::find($item['itemable_id']);
+                        if ($repObj) {
+                            $data['cliente_id'] = $data['cliente_id'] ?? $repObj->cliente_id;
+                            $data['cliente_nombre'] = ($data['cliente_nombre'] && $data['cliente_nombre'] !== 'Cliente General') 
+                                ? $data['cliente_nombre'] 
+                                : ($repObj->cliente_nombre ?? 'Cliente General');
+                            break;
+                        }
+                    }
+                }
+            }
+
             // Create Sale record
             $sale = Sale::create([
                 'empresa_id' => $user?->empresa_id,
@@ -132,12 +148,48 @@ class SaleService
                 } elseif (($item['concepto_tipo'] ?? 'servicio') === 'servicio' && !empty($item['itemable_id'])) {
                     $itemableType = Servicio::class;
                     $itemableId = $item['itemable_id'];
-                } elseif (($item['concepto_tipo'] ?? 'reparacion') === 'reparacion' && !empty($item['itemable_id'])) {
+                } elseif (in_array($item['concepto_tipo'] ?? '', ['reparacion', 'reparacion_anticipo', 'reparacion_liquidacion']) && !empty($item['itemable_id'])) {
+                    $itemableType = OrdenReparacion::class;
+                    $itemableId = $item['itemable_id'];
+
                     $reparacion = OrdenReparacion::find($item['itemable_id']);
                     if ($reparacion) {
-                        $reparacion->sale_id = $sale->id;
-                        $reparacion->saldo_restante = 0.00;
-                        $reparacion->save();
+                        $montoPago = (float) $itemSubtotal;
+
+                        if (($item['concepto_tipo'] ?? '') === 'reparacion_anticipo') {
+                            $nuevoAnticipo = (float) $reparacion->anticipo + $montoPago;
+                            $nuevoSaldo = max(0, (float) $reparacion->costo_estimado - $nuevoAnticipo);
+
+                            $reparacion->anticipo = $nuevoAnticipo;
+                            $reparacion->saldo_restante = $nuevoSaldo;
+                            $reparacion->save();
+
+                            \App\Models\OrdenReparacionHistorial::create([
+                                'orden_id' => $reparacion->id,
+                                'user_id' => $userId,
+                                'estado_anterior' => $reparacion->estado_orden,
+                                'estado_nuevo' => $reparacion->estado_orden,
+                                'comentario' => "Abono / Anticipo de {$montoPago} registrado desde el Punto de Venta (Ticket: {$codigoTicket}).",
+                            ]);
+                        } else {
+                            // Liquidación final
+                            $reparacion->sale_id = $sale->id;
+                            $reparacion->anticipo = (float) $reparacion->costo_estimado;
+                            $reparacion->saldo_restante = 0.00;
+                            if ($reparacion->estado_orden === 'reparado') {
+                                $reparacion->estado_orden = 'entregado';
+                                $reparacion->fecha_entrega = now();
+                            }
+                            $reparacion->save();
+
+                            \App\Models\OrdenReparacionHistorial::create([
+                                'orden_id' => $reparacion->id,
+                                'user_id' => $userId,
+                                'estado_anterior' => $reparacion->estado_orden,
+                                'estado_nuevo' => $reparacion->estado_orden,
+                                'comentario' => "Liquidación total de saldo ({$montoPago}) registrada desde el Punto de Venta (Ticket: {$codigoTicket}).",
+                            ]);
+                        }
                     }
                 }
 

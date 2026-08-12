@@ -422,6 +422,27 @@ class ReparacionController extends Controller
 
         $orden = OrdenReparacion::create($ordenData);
 
+        // Registrar ingreso a la Caja Chica abierta si se especificó un anticipo de recepción
+        if ($anticipo > 0) {
+            try {
+                $activeRegister = \App\Models\CashRegister::getActiveRegister($user);
+                if ($activeRegister) {
+                    $metodoPago = $request->input('metodo_pago_anticipo', 'efectivo');
+                    app(\App\Services\CashRegisterService::class)->addMovement(
+                        $activeRegister,
+                        'inflow',
+                        'anticipo_reparacion',
+                        $metodoPago,
+                        $anticipo,
+                        "Anticipo a la orden {$numeroOrden} - Cliente: {$orden->cliente_nombre}",
+                        $user->id
+                    );
+                }
+            } catch (\Throwable $e) {
+                \Illuminate\Support\Facades\Log::error('Error registrando anticipo inicial en caja: ' . $e->getMessage());
+            }
+        }
+
         // Guardar servicios agregados desde el carrito como items de la orden
         if (!empty($serviciosSeleccionados)) {
             $totalServicios = 0;

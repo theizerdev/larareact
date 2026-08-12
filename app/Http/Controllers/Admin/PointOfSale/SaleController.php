@@ -127,10 +127,8 @@ class SaleController extends Controller
             });
 
         $reparaciones = OrdenReparacion::where('empresa_id', auth()->user()?->empresa_id)
-            ->where('estado_orden', 'reparado')
-            ->where(function ($query) {
-                $query->whereNull('sale_id')->orWhere('sale_id', 0);
-            })
+            ->where('estado_orden', '!=', 'cancelado')
+            ->orderBy('id', 'desc')
             ->get()
             ->map(function ($reparacion) {
                 $displayName = trim((string) ($reparacion->cliente_nombre ?: 'Reparación'));
@@ -139,22 +137,27 @@ class SaleController extends Controller
                     $displayName = "{$displayName} - {$numeroOrden}";
                 }
 
-                $precio = (float) max(
-                    $reparacion->saldo_restante ?? 0,
-                    ($reparacion->costo_mano_obra ?? 0) + ($reparacion->costo_repuestos ?? 0),
+                $costoEstimado = (float) max(
                     $reparacion->costo_estimado ?? 0,
+                    ($reparacion->costo_mano_obra ?? 0) + ($reparacion->costo_repuestos ?? 0)
                 );
+                $anticipo = (float) ($reparacion->anticipo ?? 0);
+                $saldoRestante = (float) ($reparacion->saldo_restante ?? max(0, $costoEstimado - $anticipo));
 
                 return [
                     'id' => $reparacion->id,
                     'tipo' => 'reparacion',
                     'nombre' => $displayName,
                     'codigo' => $numeroOrden !== '' ? $numeroOrden : "REP-{$reparacion->id}",
-                    'precio' => $precio,
+                    'precio' => $saldoRestante,
+                    'costo_estimado' => $costoEstimado,
+                    'anticipo' => $anticipo,
+                    'saldo_restante' => $saldoRestante,
                     'stock' => null,
+                    'cliente_id' => $reparacion->cliente_id,
                     'cliente_nombre' => $reparacion->cliente_nombre,
                     'estado_orden' => $reparacion->estado_orden,
-                    'saldo_restante' => (float) ($reparacion->saldo_restante ?? 0),
+                    'dispositivo' => trim("{$reparacion->tipo_dispositivo} {$reparacion->marca_nombre} {$reparacion->modelo_nombre}"),
                 ];
             });
 

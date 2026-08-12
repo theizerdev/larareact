@@ -38,13 +38,16 @@ interface CatalogItem {
     cliente_nombre?: string;
     estado_orden?: string;
     saldo_restante?: number;
+    costo_estimado?: number;
+    anticipo?: number;
+    dispositivo?: string;
 }
 
 interface TicketItem {
     id: number | string;
     itemable_id?: number | null;
-    concepto_tipo?: 'producto' | 'servicio' | 'reparacion';
-    tipo?: 'producto' | 'servicio' | 'reparacion';
+    concepto_tipo?: 'producto' | 'servicio' | 'reparacion' | 'reparacion_anticipo' | 'reparacion_liquidacion';
+    tipo?: 'producto' | 'servicio' | 'reparacion' | 'reparacion_anticipo' | 'reparacion_liquidacion';
     nombre: string;
     codigo: string;
     precio_unitario: number;
@@ -240,6 +243,11 @@ export default function Terminal({
     const [isRecentSalesOpen, setIsRecentSalesOpen] = useState(false);
     const [recentSales, setRecentSales] = useState<any[]>([]);
     const [isLoadingRecentSales, setIsLoadingRecentSales] = useState(false);
+
+    // Modal de Opciones de Pago para Reparaciones (Anticipo / Liquidación)
+    const [isReparacionPagoModalOpen, setIsReparacionPagoModalOpen] = useState(false);
+    const [reparacionPagoModalItem, setReparacionPagoModalItem] = useState<CatalogItem | null>(null);
+    const [customAnticipoInput, setCustomAnticipoInput] = useState<string>('');
 
     const fetchRecentSales = async () => {
         setIsLoadingRecentSales(true);
@@ -461,6 +469,13 @@ export default function Terminal({
             return;
         }
 
+        if (item.tipo === 'reparacion') {
+            setReparacionPagoModalItem(item);
+            setCustomAnticipoInput(String(item.saldo_restante || item.precio || 0));
+            setIsReparacionPagoModalOpen(true);
+            return;
+        }
+
         playScanBeep();
         let shouldShowZeroStockModal = false;
 
@@ -504,6 +519,72 @@ export default function Terminal({
         }
 
         notifySuccess(`${item.nombre} ${__('agregado')}`);
+    };
+
+    const handleAddReparacionAnticipo = (monto: number) => {
+        if (!reparacionPagoModalItem) return;
+        if (monto <= 0) {
+            notifyError(__('Ingresa un monto válido para el anticipo.'));
+            return;
+        }
+
+        playScanBeep();
+        const item = reparacionPagoModalItem;
+        const cartId = `reparacion_anticipo-${item.id}-${Date.now()}`;
+
+        updateActiveTicket((ticket) => ({
+            ...ticket,
+            clienteId: item.cliente_id ? item.cliente_id : ticket.clienteId,
+            clienteNombre: (item.cliente_nombre && item.cliente_nombre !== 'Cliente General') ? item.cliente_nombre : ticket.clienteNombre,
+            cart: [
+                ...ticket.cart,
+                {
+                    id: cartId,
+                    itemable_id: item.id,
+                    concepto_tipo: 'reparacion_anticipo',
+                    nombre: `Anticipo a Orden ${item.codigo} (${item.cliente_nombre || 'Cliente'})`,
+                    codigo: item.codigo,
+                    precio_unitario: monto,
+                    cantidad: 1,
+                    stock: null,
+                },
+            ],
+        }));
+
+        setIsReparacionPagoModalOpen(false);
+        setReparacionPagoModalItem(null);
+        notifySuccess(__('Anticipo añadido al carrito y cliente asociado a la venta.'));
+    };
+
+    const handleAddReparacionLiquidacion = () => {
+        if (!reparacionPagoModalItem) return;
+        playScanBeep();
+        const item = reparacionPagoModalItem;
+        const montoLiquidacion = item.saldo_restante || item.precio || 0;
+        const cartId = `reparacion_liquidacion-${item.id}-${Date.now()}`;
+
+        updateActiveTicket((ticket) => ({
+            ...ticket,
+            clienteId: item.cliente_id ? item.cliente_id : ticket.clienteId,
+            clienteNombre: (item.cliente_nombre && item.cliente_nombre !== 'Cliente General') ? item.cliente_nombre : ticket.clienteNombre,
+            cart: [
+                ...ticket.cart,
+                {
+                    id: cartId,
+                    itemable_id: item.id,
+                    concepto_tipo: 'reparacion_liquidacion',
+                    nombre: `Liquidación Final - Orden ${item.codigo} (${item.cliente_nombre || 'Cliente'})`,
+                    codigo: item.codigo,
+                    precio_unitario: montoLiquidacion,
+                    cantidad: 1,
+                    stock: null,
+                },
+            ],
+        }));
+
+        setIsReparacionPagoModalOpen(false);
+        setReparacionPagoModalItem(null);
+        notifySuccess(__('Liquidación final añadida al carrito del punto de venta.'));
     };
 
     // Confirm quick stock addition for product with zero stock
@@ -630,7 +711,9 @@ export default function Terminal({
         const query = barcodeInput.trim().toLowerCase();
         return localCatalog.filter((item) =>
             (item.nombre || '').toLowerCase().includes(query) ||
-            (item.codigo || '').toLowerCase().includes(query)
+            (item.codigo || '').toLowerCase().includes(query) ||
+            (item.cliente_nombre || '').toLowerCase().includes(query) ||
+            (item.dispositivo || '').toLowerCase().includes(query)
         ).slice(0, 8);
     }, [localCatalog, barcodeInput]);
 
@@ -970,7 +1053,10 @@ export default function Terminal({
             const matchesType = searchTypeFilter === 'all' || item.tipo === searchTypeFilter;
             const query = searchModalQuery.toLowerCase();
             const matchesSearch =
-                (item.nombre || '').toLowerCase().includes(query) || (item.codigo || '').toLowerCase().includes(query);
+                (item.nombre || '').toLowerCase().includes(query) ||
+                (item.codigo || '').toLowerCase().includes(query) ||
+                (item.cliente_nombre || '').toLowerCase().includes(query) ||
+                (item.dispositivo || '').toLowerCase().includes(query);
             return matchesType && matchesSearch;
         });
     }, [localCatalog, searchTypeFilter, searchModalQuery]);
@@ -2846,6 +2932,129 @@ export default function Terminal({
                                 </Button>
                             </DialogFooter>
                         </form>
+                    </DialogContent>
+                </Dialog>
+
+                {/* MODAL SELECCIÓN TIPO PAGO REPARACIÓN (ANTICIPO O LIQUIDACIÓN) */}
+                <Dialog open={isReparacionPagoModalOpen} onOpenChange={setIsReparacionPagoModalOpen}>
+                    <DialogContent className="sm:max-w-2xl bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 text-slate-900 dark:text-slate-100 shadow-2xl rounded-2xl">
+                        <DialogHeader className="border-b border-slate-100 dark:border-slate-800 pb-3">
+                            <DialogTitle className="text-base font-black flex items-center gap-2 text-indigo-700 dark:text-indigo-400">
+                                <Wrench className="w-5 h-5 text-indigo-600 dark:text-indigo-400" />
+                                {__('Cobro de Orden de Reparación:')} <span className="font-mono text-indigo-900 dark:text-indigo-200">{reparacionPagoModalItem?.codigo}</span>
+                            </DialogTitle>
+                            <DialogDescription className="text-xs text-slate-500">
+                                {__('Seleccione la modalidad de pago para abonar o liquidar el saldo del servicio técnico.')}
+                            </DialogDescription>
+                        </DialogHeader>
+
+                        {reparacionPagoModalItem && (
+                            <div className="space-y-5 py-2 text-xs">
+                                {/* CARD RESUMEN DE LA ORDEN */}
+                                <div className="bg-slate-50 dark:bg-slate-950 p-4 rounded-xl border border-slate-200 dark:border-slate-800 space-y-2">
+                                    <div className="flex items-center justify-between">
+                                        <div>
+                                            <div className="font-extrabold text-slate-900 dark:text-white text-sm">{reparacionPagoModalItem.nombre}</div>
+                                            <div className="text-slate-500 dark:text-slate-400 text-xs mt-0.5">📱 {reparacionPagoModalItem.dispositivo || __('Dispositivo en Taller')}</div>
+                                        </div>
+                                        <Badge className="bg-purple-100 text-purple-800 dark:bg-purple-950 dark:text-purple-300 font-bold border-purple-300">
+                                            {reparacionPagoModalItem.estado_orden?.replace(/_/g, ' ').toUpperCase() || __('EN TALLER')}
+                                        </Badge>
+                                    </div>
+
+                                    <div className="grid grid-cols-3 gap-3 pt-3 border-t border-slate-200 dark:border-slate-800 text-center font-mono">
+                                        <div className="bg-white dark:bg-slate-900 p-2.5 rounded-lg border border-slate-200 dark:border-slate-800 shadow-sm">
+                                            <div className="text-[10px] font-bold text-slate-500 uppercase">{__('Costo Estimado')}</div>
+                                            <div className="text-sm font-extrabold text-slate-800 dark:text-slate-200">{currencySymbol}{Number(reparacionPagoModalItem.costo_estimado || 0).toFixed(2)}</div>
+                                        </div>
+                                        <div className="bg-emerald-50/60 dark:bg-emerald-950/40 p-2.5 rounded-lg border border-emerald-200 dark:border-emerald-800/40 shadow-sm">
+                                            <div className="text-[10px] font-bold text-emerald-700 dark:text-emerald-400 uppercase">{__('Total Anticipado')}</div>
+                                            <div className="text-sm font-extrabold text-emerald-700 dark:text-emerald-300">{currencySymbol}{Number(reparacionPagoModalItem.anticipo || 0).toFixed(2)}</div>
+                                        </div>
+                                        <div className="bg-purple-50 dark:bg-purple-950/60 p-2.5 rounded-lg border border-purple-200 dark:border-purple-800/50 shadow-sm">
+                                            <div className="text-[10px] font-bold text-purple-700 dark:text-purple-300 uppercase">{__('Saldo Restante')}</div>
+                                            <div className="text-base font-black text-purple-900 dark:text-purple-200">{currencySymbol}{Number(reparacionPagoModalItem.saldo_restante || 0).toFixed(2)}</div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div className="space-y-3">
+                                    <Label className="text-xs font-black uppercase text-slate-700 dark:text-slate-300 tracking-wider">
+                                        {__('Selecciona la Modalidad de Pago *')}
+                                    </Label>
+
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                        {/* OPCIÓN A: ANTICIPO / ADELANTO */}
+                                        <div className="bg-purple-50/50 dark:bg-slate-950 border-2 border-purple-200 dark:border-purple-900/60 p-4 rounded-xl space-y-3 hover:border-purple-400 transition-all flex flex-col justify-between shadow-sm">
+                                            <div className="space-y-2">
+                                                <div className="font-extrabold text-purple-900 dark:text-purple-300 text-sm flex items-center gap-1.5">
+                                                    <DollarSign className="w-4 h-4 text-purple-600 dark:text-purple-400" />
+                                                    {__('Abono / Anticipo Parcial')}
+                                                </div>
+                                                <p className="text-[11px] text-slate-600 dark:text-slate-400 leading-relaxed">
+                                                    {__('Ingresar un adelanto parcial a la orden de reparación.')}
+                                                </p>
+
+                                                <div className="space-y-1 pt-1">
+                                                    <Label className="text-[11px] font-bold text-purple-900 dark:text-purple-300">{__('Monto del Adelanto:')}</Label>
+                                                    <div className="relative">
+                                                        <span className="absolute left-3 top-2 text-xs font-mono font-bold text-purple-700">{currencySymbol}</span>
+                                                        <Input
+                                                            type="number"
+                                                            step="0.01"
+                                                            value={customAnticipoInput}
+                                                            onChange={(e) => setCustomAnticipoInput(e.target.value)}
+                                                            className="h-9 pl-7 text-xs bg-white dark:bg-slate-900 border-purple-300 dark:border-slate-700 font-mono font-extrabold text-purple-900 dark:text-purple-100 focus:ring-2 focus:ring-purple-500"
+                                                            placeholder="0.00"
+                                                        />
+                                                    </div>
+                                                </div>
+                                            </div>
+
+                                            <Button
+                                                type="button"
+                                                size="sm"
+                                                onClick={() => handleAddReparacionAnticipo(parseFloat(customAnticipoInput) || 0)}
+                                                className="w-full h-10 text-xs font-bold bg-purple-600 hover:bg-purple-700 text-white rounded-lg shadow-md gap-1.5 mt-3"
+                                            >
+                                                <Plus className="w-4 h-4" />
+                                                {__('Añadir Anticipo al Carrito')}
+                                            </Button>
+                                        </div>
+
+                                        {/* OPCIÓN B: LIQUIDACIÓN FINAL */}
+                                        <div className="bg-emerald-50/50 dark:bg-slate-950 border-2 border-emerald-200 dark:border-emerald-900/60 p-4 rounded-xl space-y-3 hover:border-emerald-400 transition-all flex flex-col justify-between shadow-sm">
+                                            <div className="space-y-2">
+                                                <div className="font-extrabold text-emerald-900 dark:text-emerald-400 text-sm flex items-center gap-1.5">
+                                                    <CheckCircle2 className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
+                                                    {__('Liquidación Final de Saldo')}
+                                                </div>
+                                                <p className="text-[11px] text-slate-600 dark:text-slate-400 leading-relaxed">
+                                                    {__('Cancelar el 100% del saldo pendiente y marcar equipo listo para entregar.')}
+                                                </p>
+
+                                                <div className="pt-2 border-t border-emerald-200/60 dark:border-slate-800">
+                                                    <div className="text-[10px] uppercase font-bold text-emerald-700 dark:text-emerald-400">{__('Monto a Cancelar:')}</div>
+                                                    <div className="text-2xl font-black text-emerald-800 dark:text-emerald-300 font-mono mt-0.5">
+                                                        {currencySymbol}{Number(reparacionPagoModalItem.saldo_restante || reparacionPagoModalItem.precio || 0).toFixed(2)}
+                                                    </div>
+                                                </div>
+                                            </div>
+
+                                            <Button
+                                                type="button"
+                                                size="sm"
+                                                onClick={handleAddReparacionLiquidacion}
+                                                className="w-full h-10 text-xs font-bold bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg shadow-md gap-1.5 mt-3"
+                                            >
+                                                <CheckCircle2 className="w-4 h-4" />
+                                                {__('Liquidación Total')}
+                                            </Button>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        )}
                     </DialogContent>
                 </Dialog>
 
