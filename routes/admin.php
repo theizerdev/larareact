@@ -4,5 +4,5 @@
 $modulesFiles = glob(__DIR__.'/modules/*.php');
 
 foreach ($modulesFiles as $file) {
-    require_once $file;
+    require $file;
 }
