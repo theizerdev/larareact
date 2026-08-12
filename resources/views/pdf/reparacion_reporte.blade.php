@@ -7,7 +7,7 @@
     <style>
         @page {
             size: A4;
-            margin: 10mm 12mm 10mm 12mm;
+            margin: 8mm 10mm 10mm 10mm;
         }
         * {
             box-sizing: border-box;
@@ -19,72 +19,141 @@
             background-color: #ffffff;
             color: #1e293b;
             font-size: 11px;
-            line-height: 1.4;
-            padding: 15px;
+            line-height: 1.45;
+            padding: 10px 15px;
+        }
+
+        /* BARRA SUPERIOR DE IMPRESIÓN (SOLO EN NAVEGADOR) */
+        .print-btn-bar {
+            background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
+            color: #ffffff;
+            padding: 12px 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 18px;
+            border-radius: 10px;
+            box-shadow: 0 4px 12px rgba(15, 23, 42, 0.15);
+        }
+        .btn-print {
+            background-color: #10b981;
+            color: #ffffff;
+            border: none;
+            padding: 8px 18px;
+            font-size: 12px;
+            font-weight: 800;
+            border-radius: 6px;
+            cursor: pointer;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .btn-print:hover {
+            background-color: #059669;
+        }
+
+        /* ENCABEZADO PRINCIPAL DE IMPACTO VISUAL */
+        .top-accent-bar {
+            height: 4px;
+            background: linear-gradient(90deg, #1e1b4b 0%, #4338ca 40%, #059669 100%);
+            border-radius: 4px;
+            margin-bottom: 14px;
         }
         .header-table {
             width: 100%;
             border-collapse: collapse;
-            border-bottom: 2px solid #0f172a;
+            margin-bottom: 16px;
             padding-bottom: 12px;
-            margin-bottom: 15px;
+            border-bottom: 2px solid #e2e8f0;
         }
         .header-table td {
             vertical-align: top;
         }
         .logo-img {
-            max-height: 60px;
-            max-width: 240px;
+            max-height: 65px;
+            max-width: 250px;
             object-fit: contain;
-            margin-bottom: 5px;
+            margin-bottom: 6px;
         }
         .company-title {
-            font-size: 16px;
+            font-size: 18px;
             font-weight: 900;
             color: #0f172a;
             text-transform: uppercase;
             letter-spacing: -0.5px;
+            line-height: 1.1;
         }
-        .company-sub {
-            font-size: 10px;
-            color: #475569;
+        .company-subtitle {
+            font-size: 11px;
+            font-weight: 700;
+            color: #4338ca;
             margin-top: 2px;
+            margin-bottom: 4px;
         }
-        .doc-box {
-            background-color: #f8fafc;
-            border: 1px solid #cbd5e1;
-            border-radius: 6px;
-            padding: 8px 12px;
-            text-align: right;
+        .company-info-text {
+            font-size: 9.5px;
+            color: #475569;
+            line-height: 1.4;
         }
-        .doc-title {
-            font-size: 9px;
-            font-weight: 900;
-            color: #64748b;
-            letter-spacing: 1px;
-            text-transform: uppercase;
-        }
-        .doc-num {
-            font-size: 16px;
-            font-weight: 900;
-            color: #047857;
-            font-family: monospace;
-            margin: 2px 0;
-        }
-        .badge-status {
+        .pill-badge {
             display: inline-block;
-            background-color: #10b981;
-            color: #ffffff;
+            background-color: #f1f5f9;
+            color: #334155;
             font-size: 9px;
             font-weight: 800;
             padding: 2px 8px;
-            border-radius: 4px;
+            border-radius: 12px;
+            border: 1px solid #cbd5e1;
+            margin-top: 3px;
+        }
+
+        /* TARJETA OFICIAL DEL DOCUMENTO (DERECHA) */
+        .doc-box {
+            background: #f8fafc;
+            border: 2px solid #312e81;
+            border-radius: 10px;
+            padding: 10px 14px;
+            text-align: right;
+            box-shadow: 0 2px 8px rgba(49, 46, 129, 0.05);
+        }
+        .doc-title {
+            font-size: 10px;
+            font-weight: 900;
+            color: #312e81;
+            letter-spacing: 1.2px;
             text-transform: uppercase;
         }
+        .doc-num {
+            font-size: 18px;
+            font-weight: 900;
+            color: #059669;
+            font-family: monospace;
+            margin: 3px 0;
+            letter-spacing: 0.5px;
+        }
+        .badge-status {
+            display: inline-block;
+            background-color: #312e81;
+            color: #ffffff;
+            font-size: 9px;
+            font-weight: 800;
+            padding: 3px 10px;
+            border-radius: 6px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        .doc-dates {
+            font-size: 9px;
+            color: #475569;
+            margin-top: 8px;
+            border-top: 1px solid #cbd5e1;
+            padding-top: 6px;
+            line-height: 1.5;
+        }
+
+        /* TARJETAS DE INFORMACIÓN (CLIENTE Y EQUIPO) */
         .grid-2 {
             width: 100%;
             border-collapse: collapse;
-            margin-bottom: 15px;
+            margin-bottom: 14px;
         }
         .grid-2 td {
             width: 50%;
@@ -92,28 +161,34 @@
         }
         .card-box {
             background-color: #f8fafc;
-            border: 1px solid #e2e8f0;
-            border-radius: 6px;
-            padding: 10px;
+            border: 1px solid #cbd5e1;
+            border-radius: 8px;
+            padding: 10px 12px;
         }
         .card-title {
-            font-size: 10px;
-            font-weight: 900;
-            color: #475569;
-            text-transform: uppercase;
-            border-bottom: 1px solid #cbd5e1;
-            padding-bottom: 4px;
-            margin-bottom: 6px;
-        }
-        .section-title {
-            font-size: 11px;
+            font-size: 9.5px;
             font-weight: 900;
             color: #0f172a;
             text-transform: uppercase;
             letter-spacing: 0.5px;
-            border-bottom: 1.5px solid #0f172a;
-            padding-bottom: 3px;
-            margin-top: 12px;
+            border-bottom: 1.5px solid #cbd5e1;
+            padding-bottom: 4px;
+            margin-bottom: 6px;
+            display: flex;
+            align-items: center;
+            gap: 4px;
+        }
+
+        /* SECCIONES Y TABLAS */
+        .section-title {
+            font-size: 10.5px;
+            font-weight: 900;
+            color: #0f172a;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            border-left: 3px solid #4338ca;
+            padding-left: 6px;
+            margin-top: 14px;
             margin-bottom: 8px;
         }
         .data-table {
@@ -122,30 +197,42 @@
             margin-bottom: 10px;
         }
         .data-table th {
-            background-color: #f1f5f9;
-            color: #334155;
+            background-color: #0f172a;
+            color: #ffffff;
             font-size: 9px;
             font-weight: 800;
             text-transform: uppercase;
-            padding: 6px;
-            border: 1px solid #cbd5e1;
+            padding: 7px 8px;
+            border: 1px solid #0f172a;
             text-align: left;
         }
         .data-table td {
-            padding: 6px;
+            padding: 6px 8px;
             border: 1px solid #cbd5e1;
-            font-size: 10px;
+            font-size: 9.5px;
         }
+        .data-table tr:nth-child(even) {
+            background-color: #f8fafc;
+        }
+
         .totals-table {
-            width: 240px;
+            width: 250px;
             margin-left: auto;
             border-collapse: collapse;
-            margin-top: 5px;
+            margin-top: 6px;
         }
         .totals-table td {
             padding: 4px 8px;
             font-size: 10px;
         }
+        .totals-table tr.total-row {
+            border-top: 2px solid #0f172a;
+            font-weight: 900;
+            font-size: 11.5px;
+            background-color: #f1f5f9;
+        }
+
+        /* MATRIZ DE CONTROL DE CALIDAD (QC) */
         .qc-grid {
             width: 100%;
             border-collapse: collapse;
@@ -153,17 +240,17 @@
         }
         .qc-grid td {
             width: 33.33%;
-            padding: 4px 6px;
-            border: 1px solid #e2e8f0;
+            padding: 4px 8px;
+            border: 1px solid #cbd5e1;
             background-color: #ffffff;
-            font-size: 9.5px;
+            font-size: 9px;
         }
         .badge-ok {
             background-color: #d1fae5;
             color: #065f46;
             font-weight: 800;
-            font-size: 8.5px;
-            padding: 1px 4px;
+            font-size: 8px;
+            padding: 1px 5px;
             border-radius: 3px;
             float: right;
         }
@@ -171,38 +258,40 @@
             background-color: #ffe4e6;
             color: #9f1239;
             font-weight: 800;
-            font-size: 8.5px;
-            padding: 1px 4px;
+            font-size: 8px;
+            padding: 1px 5px;
             border-radius: 3px;
             float: right;
         }
+
+        /* GALERÍA DE FOTOS */
         .photo-gallery {
             width: 100%;
             border-collapse: collapse;
             margin-top: 6px;
-            margin-bottom: 15px;
+            margin-bottom: 12px;
         }
         .photo-gallery td {
             width: 25%;
-            padding: 4px;
+            padding: 3px;
             text-align: center;
             vertical-align: top;
         }
         .photo-box {
             border: 1px solid #cbd5e1;
-            border-radius: 4px;
+            border-radius: 6px;
             padding: 3px;
             background-color: #f8fafc;
         }
         .photo-img {
             width: 100%;
-            height: 90px;
+            height: 85px;
             object-fit: cover;
-            border-radius: 3px;
+            border-radius: 4px;
             background-color: #0f172a;
         }
         .photo-caption {
-            font-size: 8.5px;
+            font-size: 8px;
             font-weight: 700;
             color: #334155;
             margin-top: 3px;
@@ -210,48 +299,33 @@
             overflow: hidden;
             text-overflow: ellipsis;
         }
+
+        /* FIRMAS Y PIE DE PÁGINA */
         .signatures-table {
             width: 100%;
             border-collapse: collapse;
-            margin-top: 25px;
+            margin-top: 20px;
             page-break-inside: avoid;
         }
         .signatures-table td {
             width: 50%;
             text-align: center;
             vertical-align: top;
-            padding: 0 20px;
+            padding: 0 25px;
         }
         .sig-line {
-            border-top: 1px solid #0f172a;
-            margin-top: 40px;
+            border-top: 1.5px solid #0f172a;
+            margin-top: 35px;
             padding-top: 4px;
             font-weight: 800;
             font-size: 10px;
             color: #0f172a;
         }
         .sig-sub {
-            font-size: 9px;
+            font-size: 8.5px;
             color: #64748b;
         }
-        .print-btn-bar {
-            background-color: #0f172a;
-            color: #ffffff;
-            padding: 10px 20px;
-            text-align: right;
-            margin-bottom: 15px;
-            border-radius: 6px;
-        }
-        .btn-print {
-            background-color: #10b981;
-            color: #ffffff;
-            border: none;
-            padding: 8px 16px;
-            font-size: 12px;
-            font-weight: 800;
-            border-radius: 4px;
-            cursor: pointer;
-        }
+
         @media print {
             .no-print {
                 display: none !important;
@@ -265,14 +339,23 @@
 </head>
 <body>
 
+    <!-- BARRA SUPERIOR DE ACCIONES (SOLO EN NAVEGADOR WEB) -->
     <div class="print-btn-bar no-print">
-        <button onclick="window.print()" class="btn-print">🖨️ Imprimir / Guardar como PDF</button>
+        <div style="font-weight: 800; font-size: 13px; display: flex; items-center; gap: 8px;">
+            📄 Reporte Técnico de Servicio — {{ $orden->numero_orden }}
+        </div>
+        @if(auth()->check())
+            <button onclick="window.print()" class="btn-print">🖨️ Imprimir / Guardar PDF</button>
+        @endif
     </div>
+
+    <!-- LÍNEA SUPERIOR DE DISEÑO CORPORATIVO -->
+    <div class="top-accent-bar"></div>
 
     <!-- 1. ENCABEZADO OFICIAL DE EMPRESA Y SUCURSAL -->
     <table class="header-table">
         <tr>
-            <td>
+            <td style="padding-right: 15px;">
                 @if(!empty($empresa->logo))
                     @php
                         $logoUrl = (str_starts_with($empresa->logo, 'http') || str_starts_with($empresa->logo, '/')) 
@@ -283,83 +366,102 @@
                 @else
                     <div class="company-title">{{ $empresa->nombre_comercial ?? $empresa->razon_social ?? 'SERVITEC' }}</div>
                 @endif
-                <div class="company-sub">
-                    <strong>{{ $empresa->nombre_comercial ?? $empresa->razon_social ?? 'Servicio Técnico Profesional' }}</strong><br>
+
+                <div class="company-subtitle">
+                    {{ $empresa->nombre_comercial ?? $empresa->razon_social ?? 'Centro de Servicio Técnico Profesional' }}
+                </div>
+
+                <div class="company-info-text">
                     @if(!empty($empresa->documento))
-                        <strong>RUC / Tax ID:</strong> {{ $empresa->documento }}<br>
+                        <strong>Documento / Tax ID:</strong> {{ $empresa->documento }}<br>
                     @endif
+
                     @if(!empty($sucursal->nombre))
-                        <strong>Sucursal:</strong> {{ $sucursal->nombre }}<br>
-                        <strong>Dirección Sucursal:</strong> {{ $sucursal->direccion ?? $empresa->direccion ?? 'N/A' }}<br>
-                        <strong>Teléfono Sucursal:</strong> {{ $sucursal->telefono ?? $empresa->telefono ?? 'N/A' }}
+                        <span class="pill-badge">📍 Sucursal: {{ $sucursal->nombre }}</span><br>
+                        <strong>Dirección:</strong> {{ $sucursal->direccion ?? $empresa->direccion ?? 'Principal' }}<br>
+                        <strong>Contacto:</strong> 📞 {{ $sucursal->telefono ?? $empresa->telefono ?? 'N/A' }}
                     @else
                         <strong>Dirección:</strong> {{ $empresa->direccion ?? 'Dirección Principal' }}<br>
-                        <strong>Teléfono:</strong> {{ $empresa->telefono ?? 'N/A' }}
+                        <strong>Contacto:</strong> 📞 {{ $empresa->telefono ?? 'N/A' }}
                     @endif
                     @if(!empty($empresa->email))
                         | ✉️ {{ $empresa->email }}
                     @endif
                 </div>
             </td>
-            <td style="width: 230px;">
+
+            <td style="width: 240px;">
                 <div class="doc-box">
-                    <div class="doc-title">Reporte Técnico de Entrega</div>
+                    <div class="doc-title">Reporte Técnico Oficial</div>
                     <div class="doc-num">{{ $orden->numero_orden }}</div>
                     <div>
                         <span class="badge-status">{{ str_replace('_', ' ', $orden->estado_orden) }}</span>
                     </div>
-                    <div style="font-size: 8.5px; color: #64748b; margin-top: 6px; border-top: 1px solid #cbd5e1; padding-top: 4px;">
-                        <strong>Ingreso:</strong> {{ \Carbon\Carbon::parse($orden->fecha_recepcion)->format('d/m/Y H:i') }}<br>
-                        <strong>Finalizado:</strong> {{ $orden->fecha_entrega ? \Carbon\Carbon::parse($orden->fecha_entrega)->format('d/m/Y') : date('d/m/Y') }}<br>
-                        <strong>Técnico:</strong> {{ $orden->tecnico->name ?? 'Taller Técnico' }}
+                    <div class="doc-dates">
+                        <strong>Fecha de Recepción:</strong> {{ \Carbon\Carbon::parse($orden->fecha_recepcion)->format('d/m/Y H:i') }}<br>
+                        <strong>Fecha de Emisión:</strong> {{ $orden->fecha_entrega ? \Carbon\Carbon::parse($orden->fecha_entrega)->format('d/m/Y') : date('d/m/Y') }}<br>
+                        <strong>Especialista Técnico:</strong> {{ $orden->tecnico->name ?? 'Taller de Servicio' }}
                     </div>
                 </div>
             </td>
         </tr>
     </table>
 
-    <!-- 2. DATOS DE CLIENTE Y DISPOSITIVO -->
+    <!-- 2. INFORMACIÓN DEL CLIENTE Y DEL EQUIPO -->
     <table class="grid-2">
         <tr>
-            <td style="padding-right: 5px;">
+            <td style="padding-right: 6px;">
                 <div class="card-box">
-                    <div class="card-title">👤 Datos del Cliente</div>
-                    <strong>{{ $orden->cliente->nombre ?? $orden->cliente_nombre }}</strong><br>
-                    📞 {{ $orden->cliente->telefono ?? $orden.cliente_telefono ?? 'Sin teléfono' }}<br>
-                    @if(!empty($orden->cliente->email))
-                        ✉️ {{ $orden->cliente->email }}
-                    @endif
+                    <div class="card-title">👤 Información del Cliente</div>
+                    <div style="font-size: 11px; font-weight: 800; color: #0f172a;">{{ $orden->cliente->nombre ?? $orden->cliente_nombre }}</div>
+                    <div style="font-size: 9.5px; color: #475569; margin-top: 2px;">
+                        📞 <strong>Teléfono:</strong> {{ $orden->cliente->telefono ?? $orden->cliente_telefono ?? 'Sin número' }}<br>
+                        @if(!empty($orden->cliente->email))
+                            ✉️ <strong>Email:</strong> {{ $orden->cliente->email }}<br>
+                        @endif
+                        @if(!empty($orden->cliente->documento))
+                            🆔 <strong>Doc. Identidad:</strong> {{ $orden->cliente->documento }}
+                        @endif
+                    </div>
                 </div>
             </td>
-            <td style="padding-left: 5px;">
+
+            <td style="padding-left: 6px;">
                 <div class="card-box">
-                    <div class="card-title">📱 Detalles del Equipo</div>
-                    <strong>{{ $orden->tipo_dispositivo }} {{ $orden->marca_nombre }} {{ $orden->modelo_nombre }}</strong><br>
-                    Color: <strong>{{ $orden->color ?? 'N/A' }}</strong> | IMEI/SN: <strong>{{ $orden->imei_serie ?? 'N/A' }}</strong><br>
-                    Seguridad: <strong>{{ !empty($orden->contrasena_patron) ? 'Registrada (' . $orden->contrasena_patron . ')' : 'Sin Clave' }}</strong>
+                    <div class="card-title">📱 Especificaciones del Dispositivo</div>
+                    <div style="font-size: 11px; font-weight: 800; color: #0f172a;">
+                        {{ $orden->tipo_dispositivo }} {{ $orden->marca_nombre }} {{ $orden->modelo_nombre }}
+                    </div>
+                    <div style="font-size: 9.5px; color: #475569; margin-top: 2px;">
+                        🎨 <strong>Color:</strong> {{ $orden->color ?? 'N/A' }} | 🔢 <strong>IMEI / Serie:</strong> {{ $orden->imei_serie ?? 'N/A' }}<br>
+                        🔒 <strong>Seguridad:</strong> {{ !empty($orden->contrasena_patron) ? 'Clave / Patrón registrado' : 'Sin Contraseña' }}<br>
+                        🎒 <strong>Accesorios Incluidos:</strong> {{ $orden->accesorios_incluidos ?? 'Sin accesorios adicionales' }}
+                    </div>
                 </div>
             </td>
         </tr>
     </table>
 
-    <!-- 3. DIAGNÓSTICO E INFORME INICIAL -->
-    <div class="section-title">1. Diagnóstico Inicial & Motivo de Reparación</div>
-    <div class="card-box" style="margin-bottom: 12px;">
-        <p><strong>Falla Reportada:</strong> {{ $orden->descripcion_falla }}</p>
+    <!-- 3. DIAGNÓSTICO INICIAL Y MOTIVO DE ATENCIÓN -->
+    <div class="section-title">1. Diagnóstico Inicial & Falla Reportada</div>
+    <div class="card-box" style="margin-bottom: 12px; background-color: #ffffff;">
+        <p style="font-size: 10px; color: #0f172a;"><strong>Falla / Problema Indicado por el Cliente:</strong> {{ $orden->descripcion_falla }}</p>
         @if(!empty($orden->observaciones_fisicas))
-            <p style="margin-top: 4px;"><strong>Observaciones Físicas de Entrada:</strong> {{ $orden->observaciones_fisicas }}</p>
+            <p style="font-size: 9.5px; color: #475569; margin-top: 4px; border-top: 1px dashed #e2e8f0; padding-top: 4px;">
+                <strong>Estado Físico de Recepción:</strong> {{ $orden->observaciones_fisicas }}
+            </p>
         @endif
     </div>
 
-    <!-- 4. TRABAJOS REALIZADOS Y COSTOS -->
+    <!-- 4. DETALLE DE SERVICIOS Y REPUESTOS APLICADOS -->
     <div class="section-title">2. Trabajos Realizados & Repuestos Aplicados</div>
     <table class="data-table">
         <thead>
             <tr>
-                <th>Descripción / Servicio / Repuesto</th>
-                <th style="text-align: center; width: 50px;">Cant.</th>
-                <th style="text-align: right; width: 80px;">P. Unit.</th>
-                <th style="text-align: right; width: 90px;">Subtotal</th>
+                <th>Descripción del Servicio / Repuesto</th>
+                <th style="text-align: center; width: 55px;">Cant.</th>
+                <th style="text-align: right; width: 90px;">Precio Unit.</th>
+                <th style="text-align: right; width: 100px;">Subtotal</th>
             </tr>
         </thead>
         <tbody>
@@ -374,8 +476,8 @@
                 @endforeach
             @else
                 <tr>
-                    <td colspan="4" style="text-align: center; font-style: italic; color: #64748b;">
-                        Servicio de reparación técnica integral según diagnóstico.
+                    <td colspan="4" style="text-align: center; font-style: italic; color: #64748b; padding: 10px;">
+                        Servicio de diagnóstico y solución técnica especializada según presupuesto aceptado.
                     </td>
                 </tr>
             @endif
@@ -384,27 +486,27 @@
 
     <table class="totals-table">
         <tr>
-            <td>Total Estimado:</td>
+            <td>Subtotal / Estimado:</td>
             <td style="text-align: right; font-weight: bold;">{{ $currencySymbol }}{{ number_format($orden->costo_estimado ?? 0, 2) }}</td>
         </tr>
         <tr>
-            <td style="color: #047857;">Anticipo Recibido:</td>
-            <td style="text-align: right; font-weight: bold; color: #047857;">-{{ $currencySymbol }}{{ number_format($orden->anticipo ?? 0, 2) }}</td>
+            <td style="color: #059669;">Anticipos Recibidos:</td>
+            <td style="text-align: right; font-weight: bold; color: #059669;">-{{ $currencySymbol }}{{ number_format($orden->anticipo ?? 0, 2) }}</td>
         </tr>
-        <tr style="border-top: 1.5px solid #0f172a; font-weight: 900; font-size: 11px;">
+        <tr class="total-row">
             <td>SALDO A CANCELAR:</td>
-            <td style="text-align: right; color: #047857;">{{ $currencySymbol }}{{ number_format($orden->saldo_restante ?? 0, 2) }}</td>
+            <td style="text-align: right; color: #059669;">{{ $currencySymbol }}{{ number_format($orden->saldo_restante ?? 0, 2) }}</td>
         </tr>
     </table>
 
-    <!-- 5. CONTROL DE CALIDAD Y POST-ATENCIÓN -->
+    <!-- 5. CHECKLIST DE CONTROL DE CALIDAD (QC) -->
     @php
         $postData = is_string($orden->post_servicio_json) ? json_decode($orden->post_servicio_json, true) : $orden->post_servicio_json;
         $validacionMap = $postData['validacion'] ?? [];
     @endphp
 
     @if(!empty($validacionMap) && count($validacionMap) > 0)
-        <div class="section-title">3. Validación Final de Funciones Electrónicas (QC)</div>
+        <div class="section-title">3. Verificación de Control de Calidad (QC Pass - 24 Puntos)</div>
         <table class="qc-grid">
             @php
                 $keys = array_keys($validacionMap);
@@ -419,7 +521,7 @@
                             @if($isOk)
                                 <span class="badge-ok">✓ OK</span>
                             @else
-                                <span class="badge-fail">✗ Falla</span>
+                                <span class="badge-fail">✗ Revisión</span>
                             @endif
                         </td>
                     @endforeach
@@ -433,11 +535,11 @@
 
     @if(!empty($postData['observaciones']))
         <div class="card-box" style="margin-bottom: 12px; background-color: #ecfdf5; border-color: #a7f3d0;">
-            <strong style="color: #065f46;">Notas Técnicas del Especialista:</strong> {{ $postData['observaciones'] }}
+            <strong style="color: #065f46;">Notas Finales del Especialista Técnico:</strong> {{ $postData['observaciones'] }}
         </div>
     @endif
 
-    <!-- 6. EVIDENCIAS FOTOGRÁFICAS DE REPARACIÓN -->
+    <!-- 6. EVIDENCIAS FOTOGRÁFICAS -->
     @php
         $fotosList = [];
         if (!empty($orden->fotos) && count($orden->fotos) > 0) {
@@ -464,7 +566,7 @@
     @endphp
 
     @if(count($fotosList) > 0)
-        <div class="section-title">4. Galería de Evidencias Fotográficas ({{ count($fotosList) }} Fotos)</div>
+        <div class="section-title">4. Galería de Evidencias Fotográficas de Taller ({{ count($fotosList) }} Imágenes)</div>
         <table class="photo-gallery">
             @php $photoChunks = array_chunk($fotosList, 4); @endphp
             @foreach($photoChunks as $pRow)
@@ -488,8 +590,8 @@
     <!-- 7. CONFORMIDAD Y FIRMAS -->
     <table class="signatures-table">
         <tr>
-            <td colspan="2" style="font-size: 8.5px; color: #64748b; font-style: italic; text-align: center; padding-bottom: 15px;">
-                El cliente declara recibir el dispositivo arriba detallado en óptimas condiciones de funcionamiento tras haber realizado las pruebas correspondientes del servicio técnico. La garantía cubre únicamente la falla intervenida por el período acordado. Quedan excluidos equipos expuestos a humedad, caídas o manipulación de terceros.
+            <td colspan="2" style="font-size: 8.5px; color: #64748b; font-style: italic; text-align: center; padding-bottom: 12px;">
+                El cliente declara recibir el dispositivo detallado en óptimas condiciones de funcionamiento tras haber realizado las pruebas correspondientes del servicio técnico. La garantía cubre exclusivamente las fallas e intervenciones detalladas en este reporte.
             </td>
         </tr>
         <tr>
@@ -499,9 +601,9 @@
                 <div class="sig-sub">DNI / Doc: ___________________</div>
             </td>
             <td>
-                <div class="sig-line">Firma y Sello Técnico Responsable</div>
-                <div class="sig-sub">{{ $orden->tecnico->name ?? 'Servicio Técnico Taller' }}</div>
-                <div class="sig-sub">{{ $empresa->nombre_comercial ?? 'Empresa' }}</div>
+                <div class="sig-line">Firma y Sello del Técnico Responsable</div>
+                <div class="sig-sub">{{ $orden->tecnico->name ?? 'Especialista de Taller' }}</div>
+                <div class="sig-sub">{{ $empresa->nombre_comercial ?? 'Servitec' }}</div>
             </td>
         </tr>
     </table>

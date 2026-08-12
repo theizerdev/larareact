@@ -1121,6 +1121,7 @@ class ReparacionController extends Controller
                 $costoFmt = number_format((float) $orden->costo_estimado, 2);
                 $anticipoFmt = number_format((float) $orden->anticipo, 2);
                 $saldoFmt = number_format((float) $orden->saldo_restante, 2);
+                $publicReportUrl = url("/admin/reparaciones/{$orden->id}/reporte-pdf");
 
                 $mensajeCliente = "📲 *CONFIRMACIÓN DE ORDEN DE REPARACIÓN*\n\n"
                     . "📋 *Orden:* #{$orden->numero_orden}\n"
@@ -1131,6 +1132,8 @@ class ReparacionController extends Controller
                     . "💰 *Costo Estimado:* {$currencySymbol}{$costoFmt}\n"
                     . "💵 *Anticipo:* {$currencySymbol}{$anticipoFmt}\n"
                     . "💳 *Saldo Restante:* {$currencySymbol}{$saldoFmt}\n\n"
+                    . "🔗 *Ver Estado y Detalle de su Reparación con Evidencias:* \n"
+                    . "👉 {$publicReportUrl}\n\n"
                     . "Estimado(a) *{$orden->cliente_nombre}*, su equipo ha sido recibido exitosamente en nuestro taller. Le mantendremos informado sobre el estatus de su reparación. ¡Gracias por su confianza!";
 
                 $whatsappService->sendMessage($clientePhone, $mensajeCliente);
