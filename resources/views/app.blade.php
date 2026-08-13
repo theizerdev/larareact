@@ -47,7 +47,7 @@
                 }
             }
             if (!$favicon) {
-                $favicon = '/image/logo/driscolls_mini_d_logo.png';
+                $favicon = '/image/logo/logo_innovacion-movil.png';
             }
         @endphp
         <link rel="icon" href="{{ $favicon }}" type="image/png">

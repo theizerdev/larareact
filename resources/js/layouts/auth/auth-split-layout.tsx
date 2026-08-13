@@ -43,9 +43,9 @@ export default function AuthSplitLayout({
                         className="mb-8 flex items-center justify-center"
                     >
                         <img
-                            src="/image/logo/larareact_logo_transparent.webp"
+                            src="/image/logo/Innovacion Movil Logo Transparente Grande.webp"
                             alt="Logo"
-                            className="h-10 w-auto object-contain"
+                            className="h-12 w-auto object-contain"
                         />
                     </Link>
 
