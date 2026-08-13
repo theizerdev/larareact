@@ -1075,7 +1075,7 @@ class ReparacionController extends Controller
         try {
             $user = auth()->user();
             $empresaId = $orden->empresa_id ?? ($user ? $user->empresa_id : 1);
-            $whatsappService = new \App\Services\WhatsAppService($empresaId);
+            $whatsappService = (new \App\Services\WhatsAppService($empresaId))->setTimeout(3);
             $currencySymbol = $this->getCurrencySymbol();
 
             $orden->loadMissing(['cliente', 'marca', 'modelo', 'tecnico']);
@@ -1122,7 +1122,7 @@ class ReparacionController extends Controller
         try {
             $user = auth()->user();
             $empresaId = $orden->empresa_id ?? ($user ? $user->empresa_id : 1);
-            $whatsappService = new \App\Services\WhatsAppService($empresaId);
+            $whatsappService = (new \App\Services\WhatsAppService($empresaId))->setTimeout(3);
             $currencySymbol = $this->getCurrencySymbol();
 
             // 1. Notificación al Cliente

@@ -488,26 +488,45 @@ export default function CreateReparacion({ clientes: initialClientes, marcas: in
         if (videoRef.current && canvasRef.current) {
             const video = videoRef.current;
             const canvas = canvasRef.current;
-            canvas.width = video.videoWidth || 1280;
-            canvas.height = video.videoHeight || 720;
+            let width = video.videoWidth || 1280;
+            let height = video.videoHeight || 720;
+            const maxDim = 1024;
+            if (width > maxDim || height > maxDim) {
+                if (width > height) {
+                    height = Math.round((height * maxDim) / width);
+                    width = maxDim;
+                } else {
+                    width = Math.round((width * maxDim) / height);
+                    height = maxDim;
+                }
+            }
+            canvas.width = width;
+            canvas.height = height;
             const ctx = canvas.getContext('2d');
             if (ctx) {
-                ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
-                const dataUrl = canvas.toDataURL('image/jpeg', 0.88);
+                ctx.imageSmoothingEnabled = true;
+                ctx.imageSmoothingQuality = 'high';
+                ctx.drawImage(video, 0, 0, width, height);
+                const dataUrl = canvas.toDataURL('image/jpeg', 0.75);
                 setCapturedImage(dataUrl);
             }
         }
     };
 
-    const handleAcceptCapturedPhoto = () => {
+    const handleAcceptCapturedPhoto = async () => {
         if (capturedImage && activeCameraSlot) {
-            setFotosState((prev) => {
-                const next = { ...prev, [activeCameraSlot]: capturedImage };
-                setData('evidencias_fotos', next as any);
-                return next;
-            });
-            notifySuccess(__('Fotografía capturada y guardada.'));
-            stopCameraStream();
+            try {
+                const compressed = await compressImage(capturedImage, { maxWidth: 1024, maxHeight: 1024, quality: 0.75 });
+                setFotosState((prev) => {
+                    const next = { ...prev, [activeCameraSlot]: compressed };
+                    setData('evidencias_fotos', next as any);
+                    return next;
+                });
+                notifySuccess(__('Fotografía capturada y guardada.'));
+                stopCameraStream();
+            } catch (err) {
+                console.error('Error al optimizar foto capturada:', err);
+            }
         }
     };
 
@@ -562,7 +581,7 @@ export default function CreateReparacion({ clientes: initialClientes, marcas: in
         if (!file) return;
 
         try {
-            const compressedBase64 = await compressImage(file, { maxWidth: 1280, maxHeight: 1280, quality: 0.8 });
+            const compressedBase64 = await compressImage(file, { maxWidth: 1024, maxHeight: 1024, quality: 0.75 });
             setFotosState((prev) => {
                 const next = { ...prev, [slotKey]: compressedBase64 };
                 setData('evidencias_fotos', next as any);
