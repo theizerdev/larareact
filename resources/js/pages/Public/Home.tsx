@@ -13,19 +13,18 @@ import SiteHeader from './Partials/Home/SiteHeader';
 export default function Home() {
     const { __ } = useTranslate();
 
+    // og:title/og:description/twitter:* ya se sirven server-side desde
+    // app.blade.php (la app no usa SSR, así que los crawlers de redes
+    // sociales nunca verían las etiquetas si sólo vivieran aquí). Esta
+    // description sí se actualiza en cliente porque está traducida.
+    const description = __(
+        'Enterprise access-control platform with biometric verification, liveness detection and document validation. Fleet management, GPS asset tracking, ITSM, inventory control, workforce time tracking and corporate messaging. Aligned with CTPAT, OEA, ISO 27001, ISO 20000, ISO 9001, PLD and AML.',
+    );
+
     return (
         <div className="hosho-landing min-h-screen">
-            <Head title="Hoshō">
-                <meta
-                    name="description"
-                    content={__(
-                        'Enterprise access-control platform with biometric verification, liveness detection and document validation. Fleet management, GPS asset tracking, ITSM, inventory control, workforce time tracking and corporate messaging. Aligned with CTPAT, OEA, ISO 27001, ISO 20000, ISO 9001, PLD and AML.',
-                    )}
-                />
-                <meta
-                    property="og:title"
-                    content="Hoshō — Enterprise access-control platform"
-                />
+            <Head>
+                <meta name="description" content={description} />
                 <meta property="og:type" content="website" />
             </Head>
 

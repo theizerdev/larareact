@@ -77,8 +77,8 @@ export default function SiteFooter() {
                 </div>
                 <div className="flex flex-wrap items-center justify-between gap-4 pt-[1.4rem]">
                     <p className="m-0 inline-flex items-center gap-2 font-hosho-data text-[.72rem] text-hosho-navy-mist">
-                        <HoshoMark className="size-[15px]" />© {year} Innovación
-                        Móvil · Hoshō 保証
+                        <HoshoMark className="size-[15px]" />© {year} Hoshō by
+                        Innovación Móvil
                     </p>
                     <p className="m-0 font-hosho-data text-[.72rem] text-hosho-navy-mist">
                         {__('Privacy notice · Terms and conditions of service')}
