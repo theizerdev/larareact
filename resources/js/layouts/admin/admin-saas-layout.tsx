@@ -47,8 +47,6 @@ import { useTemplateSettings } from '@/hooks/use-template-settings';
 import { useTranslate } from '@/hooks/use-translate';
 import { cn, toUrl } from '@/lib/utils';
 import { dashboard, home, logout } from '@/routes';
-import { index as cargosIndex } from '@/routes/admin/cargos';
-import { index as departamentosIndex } from '@/routes/admin/departamentos';
 import { index as empresasIndex } from '@/routes/admin/empresas';
 import { index as dbMonitoringIndex } from '@/routes/admin/monitoring/database';
 import { index as paisesIndex } from '@/routes/admin/paises';
@@ -56,7 +54,6 @@ import { edit as appearanceEdit } from '@/routes/appearance';
 import { edit as profileEdit } from '@/routes/profile';
 import { edit as securityEdit } from '@/routes/security';
 import { index as sucursalesIndex } from '@/routes/admin/sucursales';
-import { index as responsablesIndex } from '@/routes/admin/responsables';
 import { index as rolesIndex } from '@/routes/admin/roles';
 import { index as usuariosIndex } from '@/routes/admin/usuarios';
 import { index as serverMonitoringIndex } from '@/routes/admin/monitoring/server';
@@ -399,36 +396,7 @@ export default function AdminSaasLayout({
                                     href: sucursalesIndex.url(),
                                     permission: 'sucursales.view',
                                 },
-                                {
-                                    title: 'Departments',
-                                    href: departamentosIndex.url(),
-                                    permission: 'departamentos.view',
-                                },
-                                {
-                                    title: 'Positions',
-                                    href: cargosIndex.url(),
-                                    permission: 'cargos.view',
-                                },
-                                {
-                                    title: 'Responsibles',
-                                    href: responsablesIndex.url(),
-                                    permission: 'responsables.view',
-                                },
-                                {
-                                    title: 'Employees',
-                                    href: '/admin/empleados',
-                                    permission: 'empleados.view',
-                                },
-                                {
-                                    title: 'Suppliers',
-                                    href: '/admin/proveedores',
-                                    permission: 'proveedores.view',
-                                },
-                                {
-                                    title: 'Producers',
-                                    href: '/admin/productores',
-                                    permission: 'productores.view',
-                                },
+
                             ].filter(item => hasPermission(item.permission));
 
                             if (orgItems.length === 0) return null;
@@ -445,122 +413,10 @@ export default function AdminSaasLayout({
                             );
                         })()}
 
-                        {/* Visits Group */}
-                        {(() => {
-                            const visitsItems = [
-                                {
-                                    title: 'Temporary Visits',
-                                    href: '/admin/visitas-temporales',
-                                    permission: 'visitas_temporales.view',
-                                },
-                                {
-                                    title: 'Facility Accesses',
-                                    href: '/admin/visitas-accesos',
-                                    permission: 'visitas_temporales.view',
-                                },
-                                {
-                                    title: 'Gate Control (QR Reader)',
-                                    href: '/admin/visitas-accesos/garita',
-                                    permission: 'visitas_temporales.view',
-                                },
-                            ].filter(item => hasPermission(item.permission));
 
-                            if (visitsItems.length === 0) return null;
 
-                            return (
-                                <div className="pt-2">
-                                    <CollapsibleNavItem
-                                        title="Visits"
-                                        icon={Calendar}
-                                        collapsed={collapsed}
-                                        items={visitsItems}
-                                    />
-                                </div>
-                            );
-                        })()}
 
-                        {/* Access Control Group */}
-                        {(() => {
-                            const controlAccesoItems = [
-                                {
-                                    title: 'IVMS Employees',
-                                    href: '/admin/control-acceso/empleados',
-                                    permission: 'control_acceso.view',
-                                },
-                                {
-                                    title: 'Access Cards',
-                                    href: '/admin/control-acceso/tarjetas',
-                                    permission: 'control_acceso.view',
-                                },
-                                {
-                                    title: 'Pedestrian Access Events',
-                                    href: '/admin/control-acceso/eventos-peatonales',
-                                    permission: 'control_acceso.view',
-                                },
-                                {
-                                    title: 'Vehicles',
-                                    href: '/admin/control-acceso/vehiculos',
-                                    permission: 'control_acceso.view',
-                                },
-                                {
-                                    title: 'Vehicle Access Events',
-                                    href: '/admin/control-acceso/eventos-vehiculares',
-                                    permission: 'control_acceso.view',
-                                },
-                            ].filter(item => hasPermission(item.permission));
 
-                            if (controlAccesoItems.length === 0) return null;
-
-                            return (
-                                <div className="pt-2">
-                                    <CollapsibleNavItem
-                                        title="Access Control"
-                                        icon={Fingerprint}
-                                        collapsed={collapsed}
-                                        items={controlAccesoItems}
-                                    />
-                                </div>
-                            );
-                        })()}
-
-                        {/* Asistencia & Reloj Checador Group */}
-                        {(() => {
-                            const asistenciaItems = [
-                                {
-                                    title: 'Kiosko Checador',
-                                    href: '/admin/reloj-checador/kiosko',
-                                    permission: 'asistencia.kiosko',
-                                },
-                                {
-                                    title: 'Pre-Nómina y Horas Extra',
-                                    href: '/admin/asistencia/calculo-nomina',
-                                    permission: 'asistencia.nomina',
-                                },
-                                {
-                                    title: 'Bitácora de Marcajes',
-                                    href: '/admin/asistencia/bitacora',
-                                    permission: 'asistencia.bitacora',
-                                },
-                                {
-                                    title: 'Configuración y Turnos',
-                                    href: '/admin/asistencia/configuracion',
-                                    permission: 'asistencia.configuracion',
-                                },
-                            ].filter(item => hasPermission(item.permission) || hasPermission('asistencia.view'));
-
-                            if (asistenciaItems.length === 0) return null;
-
-                            return (
-                                <div className="pt-2">
-                                    <CollapsibleNavItem
-                                        title="Reloj Checador"
-                                        icon={Activity}
-                                        collapsed={collapsed}
-                                        items={asistenciaItems}
-                                    />
-                                </div>
-                            );
-                        })()}
 
                         {/* Settings Group */}
                         {(() => {
@@ -605,11 +461,7 @@ export default function AdminSaasLayout({
                                     href: integrationsIndex.url(),
                                     permission: 'integrations.view',
                                 },
-                                {
-                                    title: 'Validations',
-                                    href: '/admin/integrations/validaciones',
-                                    permission: 'jaak.view',
-                                },
+
                             ].filter(item => hasPermission(item.permission));
 
                             if (integrationsItems.length === 0) return null;
