@@ -26,8 +26,8 @@ export default function AuthCardLayout({
                     className="flex items-center gap-2 self-center font-medium"
                 >
                     <img
-                        src="/image/logo/larareact_logo_transparent.webp"
-                        alt="LaraReact Logo"
+                        src="/image/logo/hosho/lockup.png"
+                        alt="Hoshō"
                         className="h-40 w-auto object-contain"
                     />
                 </Link>

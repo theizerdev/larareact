@@ -17,8 +17,8 @@ export default function AuthSimpleLayout({
                             className="flex flex-col items-center gap-2 font-medium"
                         >
                             <img
-                                src="/image/logo/larareact_logo_transparent.webp"
-                                alt="Logo"
+                                src="/image/logo/hosho/lockup.png"
+                                alt="Hoshō"
                                 className="h-40 w-auto object-contain"
                             />
                             <span className="sr-only">{title}</span>

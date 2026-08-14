@@ -31,11 +31,10 @@
         </style>
 
         @php
-            $favicon = '/image/logo/logo_innovacion-movil.png';
-           
+            $favicon = '/image/logo/hosho/favicon.png';
         @endphp
         <link rel="icon" href="{{ $favicon }}" type="image/png">
-        <link rel="apple-touch-icon" href="{{ $favicon }}">
+        <link rel="apple-touch-icon" href="/image/logo/hosho/apple-touch-icon.png">
 
         @if(request()->is('admin/reloj-checador/kiosko*'))
         {{-- PWA Kiosko --}}

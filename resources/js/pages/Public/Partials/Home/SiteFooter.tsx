@@ -21,8 +21,8 @@ export default function SiteFooter() {
                         <div className="mb-4 flex items-center gap-3">
                             <span className="grid size-[34px] shrink-0 place-items-center overflow-hidden rounded-[10px] bg-white/10">
                                 <img
-                                    src="/image/logo/logo_innovacion-movil.png"
-                                    alt={__('Innovación Móvil')}
+                                    src="/image/logo/hosho/icon-dark.png"
+                                    alt="Hoshō"
                                     className="size-full object-contain p-1"
                                 />
                             </span>

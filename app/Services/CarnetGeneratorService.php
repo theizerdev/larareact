@@ -127,8 +127,8 @@ class CarnetGeneratorService
                 }
             }
 
-            // --- 5. Logotipo Driscoll's ---
-            $logoPath = public_path('image/logo/larareact_logo_transparent.png');
+            // --- 5. Logotipo institucional (Hoshō) ---
+            $logoPath = public_path('image/logo/hosho/lockup.png');
             if (!file_exists($logoPath)) {
                 $logoPath = public_path('image/logo/driscolls_logo.png');
             }
@@ -256,8 +256,8 @@ class CarnetGeneratorService
                 }
             }
 
-            // --- 5. Logotipo Driscoll's ---
-            $logoPath = public_path('image/logo/larareact_logo_transparent.png');
+            // --- 5. Logotipo institucional (Hoshō) ---
+            $logoPath = public_path('image/logo/hosho/lockup.png');
             if (!file_exists($logoPath)) {
                 $logoPath = public_path('image/logo/driscolls_logo.png');
             }
@@ -384,8 +384,8 @@ class CarnetGeneratorService
                 }
             }
 
-            // --- 5. Logotipo Driscoll's ---
-            $logoPath = public_path('image/logo/larareact_logo_transparent.png');
+            // --- 5. Logotipo institucional (Hoshō) ---
+            $logoPath = public_path('image/logo/hosho/lockup.png');
             if (!file_exists($logoPath)) {
                 $logoPath = public_path('image/logo/driscolls_logo.png');
             }

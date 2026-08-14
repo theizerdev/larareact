@@ -109,8 +109,8 @@ export default function AdminHeaderLayout({
                         >
                             <div className="flex items-center justify-center bg-transparent">
                                 <img
-                                    src={(auth as any)?.user?.empresa?.logo_mini || (auth as any)?.user?.empresa?.logo || ""}
-                                    alt={(auth as any)?.user?.empresa?.razon_social || "LaraReact Icon"}
+                                    src={(auth as any)?.user?.empresa?.logo_mini || (auth as any)?.user?.empresa?.logo || "/image/logo/hosho/icon.png"}
+                                    alt={(auth as any)?.user?.empresa?.razon_social || "Hoshō"}
                                     className="h-8 w-auto object-contain"
                                 />
                             </div>

@@ -1,9 +1,9 @@
 import type { SVGAttributes } from 'react';
 
 /**
- * Marca de Hoshō (保証 · "garantía"): un techo/torii sobre una base,
- * evocando puerta de acceso y resguardo. Único glifo dibujado a mano del
- * landing; el resto de la iconografía usa lucide-react.
+ * Marca de Hoshō (保証 · "garantía"): el escudo del isotipo oficial,
+ * trazado en monolínea para heredar currentColor. Único glifo dibujado a
+ * mano del landing; el resto de la iconografía usa lucide-react.
  */
 export default function HoshoMark(props: SVGAttributes<SVGSVGElement>) {
     return (
@@ -17,9 +17,7 @@ export default function HoshoMark(props: SVGAttributes<SVGSVGElement>) {
             aria-hidden="true"
             {...props}
         >
-            <path d="M4 10.5 12 4l8 6.5" />
-            <path d="M6 9.5V20h12V9.5" />
-            <path d="M10 20v-5.5h4V20" />
+            <path d="M12 2.6 19.5 6.2V11.3C19.5 16.5 16.1 19.7 12 21.3 7.9 19.7 4.5 16.5 4.5 11.3V6.2Z" />
         </svg>
     );
 }

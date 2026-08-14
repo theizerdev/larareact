@@ -26,7 +26,11 @@ export default function AuthSplitLayout({
                     href={home()}
                     className="relative z-10 flex items-center font-semibold"
                 >
-
+                    <img
+                        src="/image/logo/hosho/lockup-dark.png"
+                        alt="Hoshō"
+                        className="h-9 w-auto object-contain"
+                    />
                 </Link>
 
                 <p className="relative z-10 text-sm text-white/70 font-medium drop-shadow-sm">
@@ -43,8 +47,8 @@ export default function AuthSplitLayout({
                         className="mb-8 flex items-center justify-center"
                     >
                         <img
-                            src="/image/logo/Innovacion Movil Logo Transparente Grande.webp"
-                            alt="Logo"
+                            src="/image/logo/hosho/lockup.png"
+                            alt="Hoshō"
                             className="h-12 w-auto object-contain"
                         />
                     </Link>

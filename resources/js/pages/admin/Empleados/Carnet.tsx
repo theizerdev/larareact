@@ -338,7 +338,7 @@ export default function CarnetPage({ empleado }: CarnetPageProps) {
                         </p>
                     </div>
 
-                    {/* ══ Sección Inferior (Código QR y Driscoll's logo) ══ */}
+                    {/* ══ Sección Inferior (Código QR y logo institucional) ══ */}
                     <div
                         style={{
                             display: 'flex',
@@ -373,11 +373,11 @@ export default function CarnetPage({ empleado }: CarnetPageProps) {
                         {/* Logo sin fondo idéntico al de login.tsx */}
                         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '75px', width: '100%', padding: '0 10px', boxSizing: 'border-box' }}>
                             <img
-                                src="/image/logo/larareact_logo_transparent.webp"
+                                src="/image/logo/hosho/lockup.webp"
                                 onError={(e) => {
-                                    (e.target as HTMLImageElement).src = "/image/logo/larareact_logo_transparent.webp";
+                                    (e.target as HTMLImageElement).src = "/image/logo/hosho/lockup.webp";
                                 }}
-                                alt="Driscoll's Logo"
+                                alt="Hoshō"
                                 style={{ height: '72px', maxWidth: '250px', width: 'auto', display: 'block', objectFit: 'contain', backgroundColor: 'transparent' }}
                             />
                         </div>
