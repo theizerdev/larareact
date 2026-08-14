@@ -27,7 +27,7 @@ import HoshoMark from './HoshoMark';
 import Reveal from './Reveal';
 
 const fieldClass =
-    'h-auto rounded-hosho-sm border-hosho-line bg-hosho-surface-2 px-[.85rem] py-[.74rem] font-hosho-body text-[.95rem] text-hosho-ink shadow-none focus-visible:border-hosho-indigo focus-visible:bg-hosho-surface focus-visible:ring-[4px] focus-visible:ring-hosho-indigo/[.12]';
+    'h-auto rounded-hosho-sm border-hosho-line bg-hosho-surface-2 px-3 py-2.5 sm:px-[.85rem] sm:py-[.74rem] font-hosho-body text-[.95rem] text-hosho-ink shadow-none focus-visible:border-hosho-indigo focus-visible:bg-hosho-surface focus-visible:ring-[4px] focus-visible:ring-hosho-indigo/[.12]';
 const labelClass =
     'font-hosho-data text-[.64rem] tracking-[.08em] text-hosho-ink-soft uppercase';
 
@@ -108,7 +108,7 @@ export default function ContactSection() {
 
     return (
         <section id="contacto" className="py-[clamp(4.25rem,9vh,7rem)]">
-            <div className="mx-auto grid max-w-[1240px] gap-10 px-5 sm:px-8 md:grid-cols-[.85fr_1.15fr] md:gap-[clamp(2.3rem,5vw,3.8rem)]">
+            <div className="mx-auto grid max-w-[1240px] gap-8 px-4 sm:gap-10 sm:px-8 md:grid-cols-[.85fr_1.15fr] md:gap-[clamp(2.3rem,5vw,3.8rem)]">
                 <Reveal>
                     <div className="mb-[1.1rem] inline-flex items-center gap-2 rounded-full bg-hosho-indigo-tint py-[.42rem] pr-[.85rem] pl-[.62rem]">
                         <HoshoMark className="size-3.5 text-hosho-indigo" />
@@ -170,17 +170,17 @@ export default function ContactSection() {
                         ].map((row, i) => (
                             <div
                                 key={i}
-                                className="grid grid-cols-[24px_1fr] items-start gap-[.9rem]"
+                                className="grid grid-cols-[24px_minmax(0,1fr)] items-start gap-[.9rem]"
                             >
                                 <row.Icon
                                     className="mt-[.32rem] size-[19px] text-hosho-mist"
                                     strokeWidth={1.6}
                                 />
-                                <div>
+                                <div className="min-w-0">
                                     <dt className="mb-[.22rem] font-hosho-data text-[.65rem] tracking-[.08em] text-hosho-mist uppercase">
                                         {row.dt}
                                     </dt>
-                                    <dd className="m-0 text-[.98rem] text-hosho-ink">
+                                    <dd className="m-0 text-[.98rem] break-words text-hosho-ink">
                                         {row.dd}
                                     </dd>
                                 </div>
@@ -216,9 +216,9 @@ export default function ContactSection() {
                         <form
                             onSubmit={submit}
                             noValidate
-                            className="rounded-hosho-lg border border-hosho-line bg-hosho-surface p-[clamp(1.5rem,3vw,2.2rem)] shadow-hosho-md"
+                            className="rounded-hosho-lg border border-hosho-line bg-hosho-surface p-[clamp(1.3rem,4vw,2.2rem)] shadow-hosho-md"
                         >
-                            <div className="grid gap-[1.05rem] sm:grid-cols-2">
+                            <div className="grid gap-3 sm:gap-[1.05rem] sm:grid-cols-2">
                                 <Field
                                     label={__('Full name')}
                                     htmlFor="f-nombre"
@@ -253,7 +253,7 @@ export default function ContactSection() {
                                 </Field>
                             </div>
 
-                            <div className="mt-[1.05rem] grid gap-[1.05rem] sm:grid-cols-2">
+                            <div className="mt-3 grid gap-3 sm:mt-[1.05rem] sm:gap-[1.05rem] sm:grid-cols-2">
                                 <Field
                                     label={__('Corporate email address')}
                                     htmlFor="f-correo"
@@ -290,7 +290,7 @@ export default function ContactSection() {
                                 </Field>
                             </div>
 
-                            <div className="mt-[1.05rem] grid gap-[1.05rem] sm:grid-cols-2">
+                            <div className="mt-3 grid gap-3 sm:mt-[1.05rem] sm:gap-[1.05rem] sm:grid-cols-2">
                                 <div className="grid gap-2">
                                     <Label className={labelClass}>
                                         {__(
@@ -375,7 +375,7 @@ export default function ContactSection() {
                                 </Field>
                             </div>
 
-                            <label className="mt-[1.15rem] mb-[1.35rem] flex items-start gap-[.7rem] text-[.8rem] leading-[1.5] text-hosho-ink-soft">
+                            <label className="mt-3 mb-3 flex items-start gap-[.7rem] text-[.8rem] leading-[1.5] text-hosho-ink-soft sm:mt-[1.15rem] sm:mb-[1.35rem]">
                                 <Checkbox
                                     checked={data.acepta_contacto}
                                     onCheckedChange={(v) =>

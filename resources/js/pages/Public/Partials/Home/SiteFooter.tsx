@@ -28,11 +28,11 @@ export default function SiteFooter() {
                             </span>
                             <span>
                                 <strong className="block font-hosho-display text-[1.05rem] font-bold text-hosho-navy-ink">
+                                    Hoshō by
+                                </strong>
+                                <strong className="block font-hosho-display text-[1.05rem] font-bold text-hosho-navy-ink">
                                     Innovación Móvil
                                 </strong>
-                                <span className="font-hosho-data text-[.6rem] tracking-[.1em] text-hosho-navy-mist uppercase">
-                                    {__('Developer of Hoshō')}
-                                </span>
                             </span>
                         </div>
                         <p className="m-0 max-w-[34rem] text-[.92rem] text-hosho-navy-mist">

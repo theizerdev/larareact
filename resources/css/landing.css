@@ -104,6 +104,7 @@
     background: var(--color-hosho-bg);
     color: var(--color-hosho-ink);
     color-scheme: light;
+    overflow-x: hidden;
 }
 
 .hosho-landing .hosho-reveal {
