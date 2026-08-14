@@ -20,6 +20,16 @@ export default defineConfig({
                 bunny('Instrument Sans', {
                     weights: [400, 500, 600],
                 }),
+                // Tipografía de marca para el landing page (Hoshō)
+                bunny('Space Grotesk', {
+                    weights: [500, 700],
+                }),
+                bunny('Inter', {
+                    weights: [400, 500, 600, 700],
+                }),
+                bunny('IBM Plex Mono', {
+                    weights: [400, 500],
+                }),
             ],
         }),
         inertia(),

@@ -3,15 +3,20 @@
 use App\Http\Controllers\Admin\DashboardController;
 use App\Http\Controllers\Admin\VisitaAccesoController;
 use App\Http\Controllers\Auth\ForgotPasswordOtpController;
+use App\Http\Controllers\SolicitudDemoController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
+use Inertia\Inertia;
 
+// Landing page pública: siempre visible, con o sin sesión. El propio landing
+// decide a dónde llevar al usuario (login o dashboard) según su estado de auth.
 Route::get('/', function () {
-    if (Auth::check()) {
-        return redirect()->route('dashboard');
-    }
-    return redirect()->route('login');
+    return Inertia::render('Public/Home');
 })->name('home');
+
+Route::post('/contacto', [SolicitudDemoController::class, 'store'])
+    ->middleware('throttle:5,1')
+    ->name('contacto.store');
 
 // Módulo de Control de Garita (Lector QR)
 Route::get('/garita', [VisitaAccesoController::class, 'garita'])->name('garita.show');
