@@ -7,17 +7,25 @@ use Illuminate\Support\Facades\Route;
 
 use App\Http\Controllers\ContactController;
 use App\Http\Controllers\Admin\TestimonioController;
+use App\Models\SubscriptionPlan;
 use App\Models\Testimonio;
 use Inertia\Inertia;
 
 Route::get('/', function () {
+    SubscriptionPlan::ensureDefaultPlansExist();
+
     $testimonios = Testimonio::where('activo', true)
         ->orderBy('destacado', 'desc')
         ->orderBy('orden', 'asc')
         ->get();
 
+    $planes = SubscriptionPlan::where('activo', true)
+        ->orderBy('id', 'asc')
+        ->get();
+
     return Inertia::render('welcome', [
         'testimonios' => $testimonios,
+        'planes' => $planes,
     ]);
 })->name('home');
 

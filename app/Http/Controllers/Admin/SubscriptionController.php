@@ -44,9 +44,13 @@ class SubscriptionController extends Controller
 
         $bcvRate = $bcvService->getRate() ?? 36.50; // Tasa por defecto de respaldo si falla el API
 
-        $precio3 = ($plan?->precio_3_meses > 0) ? $plan->precio_3_meses : 89.00;
-        $precio6 = ($plan?->precio_6_meses > 0) ? $plan->precio_6_meses : 159.00;
-        $precio12 = ($plan?->precio_12_meses > 0) ? $plan->precio_12_meses : 288.00;
+        $planTrimestral = SubscriptionPlan::where('nombre', 'Plan Trimestral')->first();
+        $planSemestral  = SubscriptionPlan::where('nombre', 'Plan Semestral')->first();
+        $planAnual      = SubscriptionPlan::where('nombre', 'Plan Anual')->first();
+
+        $precio3  = $planTrimestral?->precio_3_meses  ?: 897.00;
+        $precio6  = $planSemestral?->precio_6_meses   ?: 1494.00;
+        $precio12 = $planAnual?->precio_12_meses     ?: 2388.00;
 
         // Opciones de cálculo de precios
         $opcionesPrecios = [
@@ -54,19 +58,19 @@ class SubscriptionController extends Controller
                 'meses' => 3,
                 'subtotal_plan' => $precio3,
                 'precio_mensual_promedio' => round($precio3 / 3, 2),
-                'total' => $plan ? $plan->calcularPrecio(3, max(1, $totalSucursales)) : 89.00,
+                'total' => ($planTrimestral ?? $plan)?->calcularPrecio(3, max(1, $totalSucursales)) ?? 897.00,
             ],
             6 => [
                 'meses' => 6,
                 'subtotal_plan' => $precio6,
                 'precio_mensual_promedio' => round($precio6 / 6, 2),
-                'total' => $plan ? $plan->calcularPrecio(6, max(1, $totalSucursales)) : 159.00,
+                'total' => ($planSemestral ?? $plan)?->calcularPrecio(6, max(1, $totalSucursales)) ?? 1494.00,
             ],
             12 => [
                 'meses' => 12,
                 'subtotal_plan' => $precio12,
                 'precio_mensual_promedio' => round($precio12 / 12, 2),
-                'total' => $plan ? $plan->calcularPrecio(12, max(1, $totalSucursales)) : 288.00,
+                'total' => ($planAnual ?? $plan)?->calcularPrecio(12, max(1, $totalSucursales)) ?? 2388.00,
             ],
         ];
 

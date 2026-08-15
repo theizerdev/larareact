@@ -128,22 +128,21 @@ export default function SubscriptionIndex({ empresa, plan, opcionesPrecios, pago
     // Si la empresa ya posee una suscripción activa pagada:
     // - El plan ya está pagado ($0.00).
     // - Únicamente se cobran las NUEVAS sucursales adicionales ($10.00 USD c/u).
-    const currentSubtotalPlan = hasActivePaidSubscription ? 0 : (currentOption?.subtotal_plan ?? (selectedCycle === 3 ? 89 : selectedCycle === 6 ? 159 : 288));
+    const currentSubtotalPlan = hasActivePaidSubscription ? 0 : (currentOption?.subtotal_plan ?? (selectedCycle === 3 ? 897 : selectedCycle === 6 ? 1494 : 2388));
     const sucursalesExtrasCount = hasActivePaidSubscription 
         ? Math.max(0, extraSucursales - empresa.max_sucursales)
         : Math.max(0, extraSucursales - (plan?.sucursales_incluidas ?? 1));
     const precioSucursalExtra = (plan?.precio_sucursal_extra_mensual && plan.precio_sucursal_extra_mensual > 0) ? plan.precio_sucursal_extra_mensual : 10;
-    const multiplicadorTiempo = hasActivePaidSubscription ? 1 : selectedCycle;
-    const costoExtraSucursales = sucursalesExtrasCount * precioSucursalExtra * multiplicadorTiempo;
+    const costoExtraSucursales = sucursalesExtrasCount * precioSucursalExtra;
     const precioFinalEstimado = currentSubtotalPlan + costoExtraSucursales;
 
-    // Formateador especial estricto para Venezuela (convierte USD a Bolívares según tasa BCV)
+    // Formateador especial (con moneda de referencia mexicana MXN o Bolívares para Venezuela)
     const formatPrice = (usdAmount: number) => {
         if (isVenezuela) {
             const bsAmount = usdAmount * bcvRate;
             return `Bs. ${bsAmount.toLocaleString('es-VE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
         }
-        return `${currencySymbol}${usdAmount.toFixed(2)}`;
+        return `$${usdAmount.toLocaleString('es-MX', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} MXN`;
     };
 
     const { data, setData, post, processing, errors, reset } = useForm({
@@ -389,42 +388,45 @@ export default function SubscriptionIndex({ empresa, plan, opcionesPrecios, pago
                                                     badge: __('Para Emprendedores'),
                                                     badgeClass: 'bg-slate-700 text-white font-bold',
                                                     titulo: __('Plan Trimestral'),
-                                                    subtitulo: __('Control total para tu primer comercio'),
-                                                    promedioCalculado: 29.66,
-                                                    facturadoText: __('Facturado $89 cada 3 meses'),
+                                                    subtitulo: __('Ideal para arrancar y controlar tu comercio'),
+                                                    precioTotal: 897,
+                                                    periodoStr: __('3 meses'),
+                                                    promedioStr: __('Solo $299 MXN al mes'),
                                                     features: [
-                                                        __('Todo lo de la Prueba Gratis'),
-                                                        __('Catálogo y productos ilimitados'),
-                                                        __('Control de stock e inventario'),
-                                                        __('Reportes de ventas y ganancias'),
+                                                        __('Acceso Total a todos los módulos'),
+                                                        __('1 Sucursal incluida'),
+                                                        __('Sucursal extra: $10 MXN/mes'),
+                                                        __('Soporte técnico e inventario'),
                                                     ],
                                                 },
                                                 6: {
-                                                    badge: __('★ Más Popular - Ahorra 15%'),
+                                                    badge: __('⭐ ¡Más Popular!'),
                                                     badgeClass: 'bg-amber-500 text-white font-bold',
                                                     titulo: __('Plan Semestral'),
-                                                    subtitulo: __('El equilibrio perfecto para crecer'),
-                                                    promedioCalculado: 26.50,
-                                                    facturadoText: __('Facturado $159 cada 6 meses'),
+                                                    subtitulo: __('El equilibrio perfecto para crecer con ahorro'),
+                                                    precioTotal: 1494,
+                                                    periodoStr: __('6 meses'),
+                                                    promedioStr: __('Solo $249 MXN al mes'),
                                                     features: [
-                                                        __('Todo lo del Plan Trimestral'),
-                                                        __('Sincronización automática de tasa'),
-                                                        __('WhatsApp Engine multi-usuario'),
-                                                        __('Soporte prioritario por WhatsApp'),
+                                                        __('Acceso Total a todos los módulos'),
+                                                        __('1 Sucursal incluida'),
+                                                        __('Sucursal extra: $10 MXN/mes'),
+                                                        __('Soporte prioritario y WhatsApp'),
                                                     ],
                                                 },
                                                 12: {
-                                                    badge: __('🔥 Mejor Valor - Ahorra 30%'),
+                                                    badge: __('🚀 ¡Mejor Precio!'),
                                                     badgeClass: 'bg-emerald-600 text-white font-bold',
                                                     titulo: __('Plan Anual'),
-                                                    subtitulo: __('Máximo ahorro y soporte continuo'),
-                                                    promedioCalculado: 24.00,
-                                                    facturadoText: __('Facturado $288 al año'),
+                                                    subtitulo: __('Máximo ahorro y soporte continuo sin límites'),
+                                                    precioTotal: 2388,
+                                                    periodoStr: __('año'),
+                                                    promedioStr: __('Solo $199 MXN al mes'),
                                                     features: [
-                                                        __('Sucursales y Cajas Ilimitadas'),
-                                                        __('Ventas a crédito y cobranza'),
-                                                        __('Auditoría estricta de transacciones'),
-                                                        __('Asesor técnico dedicado'),
+                                                        __('Acceso Total a todos los módulos'),
+                                                        __('2 Sucursales incluidas'),
+                                                        __('Sucursal extra: $10 MXN/mes'),
+                                                        __('Soporte técnico VIP dedicado'),
                                                     ],
                                                 },
                                             }[meses]!;
@@ -459,10 +461,9 @@ export default function SubscriptionIndex({ empresa, plan, opcionesPrecios, pago
                                                         <span className="text-xs font-extrabold uppercase tracking-wider text-muted-foreground">{meta.titulo}</span>
                                                         <p className="text-xs text-muted-foreground min-h-[32px]">{meta.subtitulo}</p>
                                                         <div className="pt-2">
-                                                            <h3 className="text-3xl font-black text-foreground">
-                                                                {formatPrice(meta.promedioCalculado)} <span className="text-xs font-semibold text-muted-foreground">/ {__('mes')}</span>
+                                                            <h3 className="text-2xl sm:text-3xl font-black text-foreground flex items-baseline gap-1 flex-wrap">
+                                                                {formatPrice(meta.precioTotal)} <span className="text-xs font-semibold text-muted-foreground">/ {meta.periodoStr}</span>
                                                             </h3>
-                                                            <p className="text-[11px] font-medium text-primary mt-0.5">{meta.facturadoText}</p>
                                                         </div>
                                                     </div>
 

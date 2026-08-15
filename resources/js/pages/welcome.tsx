@@ -554,194 +554,162 @@ export default function Welcome() {
                             </p>
                         </div>
 
-                        {/* Grid de Planes (4 Tarjetas) */}
+                        {/* Grid de 4 Planes Dinámico desde Base de Datos */}
                         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 lg:gap-8 items-stretch">
+                            {((pageProps.planes && pageProps.planes.length > 0)
+                                ? pageProps.planes.filter((p: any) => p.activo !== false)
+                                : [
+                                    {
+                                        id: 1,
+                                        nombre: 'Plan Prueba',
+                                        descripcion: '7 días de acceso completo para evaluar todas las herramientas.',
+                                        precio_3_meses: 0,
+                                        precio_6_meses: 0,
+                                        precio_12_meses: 0,
+                                        sucursales_incluidas: 1,
+                                    },
+                                    {
+                                        id: 2,
+                                        nombre: 'Plan Trimestral',
+                                        descripcion: 'Ideal para emprendedores y comercios con flexibilidad de pago.',
+                                        precio_3_meses: 897,
+                                        precio_6_meses: 0,
+                                        precio_12_meses: 0,
+                                        sucursales_incluidas: 1,
+                                    },
+                                    {
+                                        id: 3,
+                                        nombre: 'Plan Semestral',
+                                        descripcion: 'Control operativo total para comercios en crecimiento.',
+                                        precio_3_meses: 0,
+                                        precio_6_meses: 1494,
+                                        precio_12_meses: 0,
+                                        sucursales_incluidas: 1,
+                                    },
+                                    {
+                                        id: 4,
+                                        nombre: 'Plan Anual',
+                                        descripcion: 'La opción con mejor precio para empresas consolidadas.',
+                                        precio_3_meses: 0,
+                                        precio_6_meses: 0,
+                                        precio_12_meses: 2388,
+                                        sucursales_incluidas: 2,
+                                    },
+                                ]
+                            ).map((plan: any) => {
+                                const nameLower = (plan.nombre || '').toLowerCase();
+                                const isFree = (plan.precio_3_meses === 0 && plan.precio_6_meses === 0 && plan.precio_12_meses === 0) || nameLower.includes('prueba');
+                                const isPopular = nameLower.includes('semestral') || nameLower.includes('profesional');
+                                const isBestValue = nameLower.includes('anual') || nameLower.includes('corporativo');
 
-                            {/* Plan 1: Prueba Gratis 7 Días */}
-                            <div className="bg-white border border-slate-200 p-6 sm:p-8 rounded-3xl space-y-6 flex flex-col justify-between shadow-sm hover:shadow-xl transition-all relative">
-                                <div className="space-y-4">
-                                    <span className="inline-block px-3 py-1 rounded-full bg-emerald-50 border border-emerald-200 text-emerald-700 text-xs font-bold uppercase tracking-wider">
-                                        {__('Sin Compromiso')}
-                                    </span>
-                                    <div>
-                                        <h3 className="text-xl font-bold text-[#08264e]">{__('Prueba Gratuita')}</h3>
-                                        <p className="text-xs text-slate-500 mt-1">{__('Evalúa todo el sistema en tu negocio')}</p>
-                                    </div>
-                                    <div className="pt-2">
-                                        <div className="flex items-baseline gap-1">
-                                            <span className="text-4xl font-black text-[#08264e] font-mono">$0</span>
-                                            <span className="text-xs font-bold text-slate-500">/ 7 {__('Días')}</span>
+                                let displayPrice = '0';
+                                let periodText = '';
+                                let subdetailText = '';
+
+                                if (isFree) {
+                                    displayPrice = '0';
+                                    periodText = `/ 7 ${__('Días')}`;
+                                    subdetailText = __('Acceso Total Ilimitado');
+                                } else if (nameLower.includes('semestral') || plan.precio_6_meses > 0) {
+                                    displayPrice = '1,494';
+                                    periodText = `/ 6 ${__('meses')}`;
+                                    subdetailText = `${__('Solo')} $249 ${__('al mes')}`;
+                                } else if (nameLower.includes('anual') || plan.precio_12_meses > 0) {
+                                    displayPrice = '2,388';
+                                    periodText = `/ ${__('año')}`;
+                                    subdetailText = `${__('Solo')} $199 ${__('al mes')}`;
+                                } else {
+                                    displayPrice = '897';
+                                    periodText = `/ 3 ${__('meses')}`;
+                                    subdetailText = `${__('Solo')} $299 ${__('al mes')}`;
+                                }
+
+                                return (
+                                    <div
+                                        key={plan.id}
+                                        className={`bg-white p-6 sm:p-8 rounded-3xl space-y-6 flex flex-col justify-between transition-all relative ${
+                                            isPopular
+                                                ? 'border-2 border-[#ff5a00] shadow-2xl transform lg:-translate-y-2'
+                                                : 'border border-slate-200 shadow-sm hover:shadow-xl'
+                                        }`}
+                                    >
+                                        {isPopular && (
+                                            <div className="absolute -top-3.5 left-1/2 -translate-x-1/2 bg-gradient-to-r from-[#ff5a00] to-amber-500 text-white text-[11px] font-black uppercase tracking-wider px-4 py-1 rounded-full shadow-md shrink-0 whitespace-nowrap">
+                                                {__('⭐ 🔥 ¡MÁS VENDIDO!')}
+                                            </div>
+                                        )}
+                                        {isBestValue && !isPopular && (
+                                            <div className="absolute -top-3.5 left-1/2 -translate-x-1/2 bg-gradient-to-r from-purple-600 to-indigo-600 text-white text-[11px] font-black uppercase tracking-wider px-4 py-1 rounded-full shadow-md shrink-0 whitespace-nowrap">
+                                                {__('🚀 💰 ¡MEJOR PRECIO!')}
+                                            </div>
+                                        )}
+
+                                        <div className="space-y-4 pt-2">
+                                            <span className={`inline-block px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider ${
+                                                isFree
+                                                    ? 'bg-emerald-50 border border-emerald-200 text-emerald-700'
+                                                    : isPopular
+                                                        ? 'bg-orange-50 border border-orange-200 text-[#ff5a00]'
+                                                        : isBestValue
+                                                            ? 'bg-purple-50 border border-purple-200 text-purple-700'
+                                                            : 'bg-blue-50 border border-blue-200 text-[#08264e]'
+                                            }`}>
+                                                {isFree ? __('Sin Compromiso') : isPopular ? __('Popular') : isBestValue ? __('Mejor Valor') : __('Recomendado')}
+                                            </span>
+
+                                            <div>
+                                                <h3 className="text-xl font-bold text-[#08264e]">{__(plan.nombre)}</h3>
+                                                {plan.descripcion && (
+                                                    <p className="text-xs text-slate-500 mt-1 leading-relaxed">{__(plan.descripcion)}</p>
+                                                )}
+                                            </div>
+
+                                            <div className="pt-2">
+                                                <div className="flex items-baseline gap-1.5 flex-wrap">
+                                                    <span className="text-4xl font-black text-[#08264e] font-mono">
+                                                        ${displayPrice}
+                                                    </span>
+                                                    <span className="text-xs font-extrabold text-slate-500 font-mono uppercase">
+                                                        MXN {periodText}
+                                                    </span>
+                                                </div>
+                                            </div>
+
+                                            <ul className="space-y-2.5 text-xs text-slate-600 border-t border-slate-100 pt-4 font-medium">
+                                                <li className="flex items-center gap-2 font-semibold text-slate-800">
+                                                    <Check className="w-4 h-4 text-emerald-600 shrink-0" />
+                                                    <span>{__('Acceso Total al Sistema (Todos los módulos)')}</span>
+                                                </li>
+                                                <li className="flex items-center gap-2 font-semibold text-slate-800">
+                                                    <Check className="w-4 h-4 text-emerald-600 shrink-0" />
+                                                    <span>{plan.sucursales_incluidas ?? 1} {__('Sucursal(es) incluida(s)')}</span>
+                                                </li>
+                                                <li className="flex items-center gap-2 text-slate-700">
+                                                    <Check className="w-4 h-4 text-emerald-600 shrink-0" />
+                                                    <span>{__('Sucursales adicionales:')} <strong className="text-slate-900">${plan.precio_sucursal_extra_mensual ?? 10} MXN</strong></span>
+                                                </li>
+                                                <li className="flex items-center gap-2">
+                                                    <Check className="w-4 h-4 text-emerald-600 shrink-0" />
+                                                    <span>{__('Soporte técnico y actualizaciones')}</span>
+                                                </li>
+                                            </ul>
                                         </div>
-                                        <p className="text-xs text-emerald-600 font-bold mt-1">{__('Acceso Total Ilimitado')}</p>
+
+                                        <Link
+                                            href={`/register?plan_id=${plan.id}`}
+                                            className={`w-full py-3.5 px-4 rounded-xl text-xs font-extrabold text-center transition-all block mt-6 ${
+                                                isPopular
+                                                    ? 'bg-gradient-to-r from-[#ff5a00] to-orange-600 hover:from-orange-600 hover:to-orange-700 text-white shadow-lg shadow-orange-500/25'
+                                                    : isFree
+                                                        ? 'bg-slate-100 hover:bg-slate-200 text-[#08264e]'
+                                                        : 'bg-[#08264e] hover:bg-[#0b3368] text-white'
+                                            }`}
+                                        >
+                                            {isFree ? __('Probar 7 Días Gratis') : `${__('Elegir')} ${__(plan.nombre)}`}
+                                        </Link>
                                     </div>
-
-                                    <ul className="space-y-2.5 text-xs text-slate-600 border-t border-slate-100 pt-4 font-medium">
-                                        <li className="flex items-center gap-2">
-                                            <Check className="w-4 h-4 text-emerald-600 shrink-0" />
-                                            <span>{__('Terminal POS con atajos rápidos')}</span>
-                                        </li>
-                                        <li className="flex items-center gap-2">
-                                            <Check className="w-4 h-4 text-emerald-600 shrink-0" />
-                                            <span>{__('Apertura y Cierre de Caja Z')}</span>
-                                        </li>
-                                        <li className="flex items-center gap-2">
-                                            <Check className="w-4 h-4 text-emerald-600 shrink-0" />
-                                            <span>{isVenezuela ? __('Tasa BCV en Tiempo Real') : __('Multimoneda & Divisas')}</span>
-                                        </li>
-                                        <li className="flex items-center gap-2">
-                                            <Check className="w-4 h-4 text-emerald-600 shrink-0" />
-                                            <span>{__('Envíos OTP por WhatsApp')}</span>
-                                        </li>
-                                    </ul>
-                                </div>
-
-                                <Link
-                                    href="/register"
-                                    className="w-full py-3 px-4 rounded-xl bg-slate-100 hover:bg-slate-200 text-[#08264e] font-bold text-xs text-center transition-colors block mt-6"
-                                >
-                                    {__('Probar 7 Días Gratis')}
-                                </Link>
-                            </div>
-
-                            {/* Plan 2: Trimestral */}
-                            <div className="bg-white border border-slate-200 p-6 sm:p-8 rounded-3xl space-y-6 flex flex-col justify-between shadow-sm hover:shadow-xl transition-all relative">
-                                <div className="space-y-4">
-                                    <span className="inline-block px-3 py-1 rounded-full bg-blue-50 border border-blue-200 text-[#08264e] text-xs font-bold uppercase tracking-wider">
-                                        {__('Para Emprendedores')}
-                                    </span>
-                                    <div>
-                                        <h3 className="text-xl font-bold text-[#08264e]">{__('Plan Trimestral')}</h3>
-                                        <p className="text-xs text-slate-500 mt-1">{__('Control total para tu primer comercio')}</p>
-                                    </div>
-                                    <div className="pt-2">
-                                        <div className="flex items-baseline gap-1">
-                                            <span className="text-4xl font-black text-[#08264e] font-mono">$29.66</span>
-                                            <span className="text-xs font-bold text-slate-500">/ {__('mes')}</span>
-                                        </div>
-                                        <p className="text-xs text-slate-500 font-medium mt-1">{__('Facturado $89 cada 3 meses')}</p>
-                                    </div>
-
-                                    <ul className="space-y-2.5 text-xs text-slate-600 border-t border-slate-100 pt-4 font-medium">
-                                        <li className="flex items-center gap-2">
-                                            <Check className="w-4 h-4 text-emerald-600 shrink-0" />
-                                            <span>{__('Todo lo de la Prueba Gratis')}</span>
-                                        </li>
-                                        <li className="flex items-center gap-2">
-                                            <Check className="w-4 h-4 text-emerald-600 shrink-0" />
-                                            <span>{__('Catálogo y productos ilimitados')}</span>
-                                        </li>
-                                        <li className="flex items-center gap-2">
-                                            <Check className="w-4 h-4 text-emerald-600 shrink-0" />
-                                            <span>{__('Control de stock e inventario')}</span>
-                                        </li>
-                                        <li className="flex items-center gap-2">
-                                            <Check className="w-4 h-4 text-emerald-600 shrink-0" />
-                                            <span>{__('Reportes de ventas y ganancias')}</span>
-                                        </li>
-                                    </ul>
-                                </div>
-
-                                <Link
-                                    href="/register"
-                                    className="w-full py-3 px-4 rounded-xl bg-[#08264e] hover:bg-[#0b3368] text-white font-bold text-xs text-center transition-colors block mt-6"
-                                >
-                                    {__('Comenzar Plan Trimestral')}
-                                </Link>
-                            </div>
-
-                            {/* Plan 3: Semestral (DESTACADO / POPULAR) */}
-                            <div className="bg-white border-2 border-[#ff5a00] p-6 sm:p-8 rounded-3xl space-y-6 flex flex-col justify-between shadow-2xl transition-all relative transform lg:-translate-y-2">
-                                <div className="absolute -top-3.5 left-1/2 -translate-x-1/2 bg-gradient-to-r from-[#ff5a00] to-amber-500 text-white text-[11px] font-black uppercase tracking-wider px-4 py-1 rounded-full shadow-md shrink-0 whitespace-nowrap">
-                                    {__('★ Más Popular - Ahorra 15%')}
-                                </div>
-
-                                <div className="space-y-4 pt-2">
-                                    <div>
-                                        <h3 className="text-xl font-bold text-[#08264e]">{__('Plan Semestral')}</h3>
-                                        <p className="text-xs text-slate-500 mt-1">{__('El equilibrio perfecto para crecer')}</p>
-                                    </div>
-                                    <div className="pt-2">
-                                        <div className="flex items-baseline gap-1">
-                                            <span className="text-4xl font-black text-[#08264e] font-mono">$26.50</span>
-                                            <span className="text-xs font-bold text-slate-500">/ {__('mes')}</span>
-                                        </div>
-                                        <p className="text-xs text-[#ff5a00] font-bold mt-1">{__('Facturado $159 cada 6 meses')}</p>
-                                    </div>
-
-                                    <ul className="space-y-2.5 text-xs text-slate-600 border-t border-slate-100 pt-4 font-medium">
-                                        <li className="flex items-center gap-2">
-                                            <Check className="w-4 h-4 text-emerald-600 shrink-0" />
-                                            <span>{__('Todo lo del Plan Trimestral')}</span>
-                                        </li>
-                                        <li className="flex items-center gap-2">
-                                            <Check className="w-4 h-4 text-emerald-600 shrink-0" />
-                                            <span>{__('Sincronización automática de tasa')}</span>
-                                        </li>
-                                        <li className="flex items-center gap-2">
-                                            <Check className="w-4 h-4 text-emerald-600 shrink-0" />
-                                            <span>{__('WhatsApp Engine multi-usuario')}</span>
-                                        </li>
-                                        <li className="flex items-center gap-2">
-                                            <Check className="w-4 h-4 text-emerald-600 shrink-0" />
-                                            <span>{__('Soporte prioritario por WhatsApp')}</span>
-                                        </li>
-                                    </ul>
-                                </div>
-
-                                <Link
-                                    href="/register"
-                                    className="w-full py-3.5 px-4 rounded-xl bg-gradient-to-r from-[#ff5a00] to-orange-600 hover:from-orange-600 hover:to-orange-700 text-white font-extrabold text-xs text-center transition-all shadow-lg shadow-orange-500/25 block mt-6"
-                                >
-                                    {__('Elegir Plan Semestral')}
-                                </Link>
-                            </div>
-
-                            {/* Plan 4: Anual (MEJOR VALOR) */}
-                            <div className="bg-white border border-slate-200 p-6 sm:p-8 rounded-3xl space-y-6 flex flex-col justify-between shadow-sm hover:shadow-xl transition-all relative">
-                                <div className="space-y-4">
-                                    <span className="inline-block px-3 py-1 rounded-full bg-purple-50 border border-purple-200 text-purple-700 text-xs font-bold uppercase tracking-wider">
-                                        {__('Mejor Valor - Ahorra 30%')}
-                                    </span>
-                                    <div>
-                                        <h3 className="text-xl font-bold text-[#08264e]">{__('Plan Anual')}</h3>
-                                        <p className="text-xs text-slate-500 mt-1">{__('Máximo ahorro y soporte continuo')}</p>
-                                    </div>
-                                    <div className="pt-2">
-                                        <div className="flex items-baseline gap-1">
-                                            <span className="text-4xl font-black text-[#08264e] font-mono">$24.00</span>
-                                            <span className="text-xs font-bold text-slate-500">/ {__('mes')}</span>
-                                        </div>
-                                        <p className="text-xs text-slate-500 font-medium mt-1">{__('Facturado $288 al año')}</p>
-                                    </div>
-
-                                    <ul className="space-y-2.5 text-xs text-slate-600 border-t border-slate-100 pt-4 font-medium">
-                                        <li className="flex items-center gap-2">
-                                            <Check className="w-4 h-4 text-emerald-600 shrink-0" />
-                                            <span>{__('Sucursales y Cajas Ilimitadas')}</span>
-                                        </li>
-                                        <li className="flex items-center gap-2">
-                                            <Check className="w-4 h-4 text-emerald-600 shrink-0" />
-                                            <span>{__('Contabilidad & Exportación Excel (10 Pestañas)')}</span>
-                                        </li>
-                                        <li className="flex items-center gap-2">
-                                            <Check className="w-4 h-4 text-emerald-600 shrink-0" />
-                                            <span>{__('Ventas a crédito y cobranza')}</span>
-                                        </li>
-                                        <li className="flex items-center gap-2">
-                                            <Check className="w-4 h-4 text-emerald-600 shrink-0" />
-                                            <span>{__('Asesor técnico dedicado')}</span>
-                                        </li>
-                                    </ul>
-                                </div>
-
-                                <Link
-                                    href="/register"
-                                    className="w-full py-3 px-4 rounded-xl bg-slate-900 hover:bg-black text-white font-bold text-xs text-center transition-colors block mt-6"
-                                >
-                                    {__('Obtener Plan Anual')}
-                                </Link>
-                            </div>
-
+                                );
+                            })}
                         </div>
                     </div>
                 </section>

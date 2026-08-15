@@ -45,31 +45,14 @@ class SubscriptionPlan extends Model
     }
 
     /**
-     * Garantizar que los planes por defecto (Básico, Profesional, Corporativo) existan en la BD.
+     * Garantizar que únicamente los 4 planes oficiales (Prueba, Trimestral, Semestral, Anual) estén activos.
      */
     public static function ensureDefaultPlansExist(): void
     {
-        // Asegurar que todos los planes activos posean la estructura de precios oficial ($89, $159, $288)
-        self::query()->update([
-            'precio_3_meses' => 89.00,
-            'precio_6_meses' => 159.00,
-            'precio_12_meses' => 288.00,
-            'precio_sucursal_extra_mensual' => 10.00,
-        ]);
+        self::whereNotIn('nombre', ['Plan Prueba', 'Plan Trimestral', 'Plan Semestral', 'Plan Anual'])
+            ->update(['activo' => false]);
 
-        self::updateOrCreate(
-            ['nombre' => 'Plan Full'],
-            [
-                'descripcion' => 'Acceso completo a todos los módulos operativos del sistema. Control total para tu comercio.',
-                'precio_3_meses' => 89.00,
-                'precio_6_meses' => 159.00,
-                'precio_12_meses' => 288.00,
-                'precio_sucursal_extra_mensual' => 10.00,
-                'sucursales_incluidas' => 1,
-                'modulos_incluidos' => ['ventas', 'cajas', 'inventarios', 'productos', 'servicios', 'clientes', 'proveedores', 'compras', 'creditos', 'metas_ventas', 'multi_sucursales'],
-                'activo' => true,
-            ]
-        );
+        (new \Database\Seeders\SubscriptionPlansSeeder())->run();
     }
 
     /**
@@ -92,15 +75,15 @@ class SubscriptionPlan extends Model
     public function calcularPrecio(int $meses, int $totalSucursales = 1): float
     {
         $basePrice = match ($meses) {
-            3 => ($this->precio_3_meses > 0 ? $this->precio_3_meses : 89.00),
-            6 => ($this->precio_6_meses > 0 ? $this->precio_6_meses : 159.00),
-            12 => ($this->precio_12_meses > 0 ? $this->precio_12_meses : 288.00),
-            default => ($this->precio_3_meses > 0 ? $this->precio_3_meses : 89.00),
+            3 => ($this->precio_3_meses > 0 ? $this->precio_3_meses : 897.00),
+            6 => ($this->precio_6_meses > 0 ? $this->precio_6_meses : 1494.00),
+            12 => ($this->precio_12_meses > 0 ? $this->precio_12_meses : 2388.00),
+            default => ($this->precio_3_meses > 0 ? $this->precio_3_meses : 897.00),
         };
 
         $precioExtra = $this->precio_sucursal_extra_mensual > 0 ? $this->precio_sucursal_extra_mensual : 10.00;
         $sucursalesExtra = max(0, $totalSucursales - ($this->sucursales_incluidas ?: 1));
-        $costoSucursalesExtra = $sucursalesExtra * $precioExtra * $meses;
+        $costoSucursalesExtra = $sucursalesExtra * $precioExtra;
 
         return round($basePrice + $costoSucursalesExtra, 2);
     }
