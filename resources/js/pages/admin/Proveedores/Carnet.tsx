@@ -26,6 +26,7 @@ interface Proveedor {
     razon_social: string;
     nombre_comercial?: string | null;
     documento_identidad?: string | null;
+    codigo_acceso?: string | null;
     rfc?: string | null;
     responsable?: string | null;
     curp?: string | null;
@@ -49,7 +50,8 @@ export default function CarnetProveedorPage({ proveedor }: CarnetProveedorPagePr
     const nameWords = displayName.split(/\s+/).filter(Boolean);
 
     // QR de Verificación
-    const qrData = proveedor.curp || proveedor.rfc || proveedor.documento_identidad || `PROV_${proveedor.id}`;
+    const accessCode = proveedor.codigo_acceso || proveedor.curp || proveedor.rfc || proveedor.documento_identidad || `PROV_${proveedor.id}`;
+    const qrData = accessCode;
     const qrCodeUrl = `https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${encodeURIComponent(qrData)}&color=b91c1c`;
 
     const handlePrint = () => {
@@ -327,23 +329,35 @@ export default function CarnetProveedorPage({ proveedor }: CarnetProveedorPagePr
                             height: '225px'
                         }}
                     >
-                        {/* Código QR */}
+                        {/* Código QR y Código de Acceso */}
                         <div
                             style={{
-                                padding: '4px',
-                                border: '2px solid rgba(185, 28, 28, 0.2)',
-                                borderRadius: '12px',
-                                backgroundColor: '#ffffff',
                                 display: 'flex',
+                                flexDirection: 'column',
                                 alignItems: 'center',
-                                justifyContent: 'center'
+                                gap: '2px'
                             }}
                         >
-                            <img
-                                src={qrCodeUrl}
-                                alt="Verification QR Code"
-                                style={{ width: '92px', height: '92px', display: 'block' }}
-                            />
+                            <div
+                                style={{
+                                    padding: '4px',
+                                    border: '2px solid rgba(185, 28, 28, 0.2)',
+                                    borderRadius: '12px',
+                                    backgroundColor: '#ffffff',
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    justifyContent: 'center'
+                                }}
+                            >
+                                <img
+                                    src={qrCodeUrl}
+                                    alt="Verification QR Code"
+                                    style={{ width: '84px', height: '84px', display: 'block' }}
+                                />
+                            </div>
+                            <span style={{ fontSize: '11px', fontWeight: '800', color: '#b91c1c', letterSpacing: '0.1em' }}>
+                                {accessCode}
+                            </span>
                         </div>
 
                         {/* Logo institucional */}

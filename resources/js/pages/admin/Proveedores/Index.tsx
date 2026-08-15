@@ -78,6 +78,7 @@ interface Proveedor {
     razon_social: string;
     nombre_comercial: string;
     documento_identidad: string;
+    codigo_acceso?: string | null;
     rfc?: string | null;
     pais_telefono_id?: number | null;
     telefono?: string | null;
@@ -138,6 +139,7 @@ const initialForm = {
     nombre_comercial: '',
     rfc: '',
     documento_identidad: '',
+    codigo_acceso: '',
     pais_telefono_id: '',
     telefono: '',
     direccion: '',
@@ -305,6 +307,7 @@ export default function ProveedoresIndexPage({
             nombre_comercial: prov.nombre_comercial || '',
             rfc: prov.rfc || '',
             documento_identidad: prov.documento_identidad || '',
+            codigo_acceso: prov.codigo_acceso || prov.documento_identidad || '',
             pais_telefono_id: prov.pais_telefono_id ? String(prov.pais_telefono_id) : '',
             telefono: prov.telefono || '',
             direccion: prov.direccion || '',
@@ -483,9 +486,16 @@ export default function ProveedoresIndexPage({
             ),
         },
         {
-            header: 'RFC / Doc',
-            accessorKey: 'rfc',
-            cell: (prov) => <span className="text-sm font-mono">{prov.rfc || prov.documento_identidad || '—'}</span>,
+            header: 'Código / RFC',
+            accessorKey: 'codigo_acceso',
+            cell: (prov) => (
+                <div className="flex flex-col gap-0.5">
+                    <span className="inline-flex items-center px-2 py-0.5 rounded-md bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 font-mono font-bold text-xs tracking-wider border border-emerald-500/20 w-fit">
+                        CÓD: {prov.codigo_acceso || prov.documento_identidad || 'N/A'}
+                    </span>
+                    {prov.rfc && <span className="text-xs font-mono text-slate-500">RFC: {prov.rfc}</span>}
+                </div>
+            ),
         },
         {
             header: 'Responsable / CURP',

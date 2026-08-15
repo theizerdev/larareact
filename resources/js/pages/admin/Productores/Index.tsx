@@ -76,6 +76,7 @@ interface Productor {
     razon_social: string;
     nombre_comercial: string;
     documento_identidad: string;
+    codigo_acceso?: string | null;
     rfc?: string | null;
     razon_social_rancho?: string | null;
     nombre_comercial_rancho?: string | null;
@@ -400,12 +401,15 @@ export default function Index({
             ),
         },
         {
-            accessorKey: 'rfc',
-            header: __('RFC (Tax ID)'),
+            accessorKey: 'codigo_acceso',
+            header: __('Código / RFC'),
             cell: (productor: Productor) => (
-                <span className="font-mono text-xs font-semibold px-2 py-1 bg-slate-100 dark:bg-slate-800 rounded text-slate-700 dark:text-slate-300">
-                    {productor.rfc || productor.documento_identidad || '-'}
-                </span>
+                <div className="flex flex-col gap-0.5">
+                    <span className="inline-flex items-center px-2 py-0.5 rounded-md bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 font-mono font-bold text-xs tracking-wider border border-emerald-500/20 w-fit">
+                        CÓD: {productor.codigo_acceso || productor.documento_identidad || 'N/A'}
+                    </span>
+                    {productor.rfc && <span className="text-xs font-mono text-slate-500">RFC: {productor.rfc}</span>}
+                </div>
             ),
         },
         {

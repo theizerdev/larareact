@@ -16,6 +16,12 @@ class Proveedor extends Model
 
     protected static function booted()
     {
+        static::creating(function ($proveedor) {
+            if (empty($proveedor->codigo_acceso)) {
+                $proveedor->codigo_acceso = \App\Services\AccessCodeService::generate('proveedor', $proveedor->sucursal_id);
+            }
+        });
+
         static::updated(function ($proveedor) {
             if ($proveedor->isDirty('status') && $proveedor->status === 'activo') {
                 try {
@@ -52,6 +58,7 @@ class Proveedor extends Model
                 'razon_social',
                 'nombre_comercial',
                 'documento_identidad',
+                'codigo_acceso',
                 'rfc',
                 'responsable',
                 'curp',
@@ -71,6 +78,7 @@ class Proveedor extends Model
         'razon_social',
         'nombre_comercial',
         'documento_identidad',
+        'codigo_acceso',
         'rfc',
         'responsable',
         'curp',

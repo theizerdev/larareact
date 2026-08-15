@@ -84,6 +84,7 @@ interface Sucursal {
     id: number;
     empresa_id: number;
     nombre: string;
+    codigo_numeral?: string | null;
     pais_telefono_id?: number | string | null;
     telefono?: string | null;
     direccion?: string | null;
@@ -117,6 +118,7 @@ interface SucursalesPageProps {
 const initialForm = {
     empresa_id:       '' as string | number,
     nombre:           '',
+    codigo_numeral:   '01',
     pais_telefono_id: '' as string | number,
     telefono:         '',
     direccion:        '',
@@ -207,6 +209,7 @@ export default function SucursalesIndexPage({
         setData({
             empresa_id:       sucursal.empresa_id,
             nombre:           sucursal.nombre || '',
+            codigo_numeral:   sucursal.codigo_numeral || '01',
             pais_telefono_id: sucursal.pais_telefono_id ?? '',
             telefono:         sucursal.telefono || '',
             direccion:        sucursal.direccion || '',
@@ -594,6 +597,22 @@ return;
                                         />
                                         {errors.nombre && (
                                             <p className="text-red-500 text-xs mt-1">{errors.nombre}</p>
+                                        )}
+                                    </div>
+
+                                    {/* Numeral Planta (Código de Acceso) */}
+                                    <div>
+                                        <Label htmlFor="codigo_numeral">Numeral Planta (Ej: 01 Purépero, 02 Tuxcueca) *</Label>
+                                        <Input
+                                            id="codigo_numeral"
+                                            value={data.codigo_numeral}
+                                            onChange={(e) => setData('codigo_numeral', e.target.value)}
+                                            placeholder="01"
+                                            maxLength={2}
+                                            className="h-10 text-sm font-semibold text-emerald-700 dark:text-emerald-400"
+                                        />
+                                        {errors.codigo_numeral && (
+                                            <p className="text-red-500 text-xs mt-1">{errors.codigo_numeral}</p>
                                         )}
                                     </div>
 

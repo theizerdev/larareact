@@ -54,14 +54,31 @@ class RelojChecadorKioskoController extends Controller
         $user = $request->user();
         $empresaId = $user ? $user->empresa_id : null;
 
+        $cleanQuery = preg_replace('/[^a-zA-Z0-9]/', '', $query);
+        $isNumeric = ctype_digit($cleanQuery);
+        $intVal = $isNumeric ? (int)$cleanQuery : null;
+        $padded8 = $isNumeric ? sprintf('%08d', $intVal) : null;
+        $padded6 = $isNumeric ? sprintf('%06d', $intVal) : null;
+
         $empleado = Empleado::with(['turnoLaboral', 'departamento', 'cargo'])
             ->where('status', true)
             ->when($empresaId, fn ($q) => $q->where('empresa_id', $empresaId))
-            ->where(function ($q) use ($query) {
-                $q->where('documento_identidad', $query)
+            ->where(function ($q) use ($query, $cleanQuery, $isNumeric, $intVal, $padded8, $padded6) {
+                $q->where('codigo_acceso', $query)
+                    ->orWhere('codigo_acceso', $cleanQuery)
+                    ->orWhere('documento_identidad', $query)
+                    ->orWhere('documento_identidad', $cleanQuery)
                     ->orWhere('curp', $query)
                     ->orWhere('telefono', $query)
                     ->orWhere('id', $query);
+
+                if ($isNumeric && $intVal > 0) {
+                    $q->orWhere('codigo_acceso', $padded8)
+                        ->orWhere('documento_identidad', $padded6)
+                        ->orWhere('codigo_acceso', (string)$intVal)
+                        ->orWhere('documento_identidad', (string)$intVal)
+                        ->orWhere('codigo_acceso', 'like', "%{$cleanQuery}");
+                }
             })
             ->first();
 
@@ -114,7 +131,8 @@ class RelojChecadorKioskoController extends Controller
             'empleado' => [
                 'id' => $empleado->id,
                 'nombre_completo' => $empleado->nombre_completo,
-                'documento_identidad' => $empleado->documento_identidad,
+                'documento_identidad' => $empleado->codigo_acceso ?: $empleado->documento_identidad,
+                'codigo_acceso' => $empleado->codigo_acceso ?: $empleado->documento_identidad,
                 'foto_empleado' => $empleado->foto_empleado ? Storage::url($empleado->foto_empleado) : null,
                 'departamento' => $empleado->departamento?->nombre,
                 'cargo' => $empleado->cargo?->nombre,

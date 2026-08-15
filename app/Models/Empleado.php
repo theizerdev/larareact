@@ -14,6 +14,15 @@ class Empleado extends Model
 {
     use HasFactory, HasSpanishActivityLog, LogsActivity, Multitenantable;
 
+    protected static function booted()
+    {
+        static::creating(function ($empleado) {
+            if (empty($empleado->codigo_acceso)) {
+                $empleado->codigo_acceso = \App\Services\AccessCodeService::generate('empleado', $empleado->sucursal_id);
+            }
+        });
+    }
+
     public function getActivitylogOptions(): LogOptions
     {
         return LogOptions::defaults()
@@ -21,6 +30,7 @@ class Empleado extends Model
                 'nombres',
                 'apellidos',
                 'documento_identidad',
+                'codigo_acceso',
                 'telefono',
                 'correo',
                 'genero',
@@ -42,6 +52,7 @@ class Empleado extends Model
         'nombres',
         'apellidos',
         'documento_identidad',
+        'codigo_acceso',
         'curp',
         'pais_telefono_id',
         'telefono',

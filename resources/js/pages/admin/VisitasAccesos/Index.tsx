@@ -1108,12 +1108,12 @@ export default function Index({
                                 : item.proveedor?.nombre_comercial || item.proveedor?.razon_social || item.visitante_nombre || '-');
 
                 const doc = isVisitante
-                    ? item.visitante_documento
+                    ? (item.codigo_visitante ? `CÓD: ${item.codigo_visitante}` : item.visitante_documento)
                     : isEmp
-                        ? item.empleado?.documento_identidad
+                        ? (item.empleado?.codigo_acceso ? `CÓD: ${item.empleado.codigo_acceso}` : item.empleado?.documento_identidad)
                         : isProd
-                            ? (item.productor_empleado?.documento_identidad || item.productor?.documento_identidad || item.visitante_documento)
-                            : (item.proveedor_empleado?.documento_identidad || item.proveedor?.documento_identidad || item.visitante_documento);
+                            ? (item.productor?.codigo_acceso ? `CÓD: ${item.productor.codigo_acceso}` : item.productor_empleado?.documento_identidad || item.productor?.documento_identidad || item.visitante_documento)
+                            : (item.proveedor?.codigo_acceso ? `CÓD: ${item.proveedor.codigo_acceso}` : item.proveedor_empleado?.documento_identidad || item.proveedor?.documento_identidad || item.visitante_documento);
 
                 const rawAvatar = isVisitante
                     ? item.foto_carnet

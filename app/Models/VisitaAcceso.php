@@ -77,23 +77,43 @@ class VisitaAcceso extends Model
     protected $casts = [
         'fecha_ingreso' => 'date:Y-m-d',
         'fecha_salida' => 'date:Y-m-d',
-        'codigo_visitante' => 'integer',
+        'codigo_visitante' => 'string',
         'status' => 'integer',
         'acompanantes' => 'array',
     ];
 
-    /**
-     * Generar automáticamente el siguiente código de visitante iniciando en 80000001
-     */
-    public static function generarSiguienteCodigoVisitante(): int
+    protected static function boot()
     {
-        $ultimoCodigo = static::max('codigo_visitante');
-        
-        if (!$ultimoCodigo || $ultimoCodigo < 80000001) {
-            return 80000001;
-        }
+        parent::boot();
 
-        return $ultimoCodigo + 1;
+        static::creating(function ($model) {
+            $code = null;
+
+            if ($model->tipo_acceso === 'empleado' && $model->empleado_id) {
+                $code = Empleado::where('id', $model->empleado_id)->value('codigo_acceso')
+                    ?: Empleado::where('id', $model->empleado_id)->value('documento_identidad');
+            } elseif ($model->tipo_acceso === 'proveedor' && $model->proveedor_id) {
+                $code = Proveedor::where('id', $model->proveedor_id)->value('codigo_acceso')
+                    ?: Proveedor::where('id', $model->proveedor_id)->value('documento_identidad');
+            } elseif ($model->tipo_acceso === 'productor' && $model->productor_id) {
+                $code = Productor::where('id', $model->productor_id)->value('codigo_acceso')
+                    ?: Productor::where('id', $model->productor_id)->value('documento_identidad');
+            }
+
+            if (!empty($code)) {
+                $model->codigo_visitante = $code;
+            } elseif (empty($model->codigo_visitante)) {
+                $model->codigo_visitante = static::generarSiguienteCodigoVisitante($model->sucursal_id);
+            }
+        });
+    }
+
+    /**
+     * Generar automáticamente el siguiente código de visitante de 8 dígitos según el rol (8), sucursal y tipo (Normal/VIP)
+     */
+    public static function generarSiguienteCodigoVisitante(?int $sucursalId = null, int $numeral2 = 0): string
+    {
+        return \App\Services\AccessCodeService::generate('visitante', $sucursalId, $numeral2);
     }
 
     public function empleado(): BelongsTo

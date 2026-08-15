@@ -17,6 +17,12 @@ class Productor extends Model
 
     protected static function booted()
     {
+        static::creating(function ($productor) {
+            if (empty($productor->codigo_acceso)) {
+                $productor->codigo_acceso = \App\Services\AccessCodeService::generate('productor', $productor->sucursal_id);
+            }
+        });
+
         static::updated(function ($productor) {
             if ($productor->isDirty('status') && $productor->status === 'activo') {
                 try {
@@ -53,6 +59,7 @@ class Productor extends Model
                 'razon_social',
                 'nombre_comercial',
                 'documento_identidad',
+                'codigo_acceso',
                 'rfc',
                 'razon_social_rancho',
                 'nombre_comercial_rancho',
@@ -76,6 +83,7 @@ class Productor extends Model
         'razon_social',
         'nombre_comercial',
         'documento_identidad',
+        'codigo_acceso',
         'rfc',
         'razon_social_rancho',
         'nombre_comercial_rancho',

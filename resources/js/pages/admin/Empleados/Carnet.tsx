@@ -36,6 +36,7 @@ interface Empleado {
     nombres: string;
     apellidos: string;
     documento_identidad: string;
+    codigo_acceso?: string | null;
     telefono?: string | null;
     correo?: string | null;
     foto_empleado?: string | null;
@@ -66,7 +67,8 @@ export default function CarnetPage({ empleado }: CarnetPageProps) {
     };
 
     // Generar la URL del QR de verificación
-    const qrData = empleado.documento_identidad;
+    const accessCode = empleado.codigo_acceso || empleado.documento_identidad;
+    const qrData = accessCode;
     const qrCodeUrl = `https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${encodeURIComponent(qrData)}&color=0f4426`;
 
     // Separar nombres y apellidos por palabras para apilarlos como en el modelo original
@@ -351,23 +353,35 @@ export default function CarnetPage({ empleado }: CarnetPageProps) {
                             height: '225px'
                         }}
                     >
-                        {/* Código QR */}
+                        {/* Código QR y Código de Acceso */}
                         <div
                             style={{
-                                padding: '4px',
-                                border: '2px solid rgba(16, 74, 41, 0.1)',
-                                borderRadius: '12px',
-                                backgroundColor: '#ffffff',
                                 display: 'flex',
+                                flexDirection: 'column',
                                 alignItems: 'center',
-                                justifyContent: 'center'
+                                gap: '2px'
                             }}
                         >
-                            <img
-                                src={qrCodeUrl}
-                                alt="Verification QR Code"
-                                style={{ width: '92px', height: '92px', display: 'block' }}
-                            />
+                            <div
+                                style={{
+                                    padding: '4px',
+                                    border: '2px solid rgba(16, 74, 41, 0.1)',
+                                    borderRadius: '12px',
+                                    backgroundColor: '#ffffff',
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    justifyContent: 'center'
+                                }}
+                            >
+                                <img
+                                    src={qrCodeUrl}
+                                    alt="Verification QR Code"
+                                    style={{ width: '84px', height: '84px', display: 'block' }}
+                                />
+                            </div>
+                            <span style={{ fontSize: '11px', fontWeight: '800', color: '#104a29', letterSpacing: '0.1em' }}>
+                                {accessCode}
+                            </span>
                         </div>
 
                         {/* Logo sin fondo idéntico al de login.tsx */}

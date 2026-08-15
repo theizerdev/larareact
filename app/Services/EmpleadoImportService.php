@@ -37,19 +37,28 @@ class EmpleadoImportService
         $headersMap = [];
 
         foreach ($rowsData as $idx => $row) {
-            $normalizedVals = array_map(fn($v) => mb_strtolower(trim((string)$v)), array_values($row['cells']));
-            // Look for key header indicators
-            if (
-                in_array('no. empleado', $normalizedVals) ||
-                in_array('nombre', $normalizedVals) ||
-                in_array('apellido paterno', $normalizedVals) ||
-                in_array('id', $normalizedVals)
-            ) {
+            $normalizedVals = array_map(fn($v) => $this->normalizeHeader((string)$v), array_values($row['cells']));
+            
+            $rowHasHeader = false;
+            foreach ($normalizedVals as $val) {
+                if (
+                    str_contains($val, 'empleado') ||
+                    str_contains($val, 'nombre') ||
+                    str_contains($val, 'paterno') ||
+                    str_contains($val, 'curp') ||
+                    $val === 'id' ||
+                    $val === 'no'
+                ) {
+                    $rowHasHeader = true;
+                    break;
+                }
+            }
+
+            if ($rowHasHeader) {
                 $headerRowIndex = $idx;
                 foreach ($row['cells'] as $colRef => $val) {
-                    // Extract column letter from colRef (e.g. "A1" -> "A")
                     $colLetter = preg_replace('/[0-9]/', '', $colRef);
-                    $headersMap[$colLetter] = mb_strtolower(trim((string)$val));
+                    $headersMap[$colLetter] = (string)$val;
                 }
                 break;
             }
@@ -60,7 +69,7 @@ class EmpleadoImportService
             $firstRow = $rowsData[0];
             foreach ($firstRow['cells'] as $colRef => $val) {
                 $colLetter = preg_replace('/[0-9]/', '', $colRef);
-                $headersMap[$colLetter] = mb_strtolower(trim((string)$val));
+                $headersMap[$colLetter] = (string)$val;
             }
             $headerRowIndex = 0;
         }
@@ -303,11 +312,16 @@ class EmpleadoImportService
                     'status' => true,
                 ];
 
+                // Si el empleado existente no tiene codigo_acceso o si es un registro nuevo, generar el codigo de acceso de 8 digitos (Rol 1)
                 if ($existing) {
+                    if (empty($existing->codigo_acceso)) {
+                        $dataToSave['codigo_acceso'] = \App\Services\AccessCodeService::generate('empleado', $sucursalId);
+                    }
                     $existing->update($dataToSave);
                     $empleado = $existing;
                     $updatedCount++;
                 } else {
+                    $dataToSave['codigo_acceso'] = \App\Services\AccessCodeService::generate('empleado', $sucursalId);
                     $empleado = Empleado::create($dataToSave);
                     $createdCount++;
                 }
@@ -481,40 +495,39 @@ class EmpleadoImportService
             if (str_contains($h, 'curp')) {
                 $map['curp'] = $colLetter;
             } elseif (
-                str_contains($h, 'no. empleado') || 
-                str_contains($h, 'numero empleado') || 
-                str_contains($h, 'num. empleado') || 
-                str_contains($h, 'codigo empleado') || 
-                str_contains($h, 'codigo') || 
-                str_contains($h, 'documento') || 
-                str_contains($h, 'cedula') || 
+                str_contains($h, 'empleado') ||
+                str_contains($h, 'documento') ||
+                str_contains($h, 'cedula') ||
                 str_contains($h, 'dni') ||
                 $h === 'id' ||
                 $h === 'no' ||
-                $h === 'num'
+                $h === 'num' ||
+                (preg_match('/\b(no|num|n|cod|codigo|id)\b/i', $h) && preg_match('/\b(emp|empleado|colaborador|trabajador)\b/i', $h))
             ) {
-                $map['documento_identidad'] = $colLetter;
+                if (!str_contains($h, 'vehiculo') && !str_contains($h, 'auto') && !str_contains($h, 'placa')) {
+                    $map['documento_identidad'] = $colLetter;
+                }
             } elseif (str_contains($h, 'nombre') && !str_contains($h, 'apellido') && !str_contains($h, 'comercial')) {
                 $map['nombres'] = $colLetter;
-            } elseif (str_contains($h, 'apellido paterno') || $h === 'paterno') {
+            } elseif (str_contains($h, 'paterno')) {
                 $map['apellido_paterno'] = $colLetter;
-            } elseif (str_contains($h, 'apellido materno') || $h === 'materno') {
+            } elseif (str_contains($h, 'materno')) {
                 $map['apellido_materno'] = $colLetter;
             } elseif (str_contains($h, 'correo') || str_contains($h, 'email')) {
                 $map['correo'] = $colLetter;
             } elseif (str_contains($h, 'telefono') || str_contains($h, 'celular')) {
                 $map['telefono'] = $colLetter;
-            } elseif ((str_contains($h, 'area') || str_contains($h, 'departamento')) && !str_contains($h, 'plan')) {
+            } elseif (str_contains($h, 'area') || str_contains($h, 'departamento')) {
                 $map['departamento'] = $colLetter;
             } elseif (str_contains($h, 'empresa') && !str_contains($h, 'vehiculo')) {
                 $map['empresa'] = $colLetter;
             } elseif (str_contains($h, 'tipo vehiculo')) {
                 $map['tipo_vehiculo'] = $colLetter;
-            } elseif (str_contains($h, 'marca vehiculo') || (str_contains($h, 'marca') && !str_contains($h, 'comercial'))) {
+            } elseif (str_contains($h, 'marca')) {
                 $map['marca_vehiculo'] = $colLetter;
-            } elseif (str_contains($h, 'color vehiculo') || str_contains($h, 'color')) {
+            } elseif (str_contains($h, 'color')) {
                 $map['color_vehiculo'] = $colLetter;
-            } elseif (str_contains($h, 'placa vehiculo') || str_contains($h, 'placa')) {
+            } elseif (str_contains($h, 'placa')) {
                 $map['placa_vehiculo'] = $colLetter;
             } elseif (str_contains($h, 'comentarios')) {
                 $map['comentarios_vehiculo'] = $colLetter;
@@ -525,15 +538,18 @@ class EmpleadoImportService
     }
 
     /**
-     * Helper to normalize header string stripping accents and converting to lowercase.
+     * Helper to normalize header string stripping accents, symbols, extra spaces and converting to lowercase.
      */
     private function normalizeHeader(string $str): string
     {
-        $str = mb_strtolower(trim($str), 'UTF-8');
-        return strtr($str, [
+        $str = strtr($str, [
             'á' => 'a', 'é' => 'e', 'í' => 'i', 'ó' => 'o', 'ú' => 'u', 'ü' => 'u', 'ñ' => 'n',
             'Á' => 'a', 'É' => 'e', 'Í' => 'i', 'Ó' => 'o', 'Ú' => 'u', 'Ü' => 'u', 'Ñ' => 'n'
         ]);
+        $str = mb_strtolower(trim($str), 'UTF-8');
+        $str = preg_replace('/[^\w\s]/u', ' ', $str);
+        $str = preg_replace('/\s+/', ' ', $str);
+        return trim($str);
     }
 
     /**

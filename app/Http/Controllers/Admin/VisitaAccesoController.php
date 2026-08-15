@@ -184,16 +184,29 @@ class VisitaAccesoController extends Controller
     public function buscarEntidades(Request $request)
     {
         $tipo = $request->input('tipo_acceso', 'empleado');
-        $query = $request->input('query', '');
+        $query = trim($request->input('query', ''));
+        $cleanQuery = preg_replace('/[^a-zA-Z0-9]/', '', $query);
+        $isNumeric = ctype_digit($cleanQuery);
+        $intVal = $isNumeric ? (int)$cleanQuery : null;
+        $padded8 = $isNumeric ? sprintf('%08d', $intVal) : null;
+        $padded6 = $isNumeric ? sprintf('%06d', $intVal) : null;
 
         if ($tipo === 'empleado') {
             $empleados = Empleado::query()
                 ->where('status', 1)
-                ->where(function ($q) use ($query) {
+                ->where(function ($q) use ($query, $cleanQuery, $isNumeric, $intVal, $padded8, $padded6) {
                     if (!empty($query)) {
                         $q->where('nombres', 'like', "%{$query}%")
                           ->orWhere('apellidos', 'like', "%{$query}%")
-                          ->orWhere('documento_identidad', 'like', "%{$query}%");
+                          ->orWhere('documento_identidad', 'like', "%{$query}%")
+                          ->orWhere('codigo_acceso', 'like', "%{$query}%");
+
+                        if ($isNumeric && $intVal > 0) {
+                            $q->orWhere('codigo_acceso', $padded8)
+                              ->orWhere('documento_identidad', $padded6)
+                              ->orWhere('codigo_acceso', (string)$intVal)
+                              ->orWhere('codigo_acceso', 'like', "%{$cleanQuery}");
+                        }
                     }
                 })
                 ->with(['departamento', 'cargo', 'responsable', 'vehiculos'])
@@ -206,11 +219,19 @@ class VisitaAccesoController extends Controller
         if ($tipo === 'proveedor') {
             $proveedores = Proveedor::query()
                 ->where('status', 'activo')
-                ->where(function ($q) use ($query) {
+                ->where(function ($q) use ($query, $cleanQuery, $isNumeric, $intVal, $padded8, $padded6) {
                     if (!empty($query)) {
                         $q->where('razon_social', 'like', "%{$query}%")
                           ->orWhere('nombre_comercial', 'like', "%{$query}%")
-                          ->orWhere('documento_identidad', 'like', "%{$query}%");
+                          ->orWhere('documento_identidad', 'like', "%{$query}%")
+                          ->orWhere('codigo_acceso', 'like', "%{$query}%");
+
+                        if ($isNumeric && $intVal > 0) {
+                            $q->orWhere('codigo_acceso', $padded8)
+                              ->orWhere('documento_identidad', $padded6)
+                              ->orWhere('codigo_acceso', (string)$intVal)
+                              ->orWhere('codigo_acceso', 'like', "%{$cleanQuery}");
+                        }
                     }
                 })
                 ->with(['user'])
@@ -233,13 +254,21 @@ class VisitaAccesoController extends Controller
         if ($tipo === 'productor') {
             $productores = Productor::query()
                 ->where('status', 'activo')
-                ->where(function ($q) use ($query) {
+                ->where(function ($q) use ($query, $cleanQuery, $isNumeric, $intVal, $padded8, $padded6) {
                     if (!empty($query)) {
                         $q->where('razon_social', 'like', "%{$query}%")
                           ->orWhere('nombre_comercial', 'like', "%{$query}%")
                           ->orWhere('razon_social_rancho', 'like', "%{$query}%")
                           ->orWhere('nombre_comercial_rancho', 'like', "%{$query}%")
-                          ->orWhere('documento_identidad', 'like', "%{$query}%");
+                          ->orWhere('documento_identidad', 'like', "%{$query}%")
+                          ->orWhere('codigo_acceso', 'like', "%{$query}%");
+
+                        if ($isNumeric && $intVal > 0) {
+                            $q->orWhere('codigo_acceso', $padded8)
+                              ->orWhere('documento_identidad', $padded6)
+                              ->orWhere('codigo_acceso', (string)$intVal)
+                              ->orWhere('codigo_acceso', 'like', "%{$cleanQuery}");
+                        }
                     }
                 })
                 ->with(['user'])
@@ -287,13 +316,25 @@ class VisitaAccesoController extends Controller
         ]);
 
         $user = $request->user();
+        $sucursalId = $user->sucursal_id ?? 1;
 
-        // Generar código de visitante único 80000001+
-        $validated['codigo_visitante'] = VisitaAcceso::generarSiguienteCodigoVisitante();
+        // Asignar código de acceso de la entidad a codigo_visitante (o generar 8D para visita particular)
+        if ($validated['tipo_acceso'] === 'empleado' && !empty($validated['empleado_id'])) {
+            $emp = Empleado::find($validated['empleado_id']);
+            $validated['codigo_visitante'] = $emp?->codigo_acceso ?: $emp?->documento_identidad ?: VisitaAcceso::generarSiguienteCodigoVisitante($sucursalId);
+        } elseif ($validated['tipo_acceso'] === 'proveedor' && !empty($validated['proveedor_id'])) {
+            $prov = Proveedor::find($validated['proveedor_id']);
+            $validated['codigo_visitante'] = $prov?->codigo_acceso ?: $prov?->documento_identidad ?: VisitaAcceso::generarSiguienteCodigoVisitante($sucursalId);
+        } elseif ($validated['tipo_acceso'] === 'productor' && !empty($validated['productor_id'])) {
+            $prod = Productor::find($validated['productor_id']);
+            $validated['codigo_visitante'] = $prod?->codigo_acceso ?: $prod?->documento_identidad ?: VisitaAcceso::generarSiguienteCodigoVisitante($sucursalId);
+        } else {
+            $validated['codigo_visitante'] = VisitaAcceso::generarSiguienteCodigoVisitante($sucursalId);
+        }
         $validated['fecha_ingreso']    = now()->toDateString();
         $validated['hora_ingreso']     = now()->toTimeString();
         $validated['empresa_id']      = $user->empresa_id ?? 1;
-        $validated['sucursal_id']     = $user->sucursal_id ?? 1;
+        $validated['sucursal_id']     = $sucursalId;
         $validated['status']          = 1; // En Instalaciones
 
         if ($validated['medio_acceso'] === 'vehicular') {
@@ -650,7 +691,7 @@ class VisitaAccesoController extends Controller
         $tipoAcceso = $invitacion->tipo_acceso ?: ($invitacion->proveedor_id ? 'proveedor' : ($invitacion->productor_id ? 'productor' : ($invitacion->empleado_id ? 'empleado' : 'visitante')));
 
         $acceso = VisitaAcceso::create([
-            'codigo_visitante'      => VisitaAcceso::generarSiguienteCodigoVisitante(),
+            'codigo_visitante'      => VisitaAcceso::generarSiguienteCodigoVisitante($invitacion->sucursal_id),
             'tipo_acceso'           => $tipoAcceso,
             'invitacion_id'         => $invitacion->id,
             'visitante_nombre'      => $invitacion->visitante_nombre,
@@ -877,17 +918,35 @@ class VisitaAccesoController extends Controller
         $resultado = null;
         $visitasEsperadas = collect([]);
 
+        $cleanSearch = preg_replace('/[^a-zA-Z0-9]/', '', $search);
+        $isNumeric = ctype_digit($cleanSearch);
+        $intVal = $isNumeric ? (int)$cleanSearch : null;
+        $padded8 = $isNumeric ? sprintf('%08d', $intVal) : null;
+        $padded6 = $isNumeric ? sprintf('%06d', $intVal) : null;
+
         try {
             if (!empty($search)) {
-                // 1. Buscar primero en Empleados (por documento_identidad, ID o Nombres)
+                // 1. Buscar primero en Empleados (por codigo_acceso, documento_identidad, ID o Nombres)
                 $empleado = Empleado::query()
                     ->with(['departamento', 'cargo', 'responsable', 'vehiculos', 'empresa', 'sucursal'])
-                    ->where('documento_identidad', $search)
-                    ->orWhere('documento_identidad', 'like', "%{$search}%")
-                    ->orWhereRaw("TRIM(documento_identidad) = ?", [$search])
-                    ->orWhereRaw("LOWER(TRIM(documento_identidad)) = ?", [mb_strtolower($search)])
-                    ->orWhere('id', $search)
-                    ->orWhereRaw("CONCAT(nombres, ' ', apellidos) LIKE ?", ["%{$search}%"])
+                    ->where(function ($q) use ($search, $cleanSearch, $isNumeric, $intVal, $padded8, $padded6) {
+                        $q->where('codigo_acceso', $search)
+                          ->orWhere('codigo_acceso', $cleanSearch)
+                          ->orWhere('documento_identidad', $search)
+                          ->orWhere('documento_identidad', $cleanSearch)
+                          ->orWhere('documento_identidad', 'like', "%{$search}%")
+                          ->orWhere('codigo_acceso', 'like', "%{$search}%")
+                          ->orWhere('id', $search)
+                          ->orWhereRaw("CONCAT(nombres, ' ', apellidos) LIKE ?", ["%{$search}%"]);
+
+                        if ($isNumeric && $intVal > 0) {
+                            $q->orWhere('codigo_acceso', $padded8)
+                              ->orWhere('documento_identidad', $padded6)
+                              ->orWhere('codigo_acceso', (string)$intVal)
+                              ->orWhere('documento_identidad', (string)$intVal)
+                              ->orWhere('codigo_acceso', 'like', "%{$cleanSearch}");
+                        }
+                    })
                     ->first();
 
                 if ($empleado) {
@@ -904,7 +963,7 @@ class VisitaAccesoController extends Controller
                         'acceso_existente' => $accesoExistente,
                     ];
                 } else {
-                    // 2. Buscar en Proveedores (por documento_identidad/RFC, ID/PROV_id, Razón Social o Nombre Comercial)
+                    // 2. Buscar en Proveedores (por codigo_acceso, documento_identidad/RFC, ID/PROV_id, Razón Social)
                     $provId = null;
                     if (preg_match('/^PROV_(\d+)$/i', $search, $matches)) {
                         $provId = $matches[1];
@@ -912,16 +971,24 @@ class VisitaAccesoController extends Controller
 
                     $proveedor = Proveedor::query()
                         ->with(['pais', 'paisTelefono', 'empresa', 'sucursal', 'empleados', 'vehiculos'])
-                        ->where(function ($q) use ($search, $provId) {
-                            $q->where('documento_identidad', $search)
+                        ->where(function ($q) use ($search, $cleanSearch, $provId, $isNumeric, $intVal, $padded8, $padded6) {
+                            $q->where('codigo_acceso', $search)
+                              ->orWhere('codigo_acceso', $cleanSearch)
+                              ->orWhere('documento_identidad', $search)
+                              ->orWhere('documento_identidad', $cleanSearch)
                               ->orWhere('documento_identidad', 'like', "%{$search}%")
-                              ->orWhereRaw("TRIM(documento_identidad) = ?", [$search])
-                              ->orWhereRaw("LOWER(TRIM(documento_identidad)) = ?", [mb_strtolower($search)]);
+                              ->orWhere('codigo_acceso', 'like', "%{$search}%")
+                              ->orWhere('razon_social', 'like', "%{$search}%")
+                              ->orWhere('nombre_comercial', 'like', "%{$search}%");
                             if ($provId) {
                                 $q->orWhere('id', $provId);
                             }
-                            $q->orWhere('razon_social', 'like', "%{$search}%")
-                              ->orWhere('nombre_comercial', 'like', "%{$search}%");
+                            if ($isNumeric && $intVal > 0) {
+                                $q->orWhere('codigo_acceso', $padded8)
+                                  ->orWhere('documento_identidad', $padded6)
+                                  ->orWhere('codigo_acceso', (string)$intVal)
+                                  ->orWhere('codigo_acceso', 'like', "%{$cleanSearch}");
+                            }
                         })
                         ->first();
 
@@ -981,18 +1048,26 @@ class VisitaAccesoController extends Controller
 
                             $productor = Productor::query()
                                 ->with(['pais', 'paisTelefono', 'empresa', 'sucursal', 'empleados', 'vehiculos'])
-                                ->where(function ($q) use ($search, $prodId) {
-                                    $q->where('documento_identidad', $search)
+                                ->where(function ($q) use ($search, $cleanSearch, $prodId, $isNumeric, $intVal, $padded8, $padded6) {
+                                    $q->where('codigo_acceso', $search)
+                                      ->orWhere('codigo_acceso', $cleanSearch)
+                                      ->orWhere('documento_identidad', $search)
+                                      ->orWhere('documento_identidad', $cleanSearch)
                                       ->orWhere('documento_identidad', 'like', "%{$search}%")
-                                      ->orWhereRaw("TRIM(documento_identidad) = ?", [$search])
-                                      ->orWhereRaw("LOWER(TRIM(documento_identidad)) = ?", [mb_strtolower($search)]);
-                                    if ($prodId) {
-                                        $q->orWhere('id', $prodId);
-                                    }
-                                    $q->orWhere('razon_social', 'like', "%{$search}%")
+                                      ->orWhere('codigo_acceso', 'like', "%{$search}%")
+                                      ->orWhere('razon_social', 'like', "%{$search}%")
                                       ->orWhere('nombre_comercial', 'like', "%{$search}%")
                                       ->orWhere('razon_social_rancho', 'like', "%{$search}%")
                                       ->orWhere('nombre_comercial_rancho', 'like', "%{$search}%");
+                                    if ($prodId) {
+                                        $q->orWhere('id', $prodId);
+                                    }
+                                    if ($isNumeric && $intVal > 0) {
+                                        $q->orWhere('codigo_acceso', $padded8)
+                                          ->orWhere('documento_identidad', $padded6)
+                                          ->orWhere('codigo_acceso', (string)$intVal)
+                                          ->orWhere('codigo_acceso', 'like', "%{$cleanSearch}");
+                                    }
                                 })
                                 ->first();
 
@@ -1049,9 +1124,14 @@ class VisitaAccesoController extends Controller
                                         ->with(['anfitrion', 'empleado', 'proveedor.empleados', 'productor.empleados', 'proveedorEmpleado.proveedor.empleados', 'productorEmpleado.productor.empleados', 'paisTelefono', 'tipoServicio'])
                                         ->where('uuid', $search)
                                         ->orWhere('codigo_invitacion', $search)
+                                        ->orWhere('codigo_invitacion', $cleanSearch)
                                         ->orWhere('visitante_nombre', 'like', "%{$search}%")
                                         ->orWhere('visitante_documento', $search)
                                         ->orWhere('vehiculo_placa', $search)
+                                        ->when($isNumeric && $intVal > 0, function ($q) use ($padded8, $intVal) {
+                                            $q->orWhere('codigo_invitacion', $padded8)
+                                              ->orWhere('codigo_invitacion', (string)$intVal);
+                                        })
                                         ->first();
 
                                     if ($invitacion) {
@@ -1067,9 +1147,17 @@ class VisitaAccesoController extends Controller
                                                 'productor', 'productorEmpleado', 'responsable',
                                                 'empleadoVehiculo', 'proveedorVehiculo', 'productorVehiculo'
                                             ])
-                                            ->where('codigo_visitante', $search)
-                                            ->orWhere('visitante_documento', $search)
-                                            ->orWhere('vehiculo_placa', $search)
+                                            ->where(function ($q) use ($search, $cleanSearch, $isNumeric, $intVal, $padded8) {
+                                                $q->where('codigo_visitante', $search)
+                                                  ->orWhere('codigo_visitante', $cleanSearch)
+                                                  ->orWhere('visitante_documento', $search)
+                                                  ->orWhere('vehiculo_placa', $search);
+
+                                                if ($isNumeric && $intVal > 0) {
+                                                    $q->orWhere('codigo_visitante', $padded8)
+                                                      ->orWhere('codigo_visitante', (string)$intVal);
+                                                }
+                                            })
                                             ->latest()
                                             ->first();
 
