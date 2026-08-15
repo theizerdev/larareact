@@ -33,7 +33,7 @@ class WhatsAppService
      */
     public function __construct($empresa = null)
     {
-        $this->baseUrl = config('whatsapp.api_url', 'http://166.1.85.56:3000');
+        $this->baseUrl = config('whatsapp.api_url', 'http://169.58.168.213:3000');
         $this->timeout = config('whatsapp.timeout', 30);
 
         if (is_array($empresa)) {
@@ -451,13 +451,21 @@ class WhatsAppService
                     'response'   => $data,
                 ]);
 
-                // Guardar el token devuelto por el motor en la empresa
-                // para que las siguientes llamadas (status, envío, etc.) funcionen
+                // Guardar el token e instancia devueltos por el motor en la empresa
                 $returnedToken = $data['instance']['token'] ?? $data['token'] ?? null;
-                if ($returnedToken && $this->companyId) {
-                    \App\Models\Empresa::where('id', $this->companyId)
-                        ->update(['whatsapp_api_key' => $returnedToken]);
-                    $this->apiKey = $returnedToken;
+                $statusFromEngine = $data['instance']['status'] ?? $data['status'] ?? 'qr_ready';
+                if ($this->companyId) {
+                    $updateFields = [
+                        'whatsapp_instance' => $instanceName,
+                    ];
+                    if ($returnedToken) {
+                        $updateFields['whatsapp_api_key'] = $returnedToken;
+                        $this->apiKey = $returnedToken;
+                    }
+                    if ($statusFromEngine !== 'connected') {
+                        $updateFields['whatsapp_status'] = 'qr_ready';
+                    }
+                    \App\Models\Empresa::where('id', $this->companyId)->update($updateFields);
                 }
 
                 return $data;

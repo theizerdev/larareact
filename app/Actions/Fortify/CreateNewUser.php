@@ -61,6 +61,9 @@ class CreateNewUser implements CreatesNewUsers
                 'status' => true,
                 'api_key' => Str::random(32),
                 'whatsapp_api_key' => Str::random(32),
+                'whatsapp_api_url' => config('whatsapp.api_url', 'http://169.58.168.213:3000'),
+                'whatsapp_active' => true,
+                'whatsapp_status' => 'disconnected',
                 'subscription_status' => 'trial',
                 'trial_ends_at' => now()->addDays(7),
                 'max_sucursales' => 1,
@@ -93,7 +96,7 @@ class CreateNewUser implements CreatesNewUsers
             ]);
 
             try {
-                \App\Services\WhatsAppService::forCompany($empresa)->createInstance();
+                \App\Services\WhatsAppService::forCompany($empresa)->createInstance($cleanInstanceName);
             } catch (\Throwable $e) {
                 Log::warning('No se pudo crear la instancia inicial en el motor WhatsApp: '.$e->getMessage());
             }
