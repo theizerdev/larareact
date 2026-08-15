@@ -75,8 +75,15 @@ export default function WhatsAppIntegration({
     const [isPolling, setIsPolling] = useState(false);
     const [sendingMsg, setSendingMsg] = useState(false);
     const [lastPolled, setLastPolled] = useState<Date | null>(null);
-    const [manualCheckLoading, setManualCheckLoading] = useState(false);
-    const [isWelcomeModalOpen, setIsWelcomeModalOpen] = useState(!live_status?.isConnected);
+    const isConnected = Boolean(liveStatusState?.isConnected || whatsapp_status === 'connected');
+    const [isWelcomeModalOpen, setIsWelcomeModalOpen] = useState(!isConnected);
+
+    // Si la cuenta está conectada o se conecta durante el escaneo, cerrar el modal de bienvenida
+    useEffect(() => {
+        if (isConnected) {
+            setIsWelcomeModalOpen(false);
+        }
+    }, [isConnected]);
 
     // Ref para evitar stale closure dentro de setInterval
     const liveStatusRef = useRef<LiveStatus | null>(live_status);
