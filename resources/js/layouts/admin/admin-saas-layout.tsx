@@ -336,22 +336,7 @@ export default function AdminSaasLayout({
                         'w-64 lg:flex',
                     )}
                 >
-                    {/* Desktop Collapse Toggle Button (Floating Embedded) */}
-                    <div
-                        className="hidden lg:flex absolute top-[10px] -right-[22px] z-50 h-11 w-11 items-center justify-center rounded-full bg-slate-100 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-sm"
-                    >
-                        <button
-                            onClick={() => setCollapsed(!collapsed)}
-                            className="h-7 w-7 items-center justify-center rounded-full bg-primary hover:bg-primary/90 text-primary-foreground shadow focus:outline-none cursor-pointer flex border border-primary/20"
-                            title={collapsed ? __('Expand sidebar') : __('Collapse sidebar')}
-                        >
-                            {collapsed ? (
-                                <ChevronRight className="size-4" />
-                            ) : (
-                                <ChevronLeft className="size-4" />
-                            )}
-                        </button>
-                    </div>
+
 
                     {/* Logo area */}
                     <div className="flex h-16 items-center justify-between border-b border-sidebar-border px-4">

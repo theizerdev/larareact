@@ -69,16 +69,8 @@ class AppServiceProvider extends ServiceProvider
                 ->withProperties($properties)
                 ->log('user_logged_in');
 
-            if ($user && ($user->hasRole('Administrador') || $user->hasRole('Super Administrador'))) {
-                $hasOpenRegister = CashRegister::hasOpenRegister($user);
-
-                if (! $hasOpenRegister) {
-                    session()->flash('notification', [
-                        'type' => 'warning',
-                        'message' => __('Atención: No existe ninguna caja aperturada para el día de hoy en su empresa.'),
-                    ]);
-                }
-            }
+            // Resetear el flag de sesión para permitir evaluar el primer ingreso de la sesión
+            session()->forget('whatsapp_first_redirect_done');
         });
     }
 

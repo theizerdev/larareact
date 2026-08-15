@@ -149,6 +149,11 @@ class HandleInertiaRequests extends Middleware
             return null;
         }
 
+        // Evaluar apertura de caja únicamente al ingresar al Punto de Venta (Terminal POS)
+        if (! $request->routeIs('admin.ventas.terminal') && ! $request->is('admin/ventas/terminal*')) {
+            return null;
+        }
+
         $hasOpenRegister = \App\Models\CashRegister::hasOpenRegister($user);
 
         if (! $hasOpenRegister) {

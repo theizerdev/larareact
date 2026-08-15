@@ -25,6 +25,26 @@ class EnsureWhatsAppIsVerified
             }
         }
 
+        // Redirección automática para Administradores en primer ingreso de sesión si WhatsApp no está vinculado
+        if ($user && (! $request->session()->has('whatsapp_first_redirect_done'))) {
+            $request->session()->put('whatsapp_first_redirect_done', true);
+
+            $isAdmin = $user->hasRole('Administrador') || $user->hasRole('Super Administrador');
+            if ($isAdmin) {
+                $empresa = $user->empresa ?? ($user->empresa_id ? \App\Models\Empresa::find($user->empresa_id) : null);
+                if ($empresa && $empresa->whatsapp_status !== 'connected') {
+                    if (! $request->is('admin/integrations/whatsapp*') && ! $request->is('verify-whatsapp*') && ! $request->is('logout')) {
+                        session()->flash('notification', [
+                            'type' => 'info',
+                            'message' => __('Por favor escanee el código QR para vincular su cuenta de WhatsApp.'),
+                        ]);
+
+                        return redirect()->route('admin.integrations.whatsapp.index');
+                    }
+                }
+            }
+        }
+
         return $next($request);
     }
 }

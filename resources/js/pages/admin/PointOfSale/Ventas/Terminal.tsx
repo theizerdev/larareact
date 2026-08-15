@@ -22,6 +22,7 @@ import { Switch } from '@/components/ui/switch';
 import { useTranslate } from '@/hooks/use-translate';
 import { cn } from '@/lib/utils';
 import { notifySuccess, notifyError } from '@/utils/notifications';
+import { OpenCashRegisterModal } from '@/components/open-cash-register-modal';
 
 interface CatalogItem {
     id: number;
@@ -1131,6 +1132,7 @@ export default function Terminal({
     return (
         <>
             <Head title={__('Terminal POS - Ventas')} />
+            <OpenCashRegisterModal />
 
             <div className="space-y-2 flex flex-col flex-1 min-h-0 h-[calc(100vh-9.5rem)] lg:h-[calc(100vh-10.5rem)]">
                 {/* BARRA SUPERIOR COMPACTA DE ACCIONES Y ATAJOS DEL POS */}

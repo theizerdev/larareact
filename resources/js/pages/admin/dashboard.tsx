@@ -19,9 +19,7 @@ import {
     BarChart2,
     ListOrdered
 } from 'lucide-react';
-import React, { useState, useEffect } from 'react';
 import Chart from 'react-apexcharts';
-import { OpenCashRegisterModal } from '@/components/open-cash-register-modal';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -278,7 +276,6 @@ export default function AdminDashboard({
     return (
         <>
             <Head title={__('Dashboard en Vivo - Panel General')} />
-            <OpenCashRegisterModal />
 
             <div className="flex flex-col gap-6">
                 {/* ENCABEZADO Y CONTROLES EN VIVO */}
