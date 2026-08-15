@@ -31,45 +31,48 @@ class SubscriptionPlansSeeder extends Seeder
             ]
         );
 
-        // 1. Plan Trimestral (3 MESES — $897 MXN -> $299/mes)
+        // 1. Plan Trimestral (3 Meses)
         SubscriptionPlan::updateOrCreate(
             ['nombre' => 'Plan Trimestral'],
+            ['nombre' => 'Plan Trimestral'],
             [
-                'descripcion' => 'Ideal para emprendedores y comercios que buscan flexibilidad de pago.',
+                'descripcion' => 'Control total para tu primer comercio. Facturado $897 cada 3 meses ($299/mes).',
                 'precio_3_meses' => 897.00,
-                'precio_6_meses' => 0.00,
-                'precio_12_meses' => 0.00,
-                'precio_sucursal_extra_mensual' => 10.00,
+                'precio_6_meses' => 1494.00,
+                'precio_12_meses' => 2388.00,
+                'precio_sucursal_extra_mensual' => 20.00,
                 'sucursales_incluidas' => 1,
                 'modulos_incluidos' => ['todos'],
                 'activo' => true,
             ]
         );
 
-        // 2. Plan Semestral (6 MESES — $1,494 MXN -> $249/mes)
+        // 2. Plan Semestral (6 Meses - Más Vendido)
         SubscriptionPlan::updateOrCreate(
             ['nombre' => 'Plan Semestral'],
+            ['nombre' => 'Plan Semestral'],
             [
-                'descripcion' => 'Control operativo total para comercios en crecimiento con ahorro mensual.',
-                'precio_3_meses' => 0.00,
+                'descripcion' => 'El equilibrio perfecto para crecer. Facturado $1,494 cada 6 meses ($249/mes).',
+                'precio_3_meses' => 897.00,
                 'precio_6_meses' => 1494.00,
-                'precio_12_meses' => 0.00,
-                'precio_sucursal_extra_mensual' => 10.00,
+                'precio_12_meses' => 2388.00,
+                'precio_sucursal_extra_mensual' => 20.00,
                 'sucursales_incluidas' => 1,
                 'modulos_incluidos' => ['todos'],
                 'activo' => true,
             ]
         );
 
-        // 3. Plan Anual (12 MESES — $2,388 MXN -> $199/mes)
+        // 3. Plan Anual (12 Meses - Mejor Precio)
         SubscriptionPlan::updateOrCreate(
             ['nombre' => 'Plan Anual'],
+            ['nombre' => 'Plan Anual'],
             [
-                'descripcion' => 'La opción con mejor precio del mercado para empresas consolidadas.',
-                'precio_3_meses' => 0.00,
-                'precio_6_meses' => 0.00,
+                'descripcion' => 'Máximo ahorro y soporte continuo. Facturado $2,388 al año ($199/mes).',
+                'precio_3_meses' => 897.00,
+                'precio_6_meses' => 1494.00,
                 'precio_12_meses' => 2388.00,
-                'precio_sucursal_extra_mensual' => 10.00,
+                'precio_sucursal_extra_mensual' => 20.00,
                 'sucursales_incluidas' => 2,
                 'modulos_incluidos' => ['todos'],
                 'activo' => true,

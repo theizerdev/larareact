@@ -142,15 +142,15 @@ export default function Welcome() {
                 <meta property="og:title" content={__('FixSale | Punto de Venta, Inventario y Automatización WhatsApp')} />
                 <meta property="og:description" content={__('Plataforma integral de Punto de Venta (POS), Control de Inventario, Gestión de Servicio Técnico y Automatización por WhatsApp.')} />
                 <meta property="og:type" content="website" />
-                <meta property="og:image" content="/image/logo/2.png" />
+                <meta property="og:image" content="https://fix-sale.com/image/logo/2.png" />
                 <meta name="twitter:card" content="summary_large_image" />
                 <meta name="twitter:title" content={__('FixSale | Punto de Venta, Inventario y Automatización WhatsApp')} />
                 <meta name="twitter:description" content={__('Plataforma integral de Punto de Venta (POS), Control de Inventario, Gestión de Servicio Técnico y Automatización por WhatsApp.')} />
-                <meta name="twitter:image" content="/image/logo/2.png" />
+                <meta name="twitter:image" content="https://fix-sale.com/image/logo/2.png" />
             </Head>
 
             {/* ─── PRELOADER CON ISOTIPO MINI FIXSALE (2.PNG) ────────────────────────── */}
-            <PagePreloader logoPath="/image/logo/2.png" durationMs={1100} slogan={__('Controla. Vende. Crece.')} />
+            <PagePreloader logoPath="https://fix-sale.com/image/logo/2.png" durationMs={1100} slogan={__('Controla. Vende. Crece.')} />
 
             <div className="relative min-h-screen bg-slate-50 text-slate-800 font-sans selection:bg-orange-500 selection:text-white antialiased overflow-x-hidden">
                 {/* ─── CANVASES & PARTICLES DECORATION ──────────────────────────────────── */}
@@ -505,7 +505,7 @@ export default function Welcome() {
                                     {/* Header WhatsApp Chat */}
                                     <div className="bg-emerald-700 text-white p-3 rounded-t-2xl flex items-center gap-3 shadow">
                                         <img
-                                            src="/image/logo/2.png"
+                                            src="https://fix-sale.com/image/logo/2.png"
                                             alt="Isotipo FixSale"
                                             className="w-10 h-10 rounded-full object-cover border-2 border-white bg-white"
                                         />

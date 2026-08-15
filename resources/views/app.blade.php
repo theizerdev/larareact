@@ -4,50 +4,67 @@
         <meta charset="utf-8">
         <meta name="viewport" content="width=device-width, initial-scale=1">
 
-        <!-- SEO Meta Tags -->
-        <title>{{ config('app.name', 'SERVITEC') }} | Sistema de Punto de Venta, Inventario y Servicio Técnico</title>
-        <meta name="title" content="{{ config('app.name', 'SERVITEC') }} | Sistema de Punto de Venta, Inventario y Servicio Técnico">
-        <meta name="description" content="SERVITEC es el sistema integral de Punto de Venta (POS), Control de Inventario, Gestión de Servicio Técnico, Facturación y Automatización WhatsApp para empresas y talleres.">
-        <meta name="keywords" content="SERVITEC, FixSale, punto de venta, POS, control de inventario, servicio tecnico, gestion de talleres, facturacion, automatizacion whatsapp, software de ventas, administracion de negocios">
-        <meta name="author" content="SERVITEC">
+        <!-- Primary SEO Meta Tags -->
+        <title>{{ config('app.name', 'FixSale') }} | Sistema de Punto de Venta (POS), Inventario y Servicio Técnico</title>
+        <meta name="title" content="{{ config('app.name', 'FixSale') }} | Sistema de Punto de Venta (POS), Inventario y Servicio Técnico">
+        <meta name="description" content="FixSale es la plataforma líder de Punto de Venta (POS), Control de Inventario, Servicio Técnico, Facturación Electrónica y Automatización por WhatsApp para tiendas, negocios y talleres.">
+        <meta name="keywords" content="FixSale, fix-sale.com, fix sale, punto de venta, POS, sistema POS, control de inventario, servicio tecnico, gestion de talleres, facturacion electronica, automatizacion whatsapp, software de ventas, administracion de empresas, software pos">
+        <meta name="author" content="FixSale">
+        <meta name="application-name" content="FixSale">
         <meta name="robots" content="index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1">
-        <meta name="googlebot" content="index, follow">
-        <meta name="theme-color" content="#0f172a">
+        <meta name="googlebot" content="index, follow, max-snippet:-1, max-image-preview:large, max-video-preview:-1">
+        <meta name="bingbot" content="index, follow">
+        <meta name="theme-color" content="#f97316">
         <link rel="canonical" href="{{ url()->current() }}">
 
         <!-- Open Graph / Facebook / WhatsApp -->
         <meta property="og:type" content="website">
         <meta property="og:url" content="{{ url()->current() }}">
-        <meta property="og:site_name" content="{{ config('app.name', 'SERVITEC') }}">
-        <meta property="og:title" content="{{ config('app.name', 'SERVITEC') }} | Sistema de Punto de Venta, Inventario y Servicio Técnico">
-        <meta property="og:description" content="Gestión inteligente de ventas, inventario, órdenes de servicio técnico y automatización por WhatsApp para tu empresa.">
+        <meta property="og:site_name" content="{{ config('app.name', 'FixSale') }}">
+        <meta property="og:title" content="{{ config('app.name', 'FixSale') }} | Sistema de Punto de Venta, Inventario y Servicio Técnico">
+        <meta property="og:description" content="Gestión inteligente de ventas, inventario, órdenes de servicio técnico y automatización por WhatsApp para tu empresa o taller.">
         <meta property="og:image" content="{{ url('/image/logo/2.png') }}">
-        <meta property="og:image:alt" content="SERVITEC Logo">
+        <meta property="og:image:alt" content="FixSale Logo">
         <meta property="og:locale" content="{{ str_replace('_', '-', app()->getLocale()) == 'es' ? 'es_ES' : 'en_US' }}">
 
         <!-- Twitter Card -->
         <meta name="twitter:card" content="summary_large_image">
         <meta name="twitter:url" content="{{ url()->current() }}">
-        <meta name="twitter:title" content="{{ config('app.name', 'SERVITEC') }} | Sistema de Punto de Venta, Inventario y Servicio Técnico">
-        <meta name="twitter:description" content="Gestión inteligente de ventas, inventario, órdenes de servicio técnico y automatización por WhatsApp para tu empresa.">
+        <meta name="twitter:title" content="{{ config('app.name', 'FixSale') }} | Sistema de Punto de Venta, Inventario y Servicio Técnico">
+        <meta name="twitter:description" content="Gestión inteligente de ventas, inventario, órdenes de servicio técnico y automatización por WhatsApp para tu empresa o taller.">
         <meta name="twitter:image" content="{{ url('/image/logo/2.png') }}">
 
-        <!-- Structured Data (JSON-LD) for Google -->
+        <!-- Structured Data (JSON-LD) for Google Search -->
         <script type="application/ld+json">
-        {!! json_encode([
-            '@context' => 'https://schema.org',
-            '@type' => 'WebApplication',
-            'name' => config('app.name', 'SERVITEC'),
-            'url' => url('/'),
-            'applicationCategory' => 'BusinessApplication',
-            'operatingSystem' => 'All',
-            'description' => 'Sistema integral de Punto de Venta, Control de Inventario, Gestión de Servicio Técnico y Automatización por WhatsApp.',
-            'offers' => [
-                '@type' => 'Offer',
-                'price' => '0',
-                'priceCurrency' => 'USD',
-            ],
-        ], JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT) !!}
+        {
+            "@@context": "https://schema.org",
+            "@@graph": [
+                {
+                    "@@type": "WebApplication",
+                    "@@id": "{{ url('/') }}#webapp",
+                    "name": "FixSale",
+                    "url": "{{ url('/') }}",
+                    "applicationCategory": "BusinessApplication",
+                    "operatingSystem": "All",
+                    "description": "Sistema integral de Punto de Venta (POS), Control de Inventario, Gestión de Servicio Técnico y Automatización por WhatsApp.",
+                    "offers": {
+                        "@@type": "Offer",
+                        "price": "0",
+                        "priceCurrency": "USD"
+                    }
+                },
+                {
+                    "@@type": "Organization",
+                    "@@id": "{{ url('/') }}#organization",
+                    "name": "FixSale",
+                    "url": "{{ url('/') }}",
+                    "logo": "{{ url('/image/logo/2.png') }}",
+                    "sameAs": [
+                        "https://fix-sale.com"
+                    ]
+                }
+            ]
+        }
         </script>
 
         {{-- Inline script to detect system dark mode preference and apply it immediately --}}
