@@ -75,6 +75,7 @@ export default function WhatsAppIntegration({
     const [isPolling, setIsPolling] = useState(false);
     const [sendingMsg, setSendingMsg] = useState(false);
     const [lastPolled, setLastPolled] = useState<Date | null>(null);
+    const [manualCheckLoading, setManualCheckLoading] = useState(false);
     const isConnected = Boolean(liveStatusState?.isConnected || whatsapp_status === 'connected');
     const [isWelcomeModalOpen, setIsWelcomeModalOpen] = useState(!isConnected);
 
