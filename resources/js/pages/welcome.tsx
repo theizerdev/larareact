@@ -142,15 +142,15 @@ export default function Welcome() {
                 <meta property="og:title" content={__('FixSale | Punto de Venta, Inventario y Automatización WhatsApp')} />
                 <meta property="og:description" content={__('Plataforma integral de Punto de Venta (POS), Control de Inventario, Gestión de Servicio Técnico y Automatización por WhatsApp.')} />
                 <meta property="og:type" content="website" />
-                <meta property="og:image" content="https://fix-sale.com/image/logo/2.png" />
+                <meta property="og:image" content="/image/logo/2.png" />
                 <meta name="twitter:card" content="summary_large_image" />
                 <meta name="twitter:title" content={__('FixSale | Punto de Venta, Inventario y Automatización WhatsApp')} />
                 <meta name="twitter:description" content={__('Plataforma integral de Punto de Venta (POS), Control de Inventario, Gestión de Servicio Técnico y Automatización por WhatsApp.')} />
-                <meta name="twitter:image" content="https://fix-sale.com/image/logo/2.png" />
+                <meta name="twitter:image" content="/image/logo/2.png" />
             </Head>
 
             {/* ─── PRELOADER CON ISOTIPO MINI FIXSALE (2.PNG) ────────────────────────── */}
-            <PagePreloader logoPath="https://fix-sale.com/image/logo/2.png" durationMs={1100} slogan={__('Controla. Vende. Crece.')} />
+            <PagePreloader logoPath="/image/logo/2.png" durationMs={1100} slogan={__('Controla. Vende. Crece.')} />
 
             <div className="relative min-h-screen bg-slate-50 text-slate-800 font-sans selection:bg-orange-500 selection:text-white antialiased overflow-x-hidden">
                 {/* ─── CANVASES & PARTICLES DECORATION ──────────────────────────────────── */}
@@ -505,7 +505,7 @@ export default function Welcome() {
                                     {/* Header WhatsApp Chat */}
                                     <div className="bg-emerald-700 text-white p-3 rounded-t-2xl flex items-center gap-3 shadow">
                                         <img
-                                            src="https://fix-sale.com/image/logo/2.png"
+                                            src="/image/logo/2.png"
                                             alt="Isotipo FixSale"
                                             className="w-10 h-10 rounded-full object-cover border-2 border-white bg-white"
                                         />
@@ -598,7 +598,7 @@ export default function Welcome() {
                                 ]
                             ).map((plan: any) => {
                                 const nameLower = (plan.nombre || '').toLowerCase();
-                                const isFree = (plan.precio_3_meses === 0 && plan.precio_6_meses === 0 && plan.precio_12_meses === 0) || nameLower.includes('prueba');
+                                const isFree = nameLower.includes('prueba') || (Number(plan.precio_3_meses) === 0 && Number(plan.precio_6_meses) === 0 && Number(plan.precio_12_meses) === 0);
                                 const isPopular = nameLower.includes('semestral') || nameLower.includes('profesional');
                                 const isBestValue = nameLower.includes('anual') || nameLower.includes('corporativo');
 
@@ -610,28 +610,35 @@ export default function Welcome() {
                                     displayPrice = '0';
                                     periodText = `/ 7 ${__('Días')}`;
                                     subdetailText = __('Acceso Total Ilimitado');
-                                } else if (nameLower.includes('semestral') || plan.precio_6_meses > 0) {
-                                    displayPrice = '1,494';
-                                    periodText = `/ 6 ${__('meses')}`;
-                                    subdetailText = `${__('Solo')} $249 ${__('al mes')}`;
-                                } else if (nameLower.includes('anual') || plan.precio_12_meses > 0) {
-                                    displayPrice = '2,388';
-                                    periodText = `/ ${__('año')}`;
-                                    subdetailText = `${__('Solo')} $199 ${__('al mes')}`;
-                                } else {
-                                    displayPrice = '897';
+                                } else if (nameLower.includes('trimestral')) {
+                                    const price = Number(plan.precio_3_meses) || 897;
+                                    displayPrice = price.toLocaleString('en-US');
                                     periodText = `/ 3 ${__('meses')}`;
-                                    subdetailText = `${__('Solo')} $299 ${__('al mes')}`;
+                                    subdetailText = `${__('Solo')} $${Math.round(price / 3)} ${__('al mes')}`;
+                                } else if (nameLower.includes('semestral')) {
+                                    const price = Number(plan.precio_6_meses) || 1494;
+                                    displayPrice = price.toLocaleString('en-US');
+                                    periodText = `/ 6 ${__('meses')}`;
+                                    subdetailText = `${__('Solo')} $${Math.round(price / 6)} ${__('al mes')}`;
+                                } else if (nameLower.includes('anual')) {
+                                    const price = Number(plan.precio_12_meses) || 2388;
+                                    displayPrice = price.toLocaleString('en-US');
+                                    periodText = `/ ${__('año')}`;
+                                    subdetailText = `${__('Solo')} $${Math.round(price / 12)} ${__('al mes')}`;
+                                } else {
+                                    const price = Number(plan.precio_3_meses) || 897;
+                                    displayPrice = price.toLocaleString('en-US');
+                                    periodText = `/ 3 ${__('meses')}`;
+                                    subdetailText = `${__('Solo')} $${Math.round(price / 3)} ${__('al mes')}`;
                                 }
 
                                 return (
                                     <div
                                         key={plan.id}
-                                        className={`bg-white p-6 sm:p-8 rounded-3xl space-y-6 flex flex-col justify-between transition-all relative ${
-                                            isPopular
+                                        className={`bg-white p-6 sm:p-8 rounded-3xl space-y-6 flex flex-col justify-between transition-all relative ${isPopular
                                                 ? 'border-2 border-[#ff5a00] shadow-2xl transform lg:-translate-y-2'
                                                 : 'border border-slate-200 shadow-sm hover:shadow-xl'
-                                        }`}
+                                            }`}
                                     >
                                         {isPopular && (
                                             <div className="absolute -top-3.5 left-1/2 -translate-x-1/2 bg-gradient-to-r from-[#ff5a00] to-amber-500 text-white text-[11px] font-black uppercase tracking-wider px-4 py-1 rounded-full shadow-md shrink-0 whitespace-nowrap">
@@ -645,15 +652,14 @@ export default function Welcome() {
                                         )}
 
                                         <div className="space-y-4 pt-2">
-                                            <span className={`inline-block px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider ${
-                                                isFree
+                                            <span className={`inline-block px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider ${isFree
                                                     ? 'bg-emerald-50 border border-emerald-200 text-emerald-700'
                                                     : isPopular
                                                         ? 'bg-orange-50 border border-orange-200 text-[#ff5a00]'
                                                         : isBestValue
                                                             ? 'bg-purple-50 border border-purple-200 text-purple-700'
                                                             : 'bg-blue-50 border border-blue-200 text-[#08264e]'
-                                            }`}>
+                                                }`}>
                                                 {isFree ? __('Sin Compromiso') : isPopular ? __('Popular') : isBestValue ? __('Mejor Valor') : __('Recomendado')}
                                             </span>
 
@@ -697,13 +703,12 @@ export default function Welcome() {
 
                                         <Link
                                             href={`/register?plan_id=${plan.id}`}
-                                            className={`w-full py-3.5 px-4 rounded-xl text-xs font-extrabold text-center transition-all block mt-6 ${
-                                                isPopular
+                                            className={`w-full py-3.5 px-4 rounded-xl text-xs font-extrabold text-center transition-all block mt-6 ${isPopular
                                                     ? 'bg-gradient-to-r from-[#ff5a00] to-orange-600 hover:from-orange-600 hover:to-orange-700 text-white shadow-lg shadow-orange-500/25'
                                                     : isFree
                                                         ? 'bg-slate-100 hover:bg-slate-200 text-[#08264e]'
                                                         : 'bg-[#08264e] hover:bg-[#0b3368] text-white'
-                                            }`}
+                                                }`}
                                         >
                                             {isFree ? __('Probar 7 Días Gratis') : `${__('Elegir')} ${__(plan.nombre)}`}
                                         </Link>

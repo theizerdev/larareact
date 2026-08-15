@@ -34,7 +34,6 @@ class SubscriptionPlansSeeder extends Seeder
         // 1. Plan Trimestral (3 Meses)
         SubscriptionPlan::updateOrCreate(
             ['nombre' => 'Plan Trimestral'],
-            ['nombre' => 'Plan Trimestral'],
             [
                 'descripcion' => 'Control total para tu primer comercio. Facturado $897 cada 3 meses ($299/mes).',
                 'precio_3_meses' => 897.00,
@@ -50,7 +49,6 @@ class SubscriptionPlansSeeder extends Seeder
         // 2. Plan Semestral (6 Meses - Más Vendido)
         SubscriptionPlan::updateOrCreate(
             ['nombre' => 'Plan Semestral'],
-            ['nombre' => 'Plan Semestral'],
             [
                 'descripcion' => 'El equilibrio perfecto para crecer. Facturado $1,494 cada 6 meses ($249/mes).',
                 'precio_3_meses' => 897.00,
@@ -65,7 +63,6 @@ class SubscriptionPlansSeeder extends Seeder
 
         // 3. Plan Anual (12 Meses - Mejor Precio)
         SubscriptionPlan::updateOrCreate(
-            ['nombre' => 'Plan Anual'],
             ['nombre' => 'Plan Anual'],
             [
                 'descripcion' => 'Máximo ahorro y soporte continuo. Facturado $2,388 al año ($199/mes).',
