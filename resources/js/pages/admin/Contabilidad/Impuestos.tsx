@@ -22,6 +22,7 @@ import {
     ArrowUpRight,
     Calculator,
     ShieldCheck,
+    FileCode,
 } from 'lucide-react';
 import React, { useState } from 'react';
 import { Breadcrumbs } from '@/components/breadcrumbs';
@@ -38,44 +39,48 @@ import { cleanParams } from '@/lib/utils';
 interface VentaItem {
     id: number;
     factura_numero: string;
-    control_numero: string;
+    uuid_cfdi: string;
     fecha: string;
     cliente_nombre: string;
-    cliente_rif: string;
+    cliente_rfc: string;
+    rfc_cliente: string;
     base_imponible: number;
     monto_iva: number;
+    monto_iva_16: number;
     aliquota_iva: number;
     monto_exento: number;
-    monto_igtf: number;
     total: number;
 }
 
 interface CompraItem {
     id: number;
     factura_numero: string;
-    control_numero: string;
+    uuid_cfdi: string;
     fecha: string;
     proveedor_nombre: string;
-    proveedor_rif: string;
+    proveedor_rfc: string;
+    rfc_proveedor: string;
     base_imponible: number;
     monto_iva: number;
+    monto_iva_16: number;
     total: number;
 }
 
 interface Props {
     empresaInfo: {
         nombre: string;
-        documento: string;
+        rfc: string;
         pais: string;
-        isVenezuela: boolean;
     };
     ventasData: VentaItem[];
     comprasData: CompraItem[];
     totales: {
-        totalIvaDebito: number;
-        totalIvaCredito: number;
-        totalIgtf: number;
+        totalIvaDebito?: number;
+        totalIvaTrasladado?: number;
+        totalIvaCredito?: number;
+        totalIvaAcreditable?: number;
         saldoNetoIva: number;
+        esSaldoAFavor?: boolean;
     };
     filters: {
         from_date: string;
@@ -90,6 +95,10 @@ export default function ImpuestosPage({ empresaInfo, ventasData, comprasData, to
     const [activeTab, setActiveTab] = useState('ventas');
     const [searchQuery, setSearchQuery] = useState('');
 
+    const totalIvaTrasladado = totales.totalIvaTrasladado ?? totales.totalIvaDebito ?? 0;
+    const totalIvaAcreditable = totales.totalIvaAcreditable ?? totales.totalIvaCredito ?? 0;
+    const saldoNetoIva = totales.saldoNetoIva ?? (totalIvaTrasladado - totalIvaAcreditable);
+
     const handleSearch = (e?: React.FormEvent) => {
         if (e) e.preventDefault();
         router.get(
@@ -100,15 +109,6 @@ export default function ImpuestosPage({ empresaInfo, ventasData, comprasData, to
             }),
             { preserveState: true, preserveScroll: true }
         );
-    };
-
-    const handleResetFilters = () => {
-        const now = new Date();
-        const firstDay = new Date(now.getFullYear(), now.getMonth(), 1).toISOString().split('T')[0];
-        const lastDay = new Date(now.getFullYear(), now.getMonth() + 1, 0).toISOString().split('T')[0];
-        setFromDate(firstDay);
-        setToDate(lastDay);
-        router.get('/admin/contabilidad/impuestos', {}, { preserveState: true, preserveScroll: true });
     };
 
     const setQuickDate = (type: 'today' | 'month' | 'prevMonth') => {
@@ -133,26 +133,25 @@ export default function ImpuestosPage({ empresaInfo, ventasData, comprasData, to
         }
     };
 
-    const formatMoney = (val: number) => {
-        return `$${Number(val).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+    const formatMoney = (amount: number) => {
+        return `$${(amount || 0).toLocaleString('es-MX', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} MXN`;
     };
 
-    // Exportar Libro Activo a CSV
     const exportLibroToCSV = () => {
         let csv = '';
-        let filename = 'Libro_Fiscal.csv';
+        let filename = '';
 
         if (activeTab === 'ventas') {
-            filename = `Libro_Ventas_Fiscales_${empresaInfo.pais}_${fromDate}_${toDate}.csv`;
-            csv = 'N°,Fecha,N° Factura,N° Control,Cliente,RIF/NIT,Base Imponible,Alicuota IVA %,Monto IVA,Exento,IGTF (3%),Total Facturado\n';
+            filename = `Libro_Ventas_Fiscales_SAT_Mexico_${fromDate}_${toDate}.csv`;
+            csv = 'N°,Fecha,N° Factura,UUID CFDI,Cliente,RFC,Base Imponible (MXN),Monto IVA (16%),Total (MXN)\n';
             ventasData.forEach((v, idx) => {
-                csv += `${idx + 1},"${v.fecha}","${v.factura_numero}","${v.control_numero}","${v.cliente_nombre.replace(/"/g, '""')}","${v.cliente_rif}",${v.base_imponible},${v.aliquota_iva}%,${v.monto_iva},${v.monto_exento},${v.monto_igtf},${v.total}\n`;
+                csv += `${idx + 1},"${v.fecha}","${v.factura_numero}","${v.uuid_cfdi}","${v.cliente_nombre.replace(/"/g, '""')}","${v.rfc_cliente || v.cliente_rfc}",${v.base_imponible},${v.monto_iva},${v.total}\n`;
             });
         } else {
-            filename = `Libro_Compras_Fiscales_${empresaInfo.pais}_${fromDate}_${toDate}.csv`;
-            csv = 'N°,Fecha,N° Factura,N° Control,Proveedor,RIF/NIT,Base Imponible,Monto IVA,Total Compra\n';
+            filename = `Libro_Compras_Fiscales_SAT_Mexico_${fromDate}_${toDate}.csv`;
+            csv = 'N°,Fecha,N° Factura,UUID CFDI,Proveedor,RFC,Base Imponible (MXN),Monto IVA (16%),Total (MXN)\n';
             comprasData.forEach((c, idx) => {
-                csv += `${idx + 1},"${c.fecha}","${c.factura_numero}","${c.control_numero}","${c.proveedor_nombre.replace(/"/g, '""')}","${c.proveedor_rif}",${c.base_imponible},${c.monto_iva},${c.total}\n`;
+                csv += `${idx + 1},"${c.fecha}","${c.factura_numero}","${c.uuid_cfdi}","${c.proveedor_nombre.replace(/"/g, '""')}","${c.rfc_proveedor || c.proveedor_rfc}",${c.base_imponible},${c.monto_iva},${c.total}\n`;
             });
         }
 
@@ -169,34 +168,36 @@ export default function ImpuestosPage({ empresaInfo, ventasData, comprasData, to
     const breadcrumbs = [
         { title: __('Dashboard'), href: '/admin/dashboard' },
         { title: __('Contabilidad'), href: '#' },
-        { title: __('Impuestos & Libros Fiscales'), href: '/admin/contabilidad/impuestos' },
+        { title: __('Impuestos SAT México'), href: '/admin/contabilidad/impuestos' },
     ];
 
     const filteredVentas = ventasData.filter(
         (v) =>
             v.factura_numero.toLowerCase().includes(searchQuery.toLowerCase()) ||
+            v.uuid_cfdi.toLowerCase().includes(searchQuery.toLowerCase()) ||
             v.cliente_nombre.toLowerCase().includes(searchQuery.toLowerCase()) ||
-            v.cliente_rif.toLowerCase().includes(searchQuery.toLowerCase())
+            (v.rfc_cliente || v.cliente_rfc || '').toLowerCase().includes(searchQuery.toLowerCase())
     );
 
     const filteredCompras = comprasData.filter(
         (c) =>
             c.factura_numero.toLowerCase().includes(searchQuery.toLowerCase()) ||
+            c.uuid_cfdi.toLowerCase().includes(searchQuery.toLowerCase()) ||
             c.proveedor_nombre.toLowerCase().includes(searchQuery.toLowerCase()) ||
-            c.proveedor_rif.toLowerCase().includes(searchQuery.toLowerCase())
+            (c.rfc_proveedor || c.proveedor_rfc || '').toLowerCase().includes(searchQuery.toLowerCase())
     );
 
     return (
         <>
-            <Head title={__('Impuestos & Libros Fiscales')} />
+            <Head title={__('Impuestos SAT México - Declaración & Libros Fiscales')} />
 
             <div className="space-y-6">
                 <Breadcrumbs breadcrumbs={breadcrumbs} />
 
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                     <ModuleHeader
-                        title={__('Impuestos & Libros Fiscales')}
-                        description={__('Gestión tributaria multipaís, IVA Débito/Crédito fiscal, IGTF y generación de Libros de Ventas y Compras.')}
+                        title={__('Impuestos SAT México')}
+                        description={__('Declaración fiscal de IVA 16%, IVA Acreditable Pagado, RFCs y Libros Fiscales SAT México.')}
                         icon={<Landmark className="w-6 h-6 text-blue-600 dark:text-blue-400" />}
                     />
 
@@ -221,7 +222,7 @@ export default function ImpuestosPage({ empresaInfo, ventasData, comprasData, to
                             className="h-9 gap-1.5 text-xs font-semibold"
                         >
                             <Download className="w-3.5 h-3.5 text-emerald-600" />
-                            {__('Exportar Libro CSV')}
+                            {__('Exportar CSV SAT')}
                         </Button>
 
                         <Button
@@ -236,25 +237,23 @@ export default function ImpuestosPage({ empresaInfo, ventasData, comprasData, to
                     </div>
                 </div>
 
-                {/* ══ Contexto Tributario de País ═════════════════════════════════════ */}
+                {/* ══ Contexto Tributario SAT México ═════════════════════════════════ */}
                 <div className="p-4 rounded-xl border border-blue-200 dark:border-blue-900 bg-gradient-to-r from-blue-50/60 via-white to-indigo-50/60 dark:from-slate-900 dark:via-slate-900 dark:to-blue-950/40 flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-2xs">
                     <div className="flex items-center gap-3">
-                        <div className="p-2.5 bg-gradient-to-br from-blue-500 to-indigo-600 text-white rounded-xl shadow-md shadow-blue-500/20">
+                        <div className="p-2.5 bg-gradient-to-br from-blue-600 to-indigo-700 text-white rounded-xl shadow-md shadow-blue-500/20">
                             <Globe className="w-5 h-5" />
                         </div>
                         <div>
                             <div className="flex items-center gap-2">
                                 <h3 className="font-bold text-sm text-slate-900 dark:text-slate-100">
-                                    {empresaInfo.nombre} ({empresaInfo.documento})
+                                    {empresaInfo.nombre} ({empresaInfo.rfc || 'XAXX010101000'})
                                 </h3>
-                                <Badge className="bg-blue-600 text-white font-mono text-[10px]">
-                                    {empresaInfo.pais}
+                                <Badge className="bg-emerald-600 text-white font-mono text-[10px]">
+                                    🇲🇽 SAT México
                                 </Badge>
                             </div>
                             <p className="text-xs text-muted-foreground mt-0.5">
-                                {empresaInfo.isVenezuela
-                                    ? __('Normativa Tributaria SENIAT Venezuela (IVA 16%, IGTF 3% Divisas, N° de Control Fiscal)')
-                                    : __('Régimen Tributario General de Impuestos sobre Ventas y Compras')}
+                                {__('Normativa Fiscal SAT México (IVA Trasladado 16%, IVA Acreditable Pagado, RFC y Folio CFDI)')}
                             </p>
                         </div>
                     </div>
@@ -264,13 +263,13 @@ export default function ImpuestosPage({ empresaInfo, ventasData, comprasData, to
                     </Badge>
                 </div>
 
-                {/* ══ Cards Estadísticas Tributarias Pro ══════════════════════════════ */}
+                {/* ══ Cards Estadísticas Tributarias SAT ══════════════════════════════ */}
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-                    {/* Card 1: IVA Débito (Ventas) */}
+                    {/* Card 1: IVA Trasladado (Ventas 16%) */}
                     <div className="relative overflow-hidden rounded-xl border border-slate-200 dark:border-slate-800 bg-gradient-to-b from-white to-slate-50/50 dark:from-slate-900 dark:to-slate-900/80 p-5 shadow-sm hover:shadow-md transition-all">
                         <div className="flex items-center justify-between">
                             <span className="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">
-                                {__('IVA Débito (Ventas)')}
+                                {__('IVA Trasladado Cobrado (16%)')}
                             </span>
                             <div className="h-10 w-10 rounded-xl bg-gradient-to-br from-rose-500 to-red-600 text-white flex items-center justify-center shadow-md shadow-rose-500/20">
                                 <ArrowUpRight className="w-5 h-5" />
@@ -278,19 +277,19 @@ export default function ImpuestosPage({ empresaInfo, ventasData, comprasData, to
                         </div>
                         <div className="mt-3 flex items-baseline justify-between">
                             <span className="text-2xl font-extrabold font-mono text-slate-900 dark:text-slate-100">
-                                {formatMoney(totales.totalIvaDebito)}
+                                {formatMoney(totalIvaTrasladado)}
                             </span>
                             <Badge variant="outline" className="text-[10px] font-semibold text-rose-600 bg-rose-50 dark:bg-rose-950/50 border-rose-200">
-                                {__('Pasivo por Pagar')}
+                                {__('Pasivo SAT')}
                             </Badge>
                         </div>
                     </div>
 
-                    {/* Card 2: IVA Crédito (Compras) */}
+                    {/* Card 2: IVA Acreditable (Compras 16%) */}
                     <div className="relative overflow-hidden rounded-xl border border-slate-200 dark:border-slate-800 bg-gradient-to-b from-white to-slate-50/50 dark:from-slate-900 dark:to-slate-900/80 p-5 shadow-sm hover:shadow-md transition-all">
                         <div className="flex items-center justify-between">
                             <span className="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">
-                                {__('IVA Crédito (Compras)')}
+                                {__('IVA Acreditable Pagado (16%)')}
                             </span>
                             <div className="h-10 w-10 rounded-xl bg-gradient-to-br from-emerald-500 to-teal-600 text-white flex items-center justify-center shadow-md shadow-emerald-500/20">
                                 <ArrowDownRight className="w-5 h-5" />
@@ -298,39 +297,39 @@ export default function ImpuestosPage({ empresaInfo, ventasData, comprasData, to
                         </div>
                         <div className="mt-3 flex items-baseline justify-between">
                             <span className="text-2xl font-extrabold font-mono text-slate-900 dark:text-slate-100">
-                                {formatMoney(totales.totalIvaCredito)}
+                                {formatMoney(totalIvaAcreditable)}
                             </span>
                             <Badge variant="outline" className="text-[10px] font-semibold text-emerald-600 bg-emerald-50 dark:bg-emerald-950/50 border-emerald-200">
-                                {__('Activo a Favor')}
+                                {__('Activo SAT')}
                             </Badge>
                         </div>
                     </div>
 
-                    {/* Card 3: IGTF 3% Divisas */}
+                    {/* Card 3: RFC Emisor Registrado */}
                     <div className="relative overflow-hidden rounded-xl border border-slate-200 dark:border-slate-800 bg-gradient-to-b from-white to-slate-50/50 dark:from-slate-900 dark:to-slate-900/80 p-5 shadow-sm hover:shadow-md transition-all">
                         <div className="flex items-center justify-between">
                             <span className="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">
-                                {__('IGTF 3% Divisas')}
+                                {__('RFC Emisor Fiscal')}
                             </span>
-                            <div className="h-10 w-10 rounded-xl bg-gradient-to-br from-purple-500 to-indigo-600 text-white flex items-center justify-center shadow-md shadow-purple-500/20">
-                                <DollarSign className="w-5 h-5" />
+                            <div className="h-10 w-10 rounded-xl bg-gradient-to-br from-indigo-500 to-blue-600 text-white flex items-center justify-center shadow-md shadow-indigo-500/20">
+                                <ShieldCheck className="w-5 h-5" />
                             </div>
                         </div>
                         <div className="mt-3 flex items-baseline justify-between">
-                            <span className="text-2xl font-extrabold font-mono text-slate-900 dark:text-slate-100">
-                                {formatMoney(totales.totalIgtf)}
+                            <span className="text-lg font-extrabold font-mono text-slate-900 dark:text-slate-100 uppercase">
+                                {empresaInfo.rfc || 'XAXX010101000'}
                             </span>
-                            <Badge variant="outline" className="text-[10px] font-semibold text-purple-600 bg-purple-50 dark:bg-purple-950/50 border-purple-200">
-                                {__('Percepciones USD')}
+                            <Badge variant="outline" className="text-[10px] font-semibold text-indigo-600 bg-indigo-50 dark:bg-indigo-950/50 border-indigo-200">
+                                {__('Validador SAT')}
                             </Badge>
                         </div>
                     </div>
 
-                    {/* Card 4: Saldo Neto IVA */}
+                    {/* Card 4: Saldo Neto a Declarar SAT */}
                     <div className="relative overflow-hidden rounded-xl border border-slate-200 dark:border-slate-800 bg-gradient-to-b from-white to-slate-50/50 dark:from-slate-900 dark:to-slate-900/80 p-5 shadow-sm hover:shadow-md transition-all">
                         <div className="flex items-center justify-between">
                             <span className="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">
-                                {__('Saldo Neto de IVA')}
+                                {__('Saldo Neto de IVA SAT')}
                             </span>
                             <div className="h-10 w-10 rounded-xl bg-gradient-to-br from-blue-500 to-indigo-600 text-white flex items-center justify-center shadow-md shadow-blue-500/20">
                                 <Scale className="w-5 h-5" />
@@ -338,10 +337,10 @@ export default function ImpuestosPage({ empresaInfo, ventasData, comprasData, to
                         </div>
                         <div className="mt-3 flex items-baseline justify-between">
                             <span className="text-2xl font-extrabold font-mono text-slate-900 dark:text-slate-100">
-                                {formatMoney(Math.abs(totales.saldoNetoIva))}
+                                {formatMoney(Math.abs(saldoNetoIva))}
                             </span>
-                            <Badge className={totales.saldoNetoIva >= 0 ? "bg-rose-600 text-white text-[10px]" : "bg-emerald-600 text-white text-[10px]"}>
-                                {totales.saldoNetoIva >= 0 ? __('IVA a Pagar') : __('Crédito Fiscal')}
+                            <Badge className={saldoNetoIva >= 0 ? "bg-rose-600 text-white text-[10px]" : "bg-emerald-600 text-white text-[10px]"}>
+                                {saldoNetoIva >= 0 ? __('IVA a Pagar (SAT)') : __('IVA a Favor')}
                             </Badge>
                         </div>
                     </div>
@@ -353,11 +352,11 @@ export default function ImpuestosPage({ empresaInfo, ventasData, comprasData, to
                         <form onSubmit={handleSearch} className="flex flex-col lg:flex-row items-stretch lg:items-center justify-between gap-4">
                             <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 flex-1">
                                 <div className="space-y-1">
-                                    <Label className="text-xs font-semibold text-slate-600 dark:text-slate-400">{__('Búsqueda por Factura o Cliente/RIF')}</Label>
+                                    <Label className="text-xs font-semibold text-slate-600 dark:text-slate-400">{__('Buscar por Factura, UUID o RFC')}</Label>
                                     <div className="relative">
                                         <Search className="w-4 h-4 absolute left-3 top-2.5 text-muted-foreground" />
                                         <Input
-                                            placeholder={__('Buscar N° factura, RIF o cliente...')}
+                                            placeholder={__('Buscar N° factura, UUID o RFC...')}
                                             value={searchQuery}
                                             onChange={(e) => setSearchQuery(e.target.value)}
                                             className="pl-9 h-9 text-xs bg-white dark:bg-slate-950"
@@ -463,7 +462,7 @@ export default function ImpuestosPage({ empresaInfo, ventasData, comprasData, to
                             <CardHeader className="p-4 border-b bg-slate-50/50 dark:bg-slate-900/50 flex flex-row items-center justify-between">
                                 <CardTitle className="text-base font-bold flex items-center gap-2">
                                     <Receipt className="w-4 h-4 text-blue-600" />
-                                    <span>{__('Libro de Ventas Fiscales')}</span>
+                                    <span>{__('Libro de Ventas Fiscales (CFDI / POS)')}</span>
                                 </CardTitle>
                                 <Badge variant="outline" className="text-xs font-mono font-bold text-blue-600 bg-blue-50 border-blue-200">
                                     {__('Total Ventas Registradas')}: {filteredVentas.length}
@@ -477,13 +476,12 @@ export default function ImpuestosPage({ empresaInfo, ventasData, comprasData, to
                                             <tr>
                                                 <th className="p-3 w-10">#</th>
                                                 <th className="p-3">{__('Fecha')}</th>
-                                                <th className="p-3">{__('N° Factura')}</th>
-                                                <th className="p-3">{__('N° Control')}</th>
+                                                <th className="p-3">{__('N° Factura / Ticket')}</th>
+                                                <th className="p-3">{__('UUID / Folio CFDI')}</th>
                                                 <th className="p-3 font-sans">{__('Cliente')}</th>
-                                                <th className="p-3">{__('RIF / NIT')}</th>
+                                                <th className="p-3">{__('RFC Cliente')}</th>
                                                 <th className="p-3 text-right">{__('Base Imponible')}</th>
-                                                <th className="p-3 text-right">{__('IVA (16%)')}</th>
-                                                <th className="p-3 text-right">{__('IGTF (3%)')}</th>
+                                                <th className="p-3 text-right">{__('IVA Trasladado (16%)')}</th>
                                                 <th className="p-3 text-right">{__('Total Facturado')}</th>
                                             </tr>
                                         </thead>
@@ -494,9 +492,9 @@ export default function ImpuestosPage({ empresaInfo, ventasData, comprasData, to
                                                         <td className="p-3 text-slate-400 font-bold">{idx + 1}</td>
                                                         <td className="p-3 text-slate-600 dark:text-slate-400 whitespace-nowrap">{v.fecha}</td>
                                                         <td className="p-3 font-bold text-blue-600 dark:text-blue-400">{v.factura_numero}</td>
-                                                        <td className="p-3 text-slate-500">{v.control_numero}</td>
+                                                        <td className="p-3 text-slate-500 font-mono text-[11px]">{v.uuid_cfdi}</td>
                                                         <td className="p-3 font-sans font-medium text-slate-900 dark:text-slate-100">{v.cliente_nombre}</td>
-                                                        <td className="p-3 font-semibold text-slate-700 dark:text-slate-300">{v.cliente_rif}</td>
+                                                        <td className="p-3 font-bold font-mono text-slate-800 dark:text-slate-200">{v.rfc_cliente || v.cliente_rfc}</td>
                                                         <td className="p-3 text-right font-semibold">{formatMoney(v.base_imponible)}</td>
                                                         <td className="p-3 text-right font-bold">
                                                             {v.monto_iva > 0 ? (
@@ -507,15 +505,12 @@ export default function ImpuestosPage({ empresaInfo, ventasData, comprasData, to
                                                                 <span className="text-slate-400 italic">Exento</span>
                                                             )}
                                                         </td>
-                                                        <td className="p-3 text-right font-bold text-purple-600 dark:text-purple-400">
-                                                            {v.monto_igtf > 0 ? formatMoney(v.monto_igtf) : '-'}
-                                                        </td>
                                                         <td className="p-3 text-right font-extrabold text-slate-900 dark:text-slate-100">{formatMoney(v.total)}</td>
                                                     </tr>
                                                 ))
                                             ) : (
                                                 <tr>
-                                                    <td colSpan={10} className="p-12 text-center text-xs text-muted-foreground space-y-2">
+                                                    <td colSpan={9} className="p-12 text-center text-xs text-muted-foreground space-y-2">
                                                         <Receipt className="w-10 h-10 mx-auto text-slate-300 dark:text-slate-700 stroke-[1.2]" />
                                                         <p className="font-semibold text-sm">{__('No se encontraron ventas fiscales registradas')}</p>
                                                     </td>
@@ -533,9 +528,6 @@ export default function ImpuestosPage({ empresaInfo, ventasData, comprasData, to
                                                     </td>
                                                     <td className="p-3 text-right text-rose-600 font-extrabold">
                                                         {formatMoney(filteredVentas.reduce((a, b) => a + b.monto_iva, 0))}
-                                                    </td>
-                                                    <td className="p-3 text-right text-purple-600 font-extrabold">
-                                                        {formatMoney(filteredVentas.reduce((a, b) => a + b.monto_igtf, 0))}
                                                     </td>
                                                     <td className="p-3 text-right text-blue-600 font-extrabold text-sm">
                                                         {formatMoney(filteredVentas.reduce((a, b) => a + b.total, 0))}
@@ -555,7 +547,7 @@ export default function ImpuestosPage({ empresaInfo, ventasData, comprasData, to
                             <CardHeader className="p-4 border-b bg-slate-50/50 dark:bg-slate-900/50 flex flex-row items-center justify-between">
                                 <CardTitle className="text-base font-bold flex items-center gap-2">
                                     <ShoppingBag className="w-4 h-4 text-emerald-600" />
-                                    <span>{__('Libro de Compras Fiscales')}</span>
+                                    <span>{__('Libro de Compras Fiscales (Proveedores)')}</span>
                                 </CardTitle>
                                 <Badge variant="outline" className="text-xs font-mono font-bold text-emerald-600 bg-emerald-50 border-emerald-200">
                                     {__('Total Compras Registradas')}: {filteredCompras.length}
@@ -570,11 +562,11 @@ export default function ImpuestosPage({ empresaInfo, ventasData, comprasData, to
                                                 <th className="p-3 w-10">#</th>
                                                 <th className="p-3">{__('Fecha')}</th>
                                                 <th className="p-3">{__('N° Factura')}</th>
-                                                <th className="p-3">{__('N° Control')}</th>
+                                                <th className="p-3">{__('UUID / Folio CFDI')}</th>
                                                 <th className="p-3 font-sans">{__('Proveedor')}</th>
-                                                <th className="p-3">{__('RIF / NIT')}</th>
+                                                <th className="p-3">{__('RFC Proveedor')}</th>
                                                 <th className="p-3 text-right">{__('Base Imponible')}</th>
-                                                <th className="p-3 text-right">{__('IVA Crédito (16%)')}</th>
+                                                <th className="p-3 text-right">{__('IVA Acreditable (16%)')}</th>
                                                 <th className="p-3 text-right">{__('Total Compra')}</th>
                                             </tr>
                                         </thead>
@@ -585,9 +577,9 @@ export default function ImpuestosPage({ empresaInfo, ventasData, comprasData, to
                                                         <td className="p-3 text-slate-400 font-bold">{idx + 1}</td>
                                                         <td className="p-3 text-slate-600 dark:text-slate-400 whitespace-nowrap">{c.fecha}</td>
                                                         <td className="p-3 font-bold text-blue-600 dark:text-blue-400">{c.factura_numero}</td>
-                                                        <td className="p-3 text-slate-500">{c.control_numero}</td>
+                                                        <td className="p-3 text-slate-500 font-mono text-[11px]">{c.uuid_cfdi}</td>
                                                         <td className="p-3 font-sans font-medium text-slate-900 dark:text-slate-100">{c.proveedor_nombre}</td>
-                                                        <td className="p-3 font-semibold text-slate-700 dark:text-slate-300">{c.proveedor_rif}</td>
+                                                        <td className="p-3 font-bold font-mono text-slate-800 dark:text-slate-200">{c.rfc_proveedor || c.proveedor_rfc}</td>
                                                         <td className="p-3 text-right font-semibold">{formatMoney(c.base_imponible)}</td>
                                                         <td className="p-3 text-right font-bold text-emerald-600 dark:text-emerald-400">{formatMoney(c.monto_iva)}</td>
                                                         <td className="p-3 text-right font-extrabold text-slate-900 dark:text-slate-100">{formatMoney(c.total)}</td>

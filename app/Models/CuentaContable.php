@@ -17,6 +17,7 @@ class CuentaContable extends Model
     protected $fillable = [
         'empresa_id',
         'codigo',
+        'codigo_sat',
         'nombre',
         'tipo',
         'naturaleza',

@@ -24,47 +24,67 @@ class AccountingService
         return DB::transaction(function () use ($empresa, $rubro) {
             $empresaId = $empresa->id;
 
-            // 1. Definición del catálogo base según el rubro
+            // 1. Definición del catálogo de cuentas oficial del SAT México
             $accountsTree = [
-                // 1. ACTIVOS
-                ['codigo' => '1', 'nombre' => 'ACTIVO', 'tipo' => 'activo', 'naturaleza' => 'deudora', 'nivel' => 1, 'acepta' => false, 'padre' => null],
-                ['codigo' => '1.1', 'nombre' => 'ACTIVO CORRIENTE', 'tipo' => 'activo', 'naturaleza' => 'deudora', 'nivel' => 2, 'acepta' => false, 'padre' => '1'],
-                ['codigo' => '1.1.01', 'nombre' => 'Efectivo y Equivalentes de Efectivo', 'tipo' => 'activo', 'naturaleza' => 'deudora', 'nivel' => 3, 'acepta' => false, 'padre' => '1.1'],
-                ['codigo' => '1.1.01.01', 'nombre' => 'Caja General / POS', 'tipo' => 'activo', 'naturaleza' => 'deudora', 'nivel' => 4, 'acepta' => true, 'padre' => '1.1.01', 'key' => 'caja'],
-                ['codigo' => '1.1.01.02', 'nombre' => 'Bancos / Transferencias', 'tipo' => 'activo', 'naturaleza' => 'deudora', 'nivel' => 4, 'acepta' => true, 'padre' => '1.1.01', 'key' => 'banco'],
+                // 1. ACTIVOS (SAT 100)
+                ['codigo' => '100', 'codigo_sat' => '100', 'nombre' => 'ACTIVO', 'tipo' => 'activo', 'naturaleza' => 'deudora', 'nivel' => 1, 'acepta' => false, 'padre' => null],
+                ['codigo' => '100.1', 'codigo_sat' => '100', 'nombre' => 'ACTIVO CORRIENTE', 'tipo' => 'activo', 'naturaleza' => 'deudora', 'nivel' => 2, 'acepta' => false, 'padre' => '100'],
+                
+                ['codigo' => '101', 'codigo_sat' => '101', 'nombre' => 'Caja y Efectivo', 'tipo' => 'activo', 'naturaleza' => 'deudora', 'nivel' => 3, 'acepta' => false, 'padre' => '100.1'],
+                ['codigo' => '101.01', 'codigo_sat' => '101.01', 'nombre' => 'Caja General / POS', 'tipo' => 'activo', 'naturaleza' => 'deudora', 'nivel' => 4, 'acepta' => true, 'padre' => '101', 'key' => 'caja'],
+                
+                ['codigo' => '102', 'codigo_sat' => '102', 'nombre' => 'Bancos Nacionales', 'tipo' => 'activo', 'naturaleza' => 'deudora', 'nivel' => 3, 'acepta' => false, 'padre' => '100.1'],
+                ['codigo' => '102.01', 'codigo_sat' => '102.01', 'nombre' => 'Bancos / Transferencias', 'tipo' => 'activo', 'naturaleza' => 'deudora', 'nivel' => 4, 'acepta' => true, 'padre' => '102', 'key' => 'banco'],
 
-                ['codigo' => '1.1.02', 'nombre' => 'Cuentas por Cobrar', 'tipo' => 'activo', 'naturaleza' => 'deudora', 'nivel' => 3, 'acepta' => false, 'padre' => '1.1'],
-                ['codigo' => '1.1.02.01', 'nombre' => 'Clientes / Cuentas por Cobrar POS', 'tipo' => 'activo', 'naturaleza' => 'deudora', 'nivel' => 4, 'acepta' => true, 'padre' => '1.1.02', 'key' => 'cxc'],
+                ['codigo' => '105', 'codigo_sat' => '105', 'nombre' => 'Clientes Nacionales', 'tipo' => 'activo', 'naturaleza' => 'deudora', 'nivel' => 3, 'acepta' => false, 'padre' => '100.1'],
+                ['codigo' => '105.01', 'codigo_sat' => '105.01', 'nombre' => 'Clientes / Cuentas por Cobrar POS', 'tipo' => 'activo', 'naturaleza' => 'deudora', 'nivel' => 4, 'acepta' => true, 'padre' => '105', 'key' => 'cxc'],
 
-                ['codigo' => '1.1.03', 'nombre' => 'Inventarios', 'tipo' => 'activo', 'naturaleza' => 'deudora', 'nivel' => 3, 'acepta' => false, 'padre' => '1.1'],
-                ['codigo' => '1.1.03.01', 'nombre' => 'Inventario de Productos y Mercadería', 'tipo' => 'activo', 'naturaleza' => 'deudora', 'nivel' => 4, 'acepta' => true, 'padre' => '1.1.03', 'key' => 'inv_prod'],
-                ['codigo' => '1.1.03.02', 'nombre' => 'Inventario de Repuestos e Insumos Taller', 'tipo' => 'activo', 'naturaleza' => 'deudora', 'nivel' => 4, 'acepta' => true, 'padre' => '1.1.03', 'key' => 'inv_rep'],
+                ['codigo' => '113', 'codigo_sat' => '113', 'nombre' => 'Impuestos Acreditable y Pagos Provisional', 'tipo' => 'activo', 'naturaleza' => 'deudora', 'nivel' => 3, 'acepta' => false, 'padre' => '100.1'],
+                ['codigo' => '113.01', 'codigo_sat' => '113.01', 'nombre' => 'IVA Acreditable Pagado (16%)', 'tipo' => 'activo', 'naturaleza' => 'deudora', 'nivel' => 4, 'acepta' => true, 'padre' => '113', 'key' => 'iva_acreditable'],
+                ['codigo' => '113.02', 'codigo_sat' => '113.02', 'nombre' => 'IVA Acreditable Pendiente de Pago', 'tipo' => 'activo', 'naturaleza' => 'deudora', 'nivel' => 4, 'acepta' => true, 'padre' => '113'],
+                ['codigo' => '113.03', 'codigo_sat' => '113.03', 'nombre' => 'ISR Retenido / Anticipo de Impuestos', 'tipo' => 'activo', 'naturaleza' => 'deudora', 'nivel' => 4, 'acepta' => true, 'padre' => '113'],
 
-                // 2. PASIVOS
-                ['codigo' => '2', 'nombre' => 'PASIVO', 'tipo' => 'pasivo', 'naturaleza' => 'acreedora', 'nivel' => 1, 'acepta' => false, 'padre' => null],
-                ['codigo' => '2.1', 'nombre' => 'PASIVO CORRIENTE', 'tipo' => 'pasivo', 'naturaleza' => 'acreedora', 'nivel' => 2, 'acepta' => false, 'padre' => '2'],
-                ['codigo' => '2.1.01', 'nombre' => 'Cuentas por Pagar Comerciales', 'tipo' => 'pasivo', 'naturaleza' => 'acreedora', 'nivel' => 3, 'acepta' => false, 'padre' => '2.1'],
-                ['codigo' => '2.1.01.01', 'nombre' => 'Proveedores y Cuentas por Pagar', 'tipo' => 'pasivo', 'naturaleza' => 'acreedora', 'nivel' => 4, 'acepta' => true, 'padre' => '2.1.01', 'key' => 'cxp'],
+                ['codigo' => '115', 'codigo_sat' => '115', 'nombre' => 'Inventarios', 'tipo' => 'activo', 'naturaleza' => 'deudora', 'nivel' => 3, 'acepta' => false, 'padre' => '100.1'],
+                ['codigo' => '115.01', 'codigo_sat' => '115.01', 'nombre' => 'Inventario de Productos y Mercadería', 'tipo' => 'activo', 'naturaleza' => 'deudora', 'nivel' => 4, 'acepta' => true, 'padre' => '115', 'key' => 'inv_prod'],
+                ['codigo' => '115.02', 'codigo_sat' => '115.02', 'nombre' => 'Inventario de Repuestos e Insumos Taller', 'tipo' => 'activo', 'naturaleza' => 'deudora', 'nivel' => 4, 'acepta' => true, 'padre' => '115', 'key' => 'inv_rep'],
 
-                // 3. PATRIMONIO
-                ['codigo' => '3', 'nombre' => 'PATRIMONIO', 'tipo' => 'patrimonio', 'naturaleza' => 'acreedora', 'nivel' => 1, 'acepta' => false, 'padre' => null],
-                ['codigo' => '3.1', 'nombre' => 'CAPITAL Y RESERVAS', 'tipo' => 'patrimonio', 'naturaleza' => 'acreedora', 'nivel' => 2, 'acepta' => false, 'padre' => '3'],
-                ['codigo' => '3.1.01', 'nombre' => 'Capital Social / Aportes de Socios', 'tipo' => 'patrimonio', 'naturaleza' => 'acreedora', 'nivel' => 4, 'acepta' => true, 'padre' => '3.1'],
+                // 2. PASIVOS (SAT 200)
+                ['codigo' => '200', 'codigo_sat' => '200', 'nombre' => 'PASIVO', 'tipo' => 'pasivo', 'naturaleza' => 'acreedora', 'nivel' => 1, 'acepta' => false, 'padre' => null],
+                ['codigo' => '200.1', 'codigo_sat' => '200', 'nombre' => 'PASIVO CORRIENTE', 'tipo' => 'pasivo', 'naturaleza' => 'acreedora', 'nivel' => 2, 'acepta' => false, 'padre' => '200'],
+                
+                ['codigo' => '201', 'codigo_sat' => '201', 'nombre' => 'Proveedores Nacionales', 'tipo' => 'pasivo', 'naturaleza' => 'acreedora', 'nivel' => 3, 'acepta' => false, 'padre' => '200.1'],
+                ['codigo' => '201.01', 'codigo_sat' => '201.01', 'nombre' => 'Proveedores y Cuentas por Pagar', 'tipo' => 'pasivo', 'naturaleza' => 'acreedora', 'nivel' => 4, 'acepta' => true, 'padre' => '201', 'key' => 'cxp'],
 
-                // 4. INGRESOS
-                ['codigo' => '4', 'nombre' => 'INGRESOS', 'tipo' => 'ingreso', 'naturaleza' => 'acreedora', 'nivel' => 1, 'acepta' => false, 'padre' => null],
-                ['codigo' => '4.1', 'nombre' => 'INGRESOS OPERACIONALES', 'tipo' => 'ingreso', 'naturaleza' => 'acreedora', 'nivel' => 2, 'acepta' => false, 'padre' => '4'],
-                ['codigo' => '4.1.01', 'nombre' => 'Ingresos por Venta de Productos', 'tipo' => 'ingreso', 'naturaleza' => 'acreedora', 'nivel' => 4, 'acepta' => true, 'padre' => '4.1', 'key' => 'vta_prod'],
-                ['codigo' => '4.1.02', 'nombre' => 'Ingresos por Servicios Técnicos y Reparaciones', 'tipo' => 'ingreso', 'naturaleza' => 'acreedora', 'nivel' => 4, 'acepta' => true, 'padre' => '4.1', 'key' => 'vta_srv'],
+                ['codigo' => '208', 'codigo_sat' => '208', 'nombre' => 'Impuestos Trasladados y Retenidos SAT', 'tipo' => 'pasivo', 'naturaleza' => 'acreedora', 'nivel' => 3, 'acepta' => false, 'padre' => '200.1'],
+                ['codigo' => '208.01', 'codigo_sat' => '208.01', 'nombre' => 'IVA Trasladado Cobrado (16%)', 'tipo' => 'pasivo', 'naturaleza' => 'acreedora', 'nivel' => 4, 'acepta' => true, 'padre' => '208', 'key' => 'iva_trasladado'],
+                ['codigo' => '208.02', 'codigo_sat' => '208.02', 'nombre' => 'IVA Trasladado Pendiente de Cobro', 'tipo' => 'pasivo', 'naturaleza' => 'acreedora', 'nivel' => 4, 'acepta' => true, 'padre' => '208'],
+                ['codigo' => '208.03', 'codigo_sat' => '208.03', 'nombre' => 'ISR Retenido por Pagar', 'tipo' => 'pasivo', 'naturaleza' => 'acreedora', 'nivel' => 4, 'acepta' => true, 'padre' => '208'],
+                ['codigo' => '208.04', 'codigo_sat' => '208.04', 'nombre' => 'IVA Retenido por Pagar', 'tipo' => 'pasivo', 'naturaleza' => 'acreedora', 'nivel' => 4, 'acepta' => true, 'padre' => '208'],
 
-                // 5. GASTOS Y COSTOS
-                ['codigo' => '5', 'nombre' => 'COSTOS Y GASTOS', 'tipo' => 'costo', 'naturaleza' => 'deudora', 'nivel' => 1, 'acepta' => false, 'padre' => null],
-                ['codigo' => '5.1', 'nombre' => 'COSTOS OPERACIONALES', 'tipo' => 'costo', 'naturaleza' => 'deudora', 'nivel' => 2, 'acepta' => false, 'padre' => '5'],
-                ['codigo' => '5.1.01', 'nombre' => 'Costo de Ventas (Productos)', 'tipo' => 'costo', 'naturaleza' => 'deudora', 'nivel' => 4, 'acepta' => true, 'padre' => '5.1', 'key' => 'cst_prod'],
-                ['codigo' => '5.1.02', 'nombre' => 'Costo de Repuestos y Materiales de Taller', 'tipo' => 'costo', 'naturaleza' => 'deudora', 'nivel' => 4, 'acepta' => true, 'padre' => '5.1', 'key' => 'cst_rep'],
+                // 3. CAPITAL / PATRIMONIO (SAT 300)
+                ['codigo' => '300', 'codigo_sat' => '300', 'nombre' => 'PATRIMONIO / CAPITAL CONTABLE', 'tipo' => 'patrimonio', 'naturaleza' => 'acreedora', 'nivel' => 1, 'acepta' => false, 'padre' => null],
+                ['codigo' => '301', 'codigo_sat' => '301', 'nombre' => 'Capital Social Contribuido', 'tipo' => 'patrimonio', 'naturaleza' => 'acreedora', 'nivel' => 2, 'acepta' => false, 'padre' => '300'],
+                ['codigo' => '301.01', 'codigo_sat' => '301.01', 'nombre' => 'Capital Social / Aportaciones de Socios', 'tipo' => 'patrimonio', 'naturaleza' => 'acreedora', 'nivel' => 4, 'acepta' => true, 'padre' => '301'],
+                ['codigo' => '305', 'codigo_sat' => '305', 'nombre' => 'Resultado del Ejercicio', 'tipo' => 'patrimonio', 'naturaleza' => 'acreedora', 'nivel' => 2, 'acepta' => false, 'padre' => '300'],
+                ['codigo' => '305.01', 'codigo_sat' => '305.01', 'nombre' => 'Utilidad / Pérdida del Ejercicio Fiscal', 'tipo' => 'patrimonio', 'naturaleza' => 'acreedora', 'nivel' => 4, 'acepta' => true, 'padre' => '305'],
 
-                ['codigo' => '5.2', 'nombre' => 'GASTOS OPERACIONALES Y ADMINISTRATIVOS', 'tipo' => 'gasto', 'naturaleza' => 'deudora', 'nivel' => 2, 'acepta' => false, 'padre' => '5'],
-                ['codigo' => '5.2.01', 'nombre' => 'Gastos Generales de Operación', 'tipo' => 'gasto', 'naturaleza' => 'deudora', 'nivel' => 4, 'acepta' => true, 'padre' => '5.2', 'key' => 'gastos'],
+                // 4. INGRESOS (SAT 400)
+                ['codigo' => '400', 'codigo_sat' => '400', 'nombre' => 'INGRESOS', 'tipo' => 'ingreso', 'naturaleza' => 'acreedora', 'nivel' => 1, 'acepta' => false, 'padre' => null],
+                ['codigo' => '401', 'codigo_sat' => '401', 'nombre' => 'Ventas e Ingresos Operacionales', 'tipo' => 'ingreso', 'naturaleza' => 'acreedora', 'nivel' => 2, 'acepta' => false, 'padre' => '400'],
+                ['codigo' => '401.01', 'codigo_sat' => '401.01', 'nombre' => 'Ingresos por Venta de Productos Tasa 16%', 'tipo' => 'ingreso', 'naturaleza' => 'acreedora', 'nivel' => 4, 'acepta' => true, 'padre' => '401', 'key' => 'vta_prod'],
+                ['codigo' => '401.02', 'codigo_sat' => '401.02', 'nombre' => 'Ingresos por Servicios Técnicos y Reparaciones', 'tipo' => 'ingreso', 'naturaleza' => 'acreedora', 'nivel' => 4, 'acepta' => true, 'padre' => '401', 'key' => 'vta_srv'],
+                ['codigo' => '401.03', 'codigo_sat' => '401.03', 'nombre' => 'Ingresos Tasa 0% / Exentos', 'tipo' => 'ingreso', 'naturaleza' => 'acreedora', 'nivel' => 4, 'acepta' => true, 'padre' => '401'],
+
+                // 5. COSTOS (SAT 500)
+                ['codigo' => '500', 'codigo_sat' => '500', 'nombre' => 'COSTOS', 'tipo' => 'costo', 'naturaleza' => 'deudora', 'nivel' => 1, 'acepta' => false, 'padre' => null],
+                ['codigo' => '501', 'codigo_sat' => '501', 'nombre' => 'Costo de Ventas y Reparaciones', 'tipo' => 'costo', 'naturaleza' => 'deudora', 'nivel' => 2, 'acepta' => false, 'padre' => '500'],
+                ['codigo' => '501.01', 'codigo_sat' => '501.01', 'nombre' => 'Costo de Ventas (Productos)', 'tipo' => 'costo', 'naturaleza' => 'deudora', 'nivel' => 4, 'acepta' => true, 'padre' => '501', 'key' => 'cst_prod'],
+                ['codigo' => '501.02', 'codigo_sat' => '501.02', 'nombre' => 'Costo de Repuestos y Materiales Taller', 'tipo' => 'costo', 'naturaleza' => 'deudora', 'nivel' => 4, 'acepta' => true, 'padre' => '501', 'key' => 'cst_rep'],
+
+                // 6. GASTOS DE OPERACIÓN Y ADMINISTRACIÓN (SAT 600)
+                ['codigo' => '600', 'codigo_sat' => '600', 'nombre' => 'GASTOS GENERALES DE OPERACIÓN', 'tipo' => 'gasto', 'naturaleza' => 'deudora', 'nivel' => 1, 'acepta' => false, 'padre' => null],
+                ['codigo' => '601', 'codigo_sat' => '601', 'nombre' => 'Gastos Generales y de Administración (SAT)', 'tipo' => 'gasto', 'naturaleza' => 'deudora', 'nivel' => 2, 'acepta' => false, 'padre' => '600'],
+                ['codigo' => '601.01', 'codigo_sat' => '601.01', 'nombre' => 'Gastos Generales de Operación y Oficina', 'tipo' => 'gasto', 'naturaleza' => 'deudora', 'nivel' => 4, 'acepta' => true, 'padre' => '601', 'key' => 'gastos'],
             ];
 
             $createdModels = [];
@@ -80,6 +100,7 @@ class AccountingService
                         'codigo' => $item['codigo'],
                     ],
                     [
+                        'codigo_sat' => $item['codigo_sat'] ?? $item['codigo'],
                         'nombre' => $item['nombre'],
                         'tipo' => $item['tipo'],
                         'naturaleza' => $item['naturaleza'],

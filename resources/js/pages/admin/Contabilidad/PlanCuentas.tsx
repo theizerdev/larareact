@@ -14,6 +14,7 @@ import { Breadcrumbs } from '@/components/breadcrumbs';
 interface Cuenta {
     id: number;
     codigo: string;
+    codigo_sat?: string;
     nombre: string;
     tipo: string;
     naturaleza: string;
@@ -30,10 +31,11 @@ interface Props {
 export default function PlanCuentas({ cuentas }: Props) {
     const [search, setSearch] = useState('');
     const [openModal, setOpenModal] = useState(false);
-    const [expandedIds, setExpandedIds] = useState<number[]>([1, 2, 3, 4, 5]);
+    const [expandedIds, setExpandedIds] = useState<number[]>([1, 2, 3, 4, 5, 100, 200, 300, 400, 500, 600]);
 
     const { data, setData, post, processing, reset, errors } = useForm({
         codigo: '',
+        codigo_sat: '',
         nombre: '',
         tipo: 'activo',
         naturaleza: 'deudora',
@@ -60,7 +62,7 @@ export default function PlanCuentas({ cuentas }: Props) {
     const breadcrumbs = [
         { title: 'Dashboard', href: '/admin/dashboard' },
         { title: 'Contabilidad', href: '#' },
-        { title: 'Plan de Cuentas (PUC)', href: '/admin/contabilidad/plan-cuentas' },
+        { title: 'Catálogo de Cuentas (SAT México)', href: '/admin/contabilidad/plan-cuentas' },
     ];
 
     const getTipoBadge = (tipo: string) => {
@@ -79,7 +81,7 @@ export default function PlanCuentas({ cuentas }: Props) {
         const hasSub = cuenta.subcuentas && cuenta.subcuentas.length > 0;
         const isExpanded = expandedIds.includes(cuenta.id);
 
-        if (search && !cuenta.nombre.toLowerCase().includes(search.toLowerCase()) && !cuenta.codigo.includes(search)) {
+        if (search && !cuenta.nombre.toLowerCase().includes(search.toLowerCase()) && !cuenta.codigo.includes(search) && !(cuenta.codigo_sat && cuenta.codigo_sat.includes(search))) {
             return null;
         }
 
@@ -109,6 +111,11 @@ export default function PlanCuentas({ cuentas }: Props) {
                             <Folder className="w-3.5 h-3.5 text-amber-500" />
                         )}
                         <span className="font-semibold text-blue-600 dark:text-blue-400">{cuenta.codigo}</span>
+                        {cuenta.codigo_sat && (
+                            <Badge variant="outline" className="text-[10px] font-mono text-slate-500 border-slate-300 dark:border-slate-700">
+                                SAT: {cuenta.codigo_sat}
+                            </Badge>
+                        )}
                         <span className="font-sans font-medium text-slate-800 dark:text-slate-200">{cuenta.nombre}</span>
                     </div>
 
@@ -130,14 +137,14 @@ export default function PlanCuentas({ cuentas }: Props) {
 
     return (
         <>
-            <Head title="Plan de Cuentas (PUC)" />
+            <Head title="Catálogo de Cuentas (SAT México)" />
 
             <div className="space-y-6">
                 <Breadcrumbs breadcrumbs={breadcrumbs} />
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                     <ModuleHeader
-                        title="Plan de Cuentas (PUC Estándar)"
-                        description="Catálogo estructurado de cuentas contables de la empresa para la contabilización automática."
+                        title="Catálogo de Cuentas (SAT México)"
+                        description="Estructura contable oficial con Código Agrupador del SAT para la contabilización automática."
                         icon={<BookOpen className="w-6 h-6" />}
                     />
 

@@ -371,7 +371,7 @@ class AccountingExportService
             $query->where('empresa_id', $empresa->id);
         }
 
-        $tasaPais = (float) ($empresa?->pais?->impuesto_predeterminado ?? 16.00);
+        $tasaPais = 16.00;
 
         return $query->orderBy('created_at', 'asc')->get()->map(function ($sale) use ($tasaPais) {
             $total = (float) $sale->total;
@@ -386,19 +386,22 @@ class AccountingExportService
                 $subtotal = $total - $taxAmount;
             }
 
-            $igtfAmount = (float) ($sale->igtf_amount ?? 0);
+            $rfc = $sale->cliente?->documento ?? $sale->cliente?->rfc ?? 'XAXX010101000';
+            if (empty(trim($rfc)) || strlen(trim($rfc)) < 9) {
+                $rfc = 'XAXX010101000';
+            }
 
             return [
-                'factura' => $sale->codigo_ticket ?? $sale->invoice_number ?? ('FAC-' . str_pad($sale->id, 6, '0', STR_PAD_LEFT)),
-                'control' => $sale->control_number ?? ('00-' . str_pad($sale->id, 6, '0', STR_PAD_LEFT)),
+                'factura' => $sale->codigo_ticket ?? $sale->invoice_number ?? ('CFDI-' . str_pad($sale->id, 6, '0', STR_PAD_LEFT)),
+                'control' => $sale->control_number ?? ('UUID-' . strtoupper(md5($sale->id . $sale->created_at))),
                 'fecha' => $sale->created_at->format('Y-m-d'),
-                'cliente' => $sale->cliente_nombre ?? $sale->cliente?->razon_social ?? $sale->cliente?->nombre ?? 'Cliente Contado',
-                'rif' => $sale->cliente?->documento ?? 'J-000000000',
+                'cliente' => $sale->cliente_nombre ?? $sale->cliente?->razon_social ?? $sale->cliente?->nombre ?? 'Público en General',
+                'rif' => strtoupper($rfc),
                 'base' => $subtotal,
-                'aliquota' => $subtotal > 0 ? round(($taxAmount / $subtotal) * 100, 1) : $tasaPais,
+                'aliquota' => 16.0,
                 'iva' => $taxAmount,
                 'exento' => $taxAmount == 0 ? $total : 0,
-                'igtf' => $igtfAmount,
+                'igtf' => 0,
                 'total' => $total,
             ];
         })->toArray();
@@ -413,7 +416,7 @@ class AccountingExportService
             $query->where('empresa_id', $empresa->id);
         }
 
-        $tasaPais = (float) ($empresa?->pais?->impuesto_predeterminado ?? 16.00);
+        $tasaPais = 16.00;
 
         return $query->orderBy('created_at', 'asc')->get()->map(function ($compra) use ($tasaPais) {
             $total = (float) $compra->total;
@@ -428,12 +431,17 @@ class AccountingExportService
                 $subtotal = $total - $taxAmount;
             }
 
+            $rfcProv = $compra->proveedor?->rif_documento ?? $compra->proveedor?->documento ?? 'XAXX010101000';
+            if (empty(trim($rfcProv)) || strlen(trim($rfcProv)) < 9) {
+                $rfcProv = 'XAXX010101000';
+            }
+
             return [
                 'factura' => $compra->numero_factura ?? ('COM-' . str_pad($compra->id, 6, '0', STR_PAD_LEFT)),
-                'control' => $compra->numero_control ?? ('00-' . str_pad($compra->id, 6, '0', STR_PAD_LEFT)),
+                'control' => $compra->numero_control ?? ('UUID-' . strtoupper(md5('COM-' . $compra->id))),
                 'fecha' => $compra->created_at->format('Y-m-d'),
-                'proveedor' => $compra->proveedor?->razon_social ?? $compra->proveedor?->nombre_comercial ?? 'Proveedor',
-                'rif' => $compra->proveedor?->rif_documento ?? $compra->proveedor?->documento ?? 'J-000000000',
+                'proveedor' => $compra->proveedor?->razon_social ?? $compra->proveedor?->nombre_comercial ?? 'Proveedor Nacional',
+                'rif' => strtoupper($rfcProv),
                 'base' => $subtotal,
                 'iva' => $taxAmount,
                 'total' => $total,

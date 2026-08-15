@@ -44,8 +44,8 @@ export default function Setup({ config, rubros }: Props) {
             <div className="space-y-6">
                 <Breadcrumbs breadcrumbs={breadcrumbs} />
                 <ModuleHeader
-                    title="Contabilidad Automática por Partida Doble"
-                    description="Configure el rubro comercial de su empresa para auto-generar su Plan de Cuentas y reglas de contabilización."
+                    title="Contabilidad Automática SAT México"
+                    description="Configure el rubro comercial de su empresa para auto-generar su Catálogo de Cuentas oficial del SAT con Código Agrupador."
                     icon={<Calculator className="w-6 h-6" />}
                 />
 
@@ -54,10 +54,10 @@ export default function Setup({ config, rubros }: Props) {
                         <CardHeader>
                             <div className="flex items-center gap-2">
                                 <Badge className="bg-blue-600 text-white font-bold">Paso 1</Badge>
-                                <CardTitle className="text-lg">Seleccione el Rubro Comercial de su Empresa</CardTitle>
+                                <CardTitle className="text-lg">Seleccione el Rubro Comercial (Catálogo SAT México)</CardTitle>
                             </div>
                             <CardDescription>
-                                El sistema creará las cuentas contables y vinculará automáticamente las ventas POS, compras y servicios.
+                                El sistema creará el catálogo oficial del SAT con Código Agrupador y vinculará automáticamente las ventas POS, compras e IVA.
                             </CardDescription>
                         </CardHeader>
 

@@ -360,6 +360,9 @@ class ContabilidadController extends Controller
     /**
      * Módulo de Impuestos, IGTF y Libros Fiscales (Ventas & Compras)
      */
+    /**
+     * Módulo de Impuestos SAT México (IVA Trasladado 16%, IVA Acreditable, Retenciones)
+     */
     public function impuestos(Request $request)
     {
         $user = auth()->user();
@@ -369,10 +372,7 @@ class ContabilidadController extends Controller
         $fromDate = $request->input('from_date', date('Y-m-01'));
         $toDate = $request->input('to_date', date('Y-m-t'));
 
-        $paisIso = strtoupper($empresa?->pais?->codigo_iso2 ?? 'VE');
-        $isVenezuela = in_array($paisIso, ['VE', 'VEN']) || str_contains(strtolower($empresa?->pais?->nombre ?? ''), 'venezuela');
-
-        // Libro de Ventas Fiscales
+        // Libro de Ventas Fiscales (CFDI / Tickets POS)
         $ventasQuery = \App\Models\Sale::with(['cliente', 'user'])
             ->whereBetween('created_at', [$fromDate . ' 00:00:00', $toDate . ' 23:59:59']);
 
@@ -380,9 +380,9 @@ class ContabilidadController extends Controller
             $ventasQuery->where('empresa_id', $empresaId);
         }
 
-        $tasaPais = (float) ($empresa?->pais?->impuesto_predeterminado ?? 16.00);
+        $tasaPais = 16.00;
 
-        $ventasData = $ventasQuery->orderBy('created_at', 'desc')->get()->map(function ($sale) use ($isVenezuela, $tasaPais) {
+        $ventasData = $ventasQuery->orderBy('created_at', 'desc')->get()->map(function ($sale) use ($tasaPais) {
             $total = (float) $sale->total;
             $subtotal = (float) ($sale->subtotal ?? 0);
             
@@ -391,30 +391,33 @@ class ContabilidadController extends Controller
             } elseif ($subtotal > 0 && $subtotal < $total) {
                 $taxAmount = $total - $subtotal;
             } else {
-                // Generar automáticamente el IVA según la alícuota del país de la empresa
                 $taxAmount = round(($total * $tasaPais) / (100 + $tasaPais), 2);
                 $subtotal = $total - $taxAmount;
             }
 
-            $igtfAmount = (float) ($sale->igtf_amount ?? 0);
+            $rfc = $sale->cliente?->documento ?? $sale->cliente?->rfc ?? 'XAXX010101000';
+            if (empty(trim($rfc)) || strlen(trim($rfc)) < 9) {
+                $rfc = 'XAXX010101000'; // RFC Público en General SAT
+            }
 
             return [
                 'id' => $sale->id,
-                'factura_numero' => $sale->codigo_ticket ?? $sale->invoice_number ?? ('FAC-' . str_pad($sale->id, 6, '0', STR_PAD_LEFT)),
-                'control_numero' => $sale->control_number ?? ('00-' . str_pad($sale->id, 6, '0', STR_PAD_LEFT)),
+                'factura_numero' => $sale->codigo_ticket ?? $sale->invoice_number ?? ('CFDI-' . str_pad($sale->id, 6, '0', STR_PAD_LEFT)),
+                'uuid_cfdi' => $sale->control_number ?? ('UUID-' . strtoupper(md5($sale->id . $sale->created_at))),
                 'fecha' => $sale->created_at->format('Y-m-d H:i'),
-                'cliente_nombre' => $sale->cliente_nombre ?? $sale->cliente?->razon_social ?? $sale->cliente?->nombre ?? 'Cliente Contado',
-                'cliente_rif' => $sale->cliente?->documento ?? 'J-000000000',
+                'cliente_nombre' => $sale->cliente_nombre ?? $sale->cliente?->razon_social ?? $sale->cliente?->nombre ?? 'Público en General',
+                'cliente_rfc' => strtoupper($rfc),
+                'rfc_cliente' => strtoupper($rfc),
                 'base_imponible' => $subtotal,
                 'monto_iva' => $taxAmount,
-                'aliquota_iva' => $subtotal > 0 ? round(($taxAmount / $subtotal) * 100, 1) : $tasaPais,
+                'monto_iva_16' => $taxAmount,
+                'aliquota_iva' => 16.0,
                 'monto_exento' => $taxAmount == 0 ? $total : 0,
-                'monto_igtf' => $igtfAmount,
                 'total' => $total,
             ];
         });
 
-        // Libro de Compras Fiscales
+        // Libro de Compras Fiscales (Proveedores SAT)
         $comprasQuery = \App\Models\Compra::with(['proveedor', 'user'])
             ->whereBetween('created_at', [$fromDate . ' 00:00:00', $toDate . ' 23:59:59']);
 
@@ -435,39 +438,46 @@ class ContabilidadController extends Controller
                 $subtotal = $total - $taxAmount;
             }
 
+            $rfcProv = $compra->proveedor?->rif_documento ?? $compra->proveedor?->documento ?? 'XAXX010101000';
+            if (empty(trim($rfcProv)) || strlen(trim($rfcProv)) < 9) {
+                $rfcProv = 'XAXX010101000';
+            }
+
             return [
                 'id' => $compra->id,
                 'factura_numero' => $compra->numero_factura ?? ('COM-' . str_pad($compra->id, 6, '0', STR_PAD_LEFT)),
-                'control_numero' => $compra->numero_control ?? ('00-' . str_pad($compra->id, 6, '0', STR_PAD_LEFT)),
+                'uuid_cfdi' => $compra->numero_control ?? ('UUID-' . strtoupper(md5('COM-' . $compra->id))),
                 'fecha' => $compra->created_at->format('Y-m-d H:i'),
-                'proveedor_nombre' => $compra->proveedor?->razon_social ?? $compra->proveedor?->nombre_comercial ?? 'Proveedor',
-                'proveedor_rif' => $compra->proveedor?->rif_documento ?? $compra->proveedor?->documento ?? 'J-000000000',
+                'proveedor_nombre' => $compra->proveedor?->razon_social ?? $compra->proveedor?->nombre_comercial ?? 'Proveedor Nacional',
+                'proveedor_rfc' => strtoupper($rfcProv),
+                'rfc_proveedor' => strtoupper($rfcProv),
                 'base_imponible' => $subtotal,
                 'monto_iva' => $taxAmount,
+                'monto_iva_16' => $taxAmount,
                 'total' => $total,
             ];
         });
 
-        // Totales de resumen tributario
-        $totalIvaDebito = $ventasData->sum('monto_iva');
-        $totalIvaCredito = $comprasData->sum('monto_iva');
-        $totalIgtf = $ventasData->sum('monto_igtf');
-        $saldoNetoIva = $totalIvaDebito - $totalIvaCredito;
+        // Totales de Declaración Mensual SAT (IVA Trasladado - IVA Acreditable)
+        $totalIvaTrasladado = $ventasData->sum('monto_iva');
+        $totalIvaAcreditable = $comprasData->sum('monto_iva');
+        $saldoNetoIva = $totalIvaTrasladado - $totalIvaAcreditable;
 
         return Inertia::render('admin/Contabilidad/Impuestos', [
             'empresaInfo' => [
                 'nombre' => $empresa?->razon_social ?? 'Empresa',
-                'documento' => $empresa?->documento ?? '',
-                'pais' => $empresa?->pais?->nombre ?? 'Venezuela',
-                'isVenezuela' => $isVenezuela,
+                'rfc' => $empresa?->documento ?? $empresa?->rfc ?? 'XAXX010101000',
+                'pais' => 'México',
             ],
             'ventasData' => $ventasData,
             'comprasData' => $comprasData,
             'totales' => [
-                'totalIvaDebito' => $totalIvaDebito,
-                'totalIvaCredito' => $totalIvaCredito,
-                'totalIgtf' => $totalIgtf,
+                'totalIvaDebito' => $totalIvaTrasladado,
+                'totalIvaTrasladado' => $totalIvaTrasladado,
+                'totalIvaCredito' => $totalIvaAcreditable,
+                'totalIvaAcreditable' => $totalIvaAcreditable,
                 'saldoNetoIva' => $saldoNetoIva,
+                'esSaldoAFavor' => $saldoNetoIva < 0,
             ],
             'filters' => [
                 'from_date' => $fromDate,
