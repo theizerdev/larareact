@@ -277,7 +277,18 @@ export default function AdminSaasLayout({
         (auth as any)?.user?.id === 1
     );
     const userEmpresaId = (auth as any)?.user?.empresa_id;
-    const isSubscriptionExpiredPage = page.url.includes('/subscription/expired') || ((auth as any)?.user?.empresa?.subscription_status === 'expired' && !(auth as any)?.user?.empresa?.is_exempt);
+    const subData = (page.props as any)?.subscription;
+    const isEmpresaExempt = Boolean(
+        (auth as any)?.user?.empresa?.is_exempt ||
+        userEmpresaId === 1 ||
+        isSuperAdmin
+    );
+    const isExpiredStatus = Boolean(
+        subData?.is_expired === true ||
+        subData?.status === 'expired' ||
+        (auth as any)?.user?.empresa?.subscription_status === 'expired'
+    );
+    const isSubscriptionExpiredPage = (!isEmpresaExempt && isExpiredStatus) || page.url.includes('/subscription/expired');
 
     const hasPermission = (permission: string) => {
         if (isSuperAdmin) return true;

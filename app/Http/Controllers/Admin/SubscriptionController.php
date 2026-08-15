@@ -123,96 +123,9 @@ class SubscriptionController extends Controller
     /**
      * Vista de bloqueo por suscripción vencida.
      */
-    public function expired(\App\Services\BcvRateService $bcvService)
+    public function expired()
     {
-        $user = auth()->user();
-        $empresa = $user?->empresa;
-
-        if ($empresa && $empresa->hasActiveSubscription()) {
-            return redirect('/admin/dashboard');
-        }
-
-        SubscriptionPlan::ensureDefaultPlansExist();
-        $planes = SubscriptionPlan::where('activo', true)
-            ->where('precio_3_meses', '>', 0)
-            ->orderBy('precio_12_meses', 'asc')
-            ->get();
-
-        if ($planes->isEmpty()) {
-            $planes = SubscriptionPlan::where('activo', true)->get();
-        }
-
-        $plan = SubscriptionPlan::getPlanRenovacionDefault() ?? $planes->first();
-        $totalSucursales = $empresa ? $empresa->sucursales()->count() : 1;
-
-        $bcvRate = $bcvService->getRate() ?? 36.50;
-
-        $precio3 = ($plan?->precio_3_meses > 0) ? $plan->precio_3_meses : 89.00;
-        $precio6 = ($plan?->precio_6_meses > 0) ? $plan->precio_6_meses : 159.00;
-        $precio12 = ($plan?->precio_12_meses > 0) ? $plan->precio_12_meses : 288.00;
-
-        $opcionesPrecios = [
-            3 => [
-                'meses' => 3,
-                'subtotal_plan' => $precio3,
-                'precio_mensual_promedio' => round($precio3 / 3, 2),
-                'total' => $plan ? $plan->calcularPrecio(3, max(1, $totalSucursales)) : 89.00,
-            ],
-            6 => [
-                'meses' => 6,
-                'subtotal_plan' => $precio6,
-                'precio_mensual_promedio' => round($precio6 / 6, 2),
-                'total' => $plan ? $plan->calcularPrecio(6, max(1, $totalSucursales)) : 159.00,
-            ],
-            12 => [
-                'meses' => 12,
-                'subtotal_plan' => $precio12,
-                'precio_mensual_promedio' => round($precio12 / 12, 2),
-                'total' => $plan ? $plan->calcularPrecio(12, max(1, $totalSucursales)) : 288.00,
-            ],
-        ];
-
-        $masterEmpresa = Empresa::withoutGlobalScopes()->find(1) ?? $empresa;
-        $paymentGateways = [
-            'paypal' => [
-                'active' => (bool) $masterEmpresa?->paypal_active,
-                'mode' => $masterEmpresa?->paypal_mode ?? 'sandbox',
-                'client_id' => $masterEmpresa?->paypal_client_id ?? '',
-            ],
-            'mercadopago' => [
-                'active' => (bool) $masterEmpresa?->mercadopago_active,
-                'mode' => $masterEmpresa?->mercadopago_mode ?? 'sandbox',
-                'public_key' => $masterEmpresa?->mercadopago_public_key ?? '',
-            ],
-            'stripe' => [
-                'active' => (bool) $masterEmpresa?->stripe_active,
-                'mode' => $masterEmpresa?->stripe_mode ?? 'test',
-                'publishable_key' => $masterEmpresa?->stripe_publishable_key ?? '',
-            ],
-        ];
-
-        $latestSub = $empresa?->getLatestSubscriptionRecord();
-
-        return inertia('subscription/expired', [
-            'empresa' => $empresa ? [
-                'id' => $empresa->id,
-                'razon_social' => $empresa->razon_social,
-                'subscription_status' => $latestSub?->estado ?? $empresa->subscription_status,
-                'trial_ends_at' => ($latestSub && $latestSub->estado === 'trial') ? $latestSub->fecha_vencimiento?->format('Y-m-d H:i:s') : $empresa->trial_ends_at?->format('Y-m-d H:i:s'),
-                'subscription_expires_at' => $latestSub?->fecha_vencimiento?->format('Y-m-d H:i:s') ?? $empresa->subscription_expires_at?->format('Y-m-d H:i:s'),
-                'dias_restantes' => $empresa->dias_restantes_suscripcion,
-                'estado_legible' => $empresa->estado_suscripcion_legible,
-                'is_exempt' => $empresa->isExemptFromSubscription(),
-                'billing_cycle' => $latestSub ? ($latestSub->ciclo_meses . '_months') : $empresa->billing_cycle,
-                'max_sucursales' => $latestSub?->max_sucursales ?? $empresa->max_sucursales ?? 1,
-                'sucursales_activas' => $totalSucursales,
-            ] : null,
-            'plan' => $plan,
-            'planes' => $planes,
-            'opcionesPrecios' => $opcionesPrecios,
-            'bcvRate' => $bcvRate,
-            'paymentGateways' => $paymentGateways,
-        ]);
+        return redirect()->route('admin.subscription.index');
     }
 
     /**

@@ -71,7 +71,12 @@ class ReparacionController extends Controller
             $query->where('estado_orden', $status);
         }
 
-        $ordenes = $query->latest('id')->paginate(15)->withQueryString();
+        $perPage = (int) $request->input('perPage', 10);
+        if (!in_array($perPage, [10, 25, 50, 100])) {
+            $perPage = 10;
+        }
+
+        $ordenes = $query->latest('id')->paginate($perPage)->withQueryString();
 
         // Conteo por Estados para Tablero / Filtros
         $countsQuery = OrdenReparacion::where('empresa_id', $empresaId);
@@ -85,7 +90,7 @@ class ReparacionController extends Controller
             ->toArray();
 
         $tecnicos = User::where('empresa_id', $empresaId)->get(['id', 'name']);
-        $clientes = Cliente::where('empresa_id', $empresaId)->orderBy('nombre')->get(['id', 'nombre', 'telefono', 'email']);
+        $clientes = Cliente::withoutGlobalScope('multitenancy')->where('empresa_id', $empresaId)->orderBy('nombre')->get(['id', 'nombre', 'telefono', 'email']);
         $marcas = Marca::with('modelos')->where('empresa_id', $empresaId)->orderBy('nombre')->get();
         $categorias = \App\Models\Categoria::withoutGlobalScope('multitenancy')
             ->where(function ($q) use ($empresaId) {
@@ -111,7 +116,7 @@ class ReparacionController extends Controller
             'categorias' => $categorias,
             'servicios' => $servicios,
             'currencySymbol' => $this->getCurrencySymbol(),
-            'filters' => $request->only(['search', 'status', 'tecnico_id']),
+            'filters' => array_merge($request->only(['search', 'status', 'tecnico_id']), ['perPage' => (string) $perPage]),
             'isTecnicoOnly' => $isTecnicoOnly && !$isAdmin,
         ]);
     }
@@ -121,7 +126,7 @@ class ReparacionController extends Controller
         $user = auth()->user();
         $empresaId = $user->empresa_id;
 
-        $clientes = Cliente::where('empresa_id', $empresaId)->orderBy('nombre')->get(['id', 'nombre', 'telefono', 'email']);
+        $clientes = Cliente::withoutGlobalScope('multitenancy')->where('empresa_id', $empresaId)->orderBy('nombre')->get(['id', 'nombre', 'telefono', 'email']);
         $marcas = Marca::with('modelos')->where('empresa_id', $empresaId)->orderBy('nombre')->get();
         $tecnicos = User::where('empresa_id', $empresaId)
             ->where(function ($q) {

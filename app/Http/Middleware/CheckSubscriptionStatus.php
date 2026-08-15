@@ -60,11 +60,11 @@ class CheckSubscriptionStatus
                 return response()->json([
                     'error' => 'Suscripción Vencida',
                     'message' => 'El período de prueba o suscripción de su empresa ha caducado.',
-                    'redirect' => route('admin.subscription.expired'),
+                    'redirect' => route('admin.subscription.index'),
                 ], Response::HTTP_PAYMENT_REQUIRED);
             }
 
-            return redirect()->route('admin.subscription.expired');
+            return redirect()->route('admin.subscription.index');
         }
 
         return $next($request);

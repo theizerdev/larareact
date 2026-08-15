@@ -697,7 +697,7 @@ export default function CreateReparacion({ clientes: initialClientes, marcas: in
 
     // Clientes filtrados por la búsqueda en tiempo real
     const clientesFiltrados = clientesList.filter((c) => {
-        if (!searchClienteTerm || searchClienteTerm.trim() === '') return false;
+        if (!searchClienteTerm || searchClienteTerm.trim() === '') return true;
         const term = searchClienteTerm.toLowerCase().trim();
         return (
             c.nombre?.toLowerCase().includes(term) ||
@@ -1194,11 +1194,15 @@ export default function CreateReparacion({ clientes: initialClientes, marcas: in
                                                     onChange={(e) => {
                                                         const val = e.target.value;
                                                         setSearchClienteTerm(val);
-                                                        setData('cliente_nombre', val);
-                                                        setIsClientDropdownOpen(val.trim().length > 0);
+                                                        setData((prev) => ({
+                                                            ...prev,
+                                                            cliente_nombre: val,
+                                                            cliente_id: '',
+                                                        }));
+                                                        setIsClientDropdownOpen(true);
                                                     }}
                                                     onFocus={() => {
-                                                        if (searchClienteTerm.trim().length > 0) setIsClientDropdownOpen(true);
+                                                        setIsClientDropdownOpen(true);
                                                     }}
                                                     placeholder={__('Escriba nombre o teléfono...')}
                                                     className="text-xs h-8 pl-8 pr-7 font-medium"
@@ -1212,25 +1216,44 @@ export default function CreateReparacion({ clientes: initialClientes, marcas: in
                                             </div>
 
                                             {/* RESULTADOS CLIENTE DROPDOWN */}
-                                            {isClientDropdownOpen && clientesFiltrados.length > 0 && (
-                                                <div className="absolute left-0 right-0 z-50 mt-1 max-h-48 overflow-y-auto bg-white dark:bg-slate-900 rounded-lg border border-slate-200 dark:border-slate-800 shadow-xl divide-y divide-slate-100 dark:divide-slate-800">
-                                                    {clientesFiltrados.map((c) => (
-                                                        <button
-                                                            key={c.id}
-                                                            type="button"
-                                                            onClick={() => handleSelectClienteObj(c)}
-                                                            className="w-full px-3 py-2 text-left text-xs hover:bg-purple-50 dark:hover:bg-purple-950/40 flex items-center justify-between transition-colors"
-                                                        >
-                                                            <div>
-                                                                <span className="font-bold text-slate-900 dark:text-slate-100 block">{c.nombre}</span>
-                                                            </div>
-                                                            {c.telefono && (
-                                                                <Badge variant="outline" className="text-purple-600 border-purple-200 font-mono text-[10px]">
-                                                                    📞 {c.telefono}
-                                                                </Badge>
-                                                            )}
-                                                        </button>
-                                                    ))}
+                                            {isClientDropdownOpen && (
+                                                <div className="absolute left-0 right-0 z-50 mt-1 max-h-52 overflow-y-auto bg-white dark:bg-slate-900 rounded-lg border border-slate-200 dark:border-slate-800 shadow-xl divide-y divide-slate-100 dark:divide-slate-800">
+                                                    {clientesFiltrados.length > 0 ? (
+                                                        clientesFiltrados.slice(0, 30).map((c) => (
+                                                            <button
+                                                                key={c.id}
+                                                                type="button"
+                                                                onClick={() => handleSelectClienteObj(c)}
+                                                                className="w-full px-3 py-2 text-left text-xs hover:bg-purple-50 dark:hover:bg-purple-950/40 flex items-center justify-between transition-colors"
+                                                            >
+                                                                <div>
+                                                                    <span className="font-bold text-slate-900 dark:text-slate-100 block">{c.nombre}</span>
+                                                                    {c.email && <span className="text-[10px] text-slate-400 block">{c.email}</span>}
+                                                                </div>
+                                                                {c.telefono && (
+                                                                    <Badge variant="outline" className="text-purple-600 border-purple-200 font-mono text-[10px]">
+                                                                        📞 {c.telefono}
+                                                                    </Badge>
+                                                                )}
+                                                            </button>
+                                                        ))
+                                                    ) : (
+                                                        <div className="p-3 text-center text-xs text-slate-500">
+                                                            <p>{__('No se encontraron clientes que coincidan.')}</p>
+                                                            <button
+                                                                type="button"
+                                                                onClick={() => {
+                                                                    setIsClientDropdownOpen(false);
+                                                                    setNewClientData((prev) => ({ ...prev, nombre: searchClienteTerm }));
+                                                                    setOpenNewClientModal(true);
+                                                                }}
+                                                                className="mt-1.5 text-xs font-bold text-purple-600 hover:text-purple-700 underline inline-flex items-center gap-1"
+                                                            >
+                                                                <Plus className="w-3 h-3" />
+                                                                {__('Crear cliente "{{name}}"', { name: searchClienteTerm || __('Nuevo') })}
+                                                            </button>
+                                                        </div>
+                                                    )}
                                                 </div>
                                             )}
                                         </div>

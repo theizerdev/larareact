@@ -73,6 +73,7 @@ interface Props {
         search?: string;
         status?: string;
         tecnico_id?: string;
+        perPage?: string;
     };
     isTecnicoOnly?: boolean;
 }
@@ -85,6 +86,7 @@ export default function IndexReparaciones({ ordenes, counts, tecnicos, currencyS
     const [search, setSearch] = useState(filters.search || '');
     const [status, setStatus] = useState(filters.status || 'all');
     const [tecnicoId, setTecnicoId] = useState(filters.tecnico_id || 'all');
+    const [perPage, setPerPage] = useState(filters.perPage ? String(filters.perPage) : '10');
 
     // QR Code Camera Scanner States
     const [isScanModalOpen, setIsScanModalOpen] = useState(false);
@@ -266,14 +268,16 @@ export default function IndexReparaciones({ ordenes, counts, tecnicos, currencyS
         notifySuccess(__('Folio copiado al portapapeles.'));
     };
 
-    const handleFilter = (customStatus?: string) => {
+    const handleFilter = (customStatus?: string, customPerPage?: string) => {
         const targetStatus = customStatus !== undefined ? customStatus : status;
+        const targetPerPage = customPerPage !== undefined ? customPerPage : perPage;
         router.get(
             '/admin/reparaciones',
             cleanParams({
                 search,
                 status: targetStatus === 'all' ? undefined : targetStatus,
                 tecnico_id: tecnicoId === 'all' ? undefined : tecnicoId,
+                perPage: targetPerPage,
             }),
             { preserveState: true, preserveScroll: true }
         );
@@ -283,6 +287,7 @@ export default function IndexReparaciones({ ordenes, counts, tecnicos, currencyS
         setSearch('');
         setStatus('all');
         setTecnicoId('all');
+        setPerPage('10');
         router.get('/admin/reparaciones', {}, { preserveState: true, preserveScroll: true });
     };
 
@@ -407,12 +412,32 @@ export default function IndexReparaciones({ ordenes, counts, tecnicos, currencyS
                                 </div>
                             )}
 
+                            <div className="w-full md:w-36">
+                                <Select
+                                    value={perPage}
+                                    onValueChange={(val) => {
+                                        setPerPage(val);
+                                        handleFilter(undefined, val);
+                                    }}
+                                >
+                                    <SelectTrigger className="text-xs h-10 bg-slate-50 dark:bg-slate-950 border-slate-200 dark:border-slate-800">
+                                        <SelectValue placeholder={__('Paginación')} />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        <SelectItem value="10" className="text-xs">10 {__('filas')}</SelectItem>
+                                        <SelectItem value="25" className="text-xs">25 {__('filas')}</SelectItem>
+                                        <SelectItem value="50" className="text-xs">50 {__('filas')}</SelectItem>
+                                        <SelectItem value="100" className="text-xs">100 {__('filas')}</SelectItem>
+                                    </SelectContent>
+                                </Select>
+                            </div>
+
                             <div className="flex items-center gap-2 w-full md:w-auto">
                                 <Button onClick={() => handleFilter()} size="sm" className="h-10 px-5 text-xs font-bold bg-slate-900 hover:bg-slate-800 dark:bg-slate-100 dark:hover:bg-slate-200 text-white dark:text-slate-900 shrink-0">
                                     <Filter className="w-3.5 h-3.5 mr-1.5" />
                                     {__('Filtrar')}
                                 </Button>
-                                {(search || (status && status !== 'all') || (tecnicoId && tecnicoId !== 'all')) && (
+                                {(search || (status && status !== 'all') || (tecnicoId && tecnicoId !== 'all') || (perPage && perPage !== '10')) && (
                                     <Button onClick={handleReset} variant="outline" size="sm" className="h-10 text-xs text-slate-500 hover:text-slate-900 shrink-0">
                                         <RefreshCw className="w-3.5 h-3.5 mr-1" />
                                         {__('Limpiar')}
