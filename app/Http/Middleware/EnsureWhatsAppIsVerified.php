@@ -30,22 +30,31 @@ class EnsureWhatsAppIsVerified
             }
         }
 
-        // Redirección automática para Administradores en primer ingreso de sesión si WhatsApp no está vinculado
-        if ($user && (! $request->session()->has('whatsapp_first_redirect_done'))) {
-            $request->session()->put('whatsapp_first_redirect_done', true);
+        // 2. Redirección obligatoria para Administradores mientras WhatsApp no esté conectado
+        if ($user->empresa_id) {
+            setPermissionsTeamId($user->empresa_id);
+        }
 
-            $isAdmin = $user->hasRole('Administrador') || $user->hasRole('Super Administrador');
-            if ($isAdmin) {
-                $empresa = $user->empresa ?? ($user->empresa_id ? \App\Models\Empresa::find($user->empresa_id) : null);
-                if ($empresa && $empresa->whatsapp_status !== 'connected') {
-                    if (! $request->is('admin/integrations/whatsapp*') && ! $request->is('verify-whatsapp*') && ! $request->is('logout')) {
-                        session()->flash('notification', [
-                            'type' => 'info',
-                            'message' => __('Por favor escanee el código QR para vincular su cuenta de WhatsApp.'),
-                        ]);
+        $isAdmin = $user->id === 1
+            || $user->hasRole('Administrador')
+            || $user->hasRole('Super Administrador')
+            || $user->hasRole('super-admin')
+            || \Illuminate\Support\Facades\DB::table('model_has_roles')
+                ->join('roles', 'roles.id', '=', 'model_has_roles.role_id')
+                ->where('model_has_roles.model_id', $user->id)
+                ->whereIn('roles.name', ['Administrador', 'Super Administrador', 'super-admin', 'Admin'])
+                ->exists();
 
-                        return redirect()->route('admin.integrations.whatsapp.index');
-                    }
+        if ($isAdmin) {
+            $empresa = $user->empresa ?? ($user->empresa_id ? \App\Models\Empresa::find($user->empresa_id) : null);
+            if ($empresa && (bool) $empresa->whatsapp_active && $empresa->whatsapp_status !== 'connected') {
+                if (! $request->is('admin/integrations/whatsapp*') && ! $request->is('verify-whatsapp*') && ! $request->is('logout')) {
+                    session()->flash('notification', [
+                        'type' => 'info',
+                        'message' => __('Atención: Debe vincular su cuenta de WhatsApp para comenzar a utilizar la plataforma.'),
+                    ]);
+
+                    return redirect()->route('admin.integrations.whatsapp.index');
                 }
             }
         }
