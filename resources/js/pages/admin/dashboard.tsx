@@ -19,6 +19,7 @@ import {
     BarChart2,
     ListOrdered
 } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
 import Chart from 'react-apexcharts';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
