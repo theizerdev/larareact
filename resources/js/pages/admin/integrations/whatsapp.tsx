@@ -16,6 +16,7 @@ import { Switch } from '@/components/ui/switch';
 import { useTranslate } from '@/hooks/use-translate';
 import type { PaisPhoneOption } from '@/pages/admin/Empresas/Partials/PhoneInputGroup';
 import PhoneInputGroup from '@/pages/admin/Empresas/Partials/PhoneInputGroup';
+import { WelcomeWhatsAppModal } from '@/components/welcome-whatsapp-modal';
 
 interface LiveStatus {
     isConnected: boolean;
@@ -75,6 +76,7 @@ export default function WhatsAppIntegration({
     const [sendingMsg, setSendingMsg] = useState(false);
     const [lastPolled, setLastPolled] = useState<Date | null>(null);
     const [manualCheckLoading, setManualCheckLoading] = useState(false);
+    const [isWelcomeModalOpen, setIsWelcomeModalOpen] = useState(!live_status?.isConnected);
 
     // Ref para evitar stale closure dentro de setInterval
     const liveStatusRef = useRef<LiveStatus | null>(live_status);
@@ -464,6 +466,11 @@ return '';
     return (
         <>
             <Head title={__('WhatsApp Integration')} />
+            <WelcomeWhatsAppModal
+                isOpen={isWelcomeModalOpen}
+                onClose={() => setIsWelcomeModalOpen(false)}
+                empresaNombre={empresa_nombre}
+            />
             <div className="space-y-6">
                 <Breadcrumbs breadcrumbs={breadcrumbs} />
 

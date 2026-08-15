@@ -201,7 +201,7 @@ class IntegrationController extends Controller
             'empresa_id' => $empresa->id,
             'empresa_nombre' => $empresa->razon_social ?? $empresa->name ?? 'Empresa',
             'whatsapp_api_key' => $empresa->whatsapp_api_key,
-            'whatsapp_api_url' => $empresa->whatsapp_api_url ?? config('whatsapp.api_url', 'http://82.165.213.124:8092'),
+            'whatsapp_api_url' => $empresa->whatsapp_api_url ?? config('whatsapp.api_url', 'http://169.58.168.213:3000'),
             'whatsapp_instance' => $empresa->whatsapp_instance ?? ('empresa_'.$empresa->id),
             'whatsapp_rate_limit' => $empresa->whatsapp_rate_limit ?? 60,
             'whatsapp_active' => (bool) $empresa->whatsapp_active,

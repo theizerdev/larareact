@@ -41,7 +41,11 @@ class CreateNewUser implements CreatesNewUsers
             'email.unique' => __('Este correo electrónico ya se encuentra registrado.'),
         ])->validate();
 
-        return DB::transaction(function () use ($input) {
+        $createdEmpresa = null;
+        $createdUser = null;
+        $otpCode = null;
+
+        $createdUser = DB::transaction(function () use ($input, &$createdEmpresa, &$otpCode) {
             $phone = $input['company_phone'] ?? ($input['phone'] ?? null);
             $paisId = $input['pais_id'] ?? ($input['pais_telefono_id'] ?? null);
             $nombreComercial = ! empty($input['nombre_comercial']) ? trim($input['nombre_comercial']) : null;
@@ -95,12 +99,6 @@ class CreateNewUser implements CreatesNewUsers
                 'estado' => 'trial',
             ]);
 
-            try {
-                \App\Services\WhatsAppService::forCompany($empresa)->createInstance($cleanInstanceName);
-            } catch (\Throwable $e) {
-                Log::warning('No se pudo crear la instancia inicial en el motor WhatsApp: '.$e->getMessage());
-            }
-
             // 2. Crear Sucursal Principal con los datos de la empresa
             $sucursal = Sucursal::create([
                 'empresa_id' => $empresa->id,
@@ -144,13 +142,29 @@ class CreateNewUser implements CreatesNewUsers
                 'whatsapp_otp_expires_at' => now()->addMinutes(15),
             ])->save();
 
-            // 5. Enviar notificación de bienvenida y código OTP por WhatsApp si hay un teléfono registrado
-            if ($phone) {
-                $this->sendWhatsAppWelcomeMessage($user, $empresa, $phone, $input['password'], $otpCode);
-            }
+            $createdEmpresa = $empresa;
 
             return $user;
         });
+
+        // 5. Creación de instancia y notificación en segundo plano tras confirmar la transacción DB (sin bloquear el registro)
+        if ($createdEmpresa) {
+            try {
+                $cleanName = $createdEmpresa->whatsapp_instance ?: ('empresa_'.$createdEmpresa->id);
+                WhatsAppService::forCompany($createdEmpresa)
+                    ->setTimeout(5)
+                    ->createInstance($cleanName);
+            } catch (\Throwable $e) {
+                Log::warning('No se pudo crear la instancia inicial en el motor WhatsApp: '.$e->getMessage());
+            }
+        }
+
+        $phone = $input['company_phone'] ?? ($input['phone'] ?? null);
+        if ($phone && $createdUser && $createdEmpresa && $otpCode) {
+            $this->sendWhatsAppWelcomeMessage($createdUser, $createdEmpresa, $phone, $input['password'], $otpCode);
+        }
+
+        return $createdUser;
     }
 
     /**
@@ -160,7 +174,6 @@ class CreateNewUser implements CreatesNewUsers
     {
         try {
             $appName = config('app.name', 'Servitec');
-            $loginUrl = route('login');
 
             $formattedPhone = trim($phone);
             if ($user->pais_telefono_id) {
@@ -186,8 +199,9 @@ class CreateNewUser implements CreatesNewUsers
                 . "Atentamente,\n"
                 . "El equipo de *{$appName}*";
 
-            // Usar la empresa principal del SaaS (ID 1) para notificaciones del sistema de registro
+            // Usar la empresa principal del SaaS (ID 1) para notificaciones con un timeout corto de 4 segundos
             $whatsappService = new WhatsAppService(1);
+            $whatsappService->setTimeout(4);
             $whatsappService->sendMessage($formattedPhone, $message, true);
         } catch (\Throwable $e) {
             Log::error("Error al enviar mensaje de bienvenida WhatsApp a {$phone}: " . $e->getMessage());
