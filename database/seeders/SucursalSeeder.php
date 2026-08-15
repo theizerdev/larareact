@@ -22,7 +22,7 @@ class SucursalSeeder extends Seeder
             'id' => 1,
         ], [
             'empresa_id' => 1,
-            'nombre' => 'Fix Sale Caracas (Principal)',
+            'nombre' => 'Ciudad de México',
             'pais_telefono_id' => $paisVe?->id,
             'telefono' => '4121234567',
             'direccion' => 'Av. Francisco de Miranda, Caracas, Venezuela',
@@ -30,19 +30,6 @@ class SucursalSeeder extends Seeder
             'longitud' => -66.9036,
             'status' => true,
         ]);
-
-        // Sucursal 2 - Empresa 2
-        Sucursal::updateOrCreate([
-            'id' => 2,
-        ], [
-            'empresa_id' => 2,
-            'nombre' => 'Fix Sale Santiago (Sucursal)',
-            'pais_telefono_id' => $paisCl?->id,
-            'telefono' => '912345678',
-            'direccion' => 'Av. Providencia 1234, Santiago, Chile',
-            'latitud' => -33.4489,
-            'longitud' => -70.6693,
-            'status' => true,
-        ]);
+       
     }
 }

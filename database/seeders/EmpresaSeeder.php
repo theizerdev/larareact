@@ -22,9 +22,9 @@ class EmpresaSeeder extends Seeder
         $empresa1 = Empresa::updateOrCreate([
             'id' => 1,
         ], [
-            'pais_id' => $paisVe?->id,
-            'pais_telefono_id' => $paisVe?->id,
-            'razon_social' => 'Fix Sale Venezuela',
+            'pais_id' => 1,
+            'pais_telefono_id' => 1,
+            'razon_social' => 'Fix Sale',
             'documento' => 'J-12345678-9',
             'direccion' => 'Av. Francisco de Miranda, Caracas, Venezuela',
             'latitud' => 10.4806,
