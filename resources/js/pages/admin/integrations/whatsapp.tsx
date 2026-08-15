@@ -123,7 +123,12 @@ export default function WhatsAppIntegration({
 
             const tick = async () => {
                 try {
-                    const response = await fetch('/admin/integrations/whatsapp/status');
+                    const response = await fetch('/admin/integrations/whatsapp/status', {
+                        headers: {
+                            'Accept': 'application/json',
+                            'X-Requested-With': 'XMLHttpRequest',
+                        },
+                    });
 
                     if (response.ok) {
                         const data = await response.json();
@@ -178,7 +183,12 @@ export default function WhatsAppIntegration({
     const handleManualRefresh = async () => {
         setManualCheckLoading(true);
         try {
-            const response = await fetch('/admin/integrations/whatsapp/status');
+            const response = await fetch('/admin/integrations/whatsapp/status', {
+                headers: {
+                    'Accept': 'application/json',
+                    'X-Requested-With': 'XMLHttpRequest',
+                },
+            });
             if (response.ok) {
                 const data = await response.json();
                 if (data.success) {

@@ -17,6 +17,11 @@ class EnsureWhatsAppIsVerified
     {
         $user = $request->user();
 
+        // No realizar redirección en peticiones JSON, API o AJAX
+        if ($request->expectsJson() || $request->wantsJson() || $request->ajax() || $request->header('X-Requested-With') === 'XMLHttpRequest') {
+            return $next($request);
+        }
+
         // Si hay un usuario autenticado y tiene teléfono pero no ha sido verificado aún por WhatsApp
         if ($user && ! empty($user->telefono) && ! $user->whatsapp_verified_at) {
             // Permitir el acceso solo a las rutas de verificación de whatsapp y logout
