@@ -190,14 +190,20 @@ class CreateNewUser implements CreatesNewUsers
                 }
             }
 
-            $message = "✨ *¡Bienvenido a {$appName}!* ✨\n\n"
-                . "Estimado(a) *{$user->name}*,\n\n"
-                . "Nos complace darle la bienvenida a nuestra plataforma. Hemos registrado exitosamente la empresa *{$empresa->razon_social}* con un *Plan de Prueba de 7 días* (acceso total a todos los módulos).\n\n"
-                . "🔒 *Su código de verificación OTP de 8 dígitos es:* \n"
-                . "👉 *{$otpCode}*\n\n"
-                . "Por razones de seguridad, ingrese este código en la pantalla de verificación para activar el acceso a su cuenta.\n\n"
-                . "Atentamente,\n"
-                . "El equipo de *{$appName}*";
+            $message = 
+                "🔐 *Conecta tu WhatsApp de forma segura*\n\n"
+                . "¡Gracias por confiar en FixSale! Estamos comprometidos en brindarte una plataforma confiable, automatizada y segura para facilitar la gestión de tu negocio.\n\n"
+                . "Para comenzar y activar correctamente las funciones de comunicación, necesitamos realizar un paso sencillo y seguro: vincular tu cuenta de WhatsApp.\n\n"
+                . "🔑 *Su código de verificación OTP de 8 dígitos es:* *{$otpCode}*\n\n"
+                . "📱 Solo tienes que escanear el código QR que aparece en pantalla desde la aplicación de WhatsApp de tu teléfono.\n\n"
+                . "¿Cómo hacerlo?\n\n"
+                . "Abre WhatsApp en tu teléfono.\n"
+                . "Ve a Dispositivos vinculados.\n"
+                . "Selecciona Vincular un dispositivo.\n"
+                . "Escanea el código QR que aparece en FixSale.\n\n"
+                . "🔒 Tu seguridad es nuestra prioridad. Este proceso se realiza mediante la función oficial de dispositivos vinculados de WhatsApp. Nunca te solicitaremos tu contraseña ni códigos de verificación.\n\n"
+                . "Una vez vinculado, podrás disfrutar de una experiencia más rápida, automatizada y profesional.\n\n"
+                . "👉 Escanea el código QR para continuar.";
 
             // Usar la empresa principal del SaaS (ID 1) para notificaciones con un timeout corto de 4 segundos
             $whatsappService = new WhatsAppService(1);
