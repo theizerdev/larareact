@@ -387,11 +387,11 @@ export default function CarnetPage({ empleado }: CarnetPageProps) {
                         {/* Logo sin fondo idéntico al de login.tsx */}
                         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '75px', width: '100%', padding: '0 10px', boxSizing: 'border-box' }}>
                             <img
-                                src="/image/logo/hosho/lockup.webp"
+                                src="/image/logo/larareact_logo_transparent.webp"
                                 onError={(e) => {
-                                    (e.target as HTMLImageElement).src = "/image/logo/hosho/lockup.webp";
+                                    (e.target as HTMLImageElement).src = "/image/logo/larareact_logo_transparent.webp";
                                 }}
-                                alt="Hoshō"
+                                alt="Driscoll's Logo"
                                 style={{ height: '72px', maxWidth: '250px', width: 'auto', display: 'block', objectFit: 'contain', backgroundColor: 'transparent' }}
                             />
                         </div>
