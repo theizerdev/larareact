@@ -2,10 +2,8 @@
 
 namespace Tests\Feature;
 
-use App\Models\Empresa;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
-use Spatie\Permission\Models\Permission;
 use Tests\TestCase;
 
 class DashboardTest extends TestCase
@@ -20,12 +18,7 @@ class DashboardTest extends TestCase
 
     public function test_authenticated_users_can_visit_the_dashboard()
     {
-        Permission::firstOrCreate(['name' => 'dashboard.view', 'guard_name' => 'web']);
-        $empresa = Empresa::create(['razon_social' => 'Clínica Dashboard', 'documento' => 'J-99999999-9', 'status' => 1]);
-
-        $user = User::factory()->create(['empresa_id' => $empresa->id]);
-        $user->givePermissionTo('dashboard.view');
-
+        $user = User::factory()->create();
         $this->actingAs($user);
 
         $response = $this->get(route('dashboard'));

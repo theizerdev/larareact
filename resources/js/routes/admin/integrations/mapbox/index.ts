@@ -1,7 +1,7 @@
 import { queryParams, type RouteQueryOptions, type RouteDefinition, type RouteFormDefinition } from './../../../../wayfinder'
 /**
 * @see \App\Http\Controllers\Admin\IntegrationController::map
- * @see app/Http/Controllers/Admin/IntegrationController.php:55
+ * @see app/Http/Controllers/Admin/IntegrationController.php:49
  * @route '/admin/integrations/map'
  */
 export const map = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
@@ -16,7 +16,7 @@ map.definition = {
 
 /**
 * @see \App\Http\Controllers\Admin\IntegrationController::map
- * @see app/Http/Controllers/Admin/IntegrationController.php:55
+ * @see app/Http/Controllers/Admin/IntegrationController.php:49
  * @route '/admin/integrations/map'
  */
 map.url = (options?: RouteQueryOptions) => {
@@ -25,7 +25,7 @@ map.url = (options?: RouteQueryOptions) => {
 
 /**
 * @see \App\Http\Controllers\Admin\IntegrationController::map
- * @see app/Http/Controllers/Admin/IntegrationController.php:55
+ * @see app/Http/Controllers/Admin/IntegrationController.php:49
  * @route '/admin/integrations/map'
  */
 map.get = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
@@ -34,7 +34,7 @@ map.get = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
 })
 /**
 * @see \App\Http\Controllers\Admin\IntegrationController::map
- * @see app/Http/Controllers/Admin/IntegrationController.php:55
+ * @see app/Http/Controllers/Admin/IntegrationController.php:49
  * @route '/admin/integrations/map'
  */
 map.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
@@ -44,7 +44,7 @@ map.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
 
     /**
 * @see \App\Http\Controllers\Admin\IntegrationController::map
- * @see app/Http/Controllers/Admin/IntegrationController.php:55
+ * @see app/Http/Controllers/Admin/IntegrationController.php:49
  * @route '/admin/integrations/map'
  */
     const mapForm = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
@@ -54,7 +54,7 @@ map.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
 
             /**
 * @see \App\Http\Controllers\Admin\IntegrationController::map
- * @see app/Http/Controllers/Admin/IntegrationController.php:55
+ * @see app/Http/Controllers/Admin/IntegrationController.php:49
  * @route '/admin/integrations/map'
  */
         mapForm.get = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
@@ -63,7 +63,7 @@ map.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
         })
             /**
 * @see \App\Http\Controllers\Admin\IntegrationController::map
- * @see app/Http/Controllers/Admin/IntegrationController.php:55
+ * @see app/Http/Controllers/Admin/IntegrationController.php:49
  * @route '/admin/integrations/map'
  */
         mapForm.head = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
@@ -79,7 +79,7 @@ map.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
     map.form = mapForm
 /**
 * @see \App\Http\Controllers\Admin\IntegrationController::navigation
- * @see app/Http/Controllers/Admin/IntegrationController.php:77
+ * @see app/Http/Controllers/Admin/IntegrationController.php:71
  * @route '/admin/integrations/map/navigation'
  */
 export const navigation = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
@@ -94,7 +94,7 @@ navigation.definition = {
 
 /**
 * @see \App\Http\Controllers\Admin\IntegrationController::navigation
- * @see app/Http/Controllers/Admin/IntegrationController.php:77
+ * @see app/Http/Controllers/Admin/IntegrationController.php:71
  * @route '/admin/integrations/map/navigation'
  */
 navigation.url = (options?: RouteQueryOptions) => {
@@ -103,7 +103,7 @@ navigation.url = (options?: RouteQueryOptions) => {
 
 /**
 * @see \App\Http\Controllers\Admin\IntegrationController::navigation
- * @see app/Http/Controllers/Admin/IntegrationController.php:77
+ * @see app/Http/Controllers/Admin/IntegrationController.php:71
  * @route '/admin/integrations/map/navigation'
  */
 navigation.get = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
@@ -112,7 +112,7 @@ navigation.get = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
 })
 /**
 * @see \App\Http\Controllers\Admin\IntegrationController::navigation
- * @see app/Http/Controllers/Admin/IntegrationController.php:77
+ * @see app/Http/Controllers/Admin/IntegrationController.php:71
  * @route '/admin/integrations/map/navigation'
  */
 navigation.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
@@ -122,7 +122,7 @@ navigation.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
 
     /**
 * @see \App\Http\Controllers\Admin\IntegrationController::navigation
- * @see app/Http/Controllers/Admin/IntegrationController.php:77
+ * @see app/Http/Controllers/Admin/IntegrationController.php:71
  * @route '/admin/integrations/map/navigation'
  */
     const navigationForm = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
@@ -132,7 +132,7 @@ navigation.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
 
             /**
 * @see \App\Http\Controllers\Admin\IntegrationController::navigation
- * @see app/Http/Controllers/Admin/IntegrationController.php:77
+ * @see app/Http/Controllers/Admin/IntegrationController.php:71
  * @route '/admin/integrations/map/navigation'
  */
         navigationForm.get = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
@@ -141,7 +141,7 @@ navigation.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
         })
             /**
 * @see \App\Http\Controllers\Admin\IntegrationController::navigation
- * @see app/Http/Controllers/Admin/IntegrationController.php:77
+ * @see app/Http/Controllers/Admin/IntegrationController.php:71
  * @route '/admin/integrations/map/navigation'
  */
         navigationForm.head = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
@@ -157,7 +157,7 @@ navigation.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
     navigation.form = navigationForm
 /**
 * @see \App\Http\Controllers\Admin\IntegrationController::update
- * @see app/Http/Controllers/Admin/IntegrationController.php:99
+ * @see app/Http/Controllers/Admin/IntegrationController.php:93
  * @route '/admin/integrations/mapbox'
  */
 export const update = (options?: RouteQueryOptions): RouteDefinition<'put'> => ({
@@ -172,7 +172,7 @@ update.definition = {
 
 /**
 * @see \App\Http\Controllers\Admin\IntegrationController::update
- * @see app/Http/Controllers/Admin/IntegrationController.php:99
+ * @see app/Http/Controllers/Admin/IntegrationController.php:93
  * @route '/admin/integrations/mapbox'
  */
 update.url = (options?: RouteQueryOptions) => {
@@ -181,7 +181,7 @@ update.url = (options?: RouteQueryOptions) => {
 
 /**
 * @see \App\Http\Controllers\Admin\IntegrationController::update
- * @see app/Http/Controllers/Admin/IntegrationController.php:99
+ * @see app/Http/Controllers/Admin/IntegrationController.php:93
  * @route '/admin/integrations/mapbox'
  */
 update.put = (options?: RouteQueryOptions): RouteDefinition<'put'> => ({
@@ -191,7 +191,7 @@ update.put = (options?: RouteQueryOptions): RouteDefinition<'put'> => ({
 
     /**
 * @see \App\Http\Controllers\Admin\IntegrationController::update
- * @see app/Http/Controllers/Admin/IntegrationController.php:99
+ * @see app/Http/Controllers/Admin/IntegrationController.php:93
  * @route '/admin/integrations/mapbox'
  */
     const updateForm = (options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
@@ -206,7 +206,7 @@ update.put = (options?: RouteQueryOptions): RouteDefinition<'put'> => ({
 
             /**
 * @see \App\Http\Controllers\Admin\IntegrationController::update
- * @see app/Http/Controllers/Admin/IntegrationController.php:99
+ * @see app/Http/Controllers/Admin/IntegrationController.php:93
  * @route '/admin/integrations/mapbox'
  */
         updateForm.put = (options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({

@@ -23,10 +23,7 @@ class DatabaseSeeder extends Seeder
             RoleSeeder::class,
             EmpresaSucursalSeeder::class,
             UsersSeeder::class,
-            PlantillaPreconsultaSeeder::class,
-            Cie10YEstudiosPorEspecialidadSeeder::class,
+          
         ]);
-
     }
 }
-

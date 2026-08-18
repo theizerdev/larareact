@@ -11,23 +11,7 @@ export default defineConfig({
     define: {
         __dirname: '""',
     },
-    build: {
-        target: 'es2022',
-    },
-    optimizeDeps: {
-        include: [
-            '@fullcalendar/react',
-            '@fullcalendar/core',
-            '@fullcalendar/daygrid',
-            '@fullcalendar/timegrid',
-            '@fullcalendar/interaction',
-            '@fullcalendar/list',
-        ],
-    },
-
     plugins: [
-
-
         laravel({
             input: ['resources/css/app.css', 'resources/js/app.tsx'],
             ssr: 'resources/js/ssr.tsx',
@@ -54,7 +38,6 @@ export default defineConfig({
                 plugins: ['babel-plugin-react-compiler'],
             },
         }),
-
         tailwindcss(),
         wayfinder({
             formVariants: true,

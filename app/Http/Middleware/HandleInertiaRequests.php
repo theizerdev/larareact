@@ -60,27 +60,7 @@ class HandleInertiaRequests extends Middleware
             'translations' => file_exists($path = base_path('lang/'.$currentLocale.'.json'))
                 ? json_decode(file_get_contents($path) ?: '{}', true)
                 : [],
-            'notification' => function () use ($request) {
-                if ($notification = $request->session()->get('notification')) {
-                    $request->session()->forget('notification');
-                    return is_array($notification) ? $notification : ['type' => 'success', 'message' => (string) $notification];
-                }
-                if ($success = $request->session()->get('success')) {
-                    $request->session()->forget('success');
-                    return ['type' => 'success', 'message' => (string) $success];
-                }
-                if ($error = $request->session()->get('error')) {
-                    $request->session()->forget('error');
-                    return ['type' => 'error', 'message' => (string) $error];
-                }
-                if ($status = $request->session()->get('status')) {
-                    $request->session()->forget('status');
-                    return ['type' => 'success', 'message' => (string) $status];
-                }
-                return null;
-            },
+            'notification' => fn () => $request->session()->pull('notification'),
         ];
     }
-
 }
-

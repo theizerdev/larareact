@@ -88,7 +88,7 @@ trait Multitenantable
                     }
                 }
 
-                // 2. Filtrado por Sucursal (solo si la tabla no es empresas)
+                // 2. Filtrado por Sucursal (no aplica a la tabla empresas)
                 if ($table === 'empresas') {
                     // La tabla empresas representa el tenant principal y no posee columna sucursal_id
                 } elseif ($table === 'sucursales') {
@@ -96,9 +96,7 @@ trait Multitenantable
                         $builder->where("{$table}.id", $user->sucursal_id);
                     }
                 } else {
-                    $model = $builder->getModel();
-                    // Solo filtrar por sucursal_id si el usuario tiene una asignada y la tabla contiene la columna
-                    if ($user->sucursal_id && \Illuminate\Support\Facades\Schema::hasColumn($table, 'sucursal_id')) {
+                    if ($user->sucursal_id) {
                         $builder->where("{$table}.sucursal_id", $user->sucursal_id);
                     }
                 }
@@ -115,15 +113,6 @@ trait Multitenantable
     public static function withoutTenant(): Builder
     {
         return static::withoutGlobalScope('multitenancy');
-    }
-
-    /**
-     * Consultar registros para una empresa específica ignorando el scope por defecto del usuario actual.
-     * Uso: Modelo::forEmpresa($empresaId)->get();
-     */
-    public static function forEmpresa(int $empresaId): Builder
-    {
-        return static::withoutTenant()->where((new static)->getTable() === 'empresas' ? 'id' : 'empresa_id', $empresaId);
     }
 }
 
