@@ -166,6 +166,9 @@ class EmpleadoImportService
                 if (empty($groupedEmployees[$docClean]['telefono']) && !empty($telefono)) {
                     $groupedEmployees[$docClean]['telefono'] = $this->cleanPhoneNumber($telefono);
                 }
+                if (empty($groupedEmployees[$docClean]['departamento']) && !empty($departamento)) {
+                    $groupedEmployees[$docClean]['departamento'] = trim((string)$departamento);
+                }
                 if (($groupedEmployees[$docClean]['tarjeta_acceso_1'] === '0') && $tarjeta1 !== '0') {
                     $groupedEmployees[$docClean]['tarjeta_acceso_1'] = $tarjeta1;
                 }
@@ -292,9 +295,14 @@ class EmpleadoImportService
                     continue;
                 }
 
-                // Resolve or create Departamento under fixed empresa_id and sucursal_id
+                // Resolve or create/update Departamento under fixed empresa_id and sucursal_id
                 $rawDepName = !empty($rec['departamento']) ? trim($rec['departamento']) : 'General';
-                $cleanDepName = preg_replace('/\s+/', ' ', $rawDepName);
+                $cleanDepName = trim(preg_replace('/\s+/', ' ', $rawDepName));
+                if (empty($cleanDepName)) {
+                    $cleanDepName = 'General';
+                }
+
+                $formattedDepName = mb_convert_case($cleanDepName, MB_CASE_TITLE, 'UTF-8');
 
                 $dep = Departamento::where('empresa_id', $empresaId)
                     ->where(function ($q) use ($cleanDepName) {
@@ -304,11 +312,17 @@ class EmpleadoImportService
 
                 if (!$dep) {
                     $dep = Departamento::create([
-                        'nombre' => ucfirst($cleanDepName),
+                        'nombre' => $formattedDepName,
                         'descripcion' => "Departamento de {$cleanDepName}",
                         'empresa_id' => $empresaId,
                         'sucursal_id' => $sucursalId,
                         'user_id' => auth()->id() ?: 1,
+                        'status' => 1,
+                    ]);
+                } else {
+                    // Si el departamento ya existe en la base de datos, se actualiza/edita su información
+                    $dep->update([
+                        'nombre' => $formattedDepName,
                         'status' => 1,
                     ]);
                 }
@@ -592,7 +606,14 @@ class EmpleadoImportService
                 $map['correo'] = $colLetter;
             } elseif (str_contains($h, 'telefono') || str_contains($h, 'celular')) {
                 $map['telefono'] = $colLetter;
-            } elseif (str_contains($h, 'area') || str_contains($h, 'departamento')) {
+            } elseif (
+                str_contains($h, 'area') ||
+                str_contains($h, 'departamento') ||
+                str_contains($h, 'depto') ||
+                str_contains($h, 'seccion') ||
+                str_contains($h, 'modulo') ||
+                $h === 'dep'
+            ) {
                 $map['departamento'] = $colLetter;
             } elseif (str_contains($h, 'empresa') && !str_contains($h, 'vehiculo')) {
                 $map['empresa'] = $colLetter;
