@@ -113,6 +113,7 @@ class EmpleadoImportService
             $telefono = $this->getCellValueByMap($rowCells, $colIndexMap['telefono']);
             $departamento = $this->getCellValueByMap($rowCells, $colIndexMap['departamento']);
             $empresa = $this->getCellValueByMap($rowCells, $colIndexMap['empresa']);
+            $codigoAcceso = $this->getCellValueByMap($rowCells, $colIndexMap['codigo_acceso']);
 
             // Tarjetas de acceso
             $tarjeta1 = $this->cleanTarjetaValue($this->getCellValueByMap($rowCells, $colIndexMap['tarjeta_acceso_1']));
@@ -140,6 +141,7 @@ class EmpleadoImportService
             if (!isset($groupedEmployees[$docClean])) {
                 $groupedEmployees[$docClean] = [
                     'documento_identidad' => $docClean,
+                    'codigo_acceso' => trim((string)$codigoAcceso),
                     'curp' => trim((string)$curp),
                     'nombres' => trim((string)$nombre),
                     'apellidos' => $apellidos,
@@ -332,6 +334,8 @@ class EmpleadoImportService
                 $tarjeta2 = $this->cleanTarjetaValue($rec['tarjeta_acceso_2'] ?? null);
                 $tarjeta3 = $this->cleanTarjetaValue($rec['tarjeta_acceso_3'] ?? null);
 
+                $codigoAccesoExcel = !empty($rec['codigo_acceso']) ? trim($rec['codigo_acceso']) : null;
+
                 $dataToSave = [
                     'nombres' => !empty($rec['nombres']) ? $rec['nombres'] : 'N/A',
                     'apellidos' => !empty($rec['apellidos']) ? $rec['apellidos'] : 'N/A',
@@ -350,16 +354,30 @@ class EmpleadoImportService
                     'status' => true,
                 ];
 
-                // Si el empleado existente no tiene codigo_acceso o si es un registro nuevo, generar el codigo de acceso de 8 digitos (Rol 1)
+                if (!empty($codigoAccesoExcel)) {
+                    $occupied = Empleado::where('codigo_acceso', $codigoAccesoExcel)
+                        ->when($existing, fn($q) => $q->where('id', '!=', $existing->id))
+                        ->exists();
+
+                    if (!$occupied) {
+                        $dataToSave['codigo_acceso'] = $codigoAccesoExcel;
+                    }
+                }
+
+                // Si viene codigo_acceso válido en el Excel, usarlo. Si no, conservar el existente o generar uno de 8 dígitos.
                 if ($existing) {
-                    if (empty($existing->codigo_acceso)) {
-                        $dataToSave['codigo_acceso'] = \App\Services\AccessCodeService::generate('empleado', $sucursalId);
+                    if (empty($dataToSave['codigo_acceso'])) {
+                        $dataToSave['codigo_acceso'] = !empty($existing->codigo_acceso)
+                            ? $existing->codigo_acceso
+                            : \App\Services\AccessCodeService::generate('empleado', $sucursalId);
                     }
                     $existing->update($dataToSave);
                     $empleado = $existing;
                     $updatedCount++;
                 } else {
-                    $dataToSave['codigo_acceso'] = \App\Services\AccessCodeService::generate('empleado', $sucursalId);
+                    if (empty($dataToSave['codigo_acceso'])) {
+                        $dataToSave['codigo_acceso'] = \App\Services\AccessCodeService::generate('empleado', $sucursalId);
+                    }
                     $empleado = Empleado::create($dataToSave);
                     $createdCount++;
                 }
@@ -536,6 +554,7 @@ class EmpleadoImportService
     {
         $map = [
             'documento_identidad' => null,
+            'codigo_acceso' => null,
             'curp' => null,
             'nombres' => null,
             'apellido_paterno' => null,
@@ -557,76 +576,103 @@ class EmpleadoImportService
         foreach ($headersMap as $colLetter => $headerName) {
             $h = $this->normalizeHeader($headerName);
 
-            if (
-                preg_match('/(tarjeta|tajeta|card).*?1/i', $h) ||
-                $h === 'tarjeta acceso 1' ||
-                $h === 'tajeta acceso 1' ||
-                $h === 'tarjeta_acceso_1' ||
-                $h === 'tarjeta 1'
-            ) {
+            // 1. Tarjetas de acceso (evitar sobrescribir si ya está asignada)
+            if ($map['tarjeta_acceso_1'] === null && (preg_match('/(tarjeta|tajeta|card).*?1/i', $h) || $h === 'tarjeta acceso 1' || $h === 'tarjeta 1')) {
                 $map['tarjeta_acceso_1'] = $colLetter;
-            } elseif (
-                preg_match('/(tarjeta|tajeta|card).*?2/i', $h) ||
-                $h === 'tarjeta acceso 2' ||
-                $h === 'tajeta acceso 2' ||
-                $h === 'tarjeta_acceso_2' ||
-                $h === 'tarjeta 2'
-            ) {
+                continue;
+            }
+            if ($map['tarjeta_acceso_2'] === null && (preg_match('/(tarjeta|tajeta|card).*?2/i', $h) || $h === 'tarjeta acceso 2' || $h === 'tarjeta 2')) {
                 $map['tarjeta_acceso_2'] = $colLetter;
-            } elseif (
-                preg_match('/(tarjeta|tajeta|card).*?3/i', $h) ||
-                $h === 'tarjeta acceso 3' ||
-                $h === 'tajeta acceso 3' ||
-                $h === 'tarjeta_acceso_3' ||
-                $h === 'tarjeta 3'
-            ) {
+                continue;
+            }
+            if ($map['tarjeta_acceso_3'] === null && (preg_match('/(tarjeta|tajeta|card).*?3/i', $h) || $h === 'tarjeta acceso 3' || $h === 'tarjeta 3')) {
                 $map['tarjeta_acceso_3'] = $colLetter;
-            } elseif (str_contains($h, 'curp')) {
+                continue;
+            }
+
+            // 2. Código de Acceso / QR Nuevo / IVMS
+            if ($map['codigo_acceso'] === null && (str_contains($h, 'qr nuevo') || str_contains($h, 'codigo acceso') || str_contains($h, 'codigo de acceso') || str_contains($h, 'ivms'))) {
+                $map['codigo_acceso'] = $colLetter;
+                continue;
+            }
+
+            // 3. CURP
+            if ($map['curp'] === null && str_contains($h, 'curp')) {
                 $map['curp'] = $colLetter;
-            } elseif (
-                str_contains($h, 'empleado') ||
-                str_contains($h, 'documento') ||
-                str_contains($h, 'cedula') ||
-                str_contains($h, 'dni') ||
-                $h === 'id' ||
-                $h === 'no' ||
-                $h === 'num' ||
-                (preg_match('/\b(no|num|n|cod|codigo|id)\b/i', $h) && preg_match('/\b(emp|empleado|colaborador|trabajador)\b/i', $h))
-            ) {
-                if (!str_contains($h, 'vehiculo') && !str_contains($h, 'auto') && !str_contains($h, 'placa')) {
-                    $map['documento_identidad'] = $colLetter;
-                }
-            } elseif (str_contains($h, 'nombre') && !str_contains($h, 'apellido') && !str_contains($h, 'comercial')) {
-                $map['nombres'] = $colLetter;
-            } elseif (str_contains($h, 'paterno')) {
-                $map['apellido_paterno'] = $colLetter;
-            } elseif (str_contains($h, 'materno')) {
-                $map['apellido_materno'] = $colLetter;
-            } elseif (str_contains($h, 'correo') || str_contains($h, 'email')) {
-                $map['correo'] = $colLetter;
-            } elseif (str_contains($h, 'telefono') || str_contains($h, 'celular')) {
-                $map['telefono'] = $colLetter;
-            } elseif (
-                str_contains($h, 'area') ||
-                str_contains($h, 'departamento') ||
-                str_contains($h, 'depto') ||
-                str_contains($h, 'seccion') ||
-                str_contains($h, 'modulo') ||
-                $h === 'dep'
+                continue;
+            }
+
+            // 4. Departamento / Área (Excluir 'responsable', 'jefe', 'gerente')
+            if (
+                $map['departamento'] === null &&
+                !str_contains($h, 'responsable') && !str_contains($h, 'jefe') && !str_contains($h, 'gerente') &&
+                (str_contains($h, 'area') || str_contains($h, 'departamento') || str_contains($h, 'depto') || str_contains($h, 'seccion') || str_contains($h, 'modulo') || $h === 'dep')
             ) {
                 $map['departamento'] = $colLetter;
-            } elseif (str_contains($h, 'empresa') && !str_contains($h, 'vehiculo')) {
+                continue;
+            }
+
+            // 5. Documento de Identidad / No. Empleado (Priorizar 'No. Empleado' sobre QR / Gafette / ID)
+            if (
+                !str_contains($h, 'vehiculo') && !str_contains($h, 'auto') && !str_contains($h, 'placa') && !str_contains($h, 'qr') && !str_contains($h, 'gafette') && !str_contains($h, 'ivms') &&
+                (str_contains($h, 'empleado') || str_contains($h, 'documento') || str_contains($h, 'cedula') || str_contains($h, 'dni') || $h === 'id' || $h === 'no' || $h === 'num')
+            ) {
+                if ($map['documento_identidad'] === null || str_contains($h, 'empleado')) {
+                    $map['documento_identidad'] = $colLetter;
+                }
+                continue;
+            }
+
+            // 5. Apellidos y Nombres
+            if ($map['apellido_paterno'] === null && str_contains($h, 'paterno')) {
+                $map['apellido_paterno'] = $colLetter;
+                continue;
+            }
+            if ($map['apellido_materno'] === null && str_contains($h, 'materno')) {
+                $map['apellido_materno'] = $colLetter;
+                continue;
+            }
+            if ($map['nombres'] === null && str_contains($h, 'nombre') && !str_contains($h, 'apellido') && !str_contains($h, 'comercial')) {
+                $map['nombres'] = $colLetter;
+                continue;
+            }
+
+            // 6. Contacto
+            if ($map['correo'] === null && (str_contains($h, 'correo') || str_contains($h, 'email'))) {
+                $map['correo'] = $colLetter;
+                continue;
+            }
+            if ($map['telefono'] === null && (str_contains($h, 'telefono') || str_contains($h, 'celular'))) {
+                $map['telefono'] = $colLetter;
+                continue;
+            }
+
+            // 7. Empresa
+            if ($map['empresa'] === null && str_contains($h, 'empresa') && !str_contains($h, 'vehiculo')) {
                 $map['empresa'] = $colLetter;
-            } elseif (str_contains($h, 'tipo vehiculo')) {
+                continue;
+            }
+
+            // 8. Vehículos
+            if ($map['tipo_vehiculo'] === null && str_contains($h, 'tipo vehiculo')) {
                 $map['tipo_vehiculo'] = $colLetter;
-            } elseif (str_contains($h, 'marca')) {
+                continue;
+            }
+            if ($map['marca_vehiculo'] === null && str_contains($h, 'marca')) {
                 $map['marca_vehiculo'] = $colLetter;
-            } elseif (str_contains($h, 'color')) {
+                continue;
+            }
+            if ($map['color_vehiculo'] === null && str_contains($h, 'color')) {
                 $map['color_vehiculo'] = $colLetter;
-            } elseif (str_contains($h, 'placa')) {
+                continue;
+            }
+            if ($map['placa_vehiculo'] === null && str_contains($h, 'placa')) {
                 $map['placa_vehiculo'] = $colLetter;
-            } elseif (str_contains($h, 'comentarios')) {
+                continue;
+            }
+            if ($map['comentarios_vehiculo'] === null && str_contains($h, 'comentarios')) {
                 $map['comentarios_vehiculo'] = $colLetter;
+                continue;
             }
         }
 
