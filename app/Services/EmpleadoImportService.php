@@ -114,6 +114,11 @@ class EmpleadoImportService
             $departamento = $this->getCellValueByMap($rowCells, $colIndexMap['departamento']);
             $empresa = $this->getCellValueByMap($rowCells, $colIndexMap['empresa']);
 
+            // Tarjetas de acceso
+            $tarjeta1 = $this->cleanTarjetaValue($this->getCellValueByMap($rowCells, $colIndexMap['tarjeta_acceso_1']));
+            $tarjeta2 = $this->cleanTarjetaValue($this->getCellValueByMap($rowCells, $colIndexMap['tarjeta_acceso_2']));
+            $tarjeta3 = $this->cleanTarjetaValue($this->getCellValueByMap($rowCells, $colIndexMap['tarjeta_acceso_3']));
+
             // Vehicle fields
             $tipoVehiculo = $this->getCellValueByMap($rowCells, $colIndexMap['tipo_vehiculo']);
             $marcaVehiculo = $this->getCellValueByMap($rowCells, $colIndexMap['marca_vehiculo']);
@@ -142,6 +147,9 @@ class EmpleadoImportService
                     'telefono' => $this->cleanPhoneNumber($telefono),
                     'departamento' => trim((string)$departamento),
                     'empresa' => trim((string)$empresa),
+                    'tarjeta_acceso_1' => $tarjeta1,
+                    'tarjeta_acceso_2' => $tarjeta2,
+                    'tarjeta_acceso_3' => $tarjeta3,
                     'vehiculos' => $vehiculo ? [$vehiculo] : [],
                     'rows' => [$rowNum],
                 ];
@@ -157,6 +165,15 @@ class EmpleadoImportService
                 }
                 if (empty($groupedEmployees[$docClean]['telefono']) && !empty($telefono)) {
                     $groupedEmployees[$docClean]['telefono'] = $this->cleanPhoneNumber($telefono);
+                }
+                if (($groupedEmployees[$docClean]['tarjeta_acceso_1'] === '0') && $tarjeta1 !== '0') {
+                    $groupedEmployees[$docClean]['tarjeta_acceso_1'] = $tarjeta1;
+                }
+                if (($groupedEmployees[$docClean]['tarjeta_acceso_2'] === '0') && $tarjeta2 !== '0') {
+                    $groupedEmployees[$docClean]['tarjeta_acceso_2'] = $tarjeta2;
+                }
+                if (($groupedEmployees[$docClean]['tarjeta_acceso_3'] === '0') && $tarjeta3 !== '0') {
+                    $groupedEmployees[$docClean]['tarjeta_acceso_3'] = $tarjeta3;
                 }
             }
         }
@@ -297,11 +314,18 @@ class EmpleadoImportService
                 }
                 $departamentoId = $dep->id;
 
+                $tarjeta1 = $this->cleanTarjetaValue($rec['tarjeta_acceso_1'] ?? null);
+                $tarjeta2 = $this->cleanTarjetaValue($rec['tarjeta_acceso_2'] ?? null);
+                $tarjeta3 = $this->cleanTarjetaValue($rec['tarjeta_acceso_3'] ?? null);
+
                 $dataToSave = [
                     'nombres' => !empty($rec['nombres']) ? $rec['nombres'] : 'N/A',
                     'apellidos' => !empty($rec['apellidos']) ? $rec['apellidos'] : 'N/A',
                     'documento_identidad' => $doc,
                     'curp' => !empty($rec['curp']) ? trim($rec['curp']) : null,
+                    'tarjeta_acceso_1' => $tarjeta1,
+                    'tarjeta_acceso_2' => $tarjeta2,
+                    'tarjeta_acceso_3' => $tarjeta3,
                     'pais_telefono_id' => $paisId,
                     'telefono' => $rec['telefono'] ?? null,
                     'correo' => !empty($rec['correo']) ? $rec['correo'] : null,
@@ -468,6 +492,30 @@ class EmpleadoImportService
     }
 
     /**
+     * Clean and normalize tarjeta de acceso values. If empty, null, or matching "pendiente", return "0".
+     */
+    private function cleanTarjetaValue(?string $val): string
+    {
+        if ($val === null || $val === '') {
+            return '0';
+        }
+        $v = trim((string)$val);
+        $vLower = mb_strtolower($v);
+        if (
+            $v === '' ||
+            $vLower === 'pendiente' ||
+            $vLower === 'pendientes' ||
+            $vLower === 'vacio' ||
+            $vLower === 'vacios' ||
+            $vLower === 'null' ||
+            $vLower === 'n/a'
+        ) {
+            return '0';
+        }
+        return $v;
+    }
+
+    /**
      * Map Excel column names to target keys.
      */
     private function resolveColumnMap(array $headersMap): array
@@ -482,6 +530,9 @@ class EmpleadoImportService
             'telefono' => null,
             'departamento' => null,
             'empresa' => null,
+            'tarjeta_acceso_1' => null,
+            'tarjeta_acceso_2' => null,
+            'tarjeta_acceso_3' => null,
             'tipo_vehiculo' => null,
             'marca_vehiculo' => null,
             'color_vehiculo' => null,
@@ -492,7 +543,31 @@ class EmpleadoImportService
         foreach ($headersMap as $colLetter => $headerName) {
             $h = $this->normalizeHeader($headerName);
 
-            if (str_contains($h, 'curp')) {
+            if (
+                preg_match('/(tarjeta|tajeta|card).*?1/i', $h) ||
+                $h === 'tarjeta acceso 1' ||
+                $h === 'tajeta acceso 1' ||
+                $h === 'tarjeta_acceso_1' ||
+                $h === 'tarjeta 1'
+            ) {
+                $map['tarjeta_acceso_1'] = $colLetter;
+            } elseif (
+                preg_match('/(tarjeta|tajeta|card).*?2/i', $h) ||
+                $h === 'tarjeta acceso 2' ||
+                $h === 'tajeta acceso 2' ||
+                $h === 'tarjeta_acceso_2' ||
+                $h === 'tarjeta 2'
+            ) {
+                $map['tarjeta_acceso_2'] = $colLetter;
+            } elseif (
+                preg_match('/(tarjeta|tajeta|card).*?3/i', $h) ||
+                $h === 'tarjeta acceso 3' ||
+                $h === 'tajeta acceso 3' ||
+                $h === 'tarjeta_acceso_3' ||
+                $h === 'tarjeta 3'
+            ) {
+                $map['tarjeta_acceso_3'] = $colLetter;
+            } elseif (str_contains($h, 'curp')) {
                 $map['curp'] = $colLetter;
             } elseif (
                 str_contains($h, 'empleado') ||

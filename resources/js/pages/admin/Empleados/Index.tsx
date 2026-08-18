@@ -129,6 +129,9 @@ interface Empleado {
     apellidos: string;
     documento_identidad: string;
     codigo_acceso?: string | null;
+    tarjeta_acceso_1?: string | null;
+    tarjeta_acceso_2?: string | null;
+    tarjeta_acceso_3?: string | null;
     curp?: string | null;
     pais_telefono_id?: number | null;
     telefono?: string | null;
@@ -674,6 +677,9 @@ export default function EmpleadosIndexPage({
                                 </span>
                                 <span className="inline-flex items-center px-2 py-0.5 rounded-md bg-indigo-500/10 text-indigo-700 dark:text-indigo-300 font-mono font-bold text-xs tracking-wider border border-indigo-500/20" title="Código de Empleado 6 Dígitos">
                                     N° EMP: {emp.documento_identidad || 'N/A'}
+                                </span>
+                                <span className="inline-flex items-center px-2 py-0.5 rounded-md bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 font-mono text-[11px] border border-slate-200 dark:border-slate-700" title="Tarjetas de Acceso">
+                                    T1: {emp.tarjeta_acceso_1 || '0'} | T2: {emp.tarjeta_acceso_2 || '0'} | T3: {emp.tarjeta_acceso_3 || '0'}
                                 </span>
                                 {emp.curp ? (
                                     <span className="font-mono text-[11px] text-slate-600 dark:text-slate-400">
