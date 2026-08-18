@@ -21,6 +21,12 @@ Route::middleware(['guest'])->group(function () {
     Route::post('/forgot-password/reset', [ForgotPasswordOtpController::class, 'resetPassword'])->name('password.otp-reset');
 });
 
+// Ruta Pública de Cuestionario Pre-Consulta (para el paciente en sala de espera)
+Route::get('/preconsulta/{token}', [\App\Http\Controllers\Publico\PreconsultaPublicController::class, 'show'])->name('preconsulta.show');
+Route::post('/preconsulta/{token}', [\App\Http\Controllers\Publico\PreconsultaPublicController::class, 'store'])->name('preconsulta.store');
+
+
+
 Route::post('locale', function (Request $request) {
     $request->validate([
         'locale' => 'required|in:en,es',

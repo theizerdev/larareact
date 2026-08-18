@@ -14,10 +14,11 @@ export function toUrl(url: NonNullable<InertiaLinkProps['href']>): string {
 export function cleanParams(params: Record<string, any>): Record<string, any> {
     const cleaned: Record<string, any> = {};
     Object.entries(params).forEach(([key, val]) => {
-        // Excluir cadenas vacías, nulos o indefinidos
-        if (val === '' || val === null || val === undefined) {
+        // Excluir cadenas vacías, nulos, indefinidos o 'all'
+        if (val === '' || val === null || val === undefined || val === 'all') {
             return;
         }
+
 
         // Excluir valores por defecto para mantener limpia la URL
         if (key === 'page' && (val === 1 || val === '1')) {

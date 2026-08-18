@@ -2,7 +2,8 @@
 
 namespace Tests\Unit;
 
-use App\Models\Cargo;
+use App\Models\Empresa;
+use App\Models\Sucursal;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Spatie\Permission\Models\Role;
@@ -32,16 +33,19 @@ class MultitenantableTest extends TestCase
 
     public function test_auth_user_resolution_does_not_cause_infinite_recursion()
     {
+        $empresa = Empresa::create(['razon_social' => 'Clínica Demo A', 'documento' => 'J-12345678-0', 'status' => 1]);
+        $sucursal = Sucursal::create(['empresa_id' => $empresa->id, 'nombre' => 'Sucursal Principal', 'status' => 1]);
+
         $role = Role::firstOrCreate(['name' => 'operador', 'guard_name' => 'web']);
         $user = User::factory()->create([
-            'empresa_id' => 10,
-            'sucursal_id' => 20,
+            'empresa_id' => $empresa->id,
+            'sucursal_id' => $sucursal->id,
         ]);
         $user->assignRole($role);
 
         $this->actingAs($user);
 
-        // Debería obtener al usuario autenticado sin causar bucle recursivo / stack overflow
+        // Debería obtener al usuario autenticado sin causar bucle recursivo
         $fetchedUser = auth()->user();
         $this->assertNotNull($fetchedUser);
         $this->assertEquals($user->id, $fetchedUser->id);
@@ -49,17 +53,19 @@ class MultitenantableTest extends TestCase
 
     public function test_empresa_query_does_not_attempt_sucursal_id_filter()
     {
+        $empresa = Empresa::create(['razon_social' => 'Clínica Demo B', 'documento' => 'J-87654321-0', 'status' => 1]);
+        $sucursal = Sucursal::create(['empresa_id' => $empresa->id, 'nombre' => 'Sucursal Norte', 'status' => 1]);
+
         $role = Role::firstOrCreate(['name' => 'operador', 'guard_name' => 'web']);
         $user = User::factory()->create([
-            'empresa_id' => 1,
-            'sucursal_id' => 1,
+            'empresa_id' => $empresa->id,
+            'sucursal_id' => $sucursal->id,
         ]);
         $user->assignRole($role);
 
         $this->actingAs($user);
 
-        $empresaQuerySql = \App\Models\Empresa::toRawSql();
+        $empresaQuerySql = Empresa::toRawSql();
         $this->assertStringNotContainsString('sucursal_id', $empresaQuerySql);
     }
 }
-

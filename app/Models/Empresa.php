@@ -86,4 +86,32 @@ class Empresa extends Model
     {
         return $this->belongsTo(Pais::class);
     }
+
+    /**
+     * Get the pais_telefono that this empresa belongs to.
+     */
+    public function paisTelefono(): BelongsTo
+    {
+        return $this->belongsTo(Pais::class, 'pais_telefono_id');
+    }
+
+    /**
+     * Especialidades médicas habilitadas para esta clínica/empresa.
+     */
+    public function especialidades()
+    {
+        return $this->belongsToMany(Especialidad::class, 'empresa_especialidades', 'empresa_id', 'especialidad_id')
+            ->withPivot('es_principal', 'status')
+            ->withTimestamps();
+    }
+
+    /**
+     * Especialidad médica principal de la clínica/empresa.
+     */
+    public function especialidadPrincipal()
+    {
+        return $this->belongsToMany(Especialidad::class, 'empresa_especialidades', 'empresa_id', 'especialidad_id')
+            ->wherePivot('es_principal', true)
+            ->limit(1);
+    }
 }

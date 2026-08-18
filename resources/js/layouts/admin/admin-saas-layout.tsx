@@ -21,7 +21,7 @@ import {
     Activity,
     Link2,
 } from 'lucide-react';
-import { Building2, GitBranch, Briefcase, Calendar, Fingerprint } from 'lucide-react';
+import { Building2, GitBranch, Briefcase, Calendar, Fingerprint, Stethoscope, HeartPulse, ClipboardList, FileText } from 'lucide-react';
 import * as React from 'react';
 import LanguageToggle from '@/components/language-toggle';
 import TemplateCustomizer from '@/components/template-customizer';
@@ -248,8 +248,17 @@ export default function AdminSaasLayout({
     const [mobileMenuOpen, setMobileMenuOpen] = React.useState(false);
     const { __ } = useTranslate();
 
-    const userPermissions = (auth as any)?.user?.permissions || [];
+    const currentUser = (auth as any)?.user;
+    const userPermissions = currentUser?.permissions || [];
+    const isSuperAdmin =
+        currentUser?.roles?.some((r: any) =>
+            ['super-admin', 'Super Administrador', 'Super Admin', 'super_admin'].includes(
+                typeof r === 'string' ? r : r?.name,
+            ),
+        ) || currentUser?.is_super_admin;
+
     const hasPermission = (permission: string) => {
+        if (isSuperAdmin) return true;
         return userPermissions.includes(permission);
     };
 
@@ -334,7 +343,7 @@ export default function AdminSaasLayout({
                                     collapsed && 'opacity-0',
                                 )}
                             >
-                                SICA
+                                MEDISOFT
                             </span>
                         </Link>
                         <Button
@@ -392,6 +401,11 @@ export default function AdminSaasLayout({
                         {(() => {
                             const orgItems = [
                                 {
+                                    title: 'Companies',
+                                    href: empresasIndex.url(),
+                                    permission: 'empresas.view',
+                                },
+                                {
                                     title: 'Branches',
                                     href: sucursalesIndex.url(),
                                     permission: 'sucursales.view',
@@ -413,19 +427,105 @@ export default function AdminSaasLayout({
                             );
                         })()}
 
+                        {/* Consultas Group */}
+                        {(() => {
+                            const consultasItems = [
+                                {
+                                    title: '🔵 Sala de Espera',
+                                    href: '/admin/consultas/sala-de-espera',
+                                    permission: 'citas.view',
+                                },
+                                {
+                                    title: '🟣 En Consultorio',
+                                    href: '/admin/consultas/en-consultorio',
+                                    permission: 'citas.view',
+                                },
+                                {
+                                    title: '🟢 Consultas Finalizadas',
+                                    href: '/admin/consultas/finalizadas',
+                                    permission: 'citas.view',
+                                },
+                                {
+                                    title: '📋 Preconsulta',
+                                    href: '/admin/plantillas-preconsulta',
+                                    permission: 'citas.view',
+                                },
+                            ].filter(item => hasPermission(item.permission));
+
+                            if (consultasItems.length === 0) return null;
+
+                            return (
+                                <div className="pt-2">
+                                    <CollapsibleNavItem
+                                        title="Consultas"
+                                        icon={HeartPulse}
+                                        collapsed={collapsed}
+                                        items={consultasItems}
+                                    />
+                                </div>
+                            );
+                        })()}
+
+                        {/* Health & Medical Group */}
+                        {(() => {
+                            const userEmpresaId = currentUser?.empresa_id || 1;
+                            const healthItems = [
+                                {
+                                    title: 'Appointments',
+                                    href: '/admin/citas',
+                                    permission: 'citas.view',
+                                },
+                                {
+                                    title: 'Patients',
+                                    href: '/admin/pacientes',
+                                    permission: 'pacientes.view',
+                                },
+                                {
+                                    title: 'Doctors & Staff',
+                                    href: '/admin/medicos',
+                                    permission: 'medicos.view',
+                                },
+                                {
+                                    title: 'Medical Specialties',
+                                    href: `/admin/empresas/${userEmpresaId}/especialidades`,
+                                    permission: 'especialidades.edit',
+                                },
+                                {
+                                    title: 'Care Types',
+                                    href: '/admin/tipos-atencion',
+                                    permission: 'tipos_atencion.view',
+                                },
+                                {
+                                    title: 'Medical Records',
+                                    href: '/admin/expedientes',
+                                    permission: 'expedientes.view',
+                                },
+                                {
+                                    title: 'Prescriptions',
+                                    href: '/admin/recetas',
+                                    permission: 'recetas.view',
+                                },
+                            ].filter(item => hasPermission(item.permission));
 
 
+                            if (healthItems.length === 0) return null;
+
+                            return (
+                                <div className="pt-2">
+                                    <CollapsibleNavItem
+                                        title="Health Management"
+                                        icon={Stethoscope}
+                                        collapsed={collapsed}
+                                        items={healthItems}
+                                    />
+                                </div>
+                            );
+                        })()}
 
 
-
-                        {/* Settings Group */}
                         {(() => {
                             const settingsItems = [
-                                {
-                                    title: 'Companies',
-                                    href: empresasIndex.url(),
-                                    permission: 'empresas.view',
-                                },
+
                                 {
                                     title: 'Countries',
                                     href: paisesIndex.url(),

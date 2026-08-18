@@ -19,6 +19,8 @@ class WhatsAppService
 
     private $timeout;
 
+    private $empresaModel;
+
     public function setTimeout(int $seconds): self
     {
         $this->timeout = $seconds;
@@ -62,12 +64,14 @@ class WhatsAppService
         $this->apiKey = $credentials['api_key'] ?? $credentials['apiKey'] ?? null;
         $this->instanceName = $credentials['instance'] ?? $credentials['whatsapp_instance'] ?? null;
 
-        if (! $this->apiKey && $this->companyId) {
-            $empresaModel = Empresa::find($this->companyId);
-            if ($empresaModel) {
-                $this->apiKey = $empresaModel->whatsapp_api_key;
-                if (! $this->instanceName && ! empty($empresaModel->whatsapp_instance)) {
-                    $this->instanceName = $empresaModel->whatsapp_instance;
+        if ($this->companyId) {
+            $this->empresaModel = Empresa::with(['pais', 'paisTelefono'])->find($this->companyId);
+            if ($this->empresaModel) {
+                if (! $this->apiKey) {
+                    $this->apiKey = $this->empresaModel->whatsapp_api_key;
+                }
+                if (! $this->instanceName && ! empty($this->empresaModel->whatsapp_instance)) {
+                    $this->instanceName = $this->empresaModel->whatsapp_instance;
                 }
             }
         }
@@ -89,16 +93,20 @@ class WhatsAppService
         $empresaModel = null;
 
         if ($empresa instanceof Empresa) {
-            $empresaModel = $empresa;
+            $empresaModel = $empresa->relationLoaded('pais') && $empresa->relationLoaded('paisTelefono')
+                ? $empresa
+                : $empresa->load(['pais', 'paisTelefono']);
         } elseif (is_numeric($empresa)) {
-            $empresaModel = Empresa::find($empresa);
+            $empresaModel = Empresa::with(['pais', 'paisTelefono'])->find($empresa);
         } elseif (auth()->check() && auth()->user()->empresa_id) {
-            $empresaModel = Empresa::find(auth()->user()->empresa_id);
+            $empresaModel = Empresa::with(['pais', 'paisTelefono'])->find(auth()->user()->empresa_id);
         }
 
         if (! $empresaModel) {
-            $empresaModel = Empresa::find(1);
+            $empresaModel = Empresa::with(['pais', 'paisTelefono'])->find(1);
         }
+
+        $this->empresaModel = $empresaModel;
 
         if ($empresaModel) {
             $this->companyId = $empresaModel->id;
@@ -226,10 +234,10 @@ class WhatsAppService
     }
 
     /**
-     * Normaliza y formatea el número de teléfono con código de país.
+     * Normaliza y formatea el número de teléfono utilizando el código de país de la empresa.
      * En México (+52), la API de WhatsApp requiere el prefijo 521 para números móviles de 10 dígitos.
      */
-    public static function formatPhoneNumber(string $phone): string
+    public static function formatPhoneNumber(string $phone, $empresa = null): string
     {
         $digits = preg_replace('/[^0-9]/', '', $phone);
 
@@ -241,17 +249,51 @@ class WhatsAppService
             $digits = substr($digits, 1);
         }
 
-        // Formateo automático de móviles en México (+52)
-        if (strlen($digits) === 10) {
-            return '521' . $digits;
-        }
-
-        if (strlen($digits) === 12 && str_starts_with($digits, '52')) {
-            return '521' . substr($digits, 2);
-        }
-
-        if (strlen($digits) === 13 && str_starts_with($digits, '521')) {
+        // Si el número ya posee prefijo internacional completo (>= 11 dígitos)
+        if (strlen($digits) >= 11) {
+            if (strlen($digits) === 12 && str_starts_with($digits, '52')) {
+                return '521' . substr($digits, 2);
+            }
             return $digits;
+        }
+
+        // Si es un número local de 10 dígitos, formatear según el país de la empresa
+        if (strlen($digits) === 10) {
+            $codigoPais = null;
+
+            if ($empresa instanceof Empresa) {
+                $codigoPais = $empresa->paisTelefono->codigo_telefonico
+                    ?? $empresa->pais->codigo_telefonico
+                    ?? null;
+            } elseif (is_numeric($empresa)) {
+                $empModel = Empresa::with(['pais', 'paisTelefono'])->find($empresa);
+                $codigoPais = $empModel->paisTelefono->codigo_telefonico
+                    ?? $empModel->pais->codigo_telefonico
+                    ?? null;
+            }
+
+            if (! $codigoPais && auth()->check() && auth()->user()->empresa_id) {
+                $empModel = Empresa::with(['pais', 'paisTelefono'])->find(auth()->user()->empresa_id);
+                $codigoPais = $empModel->paisTelefono->codigo_telefonico
+                    ?? $empModel->pais->codigo_telefonico
+                    ?? null;
+            }
+
+            if (! $codigoPais) {
+                $empModel = Empresa::with(['pais', 'paisTelefono'])->find(1);
+                $codigoPais = $empModel->paisTelefono->codigo_telefonico
+                    ?? $empModel->pais->codigo_telefonico
+                    ?? '58';
+            }
+
+            $codigoPaisClean = preg_replace('/[^0-9]/', '', (string) $codigoPais);
+
+            // Regla específica de WhatsApp para México (+52)
+            if ($codigoPaisClean === '52') {
+                return '521' . $digits;
+            }
+
+            return ($codigoPaisClean ?: '58') . $digits;
         }
 
         return $digits;
@@ -262,7 +304,7 @@ class WhatsAppService
      */
     public function sendMessage(string $to, string $message, bool $isWelcome = false)
     {
-        $to = self::formatPhoneNumber($to);
+        $to = self::formatPhoneNumber($to, $this->empresaModel);
 
         try {
             $url = "{$this->baseUrl}/api/message/send-text/{$this->instanceName}";
@@ -308,7 +350,7 @@ class WhatsAppService
      */
     public function sendMedia(string $to, string $mediaUrl, string $caption = '')
     {
-        $to = self::formatPhoneNumber($to);
+        $to = self::formatPhoneNumber($to, $this->empresaModel);
         try {
             $url = "{$this->baseUrl}/api/message/send-media/{$this->instanceName}";
             $response = Http::timeout($this->timeout)

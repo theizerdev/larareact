@@ -140,14 +140,57 @@ class PermissionSeeder extends Seeder
                 'control_acceso.view' => 'Ver Control de Acceso',
             ],
 
-            // Sector: Asistencia y Reloj Checador LFT
-            'asistencia' => [
-                'asistencia.view' => 'Ver Módulo de Asistencia',
-                'asistencia.kiosko' => 'Acceso al Kiosko Checador',
-                'asistencia.bitacora' => 'Ver Bitácora de Marcajes',
-                'asistencia.nomina' => 'Ver Pre-Nómina y Cálculo LFT',
-                'asistencia.configuracion' => 'Configurar Asistencia y Turnos LFT',
+            // Sector: Salud & Gestión Médica Adaptativa
+            'salud' => [
+                // Módulo: Especialidades
+                'especialidades.view' => 'Ver Especialidades y Ramas Médicas',
+                'especialidades.create' => 'Crear Especialidad / Rama',
+                'especialidades.edit' => 'Configurar Especialidades por Clínica',
+                'especialidades.delete' => 'Eliminar Especialidad',
+
+                // Módulo: Pacientes
+                'pacientes.view' => 'Ver Pacientes',
+                'pacientes.create' => 'Crear Paciente',
+                'pacientes.edit' => 'Editar Paciente',
+                'pacientes.delete' => 'Eliminar Paciente',
+
+                // Módulo: Médicos
+                'medicos.view' => 'Ver Médicos / Especialistas',
+                'medicos.create' => 'Crear Médico',
+                'medicos.edit' => 'Editar Médico',
+                'medicos.delete' => 'Eliminar Médico',
+
+                // Módulo: Citas Médicas
+                'citas.view' => 'Ver Citas Médicas',
+                'citas.create' => 'Agendar Cita Médica',
+                'citas.edit' => 'Editar Cita Médica',
+                'citas.delete' => 'Cancelar Cita Médica',
+
+                // Módulo: Expedientes Clínicos
+                'expedientes.view' => 'Ver Expedientes Clínicos',
+                'expedientes.create' => 'Crear Consulta Clínica',
+                'expedientes.edit' => 'Editar Consulta Clínica',
+                'expedientes.delete' => 'Eliminar Registro Clínico',
+
+                // Módulo: Recetas
+                'recetas.view' => 'Ver Recetas Médicas',
+                'recetas.create' => 'Emitir Receta Médica',
+                'recetas.send_whatsapp' => 'Enviar Receta por WhatsApp',
+
+                // Módulo: Tipos de Atención
+                'tipos_atencion.view' => 'Ver Tipos de Atención',
+                'tipos_atencion.create' => 'Crear Tipo de Atención',
+                'tipos_atencion.edit' => 'Editar Tipo de Atención',
+                'tipos_atencion.delete' => 'Eliminar Tipo de Atención',
+
+                // Módulo: Citas Médicas
+                'citas.view' => 'Ver Agenda de Citas',
+                'citas.create' => 'Agendar Cita',
+                'citas.edit' => 'Editar Cita',
+                'citas.delete' => 'Eliminar Cita',
+                'citas.cambiar_estado' => 'Cambiar Estado de Cita',
             ],
+
 
         ];
 
@@ -161,6 +204,14 @@ class PermissionSeeder extends Seeder
                     str_starts_with($permission, 'paises.') => 'paises',
                     str_starts_with($permission, 'empresas.') => 'empresas',
                     str_starts_with($permission, 'sucursales.') => 'sucursales',
+                    str_starts_with($permission, 'especialidades.') => 'especialidades',
+                    str_starts_with($permission, 'pacientes.') => 'pacientes',
+                    str_starts_with($permission, 'medicos.') => 'medicos',
+                    str_starts_with($permission, 'tipos_atencion.') => 'tipos_atencion',
+                    str_starts_with($permission, 'citas.') => 'citas',
+                    str_starts_with($permission, 'expedientes.') => 'expedientes',
+                    str_starts_with($permission, 'recetas.') => 'recetas',
+
                     str_starts_with($permission, 'departamentos.') => 'departamentos',
                     str_starts_with($permission, 'cargos.') => 'cargos',
                     str_starts_with($permission, 'responsables.') => 'responsables',
