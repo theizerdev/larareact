@@ -31,30 +31,27 @@
         </style>
 
         @php
-            $favicon = '/image/logo/hosho/favicon.png';
-            $ogDescription = 'Plataforma empresarial de control de accesos con verificación biométrica, prueba de vida y validación documental. Gestión de flota, activos con GPS, ITSM, inventarios, control de jornada laboral y mensajería corporativa.';
+            $favicon = null;
+            if (auth()->check() && auth()->user()->empresa && auth()->user()->empresa->logo_mini) {
+                $favicon = auth()->user()->empresa->logo_mini;
+            } else {
+                $route = request()->route();
+                if ($route && ($route->getName() === 'preregistro.wizard' || $route->getName() === 'preregistro.submit' || request()->is('preregistro/*'))) {
+                    $token = $route->parameter('token') ?? request()->segment(2);
+                    if ($token) {
+                        $preRegistro = \App\Models\ProveedorPreRegistro::where('token', $token)->first();
+                        if ($preRegistro && $preRegistro->empresa && $preRegistro->empresa->logo_mini) {
+                            $favicon = $preRegistro->empresa->logo_mini;
+                        }
+                    }
+                }
+            }
+            if (!$favicon) {
+                $favicon = '/image/logo/driscolls_mini_d_logo.png';
+            }
         @endphp
         <link rel="icon" href="{{ $favicon }}" type="image/png">
-        <link rel="apple-touch-icon" href="/image/logo/hosho/apple-touch-icon.png">
-
-        {{-- Server-rendered title/description/Open Graph so link previews on
-             redes sociales y correo (que no ejecutan JS) siempre encuentren
-             estas etiquetas — la app es 100% client-rendered (sin SSR), por
-             lo que nada de esto puede depender de React/Inertia. --}}
-        <title>Hoshō by Innovación Móvil</title>
-        <meta name="description" content="{{ $ogDescription }}">
-        <meta property="og:site_name" content="Hoshō">
-        <meta property="og:title" content="Hoshō by Innovación Móvil">
-        <meta property="og:description" content="{{ $ogDescription }}">
-        <meta property="og:url" content="{{ url()->current() }}">
-        <meta property="og:image" content="{{ url('/image/logo/hosho/og-image.png') }}">
-        <meta property="og:image:width" content="1200">
-        <meta property="og:image:height" content="630">
-        <meta property="og:image:alt" content="Hoshō — plataforma de control de accesos">
-        <meta name="twitter:card" content="summary_large_image">
-        <meta name="twitter:title" content="Hoshō by Innovación Móvil">
-        <meta name="twitter:description" content="{{ $ogDescription }}">
-        <meta name="twitter:image" content="{{ url('/image/logo/hosho/og-image.png') }}">
+        <link rel="apple-touch-icon" href="{{ $favicon }}">
 
         @if(request()->is('admin/reloj-checador/kiosko*'))
         {{-- PWA Kiosko --}}

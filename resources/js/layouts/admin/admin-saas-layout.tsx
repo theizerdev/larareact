@@ -326,8 +326,8 @@ export default function AdminSaasLayout({
                         >
                             <div className="flex shrink-0 items-center justify-center bg-transparent">
                                 <img
-                                    src={(auth as any)?.user?.empresa?.logo_mini || (auth as any)?.user?.empresa?.logo || "/image/logo/hosho/icon-dark.png"}
-                                    alt={(auth as any)?.user?.empresa?.razon_social || "Hoshō"}
+                                    src={(auth as any)?.user?.empresa?.logo_mini || (auth as any)?.user?.empresa?.logo || "/image/logo/driscolls_mini_d_logo.png"}
+                                    alt={(auth as any)?.user?.empresa?.razon_social || "LaraReact Icon"}
                                     className="h-9 w-auto object-contain"
                                 />
                             </div>
