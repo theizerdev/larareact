@@ -674,6 +674,11 @@ export default function AdminSaasLayout({
                                     permission: 'monitoreo.logins',
                                 },
                                 {
+                                    title: 'System Activity',
+                                    href: '/admin/monitoring/activity',
+                                    permission: 'monitoreo.activities',
+                                },
+                                {
                                     title: 'System Logs',
                                     href: logMonitoringIndex.url(),
                                     permission: 'monitoreo.view',
@@ -688,7 +693,7 @@ export default function AdminSaasLayout({
                                     href: tasksMonitoringIndex.url(),
                                     permission: 'monitoreo.view',
                                 },
-                            ].filter(item => hasPermission(item.permission));
+                            ].filter(item => hasPermission(item.permission) || hasPermission('monitoreo.view'));
 
                             if (monitoringItems.length === 0) return null;
 
