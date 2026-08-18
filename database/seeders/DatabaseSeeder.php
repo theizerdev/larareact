@@ -23,10 +23,6 @@ class DatabaseSeeder extends Seeder
             RoleSeeder::class,
             EmpresaSucursalSeeder::class,
             UsersSeeder::class,
-            DepartamentoDriscollsSeeder::class,
-            CargoDriscollsSeeder::class,
-            ResponsableDriscollsSeeder::class,
-            EmpleadoDriscollsSeeder::class,
             TipoServicioSeeder::class,
         ]);
     }
