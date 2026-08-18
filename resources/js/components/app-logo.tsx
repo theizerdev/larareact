@@ -4,7 +4,7 @@ export default function AppLogo() {
     const { auth } = usePage().props as any;
     const logoMini = auth?.user?.empresa?.logo_mini;
     const logo = auth?.user?.empresa?.logo;
-    const companyLogo = logoMini || logo || "/";
+    const companyLogo = logoMini || logo || "/image/logo/hosho/icon.png";
     const companyName = auth?.user?.empresa?.razon_social;
 
     return (
@@ -12,7 +12,7 @@ export default function AppLogo() {
             <div className="flex aspect-square size-8 items-center justify-center rounded-md bg-transparent">
                 <img
                     src={companyLogo}
-                    alt={companyName || "LaraReact Icon"}
+                    alt={companyName || "Hoshō"}
                     className="size-8 object-contain"
                 />
             </div>
@@ -22,9 +22,9 @@ export default function AppLogo() {
                         companyName
                     ) : (
                         <>
-                            lara
-                            <span className="bg-gradient-to-r from-[#FF2D20] to-[#00F2FE] bg-clip-text text-transparent">
-                                react
+                            Hosh
+                            <span className="bg-gradient-to-r from-[#3B4FE0] to-[#7C3AED] bg-clip-text text-transparent">
+                                ō
                             </span>
                         </>
                     )}

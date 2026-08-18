@@ -29,6 +29,7 @@ class EmpleadoController extends Controller
                     $sub->where('nombres', 'like', "%{$search}%")
                         ->orWhere('apellidos', 'like', "%{$search}%")
                         ->orWhere('documento_identidad', 'like', "%{$search}%")
+                        ->orWhere('codigo_acceso', 'like', "%{$search}%")
                         ->orWhere('correo', 'like', "%{$search}%")
                         ->orWhere('telefono', 'like', "%{$search}%");
                 });

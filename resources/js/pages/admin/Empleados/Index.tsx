@@ -128,6 +128,7 @@ interface Empleado {
     nombres: string;
     apellidos: string;
     documento_identidad: string;
+    codigo_acceso?: string | null;
     curp?: string | null;
     pais_telefono_id?: number | null;
     telefono?: string | null;
@@ -198,6 +199,7 @@ const initialForm = {
     nombres: '',
     apellidos: '',
     documento_identidad: '',
+    codigo_acceso: '',
     curp: '',
     pais_telefono_id: '' as string | number,
     telefono: '',
@@ -542,6 +544,7 @@ export default function EmpleadosIndexPage({
             nombres: emp.nombres || '',
             apellidos: emp.apellidos || '',
             documento_identidad: emp.documento_identidad || '',
+            codigo_acceso: emp.codigo_acceso || emp.documento_identidad || '',
             curp: emp.curp || '',
             pais_telefono_id: emp.pais_telefono_id || '',
             telefono: emp.telefono || '',
@@ -666,8 +669,11 @@ export default function EmpleadosIndexPage({
                         <div>
                             <p className="font-semibold text-sm text-slate-800 dark:text-slate-100">{emp.nombres} {emp.apellidos}</p>
                             <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground mt-0.5">
-                                <span className="inline-flex items-center px-1.5 py-0.5 rounded bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 font-mono font-bold text-[11px]">
-                                    CÓD: {emp.documento_identidad || 'N/A'}
+                                <span className="inline-flex items-center px-2 py-0.5 rounded-md bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 font-mono font-bold text-xs tracking-wider border border-emerald-500/20" title="Código de Acceso 8 Dígitos">
+                                    ACCESO: {emp.codigo_acceso || 'N/A'}
+                                </span>
+                                <span className="inline-flex items-center px-2 py-0.5 rounded-md bg-indigo-500/10 text-indigo-700 dark:text-indigo-300 font-mono font-bold text-xs tracking-wider border border-indigo-500/20" title="Código de Empleado 6 Dígitos">
+                                    N° EMP: {emp.documento_identidad || 'N/A'}
                                 </span>
                                 {emp.curp ? (
                                     <span className="font-mono text-[11px] text-slate-600 dark:text-slate-400">
@@ -1004,10 +1010,33 @@ export default function EmpleadosIndexPage({
                                         )}
                                     </div>
 
-                                    {/* Código de Empleado (6 dígitos) */}
-                                    <div className="md:col-span-2 p-4 rounded-xl border border-indigo-500/30 bg-indigo-50/30 dark:bg-indigo-950/30 space-y-2 transition-all shadow-sm">
+                                    {/* Código de Acceso de Empleado (8 dígitos) */}
+                                    <div className="md:col-span-1 p-4 rounded-xl border border-emerald-500/30 bg-emerald-50/40 dark:bg-emerald-950/40 space-y-2 transition-all shadow-sm">
                                         <div className="flex items-center justify-between mb-1">
-                                            <Label htmlFor="documento_identidad" className="font-semibold text-xs">
+                                            <Label htmlFor="codigo_acceso" className="font-semibold text-xs text-emerald-900 dark:text-emerald-200">
+                                                Código de Acceso (8 dígitos)
+                                            </Label>
+                                            <span className="text-[10px] text-emerald-600 dark:text-emerald-400 font-medium">
+                                                Auto de 8 dígitos
+                                            </span>
+                                        </div>
+                                        <Input
+                                            id="codigo_acceso"
+                                            value={data.codigo_acceso}
+                                            onChange={(e) => setData('codigo_acceso', e.target.value)}
+                                            placeholder="ej. 10100001"
+                                            maxLength={20}
+                                            className="font-mono font-bold text-sm text-emerald-800 dark:text-emerald-300 border-emerald-300 dark:border-emerald-700 focus:border-emerald-500"
+                                        />
+                                        {errors.codigo_acceso && (
+                                            <p className="text-red-500 text-xs mt-1">{errors.codigo_acceso}</p>
+                                        )}
+                                    </div>
+
+                                    {/* Código de Empleado (6 dígitos) */}
+                                    <div className="md:col-span-1 p-4 rounded-xl border border-indigo-500/30 bg-indigo-50/30 dark:bg-indigo-950/30 space-y-2 transition-all shadow-sm">
+                                        <div className="flex items-center justify-between mb-1">
+                                            <Label htmlFor="documento_identidad" className="font-semibold text-xs text-indigo-950 dark:text-indigo-200">
                                                 Código de Empleado (6 dígitos) *
                                             </Label>
                                             <button
@@ -1019,7 +1048,7 @@ export default function EmpleadosIndexPage({
                                                 className="text-[11px] text-emerald-600 dark:text-emerald-400 hover:underline font-medium flex items-center gap-1"
                                             >
                                                 <Sparkles className="w-3 h-3 text-emerald-500" />
-                                                Generar 6 dígitos
+                                                Generar 6D
                                             </button>
                                         </div>
                                         <Input
@@ -1028,7 +1057,7 @@ export default function EmpleadosIndexPage({
                                             onChange={(e) => setData('documento_identidad', e.target.value)}
                                             placeholder="ej. 727652"
                                             maxLength={20}
-                                            className="font-mono"
+                                            className="font-mono font-semibold text-sm"
                                         />
                                         {errors.documento_identidad && (
                                             <p className="text-red-500 text-xs mt-1">{errors.documento_identidad}</p>

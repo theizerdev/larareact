@@ -18,7 +18,7 @@ class Sucursal extends Model
     public function getActivitylogOptions(): LogOptions
     {
         return LogOptions::defaults()
-            ->logOnly(['nombre', 'telefono', 'direccion', 'status', 'empresa_id'])
+            ->logOnly(['nombre', 'codigo_numeral', 'telefono', 'direccion', 'status', 'empresa_id'])
             ->logOnlyDirty()
             ->setDescriptionForEvent(fn (string $eventName) => static::getSpanishDescription($eventName));
     }
@@ -26,6 +26,7 @@ class Sucursal extends Model
     protected $fillable = [
         'empresa_id',
         'nombre',
+        'codigo_numeral',
         'pais_telefono_id',
         'telefono',
         'direccion',

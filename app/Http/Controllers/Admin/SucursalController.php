@@ -63,6 +63,7 @@ class SucursalController extends Controller
         $validated = $request->validate([
             'empresa_id' => 'required|exists:empresas,id',
             'nombre' => 'required|string|max:255',
+            'codigo_numeral' => 'nullable|string|max:2',
             'telefono' => 'nullable|string|max:255',
             'pais_telefono_id' => 'nullable|exists:pais,id',
             'direccion' => 'nullable|string',
@@ -94,6 +95,7 @@ class SucursalController extends Controller
         $validated = $request->validate([
             'empresa_id' => 'required|exists:empresas,id',
             'nombre' => 'required|string|max:255',
+            'codigo_numeral' => 'nullable|string|max:2',
             'telefono' => 'nullable|string|max:255',
             'pais_telefono_id' => 'nullable|exists:pais,id',
             'direccion' => 'nullable|string',
