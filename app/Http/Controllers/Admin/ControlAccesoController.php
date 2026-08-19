@@ -302,6 +302,9 @@ class ControlAccesoController extends Controller
 
     /**
      * Eventos de lectura de placas vehiculares / ANPR (bitácora de auditoría, solo lectura).
+     * Se enriquece cada evento cruzando la placa contra el directorio de vehículos
+     * (/vehicles/directory) para mostrar si el vehículo está dado de alta, a qué
+     * empleado pertenece y sus datos registrados (marca, tipo, color).
      */
     public function eventosVehiculares(Request $request)
     {
@@ -313,16 +316,41 @@ class ControlAccesoController extends Controller
         $cameraIp = $request->input('camera_ip');
         $listType = $request->input('list_type');
         $direction = $request->input('direction');
+        $isRegistered = $request->has('is_registered') ? $request->boolean('is_registered') : null;
+
+        $fetcher = null;
+
+        if ($service) {
+            $directory = $this->buildVehicleDirectoryIndex($service);
+
+            $fetcher = function (array $q) use ($service, $directory) {
+                $result = $service->listPlateEvents($q);
+
+                if (! $result['success']) {
+                    return $result;
+                }
+
+                $result['data']['items'] = array_map(
+                    fn (array $event) => $this->enrichPlateEvent($event, $directory),
+                    $result['data']['items'] ?? []
+                );
+
+                return $result;
+            };
+        }
 
         return $this->renderFilteredList(
             $request,
             'admin/control-acceso/eventos-vehiculares',
-            $service ? fn (array $q) => $service->listPlateEvents($q) : null,
-            function (array $item) use ($search, $plateNumber, $brandCode, $cameraIp, $listType, $direction) {
+            $fetcher,
+            function (array $item) use ($search, $plateNumber, $brandCode, $cameraIp, $listType, $direction, $isRegistered) {
+                if ($isRegistered !== null && (bool) ($item['is_registered'] ?? false) !== $isRegistered) {
+                    return false;
+                }
                 if (! $this->containsCi($item['plate_number'] ?? null, $plateNumber)) {
                     return false;
                 }
-                if (! $this->containsCi($item['brand_code'] ?? null, $brandCode)) {
+                if (! ($this->containsCi($item['brand_code'] ?? null, $brandCode) || $this->containsCi($item['registered_brand'] ?? null, $brandCode))) {
                     return false;
                 }
                 if (! $this->containsCi($item['camera_ip'] ?? null, $cameraIp)) {
@@ -338,12 +366,60 @@ class ControlAccesoController extends Controller
                 return $this->matchesAny([
                     $item['plate_number'] ?? null,
                     $item['brand_code'] ?? null,
+                    $item['registered_brand'] ?? null,
                     $item['camera_ip'] ?? null,
                     $item['list_type'] ?? null,
                     $item['direction'] ?? null,
+                    $item['employee_no'] ?? null,
                 ], $search);
             }
         );
+    }
+
+    /**
+     * Trae el directorio completo de vehículos y lo indexa por placa (mayúsculas)
+     * para poder enriquecer los eventos de placa en memoria sin una consulta por fila.
+     *
+     * @return array<string, array>
+     */
+    private function buildVehicleDirectoryIndex(ControlAccesoService $service): array
+    {
+        $result = $this->fetchAll(fn (array $q) => $service->listVehicleDirectory($q));
+
+        if (! $result['success']) {
+            return [];
+        }
+
+        $index = [];
+
+        foreach ($result['data']['items'] ?? [] as $vehicle) {
+            $plate = strtoupper((string) ($vehicle['plate_number'] ?? ''));
+
+            if ($plate !== '') {
+                $index[$plate] = $vehicle;
+            }
+        }
+
+        return $index;
+    }
+
+    /**
+     * Añade al evento de placa los datos de alta del vehículo (si existe en el
+     * directorio): si está registrado, a qué empleado pertenece y sus datos
+     * declarados (que pueden diferir de lo detectado por la cámara ANPR).
+     */
+    private function enrichPlateEvent(array $event, array $directory): array
+    {
+        $plate = strtoupper((string) ($event['plate_number'] ?? ''));
+        $vehicle = $directory[$plate] ?? null;
+
+        $event['is_registered'] = (bool) ($vehicle['is_registered'] ?? false);
+        $event['employee_no'] = $vehicle['employee_no'] ?? null;
+        $event['registered_brand'] = $vehicle['brand'] ?? null;
+        $event['registered_vehicle_type'] = $vehicle['vehicle_type'] ?? null;
+        $event['registered_vehicle_color'] = $vehicle['vehicle_color'] ?? null;
+
+        return $event;
     }
 
     /**

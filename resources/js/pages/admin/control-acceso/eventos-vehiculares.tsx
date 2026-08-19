@@ -9,9 +9,10 @@ import { DataTable } from '@/components/data-table';
 import { FilterBar, FilterField } from '@/components/filter-bar';
 import { ModuleHeader } from '@/components/module-header';
 import { Input } from '@/components/ui/input';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useFilterSync } from '@/hooks/use-filter-search';
 import { useTranslate } from '@/hooks/use-translate';
-import { cleanParams } from '@/lib/utils';
+import { cleanParams, cn } from '@/lib/utils';
 import type { Paginated } from '@/types/app';
 
 interface IvmsPlateEvent {
@@ -29,6 +30,13 @@ interface IvmsPlateEvent {
     brand_code: string | null;
     direction: string | null;
     photo_count: number;
+    // Datos cruzados contra el directorio de vehículos (/vehicles/directory)
+    // para saber si la placa detectada corresponde a un vehículo dado de alta.
+    is_registered: boolean;
+    employee_no: string | null;
+    registered_brand: string | null;
+    registered_vehicle_type: string | null;
+    registered_vehicle_color: string | null;
 }
 
 interface PageProps {
@@ -40,6 +48,7 @@ interface PageProps {
         camera_ip?: string;
         list_type?: string;
         direction?: string;
+        is_registered?: string;
     };
     error: string | null;
 }
@@ -53,6 +62,7 @@ export default function ControlAccesoEventosVehiculares({ items, filters, error 
     const [cameraIp, setCameraIp] = React.useState(filters.camera_ip || '');
     const [listType, setListType] = React.useState(filters.list_type || '');
     const [direction, setDirection] = React.useState(filters.direction || '');
+    const [isRegistered, setIsRegistered] = React.useState(filters.is_registered ?? 'all');
     const [isTableLoading, setIsTableLoading] = React.useState(false);
 
     React.useEffect(() => {
@@ -72,6 +82,7 @@ export default function ControlAccesoEventosVehiculares({ items, filters, error 
         camera_ip: cameraIp || undefined,
         list_type: listType || undefined,
         direction: direction || undefined,
+        is_registered: isRegistered !== 'all' ? isRegistered : undefined,
     });
 
     useFilterSync(currentFilters);
@@ -95,7 +106,35 @@ export default function ControlAccesoEventosVehiculares({ items, filters, error 
             hideOn: 'tablet',
             cell: (row) => (row.confidence !== null ? `${row.confidence}%` : '—'),
         },
-        { header: 'Vehicle', hideOn: 'mobile', cell: (row) => [row.vehicle_color, row.vehicle_type].filter(Boolean).join(' / ') || '—' },
+        {
+            header: 'Vehicle',
+            hideOn: 'mobile',
+            cell: (row) =>
+                [row.registered_vehicle_color || row.vehicle_color, row.registered_vehicle_type || row.vehicle_type]
+                    .filter(Boolean)
+                    .join(' / ') || '—',
+        },
+        {
+            header: 'Brand',
+            hideOn: 'tablet',
+            cell: (row) => row.registered_brand || row.brand_code || '—',
+        },
+        {
+            header: 'Registered',
+            cell: (row) => (
+                <span
+                    className={cn(
+                        'text-xs font-medium px-2 py-0.5 rounded-full border',
+                        row.is_registered
+                            ? 'bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-950/20 dark:text-emerald-400 dark:border-emerald-900'
+                            : 'bg-slate-50 text-slate-600 border-slate-200 dark:bg-slate-900/20 dark:text-slate-400 dark:border-slate-800'
+                    )}
+                >
+                    {row.is_registered ? __('Yes') : __('No')}
+                </span>
+            ),
+        },
+        { header: 'Employee No.', cell: (row) => row.employee_no || '—', className: 'font-mono text-xs', hideOn: 'tablet' },
         { header: 'Camera', cell: (row) => row.channel_name || row.camera_ip, hideOn: 'tablet' },
         { header: 'List Type', accessorKey: 'list_type', hideOn: 'tablet' },
         { header: 'Direction', accessorKey: 'direction', hideOn: 'mobile' },
@@ -106,7 +145,8 @@ export default function ControlAccesoEventosVehiculares({ items, filters, error 
             cell: (row) =>
                 row.photo_count > 0 ? (
                     <PhotoViewButton
-                        src={`/admin/control-acceso/eventos-vehiculares/${row.id}/foto/0`}
+                        photoIndexUrl={(i) => `/admin/control-acceso/eventos-vehiculares/${row.id}/foto/${i}`}
+                        count={row.photo_count}
                         label={row.plate_number || __('Photo')}
                     />
                 ) : (
@@ -176,6 +216,18 @@ export default function ControlAccesoEventosVehiculares({ items, filters, error 
                                 value={direction}
                                 onChange={(e) => setDirection(e.target.value)}
                             />
+                        </FilterField>
+                        <FilterField label={__('Registered')}>
+                            <Select value={isRegistered} onValueChange={setIsRegistered}>
+                                <SelectTrigger className="w-full md:w-36">
+                                    <SelectValue />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    <SelectItem value="all">{__('All')}</SelectItem>
+                                    <SelectItem value="true">{__('Yes')}</SelectItem>
+                                    <SelectItem value="false">{__('No')}</SelectItem>
+                                </SelectContent>
+                            </Select>
                         </FilterField>
                     </div>
                 </FilterBar>

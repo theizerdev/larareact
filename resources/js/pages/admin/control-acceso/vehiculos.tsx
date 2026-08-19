@@ -122,7 +122,8 @@ export default function ControlAccesoVehiculos({ items, filters, error }: PagePr
             cell: (row) =>
                 row.photo_count > 0 && row.plate_event_id ? (
                     <PhotoViewButton
-                        src={`/admin/control-acceso/eventos-vehiculares/${row.plate_event_id}/foto/0`}
+                        photoIndexUrl={(i) => `/admin/control-acceso/eventos-vehiculares/${row.plate_event_id}/foto/${i}`}
+                        count={row.photo_count}
                         label={row.plate_number}
                     />
                 ) : (
