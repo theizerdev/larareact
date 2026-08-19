@@ -40,6 +40,9 @@ interface ImportRecord {
     telefono?: string;
     departamento?: string;
     empresa?: string;
+    tarjeta_acceso_1?: string;
+    tarjeta_acceso_2?: string;
+    tarjeta_acceso_3?: string;
     vehiculos?: Array<{
         tipo_vehiculo: string;
         marca: string;
@@ -595,6 +598,7 @@ export const ImportWizardModal: React.FC<ImportWizardModalProps> = ({
                                         <th className="py-2 px-3">CURP / No. Empleado</th>
                                         <th className="py-2 px-3">Nombre Completo</th>
                                         <th className="py-2 px-3">Departamento</th>
+                                        <th className="py-2 px-3">Tarjetas Acceso</th>
                                         <th className="py-2 px-3">Teléfono (+52)</th>
                                         <th className="py-2 px-3">Vehículo(s)</th>
                                     </tr>
@@ -621,6 +625,19 @@ export const ImportWizardModal: React.FC<ImportWizardModalProps> = ({
                                             </td>
                                             <td className="py-2 px-3 text-slate-600 dark:text-slate-400">
                                                 {r.departamento || 'General'}
+                                            </td>
+                                            <td className="py-2 px-3">
+                                                <div className="flex items-center gap-1 font-mono text-[11px]">
+                                                    <Badge variant="outline" className="text-[10px] px-1.5 py-0 bg-slate-50 dark:bg-slate-800 text-slate-700 dark:text-slate-300">
+                                                        T1: {r.tarjeta_acceso_1 || '0'}
+                                                    </Badge>
+                                                    <Badge variant="outline" className="text-[10px] px-1.5 py-0 bg-slate-50 dark:bg-slate-800 text-slate-700 dark:text-slate-300">
+                                                        T2: {r.tarjeta_acceso_2 || '0'}
+                                                    </Badge>
+                                                    <Badge variant="outline" className="text-[10px] px-1.5 py-0 bg-slate-50 dark:bg-slate-800 text-slate-700 dark:text-slate-300">
+                                                        T3: {r.tarjeta_acceso_3 || '0'}
+                                                    </Badge>
+                                                </div>
                                             </td>
                                             <td className="py-2 px-3 font-mono text-slate-600 dark:text-slate-400">
                                                 {r.telefono ? `+52 ${r.telefono}` : '-'}
