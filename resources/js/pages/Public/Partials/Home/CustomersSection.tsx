@@ -5,6 +5,12 @@ import Reveal from './Reveal';
 
 const SECTOR_ICONS = [Factory, Warehouse, Landmark, Building2];
 
+const CLIENT_LOGOS = [
+    { name: "Driscoll's", src: '/image/logo/driscolls_logo.png' },
+    { name: 'Persistent', src: '/image/logo/clientes/persistent-logo.svg' },
+];
+const CLIENT_LOGO_PLACEHOLDER_COUNT = 4;
+
 export default function CustomersSection() {
     const { __ } = useTranslate();
 
@@ -89,16 +95,31 @@ export default function CustomersSection() {
                     aria-label={__('Client logos')}
                     className="mt-[2.1rem] grid grid-cols-[repeat(auto-fill,minmax(150px,1fr))] gap-4"
                 >
-                    {Array.from({ length: 6 }).map((_, i) => (
+                    {CLIENT_LOGOS.map((logo) => (
                         <div
-                            key={i}
+                            key={logo.name}
                             className="grid min-h-[100px] place-items-center rounded-hosho-md border border-hosho-line bg-hosho-surface p-4 text-center"
                         >
-                            <span className="w-full rounded-hosho-sm border border-dashed border-hosho-line px-[.8rem] py-[.65rem] font-hosho-data text-[.62rem] tracking-[.08em] text-hosho-mist">
-                                {__('Client logo')}
-                            </span>
+                            <img
+                                src={logo.src}
+                                alt={logo.name}
+                                className="max-h-9 w-full object-contain"
+                                loading="lazy"
+                            />
                         </div>
                     ))}
+                    {Array.from({ length: CLIENT_LOGO_PLACEHOLDER_COUNT }).map(
+                        (_, i) => (
+                            <div
+                                key={`placeholder-${i}`}
+                                className="grid min-h-[100px] place-items-center rounded-hosho-md border border-hosho-line bg-hosho-surface p-4 text-center"
+                            >
+                                <span className="w-full rounded-hosho-sm border border-dashed border-hosho-line px-[.8rem] py-[.65rem] font-hosho-data text-[.62rem] tracking-[.08em] text-hosho-mist">
+                                    {__('Client logo')}
+                                </span>
+                            </div>
+                        ),
+                    )}
                 </Reveal>
             </div>
         </section>

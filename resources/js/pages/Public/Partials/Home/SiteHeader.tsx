@@ -6,7 +6,6 @@ import LanguageToggle from '@/components/language-toggle';
 import { useTranslate } from '@/hooks/use-translate';
 import { dashboard, login } from '@/routes';
 import { hoshoButtonClass } from './button-styles';
-import HoshoMark from './HoshoMark';
 
 export default function SiteHeader() {
     const { __ } = useTranslate();
@@ -37,12 +36,11 @@ export default function SiteHeader() {
                     onClick={(e) => goTo(e, 'inicio')}
                     className="mr-auto flex shrink-0 items-center gap-2.5"
                 >
-                    <span className="grid size-[34px] shrink-0 place-items-center rounded-[10px] bg-hosho-indigo">
-                        <HoshoMark
-                            className="size-[19px] text-white"
-                            strokeWidth={1.7}
-                        />
-                    </span>
+                    <img
+                        src="/image/logo/hosho/icon.png"
+                        alt=""
+                        className="h-[34px] w-auto shrink-0"
+                    />
                     <span className="leading-none">
                         <span className="block font-hosho-display text-[1.28rem] leading-none font-bold tracking-tight text-hosho-ink">
                             Hoshō
