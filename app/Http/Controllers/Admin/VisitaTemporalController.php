@@ -481,9 +481,11 @@ class VisitaTemporalController extends Controller
             $whatsappService = new WhatsAppService($empresa);
             $link            = url("/preregistro-visita/{$token}");
 
+            $sucursalNombre = $user->sucursal?->nombre ?? ($empresa->razon_social ?? $empresa->nombre_comercial ?? 'Nuestras Instalaciones');
+
             $message = "Estimado Visitante {$request->nombres} {$request->apellidos}, "
                 . "le invitamos a completar su pre-registro de datos para su acceso temporal a nuestras oficinas:\n\n"
-                . "Ubicacion: " . ($user->sucursal->nombre ?? $empresa->nombre) . "\n"
+                . "Ubicacion: {$sucursalNombre}\n"
                 . "Motivo: {$request->motivo_registro}\n"
                 . "Visita a: {$empleado->nombres} {$empleado->apellidos}\n"
                 . "Autorizado por: {$responsable->nombres} {$responsable->apellidos}\n\n"

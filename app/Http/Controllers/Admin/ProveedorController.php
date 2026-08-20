@@ -153,8 +153,10 @@ class ProveedorController extends Controller
             $link = url("/preregistro/{$token}");
             $terminos    = url("https://www.driscolls.com/Privacy-and-Terms  ");
 
+            $sucursalNombre = $user->sucursal?->nombre ?? ($empresa->razon_social ?? $empresa->nombre_comercial ?? 'Nuestras Instalaciones');
+
             $message = "Estimado Proveedor *{$request->nombre_comercial}*, le invitamos a completar su pre-registro de datos para su acceso a nuestras oficinas con la siguiente información:\n\n"
-                . "Ubicación:{$user->sucursal->nombre}\n"
+                . "Ubicación: {$sucursalNombre}\n"
                 . "Colaboradores: Indicar todos los que acudirán\n"
                 . "Vehículos: En el que acudirán.\n\n"
                 . "Será Indispensable contar de cada colaborador con: INE vigente y Chaleco de seguridad*\n\n"

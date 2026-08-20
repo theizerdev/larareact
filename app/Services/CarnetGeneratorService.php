@@ -104,8 +104,8 @@ class CarnetGeneratorService
             $bannerY2 = 610;
             imagefilledrectangle($im, 16, $bannerY1, $width - 16, $bannerY2, $darkGreen);
 
-            $deptoText  = $empleado->departamento->nombre ?? 'General';
-            $sucursalText = $empleado->sucursal->nombre ?? 'Principal';
+            $deptoText  = $empleado->departamento?->nombre ?? 'General';
+            $sucursalText = $empleado->sucursal?->nombre ?? 'Principal';
 
             $deptoX = (int) (($width - (strlen($deptoText) * 12)) / 2);
             imagestring($im, 5, max(30, $deptoX), $bannerY1 + 45, $deptoText, $white);
