@@ -12,8 +12,13 @@ const CLIENT_LOGOS = [
     { name: 'TecNovum', src: '/image/logo/clientes/tecnovum-logo.png' },
     { name: 'Inteck-Pro', src: '/image/logo/clientes/inteck-pro-logo.png' },
     { name: 'InnfoHealth', src: '/image/logo/clientes/innfohealth-logo.png' },
+    { name: 'Frakcio', src: '/image/logo/clientes/frakcio-logo.png' },
+    {
+        name: 'Medical Orthosis',
+        src: '/image/logo/clientes/medical-orthosis-logo.png',
+    },
 ];
-const CLIENT_LOGO_PLACEHOLDER_COUNT = 1;
+const CLIENT_LOGO_PLACEHOLDER_COUNT = 0;
 
 export default function CustomersSection() {
     const { __ } = useTranslate();

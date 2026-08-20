@@ -44,6 +44,26 @@ const PARTNER_LOGOS = [
         src: '/image/logo/aliados/zapsign-logo.svg',
         tile: 'light' as const,
     },
+    {
+        name: 'Neftis',
+        src: '/image/logo/aliados/neftis-logo.png',
+        tile: 'dark' as const,
+    },
+    {
+        name: 'SAP SuccessFactors',
+        src: '/image/logo/aliados/sap-successfactors-logo.png',
+        tile: 'light' as const,
+    },
+    {
+        name: 'SP Solutions & Technology',
+        src: '/image/logo/aliados/sp-solutions-logo.png',
+        tile: 'light' as const,
+    },
+    {
+        name: 'The Silicon Partners',
+        src: '/image/logo/aliados/tsp-logo.png',
+        tile: 'light' as const,
+    },
 ];
 
 export default function PartnersSection() {
