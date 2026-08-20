@@ -25,7 +25,7 @@ const PARTNER_LOGOS = [
         tile: 'dark' as const,
     },
     {
-        name: 'SAP SuccessFactors',
+        name: 'SAP',
         src: '/image/logo/aliados/sap-logo.svg',
         tile: 'light' as const,
     },
@@ -47,16 +47,6 @@ const PARTNER_LOGOS = [
     {
         name: 'InnfoHealth',
         src: '/image/logo/aliados/innfohealth-logo.png',
-        tile: 'light' as const,
-    },
-    {
-        name: 'Neftis',
-        src: '/image/logo/aliados/neftis-logo.svg',
-        tile: 'light' as const,
-    },
-    {
-        name: 'SP Solutions & Technology',
-        src: '/image/logo/aliados/sp-solutions-logo.svg',
         tile: 'light' as const,
     },
 ];
@@ -163,7 +153,7 @@ export default function PartnersSection() {
                                     <img
                                         src={logo.src}
                                         alt={logo.name}
-                                        className="max-h-9 w-full object-contain"
+                                        className="h-10 w-full object-contain"
                                         loading="lazy"
                                     />
                                 </div>

@@ -10,13 +10,8 @@ const CLIENT_LOGOS = [
     { name: 'Persistent', src: '/image/logo/clientes/persistent-logo.svg' },
     { name: 'WALOOK', src: '/image/logo/clientes/walook-logo.webp' },
     { name: 'TecNovum', src: '/image/logo/clientes/tecnovum-logo.jpeg' },
-    {
-        name: 'Medical Orthosis',
-        src: '/image/logo/clientes/medical-orthosis-logo.svg',
-    },
-    { name: 'Inteck-Pro', src: '/image/logo/clientes/inteck-pro-logo.svg' },
 ];
-const CLIENT_LOGO_PLACEHOLDER_COUNT = 0;
+const CLIENT_LOGO_PLACEHOLDER_COUNT = 2;
 
 export default function CustomersSection() {
     const { __ } = useTranslate();
@@ -110,7 +105,7 @@ export default function CustomersSection() {
                             <img
                                 src={logo.src}
                                 alt={logo.name}
-                                className="max-h-9 w-full object-contain"
+                                className="h-10 w-full object-contain"
                                 loading="lazy"
                             />
                         </div>
