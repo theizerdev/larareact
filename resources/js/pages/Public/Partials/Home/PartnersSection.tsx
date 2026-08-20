@@ -49,6 +49,16 @@ const PARTNER_LOGOS = [
         src: '/image/logo/aliados/innfohealth-logo.png',
         tile: 'light' as const,
     },
+    {
+        name: 'Neftis',
+        src: '/image/logo/aliados/neftis-logo.svg',
+        tile: 'light' as const,
+    },
+    {
+        name: 'SP Solutions & Technology',
+        src: '/image/logo/aliados/sp-solutions-logo.svg',
+        tile: 'light' as const,
+    },
 ];
 
 export default function PartnersSection() {
