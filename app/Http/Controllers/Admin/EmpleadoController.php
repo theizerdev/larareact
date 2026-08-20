@@ -412,8 +412,10 @@ class EmpleadoController extends Controller
 
             $link = url("/preregistro-empleado/{$token}");
 
+            $sucursalNombre = $user->sucursal?->nombre ?? ($empresa->razon_social ?? $empresa->nombre_comercial ?? 'Nuestras Instalaciones');
+
             $message = "Estimado Colaborador *{$request->nombres} {$request->apellidos}*, le invitamos a completar su pre-registro de datos para su alta en nuestras oficinas:\n\n"
-                . "Ubicación: " . ($user->sucursal->nombre ?? $empresa->nombre) . "\n"
+                . "Ubicación: {$sucursalNombre}\n"
                 . "Motivo: {$request->motivo_registro}\n"
                 . "Autorizado por: {$responsable->nombres} {$responsable->apellidos}\n\n"
                 . "Por favor, ingrese al siguiente enlace para completar su jornada laboral, fotografías y vehículos:\n"
