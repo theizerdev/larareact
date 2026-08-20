@@ -2,9 +2,12 @@
 
 namespace App\Http\Controllers;
 
+use App\Mail\NuevaSolicitudDemoMail;
 use App\Models\SolicitudDemo;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Mail;
+use Throwable;
 
 class SolicitudDemoController extends Controller
 {
@@ -44,6 +47,16 @@ class SolicitudDemoController extends Controller
             'correo' => $solicitud->correo,
             'area_interes' => $solicitud->area_interes,
         ]);
+
+        try {
+            Mail::to('contacto@innovacionmovil.com')
+                ->send(new NuevaSolicitudDemoMail($solicitud));
+        } catch (Throwable $e) {
+            Log::error('No se pudo enviar el correo de notificación de solicitud de demo', [
+                'id' => $solicitud->id,
+                'error' => $e->getMessage(),
+            ]);
+        }
 
         return back();
     }
