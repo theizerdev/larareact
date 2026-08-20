@@ -108,7 +108,7 @@ export default function ContactSection() {
 
     return (
         <section id="contacto" className="py-[clamp(4.25rem,9vh,7rem)]">
-            <div className="mx-auto grid max-w-[1240px] gap-8 px-4 sm:gap-10 sm:px-8 md:grid-cols-[.85fr_1.15fr] md:gap-[clamp(2.3rem,5vw,3.8rem)]">
+            <div className="mx-auto grid max-w-[1240px] gap-8 px-4 sm:gap-10 sm:px-8 md:grid-cols-[minmax(0,.85fr)_minmax(0,1.15fr)] md:gap-[clamp(2.3rem,5vw,3.8rem)]">
                 <Reveal>
                     <div className="mb-[1.1rem] inline-flex items-center gap-2 rounded-full bg-hosho-indigo-tint py-[.42rem] pr-[.85rem] pl-[.62rem]">
                         <HoshoMark className="size-3.5 text-hosho-indigo" />

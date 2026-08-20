@@ -1,6 +1,5 @@
 import { Head } from '@inertiajs/react';
 import { useTranslate } from '@/hooks/use-translate';
-import ComplianceMarquee from './Partials/Home/ComplianceMarquee';
 import ComplianceSection from './Partials/Home/ComplianceSection';
 import ContactSection from './Partials/Home/ContactSection';
 import CustomersSection from './Partials/Home/CustomersSection';
@@ -30,7 +29,6 @@ export default function Home() {
 
             <SiteHeader />
             <Hero />
-            <ComplianceMarquee />
             <PlatformSection />
             <ComplianceSection />
             <CustomersSection />
