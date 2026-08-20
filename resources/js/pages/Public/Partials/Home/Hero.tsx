@@ -93,7 +93,7 @@ export default function Hero() {
                     <div className="flex flex-wrap gap-[.9rem]">
                         {[
                             {
-                                v: '<8 s',
+                                v: '<30 s',
                                 l: __(
                                     'Average validation time per access event',
                                 ),

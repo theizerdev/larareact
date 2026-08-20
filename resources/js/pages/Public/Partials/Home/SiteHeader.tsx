@@ -47,9 +47,6 @@ export default function SiteHeader() {
                         <span className="block font-hosho-display text-[1.28rem] leading-none font-bold tracking-tight text-hosho-ink">
                             Hoshō
                         </span>
-                        <span className="mt-1 block font-hosho-data text-[.6rem] tracking-[.1em] text-hosho-mist uppercase">
-                            {__('Developed by Innovación Móvil')}
-                        </span>
                     </span>
                 </a>
 

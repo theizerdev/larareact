@@ -6,11 +6,45 @@ import {
     Workflow,
 } from 'lucide-react';
 import { useTranslate } from '@/hooks/use-translate';
+import { cn } from '@/lib/utils';
 import { hoshoButtonClass } from './button-styles';
 import HoshoMark from './HoshoMark';
 import Reveal from './Reveal';
 
 const ALLY_ICONS = [Handshake, ScanLine, Workflow, ClipboardCheck];
+
+const PARTNER_LOGOS = [
+    {
+        name: 'Hikvision',
+        src: '/image/logo/aliados/hikvision-logo.svg',
+        tile: 'light' as const,
+    },
+    {
+        name: 'ZKTeco',
+        src: '/image/logo/aliados/zkteco-logo.png',
+        tile: 'dark' as const,
+    },
+    {
+        name: 'SAP SuccessFactors',
+        src: '/image/logo/aliados/sap-logo.svg',
+        tile: 'light' as const,
+    },
+    {
+        name: '360 Global IT',
+        src: '/image/logo/aliados/360-global-it-logo.png',
+        tile: 'dark' as const,
+    },
+    {
+        name: 'Jaak',
+        src: '/image/logo/integrations/jaak-logo.png',
+        tile: 'light' as const,
+    },
+    {
+        name: 'ZapSign',
+        src: '/image/logo/aliados/zapsign-logo.svg',
+        tile: 'light' as const,
+    },
+];
 
 export default function PartnersSection() {
     const { __ } = useTranslate();
@@ -101,14 +135,22 @@ export default function PartnersSection() {
                             aria-label={__('Partner logos')}
                             className="grid grid-cols-[repeat(auto-fill,minmax(150px,1fr))] gap-4"
                         >
-                            {Array.from({ length: 4 }).map((_, i) => (
+                            {PARTNER_LOGOS.map((logo) => (
                                 <div
-                                    key={i}
-                                    className="grid min-h-[100px] place-items-center rounded-hosho-md border border-hosho-navy-line bg-hosho-navy-2 p-4 text-center"
+                                    key={logo.name}
+                                    className={cn(
+                                        'grid min-h-[100px] place-items-center rounded-hosho-md border border-hosho-navy-line p-4 text-center',
+                                        logo.tile === 'dark'
+                                            ? 'bg-hosho-navy-2'
+                                            : 'bg-white',
+                                    )}
                                 >
-                                    <span className="w-full rounded-hosho-sm border border-dashed border-hosho-navy-line px-[.8rem] py-[.65rem] font-hosho-data text-[.62rem] tracking-[.08em] text-hosho-navy-mist">
-                                        {__('Partner logo')}
-                                    </span>
+                                    <img
+                                        src={logo.src}
+                                        alt={logo.name}
+                                        className="max-h-9 w-full object-contain"
+                                        loading="lazy"
+                                    />
                                 </div>
                             ))}
                         </div>
