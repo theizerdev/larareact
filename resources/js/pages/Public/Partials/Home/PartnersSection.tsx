@@ -6,7 +6,6 @@ import {
     Workflow,
 } from 'lucide-react';
 import { useTranslate } from '@/hooks/use-translate';
-import { cn } from '@/lib/utils';
 import { hoshoButtonClass } from './button-styles';
 import HoshoMark from './HoshoMark';
 import Reveal from './Reveal';
@@ -14,56 +13,25 @@ import Reveal from './Reveal';
 const ALLY_ICONS = [Handshake, ScanLine, Workflow, ClipboardCheck];
 
 const PARTNER_LOGOS = [
-    {
-        name: 'Hikvision',
-        src: '/image/logo/aliados/hikvision-logo.svg',
-        tile: 'light' as const,
-    },
-    {
-        name: 'ZKTeco',
-        src: '/image/logo/aliados/zkteco-logo.png',
-        tile: 'dark' as const,
-    },
-    {
-        name: 'SAP',
-        src: '/image/logo/aliados/sap-logo.svg',
-        tile: 'light' as const,
-    },
+    { name: 'Hikvision', src: '/image/logo/aliados/hikvision-logo.svg' },
+    { name: 'ZKTeco', src: '/image/logo/aliados/zkteco-logo.png' },
+    { name: 'SAP', src: '/image/logo/aliados/sap-logo.svg' },
     {
         name: '360 Global IT',
         src: '/image/logo/aliados/360-global-it-logo.png',
-        tile: 'light' as const,
     },
-    {
-        name: 'Jaak',
-        src: '/image/logo/integrations/jaak-logo.png',
-        tile: 'light' as const,
-    },
-    {
-        name: 'ZapSign',
-        src: '/image/logo/aliados/zapsign-logo.svg',
-        tile: 'light' as const,
-    },
-    {
-        name: 'Neftis',
-        src: '/image/logo/aliados/neftis-logo.png',
-        tile: 'dark' as const,
-    },
+    { name: 'Jaak', src: '/image/logo/integrations/jaak-logo.png' },
+    { name: 'ZapSign', src: '/image/logo/aliados/zapsign-logo.svg' },
+    { name: 'Neftis', src: '/image/logo/aliados/neftis-logo.png' },
     {
         name: 'SAP SuccessFactors',
         src: '/image/logo/aliados/sap-successfactors-logo.png',
-        tile: 'light' as const,
     },
     {
         name: 'SP Solutions & Technology',
         src: '/image/logo/aliados/sp-solutions-logo.png',
-        tile: 'light' as const,
     },
-    {
-        name: 'The Silicon Partners',
-        src: '/image/logo/aliados/tsp-logo.png',
-        tile: 'light' as const,
-    },
+    { name: 'The Silicon Partners', src: '/image/logo/aliados/tsp-logo.png' },
 ];
 
 export default function PartnersSection() {
@@ -158,12 +126,7 @@ export default function PartnersSection() {
                             {PARTNER_LOGOS.map((logo) => (
                                 <div
                                     key={logo.name}
-                                    className={cn(
-                                        'grid min-h-[100px] place-items-center rounded-hosho-md border border-hosho-navy-line p-4 text-center',
-                                        logo.tile === 'dark'
-                                            ? 'bg-hosho-navy-2'
-                                            : 'bg-white',
-                                    )}
+                                    className="grid min-h-[100px] place-items-center rounded-hosho-md border border-hosho-navy-line bg-white p-4 text-center"
                                 >
                                     <img
                                         src={logo.src}
