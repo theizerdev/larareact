@@ -153,7 +153,7 @@ export default function PartnersSection() {
                                     <img
                                         src={logo.src}
                                         alt={logo.name}
-                                        className="h-10 w-full object-contain"
+                                        className="h-16 w-full object-contain"
                                         loading="lazy"
                                     />
                                 </div>
