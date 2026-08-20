@@ -6,12 +6,14 @@ import Reveal from './Reveal';
 const SECTOR_ICONS = [Factory, Warehouse, Landmark, Building2];
 
 const CLIENT_LOGOS = [
-    { name: "Driscoll's", src: '/image/logo/driscolls_logo.png' },
+    { name: "Driscoll's", src: '/image/logo/clientes/driscolls-logo.png' },
     { name: 'Persistent', src: '/image/logo/clientes/persistent-logo.svg' },
     { name: 'WALOOK', src: '/image/logo/clientes/walook-logo.png' },
     { name: 'TecNovum', src: '/image/logo/clientes/tecnovum-logo.png' },
+    { name: 'Inteck-Pro', src: '/image/logo/clientes/inteck-pro-logo.png' },
+    { name: 'InnfoHealth', src: '/image/logo/clientes/innfohealth-logo.png' },
 ];
-const CLIENT_LOGO_PLACEHOLDER_COUNT = 2;
+const CLIENT_LOGO_PLACEHOLDER_COUNT = 1;
 
 export default function CustomersSection() {
     const { __ } = useTranslate();

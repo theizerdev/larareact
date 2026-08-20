@@ -44,11 +44,6 @@ const PARTNER_LOGOS = [
         src: '/image/logo/aliados/zapsign-logo.svg',
         tile: 'light' as const,
     },
-    {
-        name: 'InnfoHealth',
-        src: '/image/logo/aliados/innfohealth-logo.png',
-        tile: 'light' as const,
-    },
 ];
 
 export default function PartnersSection() {
