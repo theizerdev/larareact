@@ -331,14 +331,6 @@ export default function AdminSaasLayout({
                                     className="h-9 w-auto object-contain"
                                 />
                             </div>
-                            <span
-                                className={cn(
-                                    'text-base font-semibold whitespace-nowrap text-white transition-opacity duration-300',
-                                    collapsed && 'opacity-0',
-                                )}
-                            >
-                                SICA
-                            </span>
                         </Link>
                         <Button
                             variant="ghost"
