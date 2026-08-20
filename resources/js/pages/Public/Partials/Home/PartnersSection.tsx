@@ -32,7 +32,7 @@ const PARTNER_LOGOS = [
     {
         name: '360 Global IT',
         src: '/image/logo/aliados/360-global-it-logo.png',
-        tile: 'dark' as const,
+        tile: 'light' as const,
     },
     {
         name: 'Jaak',

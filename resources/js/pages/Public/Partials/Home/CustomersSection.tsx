@@ -8,8 +8,10 @@ const SECTOR_ICONS = [Factory, Warehouse, Landmark, Building2];
 const CLIENT_LOGOS = [
     { name: "Driscoll's", src: '/image/logo/driscolls_logo.png' },
     { name: 'Persistent', src: '/image/logo/clientes/persistent-logo.svg' },
+    { name: 'WALOOK', src: '/image/logo/clientes/walook-logo.webp' },
+    { name: 'TecNovum', src: '/image/logo/clientes/tecnovum-logo.jpeg' },
 ];
-const CLIENT_LOGO_PLACEHOLDER_COUNT = 4;
+const CLIENT_LOGO_PLACEHOLDER_COUNT = 2;
 
 export default function CustomersSection() {
     const { __ } = useTranslate();
