@@ -316,7 +316,19 @@ class VisitaAccesoController extends Controller
         ]);
 
         $user = $request->user();
-        $sucursalId = $user->sucursal_id ?? 1;
+
+        // Both previously defaulted to company/branch "1" when the acting
+        // user lacked one, silently misattributing a real physical access
+        // event to the wrong tenant instead of failing. Same class of bug
+        // fixed in VisitaTemporalController - confirmed in QA testing
+        // (2026-08-21).
+        if (! $user->empresa_id || ! $user->sucursal_id) {
+            throw \Illuminate\Validation\ValidationException::withMessages([
+                'sucursal_id' => __('Your account is not assigned to a specific branch, so you cannot register visits. Contact your administrator.'),
+            ]);
+        }
+
+        $sucursalId = $user->sucursal_id;
 
         // Asignar código de acceso de la entidad a codigo_visitante (o generar 8D para visita particular)
         if ($validated['tipo_acceso'] === 'empleado' && !empty($validated['empleado_id'])) {
@@ -333,9 +345,27 @@ class VisitaAccesoController extends Controller
         }
         $validated['fecha_ingreso']    = now()->toDateString();
         $validated['hora_ingreso']     = now()->toTimeString();
-        $validated['empresa_id']      = $user->empresa_id ?? 1;
+        $validated['empresa_id']      = $user->empresa_id;
         $validated['sucursal_id']     = $sucursalId;
         $validated['status']          = 1; // En Instalaciones
+
+        // empleado_id/proveedor_id/productor_id/responsable_id were only
+        // exists:*, so a facility-access event could be logged against an
+        // entity from a *different company* - misattributing a real
+        // physical access record. Confirmed exploitable the same way as
+        // the identical gap fixed in VisitaTemporalController.
+        $ownershipChecks = [
+            'empleado_id'    => [Empleado::class, __('The selected employee does not belong to your branch.')],
+            'proveedor_id'   => [Proveedor::class, __('The selected supplier does not belong to your branch.')],
+            'productor_id'   => [Productor::class, __('The selected producer does not belong to your branch.')],
+            'responsable_id' => [Responsable::class, __('The selected host does not belong to your branch.')],
+        ];
+        foreach ($ownershipChecks as $field => [$modelClass, $message]) {
+            if (! empty($validated[$field])
+                && ! $modelClass::where('id', $validated[$field])->where('sucursal_id', $sucursalId)->exists()) {
+                throw \Illuminate\Validation\ValidationException::withMessages([$field => $message]);
+            }
+        }
 
         if ($validated['medio_acceso'] === 'vehicular') {
             if (!empty($validated['productor_vehiculo_id'])) {
@@ -601,11 +631,41 @@ class VisitaAccesoController extends Controller
         ]);
 
         $user = $request->user();
+
+        // Same class of bug fixed above in store(): defaulting to company/
+        // branch "1" instead of rejecting misattributes the invitation to
+        // the wrong tenant when the acting user lacks one.
+        if (! $user->empresa_id || ! $user->sucursal_id) {
+            throw \Illuminate\Validation\ValidationException::withMessages([
+                'sucursal_id' => __('Your account is not assigned to a specific branch, so you cannot register visits. Contact your administrator.'),
+            ]);
+        }
+
         $validated['anfitrion_user_id'] = $user->id;
-        $validated['empresa_id']        = $user->empresa_id ?? 1;
-        $validated['sucursal_id']       = $user->sucursal_id ?? 1;
+        $validated['empresa_id']        = $user->empresa_id;
+        $validated['sucursal_id']       = $user->sucursal_id;
         $validated['status']            = 'pendiente';
         $validated['medio_acceso']      = 'peatonal';
+
+        // anfitrion_id/proveedor_id/productor_id were only exists:*, same
+        // cross-branch gap fixed above.
+        if (! Responsable::where('id', $validated['anfitrion_id'])->where('sucursal_id', $validated['sucursal_id'])->exists()) {
+            throw \Illuminate\Validation\ValidationException::withMessages([
+                'anfitrion_id' => __('The selected host does not belong to your branch.'),
+            ]);
+        }
+        if (! empty($validated['proveedor_id'])
+            && ! Proveedor::where('id', $validated['proveedor_id'])->where('sucursal_id', $validated['sucursal_id'])->exists()) {
+            throw \Illuminate\Validation\ValidationException::withMessages([
+                'proveedor_id' => __('The selected supplier does not belong to your branch.'),
+            ]);
+        }
+        if (! empty($validated['productor_id'])
+            && ! Productor::where('id', $validated['productor_id'])->where('sucursal_id', $validated['sucursal_id'])->exists()) {
+            throw \Illuminate\Validation\ValidationException::withMessages([
+                'productor_id' => __('The selected producer does not belong to your branch.'),
+            ]);
+        }
 
         if ($request->tipo_acceso === 'visitante') {
             $nombres = trim($request->input('visitante_nombres', ''));
@@ -639,7 +699,7 @@ class VisitaAccesoController extends Controller
             }
         }
 
-        $invitacion = VisitaAccesoInvitacion::create($validated);
+        $invitacion = \App\Services\AccessCodeService::createWithRetry(fn () => VisitaAccesoInvitacion::create($validated));
 
         // Notificar al visitante por WhatsApp si proporcionó teléfono
         if (!empty($invitacion->visitante_telefono)) {

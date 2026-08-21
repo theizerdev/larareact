@@ -70,9 +70,18 @@ class VisitaAccesoInvitacion extends Model
         });
     }
 
+    /**
+     * static::max('id') runs through the Multitenantable scope, so it only
+     * sees the current tenant's own rows - but `id` is a single global
+     * auto-increment shared by every tenant. A non-super-admin therefore
+     * computes an offset from "the highest id I can see", not the real
+     * global max, which reliably collides with another tenant's invitation
+     * (same class of bug as AccessCodeService's codigo_acceso/codigo_visitante,
+     * fixed separately). Confirmed in QA testing (2026-08-21).
+     */
     public static function generarCodigoInvitacion(): string
     {
-        $ultimo = static::max('id') ?? 0;
+        $ultimo = static::withoutTenant()->max('id') ?? 0;
         $num = 90000001 + $ultimo;
         return (string) $num;
     }

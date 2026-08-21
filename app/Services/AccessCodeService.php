@@ -138,7 +138,8 @@ class AccessCodeService
                 return $createFn();
             } catch (UniqueConstraintViolationException $e) {
                 $isCodeCollision = str_contains($e->getMessage(), 'codigo_acceso')
-                    || str_contains($e->getMessage(), 'codigo_visitante');
+                    || str_contains($e->getMessage(), 'codigo_visitante')
+                    || str_contains($e->getMessage(), 'codigo_invitacion');
 
                 if (! $isCodeCollision || $attempt === $maxAttempts) {
                     throw $e;
