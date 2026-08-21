@@ -1915,7 +1915,9 @@ export default function EmpleadosIndexPage({
                     <AlertDialogHeader>
                         <AlertDialogTitle>{__('Are you sure?')}</AlertDialogTitle>
                         <AlertDialogDescription>
-                            {__('This action cannot be undone. This will permanently delete the employee record and their photos.')}
+                            {__(
+                                'This action cannot be undone. This will permanently delete the employee record, their photos, vehicles, attendance records and access/visit history.',
+                            )}
                         </AlertDialogDescription>
                     </AlertDialogHeader>
                     <AlertDialogFooter>

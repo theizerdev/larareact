@@ -365,20 +365,29 @@ class EmpleadoImportService
                 }
 
                 // Si viene codigo_acceso válido en el Excel, usarlo. Si no, conservar el existente o generar uno de 8 dígitos.
+                // Generation happens inside createWithRetry's closure (not before it) so a
+                // collision retry actually recomputes a fresh code instead of reusing the
+                // one that just failed - see AccessCodeService::createWithRetry.
                 if ($existing) {
-                    if (empty($dataToSave['codigo_acceso'])) {
-                        $dataToSave['codigo_acceso'] = !empty($existing->codigo_acceso)
-                            ? $existing->codigo_acceso
-                            : \App\Services\AccessCodeService::generate('empleado', $sucursalId);
+                    $needsCode = empty($dataToSave['codigo_acceso']) && empty($existing->codigo_acceso);
+                    if (empty($dataToSave['codigo_acceso']) && !empty($existing->codigo_acceso)) {
+                        $dataToSave['codigo_acceso'] = $existing->codigo_acceso;
                     }
-                    $existing->update($dataToSave);
+                    \App\Services\AccessCodeService::createWithRetry(function () use ($existing, &$dataToSave, $needsCode, $sucursalId) {
+                        if ($needsCode) {
+                            $dataToSave['codigo_acceso'] = \App\Services\AccessCodeService::generate('empleado', $sucursalId);
+                        }
+                        $existing->update($dataToSave);
+                    });
                     $empleado = $existing;
                     $updatedCount++;
                 } else {
-                    if (empty($dataToSave['codigo_acceso'])) {
-                        $dataToSave['codigo_acceso'] = \App\Services\AccessCodeService::generate('empleado', $sucursalId);
-                    }
-                    $empleado = Empleado::create($dataToSave);
+                    $empleado = \App\Services\AccessCodeService::createWithRetry(function () use ($dataToSave, $sucursalId) {
+                        if (empty($dataToSave['codigo_acceso'])) {
+                            $dataToSave['codigo_acceso'] = \App\Services\AccessCodeService::generate('empleado', $sucursalId);
+                        }
+                        return Empleado::create($dataToSave);
+                    });
                     $createdCount++;
                 }
 

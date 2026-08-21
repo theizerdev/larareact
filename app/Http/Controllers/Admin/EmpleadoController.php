@@ -16,6 +16,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
+use App\Services\AccessCodeService;
 use App\Services\EmpleadoImportService;
 use Inertia\Inertia;
 
@@ -102,7 +103,7 @@ class EmpleadoController extends Controller
         $data['foto_documento'] = $this->handleImageUpload($request->input('foto_documento'), 'foto_documento');
         $data['foto_documento_reverso'] = $this->handleImageUpload($request->input('foto_documento_reverso'), 'foto_documento_reverso');
 
-        $empleado = Empleado::create($data);
+        $empleado = AccessCodeService::createWithRetry(fn () => Empleado::create($data));
 
         $primerVehiculo = null;
         // Guardar vehículos

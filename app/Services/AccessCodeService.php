@@ -7,6 +7,7 @@ use App\Models\Empleado;
 use App\Models\Proveedor;
 use App\Models\Productor;
 use App\Models\VisitaAcceso;
+use Illuminate\Database\UniqueConstraintViolationException;
 
 class AccessCodeService
 {
@@ -103,5 +104,36 @@ class AccessCodeService
         }
 
         return 1;
+    }
+
+    /**
+     * generate() computes the next code from MAX(existing)+1 with no locking,
+     * so two near-simultaneous creates for the same rol/sucursal can compute
+     * the identical code; whichever inserts second throws a
+     * UniqueConstraintViolationException that, before this, wasn't caught
+     * anywhere and surfaced to the user as a raw 500. Confirmed reproducible
+     * in QA testing (2026-08-21) with two ordinary back-to-back employee
+     * creations, not just under real concurrency.
+     *
+     * Retrying re-runs $createFn, which re-generates the code from a fresh
+     * MAX() query - by then it sees the row the other request just inserted,
+     * so the new code is correct. Only retries on a codigo_acceso/
+     * codigo_visitante collision specifically, so unrelated unique-constraint
+     * failures (e.g. a duplicate document number) still fail immediately.
+     */
+    public static function createWithRetry(\Closure $createFn, int $maxAttempts = 3)
+    {
+        for ($attempt = 1; $attempt <= $maxAttempts; $attempt++) {
+            try {
+                return $createFn();
+            } catch (UniqueConstraintViolationException $e) {
+                $isCodeCollision = str_contains($e->getMessage(), 'codigo_acceso')
+                    || str_contains($e->getMessage(), 'codigo_visitante');
+
+                if (! $isCodeCollision || $attempt === $maxAttempts) {
+                    throw $e;
+                }
+            }
+        }
     }
 }
