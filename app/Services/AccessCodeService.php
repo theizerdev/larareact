@@ -78,22 +78,32 @@ class AccessCodeService
 
     /**
      * Obtiene el siguiente número consecutivo para un prefijo dado de 4 dígitos.
+     *
+     * Empleado/Productor/Proveedor/VisitaAcceso all use the Multitenantable
+     * trait, which silently scopes every query - including this one - to the
+     * current user's own empresa_id. But codigo_acceso/codigo_visitante is
+     * unique *globally* at the DB level, across every tenant. Without
+     * withoutTenant() here, two different companies both creating their
+     * first record for the same branch-code+role would both compute "0001"
+     * and the second insert would hit the unique constraint every time -
+     * not an occasional race, a guaranteed collision. Confirmed in QA
+     * testing (2026-08-21).
      */
     protected static function getNextConsecutivo(string $rolDigit, string $prefix): int
     {
         switch ($rolDigit) {
             case self::ROL_EMPLEADOS:
-                $maxCode = Empleado::where('codigo_acceso', 'like', "{$prefix}%")->max('codigo_acceso');
+                $maxCode = Empleado::withoutTenant()->where('codigo_acceso', 'like', "{$prefix}%")->max('codigo_acceso');
                 break;
             case self::ROL_PRODUCTORES:
-                $maxCode = Productor::where('codigo_acceso', 'like', "{$prefix}%")->max('codigo_acceso');
+                $maxCode = Productor::withoutTenant()->where('codigo_acceso', 'like', "{$prefix}%")->max('codigo_acceso');
                 break;
             case self::ROL_PROVEEDORES:
-                $maxCode = Proveedor::where('codigo_acceso', 'like', "{$prefix}%")->max('codigo_acceso');
+                $maxCode = Proveedor::withoutTenant()->where('codigo_acceso', 'like', "{$prefix}%")->max('codigo_acceso');
                 break;
             case self::ROL_VISITANTES:
             default:
-                $maxCode = VisitaAcceso::where('codigo_visitante', 'like', "{$prefix}%")->max('codigo_visitante');
+                $maxCode = VisitaAcceso::withoutTenant()->where('codigo_visitante', 'like', "{$prefix}%")->max('codigo_visitante');
                 break;
         }
 

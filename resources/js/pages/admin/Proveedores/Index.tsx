@@ -1122,6 +1122,11 @@ export default function ProveedoresIndexPage({
                             <span className="block mt-2 font-semibold text-slate-800 dark:text-slate-200">
                                 {deletingProveedor?.razon_social}
                             </span>
+                            <span className="block mt-2">
+                                {__(
+                                    'This action cannot be undone. This will also permanently delete their employees, vehicles and access/visit history.',
+                                )}
+                            </span>
                         </DialogDescription>
                     </DialogHeader>
                     <DialogFooter>

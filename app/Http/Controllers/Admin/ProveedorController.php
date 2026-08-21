@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\ProveedorRequest;
 use App\Models\Proveedor;
+use App\Services\AccessCodeService;
 use App\Models\Pais;
 use App\Models\Empresa;
 use App\Models\Sucursal;
@@ -78,7 +79,7 @@ class ProveedorController extends Controller
         $data['user_id'] = $data['user_id'] ?? $user->id;
         $data['documento_identidad'] = $data['documento_identidad'] ?? $data['rfc'] ?? $data['curp'] ?? ('PROV_' . uniqid());
 
-        $proveedor = Proveedor::create($data);
+        $proveedor = AccessCodeService::createWithRetry(fn () => Proveedor::create($data));
         $this->enviarCarnetWhatsAppInternal($proveedor);
 
         return redirect()->back();
