@@ -1,6 +1,6 @@
 import { Headset } from 'lucide-react';
 
-const GLPI_URL = 'https://glpi.innovacionmovil.com/';
+const GLPI_URL = 'https://itsm-driscolls.innovacionmovil.com/';
 
 export function HelpDeskButton() {
     return (
