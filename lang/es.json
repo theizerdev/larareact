@@ -969,6 +969,7 @@
   "All Departments": "Todos los Departamentos",
   "Job Position": "Puesto de Trabajo",
   "This action cannot be undone. This will permanently delete the employee record and their photos.": "Esta acción no se puede deshacer. Esto eliminará permanentemente el registro del empleado y sus fotos.",
+  "This action cannot be undone. This will also permanently delete its departments, positions, hosts, service visits and access/visit history.": "Esta acción no se puede deshacer. También eliminará permanentemente sus departamentos, cargos, responsables, visitas y el historial de accesos asociado.",
   "There was an error deleting the employee.": "Hubo un error al eliminar al empleado.",
   "organizacion": "Organización",
   "configuracion": "Configuración",

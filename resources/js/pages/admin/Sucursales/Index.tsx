@@ -748,7 +748,9 @@ return;
                         <AlertDialogDescription>
                             {__('Are you sure you want to delete the branch')}{' '}
                             <strong>{deletingSucursal?.nombre}</strong>?{' '}
-                            {__('This action cannot be undone.')}
+                            {__(
+                                'This action cannot be undone. This will also permanently delete its departments, positions, hosts, service visits and access/visit history.',
+                            )}
                         </AlertDialogDescription>
                     </AlertDialogHeader>
                     <AlertDialogFooter>
