@@ -111,9 +111,19 @@ class RoleController extends Controller
 
     public function update(Request $request, Role $role)
     {
-        // Don't allow changing the name of Super Admin if you want to protect it
-        if ($role->name === 'Super Admin' && $request->name !== 'Super Admin') {
-            return back()->withErrors(['name' => 'No puedes cambiar el nombre del Super Admin.']);
+        // This previously checked $role->name === 'Super Admin', but the
+        // seeded role is actually named "super-admin" - the check never
+        // matched, so it never protected anything. Confirmed in QA testing
+        // (2026-08-21). Also extended to block stripping its permissions,
+        // not just renaming it, since that's just as disabling.
+        if ($this->isSuperAdminRole($role)) {
+            if ($request->name !== $role->name) {
+                return back()->withErrors(['name' => 'No puedes cambiar el nombre del Super Admin.']);
+            }
+
+            if ($request->has('permissions') && count((array) $request->input('permissions', [])) < Permission::count()) {
+                return back()->withErrors(['permissions' => 'No puedes quitarle permisos al rol Super Admin.']);
+            }
         }
 
         $validated = $request->validate([
@@ -137,12 +147,22 @@ class RoleController extends Controller
 
     public function destroy(Role $role)
     {
-        if ($role->name === 'Super Admin') {
+        if ($this->isSuperAdminRole($role)) {
             return back()->withErrors(['error' => 'No puedes eliminar el rol Super Admin.']);
         }
 
         $role->delete();
 
         return back();
+    }
+
+    /**
+     * Same alias list App\Models\User::isSuperAdmin() checks against, so
+     * this stays correct regardless of which exact casing/spelling of the
+     * role a given install ends up seeding.
+     */
+    private function isSuperAdminRole(Role $role): bool
+    {
+        return in_array($role->name, ['Super Administrador', 'super-admin', 'Super Admin', 'super_admin'], true);
     }
 }
