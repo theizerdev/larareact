@@ -2,7 +2,11 @@
 
 namespace App\Http\Requests;
 
+use App\Models\Cargo;
+use App\Models\Departamento;
+use App\Models\Sucursal;
 use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Validation\Validator;
 
 class ResponsableRequest extends FormRequest
 {
@@ -33,5 +37,48 @@ class ResponsableRequest extends FormRequest
             'user_id' => 'required|exists:users,id',
             'status' => 'nullable|integer|in:0,1',
         ];
+    }
+
+    /**
+     * Same cross-tenant gap found and fixed in DepartamentoRequest/CargoRequest.
+     */
+    public function withValidator(Validator $validator): void
+    {
+        $validator->after(function (Validator $validator) {
+            $user = $this->user();
+
+            if (! $user || $user->isSuperAdmin()) {
+                return;
+            }
+
+            if ($user->empresa_id && (int) $this->input('empresa_id') !== (int) $user->empresa_id) {
+                $validator->errors()->add('empresa_id', __('You are not allowed to assign this company.'));
+            }
+
+            if ($user->sucursal_id && (int) $this->input('sucursal_id') !== (int) $user->sucursal_id) {
+                $validator->errors()->add('sucursal_id', __('You are not allowed to assign this branch.'));
+            }
+        });
+
+        $validator->after(function (Validator $validator) {
+            $sucursalId = $this->input('sucursal_id');
+            $departamentoId = $this->input('departamento_id');
+            $cargoId = $this->input('cargo_id');
+
+            if ($this->input('empresa_id') && $sucursalId
+                && ! Sucursal::where('id', $sucursalId)->where('empresa_id', $this->input('empresa_id'))->exists()) {
+                $validator->errors()->add('sucursal_id', __('The selected branch does not belong to the selected company.'));
+            }
+
+            if ($departamentoId && $sucursalId
+                && ! Departamento::where('id', $departamentoId)->where('sucursal_id', $sucursalId)->exists()) {
+                $validator->errors()->add('departamento_id', __('The selected department does not belong to the selected branch.'));
+            }
+
+            if ($cargoId && $departamentoId
+                && ! Cargo::where('id', $cargoId)->where('departamento_id', $departamentoId)->exists()) {
+                $validator->errors()->add('cargo_id', __('The selected position does not belong to the selected department.'));
+            }
+        });
     }
 }

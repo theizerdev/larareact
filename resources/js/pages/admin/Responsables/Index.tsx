@@ -839,7 +839,9 @@ return;
                         <AlertDialogDescription>
                             {__('Are you sure you want to delete this responsible?')}{' '}
                             <strong>{deletingResponsable?.nombres} {deletingResponsable?.apellidos}</strong>?{' '}
-                            {__('This action cannot be undone.')}
+                            {__(
+                                'This action cannot be undone. This will also permanently delete their pending access authorizations.',
+                            )}
                         </AlertDialogDescription>
                     </AlertDialogHeader>
                     <AlertDialogFooter>
