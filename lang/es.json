@@ -1770,6 +1770,9 @@
   "The selected department does not belong to the selected branch.": "El departamento seleccionado no pertenece a la sucursal seleccionada.",
   "The selected position does not belong to the selected department.": "El cargo seleccionado no pertenece al departamento seleccionado.",
   "The selected host does not belong to the selected branch.": "El responsable seleccionado no pertenece a la sucursal seleccionada.",
+  "Your account is not assigned to a specific branch, so you cannot register visits. Contact your administrator.": "Tu cuenta no tiene una sucursal específica asignada, así que no puedes registrar visitas. Contacta a tu administrador.",
+  "The selected employee does not belong to your branch.": "El empleado seleccionado no pertenece a tu sucursal.",
+  "The selected host does not belong to your branch.": "El responsable seleccionado no pertenece a tu sucursal.",
   "This action cannot be undone. This will permanently delete the employee record, their photos, vehicles, attendance records and access/visit history.": "Esta acción no se puede deshacer. Esto eliminará permanentemente el registro del empleado, sus fotos, vehículos, registros de asistencia e historial de accesos/visitas.",
   "This action cannot be undone. This will also permanently delete their pending access authorizations.": "Esta acción no se puede deshacer. También eliminará permanentemente sus autorizaciones de acceso pendientes."
 }

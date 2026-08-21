@@ -92,9 +92,37 @@ class VisitaTemporalController extends Controller
         $isEntrega = in_array((int) $request->input('tipo_servicio_id'), self::ENTREGA_IDS);
         $validated = $request->validate($this->validationRules($isEntrega));
 
-        $user                        = $request->user();
+        $user = $request->user();
+
+        // sucursal_id is NOT NULL on this table, but a company-wide admin
+        // account (empresa_id set, sucursal_id not) can reach this endpoint
+        // with permission alone. Confirmed in QA testing (2026-08-21): that
+        // combination previously hit an uncaught NOT NULL constraint
+        // violation and surfaced as a raw 500 with no explanation.
+        if (! $user->sucursal_id) {
+            throw \Illuminate\Validation\ValidationException::withMessages([
+                'sucursal_id' => __('Your account is not assigned to a specific branch, so you cannot register visits. Contact your administrator.'),
+            ]);
+        }
+
         $validated['empresa_id']     = $user->empresa_id;
         $validated['sucursal_id']    = $user->sucursal_id;
+
+        // empleado_id/responsable_id only checked exists:*, not that they
+        // belong to this same branch - could otherwise register a visit
+        // against another company's employee (and trigger a WhatsApp
+        // notification to them). Confirmed in QA testing (2026-08-21).
+        if (! \App\Models\Empleado::where('id', $validated['empleado_id'])->where('sucursal_id', $validated['sucursal_id'])->exists()) {
+            throw \Illuminate\Validation\ValidationException::withMessages([
+                'empleado_id' => __('The selected employee does not belong to your branch.'),
+            ]);
+        }
+        if (! \App\Models\Responsable::where('id', $validated['responsable_id'])->where('sucursal_id', $validated['sucursal_id'])->exists()) {
+            throw \Illuminate\Validation\ValidationException::withMessages([
+                'responsable_id' => __('The selected host does not belong to your branch.'),
+            ]);
+        }
+
         $validated['foto_carnet']    = $this->handleImageUpload($request->input('foto_carnet'), 'foto_carnet');
         $validated['foto_documento'] = $this->handleImageUpload($request->input('foto_documento'), 'foto_documento');
 
