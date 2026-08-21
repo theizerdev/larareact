@@ -1,0 +1,85 @@
+import { createInertiaApp } from '@inertiajs/react';
+import HelpDeskButton from '@/components/help-desk-button';
+import { Toaster } from '@/components/ui/sonner';
+import { TooltipProvider } from '@/components/ui/tooltip';
+import { initializeTheme } from '@/hooks/use-appearance';
+import AdminLayout from '@/layouts/admin-layout';
+import AppLayout from '@/layouts/app-layout';
+import AuthLayout from '@/layouts/auth-layout';
+
+const appName = import.meta.env.VITE_APP_NAME || 'Laravel';
+
+createInertiaApp({
+    title: (title) => (title ? `${title} - ${appName}` : appName),
+    resolve: (name) => {
+        const pages = import.meta.glob(
+            ['./pages/**/*.tsx', '!./pages/**/Partials/**/*.tsx'],
+            { eager: true }
+        ) as Record<string, any>;
+        
+        const path = `./pages/${name}.tsx`;
+        const pathLower = path.toLowerCase();
+        const matchingKey = Object.keys(pages).find((key) => key.toLowerCase() === pathLower);
+        
+        if (matchingKey) {
+            return pages[matchingKey];
+        }
+
+        return pages[path];
+    },
+    layout: (name) => {
+        switch (true) {
+            case name === 'welcome':
+            case name === 'Error':
+            case name === 'admin/integrations/navigation':
+            case name === 'admin/integrations/map':
+            case name.startsWith('preregistro/'):
+            case name.startsWith('preregistro-empleado/'):
+            case name.startsWith('preregistro-visita/'):
+            case name.startsWith('preregistro-productor/'):
+            case name.startsWith('Public/'):
+            case name === 'Public/AutorizarAcceso':
+            case name === 'admin/VisitasAccesos/PaseDigital':
+            case name.toLowerCase().endsWith('/pasedigital'):
+            case name === 'admin/VisitasAccesos/GaritaControl':
+            case name.toLowerCase().endsWith('/garitacontrol'):
+            case name.toLowerCase().endsWith('/kiosko'):
+            case name.toLowerCase().endsWith('/carnet'):
+                return null;
+            case name.startsWith('auth/'):
+                return AuthLayout;
+            case name.toLowerCase().startsWith('admin/'):
+            case name === 'dashboard':
+            case name.toLowerCase().startsWith('settings/'):
+                return AdminLayout;
+            default:
+                return AppLayout;
+        }
+    },
+    strictMode: true,
+    withApp(app) {
+        return (
+            <TooltipProvider delayDuration={0}>
+                {app}
+                <Toaster />
+                <HelpDeskButton />
+            </TooltipProvider>
+        );
+    },
+    progress: {
+        color: '#4B5563',
+    },
+});
+
+// This will set light / dark mode on load...
+initializeTheme();
+
+// Register PWA service worker (Kiosko offline support)
+if ('serviceWorker' in navigator) {
+    window.addEventListener('load', () => {
+        navigator.serviceWorker
+            .register('/sw.js', { scope: '/' })
+            .then((r) => console.info('[PWA] Service Worker registrado:', r.scope))
+            .catch((e) => console.warn('[PWA] SW no disponible en dev:', e));
+    });
+}
