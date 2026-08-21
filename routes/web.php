@@ -90,7 +90,20 @@ Route::post('/admin/productores/{productor}/send-carnet-whatsapp', [\App\Http\Co
 
 use App\Http\Controllers\Admin\RelojChecadorKioskoController;
 
-
+// SAFE STOPGAP, not necessarily the final design - see QA notes
+// (2026-08-21). These had no auth middleware at all. buscarEmpleado()
+// does `->when($empresaId, fn ($q) => $q->where('empresa_id', $empresaId))`
+// - when unauthenticated $empresaId is null, so the when() condition is
+// false and the company filter is silently skipped entirely, on top of
+// Multitenantable's own scope also being inactive for an anonymous
+// request. Confirmed exploitable: an anonymous request found a real
+// employee's PII by access code across company boundaries, then
+// successfully registered a fake clock-in for them - which triggers real
+// LFT payroll recalculation and a real WhatsApp notification to that
+// employee. This is worse than the garita leak (read+write, real
+// financial/payroll impact), fixed the same way pending confirmation
+// this doesn't break how physical time-clock kiosks actually operate.
+Route::middleware('auth')->group(function () {
     Route::get('admin/reloj-checador/kiosko', [RelojChecadorKioskoController::class, 'kioskoView'])
         ->name('reloj-checador.kiosko');
 
@@ -99,6 +112,7 @@ use App\Http\Controllers\Admin\RelojChecadorKioskoController;
 
     Route::post('admin/api/reloj-checador/registrar', [RelojChecadorKioskoController::class, 'registrarMarcaje'])
         ->name('api.reloj-checador.registrar');
+});
 
 
 
