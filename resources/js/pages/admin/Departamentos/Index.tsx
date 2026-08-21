@@ -833,7 +833,9 @@ return;
                         <AlertDialogDescription>
                             {__('Are you sure you want to delete this department?')}{' '}
                             <strong>{deletingDepartamento?.nombre}</strong>?{' '}
-                            {__('This action cannot be undone.')}
+                            {__(
+                                'This action cannot be undone. This will also permanently delete its job positions.',
+                            )}
                         </AlertDialogDescription>
                     </AlertDialogHeader>
                     <AlertDialogFooter>
