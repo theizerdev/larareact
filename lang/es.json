@@ -1762,6 +1762,7 @@
   "Lockout": "Bloqueo de Seguridad",
   "Password Reset": "Restablecimiento de Clave",
   "This action cannot be undone. This will also permanently delete its job positions.": "Esta acción no se puede deshacer. También eliminará permanentemente sus cargos asociados.",
+  "You are not allowed to assign the super-admin role.": "No tienes permiso para asignar el rol de super-admin.",
   "You are not allowed to assign this company.": "No tienes permiso para asignar esta empresa.",
   "You are not allowed to assign this branch.": "No tienes permiso para asignar esta sucursal.",
   "The selected branch does not belong to the selected company.": "La sucursal seleccionada no pertenece a la empresa seleccionada.",
