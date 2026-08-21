@@ -34,9 +34,21 @@ Route::middleware('auth')->group(function () {
 
 Route::middleware(['guest'])->group(function () {
     Route::get('/forgot-password', [ForgotPasswordOtpController::class, 'show'])->name('password.request');
-    Route::post('/forgot-password/send-otp', [ForgotPasswordOtpController::class, 'sendOtp'])->name('password.send-otp');
-    Route::post('/forgot-password/verify-otp', [ForgotPasswordOtpController::class, 'verifyOtp'])->name('password.verify-otp');
-    Route::post('/forgot-password/reset', [ForgotPasswordOtpController::class, 'resetPassword'])->name('password.otp-reset');
+    Route::post('/forgot-password/send-otp', [ForgotPasswordOtpController::class, 'sendOtp'])
+        ->middleware('throttle:6,1')
+        ->name('password.send-otp');
+    // verify-otp had NO throttling at all - a 6-digit OTP is only 1M
+    // possibilities, and confirmed in QA testing (2026-08-21): 15 rapid
+    // wrong guesses all went through with zero pushback. throttle:6,1
+    // limits brute force to 60 guesses over the OTP's 10-minute validity
+    // window per IP, matching the throttle:6,1 already used on
+    // settings/password elsewhere in this app.
+    Route::post('/forgot-password/verify-otp', [ForgotPasswordOtpController::class, 'verifyOtp'])
+        ->middleware('throttle:6,1')
+        ->name('password.verify-otp');
+    Route::post('/forgot-password/reset', [ForgotPasswordOtpController::class, 'resetPassword'])
+        ->middleware('throttle:6,1')
+        ->name('password.otp-reset');
 });
 
 Route::post('locale', function (Request $request) {
