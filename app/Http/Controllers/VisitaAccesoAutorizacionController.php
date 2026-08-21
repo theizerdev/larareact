@@ -3,6 +3,8 @@
 namespace App\Http\Controllers;
 
 use App\Models\VisitaAccesoAutorizacion;
+use App\Notifications\VisitaAutorizacionRespondidaNotification;
+use App\Services\NotificationDispatcher;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 
@@ -69,6 +71,18 @@ class VisitaAccesoAutorizacionController extends Controller
             'motivo_autorizacion' => $request->motivo_autorizacion,
             'autorizado_at'       => now(),
         ]);
+
+        $autorizacion->loadMissing('responsable');
+
+        NotificationDispatcher::notifyPermission(
+            ['control_acceso.view', 'visitas_temporales.view'],
+            $autorizacion->empresa_id,
+            new VisitaAutorizacionRespondidaNotification(
+                autorizado: $status === 'autorizado',
+                responsableNombre: $autorizacion->responsable?->nombre_completo ?? 'El responsable',
+                empleadoNombre: $autorizacion->datos_solicitud['empleado_nombre'] ?? 'un empleado',
+            ),
+        );
 
         return redirect()->back()->with('success', $status === 'autorizado' ? 'Acceso autorizado exitosamente.' : 'Acceso rechazado.');
     }

@@ -19,6 +19,7 @@ class WelcomeNotification extends Notification
         return [
             'title' => 'Welcome to the system',
             'message' => 'Your account has been created successfully.',
+            'params' => [],
         ];
     }
 }

@@ -20,7 +20,10 @@ use App\Models\TipoServicio;
 use App\Models\Empresa;
 use App\Models\Sucursal;
 use App\Models\AsistenciaMarcaje;
+use App\Notifications\VisitaAccesoRegistradaNotification;
+use App\Notifications\VisitaAutorizacionSolicitadaNotification;
 use App\Services\CalculoAsistenciaLftService;
+use App\Services\NotificationDispatcher;
 use App\Services\WhatsAppService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
@@ -411,6 +414,13 @@ class VisitaAccesoController extends Controller
 
         $acceso = VisitaAcceso::create($validated);
 
+        NotificationDispatcher::notifyPermission(
+            ['control_acceso.view', 'visitas_temporales.view'],
+            $acceso->empresa_id,
+            new VisitaAccesoRegistradaNotification($acceso),
+            excludeUserIds: [$user->id],
+        );
+
         // Integración con Reloj Checador: Si es un empleado, registrar marcaje de entrada automático
         if ($validated['tipo_acceso'] === 'empleado' && !empty($validated['empleado_id'])) {
             $empleado = Empleado::find($validated['empleado_id']);
@@ -572,6 +582,17 @@ class VisitaAccesoController extends Controller
             'empresa_id'     => $empresa->id ?? 1,
             'sucursal_id'    => $user->sucursal_id ?? 1,
         ]);
+
+        NotificationDispatcher::notifyPermission(
+            ['control_acceso.view', 'visitas_temporales.view'],
+            $autorizacionRec->empresa_id,
+            new VisitaAutorizacionSolicitadaNotification(
+                $autorizacionRec,
+                "{$responsable->nombres} {$responsable->apellidos}",
+                $empleadoNombre,
+            ),
+            excludeUserIds: [$user->id],
+        );
 
         $publicUrl = route('autorizar-acceso.show', ['token' => $token]);
 

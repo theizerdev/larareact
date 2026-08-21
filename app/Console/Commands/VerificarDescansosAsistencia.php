@@ -4,7 +4,9 @@ namespace App\Console\Commands;
 
 use App\Models\AsistenciaMarcaje;
 use App\Models\Empleado;
+use App\Notifications\DescansoExcedidoNotification;
 use App\Services\NotificacionAsistenciaWhatsAppService;
+use App\Services\NotificationDispatcher;
 use Carbon\Carbon;
 use Illuminate\Console\Command;
 
@@ -107,6 +109,17 @@ class VerificarDescansosAsistencia extends Command
             if (cache()->has($cacheKey) && ! $isForce) {
                 $this->warn("• [EXCEDIDO - YA ALERTADO] Empleado #{$empleado->id} ({$empleado->nombre_completo}) - Excedido por {$minutosExcedidos} min (Notificación previa almacenada en caché).");
                 continue;
+            }
+
+            // Alerta in-app a supervisores (independiente del envío por WhatsApp al empleado)
+            $appCacheKey = "alerta_descanso_excedido_inapp_{$marcajeSalida->id}";
+            if (! cache()->has($appCacheKey) || $isForce) {
+                NotificationDispatcher::notifyPermission(
+                    ['asistencia.bitacora', 'asistencia.configuracion'],
+                    $empleado->empresa_id,
+                    new DescansoExcedidoNotification($empleado->nombre_completo, $conceptoStr, $minutosExcedidos),
+                );
+                cache()->put($appCacheKey, true, max($now->secondsUntilEndOfDay(), 60));
             }
 
             // Enviar notificación por WhatsApp

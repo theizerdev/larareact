@@ -7,7 +7,9 @@ use App\Models\Empresa;
 use App\Models\Pais;
 use App\Models\Sucursal;
 use App\Models\User;
+use App\Notifications\NuevoUsuarioNotification;
 use App\Notifications\WelcomeNotification;
+use App\Services\NotificationDispatcher;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Log;
@@ -95,6 +97,13 @@ class UserController extends Controller
             }
 
             $user->notify(new WelcomeNotification());
+
+            NotificationDispatcher::notifyPermission(
+                'users.view',
+                $user->empresa_id,
+                new NuevoUsuarioNotification($user, $request->user()->name),
+                excludeUserIds: [$user->id, $request->user()->id],
+            );
 
             return back()->with('notification', [
                 'type' => 'success',
