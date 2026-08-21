@@ -7,6 +7,7 @@ use App\Models\Empresa;
 use App\Models\Pais;
 use App\Models\Sucursal;
 use App\Models\User;
+use App\Notifications\WelcomeNotification;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Log;
@@ -92,6 +93,8 @@ class UserController extends Controller
             if (isset($validated['roles'])) {
                 $user->syncRoles($validated['roles']);
             }
+
+            $user->notify(new WelcomeNotification());
 
             return back()->with('notification', [
                 'type' => 'success',

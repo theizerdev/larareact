@@ -1,4 +1,4 @@
-import { Link, usePage } from '@inertiajs/react';
+import { Link, router, usePage } from '@inertiajs/react';
 import {
     Bell,
     Check,
@@ -237,7 +237,7 @@ export default function AdminSaasLayout({
     breadcrumbs = [],
 }: AdminSaasLayoutProps) {
     const page = usePage();
-    const { auth, name } = page.props;
+    const { auth, name, notifications, unreadNotificationsCount } = page.props;
     const getInitials = useInitials();
     const {
         settings,
@@ -256,30 +256,23 @@ export default function AdminSaasLayout({
         return userPermissions.includes(permission);
     };
 
-    const [notifications, setNotifications] = React.useState([
-        {
-            id: '1',
-            title: 'Welcome to the system',
-            message: 'Your account has been created successfully.',
-            time: 'A few minutes ago',
-            read: false,
-        },
-        {
-            id: '2',
-            title: 'Update completed',
-            message: 'The system has been updated successfully.',
-            time: '2 hours ago',
-            read: false,
-        },
-    ]);
-
     const markAsRead = (id: string) => {
-        setNotifications((prev) =>
-            prev.map((n) => (n.id === id ? { ...n, read: true } : n)),
+        router.post(
+            `/notifications/${id}/read`,
+            {},
+            { preserveScroll: true, preserveState: true, only: ['notifications', 'unreadNotificationsCount'] },
         );
     };
 
-    const unreadCount = notifications.filter((n) => !n.read).length;
+    const markAllAsRead = () => {
+        router.post(
+            '/notifications/read-all',
+            {},
+            { preserveScroll: true, preserveState: true, only: ['notifications', 'unreadNotificationsCount'] },
+        );
+    };
+
+    const unreadCount = unreadNotificationsCount;
 
     return (
         <TooltipProvider delayDuration={0}>
@@ -931,6 +924,8 @@ export default function AdminSaasLayout({
                                             variant="ghost"
                                             size="sm"
                                             className="h-auto px-2 py-1 text-xs"
+                                            onClick={markAllAsRead}
+                                            disabled={unreadCount === 0}
                                         >
                                             {__('Mark all as read')}
                                         </Button>
@@ -964,19 +959,13 @@ export default function AdminSaasLayout({
                                                             />
                                                             <div className="flex-1 space-y-1">
                                                                 <p className="text-sm font-medium">
-                                                                    {__(
-                                                                        notification.title,
-                                                                    )}
+                                                                    {notification.title}
                                                                 </p>
                                                                 <p className="text-xs text-muted-foreground">
-                                                                    {__(
-                                                                        notification.message,
-                                                                    )}
+                                                                    {notification.message}
                                                                 </p>
                                                                 <p className="text-xs text-muted-foreground">
-                                                                    {__(
-                                                                        notification.time,
-                                                                    )}
+                                                                    {notification.time}
                                                                 </p>
                                                             </div>
                                                         </div>

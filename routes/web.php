@@ -129,6 +129,10 @@ Route::middleware('auth')->group(function () {
 
 
 
+if (file_exists(__DIR__.'/notifications.php')) {
+    require __DIR__.'/notifications.php';
+}
+
 if (file_exists(__DIR__.'/larareact-settings.php')) {
     require __DIR__.'/larareact-settings.php';
 }

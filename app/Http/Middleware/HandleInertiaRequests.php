@@ -61,6 +61,18 @@ class HandleInertiaRequests extends Middleware
                 ? json_decode(file_get_contents($path) ?: '{}', true)
                 : [],
             'notification' => fn () => $request->session()->pull('notification'),
+            'notifications' => $request->user()
+                ? fn () => $request->user()->notifications()->latest()->limit(10)->get()->map(fn ($n) => [
+                    'id' => $n->id,
+                    'title' => __($n->data['title'] ?? ''),
+                    'message' => __($n->data['message'] ?? ''),
+                    'time' => $n->created_at->diffForHumans(),
+                    'read' => ! is_null($n->read_at),
+                ])
+                : [],
+            'unreadNotificationsCount' => $request->user()
+                ? fn () => $request->user()->unreadNotifications()->count()
+                : 0,
         ];
     }
 }
