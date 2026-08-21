@@ -5,12 +5,14 @@ import {
     Radar,
     ScanFace,
     ScrollText,
+    X,
 } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 import { useTranslate } from '@/hooks/use-translate';
 import { cn } from '@/lib/utils';
 
-type StepStatus = 'waiting' | 'active' | 'done';
+type StepStatus = 'waiting' | 'active' | 'done' | 'denied';
+type DenyReason = 'watchlist' | 'legal';
 
 const STEP_ICONS = [FileCheck2, ScanFace, Radar, ListChecks];
 
@@ -27,6 +29,14 @@ const QUEUE_NAMES = [
     'A. Vázquez Lira',
     'L. Ontiveros',
     'Grupo Delta Norte',
+];
+// null = access authorized; otherwise the reason the watchlist step denied it.
+const QUEUE_DENY: Array<DenyReason | null> = [
+    null,
+    'watchlist',
+    null,
+    'legal',
+    null,
 ];
 
 function clockNow() {
@@ -56,9 +66,16 @@ export default function AccessDemoPanel() {
         name: string;
         roleKey: string;
         folio: number;
+        denyReason: DenyReason | null;
     } | null>(null);
     const [ledger, setLedger] = useState<
-        Array<{ time: string; folio: number; name: string; fresh: boolean }>
+        Array<{
+            time: string;
+            folio: number;
+            name: string;
+            fresh: boolean;
+            denyReason: DenyReason | null;
+        }>
     >([]);
 
     const panelRef = useRef<HTMLDivElement>(null);
@@ -79,12 +96,16 @@ export default function AccessDemoPanel() {
             '(prefers-reduced-motion: reduce)',
         ).matches;
 
-        const pushLedger = (name: string, folio: number) => {
+        const pushLedger = (
+            name: string,
+            folio: number,
+            denyReason: DenyReason | null,
+        ) => {
             setLedger((prev) =>
-                [{ time: clockNow(), folio, name, fresh: true }, ...prev].slice(
-                    0,
-                    4,
-                ),
+                [
+                    { time: clockNow(), folio, name, fresh: true, denyReason },
+                    ...prev,
+                ].slice(0, 4),
             );
         };
 
@@ -97,16 +118,22 @@ export default function AccessDemoPanel() {
 
             const roleKey = ROLE_KEYS[idxRef.current % ROLE_KEYS.length];
             const name = QUEUE_NAMES[idxRef.current % QUEUE_NAMES.length];
+            const denyReason = QUEUE_DENY[idxRef.current % QUEUE_DENY.length];
             idxRef.current += 1;
             folioRef.current += 1;
             const folio = folioRef.current;
-            setCurrent({ name, roleKey, folio });
+            setCurrent({ name, roleKey, folio, denyReason });
 
             if (reduceMotion) {
-                setSteps(['done', 'done', 'done', 'done']);
+                setSteps([
+                    'done',
+                    'done',
+                    'done',
+                    denyReason ? 'denied' : 'done',
+                ]);
                 setSealOn(true);
                 setVerdictOn(true);
-                pushLedger(name, folio);
+                pushLedger(name, folio, denyReason);
 
                 return;
             }
@@ -129,7 +156,13 @@ export default function AccessDemoPanel() {
                 at(
                     () =>
                         setSteps((s) =>
-                            s.map((v, j) => (j === i ? 'done' : v)),
+                            s.map((v, j) =>
+                                j === i
+                                    ? i === 3 && denyReason
+                                        ? 'denied'
+                                        : 'done'
+                                    : v,
+                            ),
                         ),
                     t,
                 );
@@ -138,7 +171,7 @@ export default function AccessDemoPanel() {
             at(() => {
                 setSealOn(true);
                 setVerdictOn(true);
-                pushLedger(name, folio);
+                pushLedger(name, folio, denyReason);
             }, t + 180);
             at(runCycle, t + 3400);
         }
@@ -202,6 +235,15 @@ export default function AccessDemoPanel() {
         socio_refacciones: __('Business partner · Spare-parts supply'),
     };
 
+    const denyLabels: Record<DenyReason, string> = {
+        watchlist: __('Match found'),
+        legal: __('Restricted'),
+    };
+    const denyReasons: Record<DenyReason, string> = {
+        watchlist: __('PLD/AML watchlist match'),
+        legal: __('Active legal restriction'),
+    };
+
     return (
         <div
             ref={panelRef}
@@ -239,8 +281,9 @@ export default function AccessDemoPanel() {
 
             <div className="px-[1.2rem] pt-[.4rem] pb-[.6rem]">
                 {stepDefs.map((step, i) => {
-                    const Icon = STEP_ICONS[i];
                     const status = steps[i];
+                    const Icon =
+                        status === 'denied' ? X : STEP_ICONS[i];
 
                     return (
                         <div
@@ -256,6 +299,8 @@ export default function AccessDemoPanel() {
                                         'animate-hosho-scan border-transparent bg-hosho-coral-tint text-hosho-coral',
                                     status === 'done' &&
                                         'border-transparent bg-hosho-jade-tint text-hosho-jade',
+                                    status === 'denied' &&
+                                        'border-transparent bg-hosho-coral-tint text-hosho-coral',
                                 )}
                             >
                                 <Icon
@@ -266,7 +311,9 @@ export default function AccessDemoPanel() {
                             <span
                                 className={cn(
                                     'text-[.92rem]',
-                                    status === 'done' || status === 'active'
+                                    status === 'done' ||
+                                        status === 'active' ||
+                                        status === 'denied'
                                         ? 'text-hosho-ink'
                                         : 'text-hosho-ink-soft',
                                 )}
@@ -283,6 +330,8 @@ export default function AccessDemoPanel() {
                                         'bg-hosho-coral-tint text-hosho-coral',
                                     status === 'done' &&
                                         'bg-hosho-jade-tint text-hosho-jade',
+                                    status === 'denied' &&
+                                        'bg-hosho-coral-tint text-hosho-coral',
                                 )}
                             >
                                 <i className="not-italic">
@@ -290,10 +339,19 @@ export default function AccessDemoPanel() {
                                         ? phaseWord[i]
                                         : status === 'done'
                                           ? __('Verified')
-                                          : __('Pending')}
+                                          : status === 'denied' &&
+                                              current?.denyReason
+                                            ? denyLabels[current.denyReason]
+                                            : __('Pending')}
                                 </i>
                                 {status === 'done' && (
                                     <Check
+                                        className="size-[11px]"
+                                        strokeWidth={3}
+                                    />
+                                )}
+                                {status === 'denied' && (
+                                    <X
                                         className="size-[11px]"
                                         strokeWidth={3}
                                     />
@@ -306,20 +364,32 @@ export default function AccessDemoPanel() {
                 <div className="mt-[.3rem] flex min-h-[76px] items-center gap-4 border-t border-hosho-line pt-[1.1rem] pb-[1.2rem]">
                     <div
                         className={cn(
-                            'grid size-14 flex-none scale-[.55] place-items-center rounded-hosho-sm bg-hosho-jade-tint text-hosho-jade opacity-0',
+                            'grid size-14 flex-none scale-[.55] place-items-center rounded-hosho-sm opacity-0',
+                            current?.denyReason
+                                ? 'bg-hosho-coral-tint text-hosho-coral'
+                                : 'bg-hosho-jade-tint text-hosho-jade',
                             sealOn && 'animate-hosho-stamp',
                         )}
                     >
-                        <Check className="size-[26px]" strokeWidth={2.6} />
+                        {current?.denyReason ? (
+                            <X className="size-[26px]" strokeWidth={2.6} />
+                        ) : (
+                            <Check className="size-[26px]" strokeWidth={2.6} />
+                        )}
                     </div>
                     <div>
                         <strong
                             className={cn(
-                                'block font-hosho-display text-[1.22rem] font-bold text-hosho-ink opacity-0 transition-opacity delay-[120ms] duration-300',
+                                'block font-hosho-display text-[1.22rem] font-bold opacity-0 transition-opacity delay-[120ms] duration-300',
+                                current?.denyReason
+                                    ? 'text-hosho-coral'
+                                    : 'text-hosho-ink',
                                 verdictOn && 'opacity-100',
                             )}
                         >
-                            {__('Access authorized')}
+                            {current?.denyReason
+                                ? __('Access denied')
+                                : __('Access authorized')}
                         </strong>
                         <span
                             className={cn(
@@ -328,7 +398,11 @@ export default function AccessDemoPanel() {
                             )}
                         >
                             {current
-                                ? `F-${current.folio} · ${__('validity: 8 hours')}`
+                                ? `F-${current.folio} · ${
+                                      current.denyReason
+                                          ? denyReasons[current.denyReason]
+                                          : __('validity: 8 hours')
+                                  }`
                                 : '—'}
                         </span>
                     </div>
@@ -352,6 +426,11 @@ export default function AccessDemoPanel() {
                     {ledger.map((entry, i) => (
                         <li
                             key={`${entry.folio}-${i}`}
+                            title={
+                                entry.denyReason
+                                    ? denyReasons[entry.denyReason]
+                                    : undefined
+                            }
                             className={cn(
                                 'flex items-center gap-[.7rem] overflow-hidden py-[.15rem] text-ellipsis whitespace-nowrap',
                                 entry.fresh && 'animate-hosho-slidein',
@@ -362,12 +441,25 @@ export default function AccessDemoPanel() {
                             <span className="overflow-hidden text-ellipsis">
                                 {entry.name}
                             </span>
-                            <span className="ml-auto inline-flex items-center gap-[.3rem] text-hosho-jade">
-                                <Check
-                                    className="size-[10px]"
-                                    strokeWidth={3}
-                                />
-                                {__('AUTHORIZED')}
+                            <span
+                                className={cn(
+                                    'ml-auto inline-flex items-center gap-[.3rem]',
+                                    entry.denyReason
+                                        ? 'text-hosho-coral'
+                                        : 'text-hosho-jade',
+                                )}
+                            >
+                                {entry.denyReason ? (
+                                    <X className="size-[10px]" strokeWidth={3} />
+                                ) : (
+                                    <Check
+                                        className="size-[10px]"
+                                        strokeWidth={3}
+                                    />
+                                )}
+                                {entry.denyReason
+                                    ? __('DENIED')
+                                    : __('AUTHORIZED')}
                             </span>
                         </li>
                     ))}
