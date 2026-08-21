@@ -19,9 +19,18 @@ Route::post('/contacto', [SolicitudDemoController::class, 'store'])
     ->name('contacto.store');
 
 // Módulo de Control de Garita (Lector QR)
-Route::get('/garita', [VisitaAccesoController::class, 'garita'])->name('garita.show');
-Route::get('/admin/garita', [VisitaAccesoController::class, 'garita'])->name('admin.garita.show');
-Route::get('/admin/visitas-accesos/garita', [VisitaAccesoController::class, 'garita'])->name('admin.visitas-accesos.garita.show');
+// These had no auth middleware at all - garita() runs an open search across
+// Empleados/Proveedores/Productores with zero tenant scoping, since the
+// Multitenantable scope only activates when auth()->check() is true. An
+// anonymous request returned full PII (CURP, phone, access card numbers,
+// vehicle plates) for any company in the system. Confirmed in QA testing
+// (2026-08-21). Requiring auth here restores the existing tenant scope
+// automatically - no controller changes needed for that part.
+Route::middleware('auth')->group(function () {
+    Route::get('/garita', [VisitaAccesoController::class, 'garita'])->name('garita.show');
+    Route::get('/admin/garita', [VisitaAccesoController::class, 'garita'])->name('admin.garita.show');
+    Route::get('/admin/visitas-accesos/garita', [VisitaAccesoController::class, 'garita'])->name('admin.visitas-accesos.garita.show');
+});
 
 Route::middleware(['guest'])->group(function () {
     Route::get('/forgot-password', [ForgotPasswordOtpController::class, 'show'])->name('password.request');
