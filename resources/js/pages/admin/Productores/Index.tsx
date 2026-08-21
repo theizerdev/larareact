@@ -924,7 +924,7 @@ export default function Index({
                             {__('Eliminar Productor')}
                         </DialogTitle>
                         <DialogDescription className="text-xs text-slate-500">
-                            {__('¿Está seguro de que desea eliminar a este productor? Esta acción no se puede deshacer y eliminará colaboradores y vehículos asociados.')}
+                            {__('¿Está seguro de que desea eliminar a este productor? Esta acción no se puede deshacer y eliminará colaboradores, vehículos e historial de accesos/visitas asociados.')}
                         </DialogDescription>
                     </DialogHeader>
 

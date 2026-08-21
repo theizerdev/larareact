@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\ProductorRequest;
 use App\Models\Productor;
+use App\Services\AccessCodeService;
 use App\Models\Pais;
 use App\Models\Empresa;
 use App\Models\Sucursal;
@@ -85,7 +86,7 @@ class ProductorController extends Controller
         $data['nombre_comercial_rancho'] = $data['nombre_comercial_rancho'] ?? $data['nombre_comercial'];
         $data['documento_identidad'] = $data['documento_identidad'] ?? $data['rfc'] ?? $data['curp'] ?? ('PROD_' . uniqid());
 
-        $productor = Productor::create($data);
+        $productor = AccessCodeService::createWithRetry(fn () => Productor::create($data));
         $this->enviarCarnetWhatsAppInternal($productor);
 
         return redirect()->back();
