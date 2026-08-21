@@ -3,7 +3,7 @@
 use App\Http\Controllers\Admin\QueueMonitoringController;
 use Illuminate\Support\Facades\Route;
 
-Route::middleware(['verified'])->group(function () {
+Route::middleware(['verified', 'permission:monitoreo.view'])->group(function () {
     Route::get('/monitoring/queues', [QueueMonitoringController::class, 'index'])->name('monitoring.queues.index');
     Route::post('/monitoring/queues/retry-all', [QueueMonitoringController::class, 'retryAll'])->name('monitoring.queues.retry-all');
     Route::post('/monitoring/queues/{id}/retry', [QueueMonitoringController::class, 'retry'])->name('monitoring.queues.retry');
