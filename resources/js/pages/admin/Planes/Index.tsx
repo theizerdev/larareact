@@ -339,7 +339,7 @@ export default function PlanesIndex({ planes = [], stats, currencySymbol = '$' }
         <>
             <Head title={__('Planes & Precios - Metodología Promocional')} />
 
-            <div className="space-y-6 max-w-7xl mx-auto pb-12">
+            <div className="space-y-6 pb-12">
                 <Breadcrumbs breadcrumbs={breadcrumbs} />
 
                 {/* Header Principal */}
