@@ -71,7 +71,28 @@ class ModeloController extends Controller
             'sucursal_id' => 'nullable|exists:sucursales,id',
         ]);
 
-        Modelo::create($validated);
+        $modelo = Modelo::create($validated);
+        $modelo->load(['marca', 'familia', 'categoria']);
+
+        if ($request->wantsJson()) {
+            return response()->json([
+                'success' => true,
+                'data' => [
+                    'id' => $modelo->id,
+                    'nombre' => $modelo->nombre_comercial . ($modelo->codigo_modelo ? ' (' . $modelo->codigo_modelo . ')' : ''),
+                    'nombre_comercial' => $modelo->nombre_comercial,
+                    'codigo_modelo' => $modelo->codigo_modelo,
+                    'marca_id' => $modelo->marca_id,
+                    'familia_id' => $modelo->familia_id,
+                    'categoria_id' => $modelo->categoria_id,
+                    'marca' => $modelo->marca?->nombre ?? '',
+                    'familia' => $modelo->familia?->nombre ?? '',
+                    'categoria' => $modelo->categoria?->nombre ?? '',
+                    'specs_json' => $modelo->specs_overrides ?? [],
+                ],
+                'message' => __('Model created successfully.'),
+            ]);
+        }
 
         return back()->with('notification', [
             'type' => 'success',

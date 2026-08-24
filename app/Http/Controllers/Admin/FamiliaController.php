@@ -51,7 +51,15 @@ class FamiliaController extends Controller
     {
         $validated = $request->validated();
 
-        Familia::create($validated);
+        $familia = Familia::create($validated);
+
+        if ($request->wantsJson()) {
+            return response()->json([
+                'success' => true,
+                'data' => $familia,
+                'message' => __('Family created successfully.'),
+            ]);
+        }
 
         return back()->with('notification', [
             'type' => 'success',

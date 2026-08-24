@@ -408,72 +408,95 @@ export default function Index({ productos, categorias: categoriasProp, marcas: m
         }));
     };
 
-    const handleQuickCreateCategoria = (e: React.FormEvent) => {
+    const getCsrfToken = () => {
+        return (document.querySelector('meta[name="csrf-token"]') as HTMLMetaElement)?.content || '';
+    };
+
+    const handleQuickCreateCategoria = async (e: React.FormEvent) => {
         e.preventDefault();
+        e.stopPropagation();
         const nombreTarget = newCategoriaNombre.trim();
         if (!nombreTarget) return;
 
         setIsSavingCategoria(true);
-        router.post(
-            '/admin/categorias',
-            { nombre: nombreTarget, estado: true },
-            {
-                preserveScroll: true,
-                preserveState: true,
-                onSuccess: (page) => {
-                    notifySuccess(__('Categoría creada correctamente.'));
-                    setIsNewCategoriaOpen(false);
-                    setNewCategoriaNombre('');
-
-                    const catsUpdated = (page.props as any)?.categorias as Option[] || [];
-                    setCategorias(catsUpdated);
-
-                    const creada = catsUpdated.find((c) => c.nombre.toLowerCase() === nombreTarget.toLowerCase())
-                        || catsUpdated[catsUpdated.length - 1];
-                    if (creada) {
-                        setSelCategoriaId(String(creada.id));
-                    }
+        try {
+            const res = await fetch('/admin/categorias', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Accept': 'application/json',
+                    'X-CSRF-TOKEN': getCsrfToken(),
                 },
-                onError: () => notifyError(__('Error al crear la categoría.')),
-                onFinish: () => setIsSavingCategoria(false),
+                body: JSON.stringify({ nombre: nombreTarget, estado: true }),
+            });
+            const resData = await res.json();
+            if (res.ok && resData.data) {
+                const nuevaCat: Option = {
+                    id: resData.data.id,
+                    nombre: resData.data.nombre,
+                };
+                setCategorias((prev) => {
+                    const exists = prev.some((c) => c.id === nuevaCat.id);
+                    return exists ? prev : [...prev, nuevaCat];
+                });
+                setSelCategoriaId(String(nuevaCat.id));
+                notifySuccess(__('Categoría creada correctamente.'));
+                setIsNewCategoriaOpen(false);
+                setNewCategoriaNombre('');
+            } else {
+                notifyError(resData.message || __('Error al crear la categoría.'));
             }
-        );
+        } catch (err) {
+            notifyError(__('Error al crear la categoría.'));
+        } finally {
+            setIsSavingCategoria(false);
+        }
     };
 
-    const handleQuickCreateMarca = (e: React.FormEvent) => {
+    const handleQuickCreateMarca = async (e: React.FormEvent) => {
         e.preventDefault();
+        e.stopPropagation();
         const nombreTarget = newMarcaNombre.trim();
         if (!nombreTarget) return;
 
         setIsSavingMarca(true);
-        router.post(
-            '/admin/marcas',
-            { nombre: nombreTarget, estado: true },
-            {
-                preserveScroll: true,
-                preserveState: true,
-                onSuccess: (page) => {
-                    notifySuccess(__('Marca creada correctamente.'));
-                    setIsNewMarcaOpen(false);
-                    setNewMarcaNombre('');
-
-                    const marcasUpdated = (page.props as any)?.marcas as Option[] || [];
-                    setMarcas(marcasUpdated);
-
-                    const creada = marcasUpdated.find((m) => m.nombre.toLowerCase() === nombreTarget.toLowerCase())
-                        || marcasUpdated[marcasUpdated.length - 1];
-                    if (creada) {
-                        setSelMarcaId(String(creada.id));
-                    }
+        try {
+            const res = await fetch('/admin/marcas', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Accept': 'application/json',
+                    'X-CSRF-TOKEN': getCsrfToken(),
                 },
-                onError: () => notifyError(__('Error al crear la marca.')),
-                onFinish: () => setIsSavingMarca(false),
+                body: JSON.stringify({ nombre: nombreTarget, estado: true }),
+            });
+            const resData = await res.json();
+            if (res.ok && resData.data) {
+                const nuevaMarca: Option = {
+                    id: resData.data.id,
+                    nombre: resData.data.nombre,
+                };
+                setMarcas((prev) => {
+                    const exists = prev.some((m) => m.id === nuevaMarca.id);
+                    return exists ? prev : [...prev, nuevaMarca];
+                });
+                setSelMarcaId(String(nuevaMarca.id));
+                notifySuccess(__('Marca creada correctamente.'));
+                setIsNewMarcaOpen(false);
+                setNewMarcaNombre('');
+            } else {
+                notifyError(resData.message || __('Error al crear la marca.'));
             }
-        );
+        } catch (err) {
+            notifyError(__('Error al crear la marca.'));
+        } finally {
+            setIsSavingMarca(false);
+        }
     };
 
-    const handleQuickCreateFamilia = (e: React.FormEvent) => {
+    const handleQuickCreateFamilia = async (e: React.FormEvent) => {
         e.preventDefault();
+        e.stopPropagation();
         const nombreTarget = newFamiliaNombre.trim();
         if (!nombreTarget) return;
 
@@ -484,44 +507,55 @@ export default function Index({ productos, categorias: categoriasProp, marcas: m
         }
 
         setIsSavingFamilia(true);
-        router.post(
-            '/admin/familias',
-            {
-                nombre: nombreTarget,
-                marca_id: marcaTargetId,
-                categoria_id: selCategoriaId !== 'all' ? selCategoriaId : null,
-                estado: true,
-            },
-            {
-                preserveScroll: true,
-                preserveState: true,
-                onSuccess: (page) => {
-                    notifySuccess(__('Familia creada correctamente.'));
-                    setIsNewFamiliaOpen(false);
-                    setNewFamiliaNombre('');
-
-                    const familiasUpdated = (page.props as any)?.familias as Option[] || [];
-                    setFamilias(familiasUpdated);
-
-                    const creada = familiasUpdated.find((f) => f.nombre.toLowerCase() === nombreTarget.toLowerCase())
-                        || familiasUpdated[familiasUpdated.length - 1];
-                    if (creada) {
-                        setSelFamiliaId(String(creada.id));
-                    }
+        try {
+            const res = await fetch('/admin/familias', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Accept': 'application/json',
+                    'X-CSRF-TOKEN': getCsrfToken(),
                 },
-                onError: () => notifyError(__('Error al crear la familia.')),
-                onFinish: () => setIsSavingFamilia(false),
+                body: JSON.stringify({
+                    nombre: nombreTarget,
+                    marca_id: marcaTargetId,
+                    categoria_id: selCategoriaId !== 'all' ? selCategoriaId : null,
+                    estado: true,
+                }),
+            });
+            const resData = await res.json();
+            if (res.ok && resData.data) {
+                const nuevaFam: Option = {
+                    id: resData.data.id,
+                    nombre: resData.data.nombre,
+                    marca_id: Number(marcaTargetId),
+                    categoria_id: selCategoriaId !== 'all' ? Number(selCategoriaId) : undefined,
+                };
+                setFamilias((prev) => {
+                    const exists = prev.some((f) => f.id === nuevaFam.id);
+                    return exists ? prev : [...prev, nuevaFam];
+                });
+                setSelFamiliaId(String(nuevaFam.id));
+                notifySuccess(__('Familia creada correctamente.'));
+                setIsNewFamiliaOpen(false);
+                setNewFamiliaNombre('');
+            } else {
+                notifyError(resData.message || __('Error al crear la familia.'));
             }
-        );
+        } catch (err) {
+            notifyError(__('Error al crear la familia.'));
+        } finally {
+            setIsSavingFamilia(false);
+        }
     };
 
-    const handleQuickCreateModelo = (e: React.FormEvent) => {
+    const handleQuickCreateModelo = async (e: React.FormEvent) => {
         e.preventDefault();
+        e.stopPropagation();
         const nombreTarget = newModeloNombre.trim();
         if (!nombreTarget) return;
 
         const marcaTargetId = selMarcaId !== 'all' ? selMarcaId : (marcas[0]?.id ? String(marcas[0].id) : '');
-        const familiaTargetId = selFamiliaId !== 'all' ? selFamiliaId : (familias[0]?.id ? String(familias[0].id) : '1');
+        let familiaTargetId = selFamiliaId !== 'all' ? selFamiliaId : (familias[0]?.id ? String(familias[0].id) : '');
         const categoriaTargetId = selCategoriaId !== 'all' ? selCategoriaId : (categorias[0]?.id ? String(categorias[0].id) : '');
 
         if (!marcaTargetId) {
@@ -530,38 +564,88 @@ export default function Index({ productos, categorias: categoriasProp, marcas: m
         }
 
         setIsSavingModelo(true);
-        router.post(
-            '/admin/modelos',
-            {
-                nombre_comercial: nombreTarget,
-                codigo_modelo: newModeloCodigo.trim() || null,
-                marca_id: marcaTargetId,
-                familia_id: familiaTargetId,
-                categoria_id: categoriaTargetId || null,
-                estado: true,
-            },
-            {
-                preserveScroll: true,
-                preserveState: true,
-                onSuccess: (page) => {
-                    notifySuccess(__('Modelo creado correctamente.'));
-                    setIsNewModeloOpen(false);
-                    setNewModeloNombre('');
-                    setNewModeloCodigo('');
 
-                    const modelosUpdated = (page.props as any)?.modelos as ModeloOption[] || [];
-                    setModelos(modelosUpdated);
-
-                    const creado = modelosUpdated.find((m) => m.nombre_comercial.toLowerCase() === nombreTarget.toLowerCase())
-                        || modelosUpdated[modelosUpdated.length - 1];
-                    if (creado) {
-                        handleSelectModelo(String(creado.id), modelosUpdated);
-                    }
-                },
-                onError: () => notifyError(__('Error al crear el modelo.')),
-                onFinish: () => setIsSavingModelo(false),
+        // Si no hay familia seleccionada o disponible para esta marca, crear una familia por defecto 'General'
+        if (!familiaTargetId) {
+            try {
+                const famRes = await fetch('/admin/familias', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Accept': 'application/json',
+                        'X-CSRF-TOKEN': getCsrfToken(),
+                    },
+                    body: JSON.stringify({
+                        nombre: 'General',
+                        marca_id: marcaTargetId,
+                        categoria_id: categoriaTargetId || null,
+                        estado: true,
+                    }),
+                });
+                const famData = await famRes.json();
+                if (famRes.ok && famData.data) {
+                    familiaTargetId = String(famData.data.id);
+                    setFamilias((prev) => [...prev, famData.data]);
+                }
+            } catch (err) {
+                // Fallback
             }
-        );
+        }
+
+        if (!familiaTargetId) {
+            familiaTargetId = '1';
+        }
+
+        try {
+            const res = await fetch('/admin/modelos', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Accept': 'application/json',
+                    'X-CSRF-TOKEN': getCsrfToken(),
+                },
+                body: JSON.stringify({
+                    nombre_comercial: nombreTarget,
+                    codigo_modelo: newModeloCodigo.trim() || null,
+                    marca_id: marcaTargetId,
+                    familia_id: familiaTargetId,
+                    categoria_id: categoriaTargetId || null,
+                    estado: true,
+                }),
+            });
+            const resData = await res.json();
+            if (res.ok && resData.data) {
+                const nuevoMod: ModeloOption = {
+                    id: resData.data.id,
+                    nombre: resData.data.nombre || resData.data.nombre_comercial,
+                    nombre_comercial: resData.data.nombre_comercial,
+                    codigo_modelo: resData.data.codigo_modelo,
+                    marca_id: Number(marcaTargetId),
+                    familia_id: Number(familiaTargetId),
+                    categoria_id: Number(categoriaTargetId || 0),
+                    marca: resData.data.marca || '',
+                    familia: resData.data.familia || '',
+                    categoria: resData.data.categoria || '',
+                    specs_json: resData.data.specs_json || {},
+                };
+                setModelos((prev) => {
+                    const exists = prev.some((m) => m.id === nuevoMod.id);
+                    const updated = exists ? prev : [...prev, nuevoMod];
+                    handleSelectModelo(String(nuevoMod.id), updated);
+                    return updated;
+                });
+                notifySuccess(__('Modelo creado correctamente.'));
+                setIsNewModeloOpen(false);
+                setNewModeloNombre('');
+                setNewModeloCodigo('');
+            } else {
+                notifyError(resData.message || __('Error al crear el modelo.'));
+            }
+        } catch (err) {
+            notifyError(__('Error al crear el modelo.'));
+        } finally {
+            setIsSavingModelo(false);
+        }
     };
 
     const handleSubmit = (e: React.FormEvent) => {
@@ -1175,17 +1259,9 @@ export default function Index({ productos, categorias: categoriasProp, marcas: m
                     }}
                 >
                     <DialogContent
-                        className="sm:max-w-4xl max-h-[90vh] flex flex-col"
-                        onPointerDownOutside={(e) => {
-                            if (isNewCategoriaOpen || isNewMarcaOpen || isNewFamiliaOpen || isNewModeloOpen) {
-                                e.preventDefault();
-                            }
-                        }}
-                        onInteractOutside={(e) => {
-                            if (isNewCategoriaOpen || isNewMarcaOpen || isNewFamiliaOpen || isNewModeloOpen) {
-                                e.preventDefault();
-                            }
-                        }}
+                        className="sm:max-w-4xl max-h-[90vh] flex flex-col z-50"
+                        onPointerDownOutside={(e) => e.preventDefault()}
+                        onInteractOutside={(e) => e.preventDefault()}
                     >
                         <DialogHeader>
                             <DialogTitle className="flex items-center gap-2">
@@ -1866,7 +1942,7 @@ export default function Index({ productos, categorias: categoriasProp, marcas: m
                 {/* Sub-Modal 1: Creación Rápida de Categoría */}
                 <Dialog open={isNewCategoriaOpen} onOpenChange={setIsNewCategoriaOpen}>
                     <DialogContent
-                        className="sm:max-w-md"
+                        className="sm:max-w-md z-[70]"
                         onPointerDownOutside={(e) => e.preventDefault()}
                         onInteractOutside={(e) => e.preventDefault()}
                         onEscapeKeyDown={(e) => {
@@ -1896,7 +1972,7 @@ export default function Index({ productos, categorias: categoriasProp, marcas: m
                                 </div>
                             </div>
                             <DialogFooter>
-                                <Button type="button" variant="outline" onClick={(e) => { e.stopPropagation(); setIsNewCategoriaOpen(false); }}>{__('Cancelar')}</Button>
+                                <Button type="button" variant="outline" onClick={(e) => { e.preventDefault(); e.stopPropagation(); setIsNewCategoriaOpen(false); }}>{__('Cancelar')}</Button>
                                 <Button type="submit" disabled={isSavingCategoria}>{isSavingCategoria ? __('Guardando...') : __('Crear Categoría')}</Button>
                             </DialogFooter>
                         </form>
@@ -1906,7 +1982,7 @@ export default function Index({ productos, categorias: categoriasProp, marcas: m
                 {/* Sub-Modal 2: Creación Rápida de Marca */}
                 <Dialog open={isNewMarcaOpen} onOpenChange={setIsNewMarcaOpen}>
                     <DialogContent
-                        className="sm:max-w-md"
+                        className="sm:max-w-md z-[70]"
                         onPointerDownOutside={(e) => e.preventDefault()}
                         onInteractOutside={(e) => e.preventDefault()}
                         onEscapeKeyDown={(e) => {
@@ -1936,7 +2012,7 @@ export default function Index({ productos, categorias: categoriasProp, marcas: m
                                 </div>
                             </div>
                             <DialogFooter>
-                                <Button type="button" variant="outline" onClick={(e) => { e.stopPropagation(); setIsNewMarcaOpen(false); }}>{__('Cancelar')}</Button>
+                                <Button type="button" variant="outline" onClick={(e) => { e.preventDefault(); e.stopPropagation(); setIsNewMarcaOpen(false); }}>{__('Cancelar')}</Button>
                                 <Button type="submit" disabled={isSavingMarca}>{isSavingMarca ? __('Guardando...') : __('Crear Marca')}</Button>
                             </DialogFooter>
                         </form>
@@ -1946,7 +2022,7 @@ export default function Index({ productos, categorias: categoriasProp, marcas: m
                 {/* Sub-Modal 3: Creación Rápida de Familia */}
                 <Dialog open={isNewFamiliaOpen} onOpenChange={setIsNewFamiliaOpen}>
                     <DialogContent
-                        className="sm:max-w-md"
+                        className="sm:max-w-md z-[70]"
                         onPointerDownOutside={(e) => e.preventDefault()}
                         onInteractOutside={(e) => e.preventDefault()}
                         onEscapeKeyDown={(e) => {
@@ -1976,7 +2052,7 @@ export default function Index({ productos, categorias: categoriasProp, marcas: m
                                 </div>
                             </div>
                             <DialogFooter>
-                                <Button type="button" variant="outline" onClick={(e) => { e.stopPropagation(); setIsNewFamiliaOpen(false); }}>{__('Cancelar')}</Button>
+                                <Button type="button" variant="outline" onClick={(e) => { e.preventDefault(); e.stopPropagation(); setIsNewFamiliaOpen(false); }}>{__('Cancelar')}</Button>
                                 <Button type="submit" disabled={isSavingFamilia}>{isSavingFamilia ? __('Guardando...') : __('Crear Familia')}</Button>
                             </DialogFooter>
                         </form>
@@ -1986,7 +2062,7 @@ export default function Index({ productos, categorias: categoriasProp, marcas: m
                 {/* Sub-Modal 4: Creación Rápida de Modelo */}
                 <Dialog open={isNewModeloOpen} onOpenChange={setIsNewModeloOpen}>
                     <DialogContent
-                        className="sm:max-w-md"
+                        className="sm:max-w-md z-[70]"
                         onPointerDownOutside={(e) => e.preventDefault()}
                         onInteractOutside={(e) => e.preventDefault()}
                         onEscapeKeyDown={(e) => {
@@ -2026,7 +2102,7 @@ export default function Index({ productos, categorias: categoriasProp, marcas: m
                                 </div>
                             </div>
                             <DialogFooter>
-                                <Button type="button" variant="outline" onClick={(e) => { e.stopPropagation(); setIsNewModeloOpen(false); }}>{__('Cancelar')}</Button>
+                                <Button type="button" variant="outline" onClick={(e) => { e.preventDefault(); e.stopPropagation(); setIsNewModeloOpen(false); }}>{__('Cancelar')}</Button>
                                 <Button type="submit" disabled={isSavingModelo}>{isSavingModelo ? __('Guardando...') : __('Crear Modelo')}</Button>
                             </DialogFooter>
                         </form>

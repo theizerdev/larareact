@@ -40,7 +40,15 @@ class MarcaController extends Controller
 
         $validated['slug'] = Str::slug($validated['nombre']);
 
-        Marca::create($validated);
+        $marca = Marca::create($validated);
+
+        if ($request->wantsJson()) {
+            return response()->json([
+                'success' => true,
+                'data' => $marca,
+                'message' => __('Brand created successfully.'),
+            ]);
+        }
 
         return back()->with('notification', [
             'type' => 'success',

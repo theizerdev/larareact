@@ -34,12 +34,18 @@ interface PlanOption {
 interface PlanInfo {
     id: number;
     nombre: string;
-    descripcion: string;
+    descripcion?: string;
+    precio_regular_mensual?: number;
+    precio_promocional_mensual?: number;
+    tiene_promocion?: boolean;
+    meses_duracion_promocion?: number;
+    badge_promocion?: string;
+    destacado?: boolean;
     precio_3_meses: number;
     precio_6_meses: number;
     precio_12_meses: number;
-    precio_sucursal_extra_mensual: number;
-    sucursales_incluidas: number;
+    precio_sucursal_extra_mensual?: number;
+    sucursales_incluidas?: number;
 }
 
 interface PaymentGatewayInfo {
@@ -183,14 +189,17 @@ export default function SubscriptionExpired({ empresa, plan, planes = [], opcion
                             </Label>
                             <div className="grid gap-6 sm:grid-cols-3">
                                 {[3, 6, 12].map((meses) => {
+                                    const subtotal = getPlanSubtotal(meses);
+                                    const promedio = Math.round(subtotal / meses);
+                                    const regularMensual = currentPlan?.precio_regular_mensual || promedio;
+                                    const tienePromo = Boolean(currentPlan?.tiene_promocion) && (currentPlan?.precio_promocional_mensual ?? 0) < regularMensual;
+
                                     const meta = {
                                         3: {
-                                            badge: __('Para Emprendedores'),
+                                            badge: currentPlan?.badge_promocion || __('Plan Trimestral'),
                                             badgeClass: 'bg-slate-700 text-white font-bold',
                                             titulo: __('Plan Trimestral'),
-                                            subtitulo: __('Control total para tu primer comercio'),
-                                            promedioCalculado: 29.66,
-                                            facturadoText: __('Facturado $89 cada 3 meses'),
+                                            subtitulo: __('Control total para tu comercio'),
                                             features: [
                                                 __('Todo lo de la Prueba Gratis'),
                                                 __('Catálogo y productos ilimitados'),
@@ -199,12 +208,10 @@ export default function SubscriptionExpired({ empresa, plan, planes = [], opcion
                                             ],
                                         },
                                         6: {
-                                            badge: __('★ Más Popular - Ahorra 15%'),
+                                            badge: currentPlan?.destacado ? __('★ Más Popular') : __('Plan Semestral'),
                                             badgeClass: 'bg-amber-500 text-white font-bold',
                                             titulo: __('Plan Semestral'),
                                             subtitulo: __('El equilibrio perfecto para crecer'),
-                                            promedioCalculado: 26.50,
-                                            facturadoText: __('Facturado $159 cada 6 meses'),
                                             features: [
                                                 __('Todo lo del Plan Trimestral'),
                                                 __('Sincronización automática de tasa'),
@@ -213,12 +220,10 @@ export default function SubscriptionExpired({ empresa, plan, planes = [], opcion
                                             ],
                                         },
                                         12: {
-                                            badge: __('🔥 Mejor Valor - Ahorra 30%'),
+                                            badge: __('🔥 Mejor Valor'),
                                             badgeClass: 'bg-emerald-600 text-white font-bold',
                                             titulo: __('Plan Anual'),
                                             subtitulo: __('Máximo ahorro y soporte continuo'),
-                                            promedioCalculado: 24.00,
-                                            facturadoText: __('Facturado $288 al año'),
                                             features: [
                                                 __('Sucursales y Cajas Ilimitadas'),
                                                 __('Ventas a crédito y cobranza'),
@@ -228,7 +233,6 @@ export default function SubscriptionExpired({ empresa, plan, planes = [], opcion
                                         },
                                     }[meses]!;
 
-                                    const subtotal = getPlanSubtotal(meses);
                                     const isSelected = selectedCycle === meses;
                                     return (
                                         <div
@@ -248,10 +252,17 @@ export default function SubscriptionExpired({ empresa, plan, planes = [], opcion
                                                 <span className="text-xs font-extrabold uppercase tracking-wider text-muted-foreground">{meta.titulo}</span>
                                                 <p className="text-xs text-muted-foreground min-h-[32px]">{meta.subtitulo}</p>
                                                 <div className="pt-2">
+                                                    {tienePromo && regularMensual > promedio && (
+                                                        <span className="text-xs text-muted-foreground line-through font-semibold block">
+                                                            {formatPrice(regularMensual)} / {__('mes')}
+                                                        </span>
+                                                    )}
                                                     <h3 className="text-3xl font-black text-foreground">
-                                                        {formatPrice(meta.promedioCalculado)} <span className="text-xs font-semibold text-muted-foreground">/ {__('mes')}</span>
+                                                        {formatPrice(promedio)} <span className="text-xs font-semibold text-muted-foreground">/ {__('mes')}</span>
                                                     </h3>
-                                                    <p className="text-[11px] font-medium text-primary mt-0.5">{meta.facturadoText}</p>
+                                                    <p className="text-[11px] font-medium text-primary mt-0.5">
+                                                        {__('Facturado')} {formatPrice(subtotal)} {__('cada')} {meses} {__('meses')}
+                                                    </p>
                                                 </div>
                                             </div>
 

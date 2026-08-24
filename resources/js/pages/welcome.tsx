@@ -563,6 +563,9 @@ export default function Welcome() {
                                         id: 1,
                                         nombre: 'Plan Prueba',
                                         descripcion: '7 días de acceso completo para evaluar todas las herramientas.',
+                                        precio_regular_mensual: 0,
+                                        precio_promocional_mensual: 0,
+                                        tiene_promocion: false,
                                         precio_3_meses: 0,
                                         precio_6_meses: 0,
                                         precio_12_meses: 0,
@@ -572,77 +575,80 @@ export default function Welcome() {
                                         id: 2,
                                         nombre: 'Plan Trimestral',
                                         descripcion: 'Ideal para emprendedores y comercios con flexibilidad de pago.',
+                                        precio_regular_mensual: 499,
+                                        precio_promocional_mensual: 299,
+                                        tiene_promocion: true,
+                                        meses_duracion_promocion: 3,
+                                        badge_promocion: '40% DTO Primer Trimestre',
                                         precio_3_meses: 897,
-                                        precio_6_meses: 0,
-                                        precio_12_meses: 0,
+                                        precio_6_meses: 1794,
+                                        precio_12_meses: 3588,
                                         sucursales_incluidas: 1,
                                     },
                                     {
                                         id: 3,
                                         nombre: 'Plan Semestral',
                                         descripcion: 'Control operativo total para comercios en crecimiento.',
-                                        precio_3_meses: 0,
+                                        precio_regular_mensual: 499,
+                                        precio_promocional_mensual: 249,
+                                        tiene_promocion: true,
+                                        meses_duracion_promocion: 6,
+                                        badge_promocion: 'Más Popular - 50% OFF',
+                                        destacado: true,
+                                        precio_3_meses: 897,
                                         precio_6_meses: 1494,
-                                        precio_12_meses: 0,
+                                        precio_12_meses: 2988,
                                         sucursales_incluidas: 1,
                                     },
                                     {
                                         id: 4,
                                         nombre: 'Plan Anual',
                                         descripcion: 'La opción con mejor precio para empresas consolidadas.',
-                                        precio_3_meses: 0,
-                                        precio_6_meses: 0,
+                                        precio_regular_mensual: 499,
+                                        precio_promocional_mensual: 199,
+                                        tiene_promocion: true,
+                                        meses_duracion_promocion: 12,
+                                        badge_promocion: 'Mejor Valor - 60% OFF',
+                                        precio_3_meses: 897,
+                                        precio_6_meses: 1494,
                                         precio_12_meses: 2388,
                                         sucursales_incluidas: 2,
                                     },
                                 ]
                             ).map((plan: any) => {
                                 const nameLower = (plan.nombre || '').toLowerCase();
-                                const isFree = nameLower.includes('prueba') || (Number(plan.precio_3_meses) === 0 && Number(plan.precio_6_meses) === 0 && Number(plan.precio_12_meses) === 0);
-                                const isPopular = nameLower.includes('semestral') || nameLower.includes('profesional');
-                                const isBestValue = nameLower.includes('anual') || nameLower.includes('corporativo');
+                                const isFree = nameLower.includes('prueba') || (Number(plan.precio_regular_mensual) === 0 && Number(plan.precio_promocional_mensual) === 0 && Number(plan.precio_3_meses) === 0);
+                                const isPopular = Boolean(plan.destacado) || nameLower.includes('semestral');
+                                const isBestValue = nameLower.includes('anual') && !isPopular;
 
-                                let displayPrice = '0';
-                                let periodText = '';
-                                let subdetailText = '';
+                                const precioRegular = Number(plan.precio_regular_mensual) || (Number(plan.precio_3_meses) > 0 ? Math.round(Number(plan.precio_3_meses) / 3) : 0);
+                                const precioPromo = Number(plan.precio_promocional_mensual) || precioRegular;
+                                const tienePromo = Boolean(plan.tiene_promocion) && precioPromo < precioRegular && precioPromo > 0;
+                                const porcentajeAhorro = precioRegular > 0 ? Math.round(((precioRegular - precioPromo) / precioRegular) * 100) : 0;
+                                const duracionMeses = plan.meses_duracion_promocion || 3;
 
-                                if (isFree) {
-                                    displayPrice = '0';
-                                    periodText = `/ 7 ${__('Días')}`;
-                                    subdetailText = __('Acceso Total Ilimitado');
-                                } else if (nameLower.includes('trimestral')) {
-                                    const price = Number(plan.precio_3_meses) || 897;
-                                    displayPrice = price.toLocaleString('en-US');
-                                    periodText = `/ 3 ${__('meses')}`;
-                                    subdetailText = `${__('Solo')} $${Math.round(price / 3)} ${__('al mes')}`;
-                                } else if (nameLower.includes('semestral')) {
-                                    const price = Number(plan.precio_6_meses) || 1494;
-                                    displayPrice = price.toLocaleString('en-US');
-                                    periodText = `/ 6 ${__('meses')}`;
-                                    subdetailText = `${__('Solo')} $${Math.round(price / 6)} ${__('al mes')}`;
+                                let totalCiclo = Number(plan.precio_3_meses) || (precioPromo * 3);
+                                let periodoLabel = '3 meses';
+                                if (nameLower.includes('semestral')) {
+                                    totalCiclo = Number(plan.precio_6_meses) || (precioPromo * 6);
+                                    periodoLabel = '6 meses';
                                 } else if (nameLower.includes('anual')) {
-                                    const price = Number(plan.precio_12_meses) || 2388;
-                                    displayPrice = price.toLocaleString('en-US');
-                                    periodText = `/ ${__('año')}`;
-                                    subdetailText = `${__('Solo')} $${Math.round(price / 12)} ${__('al mes')}`;
-                                } else {
-                                    const price = Number(plan.precio_3_meses) || 897;
-                                    displayPrice = price.toLocaleString('en-US');
-                                    periodText = `/ 3 ${__('meses')}`;
-                                    subdetailText = `${__('Solo')} $${Math.round(price / 3)} ${__('al mes')}`;
+                                    totalCiclo = Number(plan.precio_12_meses) || (precioPromo * 12);
+                                    periodoLabel = '12 meses (1 año)';
                                 }
 
                                 return (
                                     <div
                                         key={plan.id}
-                                        className={`bg-white p-6 sm:p-8 rounded-3xl space-y-6 flex flex-col justify-between transition-all relative ${isPopular
+                                        className={`bg-white p-6 sm:p-7 rounded-3xl space-y-6 flex flex-col justify-between transition-all relative ${
+                                            isPopular
                                                 ? 'border-2 border-[#ff5a00] shadow-2xl transform lg:-translate-y-2'
                                                 : 'border border-slate-200 shadow-sm hover:shadow-xl'
-                                            }`}
+                                        }`}
                                     >
                                         {isPopular && (
                                             <div className="absolute -top-3.5 left-1/2 -translate-x-1/2 bg-gradient-to-r from-[#ff5a00] to-amber-500 text-white text-[11px] font-black uppercase tracking-wider px-4 py-1 rounded-full shadow-md shrink-0 whitespace-nowrap">
-                                                {__('⭐ 🔥 ¡MÁS VENDIDO!')}
+                                                {__('⭐ 🔥 ¡MÁS RECOMENDADO!')}
                                             </div>
                                         )}
                                         {isBestValue && !isPopular && (
@@ -652,33 +658,74 @@ export default function Welcome() {
                                         )}
 
                                         <div className="space-y-4 pt-2">
-                                            <span className={`inline-block px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider ${isFree
-                                                    ? 'bg-emerald-50 border border-emerald-200 text-emerald-700'
-                                                    : isPopular
-                                                        ? 'bg-orange-50 border border-orange-200 text-[#ff5a00]'
-                                                        : isBestValue
-                                                            ? 'bg-purple-50 border border-purple-200 text-purple-700'
-                                                            : 'bg-blue-50 border border-blue-200 text-[#08264e]'
+                                            <div className="flex items-center justify-between gap-2">
+                                                <span className={`inline-block px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider ${
+                                                    isFree
+                                                        ? 'bg-emerald-50 border border-emerald-200 text-emerald-700'
+                                                        : isPopular
+                                                            ? 'bg-orange-50 border border-orange-200 text-[#ff5a00]'
+                                                            : isBestValue
+                                                                ? 'bg-purple-50 border border-purple-200 text-purple-700'
+                                                                : 'bg-blue-50 border border-blue-200 text-[#08264e]'
                                                 }`}>
-                                                {isFree ? __('Sin Compromiso') : isPopular ? __('Popular') : isBestValue ? __('Mejor Valor') : __('Recomendado')}
-                                            </span>
+                                                    {isFree ? __('Sin Compromiso') : isPopular ? __('Más Vendido') : isBestValue ? __('Mejor Valor') : __('Profesional')}
+                                                </span>
+
+                                                {tienePromo && (
+                                                    <span className="bg-red-500/10 text-red-600 text-[11px] font-extrabold px-2 py-0.5 rounded-md border border-red-500/20">
+                                                        -{porcentajeAhorro}% OFF
+                                                    </span>
+                                                )}
+                                            </div>
 
                                             <div>
-                                                <h3 className="text-xl font-bold text-[#08264e]">{__(plan.nombre)}</h3>
+                                                <h3 className="text-xl font-black text-[#08264e]">{__(plan.nombre)}</h3>
                                                 {plan.descripcion && (
                                                     <p className="text-xs text-slate-500 mt-1 leading-relaxed">{__(plan.descripcion)}</p>
                                                 )}
                                             </div>
 
+                                            {/* Precios (Estilo Google) */}
                                             <div className="pt-2">
-                                                <div className="flex items-baseline gap-1.5 flex-wrap">
-                                                    <span className="text-4xl font-black text-[#08264e] font-mono">
-                                                        ${displayPrice}
-                                                    </span>
-                                                    <span className="text-xs font-extrabold text-slate-500 font-mono uppercase">
-                                                        MXN {periodText}
-                                                    </span>
-                                                </div>
+                                                {isFree ? (
+                                                    <div>
+                                                        <span className="text-4xl font-black text-[#08264e] font-mono">$0</span>
+                                                        <span className="text-xs font-extrabold text-slate-500 uppercase ml-1">MXN / 7 {__('Días')}</span>
+                                                    </div>
+                                                ) : (
+                                                    <div>
+                                                        {tienePromo && (
+                                                            <div className="flex items-center gap-1.5 mb-1">
+                                                                <span className="text-xs font-bold text-slate-400 line-through">
+                                                                    ${precioRegular} MXN
+                                                                </span>
+                                                                <span className="text-[10px] font-bold text-orange-600 bg-orange-50 px-1.5 py-0.5 rounded">
+                                                                    {plan.badge_promocion || `${duracionMeses} meses en promo`}
+                                                                </span>
+                                                            </div>
+                                                        )}
+
+                                                        <div className="flex items-baseline gap-1">
+                                                            <span className="text-4xl font-black text-[#08264e] font-mono">
+                                                                ${tienePromo ? precioPromo : precioRegular}
+                                                            </span>
+                                                            <span className="text-xs font-extrabold text-slate-500 font-mono uppercase">
+                                                                MXN / {__('mes')}
+                                                            </span>
+                                                        </div>
+
+                                                        {/* Desglose de cobro transparente */}
+                                                        {tienePromo ? (
+                                                            <p className="text-[11px] text-slate-500 mt-2 bg-slate-50 border border-slate-100 p-2 rounded-lg leading-relaxed">
+                                                                {__('Facturado')} <strong>${totalCiclo.toLocaleString('en-US')} MXN</strong> {__('por')} {periodoLabel}. {__('Luego renovación a')} <strong>${precioRegular} MXN/mes</strong>.
+                                                            </p>
+                                                        ) : (
+                                                            <p className="text-[11px] text-slate-500 mt-2 bg-slate-50 border border-slate-100 p-2 rounded-lg">
+                                                                {__('Facturado')} <strong>${totalCiclo.toLocaleString('en-US')} MXN</strong> {__('cada')} {periodoLabel}.
+                                                            </p>
+                                                        )}
+                                                    </div>
+                                                )}
                                             </div>
 
                                             <ul className="space-y-2.5 text-xs text-slate-600 border-t border-slate-100 pt-4 font-medium">
@@ -692,7 +739,7 @@ export default function Welcome() {
                                                 </li>
                                                 <li className="flex items-center gap-2 text-slate-700">
                                                     <Check className="w-4 h-4 text-emerald-600 shrink-0" />
-                                                    <span>{__('Sucursales adicionales:')} <strong className="text-slate-900">${plan.precio_sucursal_extra_mensual ?? 10} MXN</strong></span>
+                                                    <span>{__('Sucursales adicionales:')} <strong className="text-slate-900">${plan.precio_sucursal_extra_mensual ?? 20} MXN</strong></span>
                                                 </li>
                                                 <li className="flex items-center gap-2">
                                                     <Check className="w-4 h-4 text-emerald-600 shrink-0" />
@@ -703,12 +750,13 @@ export default function Welcome() {
 
                                         <Link
                                             href={`/register?plan_id=${plan.id}`}
-                                            className={`w-full py-3.5 px-4 rounded-xl text-xs font-extrabold text-center transition-all block mt-6 ${isPopular
+                                            className={`w-full py-3.5 px-4 rounded-xl text-xs font-extrabold text-center transition-all block mt-6 ${
+                                                isPopular
                                                     ? 'bg-gradient-to-r from-[#ff5a00] to-orange-600 hover:from-orange-600 hover:to-orange-700 text-white shadow-lg shadow-orange-500/25'
                                                     : isFree
                                                         ? 'bg-slate-100 hover:bg-slate-200 text-[#08264e]'
                                                         : 'bg-[#08264e] hover:bg-[#0b3368] text-white'
-                                                }`}
+                                            }`}
                                         >
                                             {isFree ? __('Probar 7 Días Gratis') : `${__('Elegir')} ${__(plan.nombre)}`}
                                         </Link>

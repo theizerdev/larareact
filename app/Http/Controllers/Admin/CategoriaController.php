@@ -59,7 +59,15 @@ class CategoriaController extends Controller
 
         $validated['slug'] = Str::slug($validated['nombre']);
 
-        Categoria::create($validated);
+        $categoria = Categoria::create($validated);
+
+        if ($request->wantsJson()) {
+            return response()->json([
+                'success' => true,
+                'data' => $categoria,
+                'message' => __('Category created successfully.'),
+            ]);
+        }
 
         return back()->with('notification', [
             'type' => 'success',

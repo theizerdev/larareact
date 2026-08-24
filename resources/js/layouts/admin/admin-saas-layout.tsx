@@ -698,6 +698,12 @@ export default function AdminSaasLayout({
                                             permission: 'subscriptions.manage',
                                         },
                                         {
+                                            title: 'Planes & Precios',
+                                            href: '/admin/planes',
+                                            permission: 'subscriptions.manage',
+                                            superAdminOnly: true,
+                                        },
+                                        {
                                             title: 'Appearance',
                                             href: appearanceEdit().url,
                                             permission: 'empresas.view',
