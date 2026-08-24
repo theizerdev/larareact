@@ -61,10 +61,13 @@ interface Orden {
 interface Props {
     ordenes: {
         data: Orden[];
-        links: any[];
+        links?: any[];
         total: number;
         current_page: number;
         last_page: number;
+        per_page?: number;
+        from?: number | null;
+        to?: number | null;
     };
     counts: Record<string, number>;
     tecnicos: { id: number; name: string }[];
@@ -578,9 +581,9 @@ export default function IndexReparaciones({ ordenes, counts, tecnicos, currencyS
                     </div>
 
                     {/* PAGINACIÓN */}
-                    {ordenes.links && ordenes.links.length > 3 && (
+                    {ordenes && ordenes.total > 0 && (
                         <div className="p-4 border-t border-slate-100 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-950">
-                            <Pagination links={ordenes.links} />
+                            <Pagination paginatedData={ordenes as any} filters={filters} />
                         </div>
                     )}
                 </Card>

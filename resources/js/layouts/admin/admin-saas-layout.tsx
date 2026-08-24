@@ -344,21 +344,18 @@ export default function AdminSaasLayout({
                             href={home()}
                             className="flex items-center gap-3 overflow-hidden"
                         >
-                            <div className="flex shrink-0 items-center justify-center bg-transparent">
+                            <div className="flex items-center">
                                 <img
-                                    src={(auth as any)?.user?.empresa?.logo_mini || (auth as any)?.user?.empresa?.logo || "/image/logo/2.png"}
-                                    alt={(auth as any)?.user?.empresa?.razon_social || "Fix Sale Icon"}
-                                    className="h-8 w-auto object-contain [[data-sidebar=dark]_&]:brightness-0 [[data-sidebar=dark]_&]:invert dark:brightness-0 dark:invert"
+                                    src="/image/logo/7.png"
+                                    alt="Fix Sale"
+                                    className="h-9 w-auto max-w-[180px] object-contain dark:block [[data-sidebar=dark]_&]:block hidden"
+                                />
+                                <img
+                                    src="/image/logo/5.png"
+                                    alt="Fix Sale"
+                                    className="h-9 w-auto max-w-[180px] object-contain dark:hidden [[data-sidebar=dark]_&]:hidden block"
                                 />
                             </div>
-                            <span
-                                className={cn(
-                                    'text-base font-semibold whitespace-nowrap text-sidebar-foreground transition-opacity duration-300',
-                                    collapsed && 'opacity-0',
-                                )}
-                            >
-                                {(auth as any)?.user?.empresa?.razon_social || name}
-                            </span>
                         </Link>
                         <Button
                             variant="ghost"

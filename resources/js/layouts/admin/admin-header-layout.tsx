@@ -107,16 +107,18 @@ export default function AdminHeaderLayout({
                             href={home()}
                             className="flex items-center gap-2.5"
                         >
-                            <div className="flex items-center justify-center bg-transparent">
+                            <div className="flex items-center">
                                 <img
-                                    src={(auth as any)?.user?.empresa?.logo_mini || (auth as any)?.user?.empresa?.logo || "/image/logo/2.png"}
-                                    alt={(auth as any)?.user?.empresa?.razon_social || "LaraReact Icon"}
-                                    className="h-8 w-auto object-contain"
+                                    src="/image/logo/7.png"
+                                    alt="Fix Sale"
+                                    className="h-8 w-auto object-contain dark:block hidden"
+                                />
+                                <img
+                                    src="/image/logo/5.png"
+                                    alt="Fix Sale"
+                                    className="h-8 w-auto object-contain dark:hidden block"
                                 />
                             </div>
-                            <span className="hidden text-lg font-semibold tracking-tight sm:inline">
-                                {(auth as any)?.user?.empresa?.razon_social || name}
-                            </span>
                         </Link>
 
                         <nav className="hidden items-center gap-1 md:flex">

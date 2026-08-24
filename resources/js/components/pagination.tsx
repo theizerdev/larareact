@@ -29,7 +29,7 @@ export interface PaginatedData {
 }
 
 export interface PaginationProps {
-    paginatedData: PaginatedData;
+    paginatedData?: PaginatedData | null;
     filters?: Record<string, string | undefined>;
     className?: string;
 }
@@ -40,7 +40,10 @@ export default function Pagination({
     className = ''
 }: PaginationProps) {
     const { __ } = useTranslate();
-    const { current_page, last_page, per_page, total, from, to } = paginatedData;
+
+    if (!paginatedData) return null;
+
+    const { current_page = 1, last_page = 1, per_page = 10, total = 0, from = null, to = null } = paginatedData;
 
     // Direct page navigation helper
     const goToPage = (page: number) => {
