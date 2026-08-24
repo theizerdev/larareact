@@ -262,36 +262,17 @@ export default function Index({ productos, categorias: categoriasProp, marcas: m
 
     const handleMarcaSelect = (val: string) => {
         setSelMarcaId(val);
-        if (val !== 'all') {
-            const brandModels = modelos.filter((m) => String(m.marca_id) === String(val));
-            const hasCurrentCat = brandModels.some((m) => String(m.categoria_id) === String(selCategoriaId));
-            if (!hasCurrentCat) {
-                setSelCategoriaId('all');
-            }
-            const hasCurrentFam = brandModels.some((m) => String(m.familia_id) === String(selFamiliaId));
-            if (!hasCurrentFam) {
-                setSelFamiliaId('all');
-            }
-        }
     };
 
     const handleCategoriaSelect = (val: string) => {
         setSelCategoriaId(val);
-        if (val !== 'all' && selMarcaId !== 'all') {
-            const catModels = modelos.filter(
-                (m) => String(m.categoria_id) === String(val) && String(m.marca_id) === String(selMarcaId)
-            );
-            if (catModels.length === 0) {
-                setSelMarcaId('all');
-            }
-        }
     };
 
     // Modelos filtrados en cascada según Categoría, Marca y Familia seleccionadas
     const filteredModelos = modelos.filter((m) => {
         if (selMarcaId !== 'all' && String(m.marca_id) !== String(selMarcaId)) return false;
-        if (selCategoriaId !== 'all' && String(m.categoria_id) !== String(selCategoriaId)) return false;
-        if (selFamiliaId !== 'all' && String(m.familia_id) !== String(selFamiliaId)) return false;
+        if (selCategoriaId !== 'all' && m.categoria_id && String(m.categoria_id) !== String(selCategoriaId)) return false;
+        if (selFamiliaId !== 'all' && m.familia_id && String(m.familia_id) !== String(selFamiliaId)) return false;
         return true;
     });
 
@@ -406,9 +387,9 @@ export default function Index({ productos, categorias: categoriasProp, marcas: m
         const mod = list.find((m) => String(m.id) === modeloId);
         if (!mod) return;
 
-        setSelCategoriaId(String(mod.categoria_id));
-        setSelMarcaId(String(mod.marca_id));
-        setSelFamiliaId(String(mod.familia_id));
+        if (mod.categoria_id) setSelCategoriaId(String(mod.categoria_id));
+        if (mod.marca_id) setSelMarcaId(String(mod.marca_id));
+        if (mod.familia_id) setSelFamiliaId(String(mod.familia_id));
 
         let nombre = mod.nombre;
         const subSpecs = Object.values(data.variant_specs || {});
