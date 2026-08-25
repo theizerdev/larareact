@@ -16,8 +16,11 @@ export default function AuthSplitLayout({
             <div className="relative hidden flex-col justify-between overflow-hidden p-12 text-white lg:flex">
                 {/* Background Image with smooth zoom micro-animation */}
                 <div
-                    className="absolute inset-0 bg-cover bg-center transition-transform duration-[10000ms] ease-out hover:scale-110"
-                    style={{ backgroundImage: 'url("/image/login_corporate_bg.png")' }}
+                    className="absolute inset-0 bg-cover transition-transform duration-[10000ms] ease-out hover:scale-110"
+                    style={{
+                        backgroundImage: 'url("/image/login_shigoto_bg.jpg")',
+                        backgroundPosition: '30% center',
+                    }}
                 />
                 {/* Subtle vignette overlay to keep logo and footer readable while showcasing the image */}
                 <div className="absolute inset-0 bg-gradient-to-b from-black/35 via-transparent to-black/45" />
@@ -27,8 +30,8 @@ export default function AuthSplitLayout({
                     className="relative z-10 flex items-center font-semibold"
                 >
                     <img
-                        src="/image/logo/hosho/lockup-dark.png"
-                        alt="Hoshō"
+                        src="/image/logo/shigoto/lockup-dark.png"
+                        alt="Shigoto"
                         className="h-9 w-auto object-contain"
                     />
                 </Link>
@@ -47,8 +50,8 @@ export default function AuthSplitLayout({
                         className="mb-8 flex items-center justify-center"
                     >
                         <img
-                            src="/image/logo/hosho/lockup.png"
-                            alt="Hoshō"
+                            src="/image/logo/shigoto/lockup.png"
+                            alt="Shigoto"
                             className="h-12 w-auto object-contain"
                         />
                     </Link>

@@ -26,8 +26,8 @@ export default function AuthCardLayout({
                     className="flex items-center gap-2 self-center font-medium"
                 >
                     <img
-                        src="/image/logo/hosho/lockup.png"
-                        alt="Hoshō"
+                        src="/image/logo/shigoto/lockup.png"
+                        alt="Shigoto"
                         className="h-40 w-auto object-contain"
                     />
                 </Link>
