@@ -64,11 +64,12 @@ class Subscription extends Model
         }
 
         return match ($cicloMeses) {
+            1 => 'Plan Mensual',
             3 => 'Plan Trimestral',
             6 => 'Plan Semestral',
             12 => 'Plan Anual',
             0 => 'Prueba Gratuita',
-            default => 'Plan Trimestral',
+            default => 'Plan Mensual',
         };
     }
 }

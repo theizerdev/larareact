@@ -44,34 +44,26 @@ class SubscriptionController extends Controller
 
         $bcvRate = $bcvService->getRate() ?? 36.50; // Tasa por defecto de respaldo si falla el API
 
-        $planTrimestral = SubscriptionPlan::where('nombre', 'Plan Trimestral')->first();
-        $planSemestral  = SubscriptionPlan::where('nombre', 'Plan Semestral')->first();
-        $planAnual      = SubscriptionPlan::where('nombre', 'Plan Anual')->first();
+        // Opciones de cálculo de precios (cobro puramente mensual)
+        $opcionesPrecios = [];
+        foreach ($planes as $p) {
+            $precioMensual = $p->precio_mensual_efectivo;
+            $opcionesPrecios[$p->id] = [
+                'plan_id' => $p->id,
+                'nombre' => $p->nombre,
+                'meses' => 1,
+                'subtotal_plan' => $precioMensual,
+                'precio_mensual_promedio' => $precioMensual,
+                'total' => $p->calcularPrecio(1, max(1, $totalSucursales)),
+            ];
+        }
 
-        $precio3  = $planTrimestral?->precio_3_meses  ?: 897.00;
-        $precio6  = $planSemestral?->precio_6_meses   ?: 1494.00;
-        $precio12 = $planAnual?->precio_12_meses     ?: 2388.00;
-
-        // Opciones de cálculo de precios
-        $opcionesPrecios = [
-            3 => [
-                'meses' => 3,
-                'subtotal_plan' => $precio3,
-                'precio_mensual_promedio' => round($precio3 / 3, 2),
-                'total' => ($planTrimestral ?? $plan)?->calcularPrecio(3, max(1, $totalSucursales)) ?? 897.00,
-            ],
-            6 => [
-                'meses' => 6,
-                'subtotal_plan' => $precio6,
-                'precio_mensual_promedio' => round($precio6 / 6, 2),
-                'total' => ($planSemestral ?? $plan)?->calcularPrecio(6, max(1, $totalSucursales)) ?? 1494.00,
-            ],
-            12 => [
-                'meses' => 12,
-                'subtotal_plan' => $precio12,
-                'precio_mensual_promedio' => round($precio12 / 12, 2),
-                'total' => ($planAnual ?? $plan)?->calcularPrecio(12, max(1, $totalSucursales)) ?? 2388.00,
-            ],
+        // Opción predeterminada para el ciclo 1 mes (compatibilidad con vistas)
+        $opcionesPrecios[1] = [
+            'meses' => 1,
+            'subtotal_plan' => $plan?->precio_mensual_efectivo ?? 499.00,
+            'precio_mensual_promedio' => $plan?->precio_mensual_efectivo ?? 499.00,
+            'total' => $plan?->calcularPrecio(1, max(1, $totalSucursales)) ?? 499.00,
         ];
 
         // Obtener la configuración activa de pasarelas de pago de la plataforma (Empresa ID 1 / Dueño del SaaS)
@@ -135,7 +127,7 @@ class SubscriptionController extends Controller
     {
         $request->validate([
             'plan_id' => 'nullable|exists:subscription_plans,id',
-            'ciclo_meses' => 'required|integer|in:3,6,12',
+            'ciclo_meses' => 'nullable|integer|min:1',
             'sucursales_contratadas' => 'required|integer|min:1',
             'metodo_pago' => 'required|string',
             'referencia_pago' => 'nullable|string|max:100',
@@ -153,6 +145,7 @@ class SubscriptionController extends Controller
             ]);
         }
 
+        $cicloMeses = (int) ($request->input('ciclo_meses') ?: 1);
         $plan = $request->plan_id ? SubscriptionPlan::find($request->plan_id) : SubscriptionPlan::getPlanRenovacionDefault();
         $hasActivePaidSubscription = $empresa->subscription_status === 'active' && ! $empresa->isExemptFromSubscription();
 
@@ -163,9 +156,9 @@ class SubscriptionController extends Controller
             $cicloPago = 1;
         } else {
             $montoCalculado = $plan
-                ? $plan->calcularPrecio((int) $request->ciclo_meses, (int) $request->sucursales_contratadas)
-                : 89.00;
-            $cicloPago = (int) $request->ciclo_meses;
+                ? $plan->calcularPrecio($cicloMeses, (int) $request->sucursales_contratadas)
+                : 499.00;
+            $cicloPago = $cicloMeses;
         }
 
         $comprobantePath = null;
@@ -198,12 +191,13 @@ class SubscriptionController extends Controller
      */
     public function createPaypalOrder(Request $request)
     {
-       
         $request->validate([
-            'ciclo_meses' => 'required|integer|in:3,6,12',
+            'plan_id' => 'nullable|exists:subscription_plans,id',
+            'ciclo_meses' => 'nullable|integer|min:1',
             'sucursales_contratadas' => 'required|integer|min:1',
         ]);
 
+        $cicloMeses = (int) ($request->input('ciclo_meses') ?: 1);
         $empresa = $request->user()->empresa;
         $planId = $request->input('plan_id');
         $plan = $planId ? SubscriptionPlan::find($planId) : SubscriptionPlan::getPlanRenovacionDefault();
@@ -214,7 +208,7 @@ class SubscriptionController extends Controller
             $precioExtra = ($plan?->precio_sucursal_extra_mensual > 0) ? $plan->precio_sucursal_extra_mensual : 10.00;
             $monto = round($nuevasSucursales * $precioExtra, 2);
         } else {
-            $monto = $plan ? $plan->calcularPrecio((int) $request->ciclo_meses, (int) $request->sucursales_contratadas) : 89.00;
+            $monto = $plan ? $plan->calcularPrecio($cicloMeses, (int) $request->sucursales_contratadas) : 499.00;
         }
 
         $masterEmpresa = Empresa::withoutGlobalScopes()->find(1) ?? $empresa;
@@ -246,7 +240,7 @@ class SubscriptionController extends Controller
                             'currency_code' => 'USD',
                             'value' => number_format($monto, 2, '.', ''),
                         ],
-                        'description' => "Renovación Suscripción Fix Sale - {$request->ciclo_meses} meses ({$empresa->razon_social})",
+                        'description' => "Renovación Suscripción Fix Sale - {$plan?->nombre} ({$empresa->razon_social})",
                     ],
                 ],
             ]);
@@ -260,10 +254,12 @@ class SubscriptionController extends Controller
     public function capturePaypalOrder(Request $request, $orderId)
     {
         $request->validate([
-            'ciclo_meses' => 'required|integer|in:3,6,12',
+            'plan_id' => 'nullable|exists:subscription_plans,id',
+            'ciclo_meses' => 'nullable|integer|min:1',
             'sucursales_contratadas' => 'required|integer|min:1',
         ]);
 
+        $cicloMeses = (int) ($request->input('ciclo_meses') ?: 1);
         $empresa = $request->user()->empresa;
         $masterEmpresa = Empresa::withoutGlobalScopes()->find(1) ?? $empresa;
         $clientId = $masterEmpresa->paypal_client_id;
@@ -302,7 +298,7 @@ class SubscriptionController extends Controller
                 $precioExtra = ($plan?->precio_sucursal_extra_mensual > 0) ? $plan->precio_sucursal_extra_mensual : 10.00;
                 $monto = round($nuevasSucursales * $precioExtra, 2);
             } else {
-                $monto = $plan ? $plan->calcularPrecio((int) $request->ciclo_meses, (int) $request->sucursales_contratadas) : 89.00;
+                $monto = $plan ? $plan->calcularPrecio($cicloMeses, (int) $request->sucursales_contratadas) : 499.00;
             }
 
             // Extender fecha de expiración calculando desde la tabla subscriptions
@@ -314,19 +310,19 @@ class SubscriptionController extends Controller
                 if ($latestSub?->fecha_vencimiento && $latestSub->fecha_vencimiento->isFuture()) {
                     $baseDate = $latestSub->fecha_vencimiento->copy();
                 }
-                $nuevaFechaExpiracion = $baseDate->addMonths((int) $request->ciclo_meses);
+                $nuevaFechaExpiracion = $baseDate->addMonths($cicloMeses);
             }
 
             $empresa->update([
                 'subscription_status' => 'active',
                 'subscription_expires_at' => $nuevaFechaExpiracion,
                 'max_sucursales' => max($empresa->max_sucursales ?? 1, (int) $request->sucursales_contratadas),
-                'billing_cycle' => (string) $request->ciclo_meses,
+                'billing_cycle' => (string) $cicloMeses,
             ]);
 
             $nombrePlan = $hasActivePaidSubscription
                 ? 'Sucursales Adicionales'
-                : Subscription::getNombrePlanByCiclo((int) $request->ciclo_meses);
+                : ($plan?->nombre ?? Subscription::getNombrePlanByCiclo($cicloMeses));
 
             // Actualizar la suscripción existente de la empresa (NO crear registros duplicados)
             $subscription = $empresa->getLatestSubscriptionRecord();
@@ -334,7 +330,7 @@ class SubscriptionController extends Controller
                 $subscription->update([
                     'plan_id' => $plan?->id,
                     'nombre_plan' => $nombrePlan,
-                    'ciclo_meses' => $hasActivePaidSubscription ? ($subscription->ciclo_meses ?: (int) $request->ciclo_meses) : (int) $request->ciclo_meses,
+                    'ciclo_meses' => $hasActivePaidSubscription ? ($subscription->ciclo_meses ?: $cicloMeses) : $cicloMeses,
                     'max_sucursales' => max($empresa->max_sucursales ?? 1, (int) $request->sucursales_contratadas),
                     'monto_total' => $monto,
                     'fecha_vencimiento' => $nuevaFechaExpiracion,
@@ -345,7 +341,7 @@ class SubscriptionController extends Controller
                     'empresa_id' => $empresa->id,
                     'plan_id' => $plan?->id,
                     'nombre_plan' => $nombrePlan,
-                    'ciclo_meses' => (int) $request->ciclo_meses,
+                    'ciclo_meses' => $cicloMeses,
                     'max_sucursales' => (int) $request->sucursales_contratadas,
                     'monto_total' => $monto,
                     'fecha_inicio' => now(),
@@ -361,7 +357,7 @@ class SubscriptionController extends Controller
                 'empresa_id' => $empresa->id,
                 'user_id' => auth()->id(),
                 'monto' => $monto,
-                'ciclo_meses' => $hasActivePaidSubscription ? 1 : (int) $request->ciclo_meses,
+                'ciclo_meses' => $hasActivePaidSubscription ? 1 : $cicloMeses,
                 'sucursales_contratadas' => (int) $request->sucursales_contratadas,
                 'metodo_pago' => 'paypal',
                 'referencia_pago' => $transactionId,
@@ -448,7 +444,7 @@ class SubscriptionController extends Controller
             DB::beginTransaction();
 
             $empresa = $payment->empresa;
-            $meses = $payment->ciclo_meses;
+            $meses = max(1, (int) $payment->ciclo_meses);
 
             $hasActivePaidSubscription = $empresa->subscription_status === 'active' && ! $empresa->isExemptFromSubscription();
 
@@ -475,7 +471,7 @@ class SubscriptionController extends Controller
 
             $nombrePlan = $hasActivePaidSubscription
                 ? 'Sucursales Adicionales'
-                : Subscription::getNombrePlanByCiclo($meses);
+                : ($plan?->nombre ?? Subscription::getNombrePlanByCiclo($meses));
 
             // Actualizar la suscripción existente de la empresa (NO crear registros duplicados)
             $subscription = $empresa->getLatestSubscriptionRecord();
@@ -597,7 +593,7 @@ class SubscriptionController extends Controller
                 'empresa_id' => $empresa->id,
                 'plan_id' => SubscriptionPlan::getPlanRenovacionDefault()?->id,
                 'nombre_plan' => $status === 'trial' ? 'Plan Prueba (7 días)' : 'Plan Profesional',
-                'ciclo_meses' => 12,
+                'ciclo_meses' => 1,
                 'max_sucursales' => $maxSucursales,
                 'monto_total' => 0.00,
                 'fecha_inicio' => now(),

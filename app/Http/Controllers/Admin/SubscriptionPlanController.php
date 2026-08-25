@@ -74,19 +74,14 @@ class SubscriptionPlanController extends Controller
             'activo' => 'boolean',
         ]);
 
-        // Auto-calcular ciclos si no fueron provistos explícitamente
+        // Asignar valores por defecto para campos mensuales
         $precioRegular = (float) ($validated['precio_regular_mensual'] ?? 0);
         $precioPromo = (float) ($validated['precio_promocional_mensual'] ?? $precioRegular);
 
-        if (empty($validated['precio_3_meses'])) {
-            $validated['precio_3_meses'] = round($precioPromo * 3, 2);
-        }
-        if (empty($validated['precio_6_meses'])) {
-            $validated['precio_6_meses'] = round($precioPromo * 6, 2);
-        }
-        if (empty($validated['precio_12_meses'])) {
-            $validated['precio_12_meses'] = round($precioPromo * 12, 2);
-        }
+        $validated['precio_3_meses'] = $validated['precio_3_meses'] ?? $precioPromo;
+        $validated['precio_6_meses'] = $validated['precio_6_meses'] ?? $precioPromo;
+        $validated['precio_12_meses'] = $validated['precio_12_meses'] ?? $precioPromo;
+
         if (!isset($validated['sucursales_incluidas'])) {
             $validated['sucursales_incluidas'] = 1;
         }

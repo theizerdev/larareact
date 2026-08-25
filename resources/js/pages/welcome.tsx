@@ -566,76 +566,50 @@ export default function Welcome() {
                                         precio_regular_mensual: 0,
                                         precio_promocional_mensual: 0,
                                         tiene_promocion: false,
-                                        precio_3_meses: 0,
-                                        precio_6_meses: 0,
-                                        precio_12_meses: 0,
                                         sucursales_incluidas: 1,
                                     },
                                     {
                                         id: 2,
-                                        nombre: 'Plan Trimestral',
-                                        descripcion: 'Ideal para emprendedores y comercios con flexibilidad de pago.',
-                                        precio_regular_mensual: 499,
+                                        nombre: 'Plan Básico',
+                                        descripcion: 'Ideal para emprendedores y comercios que inician.',
+                                        precio_regular_mensual: 399,
                                         precio_promocional_mensual: 299,
                                         tiene_promocion: true,
-                                        meses_duracion_promocion: 3,
-                                        badge_promocion: '40% DTO Primer Trimestre',
-                                        precio_3_meses: 897,
-                                        precio_6_meses: 1794,
-                                        precio_12_meses: 3588,
+                                        badge_promocion: '25% DTO Promo',
                                         sucursales_incluidas: 1,
                                     },
                                     {
                                         id: 3,
-                                        nombre: 'Plan Semestral',
-                                        descripcion: 'Control operativo total para comercios en crecimiento.',
-                                        precio_regular_mensual: 499,
-                                        precio_promocional_mensual: 249,
+                                        nombre: 'Plan Profesional',
+                                        descripcion: 'Control operativo total y reportes avanzados.',
+                                        precio_regular_mensual: 599,
+                                        precio_promocional_mensual: 499,
                                         tiene_promocion: true,
-                                        meses_duracion_promocion: 6,
-                                        badge_promocion: 'Más Popular - 50% OFF',
+                                        badge_promocion: 'Más Popular',
                                         destacado: true,
-                                        precio_3_meses: 897,
-                                        precio_6_meses: 1494,
-                                        precio_12_meses: 2988,
                                         sucursales_incluidas: 1,
                                     },
                                     {
                                         id: 4,
-                                        nombre: 'Plan Anual',
-                                        descripcion: 'La opción con mejor precio para empresas consolidadas.',
-                                        precio_regular_mensual: 499,
-                                        precio_promocional_mensual: 199,
+                                        nombre: 'Plan Empresarial',
+                                        descripcion: 'Potencia multi-sucursal para empresas consolidadas.',
+                                        precio_regular_mensual: 999,
+                                        precio_promocional_mensual: 799,
                                         tiene_promocion: true,
-                                        meses_duracion_promocion: 12,
-                                        badge_promocion: 'Mejor Valor - 60% OFF',
-                                        precio_3_meses: 897,
-                                        precio_6_meses: 1494,
-                                        precio_12_meses: 2388,
+                                        badge_promocion: 'Mejor Valor',
                                         sucursales_incluidas: 2,
                                     },
                                 ]
                             ).map((plan: any) => {
                                 const nameLower = (plan.nombre || '').toLowerCase();
                                 const isFree = nameLower.includes('prueba') || (Number(plan.precio_regular_mensual) === 0 && Number(plan.precio_promocional_mensual) === 0 && Number(plan.precio_3_meses) === 0);
-                                const isPopular = Boolean(plan.destacado) || nameLower.includes('semestral');
-                                const isBestValue = nameLower.includes('anual') && !isPopular;
+                                const isPopular = Boolean(plan.destacado) || nameLower.includes('profesional');
+                                const isBestValue = (nameLower.includes('empresarial') || nameLower.includes('anual')) && !isPopular;
 
                                 const precioRegular = Number(plan.precio_regular_mensual) || (Number(plan.precio_3_meses) > 0 ? Math.round(Number(plan.precio_3_meses) / 3) : 0);
                                 const precioPromo = Number(plan.precio_promocional_mensual) || precioRegular;
                                 const tienePromo = Boolean(plan.tiene_promocion) && precioPromo < precioRegular && precioPromo > 0;
                                 const porcentajeAhorro = precioRegular > 0 ? Math.round(((precioRegular - precioPromo) / precioRegular) * 100) : 0;
-                                const duracionMeses = plan.meses_duracion_promocion || 3;
-
-                                let totalCiclo = Number(plan.precio_3_meses) || (precioPromo * 3);
-                                let periodoLabel = '3 meses';
-                                if (nameLower.includes('semestral')) {
-                                    totalCiclo = Number(plan.precio_6_meses) || (precioPromo * 6);
-                                    periodoLabel = '6 meses';
-                                } else if (nameLower.includes('anual')) {
-                                    totalCiclo = Number(plan.precio_12_meses) || (precioPromo * 12);
-                                    periodoLabel = '12 meses (1 año)';
-                                }
 
                                 return (
                                     <div
@@ -668,7 +642,7 @@ export default function Welcome() {
                                                                 ? 'bg-purple-50 border border-purple-200 text-purple-700'
                                                                 : 'bg-blue-50 border border-blue-200 text-[#08264e]'
                                                 }`}>
-                                                    {isFree ? __('Sin Compromiso') : isPopular ? __('Más Vendido') : isBestValue ? __('Mejor Valor') : __('Profesional')}
+                                                    {isFree ? __('Sin Compromiso') : isPopular ? __('Más Vendido') : isBestValue ? __('Empresarial') : __('Básico')}
                                                 </span>
 
                                                 {tienePromo && (
@@ -685,7 +659,7 @@ export default function Welcome() {
                                                 )}
                                             </div>
 
-                                            {/* Precios (Estilo Google) */}
+                                            {/* Precios Mensuales */}
                                             <div className="pt-2">
                                                 {isFree ? (
                                                     <div>
@@ -700,7 +674,7 @@ export default function Welcome() {
                                                                     ${precioRegular} MXN
                                                                 </span>
                                                                 <span className="text-[10px] font-bold text-orange-600 bg-orange-50 px-1.5 py-0.5 rounded">
-                                                                    {plan.badge_promocion || `${duracionMeses} meses en promo`}
+                                                                    {plan.badge_promocion || __('Oferta Especial')}
                                                                 </span>
                                                             </div>
                                                         )}
@@ -714,14 +688,14 @@ export default function Welcome() {
                                                             </span>
                                                         </div>
 
-                                                        {/* Desglose de cobro transparente */}
+                                                        {/* Desglose de cobro mensual transparente */}
                                                         {tienePromo ? (
                                                             <p className="text-[11px] text-slate-500 mt-2 bg-slate-50 border border-slate-100 p-2 rounded-lg leading-relaxed">
-                                                                {__('Facturado')} <strong>${totalCiclo.toLocaleString('en-US')} MXN</strong> {__('por')} {periodoLabel}. {__('Luego renovación a')} <strong>${precioRegular} MXN/mes</strong>.
+                                                                {__('Facturación mensual con precio de oferta')} <strong>${precioPromo} MXN/mes</strong>. {__('Precio regular:')} <strong>${precioRegular} MXN/mes</strong>.
                                                             </p>
                                                         ) : (
                                                             <p className="text-[11px] text-slate-500 mt-2 bg-slate-50 border border-slate-100 p-2 rounded-lg">
-                                                                {__('Facturado')} <strong>${totalCiclo.toLocaleString('en-US')} MXN</strong> {__('cada')} {periodoLabel}.
+                                                                {__('Facturación mensual recurrente de')} <strong>${precioRegular} MXN/mes</strong>.
                                                             </p>
                                                         )}
                                                     </div>

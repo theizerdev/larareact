@@ -34,16 +34,15 @@ interface PlanOption {
 interface PlanInfo {
     id: number;
     nombre: string;
-    descripcion?: string;
+    descripcion: string;
     precio_regular_mensual?: number;
     precio_promocional_mensual?: number;
     tiene_promocion?: boolean;
-    meses_duracion_promocion?: number;
-    badge_promocion?: string;
+    badge_promocion?: string | null;
     destacado?: boolean;
-    precio_3_meses: number;
-    precio_6_meses: number;
-    precio_12_meses: number;
+    precio_3_meses?: number;
+    precio_6_meses?: number;
+    precio_12_meses?: number;
     precio_sucursal_extra_mensual?: number;
     sucursales_incluidas?: number;
 }
@@ -76,25 +75,26 @@ export default function SubscriptionExpired({ empresa, plan, planes = [], opcion
 
     const activePlanes = planes.length > 0 ? planes : (plan ? [plan] : []);
     const [selectedPlanId, setSelectedPlanId] = useState<number>(plan?.id || activePlanes[0]?.id || 1);
-    const [selectedCycle, setSelectedCycle] = useState<number>(12);
+    const [selectedCycle] = useState<number>(1);
     const [extraSucursales, setExtraSucursales] = useState<number>(Math.max(1, empresa?.sucursales_activas ?? 1));
     const [imagePreviewUrl, setImagePreviewUrl] = useState<string | null>(null);
 
     const currentPlan = activePlanes.find(p => p.id === selectedPlanId) || plan || activePlanes[0];
 
-    const getPlanSubtotal = (cycle: number) => {
-        if (!currentPlan) return opcionesPrecios[cycle]?.subtotal_plan ?? 0;
-        if (cycle === 3) return currentPlan.precio_3_meses > 0 ? currentPlan.precio_3_meses : 89.00;
-        if (cycle === 6) return currentPlan.precio_6_meses > 0 ? currentPlan.precio_6_meses : 159.00;
-        return currentPlan.precio_12_meses > 0 ? currentPlan.precio_12_meses : 288.00;
+    const getPlanMonthlyPrice = (p: PlanInfo | null) => {
+        if (!p) return 499;
+        if (p.tiene_promocion && Number(p.precio_promocional_mensual) > 0) {
+            return Number(p.precio_promocional_mensual);
+        }
+        return Number(p.precio_regular_mensual) || Number(p.precio_3_meses) || 499;
     };
 
     const precioSucursalExtra = (currentPlan?.precio_sucursal_extra_mensual && currentPlan.precio_sucursal_extra_mensual > 0)
         ? currentPlan.precio_sucursal_extra_mensual
-        : 10;
-    const currentSubtotal = getPlanSubtotal(selectedCycle);
+        : 20;
+    const currentSubtotal = getPlanMonthlyPrice(currentPlan);
     const sucursalesExtrasCount = Math.max(0, extraSucursales - (currentPlan?.sucursales_incluidas ?? 1));
-    const costoExtraSucursales = sucursalesExtrasCount * precioSucursalExtra * selectedCycle;
+    const costoExtraSucursales = sucursalesExtrasCount * precioSucursalExtra;
     const precioFinalEstimado = currentSubtotal + costoExtraSucursales;
 
     const formatPrice = (usdAmount: number) => {
@@ -102,12 +102,12 @@ export default function SubscriptionExpired({ empresa, plan, planes = [], opcion
             const bsAmount = usdAmount * bcvRate;
             return `Bs. ${bsAmount.toLocaleString('es-VE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
         }
-        return `${currencySymbol}${usdAmount.toFixed(2)}`;
+        return `$${usdAmount.toLocaleString('es-MX', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} MXN`;
     };
 
     const { data, setData, post, processing, errors, reset } = useForm({
         plan_id: selectedPlanId,
-        ciclo_meses: selectedCycle,
+        ciclo_meses: 1,
         sucursales_contratadas: extraSucursales,
         metodo_pago: 'transferencia',
         referencia_pago: '',
@@ -118,11 +118,6 @@ export default function SubscriptionExpired({ empresa, plan, planes = [], opcion
     const handlePlanChange = (planId: number) => {
         setSelectedPlanId(planId);
         setData('plan_id', planId);
-    };
-
-    const handleCycleChange = (cycle: number) => {
-        setSelectedCycle(cycle);
-        setData('ciclo_meses', cycle);
     };
 
     const handleSucursalChange = (count: number) => {
@@ -181,87 +176,55 @@ export default function SubscriptionExpired({ empresa, plan, planes = [], opcion
                 </CardHeader>
                 <CardContent className="p-6">
                     <form onSubmit={handleSubmitRenewal} className="space-y-6">
-                        {/* 1. Selecciona la Duración del Servicio / Plan */}
+                        {/* 1. Selecciona el Plan Mensual */}
                         <div className="space-y-3">
                             <Label className="text-xs font-bold uppercase tracking-wider text-muted-foreground flex items-center gap-2">
                                 <Zap className="h-4 w-4 text-primary" />
                                 {__('1. Selecciona tu Plan de Renovación')}
                             </Label>
                             <div className="grid gap-6 sm:grid-cols-3">
-                                {[3, 6, 12].map((meses) => {
-                                    const subtotal = getPlanSubtotal(meses);
-                                    const promedio = Math.round(subtotal / meses);
-                                    const regularMensual = currentPlan?.precio_regular_mensual || promedio;
-                                    const tienePromo = Boolean(currentPlan?.tiene_promocion) && (currentPlan?.precio_promocional_mensual ?? 0) < regularMensual;
+                                {(activePlanes.length > 0 ? activePlanes.filter(p => !p.nombre.toLowerCase().includes('prueba') || p.id === selectedPlanId) : [currentPlan]).map((pItem) => {
+                                    const isSelected = selectedPlanId === pItem.id;
+                                    const regularMensual = Number(pItem.precio_regular_mensual) || Number(pItem.precio_3_meses) || 499;
+                                    const promoMensual = Number(pItem.precio_promocional_mensual) || regularMensual;
+                                    const tienePromo = Boolean(pItem.tiene_promocion) && promoMensual < regularMensual && promoMensual > 0;
+                                    const precioMostrar = tienePromo ? promoMensual : regularMensual;
+                                    const ahorro = regularMensual > 0 ? Math.round(((regularMensual - promoMensual) / regularMensual) * 100) : 0;
 
-                                    const meta = {
-                                        3: {
-                                            badge: currentPlan?.badge_promocion || __('Plan Trimestral'),
-                                            badgeClass: 'bg-slate-700 text-white font-bold',
-                                            titulo: __('Plan Trimestral'),
-                                            subtitulo: __('Control total para tu comercio'),
-                                            features: [
-                                                __('Todo lo de la Prueba Gratis'),
-                                                __('Catálogo y productos ilimitados'),
-                                                __('Control de stock e inventario'),
-                                                __('Reportes de ventas y ganancias'),
-                                            ],
-                                        },
-                                        6: {
-                                            badge: currentPlan?.destacado ? __('★ Más Popular') : __('Plan Semestral'),
-                                            badgeClass: 'bg-amber-500 text-white font-bold',
-                                            titulo: __('Plan Semestral'),
-                                            subtitulo: __('El equilibrio perfecto para crecer'),
-                                            features: [
-                                                __('Todo lo del Plan Trimestral'),
-                                                __('Sincronización automática de tasa'),
-                                                __('WhatsApp Engine multi-usuario'),
-                                                __('Soporte prioritario por WhatsApp'),
-                                            ],
-                                        },
-                                        12: {
-                                            badge: __('🔥 Mejor Valor'),
-                                            badgeClass: 'bg-emerald-600 text-white font-bold',
-                                            titulo: __('Plan Anual'),
-                                            subtitulo: __('Máximo ahorro y soporte continuo'),
-                                            features: [
-                                                __('Sucursales y Cajas Ilimitadas'),
-                                                __('Ventas a crédito y cobranza'),
-                                                __('Auditoría estricta de transacciones'),
-                                                __('Asesor técnico dedicado'),
-                                            ],
-                                        },
-                                    }[meses]!;
-
-                                    const isSelected = selectedCycle === meses;
                                     return (
                                         <div
-                                            key={meses}
-                                            onClick={() => handleCycleChange(meses)}
+                                            key={pItem.id}
+                                            onClick={() => handlePlanChange(pItem.id)}
                                             className={`cursor-pointer rounded-2xl border-2 p-5 transition-all relative flex flex-col justify-between ${
                                                 isSelected
                                                     ? 'border-primary bg-primary/5 shadow-lg ring-2 ring-primary/20 scale-[1.02]'
                                                     : 'border-slate-200 hover:border-slate-300 dark:border-slate-800 bg-card'
                                             }`}
                                         >
-                                            <Badge className={`absolute -top-3 right-4 text-[10px] px-2.5 py-0.5 ${meta.badgeClass}`}>
-                                                {meta.badge}
-                                            </Badge>
+                                            {pItem.destacado ? (
+                                                <Badge className="absolute -top-3 right-4 bg-amber-500 text-white text-[10px] font-bold px-2.5 py-0.5 shadow-sm">
+                                                    {__('⭐ Más Popular')}
+                                                </Badge>
+                                            ) : tienePromo ? (
+                                                <Badge className="absolute -top-3 right-4 bg-red-600 text-white text-[10px] font-bold px-2.5 py-0.5 shadow-sm">
+                                                    -{ahorro}% OFF
+                                                </Badge>
+                                            ) : null}
 
                                             <div className="space-y-2">
-                                                <span className="text-xs font-extrabold uppercase tracking-wider text-muted-foreground">{meta.titulo}</span>
-                                                <p className="text-xs text-muted-foreground min-h-[32px]">{meta.subtitulo}</p>
+                                                <span className="text-xs font-extrabold uppercase tracking-wider text-muted-foreground">{pItem.nombre}</span>
+                                                <p className="text-xs text-muted-foreground min-h-[32px]">{pItem.descripcion || __('Acceso a la plataforma FixSale.')}</p>
                                                 <div className="pt-2">
-                                                    {tienePromo && regularMensual > promedio && (
+                                                    {tienePromo && (
                                                         <span className="text-xs text-muted-foreground line-through font-semibold block">
                                                             {formatPrice(regularMensual)} / {__('mes')}
                                                         </span>
                                                     )}
                                                     <h3 className="text-3xl font-black text-foreground">
-                                                        {formatPrice(promedio)} <span className="text-xs font-semibold text-muted-foreground">/ {__('mes')}</span>
+                                                        {formatPrice(precioMostrar)} <span className="text-xs font-semibold text-muted-foreground">/ {__('mes')}</span>
                                                     </h3>
                                                     <p className="text-[11px] font-medium text-primary mt-0.5">
-                                                        {__('Facturado')} {formatPrice(subtotal)} {__('cada')} {meses} {__('meses')}
+                                                        {__('Facturación Mensual Recurrente')}
                                                     </p>
                                                 </div>
                                             </div>
@@ -269,12 +232,18 @@ export default function SubscriptionExpired({ empresa, plan, planes = [], opcion
                                             <div className="mt-4 pt-3 border-t space-y-2">
                                                 <span className="text-[11px] font-bold text-muted-foreground uppercase">{__('Incluye:')}</span>
                                                 <ul className="space-y-1.5 text-xs">
-                                                    {meta.features.map((feat, idx) => (
-                                                        <li key={idx} className="flex items-start gap-2 text-foreground font-medium">
-                                                            <CheckCircle2 className="h-3.5 w-3.5 text-emerald-500 shrink-0 mt-0.5" />
-                                                            <span className="leading-tight">{feat}</span>
-                                                        </li>
-                                                    ))}
+                                                    <li className="flex items-start gap-2 text-foreground font-medium">
+                                                        <CheckCircle2 className="h-3.5 w-3.5 text-emerald-500 shrink-0 mt-0.5" />
+                                                        <span className="leading-tight">{pItem.sucursales_incluidas || 1} {__('Sucursal(es) incluida(s)')}</span>
+                                                    </li>
+                                                    <li className="flex items-start gap-2 text-foreground font-medium">
+                                                        <CheckCircle2 className="h-3.5 w-3.5 text-emerald-500 shrink-0 mt-0.5" />
+                                                        <span className="leading-tight">{__('Sucursal extra: ')}{formatPrice(pItem.precio_sucursal_extra_mensual || 20)}/{__('mes')}</span>
+                                                    </li>
+                                                    <li className="flex items-start gap-2 text-foreground font-medium">
+                                                        <CheckCircle2 className="h-3.5 w-3.5 text-emerald-500 shrink-0 mt-0.5" />
+                                                        <span className="leading-tight">{__('Acceso a todos los módulos')}</span>
+                                                    </li>
                                                 </ul>
                                             </div>
                                         </div>
@@ -291,9 +260,9 @@ export default function SubscriptionExpired({ empresa, plan, planes = [], opcion
                                 </Label>
                                 <div className="p-4 bg-muted/30 rounded-xl border space-y-3">
                                     <p className="text-xs text-muted-foreground">
-                                        {__('El plan base incluye 1 sucursal. Cada sucursal adicional suma únicamente +')}
+                                        {__('El plan base incluye')} <strong>{currentPlan?.sucursales_incluidas ?? 1} {__('sucursal(es)')}</strong>. {__('Cada sucursal adicional suma +')}
                                         <strong className="text-primary font-bold">
-                                            {formatPrice(precioSucursalExtra)}
+                                            {formatPrice(precioSucursalExtra)}/{__('mes')}
                                         </strong>.
                                     </p>
                                     <div className="flex items-center gap-3">
@@ -328,7 +297,9 @@ export default function SubscriptionExpired({ empresa, plan, planes = [], opcion
                                         </Button>
 
                                         <span className="text-xs text-muted-foreground font-medium">
-                                            {extraSucursales === 1 ? __('1 Sucursal Incluida') : `${extraSucursales - 1} sucursal(es) extra`}
+                                            {extraSucursales <= (currentPlan?.sucursales_incluidas ?? 1)
+                                                ? `${currentPlan?.sucursales_incluidas ?? 1} ${__('Sucursal(es) Incluida(s)')}`
+                                                : `+${sucursalesExtrasCount} ${__('sucursal(es) extra')}`}
                                         </span>
                                     </div>
                                 </div>
@@ -346,14 +317,14 @@ export default function SubscriptionExpired({ empresa, plan, planes = [], opcion
                                                 </Badge>
                                             )}
                                             <Badge variant="outline" className="text-[10px] border-slate-700 text-slate-300">
-                                                {selectedCycle} {__('Meses')}
+                                                {__('Cobro Mensual')}
                                             </Badge>
                                         </div>
                                     </div>
 
                                     <div className="space-y-1.5 text-xs text-slate-300">
                                         <div className="flex justify-between">
-                                            <span>{currentPlan?.nombre || 'Plan Full'} ({selectedCycle} meses):</span>
+                                            <span>{currentPlan?.nombre || __('Plan Mensual')} (1 {__('mes')}):</span>
                                             <span className="font-mono font-semibold">{formatPrice(currentSubtotal)}</span>
                                         </div>
                                         {sucursalesExtrasCount > 0 && (
@@ -446,7 +417,7 @@ export default function SubscriptionExpired({ empresa, plan, planes = [], opcion
                                             </div>
                                         </div>
                                         <div className="text-xs text-muted-foreground leading-relaxed flex items-center justify-between border-t border-b border-amber-200/60 dark:border-amber-900/30 py-2 my-1">
-                                            <span>{__('Plan Seleccionado:')} <strong className="text-slate-800 dark:text-slate-200">{selectedCycle} {__('meses')} ({extraSucursales} {extraSucursales === 1 ? __('sucursal') : __('sucursales')})</strong></span>
+                                            <span>{__('Plan Seleccionado:')} <strong className="text-slate-800 dark:text-slate-200">{currentPlan?.nombre || __('Plan Mensual')} ({extraSucursales} {extraSucursales === 1 ? __('sucursal') : __('sucursales')})</strong></span>
                                             <span className="font-bold font-mono text-amber-800 dark:text-amber-300 text-sm">${precioFinalEstimado.toFixed(2)} USD</span>
                                         </div>
                                         <p className="text-xs text-muted-foreground leading-relaxed">

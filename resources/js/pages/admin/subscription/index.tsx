@@ -62,9 +62,14 @@ interface PlanInfo {
     id: number;
     nombre: string;
     descripcion: string;
-    precio_3_meses: number;
-    precio_6_meses: number;
-    precio_12_meses: number;
+    precio_regular_mensual?: number;
+    precio_promocional_mensual?: number;
+    tiene_promocion?: boolean;
+    badge_promocion?: string | null;
+    destacado?: boolean;
+    precio_3_meses?: number;
+    precio_6_meses?: number;
+    precio_12_meses?: number;
     precio_sucursal_extra_mensual: number;
     sucursales_incluidas: number;
     modulos_incluidos: string[];
@@ -94,6 +99,7 @@ interface PaymentGatewayInfo {
 interface PageProps {
     empresa: EmpresaInfo;
     plan: PlanInfo | null;
+    planes?: PlanInfo[];
     opcionesPrecios: Record<number, PlanOption>;
     pagos: PagoItem[];
     suscripcionActiva?: any;
@@ -105,7 +111,7 @@ interface PageProps {
     };
 }
 
-export default function SubscriptionIndex({ empresa, plan, opcionesPrecios, pagos, suscripcionActiva, bcvRate = 36.50, paymentGateways }: PageProps) {
+export default function SubscriptionIndex({ empresa, plan, planes = [], opcionesPrecios, pagos, suscripcionActiva, bcvRate = 36.50, paymentGateways }: PageProps) {
     const { __ } = useTranslate();
     const pageProps = usePage().props as any;
     const { currencySymbol = '$', isVenezuela = false } = pageProps;
@@ -116,23 +122,29 @@ export default function SubscriptionIndex({ empresa, plan, opcionesPrecios, pago
         && suscripcionActiva 
         && parseFloat(suscripcionActiva.monto_total ?? 0) > 0 
         && suscripcionActiva.estado === 'active';
-    const activePaidCycle = (hasActivePaidSubscription && empresa.billing_cycle) ? parseInt(empresa.billing_cycle.replace('_months', '')) : null;
 
-    const [selectedCycle, setSelectedCycle] = useState<number>(activePaidCycle && [3, 6, 12].includes(activePaidCycle) ? activePaidCycle : 12);
+    const [selectedPlanId, setSelectedPlanId] = useState<number>(plan?.id ?? (planes[0]?.id ?? 1));
+    const [selectedCycle] = useState<number>(1); // 1 Mes (Cobro Mensual)
     const [extraSucursales, setExtraSucursales] = useState<number>(hasActivePaidSubscription ? (empresa.max_sucursales || 1) : Math.max(1, empresa.sucursales_activas));
     const [previewReceipt, setPreviewReceipt] = useState<string | null>(null);
     const [imagePreviewUrl, setImagePreviewUrl] = useState<string | null>(null);
 
-    const currentOption = opcionesPrecios[selectedCycle] || opcionesPrecios[12];
+    const activeSelectedPlan = planes.find((p) => p.id === selectedPlanId) || plan || planes[0];
 
-    // Si la empresa ya posee una suscripción activa pagada:
-    // - El plan ya está pagado ($0.00).
-    // - Únicamente se cobran las NUEVAS sucursales adicionales ($10.00 USD c/u).
-    const currentSubtotalPlan = hasActivePaidSubscription ? 0 : (currentOption?.subtotal_plan ?? (selectedCycle === 3 ? 897 : selectedCycle === 6 ? 1494 : 2388));
+    const getPlanMonthlyPrice = (p: PlanInfo | null) => {
+        if (!p) return 499;
+        if (p.tiene_promocion && Number(p.precio_promocional_mensual) > 0) {
+            return Number(p.precio_promocional_mensual);
+        }
+        return Number(p.precio_regular_mensual) || Number(p.precio_3_meses) || 499;
+    };
+
+    const selectedMonthlyPrice = getPlanMonthlyPrice(activeSelectedPlan);
+    const currentSubtotalPlan = hasActivePaidSubscription ? 0 : selectedMonthlyPrice;
     const sucursalesExtrasCount = hasActivePaidSubscription 
         ? Math.max(0, extraSucursales - empresa.max_sucursales)
-        : Math.max(0, extraSucursales - (plan?.sucursales_incluidas ?? 1));
-    const precioSucursalExtra = (plan?.precio_sucursal_extra_mensual && plan.precio_sucursal_extra_mensual > 0) ? plan.precio_sucursal_extra_mensual : 10;
+        : Math.max(0, extraSucursales - (activeSelectedPlan?.sucursales_incluidas ?? 1));
+    const precioSucursalExtra = (activeSelectedPlan?.precio_sucursal_extra_mensual && activeSelectedPlan.precio_sucursal_extra_mensual > 0) ? activeSelectedPlan.precio_sucursal_extra_mensual : 20;
     const costoExtraSucursales = sucursalesExtrasCount * precioSucursalExtra;
     const precioFinalEstimado = currentSubtotalPlan + costoExtraSucursales;
 
@@ -146,7 +158,8 @@ export default function SubscriptionIndex({ empresa, plan, opcionesPrecios, pago
     };
 
     const { data, setData, post, processing, errors, reset } = useForm({
-        ciclo_meses: selectedCycle,
+        plan_id: selectedPlanId,
+        ciclo_meses: 1,
         sucursales_contratadas: extraSucursales,
         metodo_pago: 'transferencia',
         referencia_pago: '',
@@ -154,10 +167,10 @@ export default function SubscriptionIndex({ empresa, plan, opcionesPrecios, pago
         notas: '',
     });
 
-    const handleCycleChange = (cycle: number) => {
-        if (hasActivePaidSubscription) return; // Bloqueado si ya tiene suscripción pagada activa
-        setSelectedCycle(cycle);
-        setData('ciclo_meses', cycle);
+    const handlePlanSelect = (planId: number) => {
+        if (hasActivePaidSubscription) return;
+        setSelectedPlanId(planId);
+        setData('plan_id', planId);
     };
 
     const handleSucursalChange = (count: number) => {
@@ -375,68 +388,26 @@ export default function SubscriptionIndex({ empresa, plan, opcionesPrecios, pago
                         </CardHeader>
                         <CardContent className="p-6">
                             <form onSubmit={handleSubmitRenewal} className="space-y-8">
-                                {/* 1. Duración del Plan */}
+                                {/* 1. Selección del Plan Mensual */}
                                 <div className="space-y-3">
                                     <Label className="text-sm font-bold flex items-center gap-2">
                                         <span className="h-6 w-6 rounded-full bg-primary text-primary-foreground text-xs flex items-center justify-center font-bold">1</span>
-                                        {__('Selecciona la Duración del Servicio')}
+                                        {__('Selecciona tu Plan Mensual')}
                                     </Label>
                                     <div className="grid gap-6 sm:grid-cols-3">
-                                        {[3, 6, 12].map((meses) => {
-                                            const meta = {
-                                                3: {
-                                                    badge: __('Para Emprendedores'),
-                                                    badgeClass: 'bg-slate-700 text-white font-bold',
-                                                    titulo: __('Plan Trimestral'),
-                                                    subtitulo: __('Ideal para arrancar y controlar tu comercio'),
-                                                    precioTotal: 897,
-                                                    periodoStr: __('3 meses'),
-                                                    promedioStr: __('Solo $299 MXN al mes'),
-                                                    features: [
-                                                        __('Acceso Total a todos los módulos'),
-                                                        __('1 Sucursal incluida'),
-                                                        __('Sucursal extra: $10 MXN/mes'),
-                                                        __('Soporte técnico e inventario'),
-                                                    ],
-                                                },
-                                                6: {
-                                                    badge: __('⭐ ¡Más Popular!'),
-                                                    badgeClass: 'bg-amber-500 text-white font-bold',
-                                                    titulo: __('Plan Semestral'),
-                                                    subtitulo: __('El equilibrio perfecto para crecer con ahorro'),
-                                                    precioTotal: 1494,
-                                                    periodoStr: __('6 meses'),
-                                                    promedioStr: __('Solo $249 MXN al mes'),
-                                                    features: [
-                                                        __('Acceso Total a todos los módulos'),
-                                                        __('1 Sucursal incluida'),
-                                                        __('Sucursal extra: $10 MXN/mes'),
-                                                        __('Soporte prioritario y WhatsApp'),
-                                                    ],
-                                                },
-                                                12: {
-                                                    badge: __('🚀 ¡Mejor Precio!'),
-                                                    badgeClass: 'bg-emerald-600 text-white font-bold',
-                                                    titulo: __('Plan Anual'),
-                                                    subtitulo: __('Máximo ahorro y soporte continuo sin límites'),
-                                                    precioTotal: 2388,
-                                                    periodoStr: __('año'),
-                                                    promedioStr: __('Solo $199 MXN al mes'),
-                                                    features: [
-                                                        __('Acceso Total a todos los módulos'),
-                                                        __('2 Sucursales incluidas'),
-                                                        __('Sucursal extra: $10 MXN/mes'),
-                                                        __('Soporte técnico VIP dedicado'),
-                                                    ],
-                                                },
-                                            }[meses]!;
-
-                                            const isSelected = selectedCycle === meses;
+                                        {(planes.length > 0 ? planes.filter(p => !p.nombre.toLowerCase().includes('prueba') || p.id === selectedPlanId) : [plan || { id: 1, nombre: 'Plan Profesional', descripcion: 'Control total', precio_regular_mensual: 499, precio_promocional_mensual: 499, sucursales_incluidas: 1, modulos_incluidos: ['todos'] }]).map((pItem: any) => {
+                                            const isSelected = selectedPlanId === pItem.id;
                                             const isLocked = hasActivePaidSubscription && !isSelected;
+                                            const regularMensual = Number(pItem.precio_regular_mensual) || Number(pItem.precio_3_meses) || 499;
+                                            const promoMensual = Number(pItem.precio_promocional_mensual) || regularMensual;
+                                            const tienePromo = Boolean(pItem.tiene_promocion) && promoMensual < regularMensual && promoMensual > 0;
+                                            const precioMostrar = tienePromo ? promoMensual : regularMensual;
+                                            const ahorro = regularMensual > 0 ? Math.round(((regularMensual - promoMensual) / regularMensual) * 100) : 0;
+
                                             return (
                                                 <div 
-                                                    key={meses}
-                                                    onClick={() => handleCycleChange(meses)}
+                                                    key={pItem.id}
+                                                    onClick={() => handlePlanSelect(pItem.id)}
                                                     className={`rounded-2xl border-2 p-5 transition-all relative flex flex-col justify-between ${
                                                         isLocked
                                                             ? 'opacity-50 cursor-not-allowed border-dashed border-border bg-muted/20 grayscale-[30%]'
@@ -449,20 +420,30 @@ export default function SubscriptionIndex({ empresa, plan, opcionesPrecios, pago
                                                 >
                                                     {isSelected && hasActivePaidSubscription ? (
                                                         <Badge className="absolute -top-3 right-4 bg-emerald-600 text-white text-[10px] font-bold px-2.5 py-0.5 shadow-sm">
-                                                            {__('✓ Plan Contratado')}
+                                                            {__('✓ Plan Activo')}
                                                         </Badge>
-                                                    ) : (
-                                                        <Badge className={`absolute -top-3 right-4 text-[10px] px-2.5 py-0.5 shadow-sm ${meta.badgeClass}`}>
-                                                            {meta.badge}
+                                                    ) : pItem.destacado ? (
+                                                        <Badge className="absolute -top-3 right-4 bg-amber-500 text-white text-[10px] font-bold px-2.5 py-0.5 shadow-sm">
+                                                            {__('⭐ Más Popular')}
                                                         </Badge>
-                                                    )}
+                                                    ) : tienePromo ? (
+                                                        <Badge className="absolute -top-3 right-4 bg-red-600 text-white text-[10px] font-bold px-2.5 py-0.5 shadow-sm">
+                                                            -{ahorro}% OFF
+                                                        </Badge>
+                                                    ) : null}
 
                                                     <div className="space-y-2">
-                                                        <span className="text-xs font-extrabold uppercase tracking-wider text-muted-foreground">{meta.titulo}</span>
-                                                        <p className="text-xs text-muted-foreground min-h-[32px]">{meta.subtitulo}</p>
+                                                        <span className="text-xs font-extrabold uppercase tracking-wider text-muted-foreground">{pItem.nombre}</span>
+                                                        <p className="text-xs text-muted-foreground min-h-[32px]">{pItem.descripcion || __('Acceso a la plataforma FixSale.')}</p>
+                                                        
                                                         <div className="pt-2">
+                                                            {tienePromo && (
+                                                                <span className="text-xs text-muted-foreground line-through block">
+                                                                    {formatPrice(regularMensual)}
+                                                                </span>
+                                                            )}
                                                             <h3 className="text-2xl sm:text-3xl font-black text-foreground flex items-baseline gap-1 flex-wrap">
-                                                                {formatPrice(meta.precioTotal)} <span className="text-xs font-semibold text-muted-foreground">/ {meta.periodoStr}</span>
+                                                                {formatPrice(precioMostrar)} <span className="text-xs font-semibold text-muted-foreground">/ {__('mes')}</span>
                                                             </h3>
                                                         </div>
                                                     </div>
@@ -470,12 +451,18 @@ export default function SubscriptionIndex({ empresa, plan, opcionesPrecios, pago
                                                     <div className="mt-4 pt-3 border-t space-y-2">
                                                         <span className="text-[11px] font-bold text-muted-foreground uppercase">{__('Incluye:')}</span>
                                                         <ul className="space-y-1.5 text-xs">
-                                                            {meta.features.map((feat, idx) => (
-                                                                <li key={idx} className="flex items-start gap-2 text-foreground font-medium">
-                                                                    <CheckCircle2 className="h-3.5 w-3.5 text-emerald-500 shrink-0 mt-0.5" />
-                                                                    <span className="leading-tight">{feat}</span>
-                                                                </li>
-                                                            ))}
+                                                            <li className="flex items-start gap-2 text-foreground font-medium">
+                                                                <CheckCircle2 className="h-3.5 w-3.5 text-emerald-500 shrink-0 mt-0.5" />
+                                                                <span className="leading-tight">{pItem.sucursales_incluidas || 1} {__('Sucursal(es) incluida(s)')}</span>
+                                                            </li>
+                                                            <li className="flex items-start gap-2 text-foreground font-medium">
+                                                                <CheckCircle2 className="h-3.5 w-3.5 text-emerald-500 shrink-0 mt-0.5" />
+                                                                <span className="leading-tight">{__('Sucursal extra: ')}{formatPrice(pItem.precio_sucursal_extra_mensual || 20)}/{__('mes')}</span>
+                                                            </li>
+                                                            <li className="flex items-start gap-2 text-foreground font-medium">
+                                                                <CheckCircle2 className="h-3.5 w-3.5 text-emerald-500 shrink-0 mt-0.5" />
+                                                                <span className="leading-tight">{__('Acceso completo al sistema')}</span>
+                                                            </li>
                                                         </ul>
                                                     </div>
                                                 </div>
@@ -495,9 +482,9 @@ export default function SubscriptionIndex({ empresa, plan, opcionesPrecios, pago
                                         <div className="p-4 bg-muted/30 rounded-xl border space-y-3">
                                             <p className="text-xs text-muted-foreground">
                                                 {hasActivePaidSubscription ? (
-                                                    <>{__('Actualmente tienes')} <strong className="text-primary font-bold">{empresa.max_sucursales} {__('sucursal(es) autorizada(s)')}</strong>. {__('Cada nueva sucursal adicional suma +')}<strong className="text-primary font-bold">{formatPrice(plan?.precio_sucursal_extra_mensual ?? 10)}/{__('mes')}</strong>.</>
+                                                    <>{__('Actualmente tienes')} <strong className="text-primary font-bold">{empresa.max_sucursales} {__('sucursal(es) autorizada(s)')}</strong>. {__('Cada nueva sucursal adicional suma +')}<strong className="text-primary font-bold">{formatPrice(activeSelectedPlan?.precio_sucursal_extra_mensual ?? 20)}/{__('mes')}</strong>.</>
                                                 ) : (
-                                                    <>{__('El plan base incluye 1 sucursal. Cada sucursal adicional suma +')}<strong className="text-primary font-bold">{formatPrice(plan?.precio_sucursal_extra_mensual ?? 10)}/{__('mes')}</strong>.</>
+                                                    <>{__('El plan base incluye')} <strong>{activeSelectedPlan?.sucursales_incluidas ?? 1} {__('sucursal(es)')}</strong>. {__('Cada sucursal adicional suma +')}<strong className="text-primary font-bold">{formatPrice(activeSelectedPlan?.precio_sucursal_extra_mensual ?? 20)}/{__('mes')}</strong>.</>
                                                 )}
                                             </p>
                                             
@@ -538,7 +525,9 @@ export default function SubscriptionIndex({ empresa, plan, opcionesPrecios, pago
                                                             ? __('(Sin nuevas sucursales adicionadas)') 
                                                             : `+${sucursalesExtrasCount} ${__('nueva(s) sucursal(es) extra')}`
                                                     ) : (
-                                                        extraSucursales === 1 ? __('1 Sucursal Incluida') : `${extraSucursales - 1} sucursal(es) extra`
+                                                        extraSucursales <= (activeSelectedPlan?.sucursales_incluidas ?? 1)
+                                                            ? `${activeSelectedPlan?.sucursales_incluidas ?? 1} ${__('Sucursal(es) Incluida(s)')}`
+                                                            : `+${sucursalesExtrasCount} ${__('sucursal(es) extra')}`
                                                     )}
                                                 </span>
                                             </div>
@@ -557,19 +546,19 @@ export default function SubscriptionIndex({ empresa, plan, opcionesPrecios, pago
                                                         </Badge>
                                                     )}
                                                     <Badge variant="outline" className="text-[10px] border-slate-700 text-slate-300">
-                                                        {selectedCycle} {__('Meses')}
+                                                        {__('Cobro Mensual')}
                                                     </Badge>
                                                 </div>
                                             </div>
 
                                             <div className="space-y-1.5 text-xs text-slate-300">
                                                 <div className="flex justify-between">
-                                                    <span>{selectedCycle === 3 ? __('Plan Trimestral') : selectedCycle === 6 ? __('Plan Semestral') : __('Plan Anual')} ({selectedCycle} meses):</span>
+                                                    <span>{activeSelectedPlan?.nombre ?? __('Plan Mensual')} (1 {__('mes')}):</span>
                                                     <span className="font-mono font-semibold">
                                                         {hasActivePaidSubscription ? (
                                                             <span className="text-emerald-400 font-bold">{__('✓ Pagado (Vigente)')}</span>
                                                         ) : (
-                                                            formatPrice(currentOption?.subtotal_plan ?? 0)
+                                                            formatPrice(selectedMonthlyPrice)
                                                         )}
                                                     </span>
                                                 </div>
@@ -667,7 +656,7 @@ export default function SubscriptionIndex({ empresa, plan, opcionesPrecios, pago
                                                     </div>
                                                 </div>
                                                 <div className="text-xs text-muted-foreground leading-relaxed flex items-center justify-between border-t border-b border-amber-200/60 dark:border-amber-900/30 py-2 my-1">
-                                                    <span>{__('Plan Seleccionado:')} <strong className="text-slate-800 dark:text-slate-200">{selectedCycle} {__('meses')} ({extraSucursales} {extraSucursales === 1 ? __('sucursal') : __('sucursales')})</strong></span>
+                                                    <span>{__('Plan Seleccionado:')} <strong className="text-slate-800 dark:text-slate-200">{activeSelectedPlan?.nombre ?? __('Plan Mensual')} ({extraSucursales} {extraSucursales === 1 ? __('sucursal') : __('sucursales')})</strong></span>
                                                     <span className="font-bold font-mono text-amber-800 dark:text-amber-300 text-sm">${precioFinalEstimado.toFixed(2)} USD</span>
                                                 </div>
                                                 <p className="text-xs text-muted-foreground leading-relaxed">

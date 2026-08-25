@@ -152,11 +152,12 @@ class Empresa extends Model
             $isExpired = now()->gt($fechaVencimiento);
             $estado = $isExpired ? 'expired' : ($this->subscription_status ?: 'trial');
 
+            $defaultPlan = SubscriptionPlan::getPlanRenovacionDefault();
             $sub = Subscription::create([
                 'empresa_id' => $this->id,
-                'plan_id' => SubscriptionPlan::getPlanRenovacionDefault()?->id,
-                'nombre_plan' => $estado === 'trial' ? 'Prueba Gratuita' : Subscription::getNombrePlanByCiclo(12),
-                'ciclo_meses' => $estado === 'trial' ? 0 : 12,
+                'plan_id' => $defaultPlan?->id,
+                'nombre_plan' => $estado === 'trial' ? 'Prueba Gratuita' : ($defaultPlan?->nombre ?? 'Plan Mensual'),
+                'ciclo_meses' => $estado === 'trial' ? 0 : 1,
                 'max_sucursales' => $this->max_sucursales ?? 1,
                 'monto_total' => 0.00,
                 'fecha_inicio' => $this->created_at ?? now(),

@@ -95,15 +95,15 @@ export default function PlanesIndex({ planes = [], stats, currencySymbol = '$' }
         nombre: '',
         descripcion: '',
         precio_regular_mensual: 499,
-        precio_promocional_mensual: 249,
-        tiene_promocion: true,
-        meses_duracion_promocion: 3,
-        badge_promocion: '50% OFF Primer Trimestre',
+        precio_promocional_mensual: 499,
+        tiene_promocion: false,
+        meses_duracion_promocion: 1,
+        badge_promocion: '',
         destacado: false,
         orden: 1,
-        precio_3_meses: 747,
-        precio_6_meses: 1494,
-        precio_12_meses: 2388,
+        precio_3_meses: 499,
+        precio_6_meses: 499,
+        precio_12_meses: 499,
         precio_sucursal_extra_mensual: 20,
         sucursales_incluidas: 1,
         modulos_incluidos: ['todos'],
@@ -120,15 +120,15 @@ export default function PlanesIndex({ planes = [], stats, currencySymbol = '$' }
             nombre: '',
             descripcion: '',
             precio_regular_mensual: 499,
-            precio_promocional_mensual: 249,
-            tiene_promocion: true,
-            meses_duracion_promocion: 3,
-            badge_promocion: '50% OFF Primer Trimestre',
+            precio_promocional_mensual: 499,
+            tiene_promocion: false,
+            meses_duracion_promocion: 1,
+            badge_promocion: '',
             destacado: false,
             orden: planes.length + 1,
-            precio_3_meses: 747,
-            precio_6_meses: 1494,
-            precio_12_meses: 2388,
+            precio_3_meses: 499,
+            precio_6_meses: 499,
+            precio_12_meses: 499,
             precio_sucursal_extra_mensual: 20,
             sucursales_incluidas: 1,
             modulos_incluidos: ['todos'],
@@ -139,19 +139,21 @@ export default function PlanesIndex({ planes = [], stats, currencySymbol = '$' }
 
     const handleOpenEdit = (plan: Plan) => {
         setEditingPlan(plan);
+        const regularMensual = Number(plan.precio_regular_mensual) || 499;
+        const promoMensual = Number(plan.precio_promocional_mensual) || regularMensual;
         setFormData({
             nombre: plan.nombre,
             descripcion: plan.descripcion || '',
-            precio_regular_mensual: Number(plan.precio_regular_mensual) || (Number(plan.precio_3_meses) > 0 ? Math.round(Number(plan.precio_3_meses) / 3) : 499),
-            precio_promocional_mensual: Number(plan.precio_promocional_mensual) || (Number(plan.precio_3_meses) > 0 ? Math.round(Number(plan.precio_3_meses) / 3) : 249),
+            precio_regular_mensual: regularMensual,
+            precio_promocional_mensual: promoMensual,
             tiene_promocion: Boolean(plan.tiene_promocion),
-            meses_duracion_promocion: plan.meses_duracion_promocion || 3,
+            meses_duracion_promocion: plan.meses_duracion_promocion || 1,
             badge_promocion: plan.badge_promocion || '',
             destacado: Boolean(plan.destacado),
             orden: plan.orden || 1,
-            precio_3_meses: Number(plan.precio_3_meses) || 747,
-            precio_6_meses: Number(plan.precio_6_meses) || 1494,
-            precio_12_meses: Number(plan.precio_12_meses) || 2388,
+            precio_3_meses: promoMensual,
+            precio_6_meses: promoMensual,
+            precio_12_meses: promoMensual,
             precio_sucursal_extra_mensual: Number(plan.precio_sucursal_extra_mensual) || 20,
             sucursales_incluidas: plan.sucursales_incluidas || 1,
             modulos_incluidos: plan.modulos_incluidos || ['todos'],
@@ -167,9 +169,9 @@ export default function PlanesIndex({ planes = [], stats, currencySymbol = '$' }
             return {
                 ...prev,
                 precio_regular_mensual: val,
-                precio_3_meses: Math.round(promo * 3),
-                precio_6_meses: Math.round(promo * 6),
-                precio_12_meses: Math.round(promo * 12),
+                precio_3_meses: promo,
+                precio_6_meses: promo,
+                precio_12_meses: promo,
             };
         });
     };
@@ -178,9 +180,9 @@ export default function PlanesIndex({ planes = [], stats, currencySymbol = '$' }
         setFormData((prev) => ({
             ...prev,
             precio_promocional_mensual: val,
-            precio_3_meses: Math.round(val * 3),
-            precio_6_meses: Math.round(val * 6),
-            precio_12_meses: Math.round(val * 12),
+            precio_3_meses: val,
+            precio_6_meses: val,
+            precio_12_meses: val,
         }));
     };
 
@@ -584,19 +586,11 @@ export default function PlanesIndex({ planes = [], stats, currencySymbol = '$' }
                                             </span>
                                         </div>
 
-                                        <div className="pt-2 border-t border-slate-100 dark:border-slate-800">
-                                            <p className="text-[11px] font-bold text-slate-500 mb-1">{__('Ciclos de Facturación:')}</p>
-                                            <div className="grid grid-cols-3 gap-1 text-[10px] text-center font-mono">
-                                                <div className="p-1 bg-slate-100 dark:bg-slate-800 rounded">
-                                                    3M: {currencySymbol}{plan.precio_3_meses}
-                                                </div>
-                                                <div className="p-1 bg-slate-100 dark:bg-slate-800 rounded">
-                                                    6M: {currencySymbol}{plan.precio_6_meses}
-                                                </div>
-                                                <div className="p-1 bg-slate-100 dark:bg-slate-800 rounded">
-                                                    12M: {currencySymbol}{plan.precio_12_meses}
-                                                </div>
-                                            </div>
+                                        <div className="pt-2 border-t border-slate-100 dark:border-slate-800 flex items-center justify-between text-[11px] text-slate-500">
+                                            <span className="font-semibold">{__('Facturación:')}</span>
+                                            <Badge variant="outline" className="text-[10px] font-bold text-blue-600 border-blue-200 dark:text-blue-400 dark:border-blue-800">
+                                                {__('Mensual Recurrente')}
+                                            </Badge>
                                         </div>
                                     </div>
 
@@ -918,89 +912,43 @@ export default function PlanesIndex({ planes = [], stats, currencySymbol = '$' }
                             )}
                         </div>
 
-                        {/* 3. Facturación por Ciclos y Sucursales */}
-                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                            <div className="space-y-3 p-4 bg-slate-50 dark:bg-slate-800/40 rounded-xl border border-slate-200 dark:border-slate-800">
-                                <h5 className="text-xs font-bold uppercase text-slate-500">{__('Precios Totales Facturados por Ciclo')}</h5>
-                                
-                                <div className="space-y-2 text-xs">
-                                    <div className="flex items-center justify-between gap-2">
-                                        <Label htmlFor="precio_3m">{__('Cobro 3 Meses:')}</Label>
-                                        <div className="w-32 relative">
-                                            <span className="absolute left-2.5 top-2 text-xs text-slate-400">{currencySymbol}</span>
-                                            <Input
-                                                id="precio_3m"
-                                                type="number"
-                                                step="0.01"
-                                                value={formData.precio_3_meses}
-                                                onChange={(e) => setFormData({ ...formData, precio_3_meses: parseFloat(e.target.value) || 0 })}
-                                                className="pl-6 h-8 text-xs font-semibold text-right"
-                                            />
-                                        </div>
-                                    </div>
-
-                                    <div className="flex items-center justify-between gap-2">
-                                        <Label htmlFor="precio_6m">{__('Cobro 6 Meses:')}</Label>
-                                        <div className="w-32 relative">
-                                            <span className="absolute left-2.5 top-2 text-xs text-slate-400">{currencySymbol}</span>
-                                            <Input
-                                                id="precio_6m"
-                                                type="number"
-                                                step="0.01"
-                                                value={formData.precio_6_meses}
-                                                onChange={(e) => setFormData({ ...formData, precio_6_meses: parseFloat(e.target.value) || 0 })}
-                                                className="pl-6 h-8 text-xs font-semibold text-right"
-                                            />
-                                        </div>
-                                    </div>
-
-                                    <div className="flex items-center justify-between gap-2">
-                                        <Label htmlFor="precio_12m">{__('Cobro 12 Meses (Anual):')}</Label>
-                                        <div className="w-32 relative">
-                                            <span className="absolute left-2.5 top-2 text-xs text-slate-400">{currencySymbol}</span>
-                                            <Input
-                                                id="precio_12m"
-                                                type="number"
-                                                step="0.01"
-                                                value={formData.precio_12_meses}
-                                                onChange={(e) => setFormData({ ...formData, precio_12_meses: parseFloat(e.target.value) || 0 })}
-                                                className="pl-6 h-8 text-xs font-semibold text-right"
-                                            />
-                                        </div>
-                                    </div>
-                                </div>
+                        {/* 3. Configuración de Sucursales y Facturación Mensual */}
+                        <div className="p-4 bg-slate-50 dark:bg-slate-800/40 rounded-xl border border-slate-200 dark:border-slate-800 space-y-3">
+                            <div className="flex items-center justify-between">
+                                <h5 className="text-xs font-bold uppercase text-slate-500">{__('Configuración de Sucursales & Modalidad')}</h5>
+                                <Badge variant="outline" className="text-[10px] font-bold text-blue-600 border-blue-200 dark:text-blue-400 dark:border-blue-800">
+                                    {__('Cobro Mensual')}
+                                </Badge>
                             </div>
 
-                            <div className="space-y-3 p-4 bg-slate-50 dark:bg-slate-800/40 rounded-xl border border-slate-200 dark:border-slate-800">
-                                <h5 className="text-xs font-bold uppercase text-slate-500">{__('Configuración de Sucursales')}</h5>
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs">
+                                <div className="space-y-1">
+                                    <Label htmlFor="sucursales_incluidas">{__('Sucursales Incluidas en el Plan')}</Label>
+                                    <Input
+                                        id="sucursales_incluidas"
+                                        type="number"
+                                        min="1"
+                                        value={formData.sucursales_incluidas}
+                                        onChange={(e) => setFormData({ ...formData, sucursales_incluidas: parseInt(e.target.value) || 1 })}
+                                        className="h-8 text-xs font-medium"
+                                    />
+                                    <p className="text-[10px] text-slate-400">{__('Cantidad de sedes operativas sin costo extra.')}</p>
+                                </div>
 
-                                <div className="space-y-2 text-xs">
-                                    <div className="space-y-1">
-                                        <Label htmlFor="sucursales_incluidas">{__('Sucursales Incluidas en el Plan')}</Label>
+                                <div className="space-y-1">
+                                    <Label htmlFor="precio_sucursal_extra">{__('Costo por Sucursal Extra (Mensual)')}</Label>
+                                    <div className="relative">
+                                        <span className="absolute left-2.5 top-2 text-xs text-slate-400">{currencySymbol}</span>
                                         <Input
-                                            id="sucursales_incluidas"
+                                            id="precio_sucursal_extra"
                                             type="number"
-                                            min="1"
-                                            value={formData.sucursales_incluidas}
-                                            onChange={(e) => setFormData({ ...formData, sucursales_incluidas: parseInt(e.target.value) || 1 })}
-                                            className="h-8 text-xs"
+                                            step="0.01"
+                                            value={formData.precio_sucursal_extra_mensual}
+                                            onChange={(e) => setFormData({ ...formData, precio_sucursal_extra_mensual: parseFloat(e.target.value) || 0 })}
+                                            className="pl-6 h-8 text-xs font-semibold"
                                         />
                                     </div>
-
-                                    <div className="space-y-1">
-                                        <Label htmlFor="precio_sucursal_extra">{__('Costo Sucursal Extra (Mensual)')}</Label>
-                                        <div className="relative">
-                                            <span className="absolute left-2.5 top-2 text-xs text-slate-400">{currencySymbol}</span>
-                                            <Input
-                                                id="precio_sucursal_extra"
-                                                type="number"
-                                                step="0.01"
-                                                value={formData.precio_sucursal_extra_mensual}
-                                                onChange={(e) => setFormData({ ...formData, precio_sucursal_extra_mensual: parseFloat(e.target.value) || 0 })}
-                                                className="pl-6 h-8 text-xs"
-                                            />
-                                        </div>
-                                    </div>
+                                    <p className="text-[10px] text-slate-400">{__('Monto mensual cobrado por cada sede adicional.')}</p>
                                 </div>
                             </div>
                         </div>
