@@ -44,53 +44,26 @@ class SubscriptionController extends Controller
 
         $bcvRate = $bcvService->getRate() ?? 36.50; // Tasa por defecto de respaldo si falla el API
 
-        $planTrimestral = $planes->first(fn($p) => str_contains(strtolower($p->nombre), 'trimestral')) ?? $planes->first();
-        $planSemestral  = $planes->first(fn($p) => str_contains(strtolower($p->nombre), 'semestral')) ?? $planes->skip(1)->first() ?? $planTrimestral;
-        $planAnual      = $planes->first(fn($p) => str_contains(strtolower($p->nombre), 'anual')) ?? $planes->skip(2)->first() ?? $planTrimestral;
+        // Opciones de cálculo de precios (cobro puramente mensual)
+        $opcionesPrecios = [];
+        foreach ($planes as $p) {
+            $precioMensual = $p->precio_mensual_efectivo;
+            $opcionesPrecios[$p->id] = [
+                'plan_id' => $p->id,
+                'nombre' => $p->nombre,
+                'meses' => 1,
+                'subtotal_plan' => $precioMensual,
+                'precio_mensual_promedio' => $precioMensual,
+                'total' => $p->calcularPrecio(1, max(1, $totalSucursales)),
+            ];
+        }
 
-        $calcPlanSubtotal = function ($planItem, $meses) {
-            if (! $planItem) {
-                return $meses === 3 ? 897.00 : ($meses === 6 ? 1494.00 : 2388.00);
-            }
-            if ($planItem->tiene_promocion && $planItem->precio_promocional_mensual > 0) {
-                return round($planItem->precio_promocional_mensual * $meses, 2);
-            }
-            $precioColumna = match ($meses) {
-                3 => $planItem->precio_3_meses,
-                6 => $planItem->precio_6_meses,
-                12 => $planItem->precio_12_meses,
-                default => 0,
-            };
-            if ($precioColumna > 0) {
-                return (float) $precioColumna;
-            }
-            return round(($planItem->precio_regular_mensual ?: 499.00) * $meses, 2);
-        };
-
-        $precio3  = $calcPlanSubtotal($planTrimestral, 3);
-        $precio6  = $calcPlanSubtotal($planSemestral, 6);
-        $precio12 = $calcPlanSubtotal($planAnual, 12);
-
-        // Opciones de cálculo de precios
-        $opcionesPrecios = [
-            3 => [
-                'meses' => 3,
-                'subtotal_plan' => $precio3,
-                'precio_mensual_promedio' => round($precio3 / 3, 2),
-                'total' => ($planTrimestral ?? $plan)?->calcularPrecio(3, max(1, $totalSucursales)) ?? $precio3,
-            ],
-            6 => [
-                'meses' => 6,
-                'subtotal_plan' => $precio6,
-                'precio_mensual_promedio' => round($precio6 / 6, 2),
-                'total' => ($planSemestral ?? $plan)?->calcularPrecio(6, max(1, $totalSucursales)) ?? $precio6,
-            ],
-            12 => [
-                'meses' => 12,
-                'subtotal_plan' => $precio12,
-                'precio_mensual_promedio' => round($precio12 / 12, 2),
-                'total' => ($planAnual ?? $plan)?->calcularPrecio(12, max(1, $totalSucursales)) ?? $precio12,
-            ],
+        // Opción predeterminada para el ciclo 1 mes (compatibilidad con vistas)
+        $opcionesPrecios[1] = [
+            'meses' => 1,
+            'subtotal_plan' => $plan?->precio_mensual_efectivo ?? 149.00,
+            'precio_mensual_promedio' => $plan?->precio_mensual_efectivo ?? 149.00,
+            'total' => $plan?->calcularPrecio(1, max(1, $totalSucursales)) ?? 149.00,
         ];
 
         // Obtener la configuración activa de pasarelas de pago de la plataforma (Empresa ID 1 / Dueño del SaaS)

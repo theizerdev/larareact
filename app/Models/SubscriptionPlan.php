@@ -113,27 +113,17 @@ class SubscriptionPlan extends Model
     /**
      * Calcula el precio total para un número de meses y sucursales (con o sin tarifa promo).
      */
-    public function calcularPrecio(int $meses, int $totalSucursales = 1, bool $aplicarPromo = true): float
+    public function calcularPrecio(int $meses = 1, int $totalSucursales = 1, bool $aplicarPromo = false): float
     {
-        if ($aplicarPromo && $this->tiene_promocion && $this->precio_promocional_mensual > 0) {
-            $basePrice = match ($meses) {
-                3 => ($this->precio_3_meses > 0 ? $this->precio_3_meses : $this->precio_promocional_mensual * 3),
-                6 => ($this->precio_6_meses > 0 ? $this->precio_6_meses : $this->precio_promocional_mensual * 6),
-                12 => ($this->precio_12_meses > 0 ? $this->precio_12_meses : $this->precio_promocional_mensual * 12),
-                default => $this->precio_promocional_mensual * $meses,
-            };
-        } else {
-            $basePrice = match ($meses) {
-                3 => ($this->precio_regular_mensual > 0 ? $this->precio_regular_mensual * 3 : ($this->precio_3_meses > 0 ? $this->precio_3_meses : 897.00)),
-                6 => ($this->precio_regular_mensual > 0 ? $this->precio_regular_mensual * 6 : ($this->precio_6_meses > 0 ? $this->precio_6_meses : 1494.00)),
-                12 => ($this->precio_regular_mensual > 0 ? $this->precio_regular_mensual * 12 : ($this->precio_12_meses > 0 ? $this->precio_12_meses : 2388.00)),
-                default => ($this->precio_regular_mensual > 0 ? $this->precio_regular_mensual * $meses : 897.00),
-            };
-        }
+        $meses = max(1, $meses);
+        $precioUnitario = ($aplicarPromo && $this->tiene_promocion && $this->precio_promocional_mensual > 0)
+            ? $this->precio_promocional_mensual
+            : ($this->tiene_promocion && $this->precio_promocional_mensual > 0 ? $this->precio_promocional_mensual : ($this->precio_regular_mensual ?: 149.00));
+
+        $basePrice = $precioUnitario * $meses;
 
         $precioExtra = $this->precio_sucursal_extra_mensual > 0 ? $this->precio_sucursal_extra_mensual : 84.72;
         $sucursalesExtra = max(0, $totalSucursales - ($this->sucursales_incluidas ?: 1));
-        $costoSucursalesExtra = $sucursalesExtra * $precioExtra * $meses;
         $costoSucursalesExtra = $sucursalesExtra * $precioExtra * $meses;
 
         return round($basePrice + $costoSucursalesExtra, 2);

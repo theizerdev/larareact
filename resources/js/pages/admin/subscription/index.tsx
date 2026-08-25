@@ -61,20 +61,18 @@ interface PlanOption {
 interface PlanInfo {
     id: number;
     nombre: string;
-    descripcion?: string | null;
+    descripcion: string;
     precio_regular_mensual?: number;
     precio_promocional_mensual?: number;
     tiene_promocion?: boolean;
-    meses_duracion_promocion?: number;
     badge_promocion?: string | null;
     destacado?: boolean;
-    orden?: number;
-    precio_3_meses: number;
-    precio_6_meses: number;
-    precio_12_meses: number;
+    precio_3_meses?: number;
+    precio_6_meses?: number;
+    precio_12_meses?: number;
     precio_sucursal_extra_mensual: number;
     sucursales_incluidas: number;
-    modulos_incluidos?: string[] | null;
+    modulos_incluidos: string[];
 }
 
 interface PagoItem {
@@ -101,7 +99,6 @@ interface PaymentGatewayInfo {
 interface PageProps {
     empresa: EmpresaInfo;
     plan: PlanInfo | null;
-    planes?: PlanInfo[];
     planes?: PlanInfo[];
     opcionesPrecios: Record<number, PlanOption>;
     pagos: PagoItem[];
@@ -146,9 +143,9 @@ export default function SubscriptionIndex({ empresa, plan, planes = [], opciones
     const currentSubtotalPlan = hasActivePaidSubscription ? 0 : selectedMonthlyPrice;
     const sucursalesExtrasCount = hasActivePaidSubscription
         ? Math.max(0, extraSucursales - empresa.max_sucursales)
-        : Math.max(0, extraSucursales - (plan?.sucursales_incluidas ?? 1));
-    const precioSucursalExtra = (plan?.precio_sucursal_extra_mensual && plan.precio_sucursal_extra_mensual > 0) ? plan.precio_sucursal_extra_mensual : 10;
-    const costoExtraSucursales = sucursalesExtrasCount * precioSucursalExtra * (hasActivePaidSubscription ? 1 : selectedCycle);
+        : Math.max(0, extraSucursales - (activeSelectedPlan?.sucursales_incluidas ?? 1));
+    const precioSucursalExtra = (activeSelectedPlan?.precio_sucursal_extra_mensual && activeSelectedPlan.precio_sucursal_extra_mensual > 0) ? activeSelectedPlan.precio_sucursal_extra_mensual : 84.72;
+    const costoExtraSucursales = sucursalesExtrasCount * precioSucursalExtra;
     const precioFinalEstimado = currentSubtotalPlan + costoExtraSucursales;
 
     // Formateador especial (con moneda de referencia mexicana MXN o Bolívares para Venezuela)
@@ -160,751 +157,690 @@ export default function SubscriptionIndex({ empresa, plan, planes = [], opciones
         return `$${usdAmount.toLocaleString('es-MX', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} MXN`;
     };
 
-    const hasAnyActiveGateway = Boolean(
-        paymentGateways?.paypal?.active || paymentGateways?.mercadopago?.active || paymentGateways?.stripe?.active
-    );
-
-    const defaultPaymentMethod = (paymentGateways?.paypal?.active && 'paypal')
-        || (paymentGateways?.mercadopago?.active && 'mercadopago')
-        || (paymentGateways?.stripe?.active && 'stripe')
-        || 'paypal';
-
     const { data, setData, post, processing, errors, reset } = useForm({
         plan_id: selectedPlanId,
         ciclo_meses: 1,
         sucursales_contratadas: extraSucursales,
-        metodo_pago: defaultPaymentMethod,
+        metodo_pago: 'transferencia',
         referencia_pago: '',
         comprobante: null as File | null,
         notas: '',
     });
 
-        const handlePlanSelect = (planId: number) => {
-            if (hasActivePaidSubscription) return;
-            setSelectedPlanId(planId);
-            setData('plan_id', planId);
-        };
+    const handlePlanSelect = (planId: number) => {
+        if (hasActivePaidSubscription) return;
+        setSelectedPlanId(planId);
+        setData('plan_id', planId);
+    };
 
-        const handleSucursalChange = (count: number) => {
-            const val = Math.max(1, count);
-            setExtraSucursales(val);
-            setData('sucursales_contratadas', val);
-        };
+    const handleSucursalChange = (count: number) => {
+        const val = Math.max(1, count);
+        setExtraSucursales(val);
+        setData('sucursales_contratadas', val);
+    };
 
-        const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-            const file = e.target.files?.[0] || null;
-            setData('comprobante', file);
-            if (file && file.type.startsWith('image/')) {
-                setImagePreviewUrl(URL.createObjectURL(file));
-            } else {
+    const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0] || null;
+        setData('comprobante', file);
+        if (file && file.type.startsWith('image/')) {
+            setImagePreviewUrl(URL.createObjectURL(file));
+        } else {
+            setImagePreviewUrl(null);
+        }
+    };
+
+    const handleSubmitRenewal = (e: React.FormEvent) => {
+        e.preventDefault();
+        post('/admin/monitoring/subscription/renew', {
+            onSuccess: () => {
+                reset('referencia_pago', 'comprobante', 'notas');
                 setImagePreviewUrl(null);
-            }
-        };
+            },
+        });
+    };
 
-        const handleSubmitRenewal = (e: React.FormEvent) => {
-            e.preventDefault();
-            post('/admin/monitoring/subscription/renew', {
-                onSuccess: () => {
-                    reset('referencia_pago', 'comprobante', 'notas');
-                    setImagePreviewUrl(null);
-                },
-            });
-        };
+    const breadcrumbs = [
+        { title: __('Dashboard'), href: '/admin/dashboard' },
+        { title: __('Configuración'), href: '#' },
+        { title: __('Suscripción'), href: '/admin/monitoring/subscription' },
+    ];
 
-        const breadcrumbs = [
-            { title: __('Dashboard'), href: '/admin/dashboard' },
-            { title: __('Configuración'), href: '#' },
-            { title: __('Suscripción'), href: '/admin/monitoring/subscription' },
-        ];
+    // Porcentaje de días restantes para la barra de progreso
+    const maxDays = empresa.subscription_status === 'trial' ? 7 : 365;
+    const progressPercent = Math.min(100, Math.max(0, (empresa.dias_restantes / maxDays) * 100));
 
-        // Porcentaje de días restantes para la barra de progreso
-        const maxDays = empresa.subscription_status === 'trial' ? 7 : 365;
-        const progressPercent = Math.min(100, Math.max(0, (empresa.dias_restantes / maxDays) * 100));
+    return (
+        <>
+            <Head title={__('Gestión de Suscripción')} />
+            <div className="space-y-6 pb-12">
+                <Breadcrumbs breadcrumbs={breadcrumbs} />
 
-        return (
-            <>
-                <Head title={__('Gestión de Suscripción')} />
-                <div className="space-y-6 pb-12">
-                    <Breadcrumbs breadcrumbs={breadcrumbs} />
+                {/* Banner Hero Principal */}
+                <div className="relative overflow-hidden rounded-2xl bg-slate-900 p-6 md:p-8 text-white shadow-xl border border-slate-800">
+                    <div className="absolute -right-16 -top-16 h-64 w-64 rounded-full bg-indigo-500/20 blur-3xl pointer-events-none" />
+                    <div className="absolute right-1/3 -bottom-20 h-56 w-56 rounded-full bg-purple-500/15 blur-3xl pointer-events-none" />
 
-                    {/* Banner Hero Principal */}
-                    <div className="relative overflow-hidden rounded-2xl bg-slate-900 p-6 md:p-8 text-white shadow-xl border border-slate-800">
-                        <div className="absolute -right-16 -top-16 h-64 w-64 rounded-full bg-indigo-500/20 blur-3xl pointer-events-none" />
-                        <div className="absolute right-1/3 -bottom-20 h-56 w-56 rounded-full bg-purple-500/15 blur-3xl pointer-events-none" />
-
-                        <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-6">
-                            <div className="space-y-2 max-w-2xl">
-                                <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-indigo-500/20 text-indigo-300 text-xs font-semibold border border-indigo-500/30 backdrop-blur-md">
-                                    <Sparkles className="h-3.5 w-3.5" />
-                                    <span>{__('Plan SaaS Full Access')}</span>
-                                </div>
-                                <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight">
-                                    {__('Estado del Servicio y Suscripción')}
-                                </h1>
-                                <p className="text-slate-300 text-sm leading-relaxed">
-                                    {__('Administra tu plan empresarial, renovaciones, capacidad de sucursales e historial de comprobantes de pago.')}
-                                </p>
+                    <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-6">
+                        <div className="space-y-2 max-w-2xl">
+                            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-indigo-500/20 text-indigo-300 text-xs font-semibold border border-indigo-500/30 backdrop-blur-md">
+                                <Sparkles className="h-3.5 w-3.5" />
+                                <span>{__('Plan SaaS Full Access')}</span>
                             </div>
+                            <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight">
+                                {__('Estado del Servicio y Suscripción')}
+                            </h1>
+                            <p className="text-slate-300 text-sm leading-relaxed">
+                                {__('Administra tu plan empresarial, renovaciones, capacidad de sucursales e historial de comprobantes de pago.')}
+                            </p>
+                        </div>
 
-                            <div className="shrink-0 flex items-center gap-3">
-                                <div className={`px-4 py-2.5 rounded-xl text-xs font-bold flex items-center gap-2.5 border backdrop-blur-md shadow-inner ${empresa.is_exempt
-                                    ? 'bg-indigo-500/20 text-indigo-200 border-indigo-500/40'
-                                    : empresa.subscription_status === 'active'
-                                        ? 'bg-emerald-500/20 text-emerald-200 border-emerald-500/40'
-                                        : empresa.subscription_status === 'trial'
-                                            ? 'bg-amber-500/20 text-amber-200 border-amber-500/40'
-                                            : 'bg-rose-500/20 text-rose-200 border-rose-500/40'
-                                    }`}>
-                                    <span className={`h-2.5 w-2.5 rounded-full animate-ping ${empresa.is_exempt ? 'bg-indigo-400' :
-                                        empresa.subscription_status === 'active' ? 'bg-emerald-400' :
-                                            empresa.subscription_status === 'trial' ? 'bg-amber-400' : 'bg-rose-400'
-                                        }`} />
-                                    <span>{empresa.estado_legible}</span>
-                                </div>
+                        <div className="shrink-0 flex items-center gap-3">
+                            <div className={`px-4 py-2.5 rounded-xl text-xs font-bold flex items-center gap-2.5 border backdrop-blur-md shadow-inner ${empresa.is_exempt
+                                ? 'bg-indigo-500/20 text-indigo-200 border-indigo-500/40'
+                                : empresa.subscription_status === 'active'
+                                    ? 'bg-emerald-500/20 text-emerald-200 border-emerald-500/40'
+                                    : empresa.subscription_status === 'trial'
+                                        ? 'bg-amber-500/20 text-amber-200 border-amber-500/40'
+                                        : 'bg-rose-500/20 text-rose-200 border-rose-500/40'
+                                }`}>
+                                <span className={`h-2.5 w-2.5 rounded-full animate-ping ${empresa.is_exempt ? 'bg-indigo-400' :
+                                    empresa.subscription_status === 'active' ? 'bg-emerald-400' :
+                                        empresa.subscription_status === 'trial' ? 'bg-amber-400' : 'bg-rose-400'
+                                    }`} />
+                                <span>{empresa.estado_legible}</span>
                             </div>
                         </div>
                     </div>
+                </div>
 
-                    {/* Grid de Estado & Características Incluidas */}
-                    <div className="grid gap-6 md:grid-cols-3">
-                        {/* Card de Estado Principal */}
-                        <Card className="md:col-span-2 shadow-sm border border-border">
-                            <CardHeader className="border-b bg-muted/30 pb-4">
-                                <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-3">
-                                    <div className="space-y-1">
-                                        <CardTitle className="text-xl font-bold flex items-center gap-2">
-                                            <Building2 className="h-5 w-5 text-primary" />
-                                            {empresa.razon_social}
-                                        </CardTitle>
-                                        <CardDescription className="text-xs">
-                                            {__('Plan Actual:')} <span className="font-bold text-foreground">{plan?.nombre || 'Plan Full SaaS'}</span>
-                                        </CardDescription>
-                                    </div>
-                                    <div className="text-left sm:text-right p-2 sm:p-0 rounded-lg bg-primary/5 sm:bg-transparent">
-                                        <span className="text-xs text-muted-foreground font-medium block">{__('Capacidad Autorizada')}</span>
-                                        <p className="text-base font-extrabold text-primary">
-                                            {empresa.sucursales_activas} / {empresa.max_sucursales} {__('Sucursal(es)')}
-                                        </p>
-                                    </div>
+                {/* Grid de Estado & Características Incluidas */}
+                <div className="grid gap-6 md:grid-cols-3">
+                    {/* Card de Estado Principal */}
+                    <Card className="md:col-span-2 shadow-sm border border-border">
+                        <CardHeader className="border-b bg-muted/30 pb-4">
+                            <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-3">
+                                <div className="space-y-1">
+                                    <CardTitle className="text-xl font-bold flex items-center gap-2">
+                                        <Building2 className="h-5 w-5 text-primary" />
+                                        {empresa.razon_social}
+                                    </CardTitle>
+                                    <CardDescription className="text-xs">
+                                        {__('Plan Actual:')} <span className="font-bold text-foreground">{plan?.nombre || 'Plan Full SaaS'}</span>
+                                    </CardDescription>
                                 </div>
-                            </CardHeader>
-                            <CardContent className="pt-6 space-y-6">
-                                <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4">
-                                    <div className="p-3.5 rounded-xl border bg-card/60 space-y-1">
-                                        <p className="text-[11px] font-bold text-muted-foreground uppercase tracking-wider">{__('Estado')}</p>
-                                        <p className="text-sm font-bold capitalize text-foreground">
-                                            {empresa.is_exempt ? __('Exento (Owner)') : empresa.subscription_status}
-                                        </p>
-                                    </div>
-                                    <div className="p-3.5 rounded-xl border bg-card/60 space-y-1">
-                                        <p className="text-[11px] font-bold text-muted-foreground uppercase tracking-wider">{__('Días Restantes')}</p>
-                                        <p className="text-sm font-bold text-primary">
-                                            {empresa.is_exempt ? '∞' : `${empresa.dias_restantes} días`}
-                                        </p>
-                                    </div>
-                                    <div className="p-3.5 rounded-xl border bg-card/60 space-y-1">
-                                        <p className="text-[11px] font-bold text-muted-foreground uppercase tracking-wider">{__('Vencimiento')}</p>
-                                        <p className="text-xs font-bold text-foreground">
-                                            {empresa.is_exempt ? __('Permanente') : (
-                                                empresa.subscription_expires_at
-                                                    ? new Date(empresa.subscription_expires_at).toLocaleDateString()
-                                                    : empresa.trial_ends_at
-                                                        ? new Date(empresa.trial_ends_at).toLocaleDateString()
-                                                        : __('Indefinido')
-                                            )}
-                                        </p>
-                                    </div>
-                                    <div className="p-3.5 rounded-xl border bg-card/60 space-y-1">
-                                        <p className="text-[11px] font-bold text-muted-foreground uppercase tracking-wider">{__('Sucursales en Uso')}</p>
-                                        <p className="text-sm font-bold text-emerald-600 dark:text-emerald-400">
-                                            {empresa.sucursales_activas} {__('activas')}
-                                        </p>
-                                    </div>
-                                </div>
-
-                                {/* Barra de Progreso de Días Restantes */}
-                                {!empresa.is_exempt && (
-                                    <div className="space-y-2 pt-2">
-                                        <div className="flex justify-between text-xs font-semibold">
-                                            <span className="text-muted-foreground">{__('Vigencia del Período')}</span>
-                                            <span className={empresa.dias_restantes <= 5 ? 'text-destructive font-bold' : 'text-primary font-bold'}>
-                                                {empresa.dias_restantes} {__('días restantes')}
-                                            </span>
-                                        </div>
-                                        <div className="w-full h-3 bg-muted rounded-full overflow-hidden p-0.5 border">
-                                            <div
-                                                className={`h-full transition-all duration-500 rounded-full ${empresa.dias_restantes <= 3 ? 'bg-destructive' :
-                                                    empresa.dias_restantes <= 7 ? 'bg-amber-500' : 'bg-primary'
-                                                    }`}
-                                                style={{ width: `${progressPercent}%` }}
-                                            />
-                                        </div>
-                                    </div>
-                                )}
-                            </CardContent>
-                        </Card>
-
-                        {/* Módulos Incluidos */}
-                        <Card className="shadow-sm border border-border">
-                            <CardHeader className="pb-3 border-b bg-muted/20">
-                                <CardTitle className="text-base font-bold flex items-center gap-2">
-                                    <Zap className="h-4 w-4 text-amber-500 fill-amber-500" />
-                                    {__('Módulos Incluidos (Plan Full)')}
-                                </CardTitle>
-                                <CardDescription className="text-xs">
-                                    {__('Todo el ecosistema de Servitec a tu disposición:')}
-                                </CardDescription>
-                            </CardHeader>
-                            <CardContent className="pt-4">
-                                <ul className="space-y-3 text-xs">
-                                    {[
-                                        __('Terminal de Venta POS & Tickets'),
-                                        __('Control de Inventario y Kardex'),
-                                        __('Cajas Chicas y Arqueos Diarios'),
-                                        __('Gestión de Clientes y Créditos'),
-                                        __('Ordenes de Servicios y Equipos'),
-                                        __('Integración WhatsApp & Reportes'),
-                                    ].map((item, idx) => (
-                                        <li key={idx} className="flex items-center gap-2.5 font-medium text-foreground">
-                                            <span className="h-4 w-4 rounded-full bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 flex items-center justify-center shrink-0">
-                                                <Check className="h-3 w-3 stroke-[3]" />
-                                            </span>
-                                            <span>{item}</span>
-                                        </li>
-                                    ))}
-                                </ul>
-                            </CardContent>
-                        </Card>
-                    </div>
-
-                    {/* Formulario de Renovación / Selección de Período */}
-                    {!empresa.is_exempt && (
-                        <Card className="shadow-md border-2 border-primary/20 overflow-hidden">
-                            <CardHeader className="bg-muted/40 border-b">
-                                <div className="flex items-center gap-3">
-                                    <div className="p-2.5 bg-primary text-primary-foreground rounded-xl shadow-sm">
-                                        <Calendar className="h-6 w-6" />
-                                    </div>
-                                    <div>
-                                        <CardTitle className="text-xl font-bold">
-                                            {__('Renovar o Ampliar Suscripción')}
-                                        </CardTitle>
-                                        <CardDescription className="text-xs sm:text-sm">
-                                            {__('Elige la duración de tu plan y ajusta las sucursales requeridas para tu negocio.')}
-                                        </CardDescription>
-                                    </div>
-                                </div>
-                            </CardHeader>
-                            <CardContent className="p-6">
-                                <form onSubmit={handleSubmitRenewal} className="space-y-8">
-                                    {/* 1. Selección del Plan Mensual */}
-                                    <div className="space-y-3">
-                                        <Label className="text-sm font-bold flex items-center gap-2">
-                                            <span className="h-6 w-6 rounded-full bg-primary text-primary-foreground text-xs flex items-center justify-center font-bold">1</span>
-                                            {__('Selecciona tu Plan Mensual')}
-                                        </Label>
-                                        <div className="grid gap-6 sm:grid-cols-3">
-                                            {[3, 6, 12].map((meses) => {
-                                                const getPlanForCycle = (m: number): PlanInfo | null => {
-                                                    if (!planes || planes.length === 0) return plan;
-                                                    if (m === 3) return planes.find(p => p.nombre.toLowerCase().includes('trimestral')) || planes[0] || plan;
-                                                    if (m === 6) return planes.find(p => p.nombre.toLowerCase().includes('semestral')) || planes[1] || plan;
-                                                    if (m === 12) return planes.find(p => p.nombre.toLowerCase().includes('anual')) || planes[2] || plan;
-                                                    return plan;
-                                                };
-
-                                                const planItem = getPlanForCycle(meses);
-                                                const tienePromo = Boolean(planItem?.tiene_promocion);
-                                                const regularMensual = Number(planItem?.precio_regular_mensual) || 499;
-                                                const promoMensual = Number(planItem?.precio_promocional_mensual) || (meses === 3 ? 299 : meses === 6 ? 249 : 199);
-                                                const precioMensual = tienePromo ? promoMensual : regularMensual;
-
-                                                const subtotalCiclo = opcionesPrecios[meses]?.subtotal_plan
-                                                    ?? (tienePromo ? (promoMensual * meses) : (regularMensual * meses));
-
-                                                const ahorroPorcentaje = regularMensual > promoMensual
-                                                    ? Math.round(((regularMensual - promoMensual) / regularMensual) * 100)
-                                                    : 0;
-
-                                                const badgeText = planItem?.badge_promocion
-                                                    || (tienePromo && ahorroPorcentaje > 0 ? `-${ahorroPorcentaje}% OFF` : (meses === 6 ? __('⭐ ¡Más Popular!') : meses === 12 ? __('🚀 ¡Mejor Precio!') : __('Para Emprendedores')));
-
-                                                const badgeClass = tienePromo
-                                                    ? 'bg-gradient-to-r from-orange-500 to-amber-500 text-white font-bold'
-                                                    : meses === 6
-                                                        ? 'bg-amber-500 text-white font-bold'
-                                                        : meses === 12
-                                                            ? 'bg-emerald-600 text-white font-bold'
-                                                            : 'bg-slate-700 text-white font-bold';
-
-                                                const titulo = planItem?.nombre || (meses === 3 ? __('Plan Trimestral') : meses === 6 ? __('Plan Semestral') : __('Plan Anual'));
-                                                const subtitulo = planItem?.descripcion || (meses === 3 ? __('Ideal para arrancar y controlar tu comercio') : meses === 6 ? __('El equilibrio perfecto para crecer con ahorro') : __('Máximo ahorro y soporte continuo sin límites'));
-                                                const periodoStr = meses === 12 ? __('año') : `${meses} ${__('meses')}`;
-
-                                                const isSelected = planItem ? selectedPlanId === planItem.id : false;
-                                                const isLocked = hasActivePaidSubscription && !isSelected;
-
-                                                return (
-                                                    <div
-                                                        key={planItem?.id ?? meses}
-                                                        onClick={() => planItem && handlePlanSelect(planItem.id)}
-                                                        className={`rounded-2xl border-2 p-5 transition-all relative flex flex-col justify-between ${isLocked
-                                                            ? 'opacity-50 cursor-not-allowed border-dashed border-border bg-muted/20 grayscale-[30%]'
-                                                            : 'cursor-pointer'
-                                                            } ${isSelected
-                                                                ? 'border-primary bg-primary/5 shadow-md ring-2 ring-primary/20 scale-[1.02]'
-                                                                : !isLocked ? 'border-border hover:border-muted-foreground/30 bg-card' : ''
-                                                            }`}
-                                                    >
-                                                        {isSelected && hasActivePaidSubscription ? (
-                                                            <Badge className="absolute -top-3 right-4 bg-emerald-600 text-white text-[10px] font-bold px-2.5 py-0.5 shadow-sm">
-                                                                {__('✓ Plan Activo')}
-                                                            </Badge>
-                                                        ) : (
-                                                            <Badge className={`absolute -top-3 right-4 text-[10px] px-2.5 py-0.5 shadow-sm ${badgeClass}`}>
-                                                                {badgeText}
-                                                            </Badge>
-                                                        )}
-
-                                                        <div className="space-y-2">
-                                                            <span className="text-xs font-extrabold uppercase tracking-wider text-muted-foreground">{titulo}</span>
-                                                            <p className="text-xs text-muted-foreground min-h-[32px]">{subtitulo}</p>
-
-                                                            <div className="pt-2">
-                                                                {tienePromo && regularMensual > promoMensual && (
-                                                                    <div className="flex items-center gap-2 mb-0.5">
-                                                                        <span className="text-xs text-muted-foreground line-through font-bold">
-                                                                            {formatPrice(regularMensual)} / {__('mes')}
-                                                                        </span>
-                                                                        <span className="text-[10px] font-bold text-orange-600 bg-orange-50 dark:bg-orange-950/40 dark:text-orange-300 px-1.5 py-0.5 rounded">
-                                                                            {planItem?.badge_promocion || `Promo ${planItem?.meses_duracion_promocion ?? meses}m`}
-                                                                        </span>
-                                                                    </div>
-                                                                )}
-                                                                <h3 className="text-2xl sm:text-3xl font-black text-foreground flex items-baseline gap-1 flex-wrap">
-                                                                    {formatPrice(precioMensual)} <span className="text-xs font-semibold text-muted-foreground">/ {__('mes')}</span>
-                                                                </h3>
-
-                                                                {tienePromo ? (
-                                                                    <p className="text-[11px] text-muted-foreground mt-2 leading-relaxed bg-muted/40 p-2 rounded-lg border">
-                                                                        {__('Facturado')} <strong className="text-foreground">{formatPrice(subtotalCiclo)}</strong> {__('por')} {periodoStr}. {__('Luego renovación a')} <strong className="text-foreground">{formatPrice(regularMensual)}/{__('mes')}</strong>.
-                                                                    </p>
-                                                                ) : (
-                                                                    <p className="text-[11px] text-muted-foreground mt-2 bg-muted/40 p-2 rounded-lg border">
-                                                                        {__('Facturado')} <strong className="text-foreground">{formatPrice(subtotalCiclo)}</strong> {__('cada')} {periodoStr}.
-                                                                    </p>
-                                                                )}
-                                                            </div>
-                                                        </div>
-
-                                                        <div className="mt-4 pt-3 border-t space-y-2">
-                                                            <span className="text-[11px] font-bold text-muted-foreground uppercase">{__('Incluye:')}</span>
-                                                            <ul className="space-y-1.5 text-xs">
-                                                                <li className="flex items-start gap-2 text-foreground font-medium">
-                                                                    <CheckCircle2 className="h-3.5 w-3.5 text-emerald-500 shrink-0 mt-0.5" />
-                                                                    <span className="leading-tight">{__('Acceso Total a todos los módulos')}</span>
-                                                                </li>
-                                                                <li className="flex items-start gap-2 text-foreground font-medium">
-                                                                    <CheckCircle2 className="h-3.5 w-3.5 text-emerald-500 shrink-0 mt-0.5" />
-                                                                    <span className="leading-tight">{planItem?.sucursales_incluidas ?? 1} {__('Sucursal(es) incluida(s)')}</span>
-                                                                </li>
-                                                                <li className="flex items-start gap-2 text-foreground font-medium">
-                                                                    <CheckCircle2 className="h-3.5 w-3.5 text-emerald-500 shrink-0 mt-0.5" />
-                                                                    <span className="leading-tight">{__('Sucursal extra:')} {formatPrice(planItem?.precio_sucursal_extra_mensual ?? 10)}/{__('mes')}</span>
-                                                                </li>
-                                                                <li className="flex items-start gap-2 text-foreground font-medium">
-                                                                    <CheckCircle2 className="h-3.5 w-3.5 text-emerald-500 shrink-0 mt-0.5" />
-                                                                    <span className="leading-tight">{__('Soporte técnico y actualizaciones continuas')}</span>
-                                                                </li>
-                                                            </ul>
-                                                        </div>
-                                                    </div>
-                                                );
-                                            })}
-                                        </div>
-                                    </div>
-
-                                    {/* 2. Selección de Sucursales & Resumen Financiero */}
-                                    <div className="grid gap-6 md:grid-cols-2 pt-4 border-t">
-                                        <div className="space-y-4">
-                                            <Label className="text-sm font-bold flex items-center gap-2">
-                                                <span className="h-6 w-6 rounded-full bg-primary text-primary-foreground text-xs flex items-center justify-center font-bold">2</span>
-                                                {__('Cantidad de Sucursales a Contratar')}
-                                            </Label>
-
-                                            <div className="p-4 bg-muted/30 rounded-xl border space-y-3">
-                                                <p className="text-xs text-muted-foreground">
-                                                    {hasActivePaidSubscription ? (
-                                                        <>{__('Actualmente tienes')} <strong className="text-primary font-bold">{empresa.max_sucursales} {__('sucursal(es) autorizada(s)')}</strong>. {__('Cada nueva sucursal adicional suma +')}<strong className="text-primary font-bold">{formatPrice(activeSelectedPlan?.precio_sucursal_extra_mensual ?? 84.72)}/{__('mes')}</strong>.</>
-                                                    ) : (
-                                                        <>{__('El plan base incluye')} <strong>{activeSelectedPlan?.sucursales_incluidas ?? 1} {__('sucursal(es)')}</strong>. {__('Cada sucursal adicional suma +')}<strong className="text-primary font-bold">{formatPrice(activeSelectedPlan?.precio_sucursal_extra_mensual ?? 84.72)}/{__('mes')}</strong>.</>
-                                                    )}
-                                                </p>
-
-                                                <div className="flex items-center gap-3">
-                                                    <Button
-                                                        type="button"
-                                                        variant="outline"
-                                                        size="icon"
-                                                        onClick={() => handleSucursalChange(extraSucursales - 1)}
-                                                        disabled={hasActivePaidSubscription ? extraSucursales <= empresa.max_sucursales : extraSucursales <= 1}
-                                                        className="h-10 w-10 rounded-lg"
-                                                    >
-                                                        <Minus className="h-4 w-4" />
-                                                    </Button>
-
-                                                    <Input
-                                                        type="number"
-                                                        min={hasActivePaidSubscription ? empresa.max_sucursales : 1}
-                                                        max={50}
-                                                        value={extraSucursales}
-                                                        onChange={(e) => handleSucursalChange(parseInt(e.target.value) || (hasActivePaidSubscription ? empresa.max_sucursales : 1))}
-                                                        className="text-center font-bold text-lg h-10 w-24"
-                                                    />
-
-                                                    <Button
-                                                        type="button"
-                                                        variant="outline"
-                                                        size="icon"
-                                                        onClick={() => handleSucursalChange(extraSucursales + 1)}
-                                                        className="h-10 w-10 rounded-lg"
-                                                    >
-                                                        <Plus className="h-4 w-4" />
-                                                    </Button>
-
-                                                    <span className="text-xs text-muted-foreground font-medium">
-                                                        {hasActivePaidSubscription ? (
-                                                            sucursalesExtrasCount === 0
-                                                                ? __('(Sin nuevas sucursales adicionadas)')
-                                                                : `+${sucursalesExtrasCount} ${__('nueva(s) sucursal(es) extra')}`
-                                                        ) : (
-                                                            extraSucursales <= (activeSelectedPlan?.sucursales_incluidas ?? 1)
-                                                                ? `${activeSelectedPlan?.sucursales_incluidas ?? 1} ${__('Sucursal(es) Incluida(s)')}`
-                                                                : `+${sucursalesExtrasCount} ${__('sucursal(es) extra')}`
-                                                        )}
-                                                    </span>
-                                                </div>
-                                            </div>
-                                        </div>
-
-                                        {/* Resumen de Tarifas Sticky Card */}
-                                        <div className="bg-slate-900 text-white p-5 rounded-2xl shadow-lg flex flex-col justify-between relative overflow-hidden border border-slate-800">
-                                            <div className="space-y-3 relative z-10">
-                                                <div className="flex items-center justify-between">
-                                                    <span className="text-xs font-bold uppercase tracking-wider text-slate-300">{__('Resumen de Inversión')}</span>
-                                                    <div className="flex items-center gap-2">
-                                                        {isVenezuela && (
-                                                            <Badge variant="outline" className="text-[10px] border-amber-500/40 text-amber-300 bg-amber-500/10">
-                                                                Tasa BCV: Bs. {bcvRate.toFixed(2)} / USD
-                                                            </Badge>
-                                                        )}
-                                                        <Badge variant="outline" className="text-[10px] border-slate-700 text-slate-300">
-                                                            {__('Cobro Mensual')}
-                                                        </Badge>
-                                                    </div>
-                                                </div>
-
-                                                <div className="space-y-1.5 text-xs text-slate-300">
-                                                    <div className="flex justify-between">
-                                                        <span>{activeSelectedPlan?.nombre ?? __('Plan Mensual')} (1 {__('mes')}):</span>
-                                                        <span className="font-mono font-semibold">
-                                                            {hasActivePaidSubscription ? (
-                                                                <span className="text-emerald-400 font-bold">{__('✓ Pagado (Vigente)')}</span>
-                                                            ) : (
-                                                                formatPrice(selectedMonthlyPrice)
-                                                            )}
-                                                        </span>
-                                                    </div>
-                                                    {sucursalesExtrasCount > 0 && (
-                                                        <div className="flex justify-between text-indigo-300">
-                                                            <span>{sucursalesExtrasCount} {__('Sucursal(es) Extra')}:</span>
-                                                            <span className="font-mono font-semibold">+{formatPrice(costoExtraSucursales)}</span>
-                                                        </div>
-                                                    )}
-                                                    {isVenezuela && (
-                                                        <div className="flex justify-between text-slate-400 text-[11px] pt-1 border-t border-slate-800">
-                                                            <span>Equivalente en Dólares USD:</span>
-                                                            <span className="font-mono">${precioFinalEstimado.toFixed(2)} USD</span>
-                                                        </div>
-                                                    )}
-                                                </div>
-                                            </div>
-
-                                            <div className="pt-4 border-t border-slate-800 mt-4 flex items-baseline justify-between relative z-10">
-                                                <div>
-                                                    <p className="text-xs text-slate-400 font-medium">
-                                                        {hasActivePaidSubscription
-                                                            ? (isVenezuela ? __('Total Sucursales Extras (Bolívares):') : __('Total Sucursales Extras:'))
-                                                            : (isVenezuela ? __('Total a Transferir (Bolívares):') : __('Total a Transferir:'))
-                                                        }
-                                                    </p>
-                                                    <p className="text-3xl font-black font-mono text-emerald-400">
-                                                        {formatPrice(precioFinalEstimado)}
-                                                    </p>
-                                                </div>
-                                            </div>
-                                        </div>
-                                    </div>
-
-                                    {/* 3. Datos del Pago */}
-                                    <div className="space-y-4 pt-4 border-t">
-                                        <Label className="text-sm font-bold flex items-center gap-2">
-                                            <span className="h-6 w-6 rounded-full bg-primary text-primary-foreground text-xs flex items-center justify-center font-bold">3</span>
-                                            {__('Registro del Pago y Comprobante')}
-                                        </Label>
-
-                                        <div className="grid gap-4 sm:grid-cols-2">
-                                            <div>
-                                                <Label htmlFor="metodo_pago" className="text-xs font-semibold">{__('Método de Pago en Línea')}</Label>
-                                                <Select
-                                                    value={data.metodo_pago}
-                                                    onValueChange={(val) => setData('metodo_pago', val)}
-                                                >
-                                                    <SelectTrigger id="metodo_pago" className="mt-1 h-10">
-                                                        <SelectValue />
-                                                    </SelectTrigger>
-                                                    <SelectContent>
-                                                        {paymentGateways?.paypal?.active && (
-                                                            <SelectItem value="paypal">💳 {__('PayPal (Checkout en línea)')}</SelectItem>
-                                                        )}
-                                                        {paymentGateways?.mercadopago?.active && (
-                                                            <SelectItem value="mercadopago">⚡ {__('Mercado Pago (Tarjeta / Dinero MP)')}</SelectItem>
-                                                        )}
-                                                        {paymentGateways?.stripe?.active && (
-                                                            <SelectItem value="stripe">🔒 {__('Stripe (Tarjeta de Crédito / Débito)')}</SelectItem>
-                                                        )}
-                                                        {!hasAnyActiveGateway && (
-                                                            <>
-                                                                <SelectItem value="paypal">💳 {__('PayPal (Checkout en línea)')}</SelectItem>
-                                                                <SelectItem value="mercadopago">⚡ {__('Mercado Pago (Tarjeta / Dinero MP)')}</SelectItem>
-                                                                <SelectItem value="stripe">🔒 {__('Stripe (Tarjeta de Crédito / Débito)')}</SelectItem>
-                                                            </>
-                                                        )}
-                                                    </SelectContent>
-                                                </Select>
-                                            </div>
-
-                                            <div>
-                                                <Label htmlFor="referencia" className="text-xs font-semibold">{__('Número de Referencia')}</Label>
-                                                <Input
-                                                    id="referencia"
-                                                    placeholder={__('Ej: 987654321')}
-                                                    value={data.referencia_pago}
-                                                    onChange={(e) => setData('referencia_pago', e.target.value)}
-                                                    className="mt-1 h-10"
-                                                />
-                                            </div>
-
-                                            {data.metodo_pago === 'paypal' && (
-                                                <div className="sm:col-span-2 p-5 bg-amber-50/70 dark:bg-amber-950/20 text-slate-900 dark:text-slate-100 rounded-xl border border-amber-200 dark:border-amber-900/40 shadow-sm space-y-4">
-                                                    <div className="flex items-center justify-between">
-                                                        <span className="text-xs font-bold uppercase text-amber-700 dark:text-amber-400 flex items-center gap-1.5">
-                                                            <Zap className="h-4 w-4 text-amber-600" />
-                                                            {__('Checkout Directo con PayPal')}
-                                                        </span>
-                                                        <div className="flex items-center gap-2">
-                                                            <Badge className="bg-amber-600 hover:bg-amber-700 text-white font-mono font-bold text-xs">
-                                                                Total: {formatPrice(precioFinalEstimado)}
-                                                            </Badge>
-                                                            <Badge variant="outline" className="text-[10px] border-amber-300 dark:border-amber-800 text-amber-800 dark:text-amber-300 bg-amber-100/50 dark:bg-amber-950/40">
-                                                                {__('Acreditación Instantánea')}
-                                                            </Badge>
-                                                        </div>
-                                                    </div>
-                                                    <div className="text-xs text-muted-foreground leading-relaxed flex items-center justify-between border-t border-b border-amber-200/60 dark:border-amber-900/30 py-2 my-1">
-                                                        <span>{__('Plan Seleccionado:')} <strong className="text-slate-800 dark:text-slate-200">{activeSelectedPlan?.nombre ?? __('Plan Mensual')} ({extraSucursales} {extraSucursales === 1 ? __('sucursal') : __('sucursales')})</strong></span>
-                                                        <span className="font-bold font-mono text-amber-800 dark:text-amber-300 text-sm">{formatPrice(precioFinalEstimado)}</span>
-                                                    </div>
-                                                    <p className="text-xs text-muted-foreground leading-relaxed">
-                                                        {__('Haz clic en el botón oficial de PayPal a continuación para procesar el cobro exacto de')} <strong>{formatPrice(precioFinalEstimado)}</strong>.
-                                                    </p>
-
-                                                    {paymentGateways?.paypal?.client_id ? (
-                                                        <PayPalButtonComponent
-                                                            clientId={paymentGateways.paypal.client_id}
-                                                            selectedCycle={selectedCycle}
-                                                            extraSucursales={extraSucursales}
-                                                            planId={selectedPlanId}
-                                                            currency="MXN"
-                                                            __={__}
-                                                        />
-                                                    ) : (
-                                                        <div className="p-3 rounded bg-amber-500/20 text-amber-300 text-xs border border-amber-500/30">
-                                                            {__('Las credenciales de PayPal están en configuración. Puedes contactar a soporte para habilitar el servicio.')}
-                                                        </div>
-                                                    )}
-                                                </div>
-                                            )}
-
-                                            {['mercadopago', 'stripe'].includes(data.metodo_pago) && (
-                                                <div className="sm:col-span-2 p-3 bg-sky-50 dark:bg-sky-950/30 text-sky-900 dark:text-sky-300 rounded-lg border border-sky-200 dark:border-sky-900 text-xs flex items-center gap-2">
-                                                    <Zap className="h-4 w-4 shrink-0 text-sky-600" />
-                                                    <span>{__('Has seleccionado una pasarela de pago en línea. Al enviar la solicitud, serás redirigido o se activará el checkout automático con acreditación instantánea.')}</span>
-                                                </div>
-                                            )}
-
-                                            {data.metodo_pago !== 'paypal' && (
-                                                <div className="sm:col-span-2">
-                                                    <Label htmlFor="comprobante" className="text-xs font-semibold">
-                                                        {['mercadopago', 'stripe'].includes(data.metodo_pago)
-                                                            ? __('Adjuntar Comprobante (Opcional para Pago Online)')
-                                                            : __('Adjuntar Captura / Comprobante (Imagen o PDF)')
-                                                        }
-                                                    </Label>
-                                                    <Input
-                                                        id="comprobante"
-                                                        type="file"
-                                                        accept="image/*,.pdf"
-                                                        onChange={handleFileChange}
-                                                        className="mt-1 cursor-pointer h-10 pt-1.5"
-                                                    />
-                                                    {imagePreviewUrl && (
-                                                        <div className="mt-3 p-2 bg-muted rounded-lg border w-32 h-32 relative">
-                                                            <img src={imagePreviewUrl} alt="Preview" className="w-full h-full object-cover rounded" />
-                                                        </div>
-                                                    )}
-                                                </div>
-                                            )}
-                                        </div>
-                                    </div>
-
-                                    {data.metodo_pago !== 'paypal' && (
-                                        <Button
-                                            type="submit"
-                                            disabled={processing}
-                                            size="lg"
-                                            className="w-full sm:w-auto gap-2 font-bold px-8 shadow-md h-11"
-                                        >
-                                            <Upload className="h-5 w-5" />
-                                            {processing ? __('Enviando...') : __('Enviar Solicitud de Renovación')}
-                                        </Button>
-                                    )}
-                                </form>
-                            </CardContent>
-                        </Card>
-                    )}
-
-                    {/* Historial de Pagos y Solicitudes */}
-                    <Card className="shadow-sm border border-border">
-                        <CardHeader className="border-b bg-muted/30">
-                            <div className="flex items-center gap-3">
-                                <Receipt className="h-5 w-5 text-primary" />
-                                <div>
-                                    <CardTitle className="text-lg font-bold">{__('Historial de Renovaciones y Comprobantes')}</CardTitle>
-                                    <CardDescription className="text-xs">{__('Seguimiento de pagos enviados y su estado de aprobación.')}</CardDescription>
+                                <div className="text-left sm:text-right p-2 sm:p-0 rounded-lg bg-primary/5 sm:bg-transparent">
+                                    <span className="text-xs text-muted-foreground font-medium block">{__('Capacidad Autorizada')}</span>
+                                    <p className="text-base font-extrabold text-primary">
+                                        {empresa.sucursales_activas} / {empresa.max_sucursales} {__('Sucursal(es)')}
+                                    </p>
                                 </div>
                             </div>
                         </CardHeader>
-                        <CardContent className="p-0">
-                            <Table>
-                                <TableHeader>
-                                    <TableRow className="bg-muted/50">
-                                        <TableHead className="font-bold">{__('Fecha')}</TableHead>
-                                        <TableHead className="font-bold">{__('Duración')}</TableHead>
-                                        <TableHead className="font-bold">{__('Sucursales')}</TableHead>
-                                        <TableHead className="font-bold">{__('Monto Total')}</TableHead>
-                                        <TableHead className="font-bold">{__('Método')}</TableHead>
-                                        <TableHead className="font-bold">{__('Referencia')}</TableHead>
-                                        <TableHead className="font-bold text-center">{__('Comprobante')}</TableHead>
-                                        <TableHead className="font-bold text-right">{__('Estado')}</TableHead>
-                                    </TableRow>
-                                </TableHeader>
-                                <TableBody>
-                                    {pagos.map((pago) => (
-                                        <TableRow key={pago.id} className="hover:bg-muted/40">
-                                            <TableCell className="text-xs font-mono font-medium">
-                                                {new Date(pago.created_at).toLocaleDateString()}
-                                            </TableCell>
-                                            <TableCell className="font-semibold text-xs">{pago.ciclo_meses} {__('Meses')}</TableCell>
-                                            <TableCell className="text-xs font-medium">{pago.sucursales_contratadas}</TableCell>
-                                            <TableCell className="font-mono font-bold text-xs text-primary">
-                                                {formatPrice(pago.monto)}
-                                            </TableCell>
-                                            <TableCell className="capitalize text-xs font-medium">{pago.metodo_pago.replace('_', ' ')}</TableCell>
-                                            <TableCell className="font-mono text-xs text-muted-foreground">{pago.referencia_pago || '--'}</TableCell>
-                                            <TableCell className="text-center">
-                                                {pago.comprobante_path ? (
-                                                    <Button
-                                                        size="sm"
-                                                        variant="ghost"
-                                                        onClick={() => setPreviewReceipt(`/storage/${pago.comprobante_path}`)}
-                                                        className="h-7 text-xs gap-1 text-primary hover:text-primary/80"
-                                                    >
-                                                        <Eye className="h-3.5 w-3.5" />
-                                                        {__('Ver')}
-                                                    </Button>
-                                                ) : (
-                                                    <span className="text-xs text-muted-foreground italic">--</span>
-                                                )}
-                                            </TableCell>
-                                            <TableCell className="text-right">
-                                                <Badge
-                                                    variant={
-                                                        pago.estado === 'approved' ? 'default' :
-                                                            pago.estado === 'pending' ? 'outline' : 'destructive'
-                                                    }
-                                                    className={`text-xs font-semibold ${pago.estado === 'approved' ? 'bg-emerald-600 text-white' :
-                                                        pago.estado === 'pending' ? 'bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-300 border-amber-300' : ''
-                                                        }`}
-                                                >
-                                                    {pago.estado === 'approved' ? __('Aprobado') :
-                                                        pago.estado === 'pending' ? __('Pendiente') : __('Rechazado')}
-                                                </Badge>
-                                            </TableCell>
-                                        </TableRow>
-                                    ))}
+                        <CardContent className="pt-6 space-y-6">
+                            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4">
+                                <div className="p-3.5 rounded-xl border bg-card/60 space-y-1">
+                                    <p className="text-[11px] font-bold text-muted-foreground uppercase tracking-wider">{__('Estado')}</p>
+                                    <p className="text-sm font-bold capitalize text-foreground">
+                                        {empresa.is_exempt ? __('Exento (Owner)') : empresa.subscription_status}
+                                    </p>
+                                </div>
+                                <div className="p-3.5 rounded-xl border bg-card/60 space-y-1">
+                                    <p className="text-[11px] font-bold text-muted-foreground uppercase tracking-wider">{__('Días Restantes')}</p>
+                                    <p className="text-sm font-bold text-primary">
+                                        {empresa.is_exempt ? '∞' : `${empresa.dias_restantes} días`}
+                                    </p>
+                                </div>
+                                <div className="p-3.5 rounded-xl border bg-card/60 space-y-1">
+                                    <p className="text-[11px] font-bold text-muted-foreground uppercase tracking-wider">{__('Vencimiento')}</p>
+                                    <p className="text-xs font-bold text-foreground">
+                                        {empresa.is_exempt ? __('Permanente') : (
+                                            empresa.subscription_expires_at
+                                                ? new Date(empresa.subscription_expires_at).toLocaleDateString()
+                                                : empresa.trial_ends_at
+                                                    ? new Date(empresa.trial_ends_at).toLocaleDateString()
+                                                    : __('Indefinido')
+                                        )}
+                                    </p>
+                                </div>
+                                <div className="p-3.5 rounded-xl border bg-card/60 space-y-1">
+                                    <p className="text-[11px] font-bold text-muted-foreground uppercase tracking-wider">{__('Sucursales en Uso')}</p>
+                                    <p className="text-sm font-bold text-emerald-600 dark:text-emerald-400">
+                                        {empresa.sucursales_activas} {__('activas')}
+                                    </p>
+                                </div>
+                            </div>
 
-                                    {pagos.length === 0 && (
-                                        <TableRow>
-                                            <TableCell colSpan={8} className="text-center py-8 text-muted-foreground">
-                                                {__('No se registran solicitudes de renovación anteriores.')}
-                                            </TableCell>
-                                        </TableRow>
-                                    )}
-                                </TableBody>
-                            </Table>
+                            {/* Barra de Progreso de Días Restantes */}
+                            {!empresa.is_exempt && (
+                                <div className="space-y-2 pt-2">
+                                    <div className="flex justify-between text-xs font-semibold">
+                                        <span className="text-muted-foreground">{__('Vigencia del Período')}</span>
+                                        <span className={empresa.dias_restantes <= 5 ? 'text-destructive font-bold' : 'text-primary font-bold'}>
+                                            {empresa.dias_restantes} {__('días restantes')}
+                                        </span>
+                                    </div>
+                                    <div className="w-full h-3 bg-muted rounded-full overflow-hidden p-0.5 border">
+                                        <div
+                                            className={`h-full transition-all duration-500 rounded-full ${empresa.dias_restantes <= 3 ? 'bg-destructive' :
+                                                empresa.dias_restantes <= 7 ? 'bg-amber-500' : 'bg-primary'
+                                                }`}
+                                            style={{ width: `${progressPercent}%` }}
+                                        />
+                                    </div>
+                                </div>
+                            )}
+                        </CardContent>
+                    </Card>
+
+                    {/* Módulos Incluidos */}
+                    <Card className="shadow-sm border border-border">
+                        <CardHeader className="pb-3 border-b bg-muted/20">
+                            <CardTitle className="text-base font-bold flex items-center gap-2">
+                                <Zap className="h-4 w-4 text-amber-500 fill-amber-500" />
+                                {__('Módulos Incluidos (Plan Full)')}
+                            </CardTitle>
+                            <CardDescription className="text-xs">
+                                {__('Todo el ecosistema de Servitec a tu disposición:')}
+                            </CardDescription>
+                        </CardHeader>
+                        <CardContent className="pt-4">
+                            <ul className="space-y-3 text-xs">
+                                {[
+                                    __('Terminal de Venta POS & Tickets'),
+                                    __('Control de Inventario y Kardex'),
+                                    __('Cajas Chicas y Arqueos Diarios'),
+                                    __('Gestión de Clientes y Créditos'),
+                                    __('Ordenes de Servicios y Equipos'),
+                                    __('Integración WhatsApp & Reportes'),
+                                ].map((item, idx) => (
+                                    <li key={idx} className="flex items-center gap-2.5 font-medium text-foreground">
+                                        <span className="h-4 w-4 rounded-full bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 flex items-center justify-center shrink-0">
+                                            <Check className="h-3 w-3 stroke-[3]" />
+                                        </span>
+                                        <span>{item}</span>
+                                    </li>
+                                ))}
+                            </ul>
                         </CardContent>
                     </Card>
                 </div>
 
-                {/* Modal Lightbox Ver Comprobante */}
-                <Dialog open={previewReceipt !== null} onOpenChange={() => setPreviewReceipt(null)}>
-                    <DialogContent className="max-w-2xl">
-                        <DialogHeader>
-                            <DialogTitle className="flex items-center gap-2">
-                                <Receipt className="h-5 w-5 text-primary" />
-                                {__('Comprobante de Pago Adjunto')}
-                            </DialogTitle>
-                        </DialogHeader>
-
-                        {previewReceipt && (
-                            <div className="p-2 border rounded-xl bg-muted flex items-center justify-center max-h-[70vh] overflow-auto">
-                                {previewReceipt.endsWith('.pdf') ? (
-                                    <iframe src={previewReceipt} className="w-full h-96 rounded" title="PDF Comprobante" />
-                                ) : (
-                                    <img src={previewReceipt} alt="Comprobante" className="max-w-full max-h-[65vh] object-contain rounded-lg shadow-md" />
-                                )}
+                {/* Formulario de Renovación / Selección de Período */}
+                {!empresa.is_exempt && (
+                    <Card className="shadow-md border-2 border-primary/20 overflow-hidden">
+                        <CardHeader className="bg-muted/40 border-b">
+                            <div className="flex items-center gap-3">
+                                <div className="p-2.5 bg-primary text-primary-foreground rounded-xl shadow-sm">
+                                    <Calendar className="h-6 w-6" />
+                                </div>
+                                <div>
+                                    <CardTitle className="text-xl font-bold">
+                                        {__('Renovar o Ampliar Suscripción')}
+                                    </CardTitle>
+                                    <CardDescription className="text-xs sm:text-sm">
+                                        {__('Elige la duración de tu plan y ajusta las sucursales requeridas para tu negocio.')}
+                                    </CardDescription>
+                                </div>
                             </div>
-                        )}
+                        </CardHeader>
+                        <CardContent className="p-6">
+                            <form onSubmit={handleSubmitRenewal} className="space-y-8">
+                                {/* 1. Selección del Plan Mensual */}
+                                <div className="space-y-3">
+                                    <Label className="text-sm font-bold flex items-center gap-2">
+                                        <span className="h-6 w-6 rounded-full bg-primary text-primary-foreground text-xs flex items-center justify-center font-bold">1</span>
+                                        {__('Selecciona tu Plan Mensual')}
+                                    </Label>
+                                    <div className="grid gap-6 sm:grid-cols-3">
+                                        {(planes.length > 0 ? planes.filter(p => !p.nombre.toLowerCase().includes('prueba') || p.id === selectedPlanId) : [plan || { id: 1, nombre: 'Plan Mensual', descripcion: 'Control total de tu negocio', precio_regular_mensual: 149, precio_promocional_mensual: 149, sucursales_incluidas: 1, precio_sucursal_extra_mensual: 84.72, modulos_incluidos: ['todos'] }]).map((pItem: any) => {
+                                            const isSelected = selectedPlanId === pItem.id;
+                                            const isLocked = hasActivePaidSubscription && !isSelected;
+                                            const regularMensual = Number(pItem.precio_regular_mensual) || Number(pItem.precio_3_meses) || 149;
+                                            const promoMensual = Number(pItem.precio_promocional_mensual) || regularMensual;
+                                            const tienePromo = Boolean(pItem.tiene_promocion) && promoMensual < regularMensual && promoMensual > 0;
+                                            const precioMostrar = tienePromo ? promoMensual : regularMensual;
+                                            const ahorro = regularMensual > 0 ? Math.round(((regularMensual - promoMensual) / regularMensual) * 100) : 0;
 
-                        <div className="flex justify-between items-center pt-2">
-                            {previewReceipt && (
-                                <a
-                                    href={previewReceipt}
-                                    target="_blank"
-                                    rel="noreferrer"
-                                    className="text-xs font-bold text-primary hover:underline flex items-center gap-1"
-                                >
-                                    <ExternalLink className="h-3.5 w-3.5" />
-                                    {__('Abrir en ventana nueva')}
-                                </a>
-                            )}
-                            <Button variant="outline" onClick={() => setPreviewReceipt(null)}>
-                                {__('Cerrar')}
-                            </Button>
+                                            return (
+                                                <div
+                                                    key={pItem.id}
+                                                    onClick={() => handlePlanSelect(pItem.id)}
+                                                    className={`rounded-2xl border-2 p-5 transition-all relative flex flex-col justify-between ${isLocked
+                                                        ? 'opacity-50 cursor-not-allowed border-dashed border-border bg-muted/20 grayscale-[30%]'
+                                                        : 'cursor-pointer'
+                                                        } ${isSelected
+                                                            ? 'border-primary bg-primary/5 shadow-md ring-2 ring-primary/20 scale-[1.02]'
+                                                            : !isLocked ? 'border-border hover:border-muted-foreground/30 bg-card' : ''
+                                                        }`}
+                                                >
+                                                    {isSelected && hasActivePaidSubscription ? (
+                                                        <Badge className="absolute -top-3 right-4 bg-emerald-600 text-white text-[10px] font-bold px-2.5 py-0.5 shadow-sm">
+                                                            {__('✓ Plan Activo')}
+                                                        </Badge>
+                                                    ) : pItem.destacado ? (
+                                                        <Badge className="absolute -top-3 right-4 bg-amber-500 text-white text-[10px] font-bold px-2.5 py-0.5 shadow-sm">
+                                                            {__('⭐ Más Popular')}
+                                                        </Badge>
+                                                    ) : tienePromo ? (
+                                                        <Badge className="absolute -top-3 right-4 bg-red-600 text-white text-[10px] font-bold px-2.5 py-0.5 shadow-sm">
+                                                            -{ahorro}% OFF
+                                                        </Badge>
+                                                    ) : null}
+
+                                                    <div className="space-y-2">
+                                                        <span className="text-xs font-extrabold uppercase tracking-wider text-muted-foreground">{pItem.nombre}</span>
+                                                        <p className="text-xs text-muted-foreground min-h-[32px]">{pItem.descripcion || __('Acceso a la plataforma FixSale.')}</p>
+
+                                                        <div className="pt-2">
+                                                            {tienePromo && (
+                                                                <span className="text-xs text-muted-foreground line-through block">
+                                                                    {formatPrice(regularMensual)}
+                                                                </span>
+                                                            )}
+                                                            <h3 className="text-2xl sm:text-3xl font-black text-foreground flex items-baseline gap-1 flex-wrap">
+                                                                {formatPrice(precioMostrar)} <span className="text-xs font-semibold text-muted-foreground">/ {__('mes')}</span>
+                                                            </h3>
+                                                        </div>
+                                                    </div>
+
+                                                    <div className="mt-4 pt-3 border-t space-y-2">
+                                                        <span className="text-[11px] font-bold text-muted-foreground uppercase">{__('Incluye:')}</span>
+                                                        <ul className="space-y-1.5 text-xs">
+                                                            <li className="flex items-start gap-2 text-foreground font-medium">
+                                                                <CheckCircle2 className="h-3.5 w-3.5 text-emerald-500 shrink-0 mt-0.5" />
+                                                                <span className="leading-tight">{pItem.sucursales_incluidas || 1} {__('Sucursal incluida')}</span>
+                                                            </li>
+                                                            <li className="flex items-start gap-2 text-foreground font-medium">
+                                                                <CheckCircle2 className="h-3.5 w-3.5 text-emerald-500 shrink-0 mt-0.5" />
+                                                                <span className="leading-tight">{__('Sucursal extra: ')}{formatPrice(pItem.precio_sucursal_extra_mensual || 84.72)}/{__('mes')}</span>
+                                                            </li>
+                                                            <li className="flex items-start gap-2 text-foreground font-medium">
+                                                                <CheckCircle2 className="h-3.5 w-3.5 text-emerald-500 shrink-0 mt-0.5" />
+                                                                <span className="leading-tight">{__('Acceso completo al sistema')}</span>
+                                                            </li>
+                                                        </ul>
+                                                    </div>
+                                                </div>
+                                            );
+                                        })}
+                                    </div>
+                                </div>
+
+                                {/* 2. Selección de Sucursales & Resumen Financiero */}
+                                <div className="grid gap-6 md:grid-cols-2 pt-4 border-t">
+                                    <div className="space-y-4">
+                                        <Label className="text-sm font-bold flex items-center gap-2">
+                                            <span className="h-6 w-6 rounded-full bg-primary text-primary-foreground text-xs flex items-center justify-center font-bold">2</span>
+                                            {__('Cantidad de Sucursales a Contratar')}
+                                        </Label>
+
+                                        <div className="p-4 bg-muted/30 rounded-xl border space-y-3">
+                                            <p className="text-xs text-muted-foreground">
+                                                {hasActivePaidSubscription ? (
+                                                    <>{__('Actualmente tienes')} <strong className="text-primary font-bold">{empresa.max_sucursales} {__('sucursal(es) autorizada(s)')}</strong>. {__('Cada nueva sucursal adicional suma +')}<strong className="text-primary font-bold">{formatPrice(activeSelectedPlan?.precio_sucursal_extra_mensual ?? 84.72)}/{__('mes')}</strong>.</>
+                                                ) : (
+                                                    <>{__('El plan base incluye')} <strong>{activeSelectedPlan?.sucursales_incluidas ?? 1} {__('sucursal(es)')}</strong>. {__('Cada sucursal adicional suma +')}<strong className="text-primary font-bold">{formatPrice(activeSelectedPlan?.precio_sucursal_extra_mensual ?? 84.72)}/{__('mes')}</strong>.</>
+                                                )}
+                                            </p>
+
+                                            <div className="flex items-center gap-3">
+                                                <Button
+                                                    type="button"
+                                                    variant="outline"
+                                                    size="icon"
+                                                    onClick={() => handleSucursalChange(extraSucursales - 1)}
+                                                    disabled={hasActivePaidSubscription ? extraSucursales <= empresa.max_sucursales : extraSucursales <= 1}
+                                                    className="h-10 w-10 rounded-lg"
+                                                >
+                                                    <Minus className="h-4 w-4" />
+                                                </Button>
+
+                                                <Input
+                                                    type="number"
+                                                    min={hasActivePaidSubscription ? empresa.max_sucursales : 1}
+                                                    max={50}
+                                                    value={extraSucursales}
+                                                    onChange={(e) => handleSucursalChange(parseInt(e.target.value) || (hasActivePaidSubscription ? empresa.max_sucursales : 1))}
+                                                    className="text-center font-bold text-lg h-10 w-24"
+                                                />
+
+                                                <Button
+                                                    type="button"
+                                                    variant="outline"
+                                                    size="icon"
+                                                    onClick={() => handleSucursalChange(extraSucursales + 1)}
+                                                    className="h-10 w-10 rounded-lg"
+                                                >
+                                                    <Plus className="h-4 w-4" />
+                                                </Button>
+
+                                                <span className="text-xs text-muted-foreground font-medium">
+                                                    {hasActivePaidSubscription ? (
+                                                        sucursalesExtrasCount === 0
+                                                            ? __('(Sin nuevas sucursales adicionadas)')
+                                                            : `+${sucursalesExtrasCount} ${__('nueva(s) sucursal(es) extra')}`
+                                                    ) : (
+                                                        extraSucursales <= (activeSelectedPlan?.sucursales_incluidas ?? 1)
+                                                            ? `${activeSelectedPlan?.sucursales_incluidas ?? 1} ${__('Sucursal(es) Incluida(s)')}`
+                                                            : `+${sucursalesExtrasCount} ${__('sucursal(es) extra')}`
+                                                    )}
+                                                </span>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    {/* Resumen de Tarifas Sticky Card */}
+                                    <div className="bg-slate-900 text-white p-5 rounded-2xl shadow-lg flex flex-col justify-between relative overflow-hidden border border-slate-800">
+                                        <div className="space-y-3 relative z-10">
+                                            <div className="flex items-center justify-between">
+                                                <span className="text-xs font-bold uppercase tracking-wider text-slate-300">{__('Resumen de Inversión')}</span>
+                                                <div className="flex items-center gap-2">
+                                                    {isVenezuela && (
+                                                        <Badge variant="outline" className="text-[10px] border-amber-500/40 text-amber-300 bg-amber-500/10">
+                                                            Tasa BCV: Bs. {bcvRate.toFixed(2)} / USD
+                                                        </Badge>
+                                                    )}
+                                                    <Badge variant="outline" className="text-[10px] border-slate-700 text-slate-300">
+                                                        {__('Cobro Mensual')}
+                                                    </Badge>
+                                                </div>
+                                            </div>
+
+                                            <div className="space-y-1.5 text-xs text-slate-300">
+                                                <div className="flex justify-between">
+                                                    <span>{activeSelectedPlan?.nombre ?? __('Plan Mensual')} (1 {__('mes')}):</span>
+                                                    <span className="font-mono font-semibold">
+                                                        {hasActivePaidSubscription ? (
+                                                            <span className="text-emerald-400 font-bold">{__('✓ Pagado (Vigente)')}</span>
+                                                        ) : (
+                                                            formatPrice(selectedMonthlyPrice)
+                                                        )}
+                                                    </span>
+                                                </div>
+                                                {sucursalesExtrasCount > 0 && (
+                                                    <div className="flex justify-between text-indigo-300">
+                                                        <span>{sucursalesExtrasCount} {__('Sucursal(es) Extra')}:</span>
+                                                        <span className="font-mono font-semibold">+{formatPrice(costoExtraSucursales)}</span>
+                                                    </div>
+                                                )}
+                                                {isVenezuela && (
+                                                    <div className="flex justify-between text-slate-400 text-[11px] pt-1 border-t border-slate-800">
+                                                        <span>Equivalente en Dólares USD:</span>
+                                                        <span className="font-mono">${precioFinalEstimado.toFixed(2)} USD</span>
+                                                    </div>
+                                                )}
+                                            </div>
+                                        </div>
+
+                                        <div className="pt-4 border-t border-slate-800 mt-4 flex items-baseline justify-between relative z-10">
+                                            <div>
+                                                <p className="text-xs text-slate-400 font-medium">
+                                                    {hasActivePaidSubscription
+                                                        ? (isVenezuela ? __('Total Sucursales Extras (Bolívares):') : __('Total Sucursales Extras:'))
+                                                        : (isVenezuela ? __('Total a Transferir (Bolívares):') : __('Total a Transferir:'))
+                                                    }
+                                                </p>
+                                                <p className="text-3xl font-black font-mono text-emerald-400">
+                                                    {formatPrice(precioFinalEstimado)}
+                                                </p>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                {/* 3. Datos del Pago */}
+                                <div className="space-y-4 pt-4 border-t">
+                                    <Label className="text-sm font-bold flex items-center gap-2">
+                                        <span className="h-6 w-6 rounded-full bg-primary text-primary-foreground text-xs flex items-center justify-center font-bold">3</span>
+                                        {__('Registro del Pago y Comprobante')}
+                                    </Label>
+
+                                    <div className="grid gap-4 sm:grid-cols-2">
+                                        <div>
+                                            <Label htmlFor="metodo_pago" className="text-xs font-semibold">{__('Método de Pago Utilizado')}</Label>
+                                            <Select
+                                                value={data.metodo_pago}
+                                                onValueChange={(val) => setData('metodo_pago', val)}
+                                            >
+                                                <SelectTrigger id="metodo_pago" className="mt-1 h-10">
+                                                    <SelectValue />
+                                                </SelectTrigger>
+                                                <SelectContent>
+                                                    <SelectItem value="Seleccione un valor">{__('Seleccione un valor')}</SelectItem>
+
+                                                    {paymentGateways?.paypal?.active && (
+                                                        <SelectItem value="paypal">💳 {__('PayPal')}</SelectItem>
+                                                    )}
+                                                    {paymentGateways?.mercadopago?.active && (
+                                                        <SelectItem value="mercadopago">⚡ {__('Mercado Pago')}</SelectItem>
+                                                    )}
+                                                    {paymentGateways?.stripe?.active && (
+                                                        <SelectItem value="stripe">🔒 {__('Stripe')}</SelectItem>
+                                                    )}
+
+                                                </SelectContent>
+                                            </Select>
+                                        </div>
+
+                                        <div>
+                                            <Label htmlFor="referencia" className="text-xs font-semibold">{__('Número de Referencia')}</Label>
+                                            <Input
+                                                id="referencia"
+                                                placeholder={__('Ej: 987654321')}
+                                                value={data.referencia_pago}
+                                                onChange={(e) => setData('referencia_pago', e.target.value)}
+                                                className="mt-1 h-10"
+                                            />
+                                        </div>
+
+                                        {data.metodo_pago === 'paypal' && (
+                                            <div className="sm:col-span-2 p-5 bg-amber-50/70 dark:bg-amber-950/20 text-slate-900 dark:text-slate-100 rounded-xl border border-amber-200 dark:border-amber-900/40 shadow-sm space-y-4">
+                                                <div className="flex items-center justify-between">
+                                                    <span className="text-xs font-bold uppercase text-amber-700 dark:text-amber-400 flex items-center gap-1.5">
+                                                        <Zap className="h-4 w-4 text-amber-600" />
+                                                        {__('Checkout Directo con PayPal')}
+                                                    </span>
+                                                    <div className="flex items-center gap-2">
+                                                        <Badge className="bg-amber-600 hover:bg-amber-700 text-white font-mono font-bold text-xs">
+                                                            Total: ${precioFinalEstimado.toFixed(2)} USD
+                                                        </Badge>
+                                                        <Badge variant="outline" className="text-[10px] border-amber-300 dark:border-amber-800 text-amber-800 dark:text-amber-300 bg-amber-100/50 dark:bg-amber-950/40">
+                                                            {__('Acreditación Instantánea')}
+                                                        </Badge>
+                                                    </div>
+                                                </div>
+                                                <div className="text-xs text-muted-foreground leading-relaxed flex items-center justify-between border-t border-b border-amber-200/60 dark:border-amber-900/30 py-2 my-1">
+                                                    <span>{__('Plan Seleccionado:')} <strong className="text-slate-800 dark:text-slate-200">{activeSelectedPlan?.nombre ?? __('Plan Mensual')} ({extraSucursales} {extraSucursales === 1 ? __('sucursal') : __('sucursales')})</strong></span>
+                                                    <span className="font-bold font-mono text-amber-800 dark:text-amber-300 text-sm">${precioFinalEstimado.toFixed(2)} USD</span>
+                                                </div>
+                                                <p className="text-xs text-muted-foreground leading-relaxed">
+                                                    {__('Haz clic en el botón oficial de PayPal a continuación para procesar el cobro exacto de')} <strong>${precioFinalEstimado.toFixed(2)} USD</strong>.
+                                                </p>
+
+                                                {paymentGateways?.paypal?.client_id ? (
+                                                    <PayPalButtonComponent
+                                                        clientId={paymentGateways.paypal.client_id}
+                                                        selectedCycle={selectedCycle}
+                                                        extraSucursales={extraSucursales}
+                                                        __={__}
+                                                    />
+                                                ) : (
+                                                    <div className="p-3 rounded bg-amber-500/20 text-amber-300 text-xs border border-amber-500/30">
+                                                        {__('Las credenciales de PayPal están en configuración. Puedes realizar tu pago por transferencia bancaria o contactar soporte.')}
+                                                    </div>
+                                                )}
+                                            </div>
+                                        )}
+
+                                        {['mercadopago', 'stripe'].includes(data.metodo_pago) && (
+                                            <div className="sm:col-span-2 p-3 bg-sky-50 dark:bg-sky-950/30 text-sky-900 dark:text-sky-300 rounded-lg border border-sky-200 dark:border-sky-900 text-xs flex items-center gap-2">
+                                                <Zap className="h-4 w-4 shrink-0 text-sky-600" />
+                                                <span>{__('Has seleccionado una pasarela de pago en línea. Al enviar la solicitud, serás redirigido o se activará el checkout automático con acreditación instantánea.')}</span>
+                                            </div>
+                                        )}
+
+                                        {data.metodo_pago !== 'paypal' && (
+                                            <div className="sm:col-span-2">
+                                                <Label htmlFor="comprobante" className="text-xs font-semibold">
+                                                    {['mercadopago', 'stripe'].includes(data.metodo_pago)
+                                                        ? __('Adjuntar Comprobante (Opcional para Pago Online)')
+                                                        : __('Adjuntar Captura / Comprobante (Imagen o PDF)')
+                                                    }
+                                                </Label>
+                                                <Input
+                                                    id="comprobante"
+                                                    type="file"
+                                                    accept="image/*,.pdf"
+                                                    onChange={handleFileChange}
+                                                    className="mt-1 cursor-pointer h-10 pt-1.5"
+                                                />
+                                                {imagePreviewUrl && (
+                                                    <div className="mt-3 p-2 bg-muted rounded-lg border w-32 h-32 relative">
+                                                        <img src={imagePreviewUrl} alt="Preview" className="w-full h-full object-cover rounded" />
+                                                    </div>
+                                                )}
+                                            </div>
+                                        )}
+                                    </div>
+                                </div>
+
+                                {data.metodo_pago !== 'paypal' && (
+                                    <Button
+                                        type="submit"
+                                        disabled={processing}
+                                        size="lg"
+                                        className="w-full sm:w-auto gap-2 font-bold px-8 shadow-md h-11"
+                                    >
+                                        <Upload className="h-5 w-5" />
+                                        {processing ? __('Enviando...') : __('Enviar Solicitud de Renovación')}
+                                    </Button>
+                                )}
+                            </form>
+                        </CardContent>
+                    </Card>
+                )}
+
+                {/* Historial de Pagos y Solicitudes */}
+                <Card className="shadow-sm border border-border">
+                    <CardHeader className="border-b bg-muted/30">
+                        <div className="flex items-center gap-3">
+                            <Receipt className="h-5 w-5 text-primary" />
+                            <div>
+                                <CardTitle className="text-lg font-bold">{__('Historial de Renovaciones y Comprobantes')}</CardTitle>
+                                <CardDescription className="text-xs">{__('Seguimiento de pagos enviados y su estado de aprobación.')}</CardDescription>
+                            </div>
                         </div>
-                    </DialogContent>
-                </Dialog>
-            </>
-        );
-    }
+                    </CardHeader>
+                    <CardContent className="p-0">
+                        <Table>
+                            <TableHeader>
+                                <TableRow className="bg-muted/50">
+                                    <TableHead className="font-bold">{__('Fecha')}</TableHead>
+                                    <TableHead className="font-bold">{__('Duración')}</TableHead>
+                                    <TableHead className="font-bold">{__('Sucursales')}</TableHead>
+                                    <TableHead className="font-bold">{__('Monto Total')}</TableHead>
+                                    <TableHead className="font-bold">{__('Método')}</TableHead>
+                                    <TableHead className="font-bold">{__('Referencia')}</TableHead>
+                                    <TableHead className="font-bold text-center">{__('Comprobante')}</TableHead>
+                                    <TableHead className="font-bold text-right">{__('Estado')}</TableHead>
+                                </TableRow>
+                            </TableHeader>
+                            <TableBody>
+                                {pagos.map((pago) => (
+                                    <TableRow key={pago.id} className="hover:bg-muted/40">
+                                        <TableCell className="text-xs font-mono font-medium">
+                                            {new Date(pago.created_at).toLocaleDateString()}
+                                        </TableCell>
+                                        <TableCell className="font-semibold text-xs">{pago.ciclo_meses} {__('Meses')}</TableCell>
+                                        <TableCell className="text-xs font-medium">{pago.sucursales_contratadas}</TableCell>
+                                        <TableCell className="font-mono font-bold text-xs text-primary">
+                                            {formatPrice(pago.monto)}
+                                        </TableCell>
+                                        <TableCell className="capitalize text-xs font-medium">{pago.metodo_pago.replace('_', ' ')}</TableCell>
+                                        <TableCell className="font-mono text-xs text-muted-foreground">{pago.referencia_pago || '--'}</TableCell>
+                                        <TableCell className="text-center">
+                                            {pago.comprobante_path ? (
+                                                <Button
+                                                    size="sm"
+                                                    variant="ghost"
+                                                    onClick={() => setPreviewReceipt(`/storage/${pago.comprobante_path}`)}
+                                                    className="h-7 text-xs gap-1 text-primary hover:text-primary/80"
+                                                >
+                                                    <Eye className="h-3.5 w-3.5" />
+                                                    {__('Ver')}
+                                                </Button>
+                                            ) : (
+                                                <span className="text-xs text-muted-foreground italic">--</span>
+                                            )}
+                                        </TableCell>
+                                        <TableCell className="text-right">
+                                            <Badge
+                                                variant={
+                                                    pago.estado === 'approved' ? 'default' :
+                                                        pago.estado === 'pending' ? 'outline' : 'destructive'
+                                                }
+                                                className={`text-xs font-semibold ${pago.estado === 'approved' ? 'bg-emerald-600 text-white' :
+                                                    pago.estado === 'pending' ? 'bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-300 border-amber-300' : ''
+                                                    }`}
+                                            >
+                                                {pago.estado === 'approved' ? __('Aprobado') :
+                                                    pago.estado === 'pending' ? __('Pendiente') : __('Rechazado')}
+                                            </Badge>
+                                        </TableCell>
+                                    </TableRow>
+                                ))}
+
+                                {pagos.length === 0 && (
+                                    <TableRow>
+                                        <TableCell colSpan={8} className="text-center py-8 text-muted-foreground">
+                                            {__('No se registran solicitudes de renovación anteriores.')}
+                                        </TableCell>
+                                    </TableRow>
+                                )}
+                            </TableBody>
+                        </Table>
+                    </CardContent>
+                </Card>
+            </div>
+
+            {/* Modal Lightbox Ver Comprobante */}
+            <Dialog open={previewReceipt !== null} onOpenChange={() => setPreviewReceipt(null)}>
+                <DialogContent className="max-w-2xl">
+                    <DialogHeader>
+                        <DialogTitle className="flex items-center gap-2">
+                            <Receipt className="h-5 w-5 text-primary" />
+                            {__('Comprobante de Pago Adjunto')}
+                        </DialogTitle>
+                    </DialogHeader>
+
+                    {previewReceipt && (
+                        <div className="p-2 border rounded-xl bg-muted flex items-center justify-center max-h-[70vh] overflow-auto">
+                            {previewReceipt.endsWith('.pdf') ? (
+                                <iframe src={previewReceipt} className="w-full h-96 rounded" title="PDF Comprobante" />
+                            ) : (
+                                <img src={previewReceipt} alt="Comprobante" className="max-w-full max-h-[65vh] object-contain rounded-lg shadow-md" />
+                            )}
+                        </div>
+                    )}
+
+                    <div className="flex justify-between items-center pt-2">
+                        {previewReceipt && (
+                            <a
+                                href={previewReceipt}
+                                target="_blank"
+                                rel="noreferrer"
+                                className="text-xs font-bold text-primary hover:underline flex items-center gap-1"
+                            >
+                                <ExternalLink className="h-3.5 w-3.5" />
+                                {__('Abrir en ventana nueva')}
+                            </a>
+                        )}
+                        <Button variant="outline" onClick={() => setPreviewReceipt(null)}>
+                            {__('Cerrar')}
+                        </Button>
+                    </div>
+                </DialogContent>
+            </Dialog>
+        </>
+    );
+}
