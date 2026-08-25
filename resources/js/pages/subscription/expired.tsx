@@ -420,7 +420,7 @@ export default function SubscriptionExpired({ empresa, plan, planes = [], opcion
                                             </span>
                                             <div className="flex items-center gap-2">
                                                 <Badge className="bg-amber-600 hover:bg-amber-700 text-white font-mono font-bold text-xs">
-                                                    Total: ${precioFinalEstimado.toFixed(2)} USD
+                                                    Total: {formatPrice(precioFinalEstimado)}
                                                 </Badge>
                                                 <Badge variant="outline" className="text-[10px] border-amber-300 dark:border-amber-800 text-amber-800 dark:text-amber-300 bg-amber-100/50 dark:bg-amber-950/40">
                                                     {__('Acreditación Instantánea')}
@@ -429,10 +429,10 @@ export default function SubscriptionExpired({ empresa, plan, planes = [], opcion
                                         </div>
                                         <div className="text-xs text-muted-foreground leading-relaxed flex items-center justify-between border-t border-b border-amber-200/60 dark:border-amber-900/30 py-2 my-1">
                                             <span>{__('Plan Seleccionado:')} <strong className="text-slate-800 dark:text-slate-200">{currentPlan?.nombre || __('Plan Mensual')} ({extraSucursales} {extraSucursales === 1 ? __('sucursal') : __('sucursales')})</strong></span>
-                                            <span className="font-bold font-mono text-amber-800 dark:text-amber-300 text-sm">${precioFinalEstimado.toFixed(2)} USD</span>
+                                            <span className="font-bold font-mono text-amber-800 dark:text-amber-300 text-sm">{formatPrice(precioFinalEstimado)}</span>
                                         </div>
                                         <p className="text-xs text-muted-foreground leading-relaxed">
-                                            {__('Haz clic en el botón oficial de PayPal a continuación para procesar el cobro exacto de')} <strong>${precioFinalEstimado.toFixed(2)} USD</strong>.
+                                            {__('Haz clic en el botón oficial de PayPal a continuación para procesar el cobro exacto de')} <strong>{formatPrice(precioFinalEstimado)}</strong>.
                                         </p>
 
                                         {paymentGateways?.paypal?.client_id ? (
@@ -440,11 +440,13 @@ export default function SubscriptionExpired({ empresa, plan, planes = [], opcion
                                                 clientId={paymentGateways.paypal.client_id}
                                                 selectedCycle={selectedCycle}
                                                 extraSucursales={extraSucursales}
+                                                planId={selectedPlanId}
+                                                currency="MXN"
                                                 __={__}
                                             />
                                         ) : (
                                             <div className="p-3 rounded bg-amber-500/20 text-amber-300 text-xs border border-amber-500/30">
-                                                {__('Las credenciales de PayPal están en configuración. Puedes realizar tu pago por transferencia bancaria o contactar soporte.')}
+                                                {__('Las credenciales de PayPal están en configuración. Puedes contactar a soporte para habilitar el servicio.')}
                                             </div>
                                         )}
                                     </div>

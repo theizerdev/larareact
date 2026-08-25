@@ -5,6 +5,8 @@ interface PayPalButtonProps {
     clientId: string;
     selectedCycle: number;
     extraSucursales: number;
+    planId?: number;
+    currency?: string;
     __: (key: string) => string;
 }
 
@@ -14,21 +16,24 @@ declare global {
     }
 }
 
-export function PayPalButtonComponent({ clientId, selectedCycle, extraSucursales, __ }: PayPalButtonProps) {
+export function PayPalButtonComponent({ clientId, selectedCycle, extraSucursales, planId, currency = 'MXN', __ }: PayPalButtonProps) {
     const paypalContainerRef = useRef<HTMLDivElement>(null);
     const selectedCycleRef = useRef(selectedCycle);
     const extraSucursalesRef = useRef(extraSucursales);
+    const planIdRef = useRef(planId);
 
     useEffect(() => {
         selectedCycleRef.current = selectedCycle;
         extraSucursalesRef.current = extraSucursales;
-    }, [selectedCycle, extraSucursales]);
+        planIdRef.current = planId;
+    }, [selectedCycle, extraSucursales, planId]);
 
     useEffect(() => {
         if (!clientId) return;
 
         const scriptId = 'paypal-sdk-script';
         let script = document.getElementById(scriptId) as HTMLScriptElement | null;
+        const targetSrc = `https://www.paypal.com/sdk/js?client-id=${clientId}&currency=${currency}`;
 
         const renderPayPalButtons = () => {
             if (window.paypal && paypalContainerRef.current) {
@@ -50,6 +55,7 @@ export function PayPalButtonComponent({ clientId, selectedCycle, extraSucursales
                                         'X-CSRF-TOKEN': (document.querySelector('meta[name="csrf-token"]') as HTMLMetaElement)?.content || '',
                                     },
                                     body: JSON.stringify({
+                                        plan_id: planIdRef.current,
                                         ciclo_meses: selectedCycleRef.current,
                                         sucursales_contratadas: extraSucursalesRef.current,
                                     }),
@@ -78,6 +84,7 @@ export function PayPalButtonComponent({ clientId, selectedCycle, extraSucursales
                                         'X-CSRF-TOKEN': (document.querySelector('meta[name="csrf-token"]') as HTMLMetaElement)?.content || '',
                                     },
                                     body: JSON.stringify({
+                                        plan_id: planIdRef.current,
                                         ciclo_meses: selectedCycleRef.current,
                                         sucursales_contratadas: extraSucursalesRef.current,
                                     }),
@@ -118,17 +125,22 @@ export function PayPalButtonComponent({ clientId, selectedCycle, extraSucursales
             }
         };
 
+        if (script && script.src !== targetSrc) {
+            script.remove();
+            script = null;
+        }
+
         if (!script) {
             script = document.createElement('script');
             script.id = scriptId;
-            script.src = `https://www.paypal.com/sdk/js?client-id=${clientId}&currency=USD`;
+            script.src = targetSrc;
             script.async = true;
             script.onload = renderPayPalButtons;
             document.body.appendChild(script);
         } else {
             renderPayPalButtons();
         }
-    }, [clientId, selectedCycle, extraSucursales]);
+    }, [clientId, currency, selectedCycle, extraSucursales, planId]);
 
     return <div ref={paypalContainerRef} className="paypal-button-container max-w-md min-h-[150px] w-full" />;
 }

@@ -264,7 +264,7 @@ class SubscriptionController extends Controller
                 'purchase_units' => [
                     [
                         'amount' => [
-                            'currency_code' => 'USD',
+                            'currency_code' => 'MXN',
                             'value' => number_format($monto, 2, '.', ''),
                         ],
                         'description' => "Renovación Suscripción Fix Sale - {$plan?->nombre} ({$empresa->razon_social})",

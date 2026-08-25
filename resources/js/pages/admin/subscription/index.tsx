@@ -115,61 +115,69 @@ interface PageProps {
 }
 
 export default function SubscriptionIndex({ empresa, plan, planes = [], opcionesPrecios, pagos, suscripcionActiva, bcvRate = 36.50, paymentGateways }: PageProps) {
-    export default function SubscriptionIndex({ empresa, plan, planes = [], opcionesPrecios, pagos, suscripcionActiva, bcvRate = 36.50, paymentGateways }: PageProps) {
-        const { __ } = useTranslate();
-        const pageProps = usePage().props as any;
-        const { currencySymbol = '$', isVenezuela = false } = pageProps;
+    const { __ } = useTranslate();
+    const pageProps = usePage().props as any;
+    const { currencySymbol = '$', isVenezuela = false } = pageProps;
 
-        // Determinar si la empresa posee una suscripción activa pagada (monto_total > 0 y estado 'active')
-        const hasActivePaidSubscription = empresa.subscription_status === 'active'
-            && !empresa.is_exempt
-            && suscripcionActiva
-            && parseFloat(suscripcionActiva.monto_total ?? 0) > 0
-            && suscripcionActiva.estado === 'active';
+    // Determinar si la empresa posee una suscripción activa pagada (monto_total > 0 y estado 'active')
+    const hasActivePaidSubscription = empresa.subscription_status === 'active'
+        && !empresa.is_exempt
+        && suscripcionActiva
+        && parseFloat(suscripcionActiva.monto_total ?? 0) > 0
+        && suscripcionActiva.estado === 'active';
 
-        const [selectedPlanId, setSelectedPlanId] = useState<number>(plan?.id ?? (planes[0]?.id ?? 1));
-        const [selectedCycle] = useState<number>(1); // 1 Mes (Cobro Mensual)
-        const [extraSucursales, setExtraSucursales] = useState<number>(Math.max(1, empresa.max_sucursales || 1, empresa.sucursales_activas || 1));
-        const [previewReceipt, setPreviewReceipt] = useState<string | null>(null);
-        const [imagePreviewUrl, setImagePreviewUrl] = useState<string | null>(null);
+    const [selectedPlanId, setSelectedPlanId] = useState<number>(plan?.id ?? (planes[0]?.id ?? 1));
+    const [selectedCycle] = useState<number>(1); // 1 Mes (Cobro Mensual)
+    const [extraSucursales, setExtraSucursales] = useState<number>(Math.max(1, empresa.max_sucursales || 1, empresa.sucursales_activas || 1));
+    const [previewReceipt, setPreviewReceipt] = useState<string | null>(null);
+    const [imagePreviewUrl, setImagePreviewUrl] = useState<string | null>(null);
 
-        const activeSelectedPlan = planes.find((p) => p.id === selectedPlanId) || plan || planes[0];
+    const activeSelectedPlan = planes.find((p) => p.id === selectedPlanId) || plan || planes[0];
 
-        const getPlanMonthlyPrice = (p: PlanInfo | null) => {
-            if (!p) return 149;
-            if (p.tiene_promocion && Number(p.precio_promocional_mensual) > 0) {
-                return Number(p.precio_promocional_mensual);
-            }
-            return Number(p.precio_regular_mensual) || Number(p.precio_3_meses) || 149;
-        };
+    const getPlanMonthlyPrice = (p: PlanInfo | null) => {
+        if (!p) return 149;
+        if (p.tiene_promocion && Number(p.precio_promocional_mensual) > 0) {
+            return Number(p.precio_promocional_mensual);
+        }
+        return Number(p.precio_regular_mensual) || Number(p.precio_3_meses) || 149;
+    };
 
-        const selectedMonthlyPrice = getPlanMonthlyPrice(activeSelectedPlan);
-        const currentSubtotalPlan = hasActivePaidSubscription ? 0 : selectedMonthlyPrice;
-        const sucursalesExtrasCount = hasActivePaidSubscription
-            ? Math.max(0, extraSucursales - empresa.max_sucursales)
-            : Math.max(0, extraSucursales - (plan?.sucursales_incluidas ?? 1));
-        const precioSucursalExtra = (plan?.precio_sucursal_extra_mensual && plan.precio_sucursal_extra_mensual > 0) ? plan.precio_sucursal_extra_mensual : 10;
-        const costoExtraSucursales = sucursalesExtrasCount * precioSucursalExtra * (hasActivePaidSubscription ? 1 : selectedCycle);
-        const precioFinalEstimado = currentSubtotalPlan + costoExtraSucursales;
+    const selectedMonthlyPrice = getPlanMonthlyPrice(activeSelectedPlan);
+    const currentSubtotalPlan = hasActivePaidSubscription ? 0 : selectedMonthlyPrice;
+    const sucursalesExtrasCount = hasActivePaidSubscription
+        ? Math.max(0, extraSucursales - empresa.max_sucursales)
+        : Math.max(0, extraSucursales - (plan?.sucursales_incluidas ?? 1));
+    const precioSucursalExtra = (plan?.precio_sucursal_extra_mensual && plan.precio_sucursal_extra_mensual > 0) ? plan.precio_sucursal_extra_mensual : 10;
+    const costoExtraSucursales = sucursalesExtrasCount * precioSucursalExtra * (hasActivePaidSubscription ? 1 : selectedCycle);
+    const precioFinalEstimado = currentSubtotalPlan + costoExtraSucursales;
 
-        // Formateador especial (con moneda de referencia mexicana MXN o Bolívares para Venezuela)
-        const formatPrice = (usdAmount: number) => {
-            if (isVenezuela) {
-                const bsAmount = usdAmount * bcvRate;
-                return `Bs. ${bsAmount.toLocaleString('es-VE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
-            }
-            return `$${usdAmount.toLocaleString('es-MX', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} MXN`;
-        };
+    // Formateador especial (con moneda de referencia mexicana MXN o Bolívares para Venezuela)
+    const formatPrice = (usdAmount: number) => {
+        if (isVenezuela) {
+            const bsAmount = usdAmount * bcvRate;
+            return `Bs. ${bsAmount.toLocaleString('es-VE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+        }
+        return `$${usdAmount.toLocaleString('es-MX', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} MXN`;
+    };
 
-        const { data, setData, post, processing, errors, reset } = useForm({
-            plan_id: selectedPlanId,
-            ciclo_meses: 1,
-            sucursales_contratadas: extraSucursales,
-            metodo_pago: 'transferencia',
-            referencia_pago: '',
-            comprobante: null as File | null,
-            notas: '',
-        });
+    const hasAnyActiveGateway = Boolean(
+        paymentGateways?.paypal?.active || paymentGateways?.mercadopago?.active || paymentGateways?.stripe?.active
+    );
+
+    const defaultPaymentMethod = (paymentGateways?.paypal?.active && 'paypal')
+        || (paymentGateways?.mercadopago?.active && 'mercadopago')
+        || (paymentGateways?.stripe?.active && 'stripe')
+        || 'paypal';
+
+    const { data, setData, post, processing, errors, reset } = useForm({
+        plan_id: selectedPlanId,
+        ciclo_meses: 1,
+        sucursales_contratadas: extraSucursales,
+        metodo_pago: defaultPaymentMethod,
+        referencia_pago: '',
+        comprobante: null as File | null,
+        notas: '',
+    });
 
         const handlePlanSelect = (planId: number) => {
             if (hasActivePaidSubscription) return;
@@ -433,18 +441,13 @@ export default function SubscriptionIndex({ empresa, plan, planes = [], opciones
                                                 const subtitulo = planItem?.descripcion || (meses === 3 ? __('Ideal para arrancar y controlar tu comercio') : meses === 6 ? __('El equilibrio perfecto para crecer con ahorro') : __('Máximo ahorro y soporte continuo sin límites'));
                                                 const periodoStr = meses === 12 ? __('año') : `${meses} ${__('meses')}`;
 
-                                                const isSelected = selectedCycle === meses;
+                                                const isSelected = planItem ? selectedPlanId === planItem.id : false;
                                                 const isLocked = hasActivePaidSubscription && !isSelected;
-                                                const regularMensual = Number(pItem.precio_regular_mensual) || Number(pItem.precio_3_meses) || 149;
-                                                const promoMensual = Number(pItem.precio_promocional_mensual) || regularMensual;
-                                                const tienePromo = Boolean(pItem.tiene_promocion) && promoMensual < regularMensual && promoMensual > 0;
-                                                const precioMostrar = tienePromo ? promoMensual : regularMensual;
-                                                const ahorro = regularMensual > 0 ? Math.round(((regularMensual - promoMensual) / regularMensual) * 100) : 0;
 
                                                 return (
                                                     <div
-                                                        key={pItem.id}
-                                                        onClick={() => handlePlanSelect(pItem.id)}
+                                                        key={planItem?.id ?? meses}
+                                                        onClick={() => planItem && handlePlanSelect(planItem.id)}
                                                         className={`rounded-2xl border-2 p-5 transition-all relative flex flex-col justify-between ${isLocked
                                                             ? 'opacity-50 cursor-not-allowed border-dashed border-border bg-muted/20 grayscale-[30%]'
                                                             : 'cursor-pointer'
@@ -461,11 +464,7 @@ export default function SubscriptionIndex({ empresa, plan, planes = [], opciones
                                                             <Badge className={`absolute -top-3 right-4 text-[10px] px-2.5 py-0.5 shadow-sm ${badgeClass}`}>
                                                                 {badgeText}
                                                             </Badge>
-                                                        ) : tienePromo ? (
-                                                        <Badge className="absolute -top-3 right-4 bg-red-600 text-white text-[10px] font-bold px-2.5 py-0.5 shadow-sm">
-                                                            -{ahorro}% OFF
-                                                        </Badge>
-                                                    ) : null}
+                                                        )}
 
                                                         <div className="space-y-2">
                                                             <span className="text-xs font-extrabold uppercase tracking-wider text-muted-foreground">{titulo}</span>
@@ -656,7 +655,7 @@ export default function SubscriptionIndex({ empresa, plan, planes = [], opciones
 
                                         <div className="grid gap-4 sm:grid-cols-2">
                                             <div>
-                                                <Label htmlFor="metodo_pago" className="text-xs font-semibold">{__('Método de Pago Utilizado')}</Label>
+                                                <Label htmlFor="metodo_pago" className="text-xs font-semibold">{__('Método de Pago en Línea')}</Label>
                                                 <Select
                                                     value={data.metodo_pago}
                                                     onValueChange={(val) => setData('metodo_pago', val)}
@@ -665,9 +664,6 @@ export default function SubscriptionIndex({ empresa, plan, planes = [], opciones
                                                         <SelectValue />
                                                     </SelectTrigger>
                                                     <SelectContent>
-                                                        <SelectItem value="transferencia">{__('Transferencia Bancaria (Manual)')}</SelectItem>
-                                                        <SelectItem value="pago_movil">{__('Pago Móvil (Bolívares)')}</SelectItem>
-                                                        <SelectItem value="zelle">{__('Zelle / Transferencia USD')}</SelectItem>
                                                         {paymentGateways?.paypal?.active && (
                                                             <SelectItem value="paypal">💳 {__('PayPal (Checkout en línea)')}</SelectItem>
                                                         )}
@@ -677,7 +673,13 @@ export default function SubscriptionIndex({ empresa, plan, planes = [], opciones
                                                         {paymentGateways?.stripe?.active && (
                                                             <SelectItem value="stripe">🔒 {__('Stripe (Tarjeta de Crédito / Débito)')}</SelectItem>
                                                         )}
-                                                        <SelectItem value="efectivo">{__('Efectivo / Depósito en Ventanilla')}</SelectItem>
+                                                        {!hasAnyActiveGateway && (
+                                                            <>
+                                                                <SelectItem value="paypal">💳 {__('PayPal (Checkout en línea)')}</SelectItem>
+                                                                <SelectItem value="mercadopago">⚡ {__('Mercado Pago (Tarjeta / Dinero MP)')}</SelectItem>
+                                                                <SelectItem value="stripe">🔒 {__('Stripe (Tarjeta de Crédito / Débito)')}</SelectItem>
+                                                            </>
+                                                        )}
                                                     </SelectContent>
                                                 </Select>
                                             </div>
@@ -702,7 +704,7 @@ export default function SubscriptionIndex({ empresa, plan, planes = [], opciones
                                                         </span>
                                                         <div className="flex items-center gap-2">
                                                             <Badge className="bg-amber-600 hover:bg-amber-700 text-white font-mono font-bold text-xs">
-                                                                Total: ${precioFinalEstimado.toFixed(2)} USD
+                                                                Total: {formatPrice(precioFinalEstimado)}
                                                             </Badge>
                                                             <Badge variant="outline" className="text-[10px] border-amber-300 dark:border-amber-800 text-amber-800 dark:text-amber-300 bg-amber-100/50 dark:bg-amber-950/40">
                                                                 {__('Acreditación Instantánea')}
@@ -711,10 +713,10 @@ export default function SubscriptionIndex({ empresa, plan, planes = [], opciones
                                                     </div>
                                                     <div className="text-xs text-muted-foreground leading-relaxed flex items-center justify-between border-t border-b border-amber-200/60 dark:border-amber-900/30 py-2 my-1">
                                                         <span>{__('Plan Seleccionado:')} <strong className="text-slate-800 dark:text-slate-200">{activeSelectedPlan?.nombre ?? __('Plan Mensual')} ({extraSucursales} {extraSucursales === 1 ? __('sucursal') : __('sucursales')})</strong></span>
-                                                        <span className="font-bold font-mono text-amber-800 dark:text-amber-300 text-sm">${precioFinalEstimado.toFixed(2)} USD</span>
+                                                        <span className="font-bold font-mono text-amber-800 dark:text-amber-300 text-sm">{formatPrice(precioFinalEstimado)}</span>
                                                     </div>
                                                     <p className="text-xs text-muted-foreground leading-relaxed">
-                                                        {__('Haz clic en el botón oficial de PayPal a continuación para procesar el cobro exacto de')} <strong>${precioFinalEstimado.toFixed(2)} USD</strong>.
+                                                        {__('Haz clic en el botón oficial de PayPal a continuación para procesar el cobro exacto de')} <strong>{formatPrice(precioFinalEstimado)}</strong>.
                                                     </p>
 
                                                     {paymentGateways?.paypal?.client_id ? (
@@ -722,11 +724,13 @@ export default function SubscriptionIndex({ empresa, plan, planes = [], opciones
                                                             clientId={paymentGateways.paypal.client_id}
                                                             selectedCycle={selectedCycle}
                                                             extraSucursales={extraSucursales}
+                                                            planId={selectedPlanId}
+                                                            currency="MXN"
                                                             __={__}
                                                         />
                                                     ) : (
                                                         <div className="p-3 rounded bg-amber-500/20 text-amber-300 text-xs border border-amber-500/30">
-                                                            {__('Las credenciales de PayPal están en configuración. Puedes realizar tu pago por transferencia bancaria o contactar soporte.')}
+                                                            {__('Las credenciales de PayPal están en configuración. Puedes contactar a soporte para habilitar el servicio.')}
                                                         </div>
                                                     )}
                                                 </div>
