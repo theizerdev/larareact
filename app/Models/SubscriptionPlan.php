@@ -118,11 +118,11 @@ class SubscriptionPlan extends Model
         $meses = max(1, $meses);
         $precioUnitario = ($aplicarPromo && $this->tiene_promocion && $this->precio_promocional_mensual > 0)
             ? $this->precio_promocional_mensual
-            : ($this->tiene_promocion && $this->precio_promocional_mensual > 0 ? $this->precio_promocional_mensual : ($this->precio_regular_mensual ?: 0.00));
+            : ($this->tiene_promocion && $this->precio_promocional_mensual > 0 ? $this->precio_promocional_mensual : ($this->precio_regular_mensual ?: 149.00));
 
         $basePrice = $precioUnitario * $meses;
 
-        $precioExtra = $this->precio_sucursal_extra_mensual > 0 ? $this->precio_sucursal_extra_mensual : 10.00;
+        $precioExtra = $this->precio_sucursal_extra_mensual > 0 ? $this->precio_sucursal_extra_mensual : 84.72;
         $sucursalesExtra = max(0, $totalSucursales - ($this->sucursales_incluidas ?: 1));
         $costoSucursalesExtra = $sucursalesExtra * $precioExtra * $meses;
 

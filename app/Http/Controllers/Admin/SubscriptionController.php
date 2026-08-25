@@ -61,9 +61,9 @@ class SubscriptionController extends Controller
         // Opción predeterminada para el ciclo 1 mes (compatibilidad con vistas)
         $opcionesPrecios[1] = [
             'meses' => 1,
-            'subtotal_plan' => $plan?->precio_mensual_efectivo ?? 499.00,
-            'precio_mensual_promedio' => $plan?->precio_mensual_efectivo ?? 499.00,
-            'total' => $plan?->calcularPrecio(1, max(1, $totalSucursales)) ?? 499.00,
+            'subtotal_plan' => $plan?->precio_mensual_efectivo ?? 149.00,
+            'precio_mensual_promedio' => $plan?->precio_mensual_efectivo ?? 149.00,
+            'total' => $plan?->calcularPrecio(1, max(1, $totalSucursales)) ?? 149.00,
         ];
 
         // Obtener la configuración activa de pasarelas de pago de la plataforma (Empresa ID 1 / Dueño del SaaS)
@@ -151,13 +151,13 @@ class SubscriptionController extends Controller
 
         if ($hasActivePaidSubscription) {
             $nuevasSucursales = max(0, (int) $request->sucursales_contratadas - ($empresa->max_sucursales ?? 1));
-            $precioExtra = ($plan?->precio_sucursal_extra_mensual > 0) ? $plan->precio_sucursal_extra_mensual : 10.00;
+            $precioExtra = ($plan?->precio_sucursal_extra_mensual > 0) ? $plan->precio_sucursal_extra_mensual : 84.72;
             $montoCalculado = round($nuevasSucursales * $precioExtra * 1, 2);
             $cicloPago = 1;
         } else {
             $montoCalculado = $plan
                 ? $plan->calcularPrecio($cicloMeses, (int) $request->sucursales_contratadas)
-                : 499.00;
+                : (149.00 + (max(0, (int) $request->sucursales_contratadas - 1) * 84.72));
             $cicloPago = $cicloMeses;
         }
 
@@ -176,13 +176,13 @@ class SubscriptionController extends Controller
             'metodo_pago' => $request->metodo_pago,
             'referencia_pago' => $request->referencia_pago,
             'comprobante_path' => $comprobantePath,
-            'notas' => $request->notas,
             'estado' => 'pending',
+            'notas' => $request->notas,
         ]);
 
         return back()->with('notification', [
             'type' => 'success',
-            'message' => 'Solicitud de renovación enviada con éxito. El administrador verificará su pago a la brevedad.',
+            'message' => 'Tu comprobante de pago ha sido registrado exitosamente. Será revisado y aprobado a la brevedad posible.',
         ]);
     }
 
@@ -205,10 +205,10 @@ class SubscriptionController extends Controller
 
         if ($hasActivePaidSubscription) {
             $nuevasSucursales = max(0, (int) $request->sucursales_contratadas - ($empresa->max_sucursales ?? 1));
-            $precioExtra = ($plan?->precio_sucursal_extra_mensual > 0) ? $plan->precio_sucursal_extra_mensual : 10.00;
+            $precioExtra = ($plan?->precio_sucursal_extra_mensual > 0) ? $plan->precio_sucursal_extra_mensual : 84.72;
             $monto = round($nuevasSucursales * $precioExtra, 2);
         } else {
-            $monto = $plan ? $plan->calcularPrecio($cicloMeses, (int) $request->sucursales_contratadas) : 499.00;
+            $monto = $plan ? $plan->calcularPrecio($cicloMeses, (int) $request->sucursales_contratadas) : (149.00 + (max(0, (int) $request->sucursales_contratadas - 1) * 84.72));
         }
 
         $masterEmpresa = Empresa::withoutGlobalScopes()->find(1) ?? $empresa;
@@ -295,10 +295,10 @@ class SubscriptionController extends Controller
 
             if ($hasActivePaidSubscription) {
                 $nuevasSucursales = max(0, (int) $request->sucursales_contratadas - ($empresa->max_sucursales ?? 1));
-                $precioExtra = ($plan?->precio_sucursal_extra_mensual > 0) ? $plan->precio_sucursal_extra_mensual : 10.00;
+                $precioExtra = ($plan?->precio_sucursal_extra_mensual > 0) ? $plan->precio_sucursal_extra_mensual : 84.72;
                 $monto = round($nuevasSucursales * $precioExtra, 2);
             } else {
-                $monto = $plan ? $plan->calcularPrecio($cicloMeses, (int) $request->sucursales_contratadas) : 499.00;
+                $monto = $plan ? $plan->calcularPrecio($cicloMeses, (int) $request->sucursales_contratadas) : (149.00 + (max(0, (int) $request->sucursales_contratadas - 1) * 84.72));
             }
 
             // Extender fecha de expiración calculando desde la tabla subscriptions

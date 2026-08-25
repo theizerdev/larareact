@@ -554,59 +554,39 @@ export default function Welcome() {
                             </p>
                         </div>
 
-                        {/* Grid de 4 Planes Dinámico desde Base de Datos */}
-                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 lg:gap-8 items-stretch">
+                        {/* Grid de Planes Dinámico desde Base de Datos */}
+                        <div className="grid grid-cols-1 md:grid-cols-2 max-w-4xl mx-auto gap-8 items-stretch">
                             {((pageProps.planes && pageProps.planes.length > 0)
                                 ? pageProps.planes.filter((p: any) => p.activo !== false)
                                 : [
                                     {
                                         id: 1,
                                         nombre: 'Plan Prueba',
-                                        descripcion: '7 días de acceso completo para evaluar todas las herramientas.',
+                                        descripcion: '7 días de acceso completo sin costo para evaluar todas las herramientas de FixSale.',
                                         precio_regular_mensual: 0,
                                         precio_promocional_mensual: 0,
                                         tiene_promocion: false,
                                         sucursales_incluidas: 1,
+                                        precio_sucursal_extra_mensual: 84.72,
                                     },
                                     {
                                         id: 2,
-                                        nombre: 'Plan Básico',
-                                        descripcion: 'Ideal para emprendedores y comercios que inician.',
-                                        precio_regular_mensual: 399,
-                                        precio_promocional_mensual: 299,
-                                        tiene_promocion: true,
-                                        badge_promocion: '25% DTO Promo',
-                                        sucursales_incluidas: 1,
-                                    },
-                                    {
-                                        id: 3,
-                                        nombre: 'Plan Profesional',
-                                        descripcion: 'Control operativo total y reportes avanzados.',
-                                        precio_regular_mensual: 599,
-                                        precio_promocional_mensual: 499,
-                                        tiene_promocion: true,
-                                        badge_promocion: 'Más Popular',
+                                        nombre: 'Plan Mensual',
+                                        descripcion: 'Acceso total e ilimitado a todos los módulos operativos y sincronización en tiempo real.',
+                                        precio_regular_mensual: 149,
+                                        precio_promocional_mensual: 149,
+                                        tiene_promocion: false,
                                         destacado: true,
                                         sucursales_incluidas: 1,
-                                    },
-                                    {
-                                        id: 4,
-                                        nombre: 'Plan Empresarial',
-                                        descripcion: 'Potencia multi-sucursal para empresas consolidadas.',
-                                        precio_regular_mensual: 999,
-                                        precio_promocional_mensual: 799,
-                                        tiene_promocion: true,
-                                        badge_promocion: 'Mejor Valor',
-                                        sucursales_incluidas: 2,
+                                        precio_sucursal_extra_mensual: 84.72,
                                     },
                                 ]
                             ).map((plan: any) => {
                                 const nameLower = (plan.nombre || '').toLowerCase();
                                 const isFree = nameLower.includes('prueba') || (Number(plan.precio_regular_mensual) === 0 && Number(plan.precio_promocional_mensual) === 0 && Number(plan.precio_3_meses) === 0);
-                                const isPopular = Boolean(plan.destacado) || nameLower.includes('profesional');
-                                const isBestValue = (nameLower.includes('empresarial') || nameLower.includes('anual')) && !isPopular;
+                                const isPopular = Boolean(plan.destacado) || !isFree;
 
-                                const precioRegular = Number(plan.precio_regular_mensual) || (Number(plan.precio_3_meses) > 0 ? Math.round(Number(plan.precio_3_meses) / 3) : 0);
+                                const precioRegular = Number(plan.precio_regular_mensual) || (Number(plan.precio_3_meses) > 0 ? Math.round(Number(plan.precio_3_meses) / 3) : (isFree ? 0 : 149));
                                 const precioPromo = Number(plan.precio_promocional_mensual) || precioRegular;
                                 const tienePromo = Boolean(plan.tiene_promocion) && precioPromo < precioRegular && precioPromo > 0;
                                 const porcentajeAhorro = precioRegular > 0 ? Math.round(((precioRegular - precioPromo) / precioRegular) * 100) : 0;
@@ -614,7 +594,7 @@ export default function Welcome() {
                                 return (
                                     <div
                                         key={plan.id}
-                                        className={`bg-white p-6 sm:p-7 rounded-3xl space-y-6 flex flex-col justify-between transition-all relative ${
+                                        className={`bg-white p-6 sm:p-8 rounded-3xl space-y-6 flex flex-col justify-between transition-all relative ${
                                             isPopular
                                                 ? 'border-2 border-[#ff5a00] shadow-2xl transform lg:-translate-y-2'
                                                 : 'border border-slate-200 shadow-sm hover:shadow-xl'
@@ -622,12 +602,7 @@ export default function Welcome() {
                                     >
                                         {isPopular && (
                                             <div className="absolute -top-3.5 left-1/2 -translate-x-1/2 bg-gradient-to-r from-[#ff5a00] to-amber-500 text-white text-[11px] font-black uppercase tracking-wider px-4 py-1 rounded-full shadow-md shrink-0 whitespace-nowrap">
-                                                {__('⭐ 🔥 ¡MÁS RECOMENDADO!')}
-                                            </div>
-                                        )}
-                                        {isBestValue && !isPopular && (
-                                            <div className="absolute -top-3.5 left-1/2 -translate-x-1/2 bg-gradient-to-r from-purple-600 to-indigo-600 text-white text-[11px] font-black uppercase tracking-wider px-4 py-1 rounded-full shadow-md shrink-0 whitespace-nowrap">
-                                                {__('🚀 💰 ¡MEJOR PRECIO!')}
+                                                {__('⭐ 🔥 ¡PLAN RECOMENDADO!')}
                                             </div>
                                         )}
 
@@ -636,13 +611,9 @@ export default function Welcome() {
                                                 <span className={`inline-block px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider ${
                                                     isFree
                                                         ? 'bg-emerald-50 border border-emerald-200 text-emerald-700'
-                                                        : isPopular
-                                                            ? 'bg-orange-50 border border-orange-200 text-[#ff5a00]'
-                                                            : isBestValue
-                                                                ? 'bg-purple-50 border border-purple-200 text-purple-700'
-                                                                : 'bg-blue-50 border border-blue-200 text-[#08264e]'
+                                                        : 'bg-orange-50 border border-orange-200 text-[#ff5a00]'
                                                 }`}>
-                                                    {isFree ? __('Sin Compromiso') : isPopular ? __('Más Vendido') : isBestValue ? __('Empresarial') : __('Básico')}
+                                                    {isFree ? __('Sin Compromiso') : __('Acceso Completo')}
                                                 </span>
 
                                                 {tienePromo && (
@@ -653,9 +624,9 @@ export default function Welcome() {
                                             </div>
 
                                             <div>
-                                                <h3 className="text-xl font-black text-[#08264e]">{__(plan.nombre)}</h3>
+                                                <h3 className="text-2xl font-black text-[#08264e]">{__(plan.nombre)}</h3>
                                                 {plan.descripcion && (
-                                                    <p className="text-xs text-slate-500 mt-1 leading-relaxed">{__(plan.descripcion)}</p>
+                                                    <p className="text-xs text-slate-500 mt-1.5 leading-relaxed">{__(plan.descripcion)}</p>
                                                 )}
                                             </div>
 
@@ -680,7 +651,7 @@ export default function Welcome() {
                                                         )}
 
                                                         <div className="flex items-baseline gap-1">
-                                                            <span className="text-4xl font-black text-[#08264e] font-mono">
+                                                            <span className="text-5xl font-black text-[#08264e] font-mono">
                                                                 ${tienePromo ? precioPromo : precioRegular}
                                                             </span>
                                                             <span className="text-xs font-extrabold text-slate-500 font-mono uppercase">
@@ -689,15 +660,9 @@ export default function Welcome() {
                                                         </div>
 
                                                         {/* Desglose de cobro mensual transparente */}
-                                                        {tienePromo ? (
-                                                            <p className="text-[11px] text-slate-500 mt-2 bg-slate-50 border border-slate-100 p-2 rounded-lg leading-relaxed">
-                                                                {__('Facturación mensual con precio de oferta')} <strong>${precioPromo} MXN/mes</strong>. {__('Precio regular:')} <strong>${precioRegular} MXN/mes</strong>.
-                                                            </p>
-                                                        ) : (
-                                                            <p className="text-[11px] text-slate-500 mt-2 bg-slate-50 border border-slate-100 p-2 rounded-lg">
-                                                                {__('Facturación mensual recurrente de')} <strong>${precioRegular} MXN/mes</strong>.
-                                                            </p>
-                                                        )}
+                                                        <p className="text-[11px] text-slate-500 mt-2 bg-slate-50 border border-slate-100 p-2.5 rounded-lg leading-relaxed">
+                                                            {__('Facturación mensual recurrente de')} <strong>${precioRegular} MXN/mes</strong>. {__('Cancela cuando quieras.')}
+                                                        </p>
                                                     </div>
                                                 )}
                                             </div>
@@ -709,15 +674,15 @@ export default function Welcome() {
                                                 </li>
                                                 <li className="flex items-center gap-2 font-semibold text-slate-800">
                                                     <Check className="w-4 h-4 text-emerald-600 shrink-0" />
-                                                    <span>{plan.sucursales_incluidas ?? 1} {__('Sucursal(es) incluida(s)')}</span>
+                                                    <span>{plan.sucursales_incluidas ?? 1} {__('Sucursal incluida')}</span>
                                                 </li>
                                                 <li className="flex items-center gap-2 text-slate-700">
                                                     <Check className="w-4 h-4 text-emerald-600 shrink-0" />
-                                                    <span>{__('Sucursales adicionales:')} <strong className="text-slate-900">${plan.precio_sucursal_extra_mensual ?? 20} MXN</strong></span>
+                                                    <span>{__('Sucursales adicionales:')} <strong className="text-slate-900">${plan.precio_sucursal_extra_mensual ?? 84.72} MXN ({__('$5 USD')})/{__('mes')}</strong></span>
                                                 </li>
                                                 <li className="flex items-center gap-2">
                                                     <Check className="w-4 h-4 text-emerald-600 shrink-0" />
-                                                    <span>{__('Soporte técnico y actualizaciones')}</span>
+                                                    <span>{__('Soporte técnico y actualizaciones continuas')}</span>
                                                 </li>
                                             </ul>
                                         </div>
@@ -727,9 +692,7 @@ export default function Welcome() {
                                             className={`w-full py-3.5 px-4 rounded-xl text-xs font-extrabold text-center transition-all block mt-6 ${
                                                 isPopular
                                                     ? 'bg-gradient-to-r from-[#ff5a00] to-orange-600 hover:from-orange-600 hover:to-orange-700 text-white shadow-lg shadow-orange-500/25'
-                                                    : isFree
-                                                        ? 'bg-slate-100 hover:bg-slate-200 text-[#08264e]'
-                                                        : 'bg-[#08264e] hover:bg-[#0b3368] text-white'
+                                                    : 'bg-slate-100 hover:bg-slate-200 text-[#08264e]'
                                             }`}
                                         >
                                             {isFree ? __('Probar 7 Días Gratis') : `${__('Elegir')} ${__(plan.nombre)}`}

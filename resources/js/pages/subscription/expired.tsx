@@ -76,22 +76,22 @@ export default function SubscriptionExpired({ empresa, plan, planes = [], opcion
     const activePlanes = planes.length > 0 ? planes : (plan ? [plan] : []);
     const [selectedPlanId, setSelectedPlanId] = useState<number>(plan?.id || activePlanes[0]?.id || 1);
     const [selectedCycle] = useState<number>(1);
-    const [extraSucursales, setExtraSucursales] = useState<number>(Math.max(1, empresa?.sucursales_activas ?? 1));
+    const [extraSucursales, setExtraSucursales] = useState<number>(Math.max(1, empresa?.max_sucursales ?? 1, empresa?.sucursales_activas ?? 1));
     const [imagePreviewUrl, setImagePreviewUrl] = useState<string | null>(null);
 
     const currentPlan = activePlanes.find(p => p.id === selectedPlanId) || plan || activePlanes[0];
 
     const getPlanMonthlyPrice = (p: PlanInfo | null) => {
-        if (!p) return 499;
+        if (!p) return 149;
         if (p.tiene_promocion && Number(p.precio_promocional_mensual) > 0) {
             return Number(p.precio_promocional_mensual);
         }
-        return Number(p.precio_regular_mensual) || Number(p.precio_3_meses) || 499;
+        return Number(p.precio_regular_mensual) || Number(p.precio_3_meses) || 149;
     };
 
     const precioSucursalExtra = (currentPlan?.precio_sucursal_extra_mensual && currentPlan.precio_sucursal_extra_mensual > 0)
         ? currentPlan.precio_sucursal_extra_mensual
-        : 20;
+        : 84.72;
     const currentSubtotal = getPlanMonthlyPrice(currentPlan);
     const sucursalesExtrasCount = Math.max(0, extraSucursales - (currentPlan?.sucursales_incluidas ?? 1));
     const costoExtraSucursales = sucursalesExtrasCount * precioSucursalExtra;
@@ -185,7 +185,7 @@ export default function SubscriptionExpired({ empresa, plan, planes = [], opcion
                             <div className="grid gap-6 sm:grid-cols-3">
                                 {(activePlanes.length > 0 ? activePlanes.filter(p => !p.nombre.toLowerCase().includes('prueba') || p.id === selectedPlanId) : [currentPlan]).map((pItem) => {
                                     const isSelected = selectedPlanId === pItem.id;
-                                    const regularMensual = Number(pItem.precio_regular_mensual) || Number(pItem.precio_3_meses) || 499;
+                                    const regularMensual = Number(pItem.precio_regular_mensual) || Number(pItem.precio_3_meses) || 149;
                                     const promoMensual = Number(pItem.precio_promocional_mensual) || regularMensual;
                                     const tienePromo = Boolean(pItem.tiene_promocion) && promoMensual < regularMensual && promoMensual > 0;
                                     const precioMostrar = tienePromo ? promoMensual : regularMensual;
@@ -238,7 +238,7 @@ export default function SubscriptionExpired({ empresa, plan, planes = [], opcion
                                                     </li>
                                                     <li className="flex items-start gap-2 text-foreground font-medium">
                                                         <CheckCircle2 className="h-3.5 w-3.5 text-emerald-500 shrink-0 mt-0.5" />
-                                                        <span className="leading-tight">{__('Sucursal extra: ')}{formatPrice(pItem.precio_sucursal_extra_mensual || 20)}/{__('mes')}</span>
+                                                        <span className="leading-tight">{__('Sucursal extra: ')}{formatPrice(pItem.precio_sucursal_extra_mensual || 84.72)}/{__('mes')}</span>
                                                     </li>
                                                     <li className="flex items-start gap-2 text-foreground font-medium">
                                                         <CheckCircle2 className="h-3.5 w-3.5 text-emerald-500 shrink-0 mt-0.5" />

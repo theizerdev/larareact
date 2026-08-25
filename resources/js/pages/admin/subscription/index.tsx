@@ -125,18 +125,18 @@ export default function SubscriptionIndex({ empresa, plan, planes = [], opciones
 
     const [selectedPlanId, setSelectedPlanId] = useState<number>(plan?.id ?? (planes[0]?.id ?? 1));
     const [selectedCycle] = useState<number>(1); // 1 Mes (Cobro Mensual)
-    const [extraSucursales, setExtraSucursales] = useState<number>(hasActivePaidSubscription ? (empresa.max_sucursales || 1) : Math.max(1, empresa.sucursales_activas));
+    const [extraSucursales, setExtraSucursales] = useState<number>(Math.max(1, empresa.max_sucursales || 1, empresa.sucursales_activas || 1));
     const [previewReceipt, setPreviewReceipt] = useState<string | null>(null);
     const [imagePreviewUrl, setImagePreviewUrl] = useState<string | null>(null);
 
     const activeSelectedPlan = planes.find((p) => p.id === selectedPlanId) || plan || planes[0];
 
     const getPlanMonthlyPrice = (p: PlanInfo | null) => {
-        if (!p) return 499;
+        if (!p) return 149;
         if (p.tiene_promocion && Number(p.precio_promocional_mensual) > 0) {
             return Number(p.precio_promocional_mensual);
         }
-        return Number(p.precio_regular_mensual) || Number(p.precio_3_meses) || 499;
+        return Number(p.precio_regular_mensual) || Number(p.precio_3_meses) || 149;
     };
 
     const selectedMonthlyPrice = getPlanMonthlyPrice(activeSelectedPlan);
@@ -144,7 +144,7 @@ export default function SubscriptionIndex({ empresa, plan, planes = [], opciones
     const sucursalesExtrasCount = hasActivePaidSubscription 
         ? Math.max(0, extraSucursales - empresa.max_sucursales)
         : Math.max(0, extraSucursales - (activeSelectedPlan?.sucursales_incluidas ?? 1));
-    const precioSucursalExtra = (activeSelectedPlan?.precio_sucursal_extra_mensual && activeSelectedPlan.precio_sucursal_extra_mensual > 0) ? activeSelectedPlan.precio_sucursal_extra_mensual : 20;
+    const precioSucursalExtra = (activeSelectedPlan?.precio_sucursal_extra_mensual && activeSelectedPlan.precio_sucursal_extra_mensual > 0) ? activeSelectedPlan.precio_sucursal_extra_mensual : 84.72;
     const costoExtraSucursales = sucursalesExtrasCount * precioSucursalExtra;
     const precioFinalEstimado = currentSubtotalPlan + costoExtraSucursales;
 
@@ -395,10 +395,10 @@ export default function SubscriptionIndex({ empresa, plan, planes = [], opciones
                                         {__('Selecciona tu Plan Mensual')}
                                     </Label>
                                     <div className="grid gap-6 sm:grid-cols-3">
-                                        {(planes.length > 0 ? planes.filter(p => !p.nombre.toLowerCase().includes('prueba') || p.id === selectedPlanId) : [plan || { id: 1, nombre: 'Plan Profesional', descripcion: 'Control total', precio_regular_mensual: 499, precio_promocional_mensual: 499, sucursales_incluidas: 1, modulos_incluidos: ['todos'] }]).map((pItem: any) => {
+                                        {(planes.length > 0 ? planes.filter(p => !p.nombre.toLowerCase().includes('prueba') || p.id === selectedPlanId) : [plan || { id: 1, nombre: 'Plan Mensual', descripcion: 'Control total de tu negocio', precio_regular_mensual: 149, precio_promocional_mensual: 149, sucursales_incluidas: 1, precio_sucursal_extra_mensual: 84.72, modulos_incluidos: ['todos'] }]).map((pItem: any) => {
                                             const isSelected = selectedPlanId === pItem.id;
                                             const isLocked = hasActivePaidSubscription && !isSelected;
-                                            const regularMensual = Number(pItem.precio_regular_mensual) || Number(pItem.precio_3_meses) || 499;
+                                            const regularMensual = Number(pItem.precio_regular_mensual) || Number(pItem.precio_3_meses) || 149;
                                             const promoMensual = Number(pItem.precio_promocional_mensual) || regularMensual;
                                             const tienePromo = Boolean(pItem.tiene_promocion) && promoMensual < regularMensual && promoMensual > 0;
                                             const precioMostrar = tienePromo ? promoMensual : regularMensual;
@@ -453,11 +453,11 @@ export default function SubscriptionIndex({ empresa, plan, planes = [], opciones
                                                         <ul className="space-y-1.5 text-xs">
                                                             <li className="flex items-start gap-2 text-foreground font-medium">
                                                                 <CheckCircle2 className="h-3.5 w-3.5 text-emerald-500 shrink-0 mt-0.5" />
-                                                                <span className="leading-tight">{pItem.sucursales_incluidas || 1} {__('Sucursal(es) incluida(s)')}</span>
+                                                                <span className="leading-tight">{pItem.sucursales_incluidas || 1} {__('Sucursal incluida')}</span>
                                                             </li>
                                                             <li className="flex items-start gap-2 text-foreground font-medium">
                                                                 <CheckCircle2 className="h-3.5 w-3.5 text-emerald-500 shrink-0 mt-0.5" />
-                                                                <span className="leading-tight">{__('Sucursal extra: ')}{formatPrice(pItem.precio_sucursal_extra_mensual || 20)}/{__('mes')}</span>
+                                                                <span className="leading-tight">{__('Sucursal extra: ')}{formatPrice(pItem.precio_sucursal_extra_mensual || 84.72)}/{__('mes')}</span>
                                                             </li>
                                                             <li className="flex items-start gap-2 text-foreground font-medium">
                                                                 <CheckCircle2 className="h-3.5 w-3.5 text-emerald-500 shrink-0 mt-0.5" />
@@ -482,9 +482,9 @@ export default function SubscriptionIndex({ empresa, plan, planes = [], opciones
                                         <div className="p-4 bg-muted/30 rounded-xl border space-y-3">
                                             <p className="text-xs text-muted-foreground">
                                                 {hasActivePaidSubscription ? (
-                                                    <>{__('Actualmente tienes')} <strong className="text-primary font-bold">{empresa.max_sucursales} {__('sucursal(es) autorizada(s)')}</strong>. {__('Cada nueva sucursal adicional suma +')}<strong className="text-primary font-bold">{formatPrice(activeSelectedPlan?.precio_sucursal_extra_mensual ?? 20)}/{__('mes')}</strong>.</>
+                                                    <>{__('Actualmente tienes')} <strong className="text-primary font-bold">{empresa.max_sucursales} {__('sucursal(es) autorizada(s)')}</strong>. {__('Cada nueva sucursal adicional suma +')}<strong className="text-primary font-bold">{formatPrice(activeSelectedPlan?.precio_sucursal_extra_mensual ?? 84.72)}/{__('mes')}</strong>.</>
                                                 ) : (
-                                                    <>{__('El plan base incluye')} <strong>{activeSelectedPlan?.sucursales_incluidas ?? 1} {__('sucursal(es)')}</strong>. {__('Cada sucursal adicional suma +')}<strong className="text-primary font-bold">{formatPrice(activeSelectedPlan?.precio_sucursal_extra_mensual ?? 20)}/{__('mes')}</strong>.</>
+                                                    <>{__('El plan base incluye')} <strong>{activeSelectedPlan?.sucursales_incluidas ?? 1} {__('sucursal(es)')}</strong>. {__('Cada sucursal adicional suma +')}<strong className="text-primary font-bold">{formatPrice(activeSelectedPlan?.precio_sucursal_extra_mensual ?? 84.72)}/{__('mes')}</strong>.</>
                                                 )}
                                             </p>
                                             
