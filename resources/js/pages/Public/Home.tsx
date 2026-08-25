@@ -17,11 +17,11 @@ export default function Home() {
     // sociales nunca verían las etiquetas si sólo vivieran aquí). Esta
     // description sí se actualiza en cliente porque está traducida.
     const description = __(
-        'Enterprise access-control platform with biometric verification, liveness detection and document validation. Fleet management, GPS asset tracking, ITSM, inventory control, workforce time tracking and corporate messaging. Aligned with CTPAT, OEA, ISO 27001, ISO 20000, ISO 9001, PLD and AML.',
+        "Enterprise workforce time and attendance platform with biometric clock-in, shift and overtime management. Supplier and vehicle onboarding with identity validation, ITSM, inventory control and WhatsApp messaging. Aligned with Mexico's Federal Labor Law 2027, CTPAT, OEA, ISO 27001, ISO 20000, ISO 9001, PLD and AML.",
     );
 
     return (
-        <div className="hosho-landing min-h-screen">
+        <div className="shigoto-landing min-h-screen">
             <Head>
                 <meta name="description" content={description} />
                 <meta property="og:type" content="website" />

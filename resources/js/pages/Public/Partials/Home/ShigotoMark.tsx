@@ -1,11 +1,11 @@
 import type { SVGAttributes } from 'react';
 
 /**
- * Marca de Hoshō (保証 · "garantía"): el escudo del isotipo oficial,
- * trazado en monolínea para heredar currentColor. Único glifo dibujado a
- * mano del landing; el resto de la iconografía usa lucide-react.
+ * Marca de Shigoto (仕事 · "trabajo"): silueta del escudo del logotipo
+ * oficial, trazada en monolínea para heredar currentColor. Único glifo
+ * dibujado a mano del landing; el resto de la iconografía usa lucide-react.
  */
-export default function HoshoMark(props: SVGAttributes<SVGSVGElement>) {
+export default function ShigotoMark(props: SVGAttributes<SVGSVGElement>) {
     return (
         <svg
             viewBox="0 0 24 24"

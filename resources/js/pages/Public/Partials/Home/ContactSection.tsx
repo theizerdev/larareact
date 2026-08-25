@@ -22,14 +22,14 @@ import {
 import { Textarea } from '@/components/ui/textarea';
 import { useTranslate } from '@/hooks/use-translate';
 import { cn } from '@/lib/utils';
-import { hoshoButtonClass } from './button-styles';
-import HoshoMark from './HoshoMark';
+import { shigotoButtonClass } from './button-styles';
 import Reveal from './Reveal';
+import ShigotoMark from './ShigotoMark';
 
 const fieldClass =
-    'h-auto rounded-hosho-sm border-hosho-line bg-hosho-surface-2 px-3 py-2.5 sm:px-[.85rem] sm:py-[.74rem] font-hosho-body text-[.95rem] text-hosho-ink shadow-none focus-visible:border-hosho-indigo focus-visible:bg-hosho-surface focus-visible:ring-[4px] focus-visible:ring-hosho-indigo/[.12]';
+    'h-auto rounded-shigoto-sm border-shigoto-line bg-shigoto-surface-2 px-3 py-2.5 sm:px-[.85rem] sm:py-[.74rem] font-shigoto-body text-[.95rem] text-shigoto-ink shadow-none focus-visible:border-shigoto-indigo focus-visible:bg-shigoto-surface focus-visible:ring-[4px] focus-visible:ring-shigoto-indigo/[.12]';
 const labelClass =
-    'font-hosho-data text-[.64rem] tracking-[.08em] text-hosho-ink-soft uppercase';
+    'font-shigoto-data text-[.64rem] tracking-[.08em] text-shigoto-ink-soft uppercase';
 
 function Field({
     label,
@@ -50,7 +50,7 @@ function Field({
             {children}
             <InputError
                 message={error}
-                className="text-[.78rem] text-hosho-coral"
+                className="text-[.78rem] text-shigoto-coral"
             />
         </div>
     );
@@ -71,18 +71,18 @@ export default function ContactSection() {
     const { __ } = useTranslate();
 
     const sitiosOpts = [
-        __('1 to 3 access points'),
-        __('4 to 10 access points'),
-        __('11 to 30 access points'),
-        __('More than 30 access points'),
+        __('1 to 50 employees'),
+        __('51 to 200 employees'),
+        __('201 to 500 employees'),
+        __('More than 500 employees'),
     ];
     const interesOpts = [
-        __('Biometric access control with liveness detection'),
-        __('Time and attendance management'),
-        __('Fleet and yard control'),
-        __('GPS and AI-based asset management'),
-        __('IT service management and inventory control'),
-        __('Evidence for CTPAT / OEA / ISO'),
+        __('Biometric time and attendance (clock-ins, breaks and meals)'),
+        __('Shift scheduling and overtime management'),
+        __('Supplier, business-partner and vehicle onboarding'),
+        __('IT service management (ITSM) and inventory control'),
+        __('Operational messaging via WhatsApp'),
+        __('Evidence for Federal Labor Law 2027 / CTPAT / OEA / ISO / PLD-AML'),
         __('Partner program'),
     ];
 
@@ -110,18 +110,18 @@ export default function ContactSection() {
         <section id="contacto" className="py-[clamp(4.25rem,9vh,7rem)]">
             <div className="mx-auto grid max-w-[1240px] gap-8 px-4 sm:gap-10 sm:px-8 md:grid-cols-[minmax(0,.85fr)_minmax(0,1.15fr)] md:gap-[clamp(2.3rem,5vw,3.8rem)]">
                 <Reveal>
-                    <div className="mb-[1.1rem] inline-flex items-center gap-2 rounded-full bg-hosho-indigo-tint py-[.42rem] pr-[.85rem] pl-[.62rem]">
-                        <HoshoMark className="size-3.5 text-hosho-indigo" />
-                        <span className="font-hosho-data text-[.68rem] tracking-[.07em] text-hosho-indigo uppercase">
+                    <div className="mb-[1.1rem] inline-flex items-center gap-2 rounded-full bg-shigoto-indigo-tint py-[.42rem] pr-[.85rem] pl-[.62rem]">
+                        <ShigotoMark className="size-3.5 text-shigoto-indigo" />
+                        <span className="font-shigoto-data text-[.68rem] tracking-[.07em] text-shigoto-indigo uppercase">
                             {__('Contact')}
                         </span>
                     </div>
-                    <h2 className="m-0 mb-[.85rem] font-hosho-display text-[clamp(1.85rem,3.8vw,2.85rem)] leading-[1.1] font-bold tracking-[-.012em] text-hosho-ink">
+                    <h2 className="m-0 mb-[.85rem] font-shigoto-display text-[clamp(1.85rem,3.8vw,2.85rem)] leading-[1.1] font-bold tracking-[-.012em] text-shigoto-ink">
                         {__('Request an assessment of your operation.')}
                     </h2>
-                    <p className="m-0 text-[clamp(1rem,1.25vw,1.13rem)] text-hosho-ink-soft">
+                    <p className="m-0 text-[clamp(1rem,1.25vw,1.13rem)] text-shigoto-ink-soft">
                         {__(
-                            "A demonstration takes approximately 30 minutes and is tailored to your organization's actual scenario: number of access points, volume of external personnel and current certification requirements.",
+                            "A demonstration takes approximately 30 minutes and is tailored to your organization's actual scenario: workforce size, number of sites and current certification requirements.",
                         )}
                     </p>
 
@@ -133,7 +133,7 @@ export default function ContactSection() {
                                 dd: (
                                     <a
                                         href="mailto:contacto@innovacionmovil.com"
-                                        className="border-b border-hosho-line pb-px hover:border-hosho-indigo hover:text-hosho-indigo"
+                                        className="border-b border-shigoto-line pb-px hover:border-shigoto-indigo hover:text-shigoto-indigo"
                                     >
                                         contacto@innovacionmovil.com
                                     </a>
@@ -147,7 +147,7 @@ export default function ContactSection() {
                                         href="https://www.innovacionmovil.com"
                                         target="_blank"
                                         rel="noopener"
-                                        className="border-b border-hosho-line pb-px hover:border-hosho-indigo hover:text-hosho-indigo"
+                                        className="border-b border-shigoto-line pb-px hover:border-shigoto-indigo hover:text-shigoto-indigo"
                                     >
                                         www.innovacionmovil.com
                                     </a>
@@ -173,14 +173,14 @@ export default function ContactSection() {
                                 className="grid grid-cols-[24px_minmax(0,1fr)] items-start gap-[.9rem]"
                             >
                                 <row.Icon
-                                    className="mt-[.32rem] size-[19px] text-hosho-mist"
+                                    className="mt-[.32rem] size-[19px] text-shigoto-mist"
                                     strokeWidth={1.6}
                                 />
                                 <div className="min-w-0">
-                                    <dt className="mb-[.22rem] font-hosho-data text-[.65rem] tracking-[.08em] text-hosho-mist uppercase">
+                                    <dt className="mb-[.22rem] font-shigoto-data text-[.65rem] tracking-[.08em] text-shigoto-mist uppercase">
                                         {row.dt}
                                     </dt>
-                                    <dd className="m-0 text-[.98rem] break-words text-hosho-ink">
+                                    <dd className="m-0 text-[.98rem] break-words text-shigoto-ink">
                                         {row.dd}
                                     </dd>
                                 </div>
@@ -191,16 +191,16 @@ export default function ContactSection() {
 
                 <Reveal>
                     {wasSuccessful ? (
-                        <div className="grid grid-cols-[26px_1fr] gap-[.9rem] rounded-hosho-md border border-hosho-jade bg-hosho-jade-tint p-[1.1rem_1.2rem]">
+                        <div className="grid grid-cols-[26px_1fr] gap-[.9rem] rounded-shigoto-md border border-shigoto-jade bg-shigoto-jade-tint p-[1.1rem_1.2rem]">
                             <BadgeCheck
-                                className="mt-[.2rem] size-[22px] text-hosho-jade"
+                                className="mt-[.2rem] size-[22px] text-shigoto-jade"
                                 strokeWidth={1.6}
                             />
                             <div>
-                                <b className="mb-[.22rem] block font-hosho-display text-[1.05rem] text-hosho-ink">
+                                <b className="mb-[.22rem] block font-shigoto-display text-[1.05rem] text-shigoto-ink">
                                     {__('Request received')}
                                 </b>
-                                <p className="m-0 text-[.87rem] text-hosho-ink-soft">
+                                <p className="m-0 text-[.87rem] text-shigoto-ink-soft">
                                     {__(
                                         'Thank you, :name. A specialist from Innovación Móvil will contact you within 24 business hours with two available time slots for the demonstration.',
                                         {
@@ -216,7 +216,7 @@ export default function ContactSection() {
                         <form
                             onSubmit={submit}
                             noValidate
-                            className="rounded-hosho-lg border border-hosho-line bg-hosho-surface p-[clamp(1.3rem,4vw,2.2rem)] shadow-hosho-md"
+                            className="rounded-shigoto-lg border border-shigoto-line bg-shigoto-surface p-[clamp(1.3rem,4vw,2.2rem)] shadow-shigoto-md"
                         >
                             <div className="grid gap-3 sm:gap-[1.05rem] sm:grid-cols-2">
                                 <Field
@@ -293,9 +293,7 @@ export default function ContactSection() {
                             <div className="mt-3 grid gap-3 sm:mt-[1.05rem] sm:gap-[1.05rem] sm:grid-cols-2">
                                 <div className="grid gap-2">
                                     <Label className={labelClass}>
-                                        {__(
-                                            'Number of access points to control',
-                                        )}
+                                        {__('Number of employees to track')}
                                     </Label>
                                     <Select
                                         value={data.sitios_acceso}
@@ -361,7 +359,7 @@ export default function ContactSection() {
                                         id="f-msg"
                                         rows={4}
                                         placeholder={__(
-                                            'Example: facility with 3 access points, 40 daily suppliers, OEA certification currently under renewal.',
+                                            'Example: 120 employees across 3 sites, rotating shifts, OEA certification currently under renewal.',
                                         )}
                                         value={data.mensaje}
                                         onChange={(e) =>
@@ -375,22 +373,22 @@ export default function ContactSection() {
                                 </Field>
                             </div>
 
-                            <label className="mt-3 mb-3 flex items-start gap-[.7rem] text-[.8rem] leading-[1.5] text-hosho-ink-soft sm:mt-[1.15rem] sm:mb-[1.35rem]">
+                            <label className="mt-3 mb-3 flex items-start gap-[.7rem] text-[.8rem] leading-[1.5] text-shigoto-ink-soft sm:mt-[1.15rem] sm:mb-[1.35rem]">
                                 <Checkbox
                                     checked={data.acepta_contacto}
                                     onCheckedChange={(v) =>
                                         setData('acepta_contacto', v === true)
                                     }
-                                    className="mt-[.15rem] flex-none data-[state=checked]:border-hosho-indigo data-[state=checked]:bg-hosho-indigo"
+                                    className="mt-[.15rem] flex-none data-[state=checked]:border-shigoto-indigo data-[state=checked]:bg-shigoto-indigo"
                                 />
                                 <span>
                                     {__(
-                                        'I authorize Innovación Móvil to use this information to contact me regarding Hoshō, in accordance with its privacy notice.',
+                                        'I authorize Innovación Móvil to use this information to contact me regarding Shigoto, in accordance with its privacy notice.',
                                     )}
                                 </span>
                             </label>
                             {errors.acepta_contacto && (
-                                <p className="mb-4 text-[.78rem] text-hosho-coral">
+                                <p className="mb-4 text-[.78rem] text-shigoto-coral">
                                     {errors.acepta_contacto}
                                 </p>
                             )}
@@ -398,7 +396,7 @@ export default function ContactSection() {
                             <button
                                 type="submit"
                                 disabled={processing}
-                                className={hoshoButtonClass(
+                                className={shigotoButtonClass(
                                     'primary',
                                     'md',
                                     'w-full disabled:opacity-60 sm:w-auto',

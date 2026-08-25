@@ -1,8 +1,8 @@
 import {
+    CalendarClock,
     Check,
-    FileCheck2,
-    ListChecks,
-    Radar,
+    Clock,
+    MessageCircle,
     ScanFace,
     ScrollText,
     X,
@@ -12,16 +12,16 @@ import { useTranslate } from '@/hooks/use-translate';
 import { cn } from '@/lib/utils';
 
 type StepStatus = 'waiting' | 'active' | 'done' | 'denied';
-type DenyReason = 'watchlist' | 'legal';
+type FlagReason = 'fuera_horario' | 'requiere_autorizacion';
 
-const STEP_ICONS = [FileCheck2, ScanFace, Radar, ListChecks];
+const STEP_ICONS = [ScanFace, CalendarClock, Clock, MessageCircle];
 
 const ROLE_KEYS = [
-    'prov_mant',
-    'socio_carga',
-    'visita_auditoria',
-    'contratista_obra',
-    'socio_refacciones',
+    'oper_produccion',
+    'supervisor_turno',
+    'chofer_reparto',
+    'almacen_logistica',
+    'soporte_ti',
 ] as const;
 const QUEUE_NAMES = [
     'M. Reyes Solano',
@@ -30,12 +30,12 @@ const QUEUE_NAMES = [
     'L. Ontiveros',
     'Grupo Delta Norte',
 ];
-// null = access authorized; otherwise the reason the watchlist step denied it.
-const QUEUE_DENY: Array<DenyReason | null> = [
+// null = clock-in recorded normally; otherwise the reason it was flagged for review.
+const QUEUE_FLAG: Array<FlagReason | null> = [
     null,
-    'watchlist',
+    'fuera_horario',
     null,
-    'legal',
+    'requiere_autorizacion',
     null,
 ];
 
@@ -46,7 +46,7 @@ function clockNow() {
     return `${p(d.getHours())}:${p(d.getMinutes())}:${p(d.getSeconds())}`;
 }
 
-export default function AccessDemoPanel() {
+export default function AttendanceDemoPanel() {
     const { __ } = useTranslate();
     const tRef = useRef(__);
     useEffect(() => {
@@ -66,7 +66,7 @@ export default function AccessDemoPanel() {
         name: string;
         roleKey: string;
         folio: number;
-        denyReason: DenyReason | null;
+        flagReason: FlagReason | null;
     } | null>(null);
     const [ledger, setLedger] = useState<
         Array<{
@@ -74,7 +74,7 @@ export default function AccessDemoPanel() {
             folio: number;
             name: string;
             fresh: boolean;
-            denyReason: DenyReason | null;
+            flagReason: FlagReason | null;
         }>
     >([]);
 
@@ -99,11 +99,11 @@ export default function AccessDemoPanel() {
         const pushLedger = (
             name: string,
             folio: number,
-            denyReason: DenyReason | null,
+            flagReason: FlagReason | null,
         ) => {
             setLedger((prev) =>
                 [
-                    { time: clockNow(), folio, name, fresh: true, denyReason },
+                    { time: clockNow(), folio, name, fresh: true, flagReason },
                     ...prev,
                 ].slice(0, 4),
             );
@@ -118,31 +118,31 @@ export default function AccessDemoPanel() {
 
             const roleKey = ROLE_KEYS[idxRef.current % ROLE_KEYS.length];
             const name = QUEUE_NAMES[idxRef.current % QUEUE_NAMES.length];
-            const denyReason = QUEUE_DENY[idxRef.current % QUEUE_DENY.length];
+            const flagReason = QUEUE_FLAG[idxRef.current % QUEUE_FLAG.length];
             idxRef.current += 1;
             folioRef.current += 1;
             const folio = folioRef.current;
-            setCurrent({ name, roleKey, folio, denyReason });
+            setCurrent({ name, roleKey, folio, flagReason });
 
             if (reduceMotion) {
                 setSteps([
                     'done',
+                    flagReason ? 'denied' : 'done',
                     'done',
                     'done',
-                    denyReason ? 'denied' : 'done',
                 ]);
                 setSealOn(true);
                 setVerdictOn(true);
-                pushLedger(name, folio, denyReason);
+                pushLedger(name, folio, flagReason);
 
                 return;
             }
 
             const phases = [
-                tRef.current('Analyzing'),
                 tRef.current('Matching'),
-                tRef.current('Verifying'),
-                tRef.current('Screening'),
+                tRef.current('Validating'),
+                tRef.current('Recording'),
+                tRef.current('Notifying'),
             ];
             let t = 500;
             [0, 1, 2, 3].forEach((i) => {
@@ -158,7 +158,7 @@ export default function AccessDemoPanel() {
                         setSteps((s) =>
                             s.map((v, j) =>
                                 j === i
-                                    ? i === 3 && denyReason
+                                    ? i === 1 && flagReason
                                         ? 'denied'
                                         : 'done'
                                     : v,
@@ -171,7 +171,7 @@ export default function AccessDemoPanel() {
             at(() => {
                 setSealOn(true);
                 setVerdictOn(true);
-                pushLedger(name, folio, denyReason);
+                pushLedger(name, folio, flagReason);
             }, t + 180);
             at(runCycle, t + 3400);
         }
@@ -210,73 +210,75 @@ export default function AccessDemoPanel() {
 
     const stepDefs = [
         {
-            label: __('Official document validation'),
-            sub: __("Driver's license · Passport · Professional ID"),
+            label: __('Biometric identification'),
+            sub: __('Facial match against the enrollment record'),
         },
         {
-            label: __('Facial biometric verification'),
-            sub: __('1:1 match against the official document'),
+            label: __('Shift and schedule validation'),
+            sub: __('Confirms the assigned shift and clock-in point'),
         },
         {
-            label: __('Liveness detection'),
-            sub: __('Passive anti-spoofing protocol'),
+            label: __('Clock event registration'),
+            sub: __('Entry, exit, break or meal'),
         },
         {
-            label: __('Watchlist screening'),
-            sub: __('AML · sanctions · internal restrictions'),
+            label: __('WhatsApp confirmation'),
+            sub: __('Notification sent to employee and supervisor'),
         },
     ];
 
     const roleLabels: Record<string, string> = {
-        prov_mant: __('Maintenance supplier'),
-        socio_carga: __('Business partner · Freight logistics'),
-        visita_auditoria: __('Visitor · Compliance audit'),
-        contratista_obra: __('Contractor · Civil works'),
-        socio_refacciones: __('Business partner · Spare-parts supply'),
+        oper_produccion: __('Production operator'),
+        supervisor_turno: __('Shift supervisor'),
+        chofer_reparto: __('Delivery driver'),
+        almacen_logistica: __('Warehouse & logistics'),
+        soporte_ti: __('IT support'),
     };
 
-    const denyLabels: Record<DenyReason, string> = {
-        watchlist: __('Match found'),
-        legal: __('Restricted'),
+    const flagLabels: Record<FlagReason, string> = {
+        fuera_horario: __('Out of schedule'),
+        requiere_autorizacion: __('Needs approval'),
     };
-    const denyReasons: Record<DenyReason, string> = {
-        watchlist: __('PLD/AML watchlist match'),
-        legal: __('Active legal restriction'),
+    const flagReasonsText: Record<FlagReason, string> = {
+        fuera_horario: __(
+            'Clock-in attempt outside the assigned shift window',
+        ),
+        requiere_autorizacion: __('Overtime pending supervisor approval'),
     };
 
     return (
         <div
             ref={panelRef}
-            aria-label={__('Access validation demonstration')}
-            className="overflow-hidden rounded-hosho-lg border border-hosho-line bg-hosho-surface shadow-hosho-lg"
+            aria-label={__('Attendance clock-in demonstration')}
+            className="overflow-hidden rounded-shigoto-lg border border-shigoto-line bg-shigoto-surface shadow-shigoto-lg"
         >
-            <div className="flex items-center gap-2.5 border-b border-hosho-line bg-hosho-surface-2 px-[1.1rem] py-[.85rem]">
+            <div className="flex items-center gap-2.5 border-b border-shigoto-line bg-shigoto-surface-2 px-[1.1rem] py-[.85rem]">
                 <span className="flex gap-1.5">
                     {[0, 1, 2].map((i) => (
                         <span
                             key={i}
-                            className="size-2 rounded-full bg-hosho-line"
+                            className="size-2 rounded-full bg-shigoto-line"
                         />
                     ))}
                 </span>
-                <span className="font-hosho-data text-[.72rem] text-hosho-mist">
-                    hosho.app
+                <span className="font-shigoto-data text-[.72rem] text-shigoto-mist">
+                    shigoto.app
                 </span>
                 <span className="ml-auto flex items-center gap-2.5 text-right">
-                    <span className="size-1.5 flex-none animate-hosho-pulse rounded-full bg-hosho-jade" />
+                    <span className="size-1.5 flex-none animate-shigoto-pulse rounded-full bg-shigoto-jade" />
                     <span className="leading-tight">
-                        <strong className="block text-[.82rem] leading-[1.2] font-semibold text-hosho-ink">
+                        <strong className="block text-[.82rem] leading-[1.2] font-semibold text-shigoto-ink">
                             {current?.name ?? '—'}
                         </strong>
-                        <span className="font-hosho-data text-[.66rem] text-hosho-mist">
+                        <span className="font-shigoto-data text-[.66rem] text-shigoto-mist">
                             {current ? roleLabels[current.roleKey] : '—'}
                         </span>
                     </span>
                 </span>
             </div>
 
-            <div className="px-[1.2rem] pt-[.85rem] pb-[.2rem] font-hosho-data text-[.68rem] tracking-[.06em] text-hosho-mist uppercase">
-                {__('Checkpoint 01 · Main entrance')}
+            <div className="px-[1.2rem] pt-[.85rem] pb-[.2rem] font-shigoto-data text-[.68rem] tracking-[.06em] text-shigoto-mist uppercase">
+                {__('Clock-in point 01 · Main entrance')}
             </div>
 
             <div className="px-[1.2rem] pt-[.4rem] pb-[.6rem]">
@@ -289,18 +291,18 @@ export default function AccessDemoPanel() {
                         <div
                             key={i}
                             className={cn(
-                                'grid grid-cols-[42px_1fr_auto] items-center gap-4 border-b border-hosho-line py-[.85rem] last:border-b-0',
+                                'grid grid-cols-[42px_1fr_auto] items-center gap-4 border-b border-shigoto-line py-[.85rem] last:border-b-0',
                             )}
                         >
                             <span
                                 className={cn(
-                                    'grid size-[42px] place-items-center rounded-hosho-sm border border-hosho-line bg-hosho-surface-2 text-hosho-mist transition-colors',
+                                    'grid size-[42px] place-items-center rounded-shigoto-sm border border-shigoto-line bg-shigoto-surface-2 text-shigoto-mist transition-colors',
                                     status === 'active' &&
-                                        'animate-hosho-scan border-transparent bg-hosho-coral-tint text-hosho-coral',
+                                        'animate-shigoto-scan border-transparent bg-shigoto-coral-tint text-shigoto-coral',
                                     status === 'done' &&
-                                        'border-transparent bg-hosho-jade-tint text-hosho-jade',
+                                        'border-transparent bg-shigoto-jade-tint text-shigoto-jade',
                                     status === 'denied' &&
-                                        'border-transparent bg-hosho-coral-tint text-hosho-coral',
+                                        'border-transparent bg-shigoto-coral-tint text-shigoto-coral',
                                 )}
                             >
                                 <Icon
@@ -314,34 +316,34 @@ export default function AccessDemoPanel() {
                                     status === 'done' ||
                                         status === 'active' ||
                                         status === 'denied'
-                                        ? 'text-hosho-ink'
-                                        : 'text-hosho-ink-soft',
+                                        ? 'text-shigoto-ink'
+                                        : 'text-shigoto-ink-soft',
                                 )}
                             >
                                 {step.label}
-                                <small className="mt-[.15rem] block font-hosho-data text-[.66rem] text-hosho-mist">
+                                <small className="mt-[.15rem] block font-shigoto-data text-[.66rem] text-shigoto-mist">
                                     {step.sub}
                                 </small>
                             </span>
                             <span
                                 className={cn(
-                                    'inline-flex items-center gap-[.4rem] rounded-full bg-hosho-surface-2 px-[.65rem] py-[.32rem] font-hosho-data text-[.65rem] tracking-[.06em] whitespace-nowrap text-hosho-mist uppercase transition-colors',
+                                    'inline-flex items-center gap-[.4rem] rounded-full bg-shigoto-surface-2 px-[.65rem] py-[.32rem] font-shigoto-data text-[.65rem] tracking-[.06em] whitespace-nowrap text-shigoto-mist uppercase transition-colors',
                                     status === 'active' &&
-                                        'bg-hosho-coral-tint text-hosho-coral',
+                                        'bg-shigoto-coral-tint text-shigoto-coral',
                                     status === 'done' &&
-                                        'bg-hosho-jade-tint text-hosho-jade',
+                                        'bg-shigoto-jade-tint text-shigoto-jade',
                                     status === 'denied' &&
-                                        'bg-hosho-coral-tint text-hosho-coral',
+                                        'bg-shigoto-coral-tint text-shigoto-coral',
                                 )}
                             >
                                 <i className="not-italic">
                                     {status === 'active'
                                         ? phaseWord[i]
                                         : status === 'done'
-                                          ? __('Verified')
+                                          ? __('Recorded')
                                           : status === 'denied' &&
-                                              current?.denyReason
-                                            ? denyLabels[current.denyReason]
+                                              current?.flagReason
+                                            ? flagLabels[current.flagReason]
                                             : __('Pending')}
                                 </i>
                                 {status === 'done' && (
@@ -361,17 +363,17 @@ export default function AccessDemoPanel() {
                     );
                 })}
 
-                <div className="mt-[.3rem] flex min-h-[76px] items-center gap-4 border-t border-hosho-line pt-[1.1rem] pb-[1.2rem]">
+                <div className="mt-[.3rem] flex min-h-[76px] items-center gap-4 border-t border-shigoto-line pt-[1.1rem] pb-[1.2rem]">
                     <div
                         className={cn(
-                            'grid size-14 flex-none scale-[.55] place-items-center rounded-hosho-sm opacity-0',
-                            current?.denyReason
-                                ? 'bg-hosho-coral-tint text-hosho-coral'
-                                : 'bg-hosho-jade-tint text-hosho-jade',
-                            sealOn && 'animate-hosho-stamp',
+                            'grid size-14 flex-none scale-[.55] place-items-center rounded-shigoto-sm opacity-0',
+                            current?.flagReason
+                                ? 'bg-shigoto-coral-tint text-shigoto-coral'
+                                : 'bg-shigoto-jade-tint text-shigoto-jade',
+                            sealOn && 'animate-shigoto-stamp',
                         )}
                     >
-                        {current?.denyReason ? (
+                        {current?.flagReason ? (
                             <X className="size-[26px]" strokeWidth={2.6} />
                         ) : (
                             <Check className="size-[26px]" strokeWidth={2.6} />
@@ -380,28 +382,30 @@ export default function AccessDemoPanel() {
                     <div>
                         <strong
                             className={cn(
-                                'block font-hosho-display text-[1.22rem] font-bold opacity-0 transition-opacity delay-[120ms] duration-300',
-                                current?.denyReason
-                                    ? 'text-hosho-coral'
-                                    : 'text-hosho-ink',
+                                'block font-shigoto-display text-[1.22rem] font-bold opacity-0 transition-opacity delay-[120ms] duration-300',
+                                current?.flagReason
+                                    ? 'text-shigoto-coral'
+                                    : 'text-shigoto-ink',
                                 verdictOn && 'opacity-100',
                             )}
                         >
-                            {current?.denyReason
-                                ? __('Access denied')
-                                : __('Access authorized')}
+                            {current?.flagReason
+                                ? __('Flagged for review')
+                                : __('Attendance recorded')}
                         </strong>
                         <span
                             className={cn(
-                                'font-hosho-data text-[.68rem] text-hosho-mist opacity-0 transition-opacity delay-[220ms] duration-300',
+                                'font-shigoto-data text-[.68rem] text-shigoto-mist opacity-0 transition-opacity delay-[220ms] duration-300',
                                 verdictOn && 'opacity-100',
                             )}
                         >
                             {current
-                                ? `F-${current.folio} · ${
-                                      current.denyReason
-                                          ? denyReasons[current.denyReason]
-                                          : __('validity: 8 hours')
+                                ? `M-${current.folio} · ${
+                                      current.flagReason
+                                          ? flagReasonsText[
+                                                current.flagReason
+                                            ]
+                                          : __('shift: 8 hours')
                                   }`
                                 : '—'}
                         </span>
@@ -409,47 +413,47 @@ export default function AccessDemoPanel() {
                 </div>
             </div>
 
-            <div className="rounded-b-hosho-lg border-t border-hosho-line bg-hosho-surface-2 px-[1.2rem] pt-[.65rem] pb-[.85rem]">
+            <div className="rounded-b-shigoto-lg border-t border-shigoto-line bg-shigoto-surface-2 px-[1.2rem] pt-[.65rem] pb-[.85rem]">
                 <div className="mb-[.4rem] flex items-center justify-between">
-                    <span className="inline-flex items-center gap-[.4rem] font-hosho-data text-[.68rem] tracking-[.06em] text-hosho-mist uppercase">
+                    <span className="inline-flex items-center gap-[.4rem] font-shigoto-data text-[.68rem] tracking-[.06em] text-shigoto-mist uppercase">
                         <ScrollText className="size-[13px]" strokeWidth={1.6} />
                         {__('Immutable audit trail')}
                     </span>
-                    <span className="font-hosho-data text-[.68rem] tracking-[.06em] text-hosho-mist uppercase">
+                    <span className="font-shigoto-data text-[.68rem] tracking-[.06em] text-shigoto-mist uppercase">
                         {__('Recent events')}
                     </span>
                 </div>
                 <ol
                     aria-live="polite"
-                    className="m-0 max-h-[5.6rem] list-none overflow-hidden p-0 font-hosho-data text-[.68rem] text-hosho-ink-soft"
+                    className="m-0 max-h-[5.6rem] list-none overflow-hidden p-0 font-shigoto-data text-[.68rem] text-shigoto-ink-soft"
                 >
                     {ledger.map((entry, i) => (
                         <li
                             key={`${entry.folio}-${i}`}
                             title={
-                                entry.denyReason
-                                    ? denyReasons[entry.denyReason]
+                                entry.flagReason
+                                    ? flagReasonsText[entry.flagReason]
                                     : undefined
                             }
                             className={cn(
                                 'flex items-center gap-[.7rem] overflow-hidden py-[.15rem] text-ellipsis whitespace-nowrap',
-                                entry.fresh && 'animate-hosho-slidein',
+                                entry.fresh && 'animate-shigoto-slidein',
                             )}
                         >
                             <span>{entry.time}</span>
-                            <span>F-{entry.folio}</span>
+                            <span>M-{entry.folio}</span>
                             <span className="overflow-hidden text-ellipsis">
                                 {entry.name}
                             </span>
                             <span
                                 className={cn(
                                     'ml-auto inline-flex items-center gap-[.3rem]',
-                                    entry.denyReason
-                                        ? 'text-hosho-coral'
-                                        : 'text-hosho-jade',
+                                    entry.flagReason
+                                        ? 'text-shigoto-coral'
+                                        : 'text-shigoto-jade',
                                 )}
                             >
-                                {entry.denyReason ? (
+                                {entry.flagReason ? (
                                     <X className="size-[10px]" strokeWidth={3} />
                                 ) : (
                                     <Check
@@ -457,9 +461,9 @@ export default function AccessDemoPanel() {
                                         strokeWidth={3}
                                     />
                                 )}
-                                {entry.denyReason
-                                    ? __('DENIED')
-                                    : __('AUTHORIZED')}
+                                {entry.flagReason
+                                    ? __('REVIEW')
+                                    : __('RECORDED')}
                             </span>
                         </li>
                     ))}
