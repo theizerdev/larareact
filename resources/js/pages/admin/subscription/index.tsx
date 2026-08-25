@@ -240,16 +240,16 @@ export default function SubscriptionIndex({ empresa, plan, planes = [], opciones
 
                             <div className="shrink-0 flex items-center gap-3">
                                 <div className={`px-4 py-2.5 rounded-xl text-xs font-bold flex items-center gap-2.5 border backdrop-blur-md shadow-inner ${empresa.is_exempt
-                                        ? 'bg-indigo-500/20 text-indigo-200 border-indigo-500/40'
-                                        : empresa.subscription_status === 'active'
-                                            ? 'bg-emerald-500/20 text-emerald-200 border-emerald-500/40'
-                                            : empresa.subscription_status === 'trial'
-                                                ? 'bg-amber-500/20 text-amber-200 border-amber-500/40'
-                                                : 'bg-rose-500/20 text-rose-200 border-rose-500/40'
+                                    ? 'bg-indigo-500/20 text-indigo-200 border-indigo-500/40'
+                                    : empresa.subscription_status === 'active'
+                                        ? 'bg-emerald-500/20 text-emerald-200 border-emerald-500/40'
+                                        : empresa.subscription_status === 'trial'
+                                            ? 'bg-amber-500/20 text-amber-200 border-amber-500/40'
+                                            : 'bg-rose-500/20 text-rose-200 border-rose-500/40'
                                     }`}>
                                     <span className={`h-2.5 w-2.5 rounded-full animate-ping ${empresa.is_exempt ? 'bg-indigo-400' :
-                                            empresa.subscription_status === 'active' ? 'bg-emerald-400' :
-                                                empresa.subscription_status === 'trial' ? 'bg-amber-400' : 'bg-rose-400'
+                                        empresa.subscription_status === 'active' ? 'bg-emerald-400' :
+                                            empresa.subscription_status === 'trial' ? 'bg-amber-400' : 'bg-rose-400'
                                         }`} />
                                     <span>{empresa.estado_legible}</span>
                                 </div>
@@ -326,7 +326,7 @@ export default function SubscriptionIndex({ empresa, plan, planes = [], opciones
                                         <div className="w-full h-3 bg-muted rounded-full overflow-hidden p-0.5 border">
                                             <div
                                                 className={`h-full transition-all duration-500 rounded-full ${empresa.dias_restantes <= 3 ? 'bg-destructive' :
-                                                        empresa.dias_restantes <= 7 ? 'bg-amber-500' : 'bg-primary'
+                                                    empresa.dias_restantes <= 7 ? 'bg-amber-500' : 'bg-primary'
                                                     }`}
                                                 style={{ width: `${progressPercent}%` }}
                                             />
@@ -446,8 +446,8 @@ export default function SubscriptionIndex({ empresa, plan, planes = [], opciones
                                                         key={pItem.id}
                                                         onClick={() => handlePlanSelect(pItem.id)}
                                                         className={`rounded-2xl border-2 p-5 transition-all relative flex flex-col justify-between ${isLocked
-                                                                ? 'opacity-50 cursor-not-allowed border-dashed border-border bg-muted/20 grayscale-[30%]'
-                                                                : 'cursor-pointer'
+                                                            ? 'opacity-50 cursor-not-allowed border-dashed border-border bg-muted/20 grayscale-[30%]'
+                                                            : 'cursor-pointer'
                                                             } ${isSelected
                                                                 ? 'border-primary bg-primary/5 shadow-md ring-2 ring-primary/20 scale-[1.02]'
                                                                 : !isLocked ? 'border-border hover:border-muted-foreground/30 bg-card' : ''
@@ -840,7 +840,7 @@ export default function SubscriptionIndex({ empresa, plan, planes = [], opciones
                                                             pago.estado === 'pending' ? 'outline' : 'destructive'
                                                     }
                                                     className={`text-xs font-semibold ${pago.estado === 'approved' ? 'bg-emerald-600 text-white' :
-                                                            pago.estado === 'pending' ? 'bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-300 border-amber-300' : ''
+                                                        pago.estado === 'pending' ? 'bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-300 border-amber-300' : ''
                                                         }`}
                                                 >
                                                     {pago.estado === 'approved' ? __('Aprobado') :

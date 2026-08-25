@@ -594,11 +594,10 @@ export default function Welcome() {
                                 return (
                                     <div
                                         key={plan.id}
-                                        className={`bg-white p-6 sm:p-8 rounded-3xl space-y-6 flex flex-col justify-between transition-all relative ${
-                                            isPopular
+                                        className={`bg-white p-6 sm:p-8 rounded-3xl space-y-6 flex flex-col justify-between transition-all relative ${isPopular
                                                 ? 'border-2 border-[#ff5a00] shadow-2xl transform lg:-translate-y-2'
                                                 : 'border border-slate-200 shadow-sm hover:shadow-xl'
-                                        }`}
+                                            }`}
                                     >
                                         {isPopular && (
                                             <div className="absolute -top-3.5 left-1/2 -translate-x-1/2 bg-gradient-to-r from-[#ff5a00] to-amber-500 text-white text-[11px] font-black uppercase tracking-wider px-4 py-1 rounded-full shadow-md shrink-0 whitespace-nowrap">
@@ -608,11 +607,10 @@ export default function Welcome() {
 
                                         <div className="space-y-4 pt-2">
                                             <div className="flex items-center justify-between gap-2">
-                                                <span className={`inline-block px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider ${
-                                                    isFree
+                                                <span className={`inline-block px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider ${isFree
                                                         ? 'bg-emerald-50 border border-emerald-200 text-emerald-700'
                                                         : 'bg-orange-50 border border-orange-200 text-[#ff5a00]'
-                                                }`}>
+                                                    }`}>
                                                     {isFree ? __('Sin Compromiso') : __('Acceso Completo')}
                                                 </span>
 
@@ -689,11 +687,10 @@ export default function Welcome() {
 
                                         <Link
                                             href={`/register?plan_id=${plan.id}`}
-                                            className={`w-full py-3.5 px-4 rounded-xl text-xs font-extrabold text-center transition-all block mt-6 ${
-                                                isPopular
+                                            className={`w-full py-3.5 px-4 rounded-xl text-xs font-extrabold text-center transition-all block mt-6 ${isPopular
                                                     ? 'bg-gradient-to-r from-[#ff5a00] to-orange-600 hover:from-orange-600 hover:to-orange-700 text-white shadow-lg shadow-orange-500/25'
                                                     : 'bg-slate-100 hover:bg-slate-200 text-[#08264e]'
-                                            }`}
+                                                }`}
                                         >
                                             {isFree ? __('Probar 7 Días Gratis') : `${__('Elegir')} ${__(plan.nombre)}`}
                                         </Link>

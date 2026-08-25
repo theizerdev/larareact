@@ -370,11 +370,10 @@ export default function PlanesIndex({ planes = [], stats, currencySymbol = '$' }
                             <button
                                 type="button"
                                 onClick={() => setViewMode('cards')}
-                                className={`p-1.5 rounded-md text-xs font-medium flex items-center gap-1.5 transition-all ${
-                                    viewMode === 'cards'
+                                className={`p-1.5 rounded-md text-xs font-medium flex items-center gap-1.5 transition-all ${viewMode === 'cards'
                                         ? 'bg-orange-500 text-white shadow-sm'
                                         : 'text-slate-400 hover:text-white'
-                                }`}
+                                    }`}
                                 title={__('Vista en Tarjetas')}
                             >
                                 <LayoutGrid className="w-4 h-4" />
@@ -383,11 +382,10 @@ export default function PlanesIndex({ planes = [], stats, currencySymbol = '$' }
                             <button
                                 type="button"
                                 onClick={() => setViewMode('table')}
-                                className={`p-1.5 rounded-md text-xs font-medium flex items-center gap-1.5 transition-all ${
-                                    viewMode === 'table'
+                                className={`p-1.5 rounded-md text-xs font-medium flex items-center gap-1.5 transition-all ${viewMode === 'table'
                                         ? 'bg-orange-500 text-white shadow-sm'
                                         : 'text-slate-400 hover:text-white'
-                                }`}
+                                    }`}
                                 title={__('Vista en Tabla')}
                             >
                                 <TableIcon className="w-4 h-4" />
@@ -476,11 +474,10 @@ export default function PlanesIndex({ planes = [], stats, currencySymbol = '$' }
                             return (
                                 <div
                                     key={plan.id}
-                                    className={`relative flex flex-col bg-white dark:bg-slate-900 rounded-2xl border transition-all duration-200 hover:shadow-xl ${
-                                        plan.destacado
+                                    className={`relative flex flex-col bg-white dark:bg-slate-900 rounded-2xl border transition-all duration-200 hover:shadow-xl ${plan.destacado
                                             ? 'border-orange-500 ring-2 ring-orange-500/20 shadow-lg'
                                             : 'border-slate-200 dark:border-slate-800 shadow-sm'
-                                    } ${!plan.activo ? 'opacity-60 grayscale-[30%]' : ''}`}
+                                        } ${!plan.activo ? 'opacity-60 grayscale-[30%]' : ''}`}
                                 >
                                     {/* Badge Superior Destacado */}
                                     {plan.destacado && (
@@ -603,7 +600,7 @@ export default function PlanesIndex({ planes = [], stats, currencySymbol = '$' }
                                             </span>
                                             <Switch
                                                 checked={Boolean(plan.tiene_promocion)}
-                                                onCheckedChange={(checked) => handleQuickTogglePromo(plan.id, { stopPropagation: () => {} } as any)}
+                                                onCheckedChange={(checked) => handleQuickTogglePromo(plan.id, { stopPropagation: () => { } } as any)}
                                             />
                                         </div>
 
@@ -707,13 +704,13 @@ export default function PlanesIndex({ planes = [], stats, currencySymbol = '$' }
                                             <td className="py-3 px-4 text-center">
                                                 <Switch
                                                     checked={Boolean(plan.tiene_promocion)}
-                                                    onCheckedChange={(checked) => handleQuickTogglePromo(plan.id, { stopPropagation: () => {} } as any)}
+                                                    onCheckedChange={(checked) => handleQuickTogglePromo(plan.id, { stopPropagation: () => { } } as any)}
                                                 />
                                             </td>
                                             <td className="py-3 px-4 text-center">
                                                 <Switch
                                                     checked={Boolean(plan.activo)}
-                                                    onCheckedChange={(checked) => handleQuickToggleStatus(plan.id, { stopPropagation: () => {} } as any)}
+                                                    onCheckedChange={(checked) => handleQuickToggleStatus(plan.id, { stopPropagation: () => { } } as any)}
                                                 />
                                             </td>
                                             <td className="py-3 px-4 text-right space-x-1">
@@ -964,17 +961,15 @@ export default function PlanesIndex({ planes = [], stats, currencySymbol = '$' }
                                             type="button"
                                             key={mod.id}
                                             onClick={() => handleToggleModulo(mod.id)}
-                                            className={`flex items-center gap-2 p-2 rounded-lg text-xs font-medium text-left transition-colors ${
-                                                isSelected || formData.modulos_incluidos?.includes(mod.id)
+                                            className={`flex items-center gap-2 p-2 rounded-lg text-xs font-medium text-left transition-colors ${isSelected || formData.modulos_incluidos?.includes(mod.id)
                                                     ? 'bg-blue-500/10 text-blue-600 dark:text-blue-400 border border-blue-500/30'
                                                     : 'hover:bg-slate-200 dark:hover:bg-slate-800 text-slate-600 dark:text-slate-400 border border-transparent'
-                                            }`}
+                                                }`}
                                         >
-                                            <div className={`w-4 h-4 rounded flex items-center justify-center border ${
-                                                isSelected || formData.modulos_incluidos?.includes(mod.id)
+                                            <div className={`w-4 h-4 rounded flex items-center justify-center border ${isSelected || formData.modulos_incluidos?.includes(mod.id)
                                                     ? 'bg-blue-600 text-white border-blue-600'
                                                     : 'border-slate-300 dark:border-slate-700'
-                                            }`}>
+                                                }`}>
                                                 {(isSelected || formData.modulos_incluidos?.includes(mod.id)) && <Check className="w-3 h-3" />}
                                             </div>
                                             <span>{mod.label}</span>

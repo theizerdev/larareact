@@ -105,11 +105,20 @@ export default function SubscriptionExpired({ empresa, plan, planes = [], opcion
         return `$${usdAmount.toLocaleString('es-MX', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} MXN`;
     };
 
+    const hasAnyActiveGateway = Boolean(
+        paymentGateways?.paypal?.active || paymentGateways?.mercadopago?.active || paymentGateways?.stripe?.active
+    );
+
+    const defaultPaymentMethod = (paymentGateways?.paypal?.active && 'paypal')
+        || (paymentGateways?.mercadopago?.active && 'mercadopago')
+        || (paymentGateways?.stripe?.active && 'stripe')
+        || 'paypal';
+
     const { data, setData, post, processing, errors, reset } = useForm({
         plan_id: selectedPlanId,
         ciclo_meses: 1,
         sucursales_contratadas: extraSucursales,
-        metodo_pago: 'transferencia',
+        metodo_pago: defaultPaymentMethod,
         referencia_pago: '',
         comprobante: null as File | null,
         notas: '',
@@ -195,11 +204,10 @@ export default function SubscriptionExpired({ empresa, plan, planes = [], opcion
                                         <div
                                             key={pItem.id}
                                             onClick={() => handlePlanChange(pItem.id)}
-                                            className={`cursor-pointer rounded-2xl border-2 p-5 transition-all relative flex flex-col justify-between ${
-                                                isSelected
+                                            className={`cursor-pointer rounded-2xl border-2 p-5 transition-all relative flex flex-col justify-between ${isSelected
                                                     ? 'border-primary bg-primary/5 shadow-lg ring-2 ring-primary/20 scale-[1.02]'
                                                     : 'border-slate-200 hover:border-slate-300 dark:border-slate-800 bg-card'
-                                            }`}
+                                                }`}
                                         >
                                             {pItem.destacado ? (
                                                 <Badge className="absolute -top-3 right-4 bg-amber-500 text-white text-[10px] font-bold px-2.5 py-0.5 shadow-sm">
@@ -266,10 +274,10 @@ export default function SubscriptionExpired({ empresa, plan, planes = [], opcion
                                         </strong>.
                                     </p>
                                     <div className="flex items-center gap-3">
-                                        <Button 
-                                            type="button" 
-                                            variant="outline" 
-                                            size="icon" 
+                                        <Button
+                                            type="button"
+                                            variant="outline"
+                                            size="icon"
                                             onClick={() => handleSucursalChange(extraSucursales - 1)}
                                             disabled={extraSucursales <= 1}
                                             className="h-10 w-10 rounded-lg"
@@ -277,7 +285,7 @@ export default function SubscriptionExpired({ empresa, plan, planes = [], opcion
                                             <Minus className="h-4 w-4" />
                                         </Button>
 
-                                        <Input 
+                                        <Input
                                             type="number"
                                             min={1}
                                             max={50}
@@ -286,10 +294,10 @@ export default function SubscriptionExpired({ empresa, plan, planes = [], opcion
                                             className="text-center font-bold text-lg h-10 w-24"
                                         />
 
-                                        <Button 
-                                            type="button" 
-                                            variant="outline" 
-                                            size="icon" 
+                                        <Button
+                                            type="button"
+                                            variant="outline"
+                                            size="icon"
                                             onClick={() => handleSucursalChange(extraSucursales + 1)}
                                             className="h-10 w-10 rounded-lg"
                                         >
@@ -364,7 +372,7 @@ export default function SubscriptionExpired({ empresa, plan, planes = [], opcion
                             <div className="grid gap-4 sm:grid-cols-2">
                                 <div>
                                     <Label htmlFor="metodo_pago" className="text-xs font-semibold">{__('Método de Pago Utilizado')}</Label>
-                                    <Select 
+                                    <Select
                                         value={data.metodo_pago}
                                         onValueChange={(val) => setData('metodo_pago', val)}
                                     >
@@ -372,9 +380,6 @@ export default function SubscriptionExpired({ empresa, plan, planes = [], opcion
                                             <SelectValue />
                                         </SelectTrigger>
                                         <SelectContent>
-                                            <SelectItem value="transferencia">{__('Transferencia Bancaria (Manual)')}</SelectItem>
-                                            <SelectItem value="pago_movil">{__('Pago Móvil (Bolívares)')}</SelectItem>
-                                            <SelectItem value="zelle">{__('Zelle / Transferencia USD')}</SelectItem>
                                             {paymentGateways?.paypal?.active && (
                                                 <SelectItem value="paypal">💳 {__('PayPal (Checkout en línea)')}</SelectItem>
                                             )}
@@ -384,14 +389,20 @@ export default function SubscriptionExpired({ empresa, plan, planes = [], opcion
                                             {paymentGateways?.stripe?.active && (
                                                 <SelectItem value="stripe">🔒 {__('Stripe (Tarjeta de Crédito / Débito)')}</SelectItem>
                                             )}
-                                            <SelectItem value="efectivo">{__('Efectivo / Depósito en Ventanilla')}</SelectItem>
+                                            {!hasAnyActiveGateway && (
+                                                <>
+                                                    <SelectItem value="paypal">💳 {__('PayPal (Checkout en línea)')}</SelectItem>
+                                                    <SelectItem value="mercadopago">⚡ {__('Mercado Pago (Tarjeta / Dinero MP)')}</SelectItem>
+                                                    <SelectItem value="stripe">🔒 {__('Stripe (Tarjeta de Crédito / Débito)')}</SelectItem>
+                                                </>
+                                            )}
                                         </SelectContent>
                                     </Select>
                                 </div>
 
                                 <div>
                                     <Label htmlFor="referencia" className="text-xs font-semibold">{__('Número de Referencia')}</Label>
-                                    <Input 
+                                    <Input
                                         id="referencia"
                                         placeholder={__('Ej: 987654321')}
                                         value={data.referencia_pago}
@@ -423,7 +434,7 @@ export default function SubscriptionExpired({ empresa, plan, planes = [], opcion
                                         <p className="text-xs text-muted-foreground leading-relaxed">
                                             {__('Haz clic en el botón oficial de PayPal a continuación para procesar el cobro exacto de')} <strong>${precioFinalEstimado.toFixed(2)} USD</strong>.
                                         </p>
-                                        
+
                                         {paymentGateways?.paypal?.client_id ? (
                                             <PayPalButtonComponent
                                                 clientId={paymentGateways.paypal.client_id}
@@ -449,12 +460,12 @@ export default function SubscriptionExpired({ empresa, plan, planes = [], opcion
                                 {data.metodo_pago !== 'paypal' && (
                                     <div className="sm:col-span-2">
                                         <Label htmlFor="comprobante" className="text-xs font-semibold">
-                                            {['mercadopago', 'stripe'].includes(data.metodo_pago) 
+                                            {['mercadopago', 'stripe'].includes(data.metodo_pago)
                                                 ? __('Adjuntar Comprobante (Opcional para Pago Online)')
                                                 : __('Adjuntar Captura / Comprobante (Imagen o PDF)')
                                             }
                                         </Label>
-                                        <Input 
+                                        <Input
                                             id="comprobante"
                                             type="file"
                                             accept="image/*,.pdf"
@@ -472,9 +483,9 @@ export default function SubscriptionExpired({ empresa, plan, planes = [], opcion
                         </div>
 
                         {data.metodo_pago !== 'paypal' && (
-                            <Button 
-                                type="submit" 
-                                disabled={processing} 
+                            <Button
+                                type="submit"
+                                disabled={processing}
                                 size="lg"
                                 className="w-full sm:w-auto gap-2 font-bold px-8 shadow-md h-11"
                             >
