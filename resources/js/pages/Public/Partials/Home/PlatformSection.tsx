@@ -1,29 +1,27 @@
 import {
+    CalendarClock,
     Clock,
     MessageCircle,
     PackageSearch,
     ScanFace,
-    ShieldCheck,
     Ticket,
     Truck,
     Workflow,
-    LocateFixed,
 } from 'lucide-react';
 import { useTranslate } from '@/hooks/use-translate';
 import { cn } from '@/lib/utils';
-import HoshoMark from './HoshoMark';
 import Reveal from './Reveal';
+import ShigotoMark from './ShigotoMark';
 
 const MOD_ICONS = [
+    Clock,
+    CalendarClock,
     ScanFace,
     Truck,
-    LocateFixed,
-    Clock,
     Ticket,
     PackageSearch,
     MessageCircle,
     Workflow,
-    ShieldCheck,
 ];
 
 export default function PlatformSection() {
@@ -33,62 +31,64 @@ export default function PlatformSection() {
         {
             num: __('01 · Core'),
             title: __(
-                'Access validation for suppliers, business partners and visitors',
+                'Biometric time and attendance for the entire workforce',
             ),
             body: __(
-                'Each individual enrolls once and remains permanently identified within the system. Hoshō validates the official identity document, captures a facial biometric record, confirms through a liveness check that a real person is present, and screens identity against current watchlists before granting access. Pre-registered visitors are cleared within seconds; any non-compliant attempt is automatically denied, with the reason recorded for audit purposes.',
+                'Every employee enrolls once and clocks in and out through facial biometrics and liveness detection, eliminating buddy punching and manual timesheets. Shigoto captures entries, exits, breaks, meals and overtime in real time, with a permanent, audit-ready record for every shift.',
             ),
             tags: [
-                __('Biometric enrollment'),
+                __('Biometric clock-in'),
                 __('Liveness detection'),
-                __('Document validation'),
-                __('Invitation-based pre-registration'),
-                __('Digital QR credential'),
-                __('AML watchlist screening'),
+                __('Breaks and meals'),
+                __('Overtime tracking'),
+                __('Shift schedules'),
+                __('Payroll export'),
             ],
         },
         {
             num: __('02'),
-            title: __('Fleet control'),
+            title: __('Shift scheduling and overtime management'),
             body: __(
-                'Comprehensive management of vehicles, drivers and trailers, with an individual record for each asset: entries, exits, valid documentation, security seals and mileage. The organization maintains full visibility over the location and status of every unit at all times.',
+                'Define shift patterns, rotations and tolerance windows by site or department. Overtime and irregularities are flagged automatically and routed for supervisor approval before they reach payroll.',
             ),
             tags: [
-                __('Yard and dock control'),
-                __('Driver management'),
-                __('Security seals'),
+                __('Rotating shifts'),
+                __('Approval workflow'),
+                __('Attendance alerts'),
             ],
         },
         {
             num: __('03'),
-            title: __('Asset management with GPS and artificial intelligence'),
+            title: __(
+                'Supplier and business-partner onboarding with identity validation',
+            ),
             body: __(
-                'Real-time monitoring of equipment and vehicles through predictive models that learn standard operating patterns and generate alerts upon deviation: unauthorized stops, geofence breaches or anomalous behavior.',
+                'Each supplier and business partner enrolls once: official identity document validation, facial biometric capture and a digital profile shared across every site of the organization. Pre-registered visits and deliveries are cleared within seconds.',
             ),
             tags: [
-                __('Configurable geofences'),
-                __('Anomaly alerts'),
-                __('Route history'),
+                __('Document validation'),
+                __('Biometric enrollment'),
+                __('Digital QR credential'),
+                __('Invitation-based pre-registration'),
             ],
         },
         {
             num: __('04'),
-            title: __('Workforce time and attendance'),
+            title: __('Vehicle registration and yard control'),
             body: __(
-                'Recording of work shifts, breaks, meals and overtime through the same biometric infrastructure used for access control, ensuring data integrity and eliminating the risk of attendance fraud.',
+                'An individual record for every vehicle associated with a supplier or partner: registration, driver, valid documentation and entry/exit logging at each checkpoint, with full visibility over units currently on site.',
             ),
             tags: [
-                __('Shift management'),
-                __('Breaks and meals'),
-                __('Overtime tracking'),
-                __('Payroll export'),
+                __('Vehicle registry'),
+                __('Driver association'),
+                __('Yard entry/exit log'),
             ],
         },
         {
             num: __('05'),
             title: __('IT service management: incidents, requests and catalog'),
             body: __(
-                'Logging, assignment, tracking and closure of incidents with supporting documentation, directly from the checkpoint. A service catalog, defined support tiers and response times measured against established service-level agreements.',
+                'Logging, assignment, tracking and closure of incidents and requests with supporting evidence. A service catalog, defined support tiers and response times measured against established service-level agreements.',
             ),
             tags: [
                 __('Service desk'),
@@ -100,7 +100,7 @@ export default function PlatformSection() {
             num: __('06'),
             title: __('Inventory control'),
             body: __(
-                'Full traceability of tools, spare parts and equipment: intake, custody and return. Withdrawals are authorized through digital vouchers, with automated cycle counting that removes reliance on spreadsheets.',
+                'Full traceability of tools, equipment and consumables: intake, custody and return. Withdrawals are authorized through digital vouchers, with automated cycle counting that removes reliance on spreadsheets.',
             ),
             tags: [
                 __('Custody tracking'),
@@ -112,19 +112,19 @@ export default function PlatformSection() {
             num: __('07'),
             title: __('Operational messaging via WhatsApp'),
             body: __(
-                'Invitations, digital credentials, supplier arrival notifications and anomaly alerts are delivered through the communication channel your organization and its personnel already use on a daily basis.',
+                'Shift reminders, digital credentials, overtime approvals and attendance alerts are delivered through the communication channel your organization and its personnel already use every day.',
             ),
             tags: [
-                __('Automated invitations'),
+                __('Automated reminders'),
                 __('Real-time notifications'),
-                __('Arrival confirmation'),
+                __('Digital credential delivery'),
             ],
         },
         {
             num: __('08'),
             title: __('Integrations and security protocols'),
             body: __(
-                'An open application programming interface for connecting to existing ERP, payroll, WMS and help-desk systems, as well as installed hardware infrastructure: turnstiles, vehicle barriers, biometric readers, video surveillance and physical access controls.',
+                'An open application programming interface for connecting to existing ERP, payroll, WMS and help-desk systems, as well as installed hardware infrastructure: biometric time clocks, turnstiles and access controllers.',
             ),
             tags: [
                 __('REST API'),
@@ -139,20 +139,20 @@ export default function PlatformSection() {
         <section id="aplicacion" className="py-[clamp(4.25rem,9vh,7rem)]">
             <div className="mx-auto max-w-[1240px] px-5 sm:px-8">
                 <Reveal className="mb-[clamp(2.3rem,4.4vw,3.4rem)] max-w-[46rem]">
-                    <div className="mb-[1.1rem] inline-flex items-center gap-2 rounded-full bg-hosho-indigo-tint py-[.42rem] pr-[.85rem] pl-[.62rem]">
-                        <HoshoMark className="size-3.5 text-hosho-indigo" />
-                        <span className="font-hosho-data text-[.68rem] tracking-[.07em] text-hosho-indigo uppercase">
+                    <div className="mb-[1.1rem] inline-flex items-center gap-2 rounded-full bg-shigoto-indigo-tint py-[.42rem] pr-[.85rem] pl-[.62rem]">
+                        <ShigotoMark className="size-3.5 text-shigoto-indigo" />
+                        <span className="font-shigoto-data text-[.68rem] tracking-[.07em] text-shigoto-indigo uppercase">
                             {__('Platform')}
                         </span>
                     </div>
-                    <h2 className="m-0 mb-[.85rem] font-hosho-display text-[clamp(1.85rem,3.8vw,2.85rem)] leading-[1.1] font-bold tracking-[-.012em] text-hosho-ink">
+                    <h2 className="m-0 mb-[.85rem] font-shigoto-display text-[clamp(1.85rem,3.8vw,2.85rem)] leading-[1.1] font-bold tracking-[-.012em] text-shigoto-ink">
                         {__(
-                            'A unified architecture for access, asset and operations control.',
+                            'A unified architecture for time and attendance, workforce and operations control.',
                         )}
                     </h2>
-                    <p className="m-0 max-w-[40rem] text-[clamp(1rem,1.25vw,1.13rem)] text-hosho-ink-soft">
+                    <p className="m-0 max-w-[40rem] text-[clamp(1rem,1.25vw,1.13rem)] text-shigoto-ink-soft">
                         {__(
-                            'Hoshō integrates people, vehicles, assets and workforce time tracking within a single corporate database, with one unified audit trail across the entire operation.',
+                            'Shigoto integrates workforce time tracking, supplier and vehicle onboarding, IT service management and inventory within a single corporate database, with one unified audit trail across the entire operation.',
                         )}
                     </p>
                 </Reveal>
@@ -166,17 +166,17 @@ export default function PlatformSection() {
                             <article
                                 key={i}
                                 className={cn(
-                                    'rounded-hosho-md border border-hosho-line bg-hosho-surface p-[1.85rem_1.55rem_1.7rem] shadow-hosho-sm transition-all duration-300 hover:-translate-y-[3px] hover:border-[#CBD2F7] hover:shadow-hosho-md',
+                                    'rounded-shigoto-md border border-shigoto-line bg-shigoto-surface p-[1.85rem_1.55rem_1.7rem] shadow-shigoto-sm transition-all duration-300 hover:-translate-y-[3px] hover:border-[#CBD2F7] hover:shadow-shigoto-md',
                                     isLead &&
-                                        'border-hosho-navy bg-hosho-navy text-hosho-navy-ink lg:col-span-2',
+                                        'border-shigoto-navy bg-shigoto-navy text-shigoto-navy-ink lg:col-span-2',
                                 )}
                             >
                                 <div className="mb-[1.1rem] flex items-center gap-[.95rem]">
                                     <span
                                         className={cn(
-                                            'grid size-12 flex-none place-items-center rounded-hosho-sm bg-hosho-indigo-tint text-hosho-indigo',
+                                            'grid size-12 flex-none place-items-center rounded-shigoto-sm bg-shigoto-indigo-tint text-shigoto-indigo',
                                             isLead &&
-                                                'bg-white/10 text-hosho-coral',
+                                                'bg-white/10 text-shigoto-coral',
                                         )}
                                     >
                                         <Icon
@@ -186,7 +186,7 @@ export default function PlatformSection() {
                                     </span>
                                     <span
                                         className={cn(
-                                            'font-hosho-data text-[.66rem] tracking-[.1em] text-hosho-mist',
+                                            'font-shigoto-data text-[.66rem] tracking-[.1em] text-shigoto-mist',
                                             isLead && 'text-[#9FB0FF]',
                                         )}
                                     >
@@ -195,16 +195,16 @@ export default function PlatformSection() {
                                 </div>
                                 <h3
                                     className={cn(
-                                        'm-0 mb-[.55rem] font-hosho-display text-[clamp(1.08rem,1.6vw,1.24rem)] leading-[1.24] font-bold tracking-[-.004em] text-hosho-ink',
-                                        isLead && 'text-hosho-navy-ink',
+                                        'm-0 mb-[.55rem] font-shigoto-display text-[clamp(1.08rem,1.6vw,1.24rem)] leading-[1.24] font-bold tracking-[-.004em] text-shigoto-ink',
+                                        isLead && 'text-shigoto-navy-ink',
                                     )}
                                 >
                                     {m.title}
                                 </h3>
                                 <p
                                     className={cn(
-                                        'm-0 mb-4 text-[.92rem] leading-[1.6] text-hosho-ink-soft',
-                                        isLead && 'text-hosho-navy-mist',
+                                        'm-0 mb-4 text-[.92rem] leading-[1.6] text-shigoto-ink-soft',
+                                        isLead && 'text-shigoto-navy-mist',
                                     )}
                                 >
                                     {m.body}
@@ -214,7 +214,7 @@ export default function PlatformSection() {
                                         <li
                                             key={ti}
                                             className={cn(
-                                                'rounded-full bg-hosho-indigo-tint px-[.65rem] py-[.28rem] font-hosho-data text-[.66rem] text-hosho-indigo',
+                                                'rounded-full bg-shigoto-indigo-tint px-[.65rem] py-[.28rem] font-shigoto-data text-[.66rem] text-shigoto-indigo',
                                                 isLead &&
                                                     'bg-white/[.08] text-[#8FE3BE]',
                                             )}

@@ -31,30 +31,31 @@
         </style>
 
         @php
-            $favicon = '/image/logo/hosho/favicon.png';
-            $ogDescription = 'Plataforma empresarial de control de accesos con verificación biométrica, prueba de vida y validación documental. Gestión de flota, activos con GPS, ITSM, inventarios, control de jornada laboral y mensajería corporativa.';
+            $favicon = '/image/logo/shigoto/favicon.svg';
+            $ogDescription = 'Sistema integral de marcaje de jornada laboral para México: entradas, salidas, descansos, comidas y tiempos extra con biometría. Alta de proveedores y socios de negocio, ITSM, inventarios y mensajería por WhatsApp.';
         @endphp
-        <link rel="icon" href="{{ $favicon }}" type="image/png">
-        <link rel="apple-touch-icon" href="/image/logo/hosho/apple-touch-icon.png">
+        <link rel="icon" href="{{ $favicon }}" type="image/svg+xml">
+        <link rel="alternate icon" href="/image/logo/shigoto/favicon.png" type="image/png">
+        <link rel="apple-touch-icon" href="/image/logo/shigoto/apple-touch-icon.png">
 
         {{-- Server-rendered title/description/Open Graph so link previews on
              redes sociales y correo (que no ejecutan JS) siempre encuentren
              estas etiquetas — la app es 100% client-rendered (sin SSR), por
              lo que nada de esto puede depender de React/Inertia. --}}
-        <title>Hoshō by Innovación Móvil</title>
+        <title>Shigoto by Innovación Móvil</title>
         <meta name="description" content="{{ $ogDescription }}">
-        <meta property="og:site_name" content="Hoshō">
-        <meta property="og:title" content="Hoshō by Innovación Móvil">
+        <meta property="og:site_name" content="Shigoto">
+        <meta property="og:title" content="Shigoto by Innovación Móvil">
         <meta property="og:description" content="{{ $ogDescription }}">
         <meta property="og:url" content="{{ url()->current() }}">
-        <meta property="og:image" content="{{ url('/image/logo/hosho/og-image.png') }}">
+        <meta property="og:image" content="{{ url('/image/logo/shigoto/og-image.png') }}">
         <meta property="og:image:width" content="1200">
         <meta property="og:image:height" content="630">
-        <meta property="og:image:alt" content="Hoshō — plataforma de control de accesos">
+        <meta property="og:image:alt" content="Shigoto — sistema de marcaje de jornada laboral">
         <meta name="twitter:card" content="summary_large_image">
-        <meta name="twitter:title" content="Hoshō by Innovación Móvil">
+        <meta name="twitter:title" content="Shigoto by Innovación Móvil">
         <meta name="twitter:description" content="{{ $ogDescription }}">
-        <meta name="twitter:image" content="{{ url('/image/logo/hosho/og-image.png') }}">
+        <meta name="twitter:image" content="{{ url('/image/logo/shigoto/og-image.png') }}">
 
         @if(request()->is('admin/reloj-checador/kiosko*'))
         {{-- PWA Kiosko --}}

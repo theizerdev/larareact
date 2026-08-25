@@ -13,13 +13,13 @@ const sizes: Record<ButtonSize, string> = {
 
 const variants: Record<ButtonVariant, string> = {
     primary:
-        'bg-hosho-indigo text-white shadow-[0_10px_24px_-10px_rgba(59,79,224,.55)] hover:bg-hosho-indigo-deep hover:-translate-y-px hover:shadow-[0_14px_28px_-10px_rgba(59,79,224,.6)]',
-    ghost: 'border border-hosho-line bg-hosho-surface text-hosho-ink hover:border-hosho-indigo hover:text-hosho-indigo hover:bg-hosho-indigo-tint',
+        'bg-shigoto-indigo text-white shadow-[0_10px_24px_-10px_rgba(59,79,224,.55)] hover:bg-shigoto-indigo-deep hover:-translate-y-px hover:shadow-[0_14px_28px_-10px_rgba(59,79,224,.6)]',
+    ghost: 'border border-shigoto-line bg-shigoto-surface text-shigoto-ink hover:border-shigoto-indigo hover:text-shigoto-indigo hover:bg-shigoto-indigo-tint',
     'ghost-band':
-        'border border-white/[0.18] text-hosho-navy-ink hover:border-white/[0.32] hover:bg-white/[0.08]',
+        'border border-white/[0.18] text-shigoto-navy-ink hover:border-white/[0.32] hover:bg-white/[0.08]',
 };
 
-export function hoshoButtonClass(
+export function shigotoButtonClass(
     variant: ButtonVariant = 'primary',
     size: ButtonSize = 'md',
     className?: string,

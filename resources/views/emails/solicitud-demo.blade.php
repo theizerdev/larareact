@@ -16,10 +16,10 @@
                     <tr>
                         <td style="background-color:#0b0f22; padding:22px 32px;">
                             <img
-                                src="{{ asset('image/logo/hosho/lockup-dark.png') }}"
-                                alt="Hoshō"
-                                height="22"
-                                style="display:block; height:22px; width:auto; border:0;"
+                                src="{{ asset('image/logo/shigoto/lockup.png') }}"
+                                alt="Shigoto"
+                                height="32"
+                                style="display:block; height:32px; width:auto; border:0;"
                             >
                         </td>
                     </tr>
@@ -56,7 +56,7 @@
                                 <tr><td colspan="3" style="height:6px;"></td></tr>
                                 <tr>
                                     <td width="50%" style="padding:14px 16px; background-color:#eef0f7; border-top-left-radius:10px; border-bottom-left-radius:10px; vertical-align:top;">
-                                        <p style="margin:0 0 3px; font-family:'IBM Plex Mono',ui-monospace,monospace; font-size:10px; font-weight:600; letter-spacing:.06em; text-transform:uppercase; color:#8890a3;">Puntos de acceso</p>
+                                        <p style="margin:0 0 3px; font-family:'IBM Plex Mono',ui-monospace,monospace; font-size:10px; font-weight:600; letter-spacing:.06em; text-transform:uppercase; color:#8890a3;">Número de colaboradores</p>
                                         <p style="margin:0; font-size:14px; font-weight:600; color:#12172b;">{{ $solicitud->sitios_acceso }}</p>
                                     </td>
                                     <td width="4"></td>
@@ -78,7 +78,7 @@
                             <table role="presentation" cellpadding="0" cellspacing="0" style="margin:28px 0 8px;">
                                 <tr>
                                     <td style="border-radius:8px; background-color:#3b4fe0;">
-                                        <a href="mailto:{{ $solicitud->correo }}?subject={{ rawurlencode('Re: solicitud de demostración Hoshō — '.$solicitud->empresa) }}"
+                                        <a href="mailto:{{ $solicitud->correo }}?subject={{ rawurlencode('Re: solicitud de demostración Shigoto — '.$solicitud->empresa) }}"
                                            style="display:inline-block; padding:12px 22px; font-size:14px; font-weight:700; color:#ffffff; text-decoration:none;">
                                             Responder a {{ explode(' ', $solicitud->nombre)[0] }} →
                                         </a>
@@ -92,7 +92,7 @@
                     <tr>
                         <td style="padding:16px 32px 26px; border-top:1px solid #eef0f7;">
                             <p style="margin:0; font-size:12px; line-height:1.6; color:#8890a3;">
-                                Recibido el {{ $solicitud->created_at->timezone('America/Mexico_City')->locale('es')->translatedFormat('d \d\e F \d\e Y, H:i') }} (hora de Ciudad de México), desde el formulario de contacto de la landing page de Hoshō.
+                                Recibido el {{ $solicitud->created_at->timezone('America/Mexico_City')->locale('es')->translatedFormat('d \d\e F \d\e Y, H:i') }} (hora de Ciudad de México), desde el formulario de contacto de la landing page de Shigoto.
                             </p>
                         </td>
                     </tr>

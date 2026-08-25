@@ -51,7 +51,7 @@ export default function Reveal({ children, className }: RevealProps) {
     return (
         <div
             ref={ref}
-            className={cn('hosho-reveal', visible && 'is-in', className)}
+            className={cn('shigoto-reveal', visible && 'is-in', className)}
         >
             {children}
         </div>
