@@ -66,12 +66,6 @@ Route::middleware(['auth', 'verified'])->group(function () {
             Route::resource('testimonios', TestimonioController::class)->except(['create', 'edit', 'show']);
             Route::patch('testimonios/{testimonio}/toggle-status', [TestimonioController::class, 'toggleStatus'])->name('testimonios.toggle-status');
             Route::patch('testimonios/{testimonio}/toggle-featured', [TestimonioController::class, 'toggleFeatured'])->name('testimonios.toggle-featured');
-
-            // Módulo de Gestión de Planes
-            Route::resource('planes', \App\Http\Controllers\Admin\SubscriptionPlanController::class)->except(['create', 'edit', 'show']);
-            Route::patch('planes/{plane}/toggle-promo', [\App\Http\Controllers\Admin\SubscriptionPlanController::class, 'togglePromo'])->name('planes.toggle-promo');
-            Route::patch('planes/{plane}/toggle-status', [\App\Http\Controllers\Admin\SubscriptionPlanController::class, 'toggleStatus'])->name('planes.toggle-status');
-            Route::patch('planes/{plane}/toggle-destacado', [\App\Http\Controllers\Admin\SubscriptionPlanController::class, 'toggleDestacado'])->name('planes.toggle-destacado');
         });
     });
 });

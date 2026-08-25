@@ -34,9 +34,9 @@ export default defineConfig({
     ],
     server: {
         watch: {
-            usePolling: true,
-            interval: 100, // Revisa cambios cada 100ms (más sensible para Windows)
-            ignored: ['**/storage/**', '**/public/storage/**'],
+            usePolling: process.env.VITE_USE_POLLING === 'true',
+            interval: 1000,
+            ignored: ['**/storage/**', '**/public/storage/**', '**/vendor/**', '**/node_modules/**'],
         },
     },
 });

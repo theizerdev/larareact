@@ -10,21 +10,26 @@ const appName = import.meta.env.VITE_APP_NAME || 'Laravel';
 
 createInertiaApp({
     title: (title) => (title ? `${title} - ${appName}` : appName),
-    resolve: (name) => {
+    resolve: async (name) => {
         const pages = import.meta.glob(
-            ['./pages/**/*.tsx', '!./pages/**/Partials/**/*.tsx'],
-            { eager: true }
-        ) as Record<string, any>;
+            ['./pages/**/*.tsx', '!./pages/**/Partials/**/*.tsx']
+        );
         
         const path = `./pages/${name}.tsx`;
+        if (pages[path]) {
+            const page = await pages[path]();
+            return (page as any).default || page;
+        }
+
         const pathLower = path.toLowerCase();
         const matchingKey = Object.keys(pages).find((key) => key.toLowerCase() === pathLower);
         
         if (matchingKey) {
-            return pages[matchingKey];
+            const page = await pages[matchingKey]();
+            return (page as any).default || page;
         }
 
-        return pages[path];
+        throw new Error(`Page not found: ${name}`);
     },
     layout: (name) => {
         switch (true) {
