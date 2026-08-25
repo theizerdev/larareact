@@ -21,3 +21,9 @@ Schedule::command('empresa:clean-products --force')
     ->weeklyOn(0, '03:00')
     ->description('Limpieza de productos e inventario (Empresa en sesión)');
 
+// Recordatorio diario automático de vencimiento de suscripciones (a 5 días)
+Schedule::command('subscriptions:send-reminders')
+    ->dailyAt('09:00')
+    ->timezone('America/Caracas')
+    ->description('Envío de recordatorios de vencimiento de suscripción por WhatsApp');
+

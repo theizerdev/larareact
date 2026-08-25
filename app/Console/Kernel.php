@@ -30,6 +30,7 @@ class Kernel extends ConsoleKernel
         Commands\VerificarRecordatoriosCitas::class, // Verificar estado de recordatorios
         Commands\ProcessConfirmationsCommand::class, // Procesar confirmaciones de citas
         Commands\ProcessDilatacionConsultas::class,
+        Commands\CheckSubscriptionExpirations::class,
     ];
 
     /**
@@ -40,6 +41,13 @@ class Kernel extends ConsoleKernel
     protected function schedule(Schedule $schedule)
     {
         $schedule->command('notifications:send-automatic')->dailyAt('08:00');
+
+        // Recordatorios automáticos de vencimiento de suscripciones (a 5 días y próximos a vencer)
+        $schedule->command('subscriptions:send-reminders')
+            ->dailyAt('09:00')
+            ->timezone('America/Caracas')
+            ->withoutOverlapping()
+            ->onOneServer();
 
         // Obtener tasas de cambio del BCV dos veces al día
         $schedule->command('exchange:fetch')

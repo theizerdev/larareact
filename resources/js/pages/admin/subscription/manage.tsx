@@ -17,7 +17,10 @@ import {
     ExternalLink,
     Filter,
     Users,
-    Gift
+    Gift,
+    MessageSquare,
+    Bell,
+    Send
 } from 'lucide-react';
 import React, { useState, useMemo } from 'react';
 import Swal from 'sweetalert2';
@@ -47,6 +50,8 @@ interface EmpresaItem {
     is_exempt: boolean;
     max_sucursales: number;
     total_sucursales: number;
+    last_reminder_sent_at?: string | null;
+    reminder_sent_count?: number;
 }
 
 interface PagoPendiente {
@@ -163,6 +168,31 @@ export default function SubscriptionManage({ empresas, pagosPendientes, stats }:
             max_sucursales: editSucursales,
         }, {
             onSuccess: () => setEditingEmpresa(null),
+        });
+    };
+
+    const handleSendReminder = (emp: EmpresaItem) => {
+        Swal.fire({
+            title: __('¿Enviar Recordatorio de Vencimiento?'),
+            html: `
+                <div class="text-left text-sm space-y-2 p-2 bg-slate-50 dark:bg-slate-900 rounded-lg">
+                    <p>Se enviará un recordatorio automático vía WhatsApp a <b>${emp.razon_social}</b> (${emp.telefono || 'teléfono del admin'}).</p>
+                    <div class="text-xs text-muted-foreground pt-1 border-t">
+                        <p>⏳ <b>Días restantes:</b> ${emp.dias_restantes} días</p>
+                        <p>📅 <b>Fecha de vencimiento:</b> ${emp.subscription_expires_at ? new Date(emp.subscription_expires_at).toLocaleDateString() : (emp.trial_ends_at ? new Date(emp.trial_ends_at).toLocaleDateString() : 'N/A')}</p>
+                        ${emp.last_reminder_sent_at ? `<p class="text-amber-600">🔔 Último aviso: ${new Date(emp.last_reminder_sent_at).toLocaleString()}</p>` : ''}
+                    </div>
+                </div>
+            `,
+            icon: 'info',
+            showCancelButton: true,
+            confirmButtonColor: '#10b981',
+            confirmButtonText: __('📲 Sí, Enviar WhatsApp'),
+            cancelButtonText: __('Cancelar'),
+        }).then((res) => {
+            if (res.isConfirmed) {
+                router.post(`/admin/monitoring/subscription/notify/${emp.id}`);
+            }
         });
     };
 
@@ -454,9 +484,28 @@ export default function SubscriptionManage({ empresas, pagosPendientes, stats }:
                                             {emp.is_exempt ? (
                                                 <span className="text-purple-600 dark:text-purple-400">∞ {__('Ilimitado')}</span>
                                             ) : (
-                                                <span className={emp.dias_restantes <= 3 ? 'text-rose-600' : 'text-indigo-600'}>
-                                                    {emp.dias_restantes} {__('días')}
-                                                </span>
+                                                <div className="space-y-0.5">
+                                                    {emp.dias_restantes <= 0 ? (
+                                                        <Badge variant="destructive" className="text-[11px] font-bold">
+                                                            {__('Vencida (0 días)')}
+                                                        </Badge>
+                                                    ) : emp.dias_restantes <= 5 ? (
+                                                        <Badge className="bg-rose-100 text-rose-800 border-rose-300 dark:bg-rose-950 dark:text-rose-300 text-[11px] font-bold gap-1">
+                                                            <AlertTriangle className="h-3 w-3 text-rose-600" />
+                                                            {emp.dias_restantes} {__('días restantes')}
+                                                        </Badge>
+                                                    ) : (
+                                                        <Badge variant="outline" className="bg-slate-50 dark:bg-slate-900 text-slate-700 dark:text-slate-300 text-[11px] font-semibold">
+                                                            {emp.dias_restantes} {__('días')}
+                                                        </Badge>
+                                                    )}
+                                                    {emp.last_reminder_sent_at && (
+                                                        <p className="text-[10px] text-muted-foreground flex items-center gap-1">
+                                                            <Bell className="h-2.5 w-2.5 text-amber-500" />
+                                                            {__('Avisado:')} {new Date(emp.last_reminder_sent_at).toLocaleDateString()}
+                                                        </p>
+                                                    )}
+                                                </div>
                                             )}
                                         </TableCell>
                                         <TableCell className="text-xs">
@@ -467,15 +516,27 @@ export default function SubscriptionManage({ empresas, pagosPendientes, stats }:
                                         </TableCell>
                                         <TableCell className="text-right">
                                             {!emp.is_exempt && (
-                                                <Button 
-                                                    size="sm" 
-                                                    variant="outline" 
-                                                    onClick={() => openEditDialog(emp)} 
-                                                    className="h-8 gap-1.5 text-xs font-semibold hover:bg-indigo-50 hover:text-indigo-600"
-                                                >
-                                                    <Edit3 className="h-3.5 w-3.5" />
-                                                    {__('Ajustar Plan')}
-                                                </Button>
+                                                <div className="flex items-center justify-end gap-1.5">
+                                                    <Button 
+                                                        size="sm" 
+                                                        variant="outline" 
+                                                        onClick={() => handleSendReminder(emp)} 
+                                                        className="h-8 gap-1 text-xs font-semibold text-emerald-700 border-emerald-300 hover:bg-emerald-50 hover:text-emerald-800 dark:text-emerald-400 dark:border-emerald-800 dark:hover:bg-emerald-950"
+                                                        title={__('Enviar recordatorio de pago por WhatsApp')}
+                                                    >
+                                                        <MessageSquare className="h-3.5 w-3.5 text-emerald-600" />
+                                                        {__('Avisar WhatsApp')}
+                                                    </Button>
+                                                    <Button 
+                                                        size="sm" 
+                                                        variant="outline" 
+                                                        onClick={() => openEditDialog(emp)} 
+                                                        className="h-8 gap-1.5 text-xs font-semibold hover:bg-indigo-50 hover:text-indigo-600"
+                                                    >
+                                                        <Edit3 className="h-3.5 w-3.5" />
+                                                        {__('Ajustar Plan')}
+                                                    </Button>
+                                                </div>
                                             )}
                                         </TableCell>
                                     </TableRow>

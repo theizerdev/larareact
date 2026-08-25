@@ -26,6 +26,8 @@ class Subscription extends Model
         'fecha_inicio',
         'fecha_vencimiento',
         'estado',
+        'last_reminder_sent_at',
+        'reminder_sent_count',
     ];
 
     protected $casts = [
@@ -37,6 +39,8 @@ class Subscription extends Model
         'monto_renovacion_regular' => 'float',
         'fecha_inicio' => 'datetime',
         'fecha_vencimiento' => 'datetime',
+        'last_reminder_sent_at' => 'datetime',
+        'reminder_sent_count' => 'integer',
     ];
 
     public function empresa(): BelongsTo

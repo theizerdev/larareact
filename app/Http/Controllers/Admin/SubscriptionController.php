@@ -402,6 +402,8 @@ class SubscriptionController extends Controller
                     'is_exempt' => $emp->isExemptFromSubscription(),
                     'max_sucursales' => $sub?->max_sucursales ?? $emp->max_sucursales ?? 1,
                     'total_sucursales' => $emp->sucursales_count ?? 1,
+                    'last_reminder_sent_at' => $sub?->last_reminder_sent_at?->format('Y-m-d H:i:s'),
+                    'reminder_sent_count' => $sub?->reminder_sent_count ?? 0,
                 ];
             });
 
@@ -606,5 +608,103 @@ class SubscriptionController extends Controller
             'type' => 'success',
             'message' => "Suscripción de {$empresa->razon_social} actualizada correctamente.",
         ]);
+    }
+
+    /**
+     * Enviar recordatorio manual de vencimiento por WhatsApp a una empresa.
+     */
+    public function sendReminder(Request $request, Empresa $empresa)
+    {
+        $user = auth()->user();
+        if ($user->empresa_id !== 1 && ! $user->hasRole('Super Administrador')) {
+            abort(403, 'No autorizado.');
+        }
+
+        if ($empresa->isExemptFromSubscription()) {
+            return back()->with('notification', [
+                'type' => 'warning',
+                'message' => 'Esta empresa está exenta de control de suscripción.',
+            ]);
+        }
+
+        $sub = $empresa->getLatestSubscriptionRecord();
+        if (! $sub || ! $sub->fecha_vencimiento) {
+            return back()->with('notification', [
+                'type' => 'error',
+                'message' => 'La empresa no posee una fecha de vencimiento registrada.',
+            ]);
+        }
+
+        $telefono = $empresa->telefono;
+        $rawCodigo = $empresa->paisTelefono?->codigo_telefonico
+            ?? $empresa->pais?->codigo_telefonico
+            ?? '52';
+        $codigoPais = preg_replace('/[^0-9]/', '', $rawCodigo) ?: '52';
+
+        if (empty($telefono)) {
+            $adminUser = $empresa->users()->first();
+            $telefono = $adminUser?->phone ?? $adminUser?->telefono;
+        }
+
+        if (empty($telefono)) {
+            return back()->with('notification', [
+                'type' => 'error',
+                'message' => "La empresa {$empresa->razon_social} no tiene ningún teléfono registrado.",
+            ]);
+        }
+
+        $cleanPhone = preg_replace('/[^0-9]/', '', $telefono);
+        if (! str_starts_with($cleanPhone, $codigoPais) && strlen($cleanPhone) <= 11) {
+            $cleanPhone = ltrim($cleanPhone, '0');
+            $cleanPhone = $codigoPais . $cleanPhone;
+        }
+
+        $diasRestantes = $empresa->dias_restantes_suscripcion;
+        $fechaFormateada = $sub->fecha_vencimiento->format('d/m/Y');
+        $nombrePlan = $sub->nombre_plan ?? 'Plan FixSale';
+        $sucursales = $sub->max_sucursales ?? $empresa->max_sucursales ?? 1;
+
+        $diasTexto = match ($diasRestantes) {
+            0 => '¡VENCE HOY!',
+            1 => '1 día restante (¡Mañana!)',
+            default => "{$diasRestantes} días restantes",
+        };
+
+        $mensajePersonalizado = $request->input('mensaje');
+        if (! empty($mensajePersonalizado)) {
+            $mensaje = $mensajePersonalizado;
+        } else {
+            $mensaje = "🔔 *RECORDATORIO DE VENCIMIENTO FIXSALE*\n\n"
+                . "Estimado/a *{$empresa->razon_social}*,\n\n"
+                . "Le recordamos que su suscripción al plan *{$nombrePlan}* está próxima a vencer.\n\n"
+                . "📅 *Fecha límite:* {$fechaFormateada}\n"
+                . "⏳ *Tiempo restante:* {$diasTexto}\n"
+                . "🏢 *Sucursales activas:* {$sucursales}\n\n"
+                . "Para garantizar la continuidad operativa de su sistema y evitar la suspensión del servicio en sus sucursales, puede reportar su pago o renovar su plan en línea ingresando al panel:\n"
+                . "👉 " . url('/admin/monitoring/subscription') . "\n\n"
+                . "Si ya realizó su pago, por favor ignore este mensaje.\n"
+                . "_Equipo de Soporte FixSale_";
+        }
+
+        try {
+            $whatsappService = new \App\Services\WhatsAppService(1);
+            $whatsappService->setTimeout(10);
+            $whatsappService->sendMessage($cleanPhone, $mensaje, true);
+
+            $sub->update([
+                'last_reminder_sent_at' => now(),
+                'reminder_sent_count' => ($sub->reminder_sent_count ?? 0) + 1,
+            ]);
+
+            return back()->with('notification', [
+                'type' => 'success',
+                'message' => "Recordatorio de vencimiento enviado exitosamente por WhatsApp a {$empresa->razon_social} ({$cleanPhone}).",
+            ]);
+        } catch (\Throwable $e) {
+            return back()->with('notification', [
+                'type' => 'error',
+                'message' => "Error al enviar WhatsApp: " . $e->getMessage(),
+            ]);
+        }
     }
 }

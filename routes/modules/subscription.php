@@ -21,6 +21,7 @@ Route::middleware(['verified'])->group(function () {
     Route::post('/monitoring/subscription/approve/{payment}', [SubscriptionController::class, 'approvePayment'])->name('subscription.approve');
     Route::post('/monitoring/subscription/reject/{payment}', [SubscriptionController::class, 'rejectPayment'])->name('subscription.reject');
     Route::post('/monitoring/subscription/update-empresa/{empresa}', [SubscriptionController::class, 'updateEmpresaSubscription'])->name('subscription.update-empresa');
+    Route::post('/monitoring/subscription/notify/{empresa}', [SubscriptionController::class, 'sendReminder'])->name('subscription.notify');
 
     // Módulo Administrativo de Gestión de Planes (Super Admin)
     Route::get('/planes', [SubscriptionPlanController::class, 'index'])->name('planes.index');
