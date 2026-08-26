@@ -14,6 +14,7 @@ use Illuminate\Support\Carbon;
 use Laravel\Fortify\TwoFactorAuthenticatable;
 use Laravel\Passkeys\Contracts\PasskeyUser;
 use Laravel\Passkeys\PasskeyAuthenticatable;
+use Laravel\Sanctum\HasApiTokens;
 use Spatie\Permission\Traits\HasRoles;
 
 /**
@@ -46,7 +47,7 @@ use Spatie\Activitylog\Traits\LogsActivity;
 class User extends Authenticatable implements PasskeyUser
 {
     /** @use HasFactory<UserFactory> */
-    use HasFactory, HasRoles, HasSpanishActivityLog, LogsActivity, Multitenantable, Notifiable, PasskeyAuthenticatable, TwoFactorAuthenticatable;
+    use HasApiTokens, HasFactory, HasRoles, HasSpanishActivityLog, LogsActivity, Multitenantable, Notifiable, PasskeyAuthenticatable, TwoFactorAuthenticatable;
 
     public function getActivitylogOptions(): LogOptions
     {
