@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\Admin\IntegrationController;
+use App\Http\Controllers\Admin\KycValidacionController;
 use Illuminate\Support\Facades\Route;
 
 Route::middleware(['auth', 'verified'])->group(function () {
@@ -27,4 +28,8 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('/integrations/validaciones', [IntegrationController::class, 'validacionesIndex'])->name('integrations.validaciones.index')->can('jaak.view');
     Route::put('/integrations/jaak', [IntegrationController::class, 'updateJaak'])->name('integrations.jaak.update')->can('jaak.manage');
     Route::post('/integrations/jaak/test', [IntegrationController::class, 'jaakTest'])->name('integrations.jaak.test')->can('jaak.manage');
+
+    // Resultados de validación de identidad (KYC) de las personas
+    Route::get('/integrations/kyc', [KycValidacionController::class, 'index'])->name('integrations.kyc.index')->can('kyc.view');
+    Route::post('/integrations/kyc/{kycValidacion}/reprocesar', [KycValidacionController::class, 'reprocesar'])->name('integrations.kyc.reprocesar')->can('kyc.manage');
 });

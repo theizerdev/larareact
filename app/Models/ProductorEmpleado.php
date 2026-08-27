@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Traits\HasKycValidaciones;
 use App\Traits\Multitenantable;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -9,7 +10,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class ProductorEmpleado extends Model
 {
-    use HasFactory, Multitenantable;
+    use HasFactory, HasKycValidaciones, Multitenantable;
 
     protected $table = 'productor_empleados';
 
@@ -18,6 +19,7 @@ class ProductorEmpleado extends Model
         'nombres',
         'apellidos',
         'documento_identidad',
+        'curp',
         'genero',
         'fecha_nacimiento',
         'edad',
@@ -28,6 +30,8 @@ class ProductorEmpleado extends Model
         'documento_reverso',
         'empresa_id',
         'sucursal_id',
+        'kyc_estatus',
+        'kyc_validado_en',
     ];
 
     protected function casts(): array
@@ -35,6 +39,7 @@ class ProductorEmpleado extends Model
         return [
             'fecha_nacimiento' => 'date',
             'edad' => 'integer',
+            'kyc_validado_en' => 'datetime',
         ];
     }
 

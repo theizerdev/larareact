@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Http\Controllers\Concerns\DispatchesKycValidacion;
 use App\Models\Pais;
 use App\Models\VisitaTemporal;
 use App\Models\VisitaTemporalPreRegistro;
@@ -15,6 +16,8 @@ use Inertia\Inertia;
 
 class VisitaTemporalPreRegistroController extends Controller
 {
+    use DispatchesKycValidacion;
+
     public function showWizard($token)
     {
         $preRegistro = VisitaTemporalPreRegistro::where('token', $token)
@@ -71,6 +74,7 @@ class VisitaTemporalPreRegistroController extends Controller
 
         $request->validate([
             'documento_identidad' => $isEntrega ? 'nullable|string|max:100' : 'required|string|max:100',
+            'curp' => 'nullable|string|size:18',
             'nombre_comercial' => $isEntrega ? 'required|string|max:255' : 'nullable|string|max:255',
             'tipo_servicio_id' => 'nullable|exists:tipo_servicios,id',
             'fecha_ingreso' => $isEntrega ? 'nullable|date' : 'required|date',
@@ -112,6 +116,7 @@ class VisitaTemporalPreRegistroController extends Controller
                 'apellidos' => $preRegistro->apellidos,
                 'nombre_comercial' => $request->nombre_comercial,
                 'documento_identidad' => $request->documento_identidad,
+                'curp' => $request->curp ? strtoupper(trim($request->curp)) : null,
                 'pais_telefono_id' => $preRegistro->pais_telefono_id,
                 'telefono' => $preRegistro->telefono,
                 'empleado_id' => $preRegistro->empleado_id,
@@ -136,6 +141,9 @@ class VisitaTemporalPreRegistroController extends Controller
             ]);
 
             DB::commit();
+
+            // 2.5 Validación de identidad (KYC) contra JAAK si la empresa la tiene activa.
+            $this->dispatchKycValidacion($visita, $preRegistro, $request->curp);
 
             // 3. Enviar mensaje de WhatsApp
             try {

@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Traits\HasKycValidaciones;
 use App\Traits\HasSpanishActivityLog;
 use App\Traits\Multitenantable;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -12,7 +13,7 @@ use Spatie\Activitylog\Traits\LogsActivity;
 
 class Empleado extends Model
 {
-    use HasFactory, HasSpanishActivityLog, LogsActivity, Multitenantable;
+    use HasFactory, HasKycValidaciones, HasSpanishActivityLog, LogsActivity, Multitenantable;
 
     protected static function booted()
     {
@@ -79,6 +80,8 @@ class Empleado extends Model
         'salario_diario',
         'turno_laboral_id',
         'status',
+        'kyc_estatus',
+        'kyc_validado_en',
     ];
 
     protected function casts(): array
@@ -87,6 +90,7 @@ class Empleado extends Model
             'status' => 'boolean',
             'jornada_laboral' => 'array',
             'salario_diario' => 'decimal:2',
+            'kyc_validado_en' => 'datetime',
         ];
     }
 

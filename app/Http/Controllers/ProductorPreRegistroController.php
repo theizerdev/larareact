@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Http\Controllers\Concerns\DispatchesKycValidacion;
 use App\Models\Pais;
 use App\Models\Productor;
 use App\Models\ProductorEmpleado;
@@ -16,6 +17,8 @@ use Inertia\Inertia;
 
 class ProductorPreRegistroController extends Controller
 {
+    use DispatchesKycValidacion;
+
     public function showWizard($token)
     {
         $preRegistro = ProductorPreRegistro::where('token', $token)
@@ -84,6 +87,7 @@ class ProductorPreRegistroController extends Controller
             'empleados.*.nombres' => 'required|string|max:255',
             'empleados.*.apellidos' => 'required|string|max:255',
             'empleados.*.documento_identidad' => 'required|string|max:50',
+            'empleados.*.curp' => 'nullable|string|size:18',
             'empleados.*.genero' => 'nullable|string|max:20',
             'empleados.*.fecha_nacimiento' => 'nullable|date',
             'empleados.*.correo' => 'nullable|email|max:255',
@@ -152,6 +156,7 @@ class ProductorPreRegistroController extends Controller
             };
 
             // 2. Crear Empleados
+            $empleadosKyc = []; // [ [modelo, curp], ... ] para lanzar KYC tras el commit
             foreach ($request->empleados as $emp) {
                 $foto_carnet = isset($emp['foto_carnet']) ? $saveBase64Image($emp['foto_carnet'], 'productor_empleados') : null;
                 $doc_frontal = isset($emp['documento_frontal']) ? $saveBase64Image($emp['documento_frontal'], 'productor_empleados') : null;
@@ -162,11 +167,14 @@ class ProductorPreRegistroController extends Controller
                     $edad = \Carbon\Carbon::parse($emp['fecha_nacimiento'])->age;
                 }
 
-                ProductorEmpleado::create([
+                $curpEmp = !empty($emp['curp']) ? strtoupper(trim($emp['curp'])) : null;
+
+                $empleadoCreado = ProductorEmpleado::create([
                     'productor_id' => $productor->id,
                     'nombres' => $emp['nombres'],
                     'apellidos' => $emp['apellidos'],
                     'documento_identidad' => $emp['documento_identidad'],
+                    'curp' => $curpEmp,
                     'genero' => $emp['genero'] ?? null,
                     'fecha_nacimiento' => $emp['fecha_nacimiento'] ?? null,
                     'edad' => $edad,
@@ -178,6 +186,8 @@ class ProductorPreRegistroController extends Controller
                     'empresa_id' => $preRegistro->empresa_id,
                     'sucursal_id' => $preRegistro->sucursal_id,
                 ]);
+
+                $empleadosKyc[] = [$empleadoCreado, $curpEmp];
             }
 
             // 3. Crear Vehículos
@@ -205,6 +215,12 @@ class ProductorPreRegistroController extends Controller
             $preRegistro->update(['status' => 'completado']);
 
             DB::commit();
+
+            // 4.5 Validación de identidad (KYC) contra JAAK por cada empleado del
+            // productor, si la empresa la tiene activa. Nunca bloquea.
+            foreach ($empleadosKyc as [$empleadoKyc, $curpKyc]) {
+                $this->dispatchKycValidacion($empleadoKyc, $preRegistro, $curpKyc);
+            }
 
             // 5. Enviar mensaje de WhatsApp
             try {

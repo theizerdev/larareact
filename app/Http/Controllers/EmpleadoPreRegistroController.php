@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Http\Controllers\Concerns\DispatchesKycValidacion;
 use App\Models\Pais;
 use App\Models\Empleado;
 use App\Models\EmpleadoVehiculo;
@@ -15,6 +16,8 @@ use Inertia\Inertia;
 
 class EmpleadoPreRegistroController extends Controller
 {
+    use DispatchesKycValidacion;
+
     public function showWizard($token)
     {
         $preRegistro = EmpleadoPreRegistro::where('token', $token)
@@ -61,6 +64,7 @@ class EmpleadoPreRegistroController extends Controller
 
         $request->validate([
             'documento_identidad' => 'required|string|max:50|unique:empleados,documento_identidad',
+            'curp' => 'nullable|string|size:18',
             'correo' => 'nullable|email|max:255',
             'genero' => 'nullable|string|in:M,F,Otro',
             'jornada_laboral' => 'nullable|array',
@@ -124,6 +128,7 @@ class EmpleadoPreRegistroController extends Controller
                 'nombres' => $preRegistro->nombres,
                 'apellidos' => $preRegistro->apellidos,
                 'documento_identidad' => $request->documento_identidad,
+                'curp' => $request->curp ? strtoupper(trim($request->curp)) : null,
                 'pais_telefono_id' => $preRegistro->pais_telefono_id,
                 'telefono' => $preRegistro->telefono,
                 'correo' => $request->correo,
@@ -173,6 +178,10 @@ class EmpleadoPreRegistroController extends Controller
             $preRegistro->update(['status' => 'completado']);
 
             DB::commit();
+
+            // 3.5 Disparar la validación de identidad (KYC) contra JAAK si la
+            // empresa la tiene activa. Nunca bloquea: corre tras la respuesta.
+            $this->dispatchKycValidacion($empleado, $preRegistro, $request->curp);
 
             // 4. Enviar mensaje de WhatsApp
             try {

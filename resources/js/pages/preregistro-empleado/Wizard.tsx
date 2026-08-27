@@ -84,6 +84,7 @@ export default function Wizard({ preRegistro, paises }: PreRegistroProps) {
     // Step 1: Profile & Shift Data
     const [profileData, setProfileData] = useState({
         documento_identidad: '',
+        curp: '',
         correo: '',
         genero: '',
         jornada_laboral: defaultJornada,
@@ -407,6 +408,22 @@ export default function Wizard({ preRegistro, paises }: PreRegistroProps) {
                                         placeholder="Ej: A-12345678"
                                     />
                                     {errors.documento_identidad && <span className="text-xs text-rose-500">{errors.documento_identidad}</span>}
+                                </div>
+                                <div className="space-y-1.5">
+                                    <Label>{__('CURP')}</Label>
+                                    <Input
+                                        value={profileData.curp}
+                                        onChange={(e) => setProfileData(p => ({ ...p, curp: e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 18) }))}
+                                        className="bg-white dark:bg-slate-950 border-slate-200 dark:border-slate-800 font-mono uppercase"
+                                        placeholder="GOMC800101HDFXXX09"
+                                        maxLength={18}
+                                    />
+                                    {profileData.curp.length > 0 && profileData.curp.length !== 18 && (
+                                        <span className="text-xs text-amber-600">{__('The CURP should have 18 characters.')}</span>
+                                    )}
+                                    <p className="text-xs text-slate-500 dark:text-slate-400">
+                                        {__('Your CURP and ID will be electronically validated (JAAK / RENAPO / INE) for access control purposes.')}
+                                    </p>
                                 </div>
                                 <div className="space-y-1.5">
                                     <Label>{__('Email Address')}</Label>
@@ -746,6 +763,7 @@ export default function Wizard({ preRegistro, paises }: PreRegistroProps) {
                                     <div className="grid grid-cols-2 gap-y-2 text-xs">
                                         <div><span className="text-slate-500">{__('Name:')}</span> <span className="text-slate-700 dark:text-slate-300 font-medium">{preRegistro.nombres} {preRegistro.apellidos}</span></div>
                                         <div><span className="text-slate-500">{__('ID / Passport:')}</span> <span className="text-slate-700 dark:text-slate-300 font-medium">{profileData.documento_identidad}</span></div>
+                                        <div><span className="text-slate-500">{__('CURP')}:</span> <span className="text-slate-700 dark:text-slate-300 font-medium font-mono">{profileData.curp || '-'}</span></div>
                                         <div><span className="text-slate-500">{__('Phone:')}</span> <span className="text-slate-700 dark:text-slate-300 font-medium">+{activePais?.codigo_telefonico} {preRegistro.telefono}</span></div>
                                         <div><span className="text-slate-500">{__('Email:')}</span> <span className="text-slate-700 dark:text-slate-300 font-medium">{profileData.correo || '-'}</span></div>
                                         <div><span className="text-slate-500">{__('Reason for registration:')}</span> <span className="text-slate-700 dark:text-slate-300 font-medium">{preRegistro.motivo_registro}</span></div>

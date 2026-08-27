@@ -110,6 +110,7 @@ export default function Wizard({ preRegistro, paises, tipoServicios }: PreRegist
     // Step 1: Profile & Dates
     const [profileData, setProfileData] = useState({
         documento_identidad: '',
+        curp: '',
         nombre_comercial: '',
         tipo_servicio_id: '',
         fecha_ingreso: '',
@@ -431,6 +432,25 @@ export default function Wizard({ preRegistro, paises, tipoServicios }: PreRegist
                                             className={cn("bg-white dark:bg-slate-950 border-slate-200 dark:border-slate-800", errors.documento_identidad && "border-rose-500")}
                                         />
                                         {errors.documento_identidad && <p className="text-xs text-rose-500 mt-1">{errors.documento_identidad}</p>}
+                                    </div>
+                                )}
+                                {!isEntregaMode && (
+                                    <div className="space-y-1.5">
+                                        <Label htmlFor="curp_visita">{__('CURP')}</Label>
+                                        <Input
+                                            id="curp_visita"
+                                            value={profileData.curp}
+                                            onChange={(e) => setProfileData(p => ({ ...p, curp: e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 18) }))}
+                                            placeholder="GOMC800101HDFXXX09"
+                                            maxLength={18}
+                                            className="bg-white dark:bg-slate-950 border-slate-200 dark:border-slate-800 font-mono uppercase"
+                                        />
+                                        {profileData.curp.length > 0 && profileData.curp.length !== 18 && (
+                                            <p className="text-xs text-amber-600 mt-1">{__('The CURP should have 18 characters.')}</p>
+                                        )}
+                                        <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
+                                            {__('Your CURP and ID will be electronically validated (JAAK / RENAPO / INE) for access control purposes.')}
+                                        </p>
                                     </div>
                                 )}
                                 <div className="space-y-1.5 md:col-span-2">

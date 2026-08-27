@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Traits\HasKycValidaciones;
 use App\Traits\HasSpanishActivityLog;
 use App\Traits\Multitenantable;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -12,7 +13,7 @@ use Spatie\Activitylog\Traits\LogsActivity;
 
 class VisitaTemporal extends Model
 {
-    use HasFactory, HasSpanishActivityLog, LogsActivity, Multitenantable;
+    use HasFactory, HasKycValidaciones, HasSpanishActivityLog, LogsActivity, Multitenantable;
 
     protected $table = 'visitas_temporales';
 
@@ -44,6 +45,7 @@ class VisitaTemporal extends Model
         'apellidos',
         'nombre_comercial',
         'documento_identidad',
+        'curp',
         'pais_telefono_id',
         'telefono',
         'empleado_id',
@@ -59,11 +61,14 @@ class VisitaTemporal extends Model
         'empresa_id',
         'sucursal_id',
         'status',
+        'kyc_estatus',
+        'kyc_validado_en',
     ];
 
     protected $casts = [
         'fecha_ingreso' => 'date:Y-m-d',
         'fecha_salida' => 'date:Y-m-d',
+        'kyc_validado_en' => 'datetime',
     ];
 
     public function paisTelefono(): BelongsTo

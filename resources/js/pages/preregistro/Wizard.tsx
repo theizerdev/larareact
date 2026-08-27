@@ -63,6 +63,7 @@ interface EmpleadoForm {
     nombres: string;
     apellidos: string;
     documento_identidad: string;
+    curp: string;
     genero: string;
     fecha_nacimiento: string;
     correo: string;
@@ -115,6 +116,7 @@ export default function Wizard({ preRegistro, paises, mapbox_api_key, mapbox_act
         nombres: '',
         apellidos: '',
         documento_identidad: '',
+        curp: '',
         genero: '',
         fecha_nacimiento: '',
         correo: '',
@@ -342,6 +344,7 @@ export default function Wizard({ preRegistro, paises, mapbox_api_key, mapbox_act
             nombres: '',
             apellidos: '',
             documento_identidad: '',
+            curp: '',
             genero: '',
             fecha_nacimiento: '',
             correo: '',
@@ -712,10 +715,14 @@ export default function Wizard({ preRegistro, paises, mapbox_api_key, mapbox_act
                                 {showEmployeeForm && (
                                     <div className="p-5 border bg-slate-50/50 rounded-2xl space-y-4">
                                         <h3 className="font-semibold text-sm">{__('New Collaborator')}</h3>
+                                        <p className="text-xs text-slate-500 dark:text-slate-400">
+                                            {__('Your CURP and ID will be electronically validated (JAAK / RENAPO / INE) for access control purposes.')}
+                                        </p>
                                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                                             <Input placeholder={__('First Names *')} value={newEmployee.nombres} onChange={(e) => setNewEmployee(prev => ({ ...prev, nombres: e.target.value }))} />
                                             <Input placeholder={__('Last Names *')} value={newEmployee.apellidos} onChange={(e) => setNewEmployee(prev => ({ ...prev, apellidos: e.target.value }))} />
                                             <Input placeholder={__('ID Document *')} value={newEmployee.documento_identidad} onChange={(e) => setNewEmployee(prev => ({ ...prev, documento_identidad: e.target.value }))} />
+                                            <Input placeholder={__('CURP (18 characters)')} maxLength={18} className="font-mono uppercase" value={newEmployee.curp} onChange={(e) => setNewEmployee(prev => ({ ...prev, curp: e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 18) }))} />
                                             <Input placeholder={__('Role / Position')} value={newEmployee.cargo} onChange={(e) => setNewEmployee(prev => ({ ...prev, cargo: e.target.value }))} />
                                             
                                             <div className="space-y-2 sm:col-span-2 border-t pt-4 mt-2">
@@ -1035,7 +1042,7 @@ export default function Wizard({ preRegistro, paises, mapbox_api_key, mapbox_act
                                                 <div key={i} className="flex justify-between items-center py-2 text-xs">
                                                     <div>
                                                         <p className="font-semibold text-slate-800 dark:text-slate-200">{emp.nombres} {emp.apellidos}</p>
-                                                        <span className="text-slate-400 font-mono">DNI: {emp.documento_identidad}</span>
+                                                        <span className="text-slate-400 font-mono">DNI: {emp.documento_identidad}{emp.curp ? ` • CURP: ${emp.curp}` : ''}</span>
                                                     </div>
                                                     <span className="text-[#104a29] font-medium bg-slate-100 dark:bg-slate-800 px-2 py-0.5 rounded-full text-[10px]">
                                                         {emp.cargo || __('Colaborador')}

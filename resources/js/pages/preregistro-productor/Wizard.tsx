@@ -61,6 +61,7 @@ interface EmpleadoForm {
     nombres: string;
     apellidos: string;
     documento_identidad: string;
+    curp: string;
     genero: string;
     fecha_nacimiento: string;
     correo: string;
@@ -216,6 +217,7 @@ export default function Wizard({ preRegistro, paises, mapbox_api_key, mapbox_act
             nombres: '',
             apellidos: '',
             documento_identidad: '',
+            curp: '',
             genero: '',
             fecha_nacimiento: '',
             correo: '',
@@ -249,6 +251,7 @@ export default function Wizard({ preRegistro, paises, mapbox_api_key, mapbox_act
                 nombres: '',
                 apellidos: '',
                 documento_identidad: '',
+                curp: '',
                 genero: '',
                 fecha_nacimiento: '',
                 correo: '',
@@ -711,7 +714,7 @@ export default function Wizard({ preRegistro, paises, mapbox_api_key, mapbox_act
                                                 </div>
                                                 <div>
                                                     <Label>{__('Documento de Identidad / RFC')} *</Label>
-                                                    <Input 
+                                                    <Input
                                                         className="mt-1.5 w-full"
                                                         value={emp.documento_identidad}
                                                         onChange={(e) => {
@@ -721,6 +724,23 @@ export default function Wizard({ preRegistro, paises, mapbox_api_key, mapbox_act
                                                         }}
                                                     />
                                                     {errors[`emp_${index}_doc`] && <p className="text-xs text-red-500 mt-1">{errors[`emp_${index}_doc`]}</p>}
+                                                </div>
+                                                <div>
+                                                    <Label>{__('CURP')}</Label>
+                                                    <Input
+                                                        className="mt-1.5 w-full font-mono uppercase"
+                                                        maxLength={18}
+                                                        placeholder="GOMC800101HDFXXX09"
+                                                        value={emp.curp}
+                                                        onChange={(e) => {
+                                                            const newEmps = [...empleados];
+                                                            newEmps[index].curp = e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 18);
+                                                            setEmpleados(newEmps);
+                                                        }}
+                                                    />
+                                                    <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
+                                                        {__('Your CURP and ID will be electronically validated (JAAK / RENAPO / INE) for access control purposes.')}
+                                                    </p>
                                                 </div>
                                                 <div>
                                                     <Label>{__('Cargo / Puesto')}</Label>

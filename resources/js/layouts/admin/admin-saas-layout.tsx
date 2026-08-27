@@ -595,6 +595,11 @@ export default function AdminSaasLayout({
                                     href: '/admin/integrations/validaciones',
                                     permission: 'jaak.view',
                                 },
+                                {
+                                    title: 'Identity Validation (KYC)',
+                                    href: '/admin/integrations/kyc',
+                                    permission: 'kyc.view',
+                                },
                             ].filter(item => hasPermission(item.permission));
 
                             if (integrationsItems.length === 0) return null;
