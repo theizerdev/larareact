@@ -1,12 +1,11 @@
 import { Head, useForm, router } from '@inertiajs/react';
-import { Wrench, Plus, CheckCircle, XCircle, MoreVertical, Pencil, Trash2, Layers, Smartphone } from 'lucide-react';
+import { Wrench, Plus, MoreVertical, Pencil, Trash2, Layers, Smartphone } from 'lucide-react';
 import React, { useState } from 'react';
 import { Breadcrumbs } from '@/components/breadcrumbs';
 import type { ColumnDef } from '@/components/data-table';
 import { DataTable } from '@/components/data-table';
 import { FilterBar, FilterField } from '@/components/filter-bar';
 import { ModuleHeader } from '@/components/module-header';
-import { StatCard } from '@/components/stat-card';
 import { Button } from '@/components/ui/button';
 import {
     Dialog,
@@ -292,10 +291,6 @@ export default function Index({ servicios, categorias = [], marcas = [], currenc
         },
     ];
 
-    const totalCount = servicios.total || 0;
-    const activeCount = servicios.data.filter((s) => s.estado).length;
-    const inactiveCount = servicios.data.filter((s) => !s.estado).length;
-
     return (
         <>
             <Head title={__('Catálogo de Servicios POS')} />
@@ -314,28 +309,6 @@ export default function Index({ servicios, categorias = [], marcas = [], currenc
                         {__('Nuevo Servicio')}
                     </Button>
                 </ModuleHeader>
-
-                {/* Stat Cards */}
-                <div className="grid grid-cols-1 gap-6 md:grid-cols-3">
-                    <StatCard
-                        icon={<Wrench className="h-6 w-6" />}
-                        title={__('TOTAL SERVICIOS')}
-                        value={totalCount}
-                        colorClassName="bg-amber-100 text-amber-600"
-                    />
-                    <StatCard
-                        icon={<CheckCircle className="h-6 w-6" />}
-                        title={__('SERVICIOS ACTIVOS')}
-                        value={activeCount}
-                        colorClassName="bg-emerald-100 text-emerald-600"
-                    />
-                    <StatCard
-                        icon={<XCircle className="h-6 w-6" />}
-                        title={__('INACTIVOS')}
-                        value={inactiveCount}
-                        colorClassName="bg-red-100 text-red-600"
-                    />
-                </div>
 
                 {/* Filtros */}
                 <FilterBar>
