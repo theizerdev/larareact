@@ -88,6 +88,16 @@ Route::post('/preregistro-visita/{token}/tipo-servicio', [VisitaTemporalPreRegis
   Route::get('admin/reparaciones/{reparacion}/reporte-pdf', [ReparacionController::class, 'reportePdf'])
         ->name('reparaciones.reporte-pdf');
 
+// Portal público de consulta y tracking de reparaciones
+use App\Http\Controllers\PublicReparacionTrackingController;
+
+Route::get('/reparacion/consultar/{numero_orden?}', [PublicReparacionTrackingController::class, 'show'])
+    ->name('reparacion.consultar');
+Route::get('/reparaciones/consultar/{numero_orden?}', [PublicReparacionTrackingController::class, 'show'])
+    ->name('reparaciones.consultar');
+Route::post('/reparacion/consultar/{numero_orden}/presupuesto', [PublicReparacionTrackingController::class, 'responderPresupuesto'])
+    ->name('reparacion.consultar.presupuesto');
+
 if (file_exists(__DIR__.'/larareact-settings.php')) {
     require __DIR__.'/larareact-settings.php';
 }

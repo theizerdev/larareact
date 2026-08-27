@@ -1722,8 +1722,9 @@ export default function ShowReparacion({ orden, empresa: propEmpresa, productosR
         const cleanPhone = phone.replace(/[^0-9]/g, '');
         const clientName = orden.cliente?.nombre || orden.cliente_nombre;
         const deviceName = `${orden.marca?.nombre || orden.marca_nombre} ${orden.modelo?.nombre_comercial || orden.modelo_nombre}`;
+        const trackingUrl = `${window.location.origin}/reparacion/consultar/${orden.numero_orden}`;
         const msg = encodeURIComponent(
-            `Hola *${clientName}*, le saludamos de Servicio Tecnico.\nInformacion sobre su orden *${orden.numero_orden}* (${deviceName}):\n\n*Estado actual:* *${orden.estado_orden.toUpperCase().replace('_', ' ')}*\n*Presupuesto Total:* *${currencySymbol}${formatNum(orden.costo_estimado)}*\n*Saldo Pendiente:* *${currencySymbol}${formatNum(orden.saldo_restante)}*\n\nSi requiere asistencia adicional, no dude en responder a este mensaje.`
+            `Hola *${clientName}*, le saludamos de Servicio Tecnico.\nInformacion sobre su orden *${orden.numero_orden}* (${deviceName}):\n\n*Estado actual:* *${orden.estado_orden.toUpperCase().replace('_', ' ')}*\n*Presupuesto Total:* *${currencySymbol}${formatNum(orden.costo_estimado)}*\n*Saldo Pendiente:* *${currencySymbol}${formatNum(orden.saldo_restante)}*\n\nConsulte el estado en vivo o apruebe su presupuesto aqui:\n${trackingUrl}`
         );
         window.open(`https://wa.me/${cleanPhone}?text=${msg}`, '_blank');
     };
