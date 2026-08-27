@@ -34,6 +34,9 @@ class ProcesarKycValidacion implements ShouldQueue
 
     private float $inicio = 0.0;
 
+    /** Respuesta cruda del paso 5 (OCR), para consultarla en la evaluación. */
+    private ?array $ultimoOcr = null;
+
     public function __construct(public KycValidacion $validacion)
     {
     }
@@ -128,13 +131,14 @@ class ProcesarKycValidacion implements ShouldQueue
             $datosOcr = [];
             if (! $this->sinPresupuesto()) {
                 $ocr = $jaak->extraerOcr($accessToken, $frontB64, $backB64);
-                $val->resultado_ocr = $this->depurar($ocr);
+                $this->ultimoOcr = $this->depurar($ocr);
+                $val->resultado_ocr = $this->ultimoOcr;
                 $datosOcr = $this->extraerDatosOcr($ocr);
             }
 
             // Paso 6 - listas oficiales y negras (una llamada por servicio)
             if (! $this->sinPresupuesto()) {
-                $val->resultado_listas = $this->consultarListas($jaak, $accessToken, $val->curp_capturada, $datosOcr);
+                $val->resultado_listas = $this->consultarListas($jaak, $accessToken, $val->curp_capturada, $datosOcr, $persona);
             }
 
             // Paso 8 - comparación facial (rostro de la INE vs. selfie)
@@ -173,15 +177,24 @@ class ProcesarKycValidacion implements ShouldQueue
     // Listas (paso 6)
     // ------------------------------------------------------------------
 
-    private function consultarListas(JaakService $jaak, string $token, ?string $curpCapturada, array $ocr): array
+    private function consultarListas(JaakService $jaak, string $token, ?string $curpCapturada, array $ocr, $persona = null): array
     {
         $curp = strtoupper(trim((string) ($curpCapturada ?: ($ocr['curp'] ?? ''))));
         $rfc = strtoupper(trim((string) ($ocr['rfc'] ?? '')));
 
+        // Nombre: preferimos el del OCR; si no, partimos los campos del registro.
+        [$nombre, $segundoNombre] = $this->partirNombre($ocr['nombres'] ?? ($persona->nombres ?? ''));
+        $primerApellido = $ocr['primer_apellido'] ?? null;
+        $segundoApellido = $ocr['segundo_apellido'] ?? null;
+        if (! $primerApellido && $persona) {
+            [$primerApellido, $segundoApellido] = $this->partirNombre($persona->apellidos ?? '');
+        }
+
         $person = array_filter([
-            'firstName' => $ocr['nombres'] ?? null,
-            'lastName' => $ocr['primer_apellido'] ?? null,
-            'secondLastName' => $ocr['segundo_apellido'] ?? null,
+            'name' => $nombre ?: null,
+            'secondName' => $segundoNombre ?: null,
+            'lastName' => $primerApellido ?: null,
+            'secondLastName' => $segundoApellido ?: null,
             'birthDate' => $ocr['fecha_nacimiento'] ?? null,
             'nationality' => 'MEX',
         ]);
@@ -189,12 +202,12 @@ class ProcesarKycValidacion implements ShouldQueue
         $ineData = array_filter([
             'cic' => $ocr['cic'] ?? null,
             'ocr' => $ocr['ocr_number'] ?? null,
-            'claveElector' => $ocr['clave_elector'] ?? null,
         ]);
 
         $identifications = array_filter([
             'curp' => $curp ?: null,
             'rfc' => $rfc ?: null,
+            'electorKey' => $ocr['clave_elector'] ?? null,
             'ine' => $ineData ?: null,
         ]);
 
@@ -203,7 +216,21 @@ class ProcesarKycValidacion implements ShouldQueue
             'identifications' => $identifications ?: null,
         ]);
 
-        // servicio => toggle a activar en esa llamada
+        if (empty($payload)) {
+            return ['_error' => 'sin datos para consultar listas'];
+        }
+
+        // JAAK exige el objeto services COMPLETO en cada llamada; sólo activamos
+        // el servicio de esa iteración (evita el error BL03 "invalid format").
+        $servicesBase = [
+            'ine' => false,
+            'interpol' => false,
+            'ofac' => false,
+            'renapo' => ['curp' => false],
+            'sat' => ['sat69b' => false],
+            'cdc' => ['rccFico' => false],
+        ];
+
         $plan = [];
         if ($curp !== '') {
             $plan['renapo'] = ['renapo' => ['curp' => true]];
@@ -211,23 +238,38 @@ class ProcesarKycValidacion implements ShouldQueue
         if (! empty($ineData)) {
             $plan['ine'] = ['ine' => true];
         }
-        $plan['ofac'] = ['ofac' => true];
-        $plan['interpol'] = ['interpol' => true];
+        if (! empty($person)) {
+            $plan['ofac'] = ['ofac' => true];
+            $plan['interpol'] = ['interpol' => true];
+        }
         if ($rfc !== '') {
             $plan['sat69b'] = ['sat' => ['sat69b' => true]];
         }
 
         $resultados = [];
-        foreach ($plan as $nombre => $services) {
-            if (empty($payload)) {
-                $resultados[$nombre] = ['ok' => false, 'error' => 'sin datos para consultar'];
-
-                continue;
-            }
-            $resultados[$nombre] = $this->depurar($jaak->investigarListas($token, $services, $payload));
+        foreach ($plan as $etiqueta => $override) {
+            $services = array_replace_recursive($servicesBase, $override);
+            $resultados[$etiqueta] = $this->depurar($jaak->investigarListas($token, $services, $payload));
         }
 
         return $resultados;
+    }
+
+    /**
+     * Parte "Juan Carlos" -> ["Juan", "Carlos"]; "Perez" -> ["Perez", null].
+     *
+     * @return array{0: ?string, 1: ?string}
+     */
+    private function partirNombre(?string $completo): array
+    {
+        $completo = trim((string) $completo);
+        if ($completo === '') {
+            return [null, null];
+        }
+        $partes = preg_split('/\s+/', $completo);
+        $primero = array_shift($partes);
+
+        return [$primero, $partes ? implode(' ', $partes) : null];
     }
 
     // ------------------------------------------------------------------
@@ -260,15 +302,41 @@ class ProcesarKycValidacion implements ShouldQueue
         }
 
         // --- INE / documento ---
+        // 'evaluation' es el veredicto global de JAAK y manda sobre 'documentValidity'
+        // (que sólo dice que el formato del documento es correcto).
         $ineValida = null;
         if ($doc['ok'] ?? false) {
-            $docValidity = data_get($doc, 'data.state.documentValidity');
             $evaluation = strtoupper((string) data_get($doc, 'data.evaluation', ''));
-            if ($docValidity === true || in_array($evaluation, ['APPROVED', 'OK', 'VALID', 'PASS', 'PASSED'], true)) {
+            $docValidity = data_get($doc, 'data.state.documentValidity');
+            $docState = (array) data_get($doc, 'data.state', []);
+
+            if (in_array($evaluation, ['APPROVED', 'OK', 'VALID', 'PASS', 'PASSED'], true)) {
                 $ineValida = true;
-            } elseif ($docValidity === false || in_array($evaluation, ['REJECTED', 'FAIL', 'FAILED', 'INVALID'], true)) {
+            } elseif (in_array($evaluation, ['REJECTED', 'FAIL', 'FAILED', 'INVALID', 'DENIED'], true)) {
+                $ineValida = false;
+            } elseif ($docValidity === true) {
+                $ineValida = true;
+            } elseif ($docValidity === false) {
                 $ineValida = false;
             }
+
+            if ($ineValida !== true) {
+                $motivo = trim((string) data_get($doc, 'data.state.message', ''));
+                if ($motivo !== '') {
+                    $observaciones[] = 'Documento (INE): '.$motivo;
+                }
+                if (($docState['securityFeatures'] ?? null) === false) {
+                    $observaciones[] = 'Documento (INE): sin características de seguridad válidas.';
+                }
+                if (($docState['photoForgery'] ?? null) === true) {
+                    $observaciones[] = 'Documento (INE): posible alteración de la fotografía.';
+                }
+            }
+        }
+        // OCR ilegible: no invalida el documento por sí solo, pero baja a revisión.
+        $ocrRechazado = strtoupper((string) data_get($this->ultimoOcr, 'data.status', '')) === 'REJECTED';
+        if ($ocrRechazado) {
+            $observaciones[] = 'No se pudieron leer los datos del documento (imagen borrosa o incompleta).';
         }
         if ($ineValida === false) {
             $observaciones[] = 'La verificación del documento de identidad (INE) no fue aprobada por JAAK.';
@@ -276,16 +344,26 @@ class ProcesarKycValidacion implements ShouldQueue
             $observaciones[] = 'No se pudo determinar la validez del documento de identidad.';
         }
 
-        // --- Rostro (One To One) ---
+        // --- Rostro (One To One). JAAK devuelve score en escala 0..100 ---
         $rostroCoincide = null;
         if ($bio && ($bio['ok'] ?? false)) {
             $isSame = data_get($bio, 'data.state.isSamePerson');
             $score = (float) data_get($bio, 'data.score', 0);
-            $umbral = (float) config('jaak.face_match_threshold', 0.80);
+            $umbral = (float) config('jaak.face_match_threshold', 60);
+            if ($umbral <= 1) { // por si alguien lo configuró como fracción
+                $umbral *= 100;
+            }
             if ($isSame === true && $score >= $umbral) {
                 $rostroCoincide = true;
             } elseif ($isSame === false || ($score > 0 && $score < $umbral)) {
                 $rostroCoincide = false;
+            } elseif ($isSame === true) {
+                $rostroCoincide = true;
+            }
+
+            $motivoBio = trim((string) data_get($bio, 'data.state.message', ''));
+            if ($rostroCoincide === false && $motivoBio !== '') {
+                $observaciones[] = 'Comparación facial: '.$motivoBio;
             }
         }
         if ($rostroCoincide === false) {
@@ -308,6 +386,10 @@ class ProcesarKycValidacion implements ShouldQueue
             }
         }
         $enListasFinal = $determinado ? $enListas : null;
+        $listasConError = ! empty($listas) && ! $determinado && $enListasFinal === null;
+        if ($listasConError) {
+            $observaciones[] = 'No se pudo consultar RENAPO / listas de control (revisar manualmente).';
+        }
 
         // --- Estatus + score ---
         $flags = [
@@ -321,16 +403,25 @@ class ProcesarKycValidacion implements ShouldQueue
             ? round(100 * count(array_filter($presentes)) / count($presentes), 2)
             : null;
 
+        // Rechazo: cualquier verificación dio negativo de forma concluyente.
         if ($enListasFinal === true || $ineValida === false || $rostroCoincide === false || $curpValida === false) {
             $estatus = KycValidacion::ESTATUS_RECHAZADO;
-        } elseif ($curpValida === true && $ineValida === true && $rostroCoincide === true && $enListasFinal === false) {
+        // Aprobado: documento e identidad biométrica confirmados y nada falló.
+        } elseif ($ineValida === true && $rostroCoincide === true && $curpValida !== false && $enListasFinal !== true) {
             $estatus = KycValidacion::ESTATUS_APROBADO;
         } else {
             $estatus = KycValidacion::ESTATUS_REVISION;
         }
 
         if ($estatus === KycValidacion::ESTATUS_APROBADO) {
-            $observaciones = ['Todas las validaciones pasaron correctamente.'];
+            $extra = [];
+            if ($curpValida !== true) {
+                $extra[] = 'CURP no verificada contra RENAPO.';
+            }
+            if ($enListasFinal !== false) {
+                $extra[] = 'No se pudieron consultar listas de control.';
+            }
+            $observaciones = array_merge(['Documento e identidad biométrica verificados.'], $extra);
         }
 
         return [

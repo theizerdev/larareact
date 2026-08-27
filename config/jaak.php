@@ -19,8 +19,9 @@ return [
     // false para dejar de disparar validaciones sin tocar la config de cada empresa.
     'kyc_enabled' => env('JAAK_KYC_ENABLED', true),
 
-    // Umbral de similitud facial (paso 8 - One To One). score de JAAK 0..1.
-    'face_match_threshold' => (float) env('JAAK_FACE_MATCH_THRESHOLD', 0.80),
+    // Umbral de similitud facial (paso 8 - One To One). JAAK devuelve el score
+    // en escala 0..100; el prioritario es state.isSamePerson.
+    'face_match_threshold' => (float) env('JAAK_FACE_MATCH_THRESHOLD', 60),
 
     // País por defecto del documento (ISO alpha-3) cuando no se puede derivar.
     'default_country' => env('JAAK_DEFAULT_COUNTRY', 'MEX'),
