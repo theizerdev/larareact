@@ -32,6 +32,7 @@ import {
     RefreshCw,
     Search,
     Pencil,
+    Info,
 } from 'lucide-react';
 import React, { useState, useRef, useEffect } from 'react';
 import { QRCodeSVG } from '@/components/qr-code-svg';
@@ -2058,82 +2059,163 @@ export default function ShowReparacion({ orden, empresa: propEmpresa, productosR
                     <div className={cn("space-y-6", activeTab === 'repuestos' ? "lg:col-span-2" : "lg:col-span-3")}>
                         {/* TAB 1: RESUMEN GENERAL (EN EL MISMO ORDEN QUE RECEPCIÓN/CREATE) */}
                         {activeTab === 'general' && (
-                            <div className="space-y-6 animate-in fade-in duration-300">
-                                {/* 1. DATOS DEL CLIENTE */}
-                                <Card className="border-slate-200 dark:border-slate-800 shadow-sm">
-                                    <CardHeader className="bg-slate-50 dark:bg-slate-900/50 border-b border-slate-100 dark:border-slate-800 py-3">
-                                        <CardTitle className="text-sm font-bold flex items-center justify-between text-slate-800 dark:text-slate-200 w-full">
-                                            <span className="flex items-center gap-2">
-                                                <User className="w-4 h-4 text-purple-600" />
-                                                {__('1. Datos del Cliente')}
-                                            </span>
-                                            <Button variant="ghost" size="sm" onClick={handleOpenEditDatosModal} className="h-7 text-xs text-purple-600 font-bold hover:bg-purple-50 dark:hover:bg-purple-950/50">
-                                                <Pencil className="w-3.5 h-3.5 mr-1" />
-                                                {__('Editar Datos')}
-                                            </Button>
-                                        </CardTitle>
-                                    </CardHeader>
-                                    <CardContent className="p-5 text-xs">
-                                        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                            <div className="space-y-4 animate-in fade-in duration-300">
+                                {/* FILA 1: 4 TARJETAS COMPACTAS (DASHBOARD GRID) */}
+                                <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
+                                    {/* 1. DATOS DEL CLIENTE */}
+                                    <Card className="border-slate-200 dark:border-slate-800 shadow-sm flex flex-col justify-between">
+                                        <CardHeader className="bg-slate-50 dark:bg-slate-900/50 border-b border-slate-100 dark:border-slate-800 py-2.5 px-4">
+                                            <CardTitle className="text-xs font-bold flex items-center justify-between text-slate-800 dark:text-slate-200 w-full">
+                                                <span className="flex items-center gap-1.5">
+                                                    <User className="w-3.5 h-3.5 text-purple-600" />
+                                                    {__('1. Datos del Cliente')}
+                                                </span>
+                                                <Button variant="ghost" size="sm" onClick={handleOpenEditDatosModal} className="h-6 px-2 text-[11px] text-purple-600 font-bold hover:bg-purple-50 dark:hover:bg-purple-950/50">
+                                                    <Pencil className="w-3 h-3 mr-1" />
+                                                    {__('Editar')}
+                                                </Button>
+                                            </CardTitle>
+                                        </CardHeader>
+                                        <CardContent className="p-4 text-xs space-y-2.5 flex-1">
                                             <div>
-                                                <span className="text-slate-400 block text-[11px] font-medium">{__('Nombre del Cliente')}</span>
-                                                <span className="font-extrabold text-slate-900 dark:text-slate-100 text-sm">{clienteNombreDisplay}</span>
+                                                <span className="text-slate-400 block text-[10px] uppercase font-semibold">{__('Nombre')}</span>
+                                                <span className="font-extrabold text-slate-900 dark:text-slate-100 text-sm block leading-tight">{clienteNombreDisplay}</span>
                                             </div>
                                             <div>
-                                                <span className="text-slate-400 block text-[11px] font-medium">{__('Teléfono de Contacto')}</span>
-                                                <span className="font-mono font-bold text-purple-700 dark:text-purple-300 text-sm flex items-center gap-1.5">
-                                                    <Phone className="w-3.5 h-3.5" /> {clienteTelefonoDisplay}
+                                                <span className="text-slate-400 block text-[10px] uppercase font-semibold">{__('Teléfono')}</span>
+                                                <a
+                                                    href={`tel:${clienteTelefonoDisplay}`}
+                                                    className="font-mono font-bold text-purple-700 dark:text-purple-300 text-xs flex items-center gap-1.5 hover:underline"
+                                                >
+                                                    <Phone className="w-3 h-3 text-purple-600" /> {clienteTelefonoDisplay}
+                                                </a>
+                                            </div>
+                                            <div>
+                                                <span className="text-slate-400 block text-[10px] uppercase font-semibold">{__('Correo')}</span>
+                                                <span className="font-medium text-slate-700 dark:text-slate-300 text-xs truncate block">
+                                                    {orden.cliente?.email || __('No registrado')}
+                                                </span>
+                                            </div>
+                                        </CardContent>
+                                    </Card>
+
+                                    {/* 2. DATOS DEL DISPOSITIVO */}
+                                    <Card className="border-slate-200 dark:border-slate-800 shadow-sm flex flex-col justify-between">
+                                        <CardHeader className="bg-slate-50 dark:bg-slate-900/50 border-b border-slate-100 dark:border-slate-800 py-2.5 px-4">
+                                            <CardTitle className="text-xs font-bold flex items-center justify-between text-slate-800 dark:text-slate-200 w-full">
+                                                <span className="flex items-center gap-1.5">
+                                                    <Smartphone className="w-3.5 h-3.5 text-purple-600" />
+                                                    {__('2. Dispositivo')}
+                                                </span>
+                                                <Badge variant="outline" className="font-mono text-[10px] py-0 px-1.5 bg-purple-50 dark:bg-purple-950 text-purple-700 border-purple-200">
+                                                    {orden.tipo_dispositivo || __('Smartphone')}
+                                                </Badge>
+                                            </CardTitle>
+                                        </CardHeader>
+                                        <CardContent className="p-4 text-xs space-y-2.5 flex-1">
+                                            <div>
+                                                <span className="text-slate-400 block text-[10px] uppercase font-semibold">{__('Marca y Modelo')}</span>
+                                                <span className="font-extrabold text-slate-900 dark:text-slate-100 text-sm block leading-tight">
+                                                    {marcaNombreDisplay} {modeloNombreDisplay}
                                                 </span>
                                             </div>
                                             <div>
-                                                <span className="text-slate-400 block text-[11px] font-medium">{__('Correo Electrónico')}</span>
-                                                <span className="font-medium text-slate-800 dark:text-slate-200">{orden.cliente?.email || __('No registrado')}</span>
+                                                <span className="text-slate-400 block text-[10px] uppercase font-semibold">{__('IMEI / Serie')}</span>
+                                                <span className="font-mono font-bold text-purple-700 dark:text-purple-400 text-xs">
+                                                    {orden.imei_serie || 'N/A'}
+                                                </span>
                                             </div>
-                                        </div>
-                                    </CardContent>
-                                </Card>
+                                            <div>
+                                                <span className="text-slate-400 block text-[10px] uppercase font-semibold">{__('Color / Estética')}</span>
+                                                <span className="font-semibold text-slate-800 dark:text-slate-200 text-xs">
+                                                    {orden.color || __('No especificado')}
+                                                </span>
+                                            </div>
+                                        </CardContent>
+                                    </Card>
 
-                                {/* 2. TIPO DE DISPOSITIVO, MARCA, MODELO E IMEI */}
-                                <Card className="border-slate-200 dark:border-slate-800 shadow-sm">
-                                    <CardHeader className="bg-slate-50 dark:bg-slate-900/50 border-b border-slate-100 dark:border-slate-800 py-3">
-                                        <CardTitle className="text-sm font-bold flex items-center justify-between text-slate-800 dark:text-slate-200 w-full">
-                                            <span className="flex items-center gap-2">
-                                                <Smartphone className="w-4 h-4 text-purple-600" />
-                                                {__('2. Tipo y Datos del Dispositivo')}
-                                            </span>
-                                            <div className="flex items-center gap-2">
-                                                <Badge variant="outline" className="font-mono text-[11px] bg-purple-50 dark:bg-purple-950 text-purple-700 border-purple-200">{orden.tipo_dispositivo || __('Smartphone')}</Badge>
-                                                <Button variant="ghost" size="sm" onClick={handleOpenEditDatosModal} className="h-7 text-xs text-purple-600 font-bold hover:bg-purple-50 dark:hover:bg-purple-950/50">
-                                                    <Pencil className="w-3.5 h-3.5 mr-1" />
-                                                    {__('Editar Datos')}
-                                                </Button>
+                                    {/* 3. RESUMEN ECONÓMICO */}
+                                    <Card className="border-slate-200 dark:border-slate-800 shadow-sm flex flex-col justify-between">
+                                        <CardHeader className="bg-slate-50 dark:bg-slate-900/50 border-b border-slate-100 dark:border-slate-800 py-2.5 px-4">
+                                            <CardTitle className="text-xs font-bold flex items-center justify-between text-slate-800 dark:text-slate-200 w-full">
+                                                <span className="flex items-center gap-1.5">
+                                                    <DollarSign className="w-3.5 h-3.5 text-emerald-600" />
+                                                    {__('3. Presupuesto')}
+                                                </span>
+                                                <Badge className="bg-emerald-600 text-white font-mono text-[10px] py-0 px-1.5">
+                                                    {orden.garantia_dias} {__('días gtía')}
+                                                </Badge>
+                                            </CardTitle>
+                                        </CardHeader>
+                                        <CardContent className="p-4 text-xs space-y-2 flex-1">
+                                            <div className="flex justify-between items-center">
+                                                <span className="text-slate-500 text-[11px] font-medium">{__('Total Estimado')}:</span>
+                                                <span className="font-mono font-extrabold text-slate-900 dark:text-slate-100 text-sm">
+                                                    {currencySymbol}{formatNum(totalPresupuestoActual)}
+                                                </span>
                                             </div>
-                                        </CardTitle>
-                                    </CardHeader>
-                                    <CardContent className="p-5 space-y-5 text-xs">
-                                        <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-                                            <div>
-                                                <span className="text-slate-400 block text-[11px] font-medium">{__('Marca')}</span>
-                                                <span className="font-bold text-slate-900 dark:text-slate-100 text-sm">{marcaNombreDisplay}</span>
+                                            <div className="flex justify-between items-center">
+                                                <span className="text-slate-500 text-[11px] font-medium">{__('Anticipo')}:</span>
+                                                <span className="font-mono font-bold text-slate-700 dark:text-slate-300 text-xs">
+                                                    {currencySymbol}{formatNum(anticipoActual)}
+                                                </span>
                                             </div>
-                                            <div>
-                                                <span className="text-slate-400 block text-[11px] font-medium">{__('Modelo')}</span>
-                                                <span className="font-bold text-slate-900 dark:text-slate-100 text-sm">{modeloNombreDisplay || 'N/A'}</span>
+                                            <div className="flex justify-between items-center pt-1.5 border-t border-slate-100 dark:border-slate-800">
+                                                <span className="text-slate-900 dark:text-slate-100 text-[11px] font-bold">{__('Saldo Restante')}:</span>
+                                                <span className="font-mono font-black text-emerald-600 text-sm">
+                                                    {currencySymbol}{formatNum(saldoRestanteActual)}
+                                                </span>
                                             </div>
-                                            <div>
-                                                <span className="text-slate-400 block text-[11px] font-medium">{__('Color / Estética')}</span>
-                                                <span className="font-semibold text-slate-800 dark:text-slate-200">{orden.color || __('No especificado')}</span>
-                                            </div>
-                                            <div>
-                                                <span className="text-slate-400 block text-[11px] font-medium">{__('IMEI / Serie')}</span>
-                                                <span className="font-mono font-bold text-purple-700 dark:text-purple-400">{orden.imei_serie || 'N/A'}</span>
-                                            </div>
-                                        </div>
+                                        </CardContent>
+                                    </Card>
 
-                                        {/* HERO FALLA REPORTADA */}
-                                        <div className="p-4 bg-purple-50/70 dark:bg-purple-950/40 rounded-xl border border-purple-200 dark:border-purple-900 space-y-1.5">
+                                    {/* 4. TALLER, FECHAS Y SEGURIDAD */}
+                                    <Card className="border-slate-200 dark:border-slate-800 shadow-sm flex flex-col justify-between">
+                                        <CardHeader className="bg-slate-50 dark:bg-slate-900/50 border-b border-slate-100 dark:border-slate-800 py-2.5 px-4">
+                                            <CardTitle className="text-xs font-bold flex items-center justify-between text-slate-800 dark:text-slate-200 w-full">
+                                                <span className="flex items-center gap-1.5">
+                                                    <Wrench className="w-3.5 h-3.5 text-purple-600" />
+                                                    {__('4. Taller & Fechas')}
+                                                </span>
+                                                <Badge variant="outline" className="font-mono text-[10px] py-0 px-1.5">
+                                                    {orden.estado_orden.toUpperCase().replace('_', ' ')}
+                                                </Badge>
+                                            </CardTitle>
+                                        </CardHeader>
+                                        <CardContent className="p-4 text-xs space-y-2 flex-1">
+                                            <div>
+                                                <span className="text-slate-400 block text-[10px] uppercase font-semibold">{__('Técnico')}</span>
+                                                <span className="font-bold text-purple-700 dark:text-purple-300 text-xs block truncate">
+                                                    {orden.tecnico?.name || __('Sin Asignar')}
+                                                </span>
+                                            </div>
+                                            <div className="grid grid-cols-2 gap-1 text-[11px]">
+                                                <div>
+                                                    <span className="text-slate-400 block text-[9px] uppercase font-semibold">{__('Recepción')}</span>
+                                                    <span className="font-medium text-slate-700 dark:text-slate-300">{formatDate(orden.fecha_recepcion)}</span>
+                                                </div>
+                                                <div>
+                                                    <span className="text-slate-400 block text-[9px] uppercase font-semibold">{__('Entrega')}</span>
+                                                    <span className="font-medium text-slate-700 dark:text-slate-300">{formatDate(orden.fecha_prometida || orden.fecha_estimada_entrega)}</span>
+                                                </div>
+                                            </div>
+                                            <div className="pt-1 border-t border-slate-100 dark:border-slate-800 flex items-center justify-between">
+                                                <span className="text-slate-400 text-[10px] font-semibold">{__('Seguridad')}:</span>
+                                                <span className="font-mono font-bold text-xs text-slate-800 dark:text-slate-200">
+                                                    {orden.contrasena_patron || __('Sin contraseña')}
+                                                </span>
+                                            </div>
+                                        </CardContent>
+                                    </Card>
+                                </div>
+
+                                {/* FILA 2: FALLA REPORTADA Y SERVICIOS REQUERIDOS */}
+                                <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                                    {/* FALLA REPORTADA Y OBSERVACIONES FÍSICAS */}
+                                    <div className="space-y-3">
+                                        <div className="p-4 bg-purple-50/80 dark:bg-purple-950/40 rounded-xl border border-purple-200 dark:border-purple-900 space-y-1.5 shadow-sm">
                                             <span className="font-extrabold text-purple-900 dark:text-purple-200 block text-xs flex items-center gap-1.5">
-                                                <AlertCircle className="w-4 h-4 text-purple-600" />
+                                                <AlertCircle className="w-4 h-4 text-purple-600 shrink-0" />
                                                 {__('Falla Reportada por el Cliente:')}
                                             </span>
                                             <p className="text-slate-800 dark:text-slate-200 text-xs leading-relaxed font-medium">
@@ -2142,194 +2224,114 @@ export default function ShowReparacion({ orden, empresa: propEmpresa, productosR
                                         </div>
 
                                         {orden.observaciones_fisicas && (
-                                            <div className="p-3.5 bg-amber-50/70 dark:bg-amber-950/30 rounded-xl border border-amber-200 dark:border-amber-900/60 text-amber-900 dark:text-amber-300 space-y-1 text-xs">
-                                                <span className="font-bold block text-[11px]">{__('Observaciones Físicas de Recepción:')}</span>
-                                                <p>{orden.observaciones_fisicas}</p>
+                                            <div className="p-3.5 bg-amber-50/80 dark:bg-amber-950/30 rounded-xl border border-amber-200 dark:border-amber-900/60 text-amber-900 dark:text-amber-300 space-y-1 text-xs shadow-sm">
+                                                <span className="font-bold block text-[11px] flex items-center gap-1">
+                                                    <Info className="w-3.5 h-3.5 text-amber-600" />
+                                                    {__('Observaciones Físicas de Recepción:')}
+                                                </span>
+                                                <p className="font-medium">{orden.observaciones_fisicas}</p>
                                             </div>
                                         )}
-                                    </CardContent>
-                                </Card>
-
-                                {/* 3. SERVICIOS DE REPARACIÓN REQUERIDOS */}
-                                <Card className="border-slate-200 dark:border-slate-800 shadow-sm">
-                                    <CardHeader className="bg-slate-50 dark:bg-slate-900/50 border-b border-slate-100 dark:border-slate-800 py-3">
-                                        <CardTitle className="text-sm font-bold flex items-center justify-between text-slate-800 dark:text-slate-200">
-                                            <span className="flex items-center gap-2">
-                                                <Wrench className="w-4 h-4 text-purple-600" />
-                                                {__('3. Servicios de Reparación Requeridos')}
-                                            </span>
-                                            <Badge variant="outline" className="font-mono text-purple-700 bg-purple-50 dark:bg-purple-950/50 font-bold border-purple-200">
-                                                {serviciosItems.length} {serviciosItems.length === 1 ? __('Servicio') : __('Servicios')}
-                                            </Badge>
-                                        </CardTitle>
-                                    </CardHeader>
-                                    <CardContent className="p-4">
-                                        {serviciosItems.length === 0 ? (
-                                            <p className="text-xs text-slate-400 italic text-center py-4">
-                                                {__('No se han registrado conceptos específicos de mano de obra en la recepción.')}
-                                            </p>
-                                        ) : (
-                                            <div className="divide-y divide-slate-100 dark:divide-slate-800">
-                                                {serviciosItems.map((item) => (
-                                                    <div key={item.id} className="py-3 flex items-center justify-between text-xs">
-                                                        <div className="space-y-0.5">
-                                                            <span className="font-bold text-slate-900 dark:text-slate-100 flex items-center gap-2">
-                                                                <CheckCircle2 className="w-4 h-4 text-purple-600" />
-                                                                {item.descripcion}
-                                                            </span>
-                                                            {(item as any).servicio?.categoria?.nombre && (
-                                                                <span className="text-[10px] text-slate-400 block font-medium pl-6">
-                                                                    Categoría: {(item as any).servicio.categoria.nombre}
-                                                                </span>
-                                                            )}
-                                                        </div>
-                                                        <div className="text-right font-mono font-bold text-slate-900 dark:text-slate-100 text-sm">
-                                                            {currencySymbol}{formatNum(item.precio_venta)}
-                                                        </div>
-                                                    </div>
-                                                ))}
-                                            </div>
-                                        )}
-                                    </CardContent>
-                                </Card>
-
-                                {/* 4. PRESUPUESTO, ADELANTO Y TÉCNICO ASIGNADO */}
-                                <Card className="border-slate-200 dark:border-slate-800 shadow-sm">
-                                    <CardHeader className="bg-slate-50 dark:bg-slate-900/50 border-b border-slate-100 dark:border-slate-800 py-3">
-                                        <CardTitle className="text-sm font-bold flex items-center gap-2 text-slate-800 dark:text-slate-200">
-                                            <DollarSign className="w-4 h-4 text-emerald-600" />
-                                            {__('4. Presupuesto, Adelanto y Técnico Asignado')}
-                                        </CardTitle>
-                                    </CardHeader>
-                                    <CardContent className="p-5 text-xs space-y-4">
-                                        <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-                                            <div>
-                                                <span className="text-slate-400 block text-[11px] font-medium">{__('Costo Estimado (Total)')}</span>
-                                                <span className="font-black text-slate-900 dark:text-slate-100 text-base font-mono">
-                                                    {currencySymbol}{formatNum(totalPresupuestoActual)}
-                                                </span>
-                                            </div>
-                                            <div>
-                                                <span className="text-slate-400 block text-[11px] font-medium">{__('Anticipo Recibido')}</span>
-                                                <span className="font-bold text-emerald-600 text-base font-mono">
-                                                    {currencySymbol}{formatNum(anticipoActual)}
-                                                </span>
-                                            </div>
-                                            <div>
-                                                <span className="text-slate-400 block text-[11px] font-medium">{__('Saldo Restante a Cobrar')}</span>
-                                                <span className="font-black text-emerald-600 text-base font-mono">
-                                                    {currencySymbol}{formatNum(saldoRestanteActual)}
-                                                </span>
-                                            </div>
-                                            <div>
-                                                <span className="text-slate-400 block text-[11px] font-medium">{__('Técnico Asignado')}</span>
-                                                <span className="font-bold text-purple-700 dark:text-purple-300 text-sm">
-                                                    🛠️ {orden.tecnico?.name || __('Sin Asignar')}
-                                                </span>
-                                            </div>
-                                        </div>
-
-                                        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 pt-3 border-t border-slate-100 dark:border-slate-800">
-                                            <div>
-                                                <span className="text-slate-400 block text-[11px] font-medium">{__('Fecha de Recepción')}</span>
-                                                <span className="font-medium text-slate-800 dark:text-slate-200">{formatDate(orden.fecha_recepcion)}</span>
-                                            </div>
-                                            <div>
-                                                <span className="text-slate-400 block text-[11px] font-medium">{__('Fecha Prometida de Entrega')}</span>
-                                                <span className="font-medium text-slate-800 dark:text-slate-200">{formatOnlyDate(orden.fecha_prometida)}</span>
-                                            </div>
-                                            <div>
-                                                <span className="text-slate-400 block text-[11px] font-medium">{__('Garantía Prometida')}</span>
-                                                <span className="font-bold text-emerald-600">{orden.garantia_dias} {__('días de garantía')}</span>
-                                            </div>
-                                        </div>
-                                    </CardContent>
-                                </Card>
-
-                                {/* 5. SEGURIDAD DEL DISPOSITIVO */}
-                                <Card className="border-slate-200 dark:border-slate-800 shadow-sm">
-                                    <CardHeader className="bg-slate-50 dark:bg-slate-900/50 border-b border-slate-100 dark:border-slate-800 py-3">
-                                        <CardTitle className="text-sm font-bold flex items-center gap-2 text-slate-800 dark:text-slate-200">
-                                            <Lock className="w-4 h-4 text-purple-600" />
-                                            {__('5. Seguridad del Dispositivo')}
-                                        </CardTitle>
-                                    </CardHeader>
-                                    <CardContent className="p-5 text-xs space-y-4">
-                                        <div className="flex items-center justify-between flex-wrap gap-3">
-                                            <div className="flex items-center gap-2">
-                                                <span className="text-xs font-bold text-slate-600 dark:text-slate-400">{__('Tipo de Bloqueo Registrado:')}</span>
-                                                <Badge className={cn(
-                                                    "font-extrabold text-xs px-3 py-1 text-white",
-                                                    isPatron ? "bg-purple-600" : isSinBloqueo ? "bg-slate-500" : "bg-indigo-600"
-                                                )}>
-                                                    {isPatron ? '🌀 Patrón (3x3)' : isSinBloqueo ? '🔓 Sin Contraseña' : '🔑 PIN / Contraseña'}
-                                                </Badge>
-                                            </div>
-
-                                            {orden.contrasena_patron && (
-                                                <div className="font-mono text-xs font-bold text-purple-700 dark:text-purple-300 bg-purple-50 dark:bg-purple-950/60 px-3 py-1.5 rounded-lg border border-purple-200 dark:border-purple-800">
-                                                    🔑 Clave: {orden.contrasena_patron}
-                                                </div>
-                                            )}
-                                        </div>
 
                                         {(isPatron || patronDotsFromStr.length > 0) && (
-                                            <div className="flex flex-col items-center justify-center p-4 rounded-xl bg-slate-950 text-white space-y-2">
-                                                <span className="text-xs font-bold text-slate-300 flex items-center gap-2">
-                                                    <span>🌀</span> {__('Lienzo de Patrón 3x3 Registrado:')}
+                                            <div className="p-3.5 rounded-xl bg-slate-950 text-white flex items-center justify-between gap-3 shadow-sm">
+                                                <span className="text-xs font-bold text-slate-300 flex items-center gap-1.5">
+                                                    <Lock className="w-3.5 h-3.5 text-purple-400" />
+                                                    {__('Patrón de Bloqueo:')}
                                                 </span>
                                                 <PatternLockViewer pattern={patronDotsFromStr} />
                                             </div>
                                         )}
-                                    </CardContent>
-                                </Card>
+                                    </div>
 
-                                {/* 6. EVIDENCIAS FOTOGRÁFICAS DEL EQUIPO (4 ÁNGULOS) */}
-                                {(orden.fotos?.length || orden.evidencias_fotos) ? (
-                                    <Card className="border-slate-200 dark:border-slate-800 shadow-sm">
-                                        <CardHeader className="bg-slate-50 dark:bg-slate-900/50 border-b border-slate-100 dark:border-slate-800 py-3">
-                                            <CardTitle className="text-sm font-bold flex items-center justify-between text-slate-800 dark:text-slate-200">
-                                                <span className="flex items-center gap-2">
-                                                    <Camera className="w-4 h-4 text-purple-600" />
-                                                    {__('6. Evidencias Fotográficas del Equipo (4 Ángulos)')}
+                                    {/* SERVICIOS DE REPARACIÓN REQUERIDOS */}
+                                    <Card className="border-slate-200 dark:border-slate-800 shadow-sm flex flex-col justify-between">
+                                        <CardHeader className="bg-slate-50 dark:bg-slate-900/50 border-b border-slate-100 dark:border-slate-800 py-2.5 px-4">
+                                            <CardTitle className="text-xs font-bold flex items-center justify-between text-slate-800 dark:text-slate-200">
+                                                <span className="flex items-center gap-1.5">
+                                                    <Wrench className="w-3.5 h-3.5 text-purple-600" />
+                                                    {__('Servicios y Mano de Obra Requerida')}
                                                 </span>
-                                                <Badge variant="outline" className="font-mono text-xs">
-                                                    {orden.fotos?.length || 0} / 4 {__('Fotos')}
+                                                <Badge variant="outline" className="font-mono text-purple-700 bg-purple-50 dark:bg-purple-950/50 font-bold border-purple-200 text-[10px] py-0">
+                                                    {serviciosItems.length} {serviciosItems.length === 1 ? __('Servicio') : __('Servicios')}
                                                 </Badge>
                                             </CardTitle>
                                         </CardHeader>
-                                        <CardContent className="p-4">
-                                            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-                                                {fotoSlots.map((item) => {
-                                                    const fotoObj = orden.fotos?.find((f: any) => f.angulo === item.key);
-                                                    const imgUrl = fotoObj ? fotoObj.url : (orden.evidencias_fotos as any)?.[item.key];
-                                                    return (
-                                                        <div key={item.key} className="flex flex-col items-center p-2.5 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-950 text-center gap-1.5">
-                                                            <span className="text-[11px] font-bold text-slate-800 dark:text-slate-200">{item.label}</span>
-                                                            {imgUrl ? (
-                                                                <div
-                                                                    onClick={() => setPreviewPhoto({ url: imgUrl, label: item.label })}
-                                                                    className="w-full h-32 rounded-lg overflow-hidden border border-purple-200 dark:border-purple-900 block group relative cursor-pointer"
-                                                                >
-                                                                    <img src={imgUrl} alt={item.label} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-200" />
-                                                                    <div className="absolute inset-0 bg-slate-950/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center text-white text-[10px] font-bold gap-1">
-                                                                        <Eye className="w-3.5 h-3.5" />
-                                                                        {__('Ampliar')}
-                                                                    </div>
-                                                                </div>
-                                                            ) : (
-                                                                <div className="w-full h-32 rounded-lg border border-dashed border-slate-200 dark:border-slate-800 flex flex-col items-center justify-center text-slate-400 text-[10px] bg-slate-50 dark:bg-slate-900/40">
-                                                                    <Camera className="w-5 h-5 text-slate-300 mb-1" />
-                                                                    <span>{__('Sin Foto')}</span>
-                                                                </div>
-                                                            )}
+                                        <CardContent className="p-3 text-xs flex-1">
+                                            {serviciosItems.length === 0 ? (
+                                                <p className="text-xs text-slate-400 italic text-center py-6">
+                                                    {__('No se han registrado conceptos específicos de mano de obra en la recepción.')}
+                                                </p>
+                                            ) : (
+                                                <div className="divide-y divide-slate-100 dark:divide-slate-800">
+                                                    {serviciosItems.map((item) => (
+                                                        <div key={item.id} className="py-2 flex items-center justify-between text-xs">
+                                                            <div className="space-y-0.5">
+                                                                <span className="font-bold text-slate-900 dark:text-slate-100 flex items-center gap-1.5">
+                                                                    <CheckCircle2 className="w-3.5 h-3.5 text-purple-600" />
+                                                                    {item.descripcion}
+                                                                </span>
+                                                                {(item as any).servicio?.categoria?.nombre && (
+                                                                    <span className="text-[10px] text-slate-400 block font-medium pl-5">
+                                                                        Categoría: {(item as any).servicio.categoria.nombre}
+                                                                    </span>
+                                                                )}
+                                                            </div>
+                                                            <div className="text-right font-mono font-bold text-slate-900 dark:text-slate-100 text-xs">
+                                                                {currencySymbol}{formatNum(item.precio_venta)}
+                                                            </div>
                                                         </div>
-                                                    );
-                                                })}
-                                            </div>
+                                                    ))}
+                                                </div>
+                                            )}
                                         </CardContent>
                                     </Card>
-                                ) : null}
+                                </div>
+
+                                {/* FILA 3: FOTOS (EVIDENCIAS FOTOGRÁFICAS DE RECEPCIÓN - 4 ÁNGULOS) */}
+                                <Card className="border-slate-200 dark:border-slate-800 shadow-sm">
+                                    <CardHeader className="bg-slate-50 dark:bg-slate-900/50 border-b border-slate-100 dark:border-slate-800 py-2.5 px-4">
+                                        <CardTitle className="text-xs font-bold flex items-center justify-between text-slate-800 dark:text-slate-200">
+                                            <span className="flex items-center gap-1.5">
+                                                <Camera className="w-3.5 h-3.5 text-purple-600" />
+                                                {__('FOTOS: Evidencias Fotográficas de Recepción (4 Ángulos)')}
+                                            </span>
+                                            <Badge variant="outline" className="font-mono text-[10px] py-0">
+                                                {orden.fotos?.length || 0} / 4 {__('Fotos')}
+                                            </Badge>
+                                        </CardTitle>
+                                    </CardHeader>
+                                    <CardContent className="p-3">
+                                        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                                            {fotoSlots.map((item) => {
+                                                const fotoObj = orden.fotos?.find((f: any) => f.angulo === item.key);
+                                                const imgUrl = fotoObj ? fotoObj.url : (orden.evidencias_fotos as any)?.[item.key];
+                                                return (
+                                                    <div key={item.key} className="flex flex-col items-center p-2 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-950 text-center gap-1">
+                                                        <span className="text-[11px] font-bold text-slate-800 dark:text-slate-200">{item.label}</span>
+                                                        {imgUrl ? (
+                                                            <div
+                                                                onClick={() => setPreviewPhoto({ url: imgUrl, label: item.label })}
+                                                                className="w-full h-28 rounded-lg overflow-hidden border border-purple-200 dark:border-purple-900 block group relative cursor-pointer"
+                                                            >
+                                                                <img src={imgUrl} alt={item.label} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-200" />
+                                                                <div className="absolute inset-0 bg-slate-950/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center text-white text-[10px] font-bold gap-1">
+                                                                    <Eye className="w-3.5 h-3.5" />
+                                                                    {__('Ampliar')}
+                                                                </div>
+                                                            </div>
+                                                        ) : (
+                                                            <div className="w-full h-28 rounded-lg border border-dashed border-slate-200 dark:border-slate-800 flex flex-col items-center justify-center text-slate-400 text-[10px] bg-slate-50 dark:bg-slate-900/40">
+                                                                <Camera className="w-4 h-4 text-slate-300 mb-1" />
+                                                                <span>{__('Sin Foto')}</span>
+                                                            </div>
+                                                        )}
+                                                    </div>
+                                                );
+                                            })}
+                                        </div>
+                                    </CardContent>
+                                </Card>
                             </div>
                         )}
 
