@@ -13,7 +13,7 @@ import {
     Camera,
     Loader2,
 } from 'lucide-react';
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useMemo } from 'react';
 import { Breadcrumbs } from '@/components/breadcrumbs';
 import type { ColumnDef } from '@/components/data-table';
 import { DataTable } from '@/components/data-table';
@@ -22,7 +22,7 @@ import { ModuleHeader } from '@/components/module-header';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import SearchableSelect from '@/components/searchable-select';
 import { useTranslate } from '@/hooks/use-translate';
 import { cleanParams, cn } from '@/lib/utils';
 import { notifySuccess, notifyError } from '@/utils/notifications';
@@ -126,18 +126,35 @@ interface Props {
     ordenes: Paginated<Orden>;
     counts: Record<string, number>;
     tecnicos: { id: number; name: string }[];
+    marcas?: Array<{ id: number; nombre: string; modelos?: any[] }>;
+    modelos?: Array<{ id: number; marca_id?: number; categoria_id?: number; nombre_comercial: string; codigo_modelo?: string }>;
+    categorias?: Array<{ id: number; nombre: string }>;
     currencySymbol: string;
     filters: {
         search?: string;
         status?: string;
         tecnico_id?: string;
+        marca_id?: string;
+        modelo_id?: string;
+        categoria_id?: string;
         perPage?: string;
     };
     isTecnicoOnly?: boolean;
     empresa?: any;
 }
 
-export default function IndexReparaciones({ ordenes, counts, tecnicos, currencySymbol, filters, isTecnicoOnly, empresa }: Props) {
+export default function IndexReparaciones({
+    ordenes,
+    counts,
+    tecnicos,
+    marcas = [],
+    modelos = [],
+    categorias = [],
+    currencySymbol,
+    filters,
+    isTecnicoOnly,
+    empresa,
+}: Props) {
     const { __ } = useTranslate();
     const pageUser = usePage<any>().props.auth?.user;
     const empresaInfo = empresa || pageUser?.empresa;
@@ -146,10 +163,119 @@ export default function IndexReparaciones({ ordenes, counts, tecnicos, currencyS
     const [search, setSearch] = useState(filters.search || '');
     const [status, setStatus] = useState(filters.status || 'all');
     const [tecnicoId, setTecnicoId] = useState(filters.tecnico_id || 'all');
+    const [marcaId, setMarcaId] = useState(filters.marca_id || 'all');
+    const [modeloId, setModeloId] = useState(filters.modelo_id || 'all');
+    const [categoriaId, setCategoriaId] = useState(filters.categoria_id || 'all');
     const [perPage, setPerPage] = useState(filters.perPage ? String(filters.perPage) : '10');
 
     // Quick Print Ticket State
     const [printOrden, setPrintOrden] = useState<Orden | null>(null);
+
+    // Filter available models dynamically based on selected Marca and Categoria
+    const availableModelos = useMemo(() => {
+        let list: any[] = modelos || [];
+        if (!list.length && marcas?.length) {
+            list = marcas.flatMap((m) =>
+                (m.modelos || []).map((mod: any) => ({
+                    ...mod,
+                    marca_id: mod.marca_id || m.id,
+                }))
+            );
+        }
+        if (marcaId && marcaId !== 'all') {
+            list = list.filter((m) => String(m.marca_id) === String(marcaId));
+        }
+        if (categoriaId && categoriaId !== 'all') {
+            list = list.filter((m) => String(m.categoria_id) === String(categoriaId));
+        }
+        return list;
+    }, [modelos, marcas, marcaId, categoriaId]);
+
+    // Select2 Options (memoized)
+    const statusOptions = useMemo(() => [
+        { value: 'all', label: __('Todos los estados') },
+        { value: 'recibido', label: __('Recibido') },
+        { value: 'en_diagnostico', label: __('En Diagnóstico') },
+        { value: 'presupuestado', label: __('Presupuestado') },
+        { value: 'en_reparacion', label: __('En Reparación') },
+        { value: 'esperando_repuesto', label: __('Esperando Repuesto') },
+        { value: 'reparado', label: __('Listo p/ Entrega') },
+        { value: 'entregado', label: __('Entregado') },
+        { value: 'cancelado', label: __('Sin Arreglo') },
+    ], [__]);
+
+    const categoriaOptions = useMemo(() => [
+        { value: 'all', label: __('Todas las categorías') },
+        ...(categorias || []).map((c) => ({ value: String(c.id), label: c.nombre })),
+    ], [categorias, __]);
+
+    const marcaOptions = useMemo(() => [
+        { value: 'all', label: __('Todas las marcas') },
+        ...(marcas || []).map((m) => ({ value: String(m.id), label: m.nombre })),
+    ], [marcas, __]);
+
+    const modeloOptions = useMemo(() => [
+        { value: 'all', label: __('Todos los modelos') },
+        ...availableModelos.map((m: any) => ({
+            value: String(m.id),
+            label: m.nombre_comercial || m.nombre || 'Modelo',
+            description: m.codigo_modelo || undefined,
+        })),
+    ], [availableModelos, __]);
+
+    const tecnicoOptions = useMemo(() => [
+        { value: 'all', label: __('Todos los técnicos') },
+        ...(tecnicos || []).map((t) => ({ value: String(t.id), label: t.name })),
+    ], [tecnicos, __]);
+
+    const perPageOptions = [
+        { value: '10', label: '10' },
+        { value: '25', label: '25' },
+        { value: '50', label: '50' },
+        { value: '100', label: '100' },
+    ];
+
+    // Global hardware barcode scanner detector
+    useEffect(() => {
+        let buffer = '';
+        let lastKeyTime = Date.now();
+
+        const handleKeyDown = (e: KeyboardEvent) => {
+            const target = e.target as HTMLElement;
+            const isInsideInput = target && (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable);
+
+            const currentTime = Date.now();
+            const timeDiff = currentTime - lastKeyTime;
+            lastKeyTime = currentTime;
+
+            if (e.key === 'Enter') {
+                if (buffer.length >= 3) {
+                    const cleaned = buffer.replace(/REP['´`]/gi, 'REP-').replace(/['´`]/g, '-').trim();
+                    if (/REP-\d+/i.test(cleaned) || /^[A-Z0-9\-_]{4,}$/i.test(cleaned)) {
+                        if (!isInsideInput) {
+                            e.preventDefault();
+                        }
+                        setSearch(cleaned);
+                    }
+                }
+                buffer = '';
+                return;
+            }
+
+            if (timeDiff > 80) {
+                buffer = '';
+            }
+
+            if (e.key.length === 1) {
+                buffer += e.key;
+            }
+        };
+
+        window.addEventListener('keydown', handleKeyDown);
+        return () => {
+            window.removeEventListener('keydown', handleKeyDown);
+        };
+    }, []);
 
     // Auto debounce filters
     const isInitialMount = useRef(true);
@@ -166,6 +292,9 @@ export default function IndexReparaciones({ ordenes, counts, tecnicos, currencyS
                     search: search || undefined,
                     status: status === 'all' ? undefined : status,
                     tecnico_id: tecnicoId === 'all' ? undefined : tecnicoId,
+                    marca_id: marcaId === 'all' ? undefined : marcaId,
+                    modelo_id: modeloId === 'all' ? undefined : modeloId,
+                    categoria_id: categoriaId === 'all' ? undefined : categoriaId,
                     perPage: perPage === '10' ? undefined : perPage,
                 }),
                 { preserveState: true, preserveScroll: true }
@@ -173,7 +302,7 @@ export default function IndexReparaciones({ ordenes, counts, tecnicos, currencyS
         }, 300);
 
         return () => clearTimeout(timer);
-    }, [search, status, tecnicoId, perPage]);
+    }, [search, status, tecnicoId, marcaId, modeloId, categoriaId, perPage]);
 
     // QR Code Camera Scanner States
     const [isScanModalOpen, setIsScanModalOpen] = useState(false);
@@ -270,7 +399,7 @@ export default function IndexReparaciones({ ordenes, counts, tecnicos, currencyS
         setIsSearchingOrden(true);
         setScannedOrden(null);
 
-        let cleanCode = code.trim();
+        let cleanCode = code.trim().replace(/REP['´`]/gi, 'REP-').replace(/['´`]/g, '-');
         const urlMatch = cleanCode.match(/reparaciones\/(\d+)/i);
         if (urlMatch) {
             cleanCode = urlMatch[1];
@@ -384,6 +513,9 @@ export default function IndexReparaciones({ ordenes, counts, tecnicos, currencyS
         setSearch('');
         setStatus('all');
         setTecnicoId('all');
+        setMarcaId('all');
+        setModeloId('all');
+        setCategoriaId('all');
         setPerPage('10');
         router.get('/admin/reparaciones', {}, { preserveState: true, preserveScroll: true });
     };
@@ -655,80 +787,111 @@ export default function IndexReparaciones({ ordenes, counts, tecnicos, currencyS
                     </Link>
                 </ModuleHeader>
 
-                {/* BARRA DE FILTROS ESTÁNDAR */}
+                {/* BARRA DE FILTROS ESTÁNDAR CON SELECT2 (SHADCN/UI) */}
                 <FilterBar>
-                    <div className="flex flex-wrap items-end gap-4">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-7 gap-3 items-end w-full">
+                        {/* BUSCAR */}
                         <FilterField label={__('Buscar')}>
                             <Input
-                                placeholder={__('Buscar por Folio, Cliente, IMEI o Modelo...')}
+                                placeholder={__('Folio, Cliente, IMEI...')}
                                 value={search}
-                                onChange={(e) => setSearch(e.target.value)}
-                                className="w-full md:w-80"
+                                onChange={(e) => {
+                                    const val = e.target.value;
+                                    const normalized = val.replace(/REP['´`]/gi, 'REP-');
+                                    setSearch(normalized);
+                                }}
+                                className="h-9 text-xs"
                             />
                         </FilterField>
 
+                        {/* ESTADO */}
                         <FilterField label={__('Estado')}>
-                            <Select value={status} onValueChange={setStatus}>
-                                <SelectTrigger className="w-full md:w-48">
-                                    <SelectValue placeholder={__('Todos los estados')} />
-                                </SelectTrigger>
-                                <SelectContent>
-                                    <SelectItem value="all">{__('Todos los estados')}</SelectItem>
-                                    <SelectItem value="recibido">{__('Recibido')}</SelectItem>
-                                    <SelectItem value="en_diagnostico">{__('En Diagnóstico')}</SelectItem>
-                                    <SelectItem value="presupuestado">{__('Presupuestado')}</SelectItem>
-                                    <SelectItem value="en_reparacion">{__('En Reparación')}</SelectItem>
-                                    <SelectItem value="esperando_repuesto">{__('Esperando Repuesto')}</SelectItem>
-                                    <SelectItem value="reparado">{__('Listo p/ Entrega')}</SelectItem>
-                                    <SelectItem value="entregado">{__('Entregado')}</SelectItem>
-                                    <SelectItem value="cancelado">{__('Sin Arreglo')}</SelectItem>
-                                </SelectContent>
-                            </Select>
+                            <SearchableSelect
+                                options={statusOptions}
+                                value={status}
+                                onChange={setStatus}
+                                placeholder={__('Todos los estados')}
+                                searchPlaceholder={__('Buscar estado...')}
+                            />
                         </FilterField>
 
-                        {!isTecnicoOnly && tecnicos.length > 0 && (
+                        {/* CATEGORÍA */}
+                        <FilterField label={__('Categoría')}>
+                            <SearchableSelect
+                                options={categoriaOptions}
+                                value={categoriaId}
+                                onChange={(val) => {
+                                    setCategoriaId(val);
+                                    setModeloId('all');
+                                }}
+                                placeholder={__('Todas las categorías')}
+                                searchPlaceholder={__('Buscar categoría...')}
+                            />
+                        </FilterField>
+
+                        {/* MARCA */}
+                        <FilterField label={__('Marca')}>
+                            <SearchableSelect
+                                options={marcaOptions}
+                                value={marcaId}
+                                onChange={(val) => {
+                                    setMarcaId(val);
+                                    setModeloId('all');
+                                }}
+                                placeholder={__('Todas las marcas')}
+                                searchPlaceholder={__('Buscar marca...')}
+                            />
+                        </FilterField>
+
+                        {/* MODELO */}
+                        <FilterField label={__('Modelo')}>
+                            <SearchableSelect
+                                options={modeloOptions}
+                                value={modeloId}
+                                onChange={setModeloId}
+                                placeholder={__('Todos los modelos')}
+                                searchPlaceholder={__('Buscar modelo...')}
+                            />
+                        </FilterField>
+
+                        {/* TÉCNICO */}
+                        {!isTecnicoOnly && (
                             <FilterField label={__('Técnico')}>
-                                <Select value={tecnicoId} onValueChange={setTecnicoId}>
-                                    <SelectTrigger className="w-full md:w-48">
-                                        <SelectValue placeholder={__('Todos los técnicos')} />
-                                    </SelectTrigger>
-                                    <SelectContent>
-                                        <SelectItem value="all">{__('Todos los técnicos')}</SelectItem>
-                                        {tecnicos.map((t) => (
-                                            <SelectItem key={t.id} value={String(t.id)}>
-                                                {t.name}
-                                            </SelectItem>
-                                        ))}
-                                    </SelectContent>
-                                </Select>
+                                <SearchableSelect
+                                    options={tecnicoOptions}
+                                    value={tecnicoId}
+                                    onChange={setTecnicoId}
+                                    placeholder={__('Todos los técnicos')}
+                                    searchPlaceholder={__('Buscar técnico...')}
+                                />
                             </FilterField>
                         )}
 
-                        <FilterField label={__('Registros por página')}>
-                            <Select value={perPage} onValueChange={setPerPage}>
-                                <SelectTrigger className="w-full md:w-36">
-                                    <SelectValue />
-                                </SelectTrigger>
-                                <SelectContent>
-                                    <SelectItem value="10">10</SelectItem>
-                                    <SelectItem value="25">25</SelectItem>
-                                    <SelectItem value="50">50</SelectItem>
-                                    <SelectItem value="100">100</SelectItem>
-                                </SelectContent>
-                            </Select>
+                        {/* REGISTROS POR PÁGINA */}
+                        <FilterField label={__('Mostrar')}>
+                            <SearchableSelect
+                                options={perPageOptions}
+                                value={perPage}
+                                onChange={setPerPage}
+                                placeholder={__('10')}
+                                searchPlaceholder={__('Registros...')}
+                            />
                         </FilterField>
+                    </div>
 
-                        {(search || status !== 'all' || tecnicoId !== 'all' || perPage !== '10') && (
+                    {(search || status !== 'all' || categoriaId !== 'all' || marcaId !== 'all' || modeloId !== 'all' || tecnicoId !== 'all' || perPage !== '10') && (
+                        <div className="flex justify-end mt-2.5">
                             <Button
                                 variant="ghost"
+                                size="sm"
                                 onClick={handleResetFilters}
-                                className="text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200"
+                                className="text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200 text-xs font-semibold"
                             >
                                 <RefreshCw className="mr-1.5 h-3.5 w-3.5" />
                                 {__('Limpiar Filtros')}
                             </Button>
-                        )}
-                    </div>
+                        </div>
+                    )}
                 </FilterBar>
 
                 {/* TABLA DE DATOS ESTÁNDAR DATA-TABLE */}
@@ -782,7 +945,11 @@ export default function IndexReparaciones({ ordenes, counts, tecnicos, currencyS
                             <div className="flex gap-2">
                                 <Input
                                     value={scanInput}
-                                    onChange={(e) => setScanInput(e.target.value)}
+                                    onChange={(e) => {
+                                        const val = e.target.value;
+                                        const normalized = val.replace(/REP['´`]/gi, 'REP-');
+                                        setScanInput(normalized);
+                                    }}
                                     placeholder={__('O ingrese folio / código de orden...')}
                                     className="text-xs"
                                     onKeyDown={(e) => e.key === 'Enter' && handleSearchByCode(scanInput)}

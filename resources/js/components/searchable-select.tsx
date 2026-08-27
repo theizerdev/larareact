@@ -13,25 +13,27 @@ export interface SearchableOption {
 }
 
 interface SearchableSelectProps {
-    options: SearchableOption[];
+    options?: SearchableOption[];
     value: string;
     onChange: (value: string) => void;
     placeholder?: string;
     searchPlaceholder?: string;
     emptyMessage?: string;
     className?: string;
+    popoverContentClassName?: string;
     disabled?: boolean;
     id?: string;
 }
 
 export default function SearchableSelect({
-    options,
+    options = [],
     value,
     onChange,
     placeholder = 'Selecciona una opción...',
     searchPlaceholder = 'Buscar...',
     emptyMessage = 'No se encontraron resultados.',
     className,
+    popoverContentClassName,
     disabled = false,
     id,
 }: SearchableSelectProps) {
@@ -83,7 +85,10 @@ export default function SearchableSelect({
                 </Button>
             </PopoverTrigger>
             <PopoverContent
-                className="w-[var(--radix-popover-trigger-width)] p-1.5 z-[100] shadow-md border bg-popover text-popover-foreground"
+                className={cn(
+                    'w-[var(--radix-popover-trigger-width)] min-w-[200px] p-1.5 z-[100] shadow-md border bg-popover text-popover-foreground',
+                    popoverContentClassName
+                )}
                 align="start"
                 sideOffset={4}
             >

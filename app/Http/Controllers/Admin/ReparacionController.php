@@ -43,6 +43,9 @@ class ReparacionController extends Controller
         $search = $request->input('search');
         $status = $request->input('status');
         $tecnicoId = $request->input('tecnico_id');
+        $marcaId = $request->input('marca_id');
+        $modeloId = $request->input('modelo_id');
+        $categoriaId = $request->input('categoria_id');
 
         $isTecnicoOnly = $user && ($user->hasRole('Técnico') || $user->hasRole('tecnico') || $user->hasRole('Tecnico') || $user->hasRole('Técnico de Reparaciones'));
         $isAdmin = $user && ($user->hasRole('Administrador') || $user->hasRole('Super Administrador') || $user->hasRole('super-admin') || $user->hasRole('Admin'));
@@ -63,13 +66,15 @@ class ReparacionController extends Controller
         // Si es exclusivamente rol Técnico (sin permisos de Administrador), mostrar ÚNICAMENTE sus órdenes asignadas
         if ($isTecnicoOnly && !$isAdmin) {
             $query->where('tecnico_id', $user->id);
-        } elseif ($tecnicoId) {
+        } elseif ($tecnicoId && $tecnicoId !== 'all') {
             $query->where('tecnico_id', $tecnicoId);
         }
 
         if ($search) {
-            $query->where(function ($q) use ($search) {
+            $normalizedSearch = str_replace(["'", "´", "`"], '-', $search);
+            $query->where(function ($q) use ($search, $normalizedSearch) {
                 $q->where('numero_orden', 'like', "%{$search}%")
+                  ->orWhere('numero_orden', 'like', "%{$normalizedSearch}%")
                   ->orWhere('cliente_nombre', 'like', "%{$search}%")
                   ->orWhere('imei_serie', 'like', "%{$search}%")
                   ->orWhere('marca_nombre', 'like', "%{$search}%")
@@ -77,8 +82,28 @@ class ReparacionController extends Controller
             });
         }
 
-        if ($status) {
+        if ($status && $status !== 'all') {
             $query->where('estado_orden', $status);
+        }
+
+        if ($marcaId && $marcaId !== 'all') {
+            $query->where('marca_id', $marcaId);
+        }
+
+        if ($modeloId && $modeloId !== 'all') {
+            $query->where('modelo_id', $modeloId);
+        }
+
+        if ($categoriaId && $categoriaId !== 'all') {
+            $categoriaObj = \App\Models\Categoria::find($categoriaId);
+            $query->where(function ($q) use ($categoriaId, $categoriaObj) {
+                $q->whereHas('modelo', function ($mq) use ($categoriaId) {
+                    $mq->where('categoria_id', $categoriaId);
+                });
+                if ($categoriaObj) {
+                    $q->orWhere('tipo_dispositivo', $categoriaObj->nombre);
+                }
+            });
         }
 
         $perPage = (int) $request->input('perPage', 10);
@@ -102,6 +127,15 @@ class ReparacionController extends Controller
         $tecnicos = User::where('empresa_id', $empresaId)->get(['id', 'name']);
         $clientes = Cliente::withoutGlobalScope('multitenancy')->where('empresa_id', $empresaId)->orderBy('nombre')->get(['id', 'nombre', 'telefono', 'email']);
         $marcas = Marca::with('modelos')->where('empresa_id', $empresaId)->orderBy('nombre')->get();
+        $modelos = Modelo::withoutGlobalScope('multitenancy')
+            ->where(function ($q) use ($empresaId) {
+                $q->where('empresa_id', $empresaId)
+                  ->orWhereNull('empresa_id');
+            })
+            ->where('estado', true)
+            ->orderBy('nombre_comercial')
+            ->get(['id', 'marca_id', 'categoria_id', 'nombre_comercial', 'codigo_modelo']);
+
         $categorias = \App\Models\Categoria::withoutGlobalScope('multitenancy')
             ->where(function ($q) use ($empresaId) {
                 $q->where('empresa_id', $empresaId)
@@ -127,11 +161,12 @@ class ReparacionController extends Controller
             'tecnicos' => $tecnicos,
             'clientes' => $clientes,
             'marcas' => $marcas,
+            'modelos' => $modelos,
             'categorias' => $categorias,
             'servicios' => $servicios,
             'empresa' => $empresa,
             'currencySymbol' => $this->getCurrencySymbol(),
-            'filters' => array_merge($request->only(['search', 'status', 'tecnico_id']), ['perPage' => (string) $perPage]),
+            'filters' => array_merge($request->only(['search', 'status', 'tecnico_id', 'marca_id', 'modelo_id', 'categoria_id']), ['perPage' => (string) $perPage]),
             'isTecnicoOnly' => $isTecnicoOnly && !$isAdmin,
         ]);
     }
@@ -1279,10 +1314,13 @@ class ReparacionController extends Controller
 
     public function apiFind(\Illuminate\Http\Request $request)
     {
-        $rawQuery = trim(urldecode($request->input('query', '')));
+        $rawQuery = trim(urldecode($request->input('code', $request->input('query', ''))));
         if (!$rawQuery) {
             return response()->json(['error' => 'Código o URL no proporcionado.'], 400);
         }
+
+        // Normalizar comillas y apóstrofes típicos de lectores de código de barras con teclado en español (REP'000001 -> REP-000001)
+        $rawQuery = str_replace(["'", "´", "`"], '-', $rawQuery);
 
         $user = auth()->user();
         $empresaId = $user ? $user->empresa_id : null;
@@ -1291,7 +1329,7 @@ class ReparacionController extends Controller
         $extractedId = null;
         if (preg_match('/reparaciones\/(\d+)/i', $rawQuery, $matches)) {
             $extractedId = (int)$matches[1];
-        } elseif (preg_match('/REP-0*(\d+)/i', $rawQuery, $matches)) {
+        } elseif (preg_match('/REP[-_\'´`]0*(\d+)/i', $rawQuery, $matches)) {
             $extractedId = (int)$matches[1];
         } elseif (is_numeric($rawQuery)) {
             $extractedId = (int)$rawQuery;

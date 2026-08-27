@@ -24,11 +24,12 @@ class PublicReparacionTrackingController extends Controller
         $currencySymbol = '$';
 
         if (!empty($queryCode)) {
-            // Normalizar código
-            $cleanCode = strtoupper(preg_replace('/\s+/', '', $queryCode));
+            // Normalizar código (incluyendo apóstrofes de escáner en español)
+            $cleanCode = strtoupper(preg_replace('/\s+/', '', str_replace(["'", "´", "`"], '-', $queryCode)));
 
             $orden = OrdenReparacion::where('numero_orden', $cleanCode)
                 ->orWhere('numero_orden', 'REP-' . str_pad(preg_replace('/[^0-9]/', '', $cleanCode), 6, '0', STR_PAD_LEFT))
+                ->orWhere('imei_serie', $cleanCode)
                 ->orWhere('imei_serie', $queryCode)
                 ->with([
                     'empresa',
