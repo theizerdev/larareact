@@ -6,6 +6,7 @@ use App\Traits\HasSpanishActivityLog;
 use App\Traits\Multitenantable;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 use Spatie\Activitylog\LogOptions;
 use Spatie\Activitylog\Traits\LogsActivity;
 
@@ -138,12 +139,12 @@ class Empresa extends Model
         return $this->hasMany(Sucursal::class, 'empresa_id');
     }
 
-    public function subscriptions()
+    public function subscriptions(): HasMany
     {
         return $this->hasMany(Subscription::class, 'empresa_id');
     }
 
-    public function subscriptionPayments()
+    public function subscriptionPayments(): HasMany
     {
         return $this->hasMany(SubscriptionPayment::class, 'empresa_id');
     }

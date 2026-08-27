@@ -784,4 +784,11 @@ class WhatsAppService
 
         return ($cleanPrefix ?: '58').$digits;
     }
+
+    
+
+    public static function forCompanyOwn($empresa): self
+    {
+        return new self($empresa);
+    }
 }
