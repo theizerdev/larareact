@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Admin;
 
+use App\Http\Controllers\Concerns\DispatchesKycValidacion;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\EmpleadoRequest;
 use App\Models\Empleado;
@@ -22,6 +23,8 @@ use Inertia\Inertia;
 
 class EmpleadoController extends Controller
 {
+    use DispatchesKycValidacion;
+
     public function index(Request $request)
     {
         $query = Empleado::with(['paisTelefono', 'departamento', 'responsable', 'cargo', 'empresa', 'sucursal', 'user', 'vehiculos'])
@@ -104,6 +107,9 @@ class EmpleadoController extends Controller
         $data['foto_documento_reverso'] = $this->handleImageUpload($request->input('foto_documento_reverso'), 'foto_documento_reverso');
 
         $empleado = AccessCodeService::createWithRetry(fn () => Empleado::create($data));
+
+        // Validación de identidad (KYC) contra JAAK si la empresa la tiene activa.
+        $this->dispatchKycValidacion($empleado, $data['curp'] ?? null);
 
         $primerVehiculo = null;
         // Guardar vehículos

@@ -181,7 +181,7 @@ class EmpleadoPreRegistroController extends Controller
 
             // 3.5 Disparar la validación de identidad (KYC) contra JAAK si la
             // empresa la tiene activa. Nunca bloquea: corre tras la respuesta.
-            $this->dispatchKycValidacion($empleado, $preRegistro, $request->curp);
+            $this->dispatchKycValidacion($empleado, $request->curp);
 
             // 4. Enviar mensaje de WhatsApp
             try {

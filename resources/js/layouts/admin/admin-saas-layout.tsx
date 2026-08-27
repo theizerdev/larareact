@@ -21,7 +21,7 @@ import {
     Activity,
     Link2,
 } from 'lucide-react';
-import { Building2, GitBranch, Briefcase, Calendar, Fingerprint } from 'lucide-react';
+import { Building2, GitBranch, Briefcase, Calendar, Fingerprint, ShieldCheck } from 'lucide-react';
 import * as React from 'react';
 import LanguageToggle from '@/components/language-toggle';
 import TemplateCustomizer from '@/components/template-customizer';
@@ -595,11 +595,6 @@ export default function AdminSaasLayout({
                                     href: '/admin/integrations/validaciones',
                                     permission: 'jaak.view',
                                 },
-                                {
-                                    title: 'Identity Validation (KYC)',
-                                    href: '/admin/integrations/kyc',
-                                    permission: 'kyc.view',
-                                },
                             ].filter(item => hasPermission(item.permission));
 
                             if (integrationsItems.length === 0) return null;
@@ -611,6 +606,30 @@ export default function AdminSaasLayout({
                                         icon={Link2}
                                         collapsed={collapsed}
                                         items={integrationsItems}
+                                    />
+                                </div>
+                            );
+                        })()}
+
+                        {/* Identity Validations Group */}
+                        {(() => {
+                            const validacionesItems = [
+                                {
+                                    title: 'Identity Validations',
+                                    href: '/admin/validaciones',
+                                    permission: 'validaciones.view',
+                                },
+                            ].filter(item => hasPermission(item.permission));
+
+                            if (validacionesItems.length === 0) return null;
+
+                            return (
+                                <div className="pt-2">
+                                    <CollapsibleNavItem
+                                        title="Identity Validations"
+                                        icon={ShieldCheck}
+                                        collapsed={collapsed}
+                                        items={validacionesItems}
                                     />
                                 </div>
                             );

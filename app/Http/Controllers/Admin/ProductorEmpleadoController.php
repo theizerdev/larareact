@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Admin;
 
+use App\Http\Controllers\Concerns\DispatchesKycValidacion;
 use App\Http\Controllers\Controller;
 use App\Models\ProductorEmpleado;
 use App\Models\Productor;
@@ -11,6 +12,8 @@ use Illuminate\Support\Facades\Validator;
 
 class ProductorEmpleadoController extends Controller
 {
+    use DispatchesKycValidacion;
+
     /**
      * List all employees for a given producer.
      */
@@ -38,6 +41,7 @@ class ProductorEmpleadoController extends Controller
             'nombres' => 'required|string|max:255',
             'apellidos' => 'required|string|max:255',
             'documento_identidad' => 'required|string|max:50',
+            'curp' => 'nullable|string|size:18',
             'genero' => 'nullable|string|max:20',
             'fecha_nacimiento' => 'nullable|date',
             'edad' => 'nullable|integer',
@@ -72,6 +76,9 @@ class ProductorEmpleadoController extends Controller
         }
 
         $employee = ProductorEmpleado::create($data);
+
+        // Validación de identidad (KYC) contra JAAK si la empresa la tiene activa.
+        $this->dispatchKycValidacion($employee, $data['curp'] ?? null);
 
         return response()->json([
             'success' => true,

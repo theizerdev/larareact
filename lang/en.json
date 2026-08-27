@@ -1212,5 +1212,10 @@
   "Re-run KYC": "Re-run KYC",
   "KYC re-validation queued.": "KYC re-validation queued.",
   "No identity validation has been run for this person yet.": "No identity validation has been run for this person yet.",
-  "JAAK raw response": "JAAK raw response"
+  "JAAK raw response": "JAAK raw response",
+  "Identity Validations": "Identity Validations",
+  "Identity validation ready": "Identity validation ready",
+  ":nombre (:tipo) — :resultado": ":nombre (:tipo) — :resultado",
+  "Results of the JAAK identity checks (CURP / INE) run during pre-registration.": "Results of the JAAK identity checks (CURP / INE) run during registration.",
+  "Search by CURP...": "Search by CURP..."
 }

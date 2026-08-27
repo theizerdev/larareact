@@ -452,6 +452,7 @@ class ProcesarKycValidacion implements ShouldQueue
         $val->save();
 
         $this->sincronizarPersona($val);
+        $this->notificar($val);
     }
 
     private function marcarError(KycValidacion $val, string $mensaje): void
@@ -464,6 +465,36 @@ class ProcesarKycValidacion implements ShouldQueue
         $val->save();
 
         $this->sincronizarPersona($val);
+        $this->notificar($val);
+    }
+
+    /**
+     * Aviso interno (campana) a los usuarios de la empresa con permiso
+     * `validaciones.view` de que ya hay resultado para esta persona.
+     */
+    private function notificar(KycValidacion $val): void
+    {
+        try {
+            $persona = $val->validable;
+            $nombre = $persona
+                ? (trim(($persona->nombres ?? '').' '.($persona->apellidos ?? '')) ?: ('#'.$val->validable_id))
+                : ('#'.$val->validable_id);
+
+            \App\Services\NotificationDispatcher::notifyPermission(
+                'validaciones.view',
+                $val->empresa_id,
+                new \App\Notifications\KycValidacionCompletadaNotification(
+                    $val->id,
+                    $nombre,
+                    class_basename($val->validable_type),
+                    $val->estatus,
+                ),
+            );
+        } catch (\Throwable $e) {
+            Log::warning('No se pudo enviar la notificación de KYC: '.$e->getMessage(), [
+                'kyc_validacion_id' => $val->id,
+            ]);
+        }
     }
 
     private function sincronizarPersona(KycValidacion $val): void

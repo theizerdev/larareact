@@ -8,19 +8,24 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\Log;
 
 /**
- * Helper compartido por los *PreRegistroController para lanzar la validación de
- * identidad (KYC) contra JAAK tras crear una persona en un wizard de pre-registro.
+ * Helper compartido para lanzar la validación de identidad (KYC) contra JAAK
+ * cuando se registra una persona: tanto desde los wizards públicos de
+ * pre-registro como desde las altas del panel de administración.
  *
- * Diseño defensivo: si algo falla aquí NO debe romper el pre-registro (que ya se
- * guardó y se le confirmó al usuario). Por eso todo va envuelto en try/catch y el
- * Job se despacha con ->afterResponse().
+ * Diseño defensivo: si algo falla aquí NO debe romper el registro (que ya se
+ * guardó y se le confirmó al usuario). Todo va envuelto en try/catch y el Job
+ * se despacha con ->afterResponse().
  */
 trait DispatchesKycValidacion
 {
-    protected function dispatchKycValidacion(Model $persona, $preRegistro, ?string $curp = null): void
+    /**
+     * @param  Model  $persona  Empleado | ProveedorEmpleado | ProductorEmpleado | VisitaTemporal
+     *                          (debe tener empresa_id, sucursal_id y la relación empresa())
+     */
+    protected function dispatchKycValidacion(Model $persona, ?string $curp = null): void
     {
         try {
-            $empresa = $preRegistro->empresa ?? null;
+            $empresa = $persona->empresa ?? null;
 
             if (! $empresa || ! $empresa->jaak_active || empty($empresa->jaak_api_key)) {
                 return; // empresa sin KYC configurado: flujo idéntico al de siempre
@@ -30,11 +35,13 @@ trait DispatchesKycValidacion
                 return;
             }
 
+            $curp = $curp ?: ($persona->curp ?? null);
+
             $validacion = KycValidacion::create([
                 'validable_type' => $persona->getMorphClass(),
                 'validable_id' => $persona->getKey(),
-                'empresa_id' => $preRegistro->empresa_id,
-                'sucursal_id' => $preRegistro->sucursal_id,
+                'empresa_id' => $persona->empresa_id,
+                'sucursal_id' => $persona->sucursal_id,
                 'curp_capturada' => $curp ? strtoupper(trim($curp)) : null,
                 'jaak_environment' => $empresa->jaak_environment ?? 'sandbox',
                 'estatus' => KycValidacion::ESTATUS_PENDIENTE,

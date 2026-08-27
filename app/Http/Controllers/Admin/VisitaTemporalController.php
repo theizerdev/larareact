@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Admin;
 
+use App\Http\Controllers\Concerns\DispatchesKycValidacion;
 use App\Http\Controllers\Controller;
 use App\Models\VisitaTemporal;
 use App\Models\Responsable;
@@ -20,6 +21,8 @@ use Inertia\Inertia;
 
 class VisitaTemporalController extends Controller
 {
+    use DispatchesKycValidacion;
+
     /** IDs de tipos de servicio que activan el modo entrega simplificada */
     private const ENTREGA_IDS = [1, 6];
 
@@ -141,6 +144,9 @@ class VisitaTemporalController extends Controller
 
         $visita = VisitaTemporal::create($validated);
 
+        // Validación de identidad (KYC) contra JAAK si la empresa la tiene activa.
+        $this->dispatchKycValidacion($visita, $validated['curp'] ?? null);
+
         // Notificar al empleado visitado Y al responsable por WhatsApp
         $this->notifyArrival($visita, $user);
 
@@ -195,6 +201,7 @@ class VisitaTemporalController extends Controller
             'apellidos'           => 'required|string|max:255',
             'nombre_comercial'    => 'nullable|string|max:255',
             'documento_identidad' => 'nullable|string|max:100',
+            'curp'                => 'nullable|string|size:18',
             'pais_telefono_id'    => 'nullable|exists:pais,id',
             'telefono'            => 'nullable|string|max:50',
             'empleado_id'         => 'required|exists:empleados,id',

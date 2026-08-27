@@ -62,9 +62,9 @@ class PermissionSeeder extends Seeder
                 // Nuevos permisos JAAK (Validaciones / KYC)
                 'jaak.view' => 'Ver configuración de JAAK',
                 'jaak.manage' => 'Gestionar configuración JAAK',
-                // Resultados de validación de identidad (KYC) de las personas
-                'kyc.view' => 'Ver validaciones KYC',
-                'kyc.manage' => 'Gestionar / revalidar KYC',
+                // Módulo Validaciones (resultados de identidad / KYC de las personas)
+                'validaciones.view' => 'Ver validaciones de identidad',
+                'validaciones.manage' => 'Gestionar / revalidar validaciones',
                 // Permisos para envío de carnet por WhatsApp
                 'proveedores.send-carnet-whatsapp' => 'Enviar carnet por WhatsApp a Proveedor',
                 'productores.send-carnet-whatsapp' => 'Enviar carnet por WhatsApp a Productor',
@@ -171,7 +171,7 @@ class PermissionSeeder extends Seeder
                     str_starts_with($permission, 'integrations.') => 'integraciones',
                     str_starts_with($permission, 'whatsapp.') => 'integraciones',
                     str_starts_with($permission, 'jaak.') => 'integraciones',
-                    str_starts_with($permission, 'kyc.') => 'integraciones',
+                    str_starts_with($permission, 'validaciones.') => 'validaciones',
                     str_starts_with($permission, 'proveedores.') => 'proveedores',
                     str_starts_with($permission, 'productores.') => 'productores',
                     str_starts_with($permission, 'monitoreo.') => 'monitoreo',

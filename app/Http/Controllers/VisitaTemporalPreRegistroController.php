@@ -143,7 +143,7 @@ class VisitaTemporalPreRegistroController extends Controller
             DB::commit();
 
             // 2.5 Validación de identidad (KYC) contra JAAK si la empresa la tiene activa.
-            $this->dispatchKycValidacion($visita, $preRegistro, $request->curp);
+            $this->dispatchKycValidacion($visita, $request->curp);
 
             // 3. Enviar mensaje de WhatsApp
             try {

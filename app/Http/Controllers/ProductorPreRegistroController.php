@@ -219,7 +219,7 @@ class ProductorPreRegistroController extends Controller
             // 4.5 Validación de identidad (KYC) contra JAAK por cada empleado del
             // productor, si la empresa la tiene activa. Nunca bloquea.
             foreach ($empleadosKyc as [$empleadoKyc, $curpKyc]) {
-                $this->dispatchKycValidacion($empleadoKyc, $preRegistro, $curpKyc);
+                $this->dispatchKycValidacion($empleadoKyc, $curpKyc);
             }
 
             // 5. Enviar mensaje de WhatsApp

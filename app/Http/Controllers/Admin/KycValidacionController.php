@@ -34,10 +34,10 @@ class KycValidacionController extends Controller
             ->withQueryString()
             ->through(fn (KycValidacion $v) => $this->transformar($v));
 
-        return inertia('admin/integrations/kyc-validaciones', [
+        return inertia('admin/validaciones/index', [
             'validaciones' => $validaciones,
             'filtros' => $filtros,
-            'puede_revalidar' => $request->user()->can('kyc.manage'),
+            'puede_revalidar' => $request->user()->can('validaciones.manage'),
         ]);
     }
 

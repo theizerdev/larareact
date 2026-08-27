@@ -81,17 +81,16 @@ export default function KycValidaciones({ validaciones, filtros, puede_revalidar
 
     const breadcrumbs = [
         { title: __('Dashboard'), href: '/admin/dashboard' },
-        { title: __('Integrations'), href: '/admin/integrations' },
-        { title: __('Identity Validation (KYC)'), href: '/admin/integrations/kyc' },
+        { title: __('Identity Validations'), href: '/admin/validaciones' },
     ];
 
     const aplicar = (extra: Record<string, string | undefined>) => {
-        router.get('/admin/integrations/kyc', { ...filtros, q, ...extra }, { preserveScroll: true, preserveState: true, replace: true });
+        router.get('/admin/validaciones', { ...filtros, q, ...extra }, { preserveScroll: true, preserveState: true, replace: true });
     };
 
     const revalidar = (id: number) => {
         router.post(
-            `/admin/integrations/kyc/${id}/reprocesar`,
+            `/admin/validaciones/${id}/reprocesar`,
             {},
             {
                 preserveScroll: true,
@@ -103,14 +102,14 @@ export default function KycValidaciones({ validaciones, filtros, puede_revalidar
 
     return (
         <>
-            <Head title={__('Identity Validation (KYC)')} />
+            <Head title={__('Identity Validations')} />
             <div className="space-y-6">
                 <Breadcrumbs breadcrumbs={breadcrumbs} />
 
                 <div>
                     <h1 className="flex items-center gap-3 text-3xl font-bold tracking-tight">
                         <ShieldCheck className="h-8 w-8 text-teal-600" />
-                        {__('Identity Validation (KYC)')}
+                        {__('Identity Validations')}
                     </h1>
                     <p className="mt-1 text-muted-foreground">
                         {__('Results of the JAAK identity checks (CURP / INE) run during pre-registration.')}

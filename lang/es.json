@@ -1806,5 +1806,11 @@
   "Re-run KYC": "Revalidar KYC",
   "KYC re-validation queued.": "Revalidación KYC encolada.",
   "No identity validation has been run for this person yet.": "Aún no se ha ejecutado ninguna validación de identidad para esta persona.",
-  "JAAK raw response": "Respuesta cruda de JAAK"
+  "JAAK raw response": "Respuesta cruda de JAAK",
+  "Identity Validations": "Validaciones de Identidad",
+  "Identity validation ready": "Validación de identidad lista",
+  ":nombre (:tipo) — :resultado": ":nombre (:tipo) — :resultado",
+  "Results of the JAAK identity checks (CURP / INE) run during pre-registration.": "Resultados de las validaciones de identidad (CURP / INE) ejecutadas al registrar a la persona.",
+  "Search by CURP...": "Buscar por CURP...",
+  "Environment": "Ambiente"
 }
