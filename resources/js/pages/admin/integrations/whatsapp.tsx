@@ -1045,6 +1045,29 @@ export default function WhatsAppIntegration({
     const dailyLimitCount = queueStatsState?.dailyLimit ?? antiBanForm.data.dailyLimit ?? 300;
     const quotaPercentage = Math.min(100, Math.round((sentTodayCount / (dailyLimitCount || 1)) * 100));
 
+    const getConnectionStateLabel = (state?: string | null, connectedFallback = false) => {
+        if (state) {
+            switch (state.toLowerCase()) {
+                case 'connected':
+                case 'open':
+                    return __('Connected');
+                case 'connecting':
+                    return __('Connecting...');
+                case 'qr_ready':
+                case 'qr':
+                    return __('Waiting Scan');
+                case 'disconnected':
+                case 'close':
+                    return __('Disconnected');
+                case 'idle':
+                    return __('Inactive');
+                default:
+                    return __(state);
+            }
+        }
+        return connectedFallback ? __('Connected') : __('Disconnected');
+    };
+
     return (
         <>
             <Head title={__('WhatsApp Integration')} />
@@ -1179,8 +1202,8 @@ export default function WhatsAppIntegration({
 
                         <div className="space-y-1">
                             <div className="flex items-baseline gap-2">
-                                <span className="text-xl font-bold tracking-tight text-slate-900 dark:text-slate-100 capitalize">
-                                    {liveStatusState?.connectionState || (isConnected ? __('connected') : __('offline'))}
+                                <span className="text-xl font-bold tracking-tight text-slate-900 dark:text-slate-100">
+                                    {getConnectionStateLabel(liveStatusState?.connectionState, isConnected)}
                                 </span>
                             </div>
                             <p className="text-xs text-muted-foreground flex items-center gap-1 font-mono">
@@ -1380,7 +1403,7 @@ export default function WhatsAppIntegration({
                                     </CardContent>
                                     <CardFooter className="border-t bg-slate-50/50 dark:bg-slate-900/10 px-6 py-3 flex justify-between items-center text-xs text-muted-foreground">
                                         <span>{__('Engine:')} Baileys Multi-Instance</span>
-                                        <span>{__('Status:')} <strong className="text-slate-700 dark:text-slate-300 capitalize">{liveStatusState?.connectionState || __('idle')}</strong></span>
+                                        <span>{__('Status:')} <strong className="text-slate-700 dark:text-slate-300">{getConnectionStateLabel(liveStatusState?.connectionState, isConnected)}</strong></span>
                                     </CardFooter>
                                 </Card>
                             </div>
@@ -2599,8 +2622,8 @@ export default function WhatsAppIntegration({
                                 </div>
                                 <div className="p-3 bg-slate-50 dark:bg-slate-900 rounded-xl border">
                                     <span className="text-[10px] text-muted-foreground block uppercase">{__('Socket State')}</span>
-                                    <span className="text-lg font-bold text-slate-900 dark:text-slate-100 capitalize">
-                                        {diagnosticData.status?.connectionState || (diagnosticData.status?.isConnected ? __('connected') : __('disconnected'))}
+                                    <span className="text-lg font-bold text-slate-900 dark:text-slate-100">
+                                        {getConnectionStateLabel(diagnosticData.status?.connectionState, Boolean(diagnosticData.status?.isConnected))}
                                     </span>
                                 </div>
                             </div>
