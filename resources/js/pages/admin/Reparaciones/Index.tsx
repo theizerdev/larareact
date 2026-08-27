@@ -36,11 +36,73 @@ import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useTranslate } from '@/hooks/use-translate';
 import { cleanParams, cn } from '@/lib/utils';
-import { notifySuccess, notifyError } from '@/utils/notifications';
+import { QRCodeSVG } from '@/components/qr-code-svg';
+
+const DOT_COORDS_VIEW: Record<number, { x: number; y: number }> = {
+    1: { x: 50, y: 50 },
+    2: { x: 150, y: 50 },
+    3: { x: 250, y: 50 },
+    4: { x: 50, y: 150 },
+    5: { x: 150, y: 150 },
+    6: { x: 250, y: 150 },
+    7: { x: 50, y: 250 },
+    8: { x: 150, y: 250 },
+    9: { x: 250, y: 250 },
+};
+
+function PrintablePatternLock({ pattern = [] }: { pattern: number[] }) {
+    if (!pattern || pattern.length === 0) return null;
+    return (
+        <div className="flex flex-col items-center my-1.5 text-center">
+            <div className="text-[9px] font-bold uppercase mb-0.5">GRÁFICA DEL PATRÓN DE DESBLOQUEO</div>
+            <svg width="120" height="120" viewBox="0 0 300 300" className="border border-black bg-white mx-auto">
+                {pattern.map((dot, idx) => {
+                    if (idx === 0) return null;
+                    const prevDot = pattern[idx - 1];
+                    const from = DOT_COORDS_VIEW[prevDot];
+                    const to = DOT_COORDS_VIEW[dot];
+                    if (!from || !to) return null;
+                    return (
+                        <g key={`print-line-${idx}`}>
+                            <line x1={from.x} y1={from.y} x2={to.x} y2={to.y} stroke="black" strokeWidth="10" strokeLinecap="round" />
+                        </g>
+                    );
+                })}
+                {[1, 2, 3, 4, 5, 6, 7, 8, 9].map((dotNum) => {
+                    const coord = DOT_COORDS_VIEW[dotNum];
+                    const isSelected = pattern.includes(dotNum);
+                    const orderIndex = pattern.indexOf(dotNum);
+                    return (
+                        <g key={`print-dot-${dotNum}`}>
+                            <circle cx={coord.x} cy={coord.y} r={isSelected ? 18 : 12} fill={isSelected ? "black" : "white"} stroke="black" strokeWidth="3" />
+                            {isSelected && (
+                                <text x={coord.x} y={coord.y + 4} textAnchor="middle" fill="white" fontSize="12" fontWeight="bold" fontFamily="monospace">
+                                    {orderIndex + 1}
+                                </text>
+                            )}
+                        </g>
+                    );
+                })}
+            </svg>
+            <div className="text-[9px] font-mono font-bold mt-1">Secuencia: {pattern.join(' - ')}</div>
+        </div>
+    );
+}
+
+const extractPatternNumbers = (val: string | null | undefined): number[] => {
+    if (!val) return [];
+    if (typeof val !== 'string') return [];
+    const match = val.match(/(?:Patrón|Secuencia|Pattern)?\s*:?\s*([\d\s\-_,]+)/i);
+    const textToScan = match ? match[1] : val;
+    const digits = textToScan.match(/\b[1-9]\b/g);
+    if (!digits) return [];
+    return digits.map(Number);
+};
 
 interface Orden {
     id: number;
     numero_orden: string;
+    cliente_id?: number;
     cliente_nombre: string;
     cliente_telefono?: string;
     tipo_dispositivo: string;
@@ -49,13 +111,23 @@ interface Orden {
     color?: string;
     imei_serie?: string;
     descripcion_falla: string;
+    observaciones_fisicas?: string;
+    accesorios_incluidos?: string;
+    contrasena_patron?: string;
     estado_orden: string;
     costo_estimado: number;
     anticipo: number;
     saldo_restante: number;
     fecha_recepcion: string;
+    fecha_estimada_entrega?: string;
     fecha_prometida?: string;
     tecnico?: { name: string };
+    cliente?: { nombre: string; telefono?: string };
+    marca?: { nombre: string };
+    modelo?: { nombre_comercial: string; codigo_modelo?: string };
+    items?: Array<{ id: number; descripcion?: string; precio: number; cantidad: number; servicio?: { nombre: string }; producto?: { nombre: string } }>;
+    empresa?: any;
+    sucursal?: any;
 }
 
 interface Props {
@@ -79,17 +151,22 @@ interface Props {
         perPage?: string;
     };
     isTecnicoOnly?: boolean;
+    empresa?: any;
 }
 
-export default function IndexReparaciones({ ordenes, counts, tecnicos, currencySymbol, filters, isTecnicoOnly }: Props) {
+export default function IndexReparaciones({ ordenes, counts, tecnicos, currencySymbol, filters, isTecnicoOnly, empresa }: Props) {
     const { __ } = useTranslate();
     const pageUser = usePage<any>().props.auth?.user;
+    const empresaInfo = empresa || pageUser?.empresa;
     const isUserTecnico = isTecnicoOnly || Boolean(pageUser?.roles?.some((r: any) => String(r.name).toLowerCase().includes('tecnic'))) || pageUser?.tipo_usuario === 'tecnico';
 
     const [search, setSearch] = useState(filters.search || '');
     const [status, setStatus] = useState(filters.status || 'all');
     const [tecnicoId, setTecnicoId] = useState(filters.tecnico_id || 'all');
     const [perPage, setPerPage] = useState(filters.perPage ? String(filters.perPage) : '10');
+
+    // Quick Print Ticket State
+    const [printOrden, setPrintOrden] = useState<Orden | null>(null);
 
     // QR Code Camera Scanner States
     const [isScanModalOpen, setIsScanModalOpen] = useState(false);
@@ -264,6 +341,33 @@ export default function IndexReparaciones({ ordenes, counts, tecnicos, currencyS
         } catch {
             return dateStr || '';
         }
+    };
+
+    const formatFullSpanishDate = (dateStr?: string): string => {
+        if (!dateStr) return __('No especificada');
+        try {
+            const cleanStr = String(dateStr).split('T')[0];
+            const parts = cleanStr.split('-');
+            if (parts.length === 3) {
+                const [year, month, day] = parts.map(Number);
+                const d = new Date(year, month - 1, day);
+                const dayName = d.toLocaleDateString('es-ES', { weekday: 'long' });
+                const monthName = d.toLocaleDateString('es-ES', { month: 'long' });
+                const capDay = dayName.charAt(0).toUpperCase() + dayName.slice(1);
+                const capMonth = monthName.charAt(0).toUpperCase() + monthName.slice(1);
+                return `${capDay} ${day} de ${capMonth} de ${year}`;
+            }
+            return dateStr;
+        } catch {
+            return dateStr || __('No especificada');
+        }
+    };
+
+    const handleQuickPrintTicket = (o: Orden) => {
+        setPrintOrden(o);
+        setTimeout(() => {
+            window.print();
+        }, 120);
     };
 
     const copyToClipboard = (text: string) => {
@@ -552,7 +656,18 @@ export default function IndexReparaciones({ ordenes, counts, tecnicos, currencyS
 
                                             {/* ACCIONES */}
                                             <td className="px-4 py-3.5 text-center">
-                                                <div className="flex items-center justify-center gap-1">
+                                                <div className="flex items-center justify-center gap-1.5">
+                                                    <Button
+                                                        size="sm"
+                                                        variant="outline"
+                                                        onClick={() => handleQuickPrintTicket(o)}
+                                                        className="h-8 text-xs font-bold gap-1 border-blue-200 hover:bg-blue-50 text-blue-700 dark:border-blue-900 dark:text-blue-300 dark:hover:bg-blue-950/40"
+                                                        title={__('Imprimir Ticket de Cliente')}
+                                                    >
+                                                        <Printer className="w-3.5 h-3.5 text-blue-600 dark:text-blue-400" />
+                                                        {__('Ticket')}
+                                                    </Button>
+
                                                     <Link href={`/admin/reparaciones/${o.id}`}>
                                                         <Button size="sm" variant="outline" className="h-8 text-xs font-bold gap-1 border-purple-200 hover:bg-purple-50 text-purple-700 dark:border-purple-900 dark:text-purple-300">
                                                             <Eye className="w-3.5 h-3.5" />
@@ -766,6 +881,171 @@ export default function IndexReparaciones({ ordenes, counts, tecnicos, currencyS
                         </div>
                     </DialogContent>
                 </Dialog>
+
+                {/* PLANTILLA DE IMPRESIÓN OFICIAL TICKET 80MM (REPARACIÓN: CLIENTE) */}
+                {printOrden && (
+                    <div id="printable-ticket-reparacion-index" className="hidden print:block text-black bg-white font-sans p-4 text-xs w-[80mm] max-w-[80mm] mx-auto">
+                        <style>{`
+                            @media print {
+                                * {
+                                    -webkit-print-color-adjust: exact !important;
+                                    print-color-adjust: exact !important;
+                                    color-adjust: exact !important;
+                                }
+                                body * {
+                                    visibility: hidden !important;
+                                }
+                                #printable-ticket-reparacion-index, #printable-ticket-reparacion-index * {
+                                    visibility: visible !important;
+                                }
+                                #printable-ticket-reparacion-index {
+                                    position: absolute !important;
+                                    left: 0 !important;
+                                    top: 0 !important;
+                                    width: 80mm !important;
+                                    max-width: 80mm !important;
+                                    margin: 0 !important;
+                                    padding: 2mm !important;
+                                    background: white !important;
+                                    color: black !important;
+                                    font-family: 'Courier New', Courier, monospace, Arial, sans-serif !important;
+                                    font-size: 11px !important;
+                                }
+                                @page {
+                                    size: 80mm auto;
+                                    margin: 0;
+                                }
+                            }
+                        `}</style>
+
+                        {/* ================= TICKET PARA EL CLIENTE ================= */}
+                        <div className="font-mono text-black text-xs leading-tight border-2 border-black p-2 bg-white">
+                            {/* HEADER EMPRESA CON LOGO MINI */}
+                            <div className="text-center mb-1">
+                                {empresaInfo?.logo_mini || empresaInfo?.logo ? (
+                                    <img
+                                        src={empresaInfo.logo_mini || empresaInfo.logo}
+                                        alt={empresaInfo.razon_social || 'Logo'}
+                                        className="h-16 max-w-[160px] mx-auto object-contain mb-1"
+                                    />
+                                ) : (
+                                    <div className="font-black text-base uppercase tracking-tight">{empresaInfo?.razon_social || 'SERVITEC'}</div>
+                                )}
+                            </div>
+
+                            {/* DIRECCIÓN Y TELÉFONO CENTRADOS */}
+                            {empresaInfo?.direccion && (
+                                <div className="text-center font-bold text-[9px] uppercase px-1 leading-snug font-mono">
+                                    {empresaInfo.direccion}
+                                </div>
+                            )}
+                            <div className="text-center font-bold text-[10px] mt-0.5 font-mono">
+                                TELEFONO: {empresaInfo?.telefono || ''}
+                            </div>
+
+                            {/* BANNER NEGRO ORDEN N° CON BORDES NEGROS SÓLIDOS */}
+                            <div className="bg-black text-white text-center font-black text-sm py-1 my-2 uppercase tracking-wider border-y-2 border-black">
+                                ORDEN N° {printOrden.numero_orden}
+                            </div>
+
+                            {/* DATOS DEL CLIENTE */}
+                            <div className="text-center font-black text-[11px] uppercase mb-1">
+                                DATOS DEL CLIENTE
+                            </div>
+                            <div className="text-[10px] space-y-0.5 font-bold uppercase px-1">
+                                <div>NOMBRE: <span className="font-normal">{printOrden.cliente?.nombre || printOrden.cliente_nombre}</span></div>
+                                <div>TELEFONO: <span className="font-normal">{printOrden.cliente?.telefono || printOrden.cliente_telefono || '-'}</span></div>
+                            </div>
+
+                            {/* DATOS DEL EQUIPO */}
+                            <div className="text-center font-black text-[11px] uppercase mt-3 mb-1">
+                                DATOS DEL EQUIPO
+                            </div>
+                            <div className="text-[10px] space-y-0.5 font-bold uppercase px-1">
+                                <div>EQUIPO: <span className="font-normal">{printOrden.marca?.nombre || printOrden.marca_nombre} {printOrden.modelo?.nombre_comercial || printOrden.modelo_nombre}</span></div>
+                                <div>IMEI/SN: <span className="font-normal">{printOrden.imei_serie || 'nv'}</span></div>
+                                <div>OBSERVACIONES: <span className="font-normal">{printOrden.observaciones_fisicas || 'equipo sin observaciones'}</span></div>
+                                <div>REPARACION: <span className="font-normal">{printOrden.descripcion_falla || (printOrden.items && printOrden.items.length > 0 ? printOrden.items.map((i: any) => i.descripcion || i.servicio?.nombre || i.producto?.nombre).join(', ') : 'Revisión y diagnóstico')}</span></div>
+                                <div>ACCESORIOS: <span className="font-normal">{printOrden.accesorios_incluidos || 'no deja'}</span></div>
+                            </div>
+
+                            {/* BANNER COSTO REPARACION CON BORDES NEGROS SÓLIDOS */}
+                            <div className="bg-black text-white text-center font-black text-[10px] py-0.5 mt-3 uppercase tracking-wide border-y border-black">
+                                COSTO REPARACION
+                            </div>
+                            <div className="text-[10px] space-y-0.5 py-1 px-1 font-bold">
+                                <div className="flex justify-between">
+                                    <span>SUBTOTAL =</span>
+                                    <span>${formatNum(printOrden.costo_estimado)} {currencySymbol !== '$' ? currencySymbol : 'MXN'}</span>
+                                </div>
+                                <div className="flex justify-between">
+                                    <span>ANTICIPO =</span>
+                                    <span>${formatNum(printOrden.anticipo)} {currencySymbol !== '$' ? currencySymbol : 'MXN'}</span>
+                                </div>
+                                <div className="flex justify-between border-t border-dotted border-black pt-0.5 font-black">
+                                    <span>TOTAL =</span>
+                                    <span>${formatNum(printOrden.saldo_restante)} {currencySymbol !== '$' ? currencySymbol : 'MXN'}</span>
+                                </div>
+                            </div>
+
+                            {/* BANNER FECHA DE RECEPCION */}
+                            <div className="bg-black text-white text-center font-black text-[10px] py-0.5 mt-1 uppercase tracking-wide border-y border-black">
+                                FECHA DE RECEPCION
+                            </div>
+                            <div className="text-center text-[10px] font-bold py-1">
+                                {formatDate(printOrden.fecha_recepcion)}
+                            </div>
+
+                            {/* BANNER FECHA APROX DE ENTREGA */}
+                            <div className="bg-black text-white text-center font-black text-[10px] py-0.5 mt-1 uppercase tracking-wide border-y border-black">
+                                FECHA APROX DE ENTREGA
+                            </div>
+                            <div className="text-center text-[10px] font-bold py-1">
+                                {formatFullSpanishDate(printOrden.fecha_estimada_entrega || printOrden.fecha_recepcion)}
+                            </div>
+
+                            {/* BANNER CONTRASEÑA */}
+                            <div className="bg-black text-white text-center font-black text-[10px] py-0.5 mt-1 uppercase tracking-wide border-y border-black">
+                                CONTRASEÑA
+                            </div>
+                            <div className="py-2 border-b-2 border-black">
+                                {extractPatternNumbers(printOrden.contrasena_patron).length > 0 ? (
+                                    <PrintablePatternLock pattern={extractPatternNumbers(printOrden.contrasena_patron)} />
+                                ) : (
+                                    <div className="text-center font-bold text-xs py-1">
+                                        {printOrden.contrasena_patron || 'Sin contraseña'}
+                                    </div>
+                                )}
+                            </div>
+
+                            {/* CÓDIGO QR Y CÓDIGO DE REPARACIÓN */}
+                            <div className="text-center py-2.5 border-b-2 border-black flex flex-col items-center bg-gray-50/50">
+                                <QRCodeSVG
+                                    value={`${typeof window !== 'undefined' ? window.location.origin : ''}/admin/reparaciones/${printOrden.id}/reporte-pdf`}
+                                    size={110}
+                                />
+                                <div className="text-[9px] font-black uppercase mt-1.5 font-mono tracking-wider">
+                                    CÓDIGO DE REPARACIÓN: {printOrden.numero_orden}
+                                </div>
+                                <div className="text-[7.5px] text-gray-700 font-semibold font-mono">
+                                    Escanee para consultar estado o ver reporte completo
+                                </div>
+                            </div>
+
+                            {/* TÉRMINOS Y GARANTÍA CON RECUADRO DE FIRMA */}
+                            <div className="pt-2">
+                                <div className="text-[9px] font-bold text-left mb-1 font-mono">
+                                    Términos y Condiciones de Garantía:
+                                </div>
+                                <div className="border-2 border-black h-12 w-full mb-1 bg-white"></div>
+                                <div className="text-center font-black text-[10px] uppercase font-mono">
+                                    FIRMA DE CONFORMIDAD
+                                </div>
+                            </div>
+                            <div className="border-b-2 border-black pt-2"></div>
+                        </div>
+                    </div>
+                )}
             </div>
         </>
     );

@@ -47,8 +47,18 @@ class ReparacionController extends Controller
         $isTecnicoOnly = $user && ($user->hasRole('Técnico') || $user->hasRole('tecnico') || $user->hasRole('Tecnico') || $user->hasRole('Técnico de Reparaciones'));
         $isAdmin = $user && ($user->hasRole('Administrador') || $user->hasRole('Super Administrador') || $user->hasRole('super-admin') || $user->hasRole('Admin'));
 
-        $query = OrdenReparacion::with(['cliente', 'marca', 'modelo', 'tecnico'])
-            ->where('empresa_id', $empresaId);
+        $empresa = $user->empresa ?? \App\Models\Empresa::find($empresaId);
+
+        $query = OrdenReparacion::with([
+            'cliente',
+            'marca',
+            'modelo',
+            'tecnico',
+            'empresa',
+            'sucursal',
+            'items.producto',
+            'items.servicio',
+        ])->where('empresa_id', $empresaId);
 
         // Si es exclusivamente rol Técnico (sin permisos de Administrador), mostrar ÚNICAMENTE sus órdenes asignadas
         if ($isTecnicoOnly && !$isAdmin) {
@@ -119,6 +129,7 @@ class ReparacionController extends Controller
             'marcas' => $marcas,
             'categorias' => $categorias,
             'servicios' => $servicios,
+            'empresa' => $empresa,
             'currencySymbol' => $this->getCurrencySymbol(),
             'filters' => array_merge($request->only(['search', 'status', 'tecnico_id']), ['perPage' => (string) $perPage]),
             'isTecnicoOnly' => $isTecnicoOnly && !$isAdmin,
