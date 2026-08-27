@@ -546,7 +546,16 @@ function PatternLockCanvas({
     );
 }
 
-export default function ShowReparacion({ orden, empresa: propEmpresa, productosRepuestos = [], tecnicos, currencySymbol }: Props) {
+export default function ShowReparacion({ 
+    orden, 
+    empresa: propEmpresa, 
+    productosRepuestos = [], 
+    tecnicos = [], 
+    clientes = [], 
+    marcas = [], 
+    categorias = [], 
+    currencySymbol 
+}: Props) {
     const { __ } = useTranslate();
     const pageProps = usePage<any>().props;
     const empresa = propEmpresa 
@@ -561,10 +570,13 @@ export default function ShowReparacion({ orden, empresa: propEmpresa, productosR
     // MODAL DE EDICIÓN / CORRECCIÓN DE DATOS DE LA ORDEN
     const [openEditDatosModal, setOpenEditDatosModal] = useState(false);
     const [editDatosForm, setEditDatosForm] = useState({
+        cliente_id: orden.cliente_id ? String(orden.cliente_id) : (orden.cliente?.id ? String(orden.cliente.id) : ''),
         cliente_nombre: orden.cliente_nombre || '',
         cliente_telefono: orden.cliente_telefono || '',
-        tipo_dispositivo: orden.tipo_dispositivo || '',
+        tipo_dispositivo: orden.tipo_dispositivo || 'Smartphone',
+        marca_id: orden.marca_id ? String(orden.marca_id) : (orden.marca?.id ? String(orden.marca.id) : ''),
         marca_nombre: orden.marca_nombre || '',
+        modelo_id: orden.modelo_id ? String(orden.modelo_id) : (orden.modelo?.id ? String(orden.modelo.id) : ''),
         modelo_nombre: orden.modelo_nombre || '',
         color: orden.color || '',
         imei_serie: orden.imei_serie || '',
@@ -576,11 +588,30 @@ export default function ShowReparacion({ orden, empresa: propEmpresa, productosR
     const [isSavingDatos, setIsSavingDatos] = useState(false);
 
     const handleOpenEditDatosModal = () => {
+        const matchedMarca = marcas.find((m) => 
+            (orden.marca_id && m.id === orden.marca_id) || 
+            (orden.marca_nombre && m.nombre.toLowerCase() === orden.marca_nombre.toLowerCase())
+        );
+        const resolvedMarcaId = matchedMarca ? String(matchedMarca.id) : (orden.marca_id ? String(orden.marca_id) : '');
+
+        let resolvedModeloId = orden.modelo_id ? String(orden.modelo_id) : '';
+        if (matchedMarca && !resolvedModeloId && orden.modelo_nombre) {
+            const matchedMod = matchedMarca.modelos?.find((mod) => 
+                mod.nombre_comercial.toLowerCase() === orden.modelo_nombre.toLowerCase()
+            );
+            if (matchedMod) {
+                resolvedModeloId = String(matchedMod.id);
+            }
+        }
+
         setEditDatosForm({
+            cliente_id: orden.cliente_id ? String(orden.cliente_id) : (orden.cliente?.id ? String(orden.cliente.id) : ''),
             cliente_nombre: orden.cliente_nombre || '',
             cliente_telefono: orden.cliente_telefono || '',
-            tipo_dispositivo: orden.tipo_dispositivo || '',
+            tipo_dispositivo: orden.tipo_dispositivo || 'Smartphone',
+            marca_id: resolvedMarcaId,
             marca_nombre: orden.marca_nombre || '',
+            modelo_id: resolvedModeloId,
             modelo_nombre: orden.modelo_nombre || '',
             color: orden.color || '',
             imei_serie: orden.imei_serie || '',
@@ -788,6 +819,14 @@ export default function ShowReparacion({ orden, empresa: propEmpresa, productosR
         }
         return [];
     }, [inspeccionData, isPatronByString, rawContrasena]);
+
+    const tienePreservicioCompletado = React.useMemo(() => {
+        if (!inspeccionData) return false;
+        if (inspeccionData.completado === true || inspeccionData.estado === 'completado') return true;
+        const keysFuncionales = Object.keys(inspeccionData.pruebas_funcionales || {});
+        const keysEsteticas = Object.keys(inspeccionData.revision_estetica || {});
+        return keysFuncionales.length > 0 || keysEsteticas.length > 0;
+    }, [inspeccionData]);
 
     const tienePreservicio = Boolean(
         inspeccionData || orden.contrasena_patron || orden.observaciones_fisicas
@@ -1967,12 +2006,12 @@ export default function ShowReparacion({ orden, empresa: propEmpresa, productosR
                     >
                         <ShieldCheck className="w-4 h-4 text-emerald-400" />
                         {__('Preservicio / Inspección')}
-                        {orden.inspeccion_json || orden.contrasena_patron ? (
+                        {tienePreservicioCompletado ? (
                             <Badge className="ml-1 text-[10px] h-4 px-1.5 bg-emerald-500 text-white border-0 font-bold">
-                                🟢 {__('Completado')}
+                                {__('Completado')}
                             </Badge>
                         ) : (
-                            <Badge variant="outline" className="ml-1 text-[10px] h-4 px-1.5">
+                            <Badge variant="outline" className="ml-1 text-[10px] h-4 px-1.5 text-amber-600 border-amber-300 dark:border-amber-700 bg-amber-50 dark:bg-amber-950/40">
                                 {__('Pendiente')}
                             </Badge>
                         )}
@@ -4699,14 +4738,58 @@ export default function ShowReparacion({ orden, empresa: propEmpresa, productosR
                     <form onSubmit={handleSaveEditDatos} className="space-y-4 py-2 text-xs">
                         {/* SECCIÓN CLIENTE */}
                         <div className="bg-slate-50 dark:bg-slate-900/50 p-3.5 rounded-xl space-y-3 border border-slate-100 dark:border-slate-800">
-                            <span className="font-bold text-purple-700 dark:text-purple-300 block text-xs">1. Datos del Cliente</span>
-                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                            <div className="flex items-center justify-between">
+                                <span className="font-bold text-purple-700 dark:text-purple-300 block text-xs">1. Datos del Cliente</span>
+                                {clientes.length > 0 && (
+                                    <span className="text-[10px] text-slate-400 font-medium">
+                                        {clientes.length} {__('clientes registrados')}
+                                    </span>
+                                )}
+                            </div>
+
+                            {/* SELECTOR DESPLEGABLE DE CLIENTE */}
+                            {clientes.length > 0 && (
+                                <div>
+                                    <Label className="text-xs font-semibold text-slate-700 dark:text-slate-300">{__('Cambiar o Seleccionar Cliente de la Lista')}</Label>
+                                    <Select
+                                        value={editDatosForm.cliente_id}
+                                        onValueChange={(val) => {
+                                            const found = clientes.find((c) => String(c.id) === val);
+                                            if (found) {
+                                                setEditDatosForm({
+                                                    ...editDatosForm,
+                                                    cliente_id: val,
+                                                    cliente_nombre: found.nombre,
+                                                    cliente_telefono: found.telefono || editDatosForm.cliente_telefono,
+                                                });
+                                            } else {
+                                                setEditDatosForm({ ...editDatosForm, cliente_id: val });
+                                            }
+                                        }}
+                                    >
+                                        <SelectTrigger className="text-xs h-9 mt-1 font-medium bg-white dark:bg-slate-950">
+                                            <SelectValue placeholder={editDatosForm.cliente_nombre ? `Cliente: ${editDatosForm.cliente_nombre}` : __('Seleccionar cliente...')}>
+                                                {editDatosForm.cliente_nombre ? `${editDatosForm.cliente_nombre}` : __('Seleccionar cliente...')}
+                                            </SelectValue>
+                                        </SelectTrigger>
+                                        <SelectContent className="max-h-60">
+                                            {clientes.map((c) => (
+                                                <SelectItem key={c.id} value={String(c.id)} className="text-xs">
+                                                    {c.nombre} {c.telefono ? `(${c.telefono})` : ''}
+                                                </SelectItem>
+                                            ))}
+                                        </SelectContent>
+                                    </Select>
+                                </div>
+                            )}
+
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
                                 <div>
                                     <Label className="text-xs font-semibold">{__('Nombre del Cliente *')}</Label>
                                     <Input
                                         value={editDatosForm.cliente_nombre}
                                         onChange={(e) => setEditDatosForm({ ...editDatosForm, cliente_nombre: e.target.value })}
-                                        className="text-xs h-9 mt-1 font-medium"
+                                        className="text-xs h-9 mt-1 font-medium bg-white dark:bg-slate-950"
                                         required
                                     />
                                 </div>
@@ -4715,45 +4798,130 @@ export default function ShowReparacion({ orden, empresa: propEmpresa, productosR
                                     <Input
                                         value={editDatosForm.cliente_telefono}
                                         onChange={(e) => setEditDatosForm({ ...editDatosForm, cliente_telefono: e.target.value })}
-                                        className="text-xs h-9 mt-1 font-medium"
+                                        className="text-xs h-9 mt-1 font-medium bg-white dark:bg-slate-950"
                                     />
                                 </div>
                             </div>
                         </div>
 
-                        {/* SECCIÓN DISPOSITIVO */}
+                        {/* SECCIÓN DISPOSITIVO CON LISTAS DESPLEGABLES */}
                         <div className="bg-slate-50 dark:bg-slate-900/50 p-3.5 rounded-xl space-y-3 border border-slate-100 dark:border-slate-800">
                             <span className="font-bold text-purple-700 dark:text-purple-300 block text-xs">2. Datos del Dispositivo</span>
+                            
                             <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                                {/* TIPO / CATEGORÍA */}
                                 <div>
                                     <Label className="text-xs font-semibold">{__('Tipo / Categoría *')}</Label>
-                                    <Input
+                                    <Select
                                         value={editDatosForm.tipo_dispositivo}
-                                        onChange={(e) => setEditDatosForm({ ...editDatosForm, tipo_dispositivo: e.target.value })}
-                                        placeholder={__('ej: Smartphone, Consola, Laptop')}
-                                        className="text-xs h-9 mt-1 font-medium"
-                                        required
-                                    />
+                                        onValueChange={(val) => setEditDatosForm({ ...editDatosForm, tipo_dispositivo: val })}
+                                    >
+                                        <SelectTrigger className="text-xs h-9 mt-1 font-medium bg-white dark:bg-slate-950">
+                                            <SelectValue placeholder={__('Seleccionar tipo...')} />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                            {['Smartphone', 'Tablet', 'Laptop', 'Smartwatch', 'Consola', 'PC Escritorio', 'Otro'].map((tipo) => (
+                                                <SelectItem key={tipo} value={tipo} className="text-xs">
+                                                    {tipo}
+                                                </SelectItem>
+                                            ))}
+                                        </SelectContent>
+                                    </Select>
                                 </div>
+
+                                {/* MARCA DEL EQUIPO */}
                                 <div>
                                     <Label className="text-xs font-semibold">{__('Marca del Equipo *')}</Label>
-                                    <Input
-                                        value={editDatosForm.marca_nombre}
-                                        onChange={(e) => setEditDatosForm({ ...editDatosForm, marca_nombre: e.target.value })}
-                                        placeholder={__('ej: Apple, Samsung, Nintendo')}
-                                        className="text-xs h-9 mt-1 font-medium"
-                                        required
-                                    />
+                                    {marcas.length > 0 ? (
+                                        <div className="space-y-1 mt-1">
+                                            <Select
+                                                value={editDatosForm.marca_id}
+                                                onValueChange={(val) => {
+                                                    const found = marcas.find((m) => String(m.id) === val);
+                                                    setEditDatosForm({
+                                                        ...editDatosForm,
+                                                        marca_id: val,
+                                                        marca_nombre: found ? found.nombre : editDatosForm.marca_nombre,
+                                                        modelo_id: '',
+                                                        modelo_nombre: '',
+                                                    });
+                                                }}
+                                            >
+                                                <SelectTrigger className="text-xs h-9 font-medium bg-white dark:bg-slate-950">
+                                                    <SelectValue placeholder={editDatosForm.marca_nombre ? `${editDatosForm.marca_nombre}` : __('Seleccionar marca...')}>
+                                                        {editDatosForm.marca_nombre ? `${editDatosForm.marca_nombre}` : __('Seleccionar marca...')}
+                                                    </SelectValue>
+                                                </SelectTrigger>
+                                                <SelectContent className="max-h-60">
+                                                    {marcas.map((m) => (
+                                                        <SelectItem key={m.id} value={String(m.id)} className="text-xs">
+                                                            {m.nombre}
+                                                        </SelectItem>
+                                                    ))}
+                                                </SelectContent>
+                                            </Select>
+                                        </div>
+                                    ) : (
+                                        <Input
+                                            value={editDatosForm.marca_nombre}
+                                            onChange={(e) => setEditDatosForm({ ...editDatosForm, marca_nombre: e.target.value })}
+                                            placeholder={__('ej: Apple, Samsung, Xiaomi')}
+                                            className="text-xs h-9 mt-1 font-medium bg-white dark:bg-slate-950"
+                                            required
+                                        />
+                                    )}
                                 </div>
+
+                                {/* MODELO DEL EQUIPO */}
                                 <div>
-                                    <Label className="text-xs font-semibold">{__('Modelo del Equipo *')}</Label>
-                                    <Input
-                                        value={editDatosForm.modelo_nombre}
-                                        onChange={(e) => setEditDatosForm({ ...editDatosForm, modelo_nombre: e.target.value })}
-                                        placeholder={__('ej: iPhone 14, PS5, Galaxy S23')}
-                                        className="text-xs h-9 mt-1 font-medium"
-                                        required
-                                    />
+                                    {(() => {
+                                        const selectedMarcaForEdit = marcas.find(
+                                            (m) => String(m.id) === editDatosForm.marca_id || (editDatosForm.marca_nombre && m.nombre.toLowerCase() === editDatosForm.marca_nombre.toLowerCase())
+                                        );
+                                        const availableModelosForEdit = selectedMarcaForEdit?.modelos || [];
+
+                                        return (
+                                            <div>
+                                                <Label className="text-xs font-semibold">{__('Modelo del Equipo *')}</Label>
+                                                {availableModelosForEdit.length > 0 ? (
+                                                    <div className="space-y-1 mt-1">
+                                                        <Select
+                                                            value={editDatosForm.modelo_id}
+                                                            onValueChange={(val) => {
+                                                                const found = availableModelosForEdit.find((mod) => String(mod.id) === val);
+                                                                setEditDatosForm({
+                                                                    ...editDatosForm,
+                                                                    modelo_id: val,
+                                                                    modelo_nombre: found ? found.nombre_comercial : editDatosForm.modelo_nombre,
+                                                                });
+                                                            }}
+                                                        >
+                                                            <SelectTrigger className="text-xs h-9 font-medium bg-white dark:bg-slate-950">
+                                                                <SelectValue placeholder={editDatosForm.modelo_nombre ? `${editDatosForm.modelo_nombre}` : __('Seleccionar de la lista...')}>
+                                                                    {editDatosForm.modelo_nombre ? `${editDatosForm.modelo_nombre}` : __('Seleccionar de la lista...')}
+                                                                </SelectValue>
+                                                            </SelectTrigger>
+                                                            <SelectContent className="max-h-60">
+                                                                {availableModelosForEdit.map((mod) => (
+                                                                    <SelectItem key={mod.id} value={String(mod.id)} className="text-xs">
+                                                                        {mod.nombre_comercial} {mod.numero_modelo ? `(${mod.numero_modelo})` : ''}
+                                                                    </SelectItem>
+                                                                ))}
+                                                            </SelectContent>
+                                                        </Select>
+                                                    </div>
+                                                ) : (
+                                                    <Input
+                                                        value={editDatosForm.modelo_nombre}
+                                                        onChange={(e) => setEditDatosForm({ ...editDatosForm, modelo_nombre: e.target.value })}
+                                                        placeholder={__('ej: Galaxy S23, iPhone 14')}
+                                                        className="text-xs h-9 mt-1 font-medium bg-white dark:bg-slate-950"
+                                                        required
+                                                    />
+                                                )}
+                                            </div>
+                                        );
+                                    })()}
                                 </div>
                             </div>
 
@@ -4764,7 +4932,7 @@ export default function ShowReparacion({ orden, empresa: propEmpresa, productosR
                                         value={editDatosForm.color}
                                         onChange={(e) => setEditDatosForm({ ...editDatosForm, color: e.target.value })}
                                         placeholder={__('ej: Negro, Azul, Rayones leves')}
-                                        className="text-xs h-9 mt-1 font-medium"
+                                        className="text-xs h-9 mt-1 font-medium bg-white dark:bg-slate-950"
                                     />
                                 </div>
                                 <div>
@@ -4773,7 +4941,7 @@ export default function ShowReparacion({ orden, empresa: propEmpresa, productosR
                                         value={editDatosForm.imei_serie}
                                         onChange={(e) => setEditDatosForm({ ...editDatosForm, imei_serie: e.target.value })}
                                         placeholder={__('5 dígitos o número completo')}
-                                        className="text-xs h-9 mt-1 font-medium"
+                                        className="text-xs h-9 mt-1 font-medium font-mono bg-white dark:bg-slate-950"
                                     />
                                 </div>
                                 <div>
@@ -4782,7 +4950,7 @@ export default function ShowReparacion({ orden, empresa: propEmpresa, productosR
                                         value={editDatosForm.contrasena_patron}
                                         onChange={(e) => setEditDatosForm({ ...editDatosForm, contrasena_patron: e.target.value })}
                                         placeholder={__('Sin contraseña, PIN: 1234, etc.')}
-                                        className="text-xs h-9 mt-1 font-medium"
+                                        className="text-xs h-9 mt-1 font-medium bg-white dark:bg-slate-950"
                                     />
                                 </div>
                             </div>

@@ -589,6 +589,7 @@ class ReparacionController extends Controller
             ->get(['id', 'sku', 'codigo_barras', 'nombre_variante', 'precio_venta', 'precio_compra', 'stock', 'marca_id', 'modelo_id', 'condicion', 'tipo_producto']);
 
         $tecnicos = User::where('empresa_id', $empresaId)->get(['id', 'name']);
+        $clientes = \App\Models\Cliente::where('empresa_id', $empresaId)->orderBy('nombre')->get(['id', 'nombre', 'telefono', 'email', 'identificacion']);
         $marcas = Marca::with('modelos')->where('empresa_id', $empresaId)->orderBy('nombre')->get();
         $categorias = \App\Models\Categoria::withoutGlobalScope('multitenancy')
             ->where(function ($q) use ($empresaId) {
@@ -603,6 +604,7 @@ class ReparacionController extends Controller
             'empresa' => $empresa,
             'productosRepuestos' => $productosRepuestos,
             'tecnicos' => $tecnicos,
+            'clientes' => $clientes,
             'marcas' => $marcas,
             'categorias' => $categorias,
             'currencySymbol' => $this->getCurrencySymbol(),
@@ -647,6 +649,7 @@ class ReparacionController extends Controller
     public function updateDatos(Request $request, OrdenReparacion $reparacion)
     {
         $validated = $request->validate([
+            'cliente_id' => 'nullable|exists:clientes,id',
             'cliente_nombre' => 'required|string|max:255',
             'cliente_telefono' => 'nullable|string|max:50',
             'tipo_dispositivo' => 'required|string|max:255',
