@@ -53,7 +53,7 @@ class ServicioController extends Controller
             $query->where('estado', $status);
         }
 
-        $servicios = $query->orderBy('nombre', 'asc')->paginate($perPage)->withQueryString();
+        $servicios = $query->orderBy('id', 'desc')->paginate($perPage)->withQueryString();
 
         $categorias = \App\Models\Categoria::where('empresa_id', $user->empresa_id)
             ->where('estado', true)
@@ -75,11 +75,26 @@ class ServicioController extends Controller
             'nombre' => 'required|string|max:255',
             'codigo' => 'nullable|string|max:100',
             'descripcion' => 'nullable|string',
-            'precio' => 'required|numeric|min:0',
+            'precio' => 'nullable|numeric|min:0',
             'estado' => 'boolean',
         ]);
 
-        Servicio::create($validated);
+        $validated['precio'] = $validated['precio'] ?? 0.00;
+
+        $servicio = Servicio::create($validated);
+
+        $codigo = !empty($validated['codigo'])
+            ? $validated['codigo']
+            : 'SRV-' . str_pad($servicio->id, 8, '0', STR_PAD_LEFT);
+
+        $descripcion = !empty($validated['descripcion'])
+            ? $validated['descripcion']
+            : "Servicio {$codigo} {$servicio->nombre}";
+
+        $servicio->update([
+            'codigo' => $codigo,
+            'descripcion' => $descripcion,
+        ]);
 
         return back()->with('notification', [
             'type' => 'success',
@@ -94,9 +109,19 @@ class ServicioController extends Controller
             'nombre' => 'required|string|max:255',
             'codigo' => 'nullable|string|max:100',
             'descripcion' => 'nullable|string',
-            'precio' => 'required|numeric|min:0',
+            'precio' => 'nullable|numeric|min:0',
             'estado' => 'boolean',
         ]);
+
+        $validated['precio'] = $validated['precio'] ?? $servicio->precio ?? 0.00;
+
+        if (empty($validated['codigo'])) {
+            $validated['codigo'] = $servicio->codigo ?: ('SRV-' . str_pad($servicio->id, 8, '0', STR_PAD_LEFT));
+        }
+
+        if (empty($validated['descripcion'])) {
+            $validated['descripcion'] = "Servicio {$validated['codigo']} {$validated['nombre']}";
+        }
 
         $servicio->update($validated);
 

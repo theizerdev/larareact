@@ -92,12 +92,20 @@ export default function Index({ servicios, categorias = [], currencySymbol = '$'
         nombre: '',
         codigo: '',
         descripcion: '',
-        precio: '',
+        precio: '0.00',
         estado: true,
     });
 
     const handleOpenCreate = () => {
         reset();
+        setData({
+            categoria_id: '',
+            nombre: '',
+            codigo: '',
+            descripcion: '',
+            precio: '0.00',
+            estado: true,
+        });
         setEditingServicio(null);
         setIsCreateOpen(true);
     };
@@ -109,7 +117,7 @@ export default function Index({ servicios, categorias = [], currencySymbol = '$'
             nombre: servicio.nombre,
             codigo: servicio.codigo || '',
             descripcion: servicio.descripcion || '',
-            precio: String(servicio.precio || '0'),
+            precio: String(servicio.precio ?? '0.00'),
             estado: servicio.estado,
         });
         setIsCreateOpen(true);
@@ -187,15 +195,6 @@ export default function Index({ servicios, categorias = [], currencySymbol = '$'
                         )}
                     </div>
                 </div>
-            ),
-        },
-        {
-            header: __('Precio Base'),
-            accessorKey: 'precio',
-            cell: (servicio) => (
-                <span className="font-mono font-bold text-sm text-emerald-600 dark:text-emerald-400">
-                    {currencySymbol}{Number(servicio.precio || 0).toFixed(2)}
-                </span>
             ),
         },
         {
@@ -339,7 +338,7 @@ export default function Index({ servicios, categorias = [], currencySymbol = '$'
                         </DialogHeader>
 
                         <form onSubmit={handleSubmit} className="space-y-4 py-2">
-                            {/* SELECCIÓN DE CATEGORÍA (DE PRIMERO Y OCUPANDO TODO EL ANCHO) */}
+                            {/* SELECCIÓN DE CATEGORÍA */}
                             <div className="space-y-2">
                                 <Label htmlFor="categoria_id">{__('Categoría de Dispositivo / Servicio *')}</Label>
                                 <Select
@@ -366,57 +365,16 @@ export default function Index({ servicios, categorias = [], currencySymbol = '$'
                                 {errors.categoria_id && <p className="text-xs text-rose-500">{errors.categoria_id}</p>}
                             </div>
 
-                            {/* CÓDIGO Y PRECIO BASE (DEBAJO DE LA CATEGORÍA) */}
-                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                                <div className="space-y-2">
-                                    <Label htmlFor="codigo">{__('Código / SKU')}</Label>
-                                    <Input
-                                        id="codigo"
-                                        value={data.codigo}
-                                        onChange={(e) => setData('codigo', e.target.value)}
-                                        placeholder="Ej: SRV-001"
-                                    />
-                                    {errors.codigo && <p className="text-xs text-rose-500">{errors.codigo}</p>}
-                                </div>
-
-                                <div className="space-y-2">
-                                    <Label htmlFor="precio">{__('Precio Base')} ({currencySymbol})</Label>
-                                    <Input
-                                        id="precio"
-                                        type="number"
-                                        step="0.01"
-                                        min="0"
-                                        value={data.precio}
-                                        onChange={(e) => setData('precio', e.target.value)}
-                                        placeholder="Ej: 25.00"
-                                        required
-                                    />
-                                    {errors.precio && <p className="text-xs text-rose-500">{errors.precio}</p>}
-                                </div>
-                            </div>
-
                             <div className="space-y-2">
-                                <Label htmlFor="nombre">{__('Nombre del Servicio')}</Label>
+                                <Label htmlFor="nombre">{__('Nombre del Servicio *')}</Label>
                                 <Input
                                     id="nombre"
                                     value={data.nombre}
                                     onChange={(e) => setData('nombre', e.target.value)}
-                                    placeholder="Ej: Mantenimiento General, Cambio de Batería"
+                                    placeholder={__('Ej: Mantenimiento General, Cambio de Batería')}
                                     required
                                 />
                                 {errors.nombre && <p className="text-xs text-rose-500">{errors.nombre}</p>}
-                            </div>
-
-                            <div className="space-y-2">
-                                <Label htmlFor="descripcion">{__('Descripción')}</Label>
-                                <Textarea
-                                    id="descripcion"
-                                    rows={3}
-                                    value={data.descripcion}
-                                    onChange={(e) => setData('descripcion', e.target.value)}
-                                    placeholder={__('Detalles o alcance del servicio ofrecido...')}
-                                />
-                                {errors.descripcion && <p className="text-xs text-rose-500">{errors.descripcion}</p>}
                             </div>
 
                             <div className="flex items-center justify-between rounded-lg border p-3">

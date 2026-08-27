@@ -207,6 +207,19 @@ class ReparacionController extends Controller
             'estado' => true,
         ]));
 
+        $codigo = !empty($validated['codigo'])
+            ? $validated['codigo']
+            : 'SRV-' . str_pad($servicio->id, 8, '0', STR_PAD_LEFT);
+
+        $descripcion = !empty($validated['descripcion'])
+            ? $validated['descripcion']
+            : "Servicio {$codigo} {$servicio->nombre}";
+
+        $servicio->update([
+            'codigo' => $codigo,
+            'descripcion' => $descripcion,
+        ]);
+
         $servicio->load('categoria:id,nombre');
 
         return response()->json([
