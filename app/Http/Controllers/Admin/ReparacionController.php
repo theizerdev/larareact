@@ -603,9 +603,6 @@ class ReparacionController extends Controller
             ->orderBy('nombre')
             ->get(['id', 'nombre']);
 
-        $empresa = $user->empresa ?? ($empresaId ? \App\Models\Empresa::find($empresaId) : null);
-        $sucursal = $user->sucursal ?? ($user->sucursal_id ? \App\Models\Sucursal::find($user->sucursal_id) : null);
-
         return Inertia::render('admin/Reparaciones/Show', [
             'orden' => $reparacion,
             'productosRepuestos' => $productosRepuestos,
@@ -613,8 +610,6 @@ class ReparacionController extends Controller
             'marcas' => $marcas,
             'categorias' => $categorias,
             'currencySymbol' => $this->getCurrencySymbol(),
-            'empresa' => $empresa,
-            'sucursal' => $sucursal,
         ]);
     }
 
