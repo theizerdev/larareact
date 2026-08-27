@@ -3,21 +3,25 @@
 namespace App\Services;
 
 use App\Models\Empresa;
+use App\Models\WhatsAppMessage;
+use App\Models\WhatsAppTemplate;
 use Illuminate\Http\Client\ConnectionException;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 
 class WhatsAppService
 {
-    private $baseUrl;
+    private string $baseUrl;
 
-    private $apiKey;
+    private ?string $apiKey = null;
 
-    private $companyId;
+    private int $companyId = 1;
 
-    private $instanceName;
+    private string $instanceName = 'empresa_1';
 
-    private $timeout;
+    private int $timeout = 30;
+
+    protected string $countryCode = '+58';
 
     public function setTimeout(int $seconds): self
     {
@@ -29,12 +33,12 @@ class WhatsAppService
     /**
      * Constructor del servicio WhatsApp
      *
-     * @param  Empresa|int|null  $empresa  - Empresa, ID de empresa, o null para usar la del usuario actual
+     * @param  Empresa|int|array|null  $empresa  - Empresa, ID de empresa, array de credenciales, o null para usar la del usuario actual
      */
     public function __construct($empresa = null)
     {
-        $this->baseUrl = config('whatsapp.api_url', 'http://169.58.168.213:3000');
-        $this->timeout = config('whatsapp.timeout', 30);
+        $this->baseUrl = rtrim(config('whatsapp.api_url', 'http://localhost:3000'), '/');
+        $this->timeout = (int) config('whatsapp.timeout', 30);
 
         if (is_array($empresa)) {
             $this->resolveCredentials($empresa);
@@ -48,8 +52,13 @@ class WhatsAppService
         return new self($credentials);
     }
 
+    public static function forCompany($empresa): self
+    {
+        return new self($empresa);
+    }
+
     /**
-     * Resuelve las credenciales provistas directamente
+     * Resuelve las credenciales provistas directamente como array
      */
     private function resolveCredentials(array $credentials): void
     {
@@ -58,17 +67,20 @@ class WhatsAppService
         }
 
         $this->timeout = $credentials['timeout'] ?? $this->timeout;
-        $this->companyId = $credentials['empresa_id'] ?? $credentials['company_id'] ?? 1;
+        $this->companyId = (int) ($credentials['empresa_id'] ?? $credentials['company_id'] ?? 1);
         $this->apiKey = $credentials['api_key'] ?? $credentials['apiKey'] ?? null;
-        $this->instanceName = $credentials['instance'] ?? $credentials['whatsapp_instance'] ?? null;
+        $this->instanceName = $credentials['instance'] ?? $credentials['whatsapp_instance'] ?? '';
 
-        if (! $this->apiKey && $this->companyId) {
-            $empresaModel = Empresa::find($this->companyId);
+        if ($this->companyId) {
+            $empresaModel = Empresa::with('pais')->find($this->companyId);
             if ($empresaModel) {
-                $this->apiKey = $empresaModel->whatsapp_api_key;
+                if (! $this->apiKey) {
+                    $this->apiKey = $empresaModel->whatsapp_api_key;
+                }
                 if (! $this->instanceName && ! empty($empresaModel->whatsapp_instance)) {
                     $this->instanceName = $empresaModel->whatsapp_instance;
                 }
+                $this->countryCode = $empresaModel->pais?->codigo_telefonico ?? '+58';
             }
         }
 
@@ -91,17 +103,17 @@ class WhatsAppService
         if ($empresa instanceof Empresa) {
             $empresaModel = $empresa;
         } elseif (is_numeric($empresa)) {
-            $empresaModel = Empresa::find($empresa);
+            $empresaModel = Empresa::with('pais')->find($empresa);
         } elseif (auth()->check() && auth()->user()->empresa_id) {
-            $empresaModel = Empresa::find(auth()->user()->empresa_id);
+            $empresaModel = Empresa::with('pais')->find(auth()->user()->empresa_id);
         }
 
         if (! $empresaModel) {
-            $empresaModel = Empresa::find(1);
+            $empresaModel = Empresa::with('pais')->find(1);
         }
 
         if ($empresaModel) {
-            $this->companyId = $empresaModel->id;
+            $this->companyId = (int) $empresaModel->id;
             $this->apiKey = $empresaModel->whatsapp_api_key ?? config('whatsapp.api_key', 'test-api-key-vargas-centro');
             if (! empty($empresaModel->whatsapp_api_url)) {
                 $this->baseUrl = rtrim($empresaModel->whatsapp_api_url, '/');
@@ -110,34 +122,32 @@ class WhatsAppService
                 ? $empresaModel->whatsapp_instance
                 : 'empresa_'.$empresaModel->id;
 
+            $pais = $empresaModel->relationLoaded('pais') ? $empresaModel->pais : $empresaModel->pais()->first();
+            $this->countryCode = $pais?->codigo_telefonico ?? '+58';
+
             return;
         }
 
         $this->companyId = 1;
         $this->apiKey = config('whatsapp.api_key', 'test-api-key-vargas-centro');
         $this->instanceName = 'empresa_1';
+        $this->countryCode = '+58';
     }
 
     /**
-     * Obtiene los headers necesarios para la API
+     * Cliente HTTP base con cabeceras de autenticación (x-api-key / X-Company-Id)
      */
-    private function getHeaders(): array
+    protected function client()
     {
-        return [
-            'X-API-Key' => $this->apiKey,
+        $key = (string) ($this->apiKey ?? '');
+        $headers = [
+            'x-api-key' => $key,
             'X-Company-Id' => (string) $this->companyId,
             'Content-Type' => 'application/json',
+            'Accept' => 'application/json',
         ];
-    }
 
-    public static function forCompany($empresa): self
-    {
-        return new self($empresa);
-    }
-
-    public static function forCompanyOwn($empresa): self
-    {
-        return new self($empresa);
+        return Http::withHeaders($headers)->timeout($this->timeout);
     }
 
     public function getCompanyId(): int
@@ -150,16 +160,45 @@ class WhatsAppService
         return $this->instanceName;
     }
 
-    /**
-     * Obtener el estado de la conexión WhatsApp
-     */
-    public function getStatus()
+    public function getCountryCode(): string
     {
+        return $this->countryCode;
+    }
+
+    /**
+     * Crear una nueva instancia de WhatsApp o inicializarla en el motor
+     */
+    public function createInstance(?string $name = null, ?string $customToken = null): ?array
+    {
+        $instanceName = $name ?? $this->instanceName;
+
         try {
-            $url = "{$this->baseUrl}/api/instance/{$this->instanceName}/status";
-            $response = Http::timeout(10)
-                ->withHeaders($this->getHeaders())
-                ->get($url);
+            $response = $this->client()->post("{$this->baseUrl}/api/instance/create", [
+                'name' => $instanceName,
+                'token' => $customToken,
+            ]);
+
+            return $response->json();
+        } catch (\Exception $e) {
+            Log::error('WhatsApp Create Instance Error: '.$e->getMessage(), [
+                'company_id' => $this->companyId,
+                'instance' => $instanceName,
+            ]);
+
+            return null;
+        }
+    }
+
+    /**
+     * Obtener el estado actual y la imagen en Base64 del código QR
+     */
+    public function getStatus(?string $name = null): ?array
+    {
+        $instanceName = $name ?? $this->instanceName;
+
+        try {
+            $url = "{$this->baseUrl}/api/instance/{$instanceName}/status";
+            $response = $this->client()->timeout(10)->get($url);
 
             if ($response->successful()) {
                 $data = $response->json();
@@ -167,34 +206,38 @@ class WhatsAppService
                 $isConnected = ($status === 'open');
 
                 return [
-                    'instanceName' => $data['instanceName'] ?? $this->instanceName,
+                    'instanceName' => $data['instanceName'] ?? $instanceName,
                     'status' => $status,
                     'isConnected' => $isConnected,
                     'connectionState' => $isConnected ? 'connected' : ($status === 'qr' ? 'qr_ready' : $status),
                     'qrCode' => $data['qrDataUrl'] ?? null,
+                    'qrDataUrl' => $data['qrDataUrl'] ?? null,
                     'token' => $data['token'] ?? null,
                     'user' => [
                         'id' => $data['userJid'] ?? null,
+                        'name' => $data['userName'] ?? null,
                     ],
+                    'userJid' => $data['userJid'] ?? null,
                     'raw' => $data,
                 ];
             }
 
-            // Si la instancia aún no existe en el manager de Node (404), la declaramos como desconectada
             if ($response->status() === 404) {
                 return [
-                    'instanceName' => $this->instanceName,
+                    'instanceName' => $instanceName,
                     'status' => 'close',
                     'isConnected' => false,
                     'connectionState' => 'disconnected',
                     'qrCode' => null,
+                    'qrDataUrl' => null,
                     'user' => null,
+                    'userJid' => null,
                 ];
             }
 
             Log::warning('WhatsApp Status HTTP Error', [
                 'company_id' => $this->companyId,
-                'instance' => $this->instanceName,
+                'instance' => $instanceName,
                 'status' => $response->status(),
             ]);
 
@@ -203,14 +246,14 @@ class WhatsAppService
             Log::error('WhatsApp Service Unavailable: '.$e->getMessage(), [
                 'company_id' => $this->companyId,
                 'url' => $this->baseUrl,
-                'instance' => $this->instanceName,
+                'instance' => $instanceName,
             ]);
 
             return ['_error' => 'service_unavailable'];
         } catch (\Exception $e) {
             Log::error('WhatsApp Status Error: '.$e->getMessage(), [
                 'company_id' => $this->companyId,
-                'instance' => $this->instanceName,
+                'instance' => $instanceName,
             ]);
 
             return null;
@@ -220,289 +263,410 @@ class WhatsAppService
     /**
      * Obtener código QR para conectar WhatsApp
      */
-    public function getQRCode()
+    public function getQRCode(?string $name = null): ?array
     {
-        $status = $this->getStatus();
-        if ($status && isset($status['qrCode'])) {
+        $status = $this->getStatus($name);
+        if ($status && ! empty($status['qrCode'])) {
             return ['qrCode' => $status['qrCode']];
         }
 
         return null;
     }
 
-    private function normalizeRecipient(string $to): string
-    {
-        $normalized = preg_replace('/[^0-9]/', '', trim($to)) ?? '';
-
-        if (str_starts_with($normalized, '00')) {
-            $normalized = substr($normalized, 2);
-        }
-
-        return $normalized;
-    }
-
-    private function recipientVariants(string $to): array
-    {
-        $normalized = $this->normalizeRecipient($to);
-
-        if ($normalized === '') {
-            return [''];
-        }
-
-        $variants = [$normalized];
-
-        // Mexico mantiene historicamente el identificador 521 para moviles en WhatsApp,
-        // pero algunos proveedores operan con 52 + 10 digitos. Probamos ambas variantes.
-        if (str_starts_with($normalized, '521') && strlen($normalized) === 13) {
-            $variants[] = '52'.substr($normalized, 3);
-        } elseif (str_starts_with($normalized, '52') && strlen($normalized) === 12) {
-            $variants[] = '521'.substr($normalized, 2);
-        }
-
-        return array_values(array_unique($variants));
-    }
-
-    private function shouldRetryWithAlternateRecipient($response): bool
-    {
-        if (! $response || $response->successful()) {
-            return false;
-        }
-
-        $body = strtolower($response->body());
-
-        return str_contains($body, 'no lid for user');
-    }
-
     /**
-     * Enviar mensaje de texto
+     * 🛡️ Verificar si un número telefónico existe en WhatsApp
      */
-    public function sendMessage(string $to, string $message, bool $isWelcome = false)
+    public function checkNumber(string $phone, ?string $instance = null): ?array
     {
-        try {
-            $url = "{$this->baseUrl}/api/message/send-text/{$this->instanceName}";
-            $recipients = $this->recipientVariants($to);
-            $lastResponse = null;
-
-            foreach ($recipients as $index => $recipient) {
-                $response = Http::timeout($this->timeout)
-                    ->withHeaders($this->getHeaders())
-                    ->post($url, [
-                        'to' => $recipient,
-                        'message' => $message,
-                    ]);
-
-                if ($response->successful()) {
-                    Log::info('WhatsApp mensaje enviado', [
-                        'company_id' => $this->companyId,
-                        'instance' => $this->instanceName,
-                        'to' => $recipient,
-                    ]);
-
-                    return $response->json();
-                }
-
-                $lastResponse = $response;
-
-                if ($index < count($recipients) - 1 && $this->shouldRetryWithAlternateRecipient($response)) {
-                    Log::warning('WhatsApp retrying with alternate recipient variant', [
-                        'company_id' => $this->companyId,
-                        'instance' => $this->instanceName,
-                        'to' => $recipient,
-                        'status' => $response->status(),
-                    ]);
-
-                    continue;
-                }
-
-                break;
-            }
-
-            Log::error('WhatsApp Send Message Failed', [
-                'company_id' => $this->companyId,
-                'instance' => $this->instanceName,
-                'to' => $recipients[0] ?? $to,
-                'status' => $lastResponse?->status(),
-                'body' => $lastResponse?->body(),
-            ]);
-
-            return null;
-        } catch (\Exception $e) {
-            Log::error('WhatsApp Send Message Error: '.$e->getMessage(), [
-                'company_id' => $this->companyId,
-                'instance' => $this->instanceName,
-                'to' => $this->normalizeRecipient($to),
-            ]);
-
-            return null;
-        }
-    }
-
-    /**
-     * Enviar documento o imagen vía URL
-     */
-    public function sendMedia(string $to, string $mediaUrl, string $caption = '')
-    {
-        try {
-            $url = "{$this->baseUrl}/api/message/send-media/{$this->instanceName}";
-            $recipients = $this->recipientVariants($to);
-            $lastResponse = null;
-
-            foreach ($recipients as $index => $recipient) {
-                $response = Http::timeout($this->timeout)
-                    ->withHeaders($this->getHeaders())
-                    ->post($url, [
-                        'to' => $recipient,
-                        'url' => $mediaUrl,
-                        'caption' => $caption,
-                        'message' => $caption,
-                        'isWelcome' => true,
-                    ]);
-
-                if ($response->successful()) {
-                    Log::info('WhatsApp documento enviado exitosamente', [
-                        'company_id' => $this->companyId,
-                        'to' => $recipient,
-                        'response' => $response->json(),
-                    ]);
-                    return $response->json();
-                }
-
-                $lastResponse = $response;
-
-                if ($index < count($recipients) - 1 && $this->shouldRetryWithAlternateRecipient($response)) {
-                    Log::warning('WhatsApp retrying media with alternate recipient variant', [
-                        'company_id' => $this->companyId,
-                        'instance' => $this->instanceName,
-                        'to' => $recipient,
-                        'status' => $response->status(),
-                    ]);
-
-                    continue;
-                }
-
-                break;
-            }
-
-            Log::error('WhatsApp Send Document Failed', [
-                'status' => $lastResponse?->status(),
-                'body' => $lastResponse?->body(),
-            ]);
-
-            return null;
-        } catch (\Exception $e) {
-            Log::error('WhatsApp Send Media Error: '.$e->getMessage(), [
-                'company_id' => $this->companyId,
-                'instance' => $this->instanceName,
-                'to' => $this->normalizeRecipient($to),
-            ]);
-
-            return null;
-        }
-    }
-
-    public function sendDocument(string $to, string $filePath, string $caption = '')
-    {
-        return $this->sendMedia($to, $filePath, $caption);
-    }
-
-    public function sendImage(string $to, string $filePath, string $caption = '')
-    {
-        return $this->sendMedia($to, $filePath, $caption);
-    }
-
-    /**
-     * Crear una nueva instancia en el motor de WhatsApp (Node.js)
-     */
-    public function createInstance(?string $name = null, ?string $customToken = null)
-    {
-        $rawName = $name ?? $this->instanceName;
-        // El motor ya sanitiza, pero limpiamos por seguridad
-        $instanceName = preg_replace('/[^a-zA-Z0-9_-]/', '', str_replace(['/', ' '], '', strtolower($rawName)));
-        if (empty($instanceName)) {
-            $instanceName = 'empresa_'.$this->companyId;
-        }
-
-        // Usamos la master key del env para autenticar la creación.
-        // NO enviamos el whatsapp_api_key de la empresa como token —
-        // el motor genera un token UUID propio y lo devuelve en la respuesta.
-        $masterKey = config('whatsapp.api_key', 'my_secret_key_123');
+        $instanceName = $instance ?? $this->instanceName;
+        $formattedPhone = self::formatPhoneNumber($phone, $this->countryCode);
 
         try {
-            $url = "{$this->baseUrl}/api/instance/create";
-            $body = ['name' => $instanceName];
-
-            // Si se pasa un token personalizado (por ej. al rotar), lo incluimos
-            if ($customToken) {
-                $body['token'] = $customToken;
-            }
-
-            $response = Http::timeout($this->timeout)
-                ->withHeaders([
-                    'X-API-Key' => $masterKey,
-                    'Content-Type' => 'application/json',
-                ])
-                ->post($url, $body);
+            $response = $this->client()->get("{$this->baseUrl}/api/instance/{$instanceName}/check-number/{$formattedPhone}");
 
             if ($response->successful()) {
                 $data = $response->json();
 
-                Log::info("Instancia de WhatsApp '{$instanceName}' creada/inicializada exitosamente.", [
-                    'company_id' => $this->companyId,
-                    'response'   => $data,
-                ]);
-
-                // Guardar el token e instancia devueltos por el motor en la empresa
-                $returnedToken = $data['instance']['token'] ?? $data['token'] ?? null;
-                $statusFromEngine = $data['instance']['status'] ?? $data['status'] ?? 'qr_ready';
-                if ($this->companyId) {
-                    $updateFields = [
-                        'whatsapp_instance' => $instanceName,
-                    ];
-                    if ($returnedToken) {
-                        $updateFields['whatsapp_api_key'] = $returnedToken;
-                        $this->apiKey = $returnedToken;
-                    }
-                    if ($statusFromEngine !== 'connected') {
-                        $updateFields['whatsapp_status'] = 'qr_ready';
-                    }
-                    \App\Models\Empresa::where('id', $this->companyId)->update($updateFields);
-                }
-
-                return $data;
+                return [
+                    'exists' => (bool) ($data['exists'] ?? true),
+                    'jid' => $data['jid'] ?? ($formattedPhone.'@s.whatsapp.net'),
+                    'formattedPhone' => $formattedPhone,
+                ];
             }
 
-            Log::warning("No se pudo crear la instancia de WhatsApp '{$instanceName}' (HTTP {$response->status()})", [
-                'company_id' => $this->companyId,
-                'status'     => $response->status(),
-                'body'       => $response->body(),
-            ]);
+            // Si el servidor de WhatsApp no tiene implementada la subruta check-number (404),
+            // validamos el formato internacional E.164 para no arrojar un falso negativo
+            if ($response->status() === 404) {
+                $isValidFormat = strlen($formattedPhone) >= 10 && strlen($formattedPhone) <= 15;
+
+                return [
+                    'exists' => $isValidFormat,
+                    'jid' => $formattedPhone.'@s.whatsapp.net',
+                    'formattedPhone' => $formattedPhone,
+                ];
+            }
 
             return null;
         } catch (\Exception $e) {
-            Log::error('WhatsApp Create Instance Error: '.$e->getMessage(), [
-                'company_id' => $this->companyId,
-                'instance'   => $instanceName,
+            Log::error('WhatsApp Check Number Error: '.$e->getMessage(), [
+                'phone' => $phone,
+                'instance' => $instanceName,
             ]);
 
             return null;
         }
     }
 
+    /**
+     * 🛡️ Enviar mensaje de texto con protección Anti-Baneo, Spintax y variables
+     */
+    public function sendText(string $to, string $message, array $variables = [], bool $sync = false, ?string $instance = null): ?array
+    {
+        $instanceName = $instance ?? $this->instanceName;
+        $toFormatted = self::formatPhoneNumber($to, $this->countryCode);
+
+        try {
+            $url = "{$this->baseUrl}/api/message/send-text/{$instanceName}";
+            $response = $this->client()->post($url, [
+                'to' => $toFormatted,
+                'message' => $message,
+                'variables' => (object) $variables,
+                'sync' => $sync,
+                'simulateTyping' => true,
+            ]);
+
+            if ($response->successful()) {
+                $responseData = $response->json();
+                $msgId = $responseData['data']['key']['id'] ?? $responseData['messageId'] ?? null;
+
+                try {
+                    WhatsAppMessage::create([
+                        'message_id' => $msgId,
+                        'recipient_phone' => $toFormatted,
+                        'message_content' => $message,
+                        'variables' => $variables,
+                        'status' => 'sent',
+                        'sent_at' => now(),
+                        'direction' => 'outbound',
+                        'created_by' => auth()->id() ?? null,
+                    ]);
+                } catch (\Throwable $e) {
+                    Log::warning('Failed to log outbound WhatsAppMessage: '.$e->getMessage());
+                }
+
+                Log::info('WhatsApp mensaje enviado', [
+                    'company_id' => $this->companyId,
+                    'instance' => $instanceName,
+                    'to' => $toFormatted,
+                ]);
+
+                return $responseData;
+            }
+
+            Log::error('WhatsApp Send Message Failed', [
+                'company_id' => $this->companyId,
+                'instance' => $instanceName,
+                'to' => $toFormatted,
+                'status' => $response->status(),
+                'body' => $response->body(),
+            ]);
+
+            return $response->json() ?? ['error' => 'HTTP '.$response->status()];
+        } catch (\Exception $e) {
+            Log::error('WhatsApp Send Message Error: '.$e->getMessage(), [
+                'company_id' => $this->companyId,
+                'instance' => $instanceName,
+                'to' => $toFormatted,
+            ]);
+
+            return null;
+        }
+    }
+
+    /**
+     * 📋 Enviar un mensaje utilizando una Plantilla registrada con Spintax y variables dinámicas
+     */
+    public function sendTemplate(string $to, string $templateNameOrCategory, array $variables = [], bool $sync = false, ?string $instance = null): ?array
+    {
+        $template = WhatsAppTemplate::where('empresa_id', $this->companyId)
+            ->where('activo', true)
+            ->where(function ($q) use ($templateNameOrCategory) {
+                $q->where('nombre', $templateNameOrCategory)
+                    ->orWhere('categoria', $templateNameOrCategory);
+            })
+            ->first();
+
+        $content = $template ? $template->contenido : $templateNameOrCategory;
+
+        // Auto-inyectar nombre de la empresa si no se pasa explícitamente
+        if (!isset($variables['empresa'])) {
+            $variables['empresa'] = $this->empresa?->nombre ?? 'MMM Venezuela';
+        }
+
+        return $this->sendText($to, $content, $variables, $sync, $instance);
+    }
+
+    /**
+     * Wrapper retrocompatible de sendMessage
+     */
+    public function sendMessage(string $to, string $message, array|bool $variablesOrIsWelcome = [], bool $sync = false, ?string $instance = null): ?array
+    {
+        $variables = is_array($variablesOrIsWelcome) ? $variablesOrIsWelcome : [];
+
+        return $this->sendText($to, $message, $variables, $sync, $instance);
+    }
+
+    /**
+     * 🛡️ Enviar archivo multimedia (Imagen, PDF, Audio, Video) vía URL
+     */
+    public function sendMedia(string $to, string $mediaUrl, string $caption = '', array $variables = [], bool $sync = false, ?string $instance = null): ?array
+    {
+        $instanceName = $instance ?? $this->instanceName;
+        $toFormatted = self::formatPhoneNumber($to, $this->countryCode);
+
+        try {
+            $url = "{$this->baseUrl}/api/message/send-media/{$instanceName}";
+            $response = $this->client()->post($url, [
+                'to' => $toFormatted,
+                'url' => $mediaUrl,
+                'caption' => $caption,
+                'message' => $caption,
+                'variables' => (object) $variables,
+                'sync' => $sync,
+                'simulateTyping' => true,
+            ]);
+
+            if ($response->successful()) {
+                Log::info('WhatsApp multimedia enviado', [
+                    'company_id' => $this->companyId,
+                    'to' => $toFormatted,
+                    'response' => $response->json(),
+                ]);
+
+                return $response->json();
+            }
+
+            Log::error('WhatsApp Send Media Failed', [
+                'status' => $response->status(),
+                'body' => $response->body(),
+            ]);
+
+            return $response->json() ?? ['error' => 'HTTP '.$response->status()];
+        } catch (\Exception $e) {
+            Log::error('WhatsApp Send Media Error: '.$e->getMessage(), [
+                'company_id' => $this->companyId,
+                'instance' => $instanceName,
+                'to' => $toFormatted,
+            ]);
+
+            return null;
+        }
+    }
+
+    public function sendDocument(string $to, string $filePath, string $caption = '', array $variables = [], bool $sync = false, ?string $instance = null): ?array
+    {
+        return $this->sendMedia($to, $filePath, $caption, $variables, $sync, $instance);
+    }
+
+    public function sendImage(string $to, string $filePath, string $caption = '', array $variables = [], bool $sync = false, ?string $instance = null): ?array
+    {
+        return $this->sendMedia($to, $filePath, $caption, $variables, $sync, $instance);
+    }
+
+    /**
+     * 📊 Obtener estadísticas de la cola de envíos y límites de calentamiento
+     */
+    public function getQueueStats(?string $instance = null): ?array
+    {
+        $instanceName = $instance ?? $this->instanceName;
+
+        // Obtener límite configurado de la empresa en BD
+        $empresa = Empresa::find($this->companyId);
+        $dailyLimit = (int) ($empresa?->whatsapp_rate_limit ?? 300);
+
+        // Mensajes locales enviados hoy
+        $sentToday = WhatsAppMessage::where('direction', 'outbound')
+            ->whereDate('created_at', today())
+            ->count();
+
+        $inQueue = WhatsAppMessage::where('direction', 'outbound')
+            ->where('status', 'pending')
+            ->count();
+
+        $failedToday = WhatsAppMessage::where('direction', 'outbound')
+            ->whereDate('created_at', today())
+            ->where('status', 'failed')
+            ->count();
+
+        $remoteStats = null;
+        try {
+            $response = $this->client()->timeout(4)->get("{$this->baseUrl}/api/message/queue/{$instanceName}");
+            if ($response->successful()) {
+                $remoteStats = $response->json();
+            }
+        } catch (\Throwable $e) {
+            // Continúa con métricas sincronizadas locales
+        }
+
+        $effectiveSent = max($sentToday, (int) ($remoteStats['sentToday'] ?? 0));
+        $effectiveDailyLimit = (int) ($remoteStats['dailyLimit'] ?? $dailyLimit);
+        $remaining = max(0, $effectiveDailyLimit - $effectiveSent);
+
+        $dbWarmupMode = $empresa?->whatsapp_warmup_mode ?? true;
+        $dbWorkingHoursEnabled = $empresa?->whatsapp_working_hours_enabled ?? true;
+        $dbWorkingHoursStart = $empresa?->whatsapp_working_hours_start ?? '08:00';
+        $dbWorkingHoursEnd = $empresa?->whatsapp_working_hours_end ?? '20:00';
+        $dbProxyUrl = $empresa?->whatsapp_proxy_url ?? '';
+
+        return [
+            'sentToday' => $effectiveSent,
+            'dailyLimit' => $effectiveDailyLimit,
+            'remaining' => $remaining,
+            'queued' => (int) ($remoteStats['inQueue'] ?? $remoteStats['queued'] ?? $inQueue),
+            'inQueue' => (int) ($remoteStats['inQueue'] ?? $remoteStats['queued'] ?? $inQueue),
+            'failedToday' => (int) ($remoteStats['failedToday'] ?? $failedToday),
+            'warmupMode' => (bool) ($remoteStats['warmupMode'] ?? $dbWarmupMode),
+            'workingHoursEnabled' => (bool) ($remoteStats['workingHoursEnabled'] ?? $dbWorkingHoursEnabled),
+            'workingHoursStart' => $remoteStats['workingHoursStart'] ?? $dbWorkingHoursStart,
+            'workingHoursEnd' => $remoteStats['workingHoursEnd'] ?? $dbWorkingHoursEnd,
+            'proxyUrl' => $remoteStats['proxyUrl'] ?? $dbProxyUrl,
+        ];
+    }
+
+    /**
+     * 🛑 Añadir un número a la Lista Negra (Blacklist / Opt-Out)
+     */
+    public function addToBlacklist(string $phone, string $reason = 'OPT_OUT_USER', ?string $instance = null): ?array
+    {
+        $instanceName = $instance ?? $this->instanceName;
+        $formattedPhone = self::formatPhoneNumber($phone, $this->countryCode);
+
+        try {
+            $response = $this->client()->post("{$this->baseUrl}/api/instance/{$instanceName}/blacklist", [
+                'phone' => $formattedPhone,
+                'reason' => $reason,
+            ]);
+
+            return $response->json();
+        } catch (\Exception $e) {
+            Log::error('WhatsApp Add Blacklist Error: '.$e->getMessage(), [
+                'phone' => $phone,
+                'instance' => $instanceName,
+            ]);
+
+            return null;
+        }
+    }
+
+    /**
+     * Eliminar un número de la Lista Negra
+     */
+    public function removeFromBlacklist(string $phone, ?string $instance = null): ?array
+    {
+        $instanceName = $instance ?? $this->instanceName;
+        $formattedPhone = self::formatPhoneNumber($phone, $this->countryCode);
+
+        try {
+            $response = $this->client()->delete("{$this->baseUrl}/api/instance/{$instanceName}/blacklist/{$formattedPhone}");
+
+            return $response->json();
+        } catch (\Exception $e) {
+            Log::error('WhatsApp Remove Blacklist Error: '.$e->getMessage(), [
+                'phone' => $phone,
+                'instance' => $instanceName,
+            ]);
+
+            return null;
+        }
+    }
+
+    /**
+     * 🛡️ Configurar parámetros Anti-Baneo y Límites de Mensajería
+     */
+    public function updateAntiBan(array $settings, ?string $instance = null): ?array
+    {
+        $instanceName = $instance ?? $this->instanceName;
+
+        try {
+            $response = $this->client()->post("{$this->baseUrl}/api/instance/{$instanceName}/antiban", $settings);
+
+            return $response->json();
+        } catch (\Exception $e) {
+            Log::error('WhatsApp Update AntiBan Error: '.$e->getMessage(), [
+                'instance' => $instanceName,
+            ]);
+
+            return null;
+        }
+    }
+
+    /**
+     * ⚙️ Ajustar límite diario y modo calentamiento rápidamente
+     */
+    public function setDailyLimit(int $limit, bool $warmupMode = true, ?string $instance = null): ?array
+    {
+        return $this->updateAntiBan([
+            'dailyLimit' => $limit,
+            'warmupMode' => $warmupMode,
+        ], $instance);
+    }
+
+    /**
+     * 🌙 Configurar Horarios de Envío y Silencio Nocturno (Working Hours)
+     */
+    public function updateWorkingHours(bool $enabled, string $start = '08:00', string $end = '20:00', ?string $instance = null): ?array
+    {
+        return $this->updateAntiBan([
+            'workingHoursEnabled' => $enabled,
+            'workingHoursStart' => $start,
+            'workingHoursEnd' => $end,
+        ], $instance);
+    }
+
+    /**
+     * 🌐 Configurar Proxy HTTP/SOCKS5 dedicado para la instancia
+     */
+    public function setProxy(string $proxyUrl, ?string $instance = null): ?array
+    {
+        return $this->updateAntiBan([
+            'proxyUrl' => $proxyUrl,
+        ], $instance);
+    }
+
+    /**
+     * 🎲 Previsualizar variaciones generadas por una plantilla Spintax
+     */
+    public function previewSpintax(string $template, int $count = 5, array $variables = []): ?array
+    {
+        try {
+            $response = $this->client()->post("{$this->baseUrl}/api/message/spintax-preview", [
+                'text' => $template,
+                'count' => $count,
+                'variables' => (object) $variables,
+            ]);
+
+            return $response->json();
+        } catch (\Exception $e) {
+            Log::error('WhatsApp Spintax Preview Error: '.$e->getMessage(), [
+                'template' => $template,
+            ]);
+
+            return null;
+        }
+    }
 
     /**
      * Iniciar / Encender una instancia
      */
-    public function startInstance(?string $name = null)
+    public function startInstance(?string $name = null): ?array
     {
         $instanceName = $name ?? $this->instanceName;
-        try {
-            $url = "{$this->baseUrl}/api/instance/{$instanceName}/start";
-            $response = Http::timeout($this->timeout)
-                ->withHeaders($this->getHeaders())
-                ->post($url);
 
-            return $response->successful() ? $response->json() : null;
+        try {
+            return $this->client()->post("{$this->baseUrl}/api/instance/{$instanceName}/start")->json();
         } catch (\Exception $e) {
+            Log::error('WhatsApp Start Instance Error: '.$e->getMessage());
+
             return null;
         }
     }
@@ -510,57 +674,43 @@ class WhatsAppService
     /**
      * Detener / Apagar una instancia
      */
-    public function stopInstance(?string $name = null)
+    public function stopInstance(?string $name = null): ?array
     {
         $instanceName = $name ?? $this->instanceName;
-        try {
-            $url = "{$this->baseUrl}/api/instance/{$instanceName}/stop";
-            $response = Http::timeout($this->timeout)
-                ->withHeaders($this->getHeaders())
-                ->post($url);
 
-            return $response->successful() ? $response->json() : null;
+        try {
+            return $this->client()->post("{$this->baseUrl}/api/instance/{$instanceName}/stop")->json();
         } catch (\Exception $e) {
+            Log::error('WhatsApp Stop Instance Error: '.$e->getMessage());
+
             return null;
         }
     }
 
     /**
-     * Alias para enviar mensajes de texto simple
-     */
-    public function sendText(string $to, string $message, ?string $instance = null)
-    {
-        if ($instance) {
-            $this->instanceName = $instance;
-        }
-
-        return $this->sendMessage($to, $message);
-    }
-
-    /**
      * Conectar / Crear instancia en el servidor de WhatsApp
      */
-    public function connect()
+    public function connect(?string $customToken = null)
     {
-        return $this->createInstance();
+        return $this->createInstance($this->instanceName, $customToken);
     }
 
     /**
      * Desconectar / Eliminar instancia
      */
-    public function disconnect()
+    public function disconnect(?string $name = null)
     {
+        $instanceName = $name ?? $this->instanceName;
+
         try {
-            $url = "{$this->baseUrl}/api/instance/{$this->instanceName}";
-            $response = Http::timeout($this->timeout)
-                ->withHeaders($this->getHeaders())
-                ->delete($url);
+            $url = "{$this->baseUrl}/api/instance/{$instanceName}";
+            $response = $this->client()->delete($url);
 
             return $response->successful() ? $response->json() : null;
         } catch (\Exception $e) {
             Log::error('WhatsApp Disconnect Error: '.$e->getMessage(), [
                 'company_id' => $this->companyId,
-                'instance' => $this->instanceName,
+                'instance' => $instanceName,
             ]);
 
             return null;
@@ -580,5 +730,58 @@ class WhatsAppService
     public function isConfigured(): bool
     {
         return ! empty($this->apiKey) && ! empty($this->companyId);
+    }
+
+    /**
+     * Normaliza y formatea el número de teléfono con código de país.
+     */
+    public static function formatPhoneNumber(string $phone, ?string $defaultCountryCode = '+58'): string
+    {
+        $digits = preg_replace('/[^0-9]/', '', $phone);
+
+        if (empty($digits)) {
+            return '';
+        }
+
+        // Si empieza con 0 (ej. 04241234567 o 04121234567), quitar el 0
+        if (str_starts_with($digits, '0')) {
+            $digits = substr($digits, 1);
+        }
+
+        // Si ya tiene código de país de Venezuela (58) con 12 dígitos
+        if (str_starts_with($digits, '58') && strlen($digits) >= 12) {
+            return $digits;
+        }
+
+        // Si ya tiene código de país de México (521 o 52)
+        if (str_starts_with($digits, '521') && strlen($digits) === 13) {
+            return $digits;
+        }
+        if (str_starts_with($digits, '52') && strlen($digits) === 12) {
+            return '521'.substr($digits, 2);
+        }
+
+        $cleanPrefix = $defaultCountryCode ? preg_replace('/[^0-9]/', '', $defaultCountryCode) : '58';
+
+        // Manejo específico si el país de la empresa es México (52)
+        if ($cleanPrefix === '52') {
+            if (strlen($digits) === 10) {
+                return '521'.$digits;
+            }
+
+            return $cleanPrefix.$digits;
+        }
+
+        // Si tiene 10 dígitos (típico móvil de Venezuela: 4242885159, 412..., 414...)
+        if (strlen($digits) === 10) {
+            return ($cleanPrefix ?: '58').$digits;
+        }
+
+        // Si ya incluye el prefijo limpio
+        if ($cleanPrefix && str_starts_with($digits, $cleanPrefix)) {
+            return $digits;
+        }
+
+        return ($cleanPrefix ?: '58').$digits;
     }
 }

@@ -6,8 +6,6 @@ use App\Traits\HasSpanishActivityLog;
 use App\Traits\Multitenantable;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
-use App\Models\Pais;
-use Illuminate\Database\Eloquent\Relations\HasMany;
 use Spatie\Activitylog\LogOptions;
 use Spatie\Activitylog\Traits\LogsActivity;
 
@@ -20,8 +18,9 @@ class Empresa extends Model
     public function getActivitylogOptions(): LogOptions
     {
         return LogOptions::defaults()
-            ->logOnly(['razon_social', 'nombre_comercial', 'documento', 'status', 'telefono', 'email'])
+            ->logFillable()
             ->logOnlyDirty()
+            ->dontSubmitEmptyLogs()
             ->setDescriptionForEvent(fn (string $eventName) => static::getSpanishDescription($eventName));
     }
 
@@ -31,12 +30,14 @@ class Empresa extends Model
         'nombre_comercial',
         'documento',
         'pais_telefono_id',
+        'zona_horaria',
         'logo',
         'logo_mini',
         'direccion',
         'latitud',
         'longitud',
         'representante_legal',
+        'curp_representante_legal',
         'telefono',
         'email',
         'status',
@@ -45,16 +46,27 @@ class Empresa extends Model
         'whatsapp_api_url',
         'whatsapp_instance',
         'whatsapp_rate_limit',
+        'whatsapp_warmup_mode',
+        'whatsapp_working_hours_enabled',
+        'whatsapp_working_hours_start',
+        'whatsapp_working_hours_end',
+        'whatsapp_proxy_url',
         'whatsapp_active',
         'whatsapp_phone',
         'whatsapp_status',
         'whatsapp_last_connected',
-        'valor_dolar',
         'mapbox_api_key',
         'mapbox_active',
         'google_maps_api_key',
         'google_maps_active',
-        'paypal_active',
+        'control_acceso_base_url',
+        'control_acceso_app_token',
+        'control_acceso_user_token',
+        'control_acceso_active',
+        'jaak_api_key',
+        'jaak_environment',
+        'jaak_active',
+         'paypal_active',
         'paypal_mode',
         'paypal_client_id',
         'paypal_client_secret',
@@ -74,7 +86,13 @@ class Empresa extends Model
         'max_sucursales',
     ];
 
-    protected function casts(): array
+    protected $casts = [
+        'whatsapp_warmup_mode' => 'boolean',
+        'whatsapp_working_hours_enabled' => 'boolean',
+        'whatsapp_active' => 'boolean',
+    ];
+
+      protected function casts(): array
     {
         return [
             'latitud' => 'decimal:8',
@@ -94,7 +112,7 @@ class Empresa extends Model
         ];
     }
 
-    protected $appends = [
+     protected $appends = [
         'dias_restantes_suscripcion',
         'estado_suscripcion_legible',
     ];
@@ -281,5 +299,5 @@ class Empresa extends Model
     {
         return bin2hex(random_bytes(32));
     }
+   
 }
-
