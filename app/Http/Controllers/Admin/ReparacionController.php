@@ -1135,6 +1135,7 @@ class ReparacionController extends Controller
                 $marcaNombre = $orden->marca ? $orden->marca->nombre : ($orden->marca_nombre ?? 'Dispositivo');
                 $modeloNombre = $orden->modelo ? $orden->modelo->nombre_comercial : ($orden->modelo_nombre ?? '');
                 $saldoFmt = number_format((float) $orden->saldo_restante, 2);
+                $trackingUrl = url("/reparacion/consultar?orden={$orden->numero_orden}");
 
                 $mensajeCliente = "*¡SU EQUIPO YA ESTA LISTO PARA RETIRAR!*\n\n"
                     . "Estimado(a) *{$clienteNombre}*,\n"
@@ -1146,6 +1147,8 @@ class ReparacionController extends Controller
                     . "• *Saldo Pendiente:* {$currencySymbol}{$saldoFmt}\n\n"
                     . "*TECNICO A CARGO:*\n"
                     . "• *Nombre:* {$tecnicoNombre}\n\n"
+                    . "*Ver detalle de la orden:*\n"
+                    . "{$trackingUrl}\n\n"
                     . "Puede pasar por nuestra sucursal en nuestros horarios de atencion. Agradecemos su confianza.";
 
                 $whatsappService->sendMessage($clientePhone, $mensajeCliente);
@@ -1179,7 +1182,7 @@ class ReparacionController extends Controller
                 $costoFmt = number_format((float) $orden->costo_estimado, 2);
                 $anticipoFmt = number_format((float) $orden->anticipo, 2);
                 $saldoFmt = number_format((float) $orden->saldo_restante, 2);
-                $publicReportUrl = url("/admin/reparaciones/{$orden->id}/reporte-pdf");
+                $trackingUrl = url("/reparacion/consultar?orden={$orden->numero_orden}");
 
                 $mensajeCliente = "*CONFIRMACION DE ORDEN DE REPARACION*\n\n"
                     . "*Orden:* #{$orden->numero_orden}\n"
@@ -1190,8 +1193,8 @@ class ReparacionController extends Controller
                     . "*Costo Estimado:* {$currencySymbol}{$costoFmt}\n"
                     . "*Anticipo:* {$currencySymbol}{$anticipoFmt}\n"
                     . "*Saldo Restante:* {$currencySymbol}{$saldoFmt}\n\n"
-                    . "*Ver Estado y Detalle de su Reparacion con Evidencias:*\n"
-                    . "{$publicReportUrl}\n\n"
+                    . "*Consulte el estado en vivo o apruebe su presupuesto aqui:*\n"
+                    . "{$trackingUrl}\n\n"
                     . "Estimado(a) *{$orden->cliente_nombre}*, su equipo ha sido recibido exitosamente en nuestro taller. Le mantendremos informado sobre el estatus de su reparacion. Gracias por su confianza.";
 
                 $whatsappService->sendMessage($clientePhone, $mensajeCliente);

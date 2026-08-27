@@ -395,7 +395,7 @@ export default function IndexReparaciones({ ordenes, counts, tecnicos, currencyS
         const clientName = o.cliente?.nombre || o.cliente_nombre;
         const brandName = o.marca?.nombre || o.marca_nombre;
         const modelName = o.modelo?.nombre_comercial || o.modelo_nombre;
-        const trackingUrl = `${window.location.origin}/reparacion/consultar/${o.numero_orden}`;
+        const trackingUrl = `${window.location.origin}/reparacion/consultar?orden=${o.numero_orden}`;
         const msg = encodeURIComponent(
             `Hola *${clientName}*, le saludamos del Servicio Tecnico.\nSu equipo *${brandName} ${modelName}* (Orden *${o.numero_orden}*) se encuentra actualmente en estado: *${o.estado_orden.toUpperCase().replace('_', ' ')}*.\nSaldo pendiente: *${currencySymbol}${formatNum(o.saldo_restante)}*.\n\nConsulte el estado en vivo o apruebe su presupuesto aqui:\n${trackingUrl}`
         );
