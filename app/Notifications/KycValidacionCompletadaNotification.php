@@ -38,12 +38,20 @@ class KycValidacionCompletadaNotification extends Notification
             default => $this->estatus,
         };
 
+        $tipoTxt = match ($this->personaTipo) {
+            'Empleado' => __('Employee'),
+            'ProveedorEmpleado' => __('Supplier staff'),
+            'ProductorEmpleado' => __('Producer staff'),
+            'VisitaTemporal' => __('Temporary visit'),
+            default => $this->personaTipo,
+        };
+
         return [
             'title' => 'Identity validation ready',
             'message' => ':nombre (:tipo) — :resultado',
             'params' => [
                 'nombre' => $this->personaNombre,
-                'tipo' => $this->personaTipo,
+                'tipo' => $tipoTxt,
                 'resultado' => $estatusTxt,
             ],
             'url' => '/admin/validaciones',

@@ -1217,5 +1217,7 @@
   "Identity validation ready": "Identity validation ready",
   ":nombre (:tipo) — :resultado": ":nombre (:tipo) — :resultado",
   "Results of the JAAK identity checks (CURP / INE) run during pre-registration.": "Results of the JAAK identity checks (CURP / INE) run during registration.",
-  "Search by CURP...": "Search by CURP..."
+  "Search by CURP...": "Search by CURP...",
+  "Supplier staff": "Supplier staff",
+  "Producer staff": "Producer staff"
 }

@@ -1812,5 +1812,7 @@
   ":nombre (:tipo) — :resultado": ":nombre (:tipo) — :resultado",
   "Results of the JAAK identity checks (CURP / INE) run during pre-registration.": "Resultados de las validaciones de identidad (CURP / INE) ejecutadas al registrar a la persona.",
   "Search by CURP...": "Buscar por CURP...",
-  "Environment": "Ambiente"
+  "Environment": "Ambiente",
+  "Supplier staff": "Personal de proveedor",
+  "Producer staff": "Personal de productor"
 }
