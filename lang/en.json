@@ -1802,5 +1802,10 @@
     " y escanee el código QR que verá en pantalla.": " and scan the QR code displayed on screen.",
     "y escanee el código QR que verá en pantalla.": "and scan the QR code displayed on screen.",
     "Continuar e Iniciar Escaneo QR": "Continue and Start QR Scan",
-    "es la vinculación de su cuenta de WhatsApp.": "is linking your WhatsApp account."
+    "es la vinculación de su cuenta de WhatsApp.": "is linking your WhatsApp account.",
+    "IMEI / Serie": "IMEI / Serial",
+    "Buscando...": "Searching...",
+    "orden previa": "previous order",
+    "órdenes previas": "previous orders",
+    "IMEI / Serie (5 Dígitos)": "IMEI / Serial"
 }

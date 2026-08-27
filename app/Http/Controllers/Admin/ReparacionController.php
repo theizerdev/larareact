@@ -382,7 +382,7 @@ class ReparacionController extends Controller
             'modelo_id' => 'nullable|exists:modelos,id',
             'modelo_nombre' => 'required|string|max:255',
             'color' => 'nullable|string|max:100',
-            'imei_serie' => 'nullable|regex:/^\d{5}$/',
+            'imei_serie' => 'nullable|string|max:100',
             'contrasena_patron' => 'nullable|string|max:255',
             'descripcion_falla' => 'required|string',
             'observaciones_fisicas' => 'nullable|string',

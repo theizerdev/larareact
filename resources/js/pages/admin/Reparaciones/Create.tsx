@@ -546,12 +546,12 @@ export default function CreateReparacion({ clientes: initialClientes, marcas: in
         }
     };
 
-    // Búsqueda en tiempo real de historial por serie corta (5 dígitos)
+    // Búsqueda en tiempo real de historial por IMEI / Número de Serie
     const handleImeiChange = (val: string) => {
-        const onlyDigits = val.replace(/\D/g, '').slice(0, 5);
-        setData('imei_serie', onlyDigits);
+        setData('imei_serie', val);
 
-        if (!onlyDigits || onlyDigits.length < 5) {
+        const cleanVal = val.trim();
+        if (!cleanVal || cleanVal.length < 3) {
             setImeiHistoryData(null);
             return;
         }
@@ -562,14 +562,14 @@ export default function CreateReparacion({ clientes: initialClientes, marcas: in
         (window as any)._imeiDebounceTimer = setTimeout(async () => {
             setIsCheckingImei(true);
             try {
-                const res = await postJson('/admin/reparaciones/check-imei', { imei: onlyDigits });
+                const res = await postJson('/admin/reparaciones/check-imei', { imei: cleanVal });
                 if (res.success && res.count > 0) {
                     setImeiHistoryData(res);
                 } else {
                     setImeiHistoryData(null);
                 }
             } catch (err) {
-                console.error('Error al verificar IMEI:', err);
+                console.error('Error al verificar IMEI/Serie:', err);
             } finally {
                 setIsCheckingImei(false);
             }
@@ -1508,13 +1508,23 @@ export default function CreateReparacion({ clientes: initialClientes, marcas: in
                                             />
                                         </div>
                                         <div>
-                                            <Label className="text-[11px] font-bold text-slate-700 dark:text-slate-300">{__('IMEI / Serie (5 Dígitos)')}</Label>
+                                            <div className="flex items-center justify-between">
+                                                <Label className="text-[11px] font-bold text-slate-700 dark:text-slate-300">{__('IMEI / Serie')}</Label>
+                                                {isCheckingImei && (
+                                                    <span className="text-[9px] text-purple-600 animate-pulse">{__('Buscando...')}</span>
+                                                )}
+                                                {imeiHistoryData && (
+                                                    <span className="text-[9px] font-bold text-amber-600 bg-amber-50 dark:bg-amber-950/50 px-1 rounded border border-amber-200">
+                                                        ⚠️ {imeiHistoryData.count} {imeiHistoryData.count === 1 ? __('orden previa') : __('órdenes previas')}
+                                                    </span>
+                                                )}
+                                            </div>
                                             <Input
                                                 value={data.imei_serie}
                                                 onChange={(e) => handleImeiChange(e.target.value)}
-                                                placeholder="ej: 12345"
-                                                maxLength={5}
-                                                className="text-xs h-8 mt-0.5 font-mono font-bold"
+                                                placeholder="ej: 3568..., F2LZ... o 12345"
+                                                maxLength={50}
+                                                className="text-xs h-8 mt-0.5 font-mono font-bold uppercase"
                                             />
                                         </div>
                                         <div>
