@@ -751,3 +751,6 @@ export default function ReparacionTracking({
         </div>
     );
 }
+
+ReparacionTracking.layout = (page: React.ReactNode) => page;
+

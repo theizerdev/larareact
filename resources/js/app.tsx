@@ -40,6 +40,8 @@ createInertiaApp({
             case name.startsWith('preregistro/'):
             case name.startsWith('preregistro-empleado/'):
             case name.startsWith('preregistro-visita/'):
+            case name.startsWith('public/'):
+            case name === 'public/ReparacionTracking':
                 return null;
             case name.startsWith('auth/'):
                 return AuthLayout;
