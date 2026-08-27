@@ -671,25 +671,45 @@ export default function CreateReparacion({ clientes: initialClientes, marcas: in
         (c) => c.nombre.toLowerCase().trim() === (data.tipo_dispositivo || '').toLowerCase().trim()
     )?.id;
 
-    const activeMarcaId = data.marca_id ? Number(data.marca_id) : (selectedMarcaId ? Number(selectedMarcaId) : null);
-    const activeModeloId = data.modelo_id ? Number(data.modelo_id) : null;
+    const activeMarcaId = data.marca_id
+        ? Number(data.marca_id)
+        : (selectedMarcaId
+            ? Number(selectedMarcaId)
+            : (marcasList.find((m) => m.nombre.toLowerCase().trim() === (data.marca_nombre || '').toLowerCase().trim())?.id || null));
 
-    // Servicios compatibles según la selección de Categoría, Marca y Modelo
+    const activeModeloId = data.modelo_id
+        ? Number(data.modelo_id)
+        : (modelosFiltrados.find(
+            (m) =>
+                m.nombre_comercial.toLowerCase().trim() === (data.modelo_nombre || '').toLowerCase().trim() ||
+                (m.codigo_modelo && m.codigo_modelo.toLowerCase().trim() === (data.modelo_nombre || '').toLowerCase().trim())
+        )?.id || null);
+
+    // Servicios compatibles según la selección estricta de Categoría, Marca y Modelo
     const serviciosFiltrados = serviciosList.filter((s) => {
-        // 1. Filtrado por jerarquía de equipo (Categoría -> Marca -> Modelo)
-        if (s.modelo_id) {
-            // Si el servicio es exclusivo de un modelo, solo mostrar si coincide el modelo seleccionado
-            if (!activeModeloId || s.modelo_id !== activeModeloId) return false;
-        } else if (s.marca_id) {
-            // Si el servicio es de una marca, debe coincidir con la marca seleccionada
-            if (!activeMarcaId || s.marca_id !== activeMarcaId) return false;
-            // Si además tiene categoría asignada, debe coincidir si hay categoría seleccionada
-            if (s.categoria_id && activeCategoriaId && s.categoria_id !== activeCategoriaId) return false;
-        } else if (s.categoria_id) {
-            // Si el servicio es de una categoría, debe coincidir con la categoría seleccionada
-            if (!activeCategoriaId || s.categoria_id !== activeCategoriaId) return false;
+        // 1. Filtrado estricto por jerarquía de equipo seleccionado
+        if (activeModeloId) {
+            // Si hay un modelo específico seleccionado (ej: S21 Ultra):
+            // Mostrar exclusivamente los servicios asociados a este modelo específico,
+            // o servicios directos de la marca (ej: Samsung) que no estén limitados a otro modelo
+            const isExactModel = s.modelo_id && Number(s.modelo_id) === Number(activeModeloId);
+            const isBrandService = !s.modelo_id && s.marca_id && Number(s.marca_id) === Number(activeMarcaId) &&
+                (!s.categoria_id || (activeCategoriaId && Number(s.categoria_id) === Number(activeCategoriaId)));
+
+            if (!isExactModel && !isBrandService) return false;
+        } else if (activeMarcaId) {
+            // Si solo se ha seleccionado la marca (ej: Samsung sin modelo aún):
+            // Mostrar los servicios asignados a esta marca
+            const isBrandService = s.marca_id && Number(s.marca_id) === Number(activeMarcaId) &&
+                (!s.categoria_id || (activeCategoriaId && Number(s.categoria_id) === Number(activeCategoriaId)));
+
+            if (!isBrandService) return false;
+        } else if (activeCategoriaId) {
+            // Si solo se ha seleccionado el tipo/categoría (ej: Smartphone):
+            // Mostrar servicios asociados a esta categoría sin marca o universales
+            const isCatService = s.categoria_id && Number(s.categoria_id) === Number(activeCategoriaId) && !s.marca_id && !s.modelo_id;
+            if (!isCatService) return false;
         }
-        // Si no tiene modelo, ni marca, ni categoría es un servicio universal (siempre disponible)
 
         // 2. Filtro de búsqueda por texto
         if (!searchServicioTerm || searchServicioTerm.trim() === '') return true;

@@ -162,7 +162,6 @@ export default function IndexReparaciones({
 
     const [search, setSearch] = useState(filters.search || '');
     const [status, setStatus] = useState(filters.status || 'all');
-    const [tecnicoId, setTecnicoId] = useState(filters.tecnico_id || 'all');
     const [marcaId, setMarcaId] = useState(filters.marca_id || 'all');
     const [modeloId, setModeloId] = useState(filters.modelo_id || 'all');
     const [categoriaId, setCategoriaId] = useState(filters.categoria_id || 'all');
@@ -222,11 +221,6 @@ export default function IndexReparaciones({
             description: m.codigo_modelo || undefined,
         })),
     ], [availableModelos, __]);
-
-    const tecnicoOptions = useMemo(() => [
-        { value: 'all', label: __('Todos los técnicos') },
-        ...(tecnicos || []).map((t) => ({ value: String(t.id), label: t.name })),
-    ], [tecnicos, __]);
 
     const perPageOptions = [
         { value: '10', label: '10' },
@@ -291,7 +285,6 @@ export default function IndexReparaciones({
                 cleanParams({
                     search: search || undefined,
                     status: status === 'all' ? undefined : status,
-                    tecnico_id: tecnicoId === 'all' ? undefined : tecnicoId,
                     marca_id: marcaId === 'all' ? undefined : marcaId,
                     modelo_id: modeloId === 'all' ? undefined : modeloId,
                     categoria_id: categoriaId === 'all' ? undefined : categoriaId,
@@ -302,7 +295,7 @@ export default function IndexReparaciones({
         }, 300);
 
         return () => clearTimeout(timer);
-    }, [search, status, tecnicoId, marcaId, modeloId, categoriaId, perPage]);
+    }, [search, status, marcaId, modeloId, categoriaId, perPage]);
 
     // QR Code Camera Scanner States
     const [isScanModalOpen, setIsScanModalOpen] = useState(false);
@@ -512,7 +505,6 @@ export default function IndexReparaciones({
     const handleResetFilters = () => {
         setSearch('');
         setStatus('all');
-        setTecnicoId('all');
         setMarcaId('all');
         setModeloId('all');
         setCategoriaId('all');
@@ -789,7 +781,7 @@ export default function IndexReparaciones({
 
                 {/* BARRA DE FILTROS ESTÁNDAR CON SELECT2 (SHADCN/UI) */}
                 <FilterBar>
-                    <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-7 gap-3 items-end w-full">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3 items-end w-full">
                         {/* BUSCAR */}
                         <FilterField label={__('Buscar')}>
                             <Input
@@ -854,19 +846,6 @@ export default function IndexReparaciones({
                             />
                         </FilterField>
 
-                        {/* TÉCNICO */}
-                        {!isTecnicoOnly && (
-                            <FilterField label={__('Técnico')}>
-                                <SearchableSelect
-                                    options={tecnicoOptions}
-                                    value={tecnicoId}
-                                    onChange={setTecnicoId}
-                                    placeholder={__('Todos los técnicos')}
-                                    searchPlaceholder={__('Buscar técnico...')}
-                                />
-                            </FilterField>
-                        )}
-
                         {/* REGISTROS POR PÁGINA */}
                         <FilterField label={__('Mostrar')}>
                             <SearchableSelect
@@ -879,7 +858,7 @@ export default function IndexReparaciones({
                         </FilterField>
                     </div>
 
-                    {(search || status !== 'all' || categoriaId !== 'all' || marcaId !== 'all' || modeloId !== 'all' || tecnicoId !== 'all' || perPage !== '10') && (
+                    {(search || status !== 'all' || categoriaId !== 'all' || marcaId !== 'all' || modeloId !== 'all' || perPage !== '10') && (
                         <div className="flex justify-end mt-2.5">
                             <Button
                                 variant="ghost"
