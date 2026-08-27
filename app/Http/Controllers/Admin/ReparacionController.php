@@ -589,7 +589,7 @@ class ReparacionController extends Controller
             ->get(['id', 'sku', 'codigo_barras', 'nombre_variante', 'precio_venta', 'precio_compra', 'stock', 'marca_id', 'modelo_id', 'condicion', 'tipo_producto']);
 
         $tecnicos = User::where('empresa_id', $empresaId)->get(['id', 'name']);
-        $clientes = \App\Models\Cliente::where('empresa_id', $empresaId)->orderBy('nombre')->get(['id', 'nombre', 'telefono', 'email', 'identificacion']);
+        $clientes = \App\Models\Cliente::where('empresa_id', $empresaId)->orderBy('nombre')->get(['id', 'nombre', 'telefono', 'email']);
         $marcas = Marca::with('modelos')->where('empresa_id', $empresaId)->orderBy('nombre')->get();
         $categorias = \App\Models\Categoria::withoutGlobalScope('multitenancy')
             ->where(function ($q) use ($empresaId) {
