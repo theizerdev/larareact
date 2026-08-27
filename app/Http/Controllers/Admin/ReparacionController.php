@@ -195,8 +195,10 @@ class ReparacionController extends Controller
             'nombre' => 'required|string|max:255',
             'codigo' => 'nullable|string|max:100',
             'descripcion' => 'nullable|string',
-            'precio' => 'required|numeric|min:0',
+            'precio' => 'nullable|numeric|min:0',
         ]);
+
+        $validated['precio'] = $validated['precio'] ?? 0.00;
 
         $user = auth()->user();
         $servicio = \App\Models\Servicio::create(array_merge($validated, [

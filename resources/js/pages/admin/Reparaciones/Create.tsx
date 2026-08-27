@@ -935,34 +935,32 @@ export default function CreateReparacion({ clientes: initialClientes, marcas: in
             notifyError(__('Por favor ingrese el nombre del servicio.'));
             return;
         }
-        if (!newServicioData.precio || Number(newServicioData.precio) < 0) {
-            notifyError(__('Por favor ingrese un precio válido.'));
-            return;
-        }
 
         setIsCreatingServicio(true);
         try {
-            const dataRes = await postJson('/admin/reparaciones/quick-servicio', newServicioData);
+            const payload = {
+                ...newServicioData,
+                precio: newServicioData.precio ? Number(newServicioData.precio) : 0,
+            };
+            const dataRes = await postJson('/admin/reparaciones/quick-servicio', payload);
             if (dataRes.success) {
                 const newServicio: ServicioItem = dataRes.servicio;
                 setServiciosList((prev) => [...prev, newServicio]);
 
-                const precioNum = Number(newServicio.precio || 0);
                 const newCartItem: CartServicio = {
                     servicio_id: newServicio.id,
                     nombre: newServicio.nombre,
                     codigo: newServicio.codigo || '',
-                    precio: precioNum,
+                    precio: 0,
                     cantidad: 1,
-                    subtotal: precioNum,
+                    subtotal: 0,
                     categoria_nombre: newServicio.categoria?.nombre || '',
                 };
                 const updatedCart = [...cartServicios, newCartItem];
                 setCartServicios(updatedCart);
-                updateCostoEstimadoWithCart(updatedCart);
 
                 setOpenNewServicioModal(false);
-                setNewServicioData({ categoria_id: '', nombre: '', codigo: '', descripcion: '', precio: '' });
+                setNewServicioData({ categoria_id: '', nombre: '', codigo: '', descripcion: '', precio: '0' });
                 notifySuccess(__('Nuevo servicio creado y agregado a la orden.'));
             } else {
                 notifyError(__('Ocurrió un error al registrar el servicio.'));
@@ -1628,17 +1626,6 @@ export default function CreateReparacion({ clientes: initialClientes, marcas: in
                                                         className="text-xs h-8 mt-1"
                                                     />
                                                 </div>
-                                                <div>
-                                                    <Label className="text-xs font-semibold">{__('Precio Sugerido')}</Label>
-                                                    <Input
-                                                        type="number"
-                                                        step="0.01"
-                                                        value={newServicioData.precio}
-                                                        onChange={(e) => setNewServicioData({ ...newServicioData, precio: e.target.value })}
-                                                        placeholder="0.00"
-                                                        className="text-xs h-8 mt-1"
-                                                    />
-                                                </div>
                                                 <div className="flex items-center justify-end gap-2 pt-2 border-t border-slate-100 dark:border-slate-800">
                                                     <Button type="button" variant="outline" size="sm" onClick={() => setOpenNewServicioModal(false)} className="h-8 text-xs">{__('Cancelar')}</Button>
                                                     <Button type="button" onClick={(e) => handleCreateNewServicio(e)} disabled={isCreatingServicio} size="sm" className="h-8 text-xs font-bold bg-purple-600 hover:bg-purple-700 text-white">{__('Guardar Servicio')}</Button>
@@ -1676,14 +1663,9 @@ export default function CreateReparacion({ clientes: initialClientes, marcas: in
                                                                 setIsServicioDropdownOpen(false);
                                                                 setSearchServicioTerm('');
                                                             }}
-                                                            className="w-full px-3 py-1.5 text-left text-xs hover:bg-purple-50 dark:hover:bg-purple-950/40 flex items-center justify-between transition-colors"
+                                                            className="w-full px-3 py-2 text-left text-xs hover:bg-purple-50 dark:hover:bg-purple-950/40 flex items-center justify-between transition-colors"
                                                         >
-                                                            <div>
-                                                                <span className="font-bold text-slate-900 dark:text-slate-100 block">{s.nombre}</span>
-                                                            </div>
-                                                            <Badge variant="outline" className="font-mono text-purple-600 border-purple-200 text-[10px]">
-                                                                {currencySymbol}{s.precio}
-                                                            </Badge>
+                                                            <span className="font-bold text-slate-900 dark:text-slate-100 block">{s.nombre}</span>
                                                         </button>
                                                     ))
                                                 ) : (
@@ -1699,26 +1681,16 @@ export default function CreateReparacion({ clientes: initialClientes, marcas: in
                                             <table className="w-full text-left text-[11px]">
                                                 <thead className="bg-slate-100 dark:bg-slate-800 text-slate-600 font-bold uppercase text-[9px]">
                                                     <tr>
-                                                        <th className="p-1">{__('Servicio')}</th>
-                                                        <th className="p-1 text-right">{__('Precio')}</th>
-                                                        <th className="p-1 text-center"></th>
+                                                        <th className="p-1.5">{__('Servicio')}</th>
+                                                        <th className="p-1.5 text-right w-8"></th>
                                                     </tr>
                                                 </thead>
                                                 <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
                                                     {cartServicios.map((item, idx) => (
                                                         <tr key={idx} className="hover:bg-slate-50 dark:hover:bg-slate-900/50">
-                                                            <td className="p-1 font-bold text-slate-800 dark:text-slate-200 truncate max-w-[120px]">{item.nombre}</td>
-                                                            <td className="p-1 text-right font-mono font-bold">
-                                                                <input
-                                                                    type="number"
-                                                                    step="0.01"
-                                                                    value={item.precio}
-                                                                    onChange={(e) => handleUpdateCartItemPrecio(idx, parseFloat(e.target.value) || 0)}
-                                                                    className="w-16 text-right h-6 text-xs font-mono border rounded px-1"
-                                                                />
-                                                            </td>
-                                                            <td className="p-1 text-center">
-                                                                <button type="button" onClick={() => handleRemoveCartItem(idx)} className="text-slate-400 hover:text-rose-600">
+                                                            <td className="p-1.5 font-bold text-slate-800 dark:text-slate-200">{item.nombre}</td>
+                                                            <td className="p-1.5 text-right">
+                                                                <button type="button" onClick={() => handleRemoveCartItem(idx)} className="text-slate-400 hover:text-rose-600 p-0.5" title={__('Eliminar')}>
                                                                     <Trash2 className="w-3.5 h-3.5" />
                                                                 </button>
                                                             </td>
