@@ -95,6 +95,7 @@ interface OrdenData {
 
 interface Props {
     orden: OrdenData | null;
+    empresaId?: number;
     searchedCode: string;
     notFound: boolean;
     currencySymbol: string;
@@ -123,6 +124,7 @@ const ORDER_STATE_RANK: Record<string, number> = {
 
 export default function ReparacionTracking({
     orden,
+    empresaId,
     searchedCode = '',
     notFound = false,
     currencySymbol = '$',
@@ -137,6 +139,7 @@ export default function ReparacionTracking({
     const [isSubmittingDecision, setIsSubmittingDecision] = useState(false);
 
     const activeEmpresa = orden?.empresa || defaultEmpresa;
+    const currentEmpresaId = activeEmpresa?.id || empresaId;
 
     const handleSearch = (e: React.FormEvent) => {
         e.preventDefault();
@@ -144,7 +147,11 @@ export default function ReparacionTracking({
         if (!code) return;
 
         setIsSubmittingSearch(true);
-        router.get('/reparacion/consultar', { orden: code }, {
+        const searchUrl = currentEmpresaId
+            ? `/reparacion/${currentEmpresaId}/consultar`
+            : '/reparacion/consultar';
+
+        router.get(searchUrl, { orden: code }, {
             preserveState: false,
             onFinish: () => setIsSubmittingSearch(false),
         });
@@ -153,8 +160,12 @@ export default function ReparacionTracking({
     const handleBudgetDecision = (decision: 'aprobar' | 'rechazar') => {
         if (!orden) return;
         setIsSubmittingDecision(true);
+        const budgetUrl = currentEmpresaId
+            ? `/reparacion/${currentEmpresaId}/consultar/${orden.numero_orden}/presupuesto`
+            : `/reparacion/consultar/${orden.numero_orden}/presupuesto`;
+
         router.post(
-            `/reparacion/consultar/${orden.numero_orden}/presupuesto`,
+            budgetUrl,
             {
                 decision,
                 motivo: decision === 'rechazar' ? rejectReason : null,

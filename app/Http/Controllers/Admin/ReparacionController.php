@@ -593,12 +593,18 @@ class ReparacionController extends Controller
         ]);
 
         // Enviar notificaciones por WhatsApp al cliente y al técnico asociado
-        $this->sendWhatsAppNotificationsOnOrderCreation($orden);
+        $waUrl = $this->sendWhatsAppNotificationsOnOrderCreation($orden);
 
-        return redirect()->route('admin.reparaciones.show', $orden->id)->with('notification', [
+        $redirect = redirect()->route('admin.reparaciones.show', $orden->id)->with('notification', [
             'type' => 'success',
             'message' => "Orden de Reparación {$numeroOrden} creada exitosamente.",
         ]);
+
+        if ($waUrl) {
+            $redirect->with('whatsapp_url', $waUrl);
+        }
+
+        return $redirect;
     }
 
     public function show($id)
@@ -1173,7 +1179,8 @@ class ReparacionController extends Controller
                 $marcaNombre = $orden->marca ? $orden->marca->nombre : ($orden->marca_nombre ?? 'Dispositivo');
                 $modeloNombre = $orden->modelo ? $orden->modelo->nombre_comercial : ($orden->modelo_nombre ?? '');
                 $saldoFmt = number_format((float) $orden->saldo_restante, 2);
-                $trackingUrl = url("/reparacion/consultar?orden={$orden->numero_orden}");
+                $empresaId = $orden->empresa_id ?? 1;
+                $trackingUrl = url("/reparacion/{$empresaId}/consultar?orden={$orden->numero_orden}");
 
                 $mensajeCliente = "*¡SU EQUIPO YA ESTA LISTO PARA RETIRAR!*\n\n"
                     . "Estimado(a) *{$clienteNombre}*,\n"
@@ -1199,13 +1206,15 @@ class ReparacionController extends Controller
         return null;
     }
 
-    private function sendWhatsAppNotificationsOnOrderCreation(OrdenReparacion $orden): void
+    private function sendWhatsAppNotificationsOnOrderCreation(OrdenReparacion $orden): ?string
     {
         try {
             $user = auth()->user();
             $empresaId = $orden->empresa_id ?? ($user ? $user->empresa_id : 1);
             $whatsappService = (new \App\Services\WhatsAppService($empresaId))->setTimeout(3);
             $currencySymbol = $this->getCurrencySymbol();
+
+            $waUrlCliente = null;
 
             // 1. Notificación al Cliente
             $clientePhone = $this->formatPhoneNumber($orden->cliente_telefono, $empresaId);
@@ -1220,7 +1229,7 @@ class ReparacionController extends Controller
                 $costoFmt = number_format((float) $orden->costo_estimado, 2);
                 $anticipoFmt = number_format((float) $orden->anticipo, 2);
                 $saldoFmt = number_format((float) $orden->saldo_restante, 2);
-                $trackingUrl = url("/reparacion/consultar?orden={$orden->numero_orden}");
+                $trackingUrl = url("/reparacion/{$empresaId}/consultar?orden={$orden->numero_orden}");
 
                 $mensajeCliente = "*CONFIRMACION DE ORDEN DE REPARACION*\n\n"
                     . "*Orden:* #{$orden->numero_orden}\n"
@@ -1236,6 +1245,7 @@ class ReparacionController extends Controller
                     . "Estimado(a) *{$orden->cliente_nombre}*, su equipo ha sido recibido exitosamente en nuestro taller. Le mantendremos informado sobre el estatus de su reparacion. Gracias por su confianza.";
 
                 $whatsappService->sendMessage($clientePhone, $mensajeCliente);
+                $waUrlCliente = "https://wa.me/{$clientePhone}?text=" . urlencode($mensajeCliente);
             }
 
             // 2. Notificación al Técnico Asignado (si aplica)
@@ -1258,9 +1268,12 @@ class ReparacionController extends Controller
                     }
                 }
             }
+
+            return $waUrlCliente;
         } catch (\Throwable $e) {
             \Illuminate\Support\Facades\Log::error('Error enviando notificaciones de WhatsApp en creación de orden: ' . $e->getMessage());
         }
+        return null;
     }
 
     private function formatPhoneNumber(?string $phone, ?int $empresaId = null): ?string

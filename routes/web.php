@@ -88,14 +88,23 @@ Route::post('/preregistro-visita/{token}/tipo-servicio', [VisitaTemporalPreRegis
   Route::get('admin/reparaciones/{reparacion}/reporte-pdf', [ReparacionController::class, 'reportePdf'])
         ->name('reparaciones.reporte-pdf');
 
-// Portal público de consulta y tracking de reparaciones
+// Portal público de consulta y tracking de reparaciones por empresa
 use App\Http\Controllers\PublicReparacionTrackingController;
 
-Route::get('/reparacion/consultar/{numero_orden?}', [PublicReparacionTrackingController::class, 'show'])
+// Rutas asociadas a la empresa específica
+Route::get('/reparacion/{empresa}/consultar/{numero_orden?}', [PublicReparacionTrackingController::class, 'show'])
+    ->name('reparacion.empresa.consultar');
+Route::get('/reparaciones/{empresa}/consultar/{numero_orden?}', [PublicReparacionTrackingController::class, 'show'])
+    ->name('reparaciones.empresa.consultar');
+Route::post('/reparacion/{empresa}/consultar/{numero_orden}/presupuesto', [PublicReparacionTrackingController::class, 'responderPresupuesto'])
+    ->name('reparacion.empresa.consultar.presupuesto');
+
+// Rutas de fallback generales (compatibilidad con tickets anteriores)
+Route::get('/reparacion/consultar/{numero_orden?}', [PublicReparacionTrackingController::class, 'showFallback'])
     ->name('reparacion.consultar');
-Route::get('/reparaciones/consultar/{numero_orden?}', [PublicReparacionTrackingController::class, 'show'])
+Route::get('/reparaciones/consultar/{numero_orden?}', [PublicReparacionTrackingController::class, 'showFallback'])
     ->name('reparaciones.consultar');
-Route::post('/reparacion/consultar/{numero_orden}/presupuesto', [PublicReparacionTrackingController::class, 'responderPresupuesto'])
+Route::post('/reparacion/consultar/{numero_orden}/presupuesto', [PublicReparacionTrackingController::class, 'responderPresupuestoFallback'])
     ->name('reparacion.consultar.presupuesto');
 
 if (file_exists(__DIR__.'/larareact-settings.php')) {

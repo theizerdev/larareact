@@ -13,9 +13,43 @@ use Inertia\Response;
 class PublicReparacionTrackingController extends Controller
 {
     /**
-     * Display public tracking portal or search for a specific repair order.
+     * Display public tracking portal scoped to a specific empresa: /reparacion/{empresa}/consultar/{numero_orden?}
      */
-    public function show(Request $request, ?string $numeroOrden = null): Response
+    public function show(Request $request, $empresaParam = null, ?string $numeroOrden = null): Response
+    {
+        $targetEmpresa = null;
+        if ($empresaParam) {
+            if (is_numeric($empresaParam)) {
+                $targetEmpresa = Empresa::find($empresaParam);
+            } else {
+                $targetEmpresa = Empresa::where('id', $empresaParam)
+                    ->orWhere('slug', $empresaParam)
+                    ->first();
+            }
+        }
+
+        if (!$targetEmpresa) {
+            $targetEmpresa = Empresa::first();
+        }
+
+        return $this->processTracking($request, $targetEmpresa, $numeroOrden);
+    }
+
+    /**
+     * Fallback route for backwards compatibility: /reparacion/consultar/{numero_orden?}
+     */
+    public function showFallback(Request $request, ?string $numeroOrden = null): Response
+    {
+        $empresaId = $request->input('empresa') ?: $request->input('empresa_id');
+        $targetEmpresa = $empresaId ? Empresa::find($empresaId) : null;
+
+        return $this->processTracking($request, $targetEmpresa, $numeroOrden);
+    }
+
+    /**
+     * Internal processor for tracking views.
+     */
+    protected function processTracking(Request $request, ?Empresa $targetEmpresa, ?string $numeroOrden = null): Response
     {
         $queryCode = trim((string) ($numeroOrden ?: $request->input('orden') ?: $request->input('q') ?: ''));
 
@@ -27,21 +61,35 @@ class PublicReparacionTrackingController extends Controller
             // Normalizar código (incluyendo apóstrofes de escáner en español)
             $cleanCode = strtoupper(preg_replace('/\s+/', '', str_replace(["'", "´", "`"], '-', $queryCode)));
 
-            $orden = OrdenReparacion::where('numero_orden', $cleanCode)
-                ->orWhere('numero_orden', 'REP-' . str_pad(preg_replace('/[^0-9]/', '', $cleanCode), 6, '0', STR_PAD_LEFT))
-                ->orWhere('imei_serie', $cleanCode)
-                ->orWhere('imei_serie', $queryCode)
-                ->with([
-                    'empresa',
-                    'sucursal',
-                    'marca',
-                    'modelo',
-                    'items.servicio',
-                    'historial' => fn ($q) => $q->orderBy('created_at', 'desc'),
-                ])
-                ->first();
+            $query = OrdenReparacion::query();
+
+            // Si hay empresa objetivo, filtrar estrictamente por empresa_id
+            if ($targetEmpresa) {
+                $query->where('empresa_id', $targetEmpresa->id);
+            }
+
+            $orden = $query->where(function ($q) use ($cleanCode, $queryCode) {
+                $q->where('numero_orden', $cleanCode)
+                  ->orWhere('numero_orden', 'REP-' . str_pad(preg_replace('/[^0-9]/', '', $cleanCode), 6, '0', STR_PAD_LEFT))
+                  ->orWhere('imei_serie', $cleanCode)
+                  ->orWhere('imei_serie', $queryCode);
+            })
+            ->with([
+                'empresa',
+                'sucursal',
+                'marca',
+                'modelo',
+                'items.servicio',
+                'historial' => fn ($q) => $q->orderBy('created_at', 'desc'),
+            ])
+            ->first();
 
             if ($orden) {
+                // Actualizar empresa objetivo si venía de fallback
+                if (!$targetEmpresa && $orden->empresa) {
+                    $targetEmpresa = $orden->empresa;
+                }
+
                 // Símbolo de moneda de la empresa de la orden
                 if ($orden->empresa && $orden->empresa->pais_id) {
                     $pais = Pais::find($orden->empresa->pais_id);
@@ -68,11 +116,12 @@ class PublicReparacionTrackingController extends Controller
                     ? str_repeat('*', strlen($imei) - 4) . substr($imei, -4)
                     : $imei;
 
-                $empresa = $orden->empresa;
+                $empresa = $orden->empresa ?: $targetEmpresa;
                 $sucursal = $orden->sucursal;
 
                 $ordenData = [
                     'id' => $orden->id,
+                    'empresa_id' => $orden->empresa_id,
                     'numero_orden' => $orden->numero_orden,
                     'estado_orden' => $orden->estado_orden,
                     'tipo_dispositivo' => $orden->tipo_dispositivo ?: 'Dispositivo',
@@ -108,6 +157,7 @@ class PublicReparacionTrackingController extends Controller
                         ];
                     }),
                     'empresa' => [
+                        'id' => $empresa?->id,
                         'nombre' => $empresa?->nombre_comercial ?: ($empresa?->razon_social ?: 'Servicio Técnico Especializado'),
                         'razon_social' => $empresa?->razon_social,
                         'logo' => $empresa?->logo ?: $empresa?->logo_mini,
@@ -122,35 +172,71 @@ class PublicReparacionTrackingController extends Controller
             }
         }
 
-        // Si no hay empresa de orden, cargar empresa por defecto para la cabecera
-        $defaultEmpresa = Empresa::first();
+        // Si no hay empresa objetivo aún, cargar la primera registrada
+        if (!$targetEmpresa) {
+            $targetEmpresa = Empresa::first();
+        }
+
+        if ($targetEmpresa && $targetEmpresa->pais_id && $currencySymbol === '$') {
+            $pais = Pais::find($targetEmpresa->pais_id);
+            if ($pais && !empty($pais->simbolo_moneda)) {
+                $currencySymbol = $pais->simbolo_moneda;
+            }
+        }
 
         return Inertia::render('public/ReparacionTracking', [
             'orden' => $ordenData,
+            'empresaId' => $targetEmpresa?->id,
             'searchedCode' => $queryCode,
             'notFound' => $notFound,
             'currencySymbol' => $currencySymbol,
-            'defaultEmpresa' => $defaultEmpresa ? [
-                'nombre' => $defaultEmpresa->nombre_comercial ?: $defaultEmpresa->razon_social,
-                'logo' => $defaultEmpresa->logo ?: $defaultEmpresa->logo_mini,
-                'telefono' => $defaultEmpresa->telefono,
-                'whatsapp_phone' => $defaultEmpresa->whatsapp_phone ?: $defaultEmpresa->telefono,
-                'direccion' => $defaultEmpresa->direccion,
+            'defaultEmpresa' => $targetEmpresa ? [
+                'id' => $targetEmpresa->id,
+                'nombre' => $targetEmpresa->nombre_comercial ?: $targetEmpresa->razon_social,
+                'logo' => $targetEmpresa->logo ?: $targetEmpresa->logo_mini,
+                'telefono' => $targetEmpresa->telefono,
+                'whatsapp_phone' => $targetEmpresa->whatsapp_phone ?: $targetEmpresa->telefono,
+                'direccion' => $targetEmpresa->direccion,
             ] : null,
         ]);
     }
 
     /**
-     * Permite al cliente aprobar o rechazar el presupuesto en línea.
+     * Responder presupuesto para ruta por empresa: /reparacion/{empresa}/consultar/{numero_orden}/presupuesto
      */
-    public function responderPresupuesto(Request $request, string $numeroOrden)
+    public function responderPresupuesto(Request $request, $empresaParam, string $numeroOrden)
+    {
+        return $this->handleDecisionPresupuesto($request, $numeroOrden, $empresaParam);
+    }
+
+    /**
+     * Responder presupuesto para ruta de fallback: /reparacion/consultar/{numero_orden}/presupuesto
+     */
+    public function responderPresupuestoFallback(Request $request, string $numeroOrden)
+    {
+        return $this->handleDecisionPresupuesto($request, $numeroOrden, null);
+    }
+
+    /**
+     * Procesar aprobación o rechazo de presupuesto.
+     */
+    protected function handleDecisionPresupuesto(Request $request, string $numeroOrden, $empresaParam = null)
     {
         $validated = $request->validate([
             'decision' => 'required|in:aprobar,rechazar',
             'motivo' => 'nullable|string|max:500',
         ]);
 
-        $orden = OrdenReparacion::where('numero_orden', strtoupper(trim($numeroOrden)))->firstOrFail();
+        $query = OrdenReparacion::where('numero_orden', strtoupper(trim($numeroOrden)));
+
+        if ($empresaParam) {
+            $targetEmpresaId = is_numeric($empresaParam) ? (int)$empresaParam : Empresa::where('id', $empresaParam)->orWhere('slug', $empresaParam)->value('id');
+            if ($targetEmpresaId) {
+                $query->where('empresa_id', $targetEmpresaId);
+            }
+        }
+
+        $orden = $query->firstOrFail();
 
         if ($validated['decision'] === 'aprobar') {
             $orden->update([
