@@ -879,14 +879,15 @@ export default function IndexReparaciones({ ordenes, counts, tecnicos, currencyS
                         `}</style>
 
                         {/* ================= TICKET PARA EL CLIENTE ================= */}
-                        <div className="font-mono text-black text-xs leading-tight border-2 border-black p-2 bg-white">
-                            {/* HEADER EMPRESA CON LOGO MINI */}
+                        <div className="font-mono text-black text-xs leading-tight p-0 bg-white">
+                            {/* HEADER EMPRESA CON LOGO */}
                             <div className="text-center mb-1">
                                 {empresaInfo?.logo_mini || empresaInfo?.logo ? (
                                     <img
                                         src={empresaInfo.logo_mini || empresaInfo.logo}
                                         alt={empresaInfo.razon_social || 'Logo'}
-                                        className="h-16 max-w-[160px] mx-auto object-contain mb-1"
+                                        style={{ maxWidth: `${Number(empresaInfo?.logo_ticket_size || 200)}px`, maxHeight: `${Math.round(Number(empresaInfo?.logo_ticket_size || 200) * 0.75)}px` }}
+                                        className="mx-auto object-contain mb-1"
                                     />
                                 ) : (
                                     <div className="font-black text-base uppercase tracking-tight">{empresaInfo?.razon_social || 'SERVITEC'}</div>
@@ -899,18 +900,22 @@ export default function IndexReparaciones({ ordenes, counts, tecnicos, currencyS
                                     {empresaInfo.direccion}
                                 </div>
                             )}
-                            <div className="text-center font-bold text-[10px] mt-0.5 font-mono">
-                                TELEFONO: {empresaInfo?.telefono || ''}
-                            </div>
+                            {(empresaInfo?.telefono || empresaInfo?.whatsapp_phone || printOrden?.empresa?.telefono || printOrden?.empresa?.whatsapp_phone) && (
+                                <div className="text-center font-bold text-[10.5px] mt-0.5 font-mono">
+                                    TEL: {empresaInfo?.telefono || empresaInfo?.whatsapp_phone || printOrden?.empresa?.telefono || printOrden?.empresa?.whatsapp_phone}
+                                </div>
+                            )}
 
-                            {/* BANNER NEGRO ORDEN N° CON BORDES NEGROS SÓLIDOS */}
-                            <div className="bg-black text-white text-center font-black text-sm py-1 my-2 uppercase tracking-wider border-y-2 border-black">
-                                ORDEN N° {printOrden.numero_orden}
+                            {/* NÚMERO DE ORDEN */}
+                            <div className="border-y border-dashed border-black py-1.5 my-2 text-center">
+                                <div className="font-black text-sm uppercase tracking-wider font-mono">
+                                    ORDEN N° {printOrden.numero_orden}
+                                </div>
                             </div>
 
                             {/* DATOS DEL CLIENTE */}
-                            <div className="text-center font-black text-[11px] uppercase mb-1">
-                                DATOS DEL CLIENTE
+                            <div className="text-center font-black text-[11px] uppercase mb-1 font-mono tracking-wide">
+                                === DATOS DEL CLIENTE ===
                             </div>
                             <div className="text-[10px] space-y-0.5 font-bold uppercase px-1">
                                 <div>NOMBRE: <span className="font-normal">{printOrden.cliente?.nombre || printOrden.cliente_nombre}</span></div>
@@ -918,8 +923,8 @@ export default function IndexReparaciones({ ordenes, counts, tecnicos, currencyS
                             </div>
 
                             {/* DATOS DEL EQUIPO */}
-                            <div className="text-center font-black text-[11px] uppercase mt-3 mb-1">
-                                DATOS DEL EQUIPO
+                            <div className="border-t border-dashed border-black pt-1.5 mt-2 text-center font-black text-[11px] uppercase mb-1 font-mono tracking-wide">
+                                === DATOS DEL EQUIPO ===
                             </div>
                             <div className="text-[10px] space-y-0.5 font-bold uppercase px-1">
                                 <div>EQUIPO: <span className="font-normal">{printOrden.marca?.nombre || printOrden.marca_nombre} {printOrden.modelo?.nombre_comercial || printOrden.modelo_nombre}</span></div>
@@ -929,9 +934,9 @@ export default function IndexReparaciones({ ordenes, counts, tecnicos, currencyS
                                 <div>ACCESORIOS: <span className="font-normal">{printOrden.accesorios_incluidos || 'no deja'}</span></div>
                             </div>
 
-                            {/* BANNER COSTO REPARACION CON BORDES NEGROS SÓLIDOS */}
-                            <div className="bg-black text-white text-center font-black text-[10px] py-0.5 mt-3 uppercase tracking-wide border-y border-black">
-                                COSTO REPARACION
+                            {/* COSTO REPARACION */}
+                            <div className="border-t border-dashed border-black pt-1.5 mt-2 text-center font-black text-[10.5px] uppercase font-mono tracking-wide">
+                                === COSTO REPARACIÓN ===
                             </div>
                             <div className="text-[10px] space-y-0.5 py-1 px-1 font-bold">
                                 <div className="flex justify-between">
@@ -948,61 +953,60 @@ export default function IndexReparaciones({ ordenes, counts, tecnicos, currencyS
                                 </div>
                             </div>
 
-                            {/* BANNER FECHA DE RECEPCION */}
-                            <div className="bg-black text-white text-center font-black text-[10px] py-0.5 mt-1 uppercase tracking-wide border-y border-black">
-                                FECHA DE RECEPCION
+                            {/* FECHA DE RECEPCION */}
+                            <div className="border-t border-dashed border-black pt-1.5 mt-1 text-center font-black text-[10px] uppercase font-mono tracking-wide">
+                                === FECHA DE RECEPCIÓN ===
                             </div>
-                            <div className="text-center text-[10px] font-bold py-1">
+                            <div className="text-center text-[10px] font-bold py-0.5">
                                 {formatDate(printOrden.fecha_recepcion)}
                             </div>
 
-                            {/* BANNER FECHA APROX DE ENTREGA */}
-                            <div className="bg-black text-white text-center font-black text-[10px] py-0.5 mt-1 uppercase tracking-wide border-y border-black">
-                                FECHA APROX DE ENTREGA
+                            {/* FECHA APROX DE ENTREGA */}
+                            <div className="border-t border-dashed border-black pt-1.5 mt-1 text-center font-black text-[10px] uppercase font-mono tracking-wide">
+                                === FECHA APROX DE ENTREGA ===
                             </div>
-                            <div className="text-center text-[10px] font-bold py-1">
+                            <div className="text-center text-[10px] font-bold py-0.5">
                                 {formatFullSpanishDate(printOrden.fecha_estimada_entrega || printOrden.fecha_recepcion)}
                             </div>
 
-                            {/* BANNER CONTRASEÑA */}
-                            <div className="bg-black text-white text-center font-black text-[10px] py-0.5 mt-1 uppercase tracking-wide border-y border-black">
-                                CONTRASEÑA
+                            {/* CONTRASEÑA */}
+                            <div className="border-t border-dashed border-black pt-1.5 mt-1 text-center font-black text-[10px] uppercase font-mono tracking-wide">
+                                === CONTRASEÑA / PIN ===
                             </div>
-                            <div className="py-2 border-b-2 border-black">
+                            <div className="py-1">
                                 {extractPatternNumbers(printOrden.contrasena_patron).length > 0 ? (
                                     <PrintablePatternLock pattern={extractPatternNumbers(printOrden.contrasena_patron)} />
                                 ) : (
-                                    <div className="text-center font-bold text-xs py-1">
+                                    <div className="text-center font-bold text-xs py-0.5">
                                         {printOrden.contrasena_patron || 'Sin contraseña'}
                                     </div>
                                 )}
                             </div>
 
                             {/* CÓDIGO QR Y CÓDIGO DE REPARACIÓN */}
-                            <div className="text-center py-2.5 border-b-2 border-black flex flex-col items-center bg-gray-50/50">
+                            <div className="border-t border-dashed border-black pt-2.5 pb-2 text-center flex flex-col items-center">
                                 <QRCodeSVG
-                                    value={`${typeof window !== 'undefined' ? window.location.origin : ''}/admin/reparaciones/${printOrden.id}/reporte-pdf`}
-                                    size={110}
+                                    value={printOrden.numero_orden}
+                                    size={115}
                                 />
-                                <div className="text-[9px] font-black uppercase mt-1.5 font-mono tracking-wider">
+                                <div className="text-[9.5px] font-black uppercase mt-1.5 font-mono tracking-wider">
                                     CÓDIGO DE REPARACIÓN: {printOrden.numero_orden}
                                 </div>
                                 <div className="text-[7.5px] text-gray-700 font-semibold font-mono">
-                                    Escanee para consultar estado o ver reporte completo
+                                    Escanee para consultar estado o cobrar en POS
                                 </div>
                             </div>
 
-                            {/* TÉRMINOS Y GARANTÍA CON RECUADRO DE FIRMA */}
-                            <div className="pt-2">
-                                <div className="text-[9px] font-bold text-left mb-1 font-mono">
-                                    Términos y Condiciones de Garantía:
+                            {/* TÉRMINOS Y FIRMA DE CONFORMIDAD */}
+                            <div className="border-t border-dashed border-black pt-2 pb-1 text-center">
+                                <div className="text-[8.5px] font-bold text-left mb-6 font-mono leading-tight">
+                                    Términos y Condiciones de Garantía: Al firmar, el cliente acepta las condiciones del servicio.
                                 </div>
-                                <div className="border-2 border-black h-12 w-full mb-1 bg-white"></div>
-                                <div className="text-center font-black text-[10px] uppercase font-mono">
+                                <div className="border-b border-black w-44 mx-auto mb-1"></div>
+                                <div className="text-center font-black text-[9.5px] uppercase font-mono tracking-wider">
                                     FIRMA DE CONFORMIDAD
                                 </div>
                             </div>
-                            <div className="border-b-2 border-black pt-2"></div>
                         </div>
                     </div>
                 )}

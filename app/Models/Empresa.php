@@ -34,6 +34,7 @@ class Empresa extends Model
         'zona_horaria',
         'logo',
         'logo_mini',
+        'logo_ticket_size',
         'direccion',
         'latitud',
         'longitud',

@@ -148,6 +148,7 @@ class EmpresaController extends Controller
         $request->validate([
             'logo' => 'nullable|image|mimes:jpeg,png,jpg,webp|max:5120',
             'logo_mini' => 'nullable|image|mimes:jpeg,png,jpg,webp|max:2048',
+            'logo_ticket_size' => 'nullable|integer|min:50|max:400',
         ]);
 
         try {
@@ -159,6 +160,10 @@ class EmpresaController extends Controller
             if ($request->hasFile('logo_mini')) {
                 $path = $request->file('logo_mini')->store('empresas/logos_mini', 'public');
                 $empresa->logo_mini = '/storage/'.$path;
+            }
+
+            if ($request->has('logo_ticket_size')) {
+                $empresa->logo_ticket_size = (int) $request->input('logo_ticket_size', 200);
             }
 
             $empresa->save();

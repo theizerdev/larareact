@@ -35,6 +35,7 @@ class UpdateEmpresaRequest extends FormRequest
             'telefono' => ['nullable', 'string', 'max:255'],
             'email' => ['nullable', 'email', 'max:255'],
             'representante_legal' => ['nullable', 'string', 'max:255'],
+            'logo_ticket_size' => ['nullable', 'integer', 'min:50', 'max:400'],
             'status' => ['boolean'],
         ];
     }

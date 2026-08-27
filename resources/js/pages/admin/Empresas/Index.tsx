@@ -14,6 +14,7 @@ import {
     Upload,
     X,
     LocateFixed,
+    Sliders,
 } from 'lucide-react';
 import React, { useState, Suspense, lazy, useRef } from 'react';
 import { Breadcrumbs } from '@/components/breadcrumbs';
@@ -73,6 +74,7 @@ interface Empresa {
     documento: string;
     logo?: string | null;
     logo_mini?: string | null;
+    logo_ticket_size?: number | null;
     direccion?: string | null;
     latitud?: number | null;
     longitud?: number | null;
@@ -139,6 +141,7 @@ export default function EmpresasIndexPage({ auth, empresas, stats, paises, filte
     const [logoMiniFile, setLogoMiniFile]   = useState<File | null>(null);
     const [logoPreview, setLogoPreview]     = useState<string | null>(null);
     const [logoMiniPreview, setLogoMiniPreview] = useState<string | null>(null);
+    const [logoTicketSize, setLogoTicketSize]   = useState<number>(200);
     const [uploadingLogos, setUploadingLogos]   = useState(false);
     const logoInputRef     = useRef<HTMLInputElement>(null);
     const logoMiniInputRef = useRef<HTMLInputElement>(null);
@@ -154,8 +157,8 @@ export default function EmpresasIndexPage({ auth, empresas, stats, paises, filte
         const unbindFinish = router.on('finish', () => setIsTableLoading(false));
 
         return () => {
- unbindStart(); unbindFinish(); 
-};
+            unbindStart(); unbindFinish(); 
+        };
     }, []);
 
     // Debounce de filtros
@@ -195,6 +198,7 @@ export default function EmpresasIndexPage({ auth, empresas, stats, paises, filte
         setLogoMiniFile(null);
         setLogoPreview(null);
         setLogoMiniPreview(null);
+        setLogoTicketSize(200);
         setIsModalOpen(true);
     };
 
@@ -218,14 +222,15 @@ export default function EmpresasIndexPage({ auth, empresas, stats, paises, filte
         setLogoMiniFile(null);
         setLogoPreview(empresa.logo || null);
         setLogoMiniPreview(empresa.logo_mini || null);
+        setLogoTicketSize(empresa.logo_ticket_size || 200);
         setActiveTab('general');
         setIsModalOpen(true);
     };
 
     const handleLogoFileChange = (file: File | null, type: 'logo' | 'logo_mini') => {
         if (!file) {
-return;
-}
+            return;
+        }
 
         const reader = new FileReader();
         reader.onloadend = () => {
@@ -242,22 +247,20 @@ return;
 
     const handleUploadLogos = () => {
         if (!editingEmpresa) {
-return;
-}
-
-        if (!logoFile && !logoMiniFile) {
-return;
-}
+            return;
+        }
 
         const formData = new FormData();
 
-        if (logoFile)     {
-formData.append('logo',      logoFile);
-}
+        if (logoFile) {
+            formData.append('logo', logoFile);
+        }
 
         if (logoMiniFile) {
-formData.append('logo_mini', logoMiniFile);
-}
+            formData.append('logo_mini', logoMiniFile);
+        }
+
+        formData.append('logo_ticket_size', String(logoTicketSize));
 
         setUploadingLogos(true);
         router.post(`/admin/empresas/${editingEmpresa.id}/logos`, formData, {
@@ -265,11 +268,10 @@ formData.append('logo_mini', logoMiniFile);
             onSuccess: () => {
                 setLogoFile(null);
                 setLogoMiniFile(null);
-                notifySuccess(__('Logos updated successfully.'));
+                notifySuccess(__('Logos and ticket configuration updated successfully.'));
             },
             onError: (errors) => {
                 console.error('[Logo Upload] Validation errors:', errors);
-                // Mostrar el primer error de validación recibido del servidor
                 const firstError = Object.values(errors)[0] as string | undefined;
                 notifyError(firstError ?? __('There was an error updating the logos. Please try again.'));
             },
@@ -991,12 +993,88 @@ handleLogoFileChange(file, 'logo_mini');
                                         </div>
                                     </div>
 
+                                    {/* ─── Configuración de Tamaño de Logo en Tickets Térmicos ─── */}
+                                    <div className="rounded-xl border border-slate-200 dark:border-slate-800 p-4 bg-slate-50/50 dark:bg-slate-900/30 space-y-4">
+                                        <div className="flex items-center justify-between">
+                                            <div>
+                                                <h4 className="text-sm font-bold text-slate-900 dark:text-slate-100 flex items-center gap-2">
+                                                    <Sliders className="h-4 w-4 text-indigo-500" />
+                                                    {__('Tamaño del Logo en Tickets Térmicos (80mm)')}
+                                                </h4>
+                                                <p className="text-xs text-muted-foreground mt-0.5">
+                                                    {__('Ajusta el tamaño máximo del logo en los tickets impresos de recepción y clientes.')}
+                                                </p>
+                                            </div>
+                                            <span className="text-xs font-black px-2.5 py-1 rounded bg-indigo-100 dark:bg-indigo-900/50 text-indigo-700 dark:text-indigo-300 font-mono">
+                                                {logoTicketSize}px
+                                            </span>
+                                        </div>
+
+                                        {/* Slider + Botones Preestablecidos */}
+                                        <div className="space-y-3">
+                                            <div className="flex items-center gap-4">
+                                                <input
+                                                    type="range"
+                                                    min="80"
+                                                    max="320"
+                                                    step="10"
+                                                    value={logoTicketSize}
+                                                    onChange={(e) => setLogoTicketSize(Number(e.target.value))}
+                                                    className="w-full h-2 bg-slate-200 dark:bg-slate-700 rounded-lg appearance-none cursor-pointer accent-indigo-600"
+                                                />
+                                            </div>
+
+                                            <div className="flex flex-wrap gap-2">
+                                                {[
+                                                    { label: __('Pequeño (140px)'), value: 140 },
+                                                    { label: __('Mediano (200px)'), value: 200 },
+                                                    { label: __('Grande (250px)'), value: 250 },
+                                                    { label: __('Extra Grande (290px)'), value: 290 },
+                                                ].map((preset) => (
+                                                    <button
+                                                        key={preset.value}
+                                                        type="button"
+                                                        onClick={() => setLogoTicketSize(preset.value)}
+                                                        className={`text-xs px-2.5 py-1 rounded-md border font-medium transition-all ${
+                                                            logoTicketSize === preset.value
+                                                                ? 'bg-indigo-600 text-white border-indigo-600 shadow-sm'
+                                                                : 'bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 border-slate-300 dark:border-slate-700 hover:bg-slate-50'
+                                                        }`}
+                                                    >
+                                                        {preset.label}
+                                                    </button>
+                                                ))}
+                                            </div>
+                                        </div>
+
+                                        {/* Vista previa simulada en ticket de 80mm */}
+                                        <div className="border border-dashed border-slate-300 dark:border-slate-700 rounded-lg p-3 bg-white dark:bg-slate-950 flex flex-col items-center justify-center text-center">
+                                            <span className="text-[10px] font-mono text-slate-400 uppercase tracking-wider mb-2">
+                                                {__('Vista Previa en Ticket 80mm')}
+                                            </span>
+                                            <div className="w-[80mm] max-w-full bg-white text-black p-2 border border-slate-300 shadow-xs">
+                                                {logoPreview || logoMiniPreview || editingEmpresa?.logo || editingEmpresa?.logo_mini ? (
+                                                    <img
+                                                        src={logoPreview || logoMiniPreview || editingEmpresa?.logo || editingEmpresa?.logo_mini || ''}
+                                                        alt="Logo Preview"
+                                                        style={{ maxWidth: `${logoTicketSize}px`, maxHeight: `${Math.round(logoTicketSize * 0.75)}px` }}
+                                                        className="mx-auto object-contain mb-1"
+                                                    />
+                                                ) : (
+                                                    <div className="font-bold text-sm uppercase">{editingEmpresa?.razon_social || 'SERVITEC'}</div>
+                                                )}
+                                                <div className="text-[9px] font-mono font-bold text-slate-600">{editingEmpresa?.direccion || 'DIRECCIÓN DE LA EMPRESA'}</div>
+                                                <div className="text-[9px] font-mono font-bold text-slate-600">TEL: {editingEmpresa?.telefono || '1234567890'}</div>
+                                            </div>
+                                        </div>
+                                    </div>
+
                                     {/* Botón de subida de logos */}
                                     <div className="flex justify-end pt-2 border-t">
                                         <Button
                                             type="button"
                                             onClick={handleUploadLogos}
-                                            disabled={uploadingLogos || (!logoFile && !logoMiniFile)}
+                                            disabled={uploadingLogos || (!logoFile && !logoMiniFile && logoTicketSize === (editingEmpresa?.logo_ticket_size || 200))}
                                             className="bg-indigo-600 hover:bg-indigo-700 text-white"
                                         >
                                             {uploadingLogos ? (
@@ -1005,12 +1083,12 @@ handleLogoFileChange(file, 'logo_mini');
                                                         <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
                                                         <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                                                     </svg>
-                                                    {__('Uploading...')}
+                                                    {__('Saving...')}
                                                 </>
                                             ) : (
                                                 <>
                                                     <Upload className="h-4 w-4 mr-2" />
-                                                    {__('Upload Logos')}
+                                                    {__('Guardar Logos y Configuración')}
                                                 </>
                                             )}
                                         </Button>
