@@ -587,6 +587,10 @@ class ReparacionController extends Controller
         $user = auth()->user();
         $empresaId = $user->empresa_id;
 
+        $empresa = \App\Models\Empresa::find($empresaId)
+            ?? $reparacion->empresa
+            ?? \App\Models\Empresa::find($reparacion->empresa_id);
+
         $productosRepuestos = Producto::where('empresa_id', $empresaId)
             ->where('tipo_producto', 'repuesto')
             ->with(['marca:id,nombre', 'modelo:id,nombre_comercial'])
@@ -605,6 +609,7 @@ class ReparacionController extends Controller
 
         return Inertia::render('admin/Reparaciones/Show', [
             'orden' => $reparacion,
+            'empresa' => $empresa,
             'productosRepuestos' => $productosRepuestos,
             'tecnicos' => $tecnicos,
             'marcas' => $marcas,

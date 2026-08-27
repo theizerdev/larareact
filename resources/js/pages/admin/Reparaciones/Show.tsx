@@ -147,6 +147,7 @@ interface CategoriaItem {
 
 interface Props {
     orden: Orden;
+    empresa?: any;
     productosRepuestos: ProductoRepuesto[];
     tecnicos: { id: number; name: string }[];
     currencySymbol: string;
@@ -544,10 +545,14 @@ function PatternLockCanvas({
     );
 }
 
-export default function ShowReparacion({ orden, productosRepuestos = [], tecnicos, currencySymbol }: Props) {
+export default function ShowReparacion({ orden, empresa: propEmpresa, productosRepuestos = [], tecnicos, currencySymbol }: Props) {
     const { __ } = useTranslate();
     const pageProps = usePage<any>().props;
-    const empresa = pageProps.empresa || pageProps.auth?.user?.empresa;
+    const empresa = propEmpresa 
+        || (orden as any)?.empresa 
+        || pageProps.empresa 
+        || pageProps.auth?.user?.empresa 
+        || (pageProps as any)?.auth?.empresa;
 
     const [isPrintModalOpen, setIsPrintModalOpen] = useState(false);
     const [printType, setPrintType] = useState<'cliente' | 'tecnico'>('cliente');
