@@ -118,6 +118,7 @@ const initialForm = {
     direccion: '',
     latitud: null as number | null,
     longitud: null as number | null,
+    logo_ticket_size: 200,
 };
 
 // ─── Página principal ─────────────────────────────────────────────────────────
@@ -217,12 +218,13 @@ export default function EmpresasIndexPage({ auth, empresas, stats, paises, filte
             direccion:           empresa.direccion || '',
             latitud:             empresa.latitud ?? null,
             longitud:            empresa.longitud ?? null,
+            logo_ticket_size:    empresa.logo_ticket_size ? Number(empresa.logo_ticket_size) : 200,
         });
         setLogoFile(null);
         setLogoMiniFile(null);
         setLogoPreview(empresa.logo || null);
         setLogoMiniPreview(empresa.logo_mini || null);
-        setLogoTicketSize(empresa.logo_ticket_size || 200);
+        setLogoTicketSize(empresa.logo_ticket_size ? Number(empresa.logo_ticket_size) : 200);
         setActiveTab('general');
         setIsModalOpen(true);
     };
@@ -1019,7 +1021,11 @@ handleLogoFileChange(file, 'logo_mini');
                                                     max="320"
                                                     step="10"
                                                     value={logoTicketSize}
-                                                    onChange={(e) => setLogoTicketSize(Number(e.target.value))}
+                                                    onChange={(e) => {
+                                                        const val = Number(e.target.value);
+                                                        setLogoTicketSize(val);
+                                                        setData('logo_ticket_size', val);
+                                                    }}
                                                     className="w-full h-2 bg-slate-200 dark:bg-slate-700 rounded-lg appearance-none cursor-pointer accent-indigo-600"
                                                 />
                                             </div>
@@ -1034,7 +1040,10 @@ handleLogoFileChange(file, 'logo_mini');
                                                     <button
                                                         key={preset.value}
                                                         type="button"
-                                                        onClick={() => setLogoTicketSize(preset.value)}
+                                                        onClick={() => {
+                                                            setLogoTicketSize(preset.value);
+                                                            setData('logo_ticket_size', preset.value);
+                                                        }}
                                                         className={`text-xs px-2.5 py-1 rounded-md border font-medium transition-all ${
                                                             logoTicketSize === preset.value
                                                                 ? 'bg-indigo-600 text-white border-indigo-600 shadow-sm'
@@ -1052,16 +1061,21 @@ handleLogoFileChange(file, 'logo_mini');
                                             <span className="text-[10px] font-mono text-slate-400 uppercase tracking-wider mb-2">
                                                 {__('Vista Previa en Ticket 80mm')}
                                             </span>
-                                            <div className="w-[80mm] max-w-full bg-white text-black p-2 border border-slate-300 shadow-xs">
-                                                {logoPreview || logoMiniPreview || editingEmpresa?.logo || editingEmpresa?.logo_mini ? (
+                                            <div className="w-[80mm] max-w-full bg-white text-black p-2 border border-slate-300 shadow-xs flex flex-col items-center justify-center text-center">
+                                                {logoPreview || editingEmpresa?.logo || logoMiniPreview || editingEmpresa?.logo_mini ? (
                                                     <img
-                                                        src={logoPreview || logoMiniPreview || editingEmpresa?.logo || editingEmpresa?.logo_mini || ''}
+                                                        src={logoPreview || editingEmpresa?.logo || logoMiniPreview || editingEmpresa?.logo_mini || ''}
                                                         alt="Logo Preview"
-                                                        style={{ maxWidth: `${logoTicketSize}px`, maxHeight: `${Math.round(logoTicketSize * 0.75)}px` }}
+                                                        style={{
+                                                            width: `${logoTicketSize}px`,
+                                                            maxWidth: '100%',
+                                                            height: 'auto',
+                                                            maxHeight: '160px',
+                                                        }}
                                                         className="mx-auto object-contain mb-1"
                                                     />
                                                 ) : (
-                                                    <div className="font-bold text-sm uppercase">{editingEmpresa?.razon_social || 'SERVITEC'}</div>
+                                                    <div className="font-bold text-sm uppercase">{editingEmpresa?.nombre_comercial || editingEmpresa?.razon_social || 'SERVITEC'}</div>
                                                 )}
                                                 <div className="text-[9px] font-mono font-bold text-slate-600">{editingEmpresa?.direccion || 'DIRECCIÓN DE LA EMPRESA'}</div>
                                                 <div className="text-[9px] font-mono font-bold text-slate-600">TEL: {editingEmpresa?.telefono || '1234567890'}</div>

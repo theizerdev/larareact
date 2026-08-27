@@ -4508,17 +4508,22 @@ export default function ShowReparacion({ orden, empresa: propEmpresa, productosR
                     {printType === 'cliente' ? (
                         /* ================= TICKET PARA EL CLIENTE ================= */
                         <div className="font-mono text-black text-xs leading-tight p-0 bg-white">
-                            {/* HEADER EMPRESA CON LOGO MINI */}
-                            <div className="text-center mb-1">
-                                {empresa?.logo_mini || empresa?.logo ? (
+                            {/* HEADER EMPRESA CON LOGO */}
+                            <div className="text-center mb-1 flex flex-col items-center justify-center">
+                                {empresa?.logo || empresa?.logo_mini ? (
                                     <img
-                                        src={empresa.logo_mini || empresa.logo}
-                                        alt={empresa.razon_social || 'Logo'}
-                                        style={{ maxWidth: `${Number(empresa?.logo_ticket_size || 200)}px`, maxHeight: `${Math.round(Number(empresa?.logo_ticket_size || 200) * 0.75)}px` }}
+                                        src={empresa.logo || empresa.logo_mini}
+                                        alt={empresa.razon_social || empresa.nombre_comercial || 'Logo'}
+                                        style={{
+                                            width: `${Number(empresa?.logo_ticket_size || 200)}px`,
+                                            maxWidth: '100%',
+                                            height: 'auto',
+                                            maxHeight: '160px',
+                                        }}
                                         className="mx-auto object-contain mb-1"
                                     />
                                 ) : (
-                                    <div className="font-black text-base uppercase tracking-tight">{empresa?.razon_social || 'SERVITEC'}</div>
+                                    <div className="font-black text-base uppercase tracking-tight">{empresa?.nombre_comercial || empresa?.razon_social || 'SERVITEC'}</div>
                                 )}
                             </div>
 

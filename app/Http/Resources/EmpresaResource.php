@@ -26,6 +26,7 @@ class EmpresaResource extends JsonResource
             'status' => (bool) $this->status,
             'logo' => $this->logo,
             'logo_mini' => $this->logo_mini,
+            'logo_ticket_size' => (int) ($this->logo_ticket_size ?? 200),
             'subscription_status' => $this->subscription_status,
             'pais' => $this->whenLoaded('pais', fn () => [
                 'id' => $this->pais->id,

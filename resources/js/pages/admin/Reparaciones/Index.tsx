@@ -881,17 +881,22 @@ export default function IndexReparaciones({ ordenes, counts, tecnicos, currencyS
 
                         {/* ================= TICKET PARA EL CLIENTE ================= */}
                         <div className="font-mono text-black text-xs leading-tight p-0 bg-white">
-                            {/* HEADER EMPRESA CON LOGO MINI */}
-                            <div className="text-center mb-1">
-                                {empresaInfo?.logo_mini || empresaInfo?.logo ? (
+                            {/* HEADER EMPRESA CON LOGO */}
+                            <div className="text-center mb-1 flex flex-col items-center justify-center">
+                                {empresaInfo?.logo || empresaInfo?.logo_mini ? (
                                     <img
-                                        src={empresaInfo.logo_mini || empresaInfo.logo}
-                                        alt={empresaInfo.razon_social || 'Logo'}
-                                        style={{ maxWidth: `${Number(empresaInfo?.logo_ticket_size || 200)}px`, maxHeight: `${Math.round(Number(empresaInfo?.logo_ticket_size || 200) * 0.75)}px` }}
+                                        src={empresaInfo.logo || empresaInfo.logo_mini}
+                                        alt={empresaInfo.razon_social || empresaInfo.nombre_comercial || 'Logo'}
+                                        style={{
+                                            width: `${Number(empresaInfo?.logo_ticket_size || 200)}px`,
+                                            maxWidth: '100%',
+                                            height: 'auto',
+                                            maxHeight: '160px',
+                                        }}
                                         className="mx-auto object-contain mb-1"
                                     />
                                 ) : (
-                                    <div className="font-black text-base uppercase tracking-tight">{empresaInfo?.razon_social || 'SERVITEC'}</div>
+                                    <div className="font-black text-base uppercase tracking-tight">{empresaInfo?.nombre_comercial || empresaInfo?.razon_social || 'SERVITEC'}</div>
                                 )}
                             </div>
 
