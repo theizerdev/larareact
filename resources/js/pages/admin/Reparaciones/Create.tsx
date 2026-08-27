@@ -1870,8 +1870,8 @@ export default function CreateReparacion({ clientes: initialClientes, marcas: in
                                                 </SelectTrigger>
                                                 <SelectContent>
                                                     {tecnicos.map((t) => (
-                                                        <SelectItem key={t.id} value={String(t.id)} className="text-xs">
-                                                            🛠️ {t.name}
+                                                        <SelectItem key={t.id} value={String(t.id)} className="text-xs font-medium">
+                                                            {t.name}
                                                         </SelectItem>
                                                     ))}
                                                 </SelectContent>

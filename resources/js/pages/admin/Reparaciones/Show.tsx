@@ -1902,8 +1902,8 @@ export default function ShowReparacion({ orden, empresa: propEmpresa, productosR
                                                 </SelectTrigger>
                                                 <SelectContent>
                                                     {tecnicos.map((t) => (
-                                                        <SelectItem key={t.id} value={String(t.id)} className="text-xs">
-                                                            🛠️ {t.name}
+                                                        <SelectItem key={t.id} value={String(t.id)} className="text-xs font-medium">
+                                                            {t.name}
                                                         </SelectItem>
                                                     ))}
                                                 </SelectContent>
@@ -4827,7 +4827,7 @@ export default function ShowReparacion({ orden, empresa: propEmpresa, productosR
                                     <SelectContent>
                                         {tecnicos.map((t) => (
                                             <SelectItem key={t.id} value={String(t.id)} className="text-xs">
-                                                🛠️ {t.name}
+                                                {t.name}
                                             </SelectItem>
                                         ))}
                                     </SelectContent>

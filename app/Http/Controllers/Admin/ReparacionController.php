@@ -144,17 +144,8 @@ class ReparacionController extends Controller
         $clientes = Cliente::withoutGlobalScope('multitenancy')->where('empresa_id', $empresaId)->orderBy('nombre')->get(['id', 'nombre', 'telefono', 'email']);
         $marcas = Marca::with('modelos')->where('empresa_id', $empresaId)->orderBy('nombre')->get();
         $tecnicos = User::where('empresa_id', $empresaId)
-            ->where(function ($q) {
-                $q->whereHas('roles', function ($rq) {
-                    $rq->whereIn('name', ['Técnico', 'tecnico', 'Tecnico', 'Técnico de Reparaciones']);
-                });
-            })
             ->orderBy('name')
             ->get(['id', 'name']);
-
-        if ($tecnicos->isEmpty()) {
-            $tecnicos = User::where('empresa_id', $empresaId)->orderBy('name')->get(['id', 'name']);
-        }
 
         $categorias = \App\Models\Categoria::withoutGlobalScope('multitenancy')
             ->where(function ($q) use ($empresaId) {
