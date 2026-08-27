@@ -624,7 +624,7 @@ export default function CreateReparacion({ clientes: initialClientes, marcas: in
         costo_estimado: '0',
         anticipo: '0',
         garantia_dias: '30',
-        fecha_prometida: new Date(Date.now() + 86400000 * 2).toISOString().split('T')[0],
+        fecha_prometida: new Date(Date.now() + 86400000 * 2).toISOString().slice(0, 16),
         evidencias_fotos: { frente: '', trasero: '', borde_sup: '', borde_inf: '' },
     });
 
@@ -1879,9 +1879,9 @@ export default function CreateReparacion({ clientes: initialClientes, marcas: in
                                         </div>
 
                                         <div>
-                                            <Label className="text-[10px] font-bold text-slate-700 dark:text-slate-300">{__('Fecha Entrega')}</Label>
+                                            <Label className="text-[10px] font-bold text-slate-700 dark:text-slate-300">{__('Fecha y Hora Estimada de Entrega')}</Label>
                                             <Input
-                                                type="date"
+                                                type="datetime-local"
                                                 value={data.fecha_prometida}
                                                 onChange={(e) => setData('fecha_prometida', e.target.value)}
                                                 className="text-xs h-8 mt-0.5 font-mono"

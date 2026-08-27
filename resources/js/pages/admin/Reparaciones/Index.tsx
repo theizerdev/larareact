@@ -206,7 +206,7 @@ export default function IndexReparaciones({ ordenes, counts, tecnicos, currencyS
             try {
                 await html5QrCodeRef.current.stop();
                 html5QrCodeRef.current.clear();
-            } catch (e) {}
+            } catch (e) { }
             html5QrCodeRef.current = null;
         }
         setIsCameraActive(false);
@@ -226,7 +226,7 @@ export default function IndexReparaciones({ ordenes, counts, tecnicos, currencyS
             if (html5QrCodeRef.current) {
                 try {
                     await html5QrCodeRef.current.stop();
-                } catch (e) {}
+                } catch (e) { }
             }
 
             setTimeout(async () => {
@@ -252,7 +252,7 @@ export default function IndexReparaciones({ ordenes, counts, tecnicos, currencyS
                                 stopCamera();
                             }
                         },
-                        () => {}
+                        () => { }
                     );
                 } catch (err: any) {
                     setCameraError(__('No se pudo iniciar la cámara. Verifique los permisos en su navegador.'));

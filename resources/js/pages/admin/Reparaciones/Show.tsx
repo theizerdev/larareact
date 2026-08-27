@@ -4591,14 +4591,6 @@ export default function ShowReparacion({ orden, empresa: propEmpresa, productosR
                                 {formatDate(orden.fecha_recepcion)}
                             </div>
 
-                            {/* BANNER FECHA APROX DE ENTREGA */}
-                            <div className="bg-black text-white text-center font-black text-[10px] py-0.5 mt-1 uppercase tracking-wide">
-                                FECHA APROX DE ENTREGA
-                            </div>
-                            <div className="text-center text-[10px] font-bold py-1">
-                                {formatFullSpanishDate(orden.fecha_estimada_entrega || orden.fecha_recepcion)}
-                            </div>
-
                             {/* BANNER CONTRASEÑA */}
                             <div className="bg-black text-white text-center font-black text-[10px] py-0.5 mt-1 uppercase tracking-wide">
                                 CONTRASEÑA
@@ -4661,6 +4653,7 @@ export default function ShowReparacion({ orden, empresa: propEmpresa, productosR
                             <div className="text-[10px] font-mono space-y-0.5">
                                 <div>EQUIPO: <strong>{marcaNombreDisplay} {modeloNombreDisplay}</strong></div>
                                 <div>IMEI/SERIE: <strong>{orden.imei_serie || 'nv'}</strong></div>
+                                <div>ENTREGA ESTIMADA: <strong>{formatDate(orden.fecha_prometida || orden.fecha_estimada_entrega) || 'No especificada'}</strong></div>
                                 <div>FALLA: <strong>{orden.descripcion_falla}</strong></div>
                                 <div>DETALLE TALLER: <strong>{orden.observaciones_fisicas || 'Sin observaciones'}</strong></div>
                                 <div>SEGURIDAD: <strong>{orden.contrasena_patron || 'Sin contraseña'}</strong></div>

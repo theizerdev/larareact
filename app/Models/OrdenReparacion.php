@@ -55,7 +55,7 @@ class OrdenReparacion extends Model
         'saldo_restante' => 'decimal:2',
         'comision_tecnico_pct' => 'decimal:2',
         'fecha_recepcion' => 'datetime',
-        'fecha_prometida' => 'date',
+        'fecha_prometida' => 'datetime',
         'fecha_entrega' => 'datetime',
         'inspeccion_json' => 'array',
         'post_servicio_json' => 'array',
