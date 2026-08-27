@@ -1,5 +1,5 @@
 import { Head, useForm, router } from '@inertiajs/react';
-import { Wrench, Plus, CheckCircle, XCircle, MoreVertical, Pencil, Trash2, Tag, Layers } from 'lucide-react';
+import { Wrench, Plus, CheckCircle, XCircle, MoreVertical, Pencil, Trash2, Layers, Smartphone } from 'lucide-react';
 import React, { useState } from 'react';
 import { Breadcrumbs } from '@/components/breadcrumbs';
 import type { ColumnDef } from '@/components/data-table';
@@ -26,7 +26,6 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Switch } from '@/components/ui/switch';
-import { Textarea } from '@/components/ui/textarea';
 import { useTranslate } from '@/hooks/use-translate';
 import { cleanParams, cn } from '@/lib/utils';
 import type { Paginated } from '@/types/app';
@@ -37,6 +36,20 @@ interface CategoriaItem {
     nombre: string;
 }
 
+interface ModeloItem {
+    id: number;
+    marca_id: number;
+    categoria_id?: number | null;
+    nombre_comercial: string;
+    codigo_modelo?: string | null;
+}
+
+interface MarcaItem {
+    id: number;
+    nombre: string;
+    modelos?: ModeloItem[];
+}
+
 interface Servicio {
     id: number;
     nombre: string;
@@ -45,12 +58,17 @@ interface Servicio {
     precio: number;
     estado: boolean;
     categoria_id?: number | null;
+    marca_id?: number | null;
+    modelo_id?: number | null;
     categoria?: CategoriaItem | null;
+    marca?: { id: number; nombre: string } | null;
+    modelo?: { id: number; nombre_comercial: string; codigo_modelo?: string | null } | null;
 }
 
 interface Props {
     servicios: Paginated<Servicio>;
     categorias?: CategoriaItem[];
+    marcas?: MarcaItem[];
     currencySymbol?: string;
     filters: {
         search?: string;
@@ -59,7 +77,7 @@ interface Props {
     };
 }
 
-export default function Index({ servicios, categorias = [], currencySymbol = '$', filters }: Props) {
+export default function Index({ servicios, categorias = [], marcas = [], currencySymbol = '$', filters }: Props) {
     const { __ } = useTranslate();
     const [isCreateOpen, setIsCreateOpen] = useState(false);
     const [editingServicio, setEditingServicio] = useState<Servicio | null>(null);
@@ -89,21 +107,28 @@ export default function Index({ servicios, categorias = [], currencySymbol = '$'
 
     const { data, setData, post, put, processing, errors, reset } = useForm({
         categoria_id: '',
+        marca_id: '',
+        modelo_id: '',
         nombre: '',
-        codigo: '',
-        descripcion: '',
-        precio: '0.00',
+        precio: '',
         estado: true,
     });
+
+    const selectedMarca = marcas.find((m) => String(m.id) === String(data.marca_id));
+    const availableModelos = selectedMarca?.modelos || [];
+    const filteredModelos = data.categoria_id
+        ? availableModelos.filter((m) => !m.categoria_id || String(m.categoria_id) === String(data.categoria_id))
+        : availableModelos;
+    const finalModelos = filteredModelos.length > 0 ? filteredModelos : availableModelos;
 
     const handleOpenCreate = () => {
         reset();
         setData({
             categoria_id: '',
+            marca_id: '',
+            modelo_id: '',
             nombre: '',
-            codigo: '',
-            descripcion: '',
-            precio: '0.00',
+            precio: '',
             estado: true,
         });
         setEditingServicio(null);
@@ -114,9 +139,9 @@ export default function Index({ servicios, categorias = [], currencySymbol = '$'
         setEditingServicio(servicio);
         setData({
             categoria_id: servicio.categoria_id ? String(servicio.categoria_id) : '',
+            marca_id: servicio.marca_id ? String(servicio.marca_id) : '',
+            modelo_id: servicio.modelo_id ? String(servicio.modelo_id) : '',
             nombre: servicio.nombre,
-            codigo: servicio.codigo || '',
-            descripcion: servicio.descripcion || '',
             precio: String(servicio.precio ?? '0.00'),
             estado: servicio.estado,
         });
@@ -171,6 +196,26 @@ export default function Index({ servicios, categorias = [], currencySymbol = '$'
             ),
         },
         {
+            header: __('Marca / Modelo'),
+            cell: (servicio) => (
+                <div className="flex flex-col gap-0.5">
+                    {servicio.marca ? (
+                        <span className="font-semibold text-xs text-slate-800 dark:text-slate-200 flex items-center gap-1">
+                            <Smartphone className="w-3 h-3 text-slate-500" />
+                            {servicio.marca.nombre}
+                        </span>
+                    ) : (
+                        <span className="text-xs text-slate-400 italic">{__('General')}</span>
+                    )}
+                    {servicio.modelo && (
+                        <span className="text-[11px] text-muted-foreground">
+                            {servicio.modelo.nombre_comercial} {servicio.modelo.codigo_modelo ? `(${servicio.modelo.codigo_modelo})` : ''}
+                        </span>
+                    )}
+                </div>
+            ),
+        },
+        {
             header: __('Código'),
             accessorKey: 'codigo',
             cell: (servicio) => (
@@ -180,21 +225,30 @@ export default function Index({ servicios, categorias = [], currencySymbol = '$'
             ),
         },
         {
-            header: __('Nombre del Servicio'),
+            header: __('Descripción del Servicio'),
             accessorKey: 'nombre',
             className: 'font-medium',
             cell: (servicio) => (
                 <div className="flex items-center gap-3">
-                    <div className="w-8 h-8 rounded bg-amber-100 dark:bg-amber-900/30 flex items-center justify-center">
+                    <div className="w-8 h-8 rounded bg-amber-100 dark:bg-amber-900/30 flex items-center justify-center flex-shrink-0">
                         <Wrench className="w-4 h-4 text-amber-600 dark:text-amber-400" />
                     </div>
                     <div>
-                        <p className="font-medium text-sm">{servicio.nombre}</p>
-                        {servicio.descripcion && (
+                        <p className="font-medium text-sm text-slate-900 dark:text-slate-100">{servicio.nombre}</p>
+                        {servicio.descripcion && servicio.descripcion !== servicio.nombre && (
                             <p className="text-xs text-muted-foreground truncate max-w-xs">{servicio.descripcion}</p>
                         )}
                     </div>
                 </div>
+            ),
+        },
+        {
+            header: __('Precio'),
+            accessorKey: 'precio',
+            cell: (servicio) => (
+                <span className="font-mono font-bold text-sm text-emerald-600 dark:text-emerald-400">
+                    {currencySymbol}{Number(servicio.precio || 0).toFixed(2)}
+                </span>
             ),
         },
         {
@@ -288,7 +342,7 @@ export default function Index({ servicios, categorias = [], currencySymbol = '$'
                     <div className="flex flex-wrap items-end gap-4">
                         <FilterField label={__('Buscar')}>
                             <Input
-                                placeholder={__('Buscar por servicio, código...')}
+                                placeholder={__('Buscar por servicio, marca, modelo, código...')}
                                 className="w-full md:w-96"
                                 value={searchTerm}
                                 onChange={(e) => setSearchTerm(e.target.value)}
@@ -329,18 +383,18 @@ export default function Index({ servicios, categorias = [], currencySymbol = '$'
 
                 {/* Dialog Modal Crear / Editar Servicio */}
                 <Dialog open={isCreateOpen} onOpenChange={setIsCreateOpen}>
-                    <DialogContent>
+                    <DialogContent className="sm:max-w-lg">
                         <DialogHeader>
                             <DialogTitle>{editingServicio ? __('Editar Servicio') : __('Nuevo Servicio')}</DialogTitle>
                             <DialogDescription>
-                                {__('Ingrese los detalles del servicio ofrecido en el punto de venta.')}
+                                {__('Configure la jerarquía: Categoría > Marca > Modelo > Descripción > Precio.')}
                             </DialogDescription>
                         </DialogHeader>
 
                         <form onSubmit={handleSubmit} className="space-y-4 py-2">
-                            {/* SELECCIÓN DE CATEGORÍA */}
-                            <div className="space-y-2">
-                                <Label htmlFor="categoria_id">{__('Categoría de Dispositivo / Servicio *')}</Label>
+                            {/* 1. SELECCIÓN DE CATEGORÍA */}
+                            <div className="space-y-1.5">
+                                <Label htmlFor="categoria_id">{__('1. Categoría *')}</Label>
                                 <Select
                                     value={data.categoria_id}
                                     onValueChange={(val) => setData('categoria_id', val)}
@@ -365,22 +419,103 @@ export default function Index({ servicios, categorias = [], currencySymbol = '$'
                                 {errors.categoria_id && <p className="text-xs text-rose-500">{errors.categoria_id}</p>}
                             </div>
 
-                            <div className="space-y-2">
-                                <Label htmlFor="nombre">{__('Nombre del Servicio *')}</Label>
+                            {/* 2. SELECCIÓN DE MARCA */}
+                            <div className="space-y-1.5">
+                                <Label htmlFor="marca_id">{__('2. Marca *')}</Label>
+                                <Select
+                                    value={data.marca_id}
+                                    onValueChange={(val) => {
+                                        setData((prev) => ({
+                                            ...prev,
+                                            marca_id: val,
+                                            modelo_id: '',
+                                        }));
+                                    }}
+                                >
+                                    <SelectTrigger id="marca_id" className="w-full">
+                                        <SelectValue placeholder={__('Seleccionar Marca...')} />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        {marcas && marcas.length > 0 ? (
+                                            marcas.map((m) => (
+                                                <SelectItem key={m.id} value={String(m.id)}>
+                                                    {m.nombre}
+                                                </SelectItem>
+                                            ))
+                                        ) : (
+                                            <SelectItem value="none" disabled>
+                                                {__('No hay marcas registradas')}
+                                            </SelectItem>
+                                        )}
+                                    </SelectContent>
+                                </Select>
+                                {errors.marca_id && <p className="text-xs text-rose-500">{errors.marca_id}</p>}
+                            </div>
+
+                            {/* 3. SELECCIÓN DE MODELO */}
+                            <div className="space-y-1.5">
+                                <Label htmlFor="modelo_id">{__('3. Modelo *')}</Label>
+                                <Select
+                                    value={data.modelo_id}
+                                    onValueChange={(val) => setData('modelo_id', val)}
+                                    disabled={!data.marca_id || finalModelos.length === 0}
+                                >
+                                    <SelectTrigger id="modelo_id" className="w-full">
+                                        <SelectValue
+                                            placeholder={
+                                                !data.marca_id
+                                                    ? __('Primero seleccione una marca...')
+                                                    : finalModelos.length === 0
+                                                    ? __('Sin modelos disponibles')
+                                                    : __('Seleccionar Modelo...')
+                                            }
+                                        />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        {finalModelos.map((mod) => (
+                                            <SelectItem key={mod.id} value={String(mod.id)}>
+                                                {mod.nombre_comercial} {mod.codigo_modelo ? `(${mod.codigo_modelo})` : ''}
+                                            </SelectItem>
+                                        ))}
+                                    </SelectContent>
+                                </Select>
+                                {errors.modelo_id && <p className="text-xs text-rose-500">{errors.modelo_id}</p>}
+                            </div>
+
+                            {/* 4. DESCRIPCIÓN DEL SERVICIO */}
+                            <div className="space-y-1.5">
+                                <Label htmlFor="nombre">{__('4. Descripción del Servicio *')}</Label>
                                 <Input
                                     id="nombre"
                                     value={data.nombre}
                                     onChange={(e) => setData('nombre', e.target.value)}
-                                    placeholder={__('Ej: Mantenimiento General, Cambio de Batería')}
+                                    placeholder={__('Ej: Cambio de Pantalla OLED, Cambio de Batería, Mantenimiento')}
                                     required
                                 />
                                 {errors.nombre && <p className="text-xs text-rose-500">{errors.nombre}</p>}
                             </div>
 
+                            {/* 5. PRECIO */}
+                            <div className="space-y-1.5">
+                                <Label htmlFor="precio">{__('5. Precio Base')} ({currencySymbol}) *</Label>
+                                <Input
+                                    id="precio"
+                                    type="number"
+                                    step="0.01"
+                                    min="0"
+                                    value={data.precio}
+                                    onChange={(e) => setData('precio', e.target.value)}
+                                    placeholder="0.00"
+                                    required
+                                />
+                                {errors.precio && <p className="text-xs text-rose-500">{errors.precio}</p>}
+                            </div>
+
+                            {/* ESTADO */}
                             <div className="flex items-center justify-between rounded-lg border p-3">
                                 <div>
                                     <Label className="text-base">{__('Estado Activo')}</Label>
-                                    <p className="text-xs text-muted-foreground">{__('Permite ofertar este servicio en el POS.')}</p>
+                                    <p className="text-xs text-muted-foreground">{__('Habilita este servicio para presupuestos y órdenes.')}</p>
                                 </div>
                                 <Switch
                                     checked={data.estado}

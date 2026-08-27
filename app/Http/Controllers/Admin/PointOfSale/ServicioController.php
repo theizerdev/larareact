@@ -39,13 +39,20 @@ class ServicioController extends Controller
         $status = $request->input('status');
         $perPage = $request->input('perPage', 10);
 
-        $query = Servicio::with('categoria:id,nombre');
+        $query = Servicio::with([
+            'categoria:id,nombre',
+            'marca:id,nombre',
+            'modelo:id,nombre_comercial,codigo_modelo,marca_id,categoria_id',
+        ]);
 
         if ($search) {
             $query->where(function ($q) use ($search) {
                 $q->where('nombre', 'like', "%{$search}%")
                   ->orWhere('codigo', 'like', "%{$search}%")
-                  ->orWhere('descripcion', 'like', "%{$search}%");
+                  ->orWhere('descripcion', 'like', "%{$search}%")
+                  ->orWhereHas('categoria', fn($c) => $c->where('nombre', 'like', "%{$search}%"))
+                  ->orWhereHas('marca', fn($m) => $m->where('nombre', 'like', "%{$search}%"))
+                  ->orWhereHas('modelo', fn($mo) => $mo->where('nombre_comercial', 'like', "%{$search}%")->orWhere('codigo_modelo', 'like', "%{$search}%"));
             });
         }
 
@@ -60,9 +67,18 @@ class ServicioController extends Controller
             ->orderBy('nombre')
             ->get(['id', 'nombre']);
 
+        $marcas = \App\Models\Marca::where('empresa_id', $user->empresa_id)
+            ->where('estado', true)
+            ->with(['modelos' => function ($q) {
+                $q->where('estado', true)->select('id', 'marca_id', 'categoria_id', 'nombre_comercial', 'codigo_modelo');
+            }])
+            ->orderBy('nombre')
+            ->get(['id', 'nombre']);
+
         return inertia('admin/PointOfSale/Servicios/Index', [
             'servicios' => $servicios,
             'categorias' => $categorias,
+            'marcas' => $marcas,
             'currencySymbol' => $this->getCurrencySymbol(),
             'filters' => $request->only(['search', 'status', 'perPage']),
         ]);
@@ -72,10 +88,12 @@ class ServicioController extends Controller
     {
         $validated = $request->validate([
             'categoria_id' => 'nullable|exists:categorias,id',
+            'marca_id' => 'nullable|exists:marcas,id',
+            'modelo_id' => 'nullable|exists:modelos,id',
             'nombre' => 'required|string|max:255',
             'codigo' => 'nullable|string|max:100',
             'descripcion' => 'nullable|string',
-            'precio' => 'nullable|numeric|min:0',
+            'precio' => 'required|numeric|min:0',
             'estado' => 'boolean',
         ]);
 
@@ -106,10 +124,12 @@ class ServicioController extends Controller
     {
         $validated = $request->validate([
             'categoria_id' => 'nullable|exists:categorias,id',
+            'marca_id' => 'nullable|exists:marcas,id',
+            'modelo_id' => 'nullable|exists:modelos,id',
             'nombre' => 'required|string|max:255',
             'codigo' => 'nullable|string|max:100',
             'descripcion' => 'nullable|string',
-            'precio' => 'nullable|numeric|min:0',
+            'precio' => 'required|numeric|min:0',
             'estado' => 'boolean',
         ]);
 

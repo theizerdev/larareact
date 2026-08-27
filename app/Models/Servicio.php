@@ -17,6 +17,8 @@ class Servicio extends Model
         'empresa_id',
         'sucursal_id',
         'categoria_id',
+        'marca_id',
+        'modelo_id',
         'nombre',
         'codigo',
         'descripcion',
@@ -42,5 +44,15 @@ class Servicio extends Model
     public function categoria(): BelongsTo
     {
         return $this->belongsTo(Categoria::class);
+    }
+
+    public function marca(): BelongsTo
+    {
+        return $this->belongsTo(Marca::class);
+    }
+
+    public function modelo(): BelongsTo
+    {
+        return $this->belongsTo(Modelo::class);
     }
 }

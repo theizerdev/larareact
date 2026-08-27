@@ -1115,17 +1115,17 @@ class ReparacionController extends Controller
                 $modeloNombre = $orden->modelo ? $orden->modelo->nombre_comercial : ($orden->modelo_nombre ?? '');
                 $saldoFmt = number_format((float) $orden->saldo_restante, 2);
 
-                $mensajeCliente = "🟢 *¡SU EQUIPO YA ESTÁ LISTO PARA RETIRAR!*\n\n"
+                $mensajeCliente = "*¡SU EQUIPO YA ESTA LISTO PARA RETIRAR!*\n\n"
                     . "Estimado(a) *{$clienteNombre}*,\n"
-                    . "Le informamos que la reparación de su equipo ha finalizado exitosamente y ya se encuentra *DISPONIBLE PARA SU RETIRO* en nuestra sucursal.\n\n"
-                    . "📋 *DATOS DE LA ÓRDEN:*\n"
-                    . "• *Orden N°:* #{$orden->numero_orden}\n"
+                    . "Le informamos que la reparacion de su equipo ha finalizado exitosamente y ya se encuentra *DISPONIBLE PARA SU RETIRO* en nuestra sucursal.\n\n"
+                    . "*DATOS DE LA ORDEN:*\n"
+                    . "• *Orden:* #{$orden->numero_orden}\n"
                     . "• *Equipo:* {$marcaNombre} {$modeloNombre} ({$orden->tipo_dispositivo})\n"
                     . (!empty($orden->imei_serie) ? "• *IMEI/Serie:* {$orden->imei_serie}\n" : "")
                     . "• *Saldo Pendiente:* {$currencySymbol}{$saldoFmt}\n\n"
-                    . "🛠️ *TÉCNICO A CARGO:*\n"
+                    . "*TECNICO A CARGO:*\n"
                     . "• *Nombre:* {$tecnicoNombre}\n\n"
-                    . "Puede pasar por nuestra sucursal en nuestros horarios de atención. ¡Agradecemos su confianza!";
+                    . "Puede pasar por nuestra sucursal en nuestros horarios de atencion. Agradecemos su confianza.";
 
                 $whatsappService->sendMessage($clientePhone, $mensajeCliente);
 
@@ -1160,18 +1160,18 @@ class ReparacionController extends Controller
                 $saldoFmt = number_format((float) $orden->saldo_restante, 2);
                 $publicReportUrl = url("/admin/reparaciones/{$orden->id}/reporte-pdf");
 
-                $mensajeCliente = "📲 *CONFIRMACIÓN DE ORDEN DE REPARACIÓN*\n\n"
-                    . "📋 *Orden:* #{$orden->numero_orden}\n"
-                    . "👤 *Cliente:* {$orden->cliente_nombre}\n"
-                    . "📱 *Equipo:* {$orden->marca_nombre} {$orden->modelo_nombre} ({$orden->tipo_dispositivo})\n"
-                    . (!empty($orden->imei_serie) ? "🔢 *IMEI/Serie:* {$orden->imei_serie}\n" : "")
-                    . "⚠️ *Falla Reportada:* {$orden->descripcion_falla}\n"
-                    . "💰 *Costo Estimado:* {$currencySymbol}{$costoFmt}\n"
-                    . "💵 *Anticipo:* {$currencySymbol}{$anticipoFmt}\n"
-                    . "💳 *Saldo Restante:* {$currencySymbol}{$saldoFmt}\n\n"
-                    . "🔗 *Ver Estado y Detalle de su Reparación con Evidencias:* \n"
-                    . "👉 {$publicReportUrl}\n\n"
-                    . "Estimado(a) *{$orden->cliente_nombre}*, su equipo ha sido recibido exitosamente en nuestro taller. Le mantendremos informado sobre el estatus de su reparación. ¡Gracias por su confianza!";
+                $mensajeCliente = "*CONFIRMACION DE ORDEN DE REPARACION*\n\n"
+                    . "*Orden:* #{$orden->numero_orden}\n"
+                    . "*Cliente:* {$orden->cliente_nombre}\n"
+                    . "*Equipo:* {$orden->marca_nombre} {$orden->modelo_nombre} ({$orden->tipo_dispositivo})\n"
+                    . (!empty($orden->imei_serie) ? "*IMEI/Serie:* {$orden->imei_serie}\n" : "")
+                    . "*Falla Reportada:* {$orden->descripcion_falla}\n"
+                    . "*Costo Estimado:* {$currencySymbol}{$costoFmt}\n"
+                    . "*Anticipo:* {$currencySymbol}{$anticipoFmt}\n"
+                    . "*Saldo Restante:* {$currencySymbol}{$saldoFmt}\n\n"
+                    . "*Ver Estado y Detalle de su Reparacion con Evidencias:*\n"
+                    . "{$publicReportUrl}\n\n"
+                    . "Estimado(a) *{$orden->cliente_nombre}*, su equipo ha sido recibido exitosamente en nuestro taller. Le mantendremos informado sobre el estatus de su reparacion. Gracias por su confianza.";
 
                 $whatsappService->sendMessage($clientePhone, $mensajeCliente);
             }
@@ -1182,15 +1182,15 @@ class ReparacionController extends Controller
                 if ($tecnico && !empty($tecnico->telefono)) {
                     $tecnicoPhone = $this->formatPhoneNumber($tecnico->telefono, $empresaId);
                     if ($tecnicoPhone) {
-                        $mensajeTecnico = "🛠️ *NUEVA ÓRDEN DE REPARACIÓN ASIGNADA*\n\n"
-                            . "📋 *Orden:* #{$orden->numero_orden}\n"
-                            . "👤 *Técnico:* {$tecnico->name}\n"
-                            . "📱 *Equipo:* {$orden->marca_nombre} {$orden->modelo_nombre} ({$orden->tipo_dispositivo})\n"
-                            . (!empty($orden->imei_serie) ? "🔢 *IMEI/Serie:* {$orden->imei_serie}\n" : "")
-                            . "👤 *Cliente:* {$orden->cliente_nombre}\n"
-                            . "⚠️ *Falla Reportada:* {$orden->descripcion_falla}\n"
-                            . (!empty($orden->observaciones_fisicas) ? "📝 *Observaciones:* {$orden->observaciones_fisicas}\n" : "")
-                            . "\nHola *{$tecnico->name}*, se te ha asignado una nueva orden de servicio técnico. Por favor ingresa al sistema para iniciar el diagnóstico.";
+                        $mensajeTecnico = "*NUEVA ORDEN DE REPARACION ASIGNADA*\n\n"
+                            . "*Orden:* #{$orden->numero_orden}\n"
+                            . "*Tecnico:* {$tecnico->name}\n"
+                            . "*Equipo:* {$orden->marca_nombre} {$orden->modelo_nombre} ({$orden->tipo_dispositivo})\n"
+                            . (!empty($orden->imei_serie) ? "*IMEI/Serie:* {$orden->imei_serie}\n" : "")
+                            . "*Cliente:* {$orden->cliente_nombre}\n"
+                            . "*Falla Reportada:* {$orden->descripcion_falla}\n"
+                            . (!empty($orden->observaciones_fisicas) ? "*Observaciones:* {$orden->observaciones_fisicas}\n" : "")
+                            . "\nHola *{$tecnico->name}*, se te ha asignado una nueva orden de servicio tecnico. Por favor ingresa al sistema para iniciar el diagnostico.";
 
                         $whatsappService->sendMessage($tecnicoPhone, $mensajeTecnico);
                     }
