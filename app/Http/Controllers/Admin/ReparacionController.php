@@ -15,9 +15,11 @@ use App\Models\OrdenReparacionFoto;
 use App\Models\Pais;
 use App\Models\Producto;
 use App\Models\User;
+use App\Services\PostServicioChecklistService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Inertia\Inertia;
+
 
 class ReparacionController extends Controller
 {
@@ -609,12 +611,13 @@ class ReparacionController extends Controller
 
     public function show($id)
     {
-        $reparacion = OrdenReparacion::find($id);
+        $reparacion = OrdenReparacion::findOrFail($id);
         $relations = ['empresa', 'sucursal', 'cliente', 'marca', 'modelo', 'tecnico', 'items.producto', 'items.servicio', 'historial.user', 'sale'];
         if (\Illuminate\Support\Facades\Schema::hasTable('orden_reparacion_fotos')) {
             $relations[] = 'fotos';
         }
         $reparacion->load($relations);
+
 
         $user = auth()->user();
         $empresaId = $user->empresa_id;
@@ -640,17 +643,36 @@ class ReparacionController extends Controller
             ->orderBy('nombre')
             ->get(['id', 'nombre']);
 
+        // Sucursales para el modal de configuración del checklist
+        $sucursales = \App\Models\Sucursal::withoutGlobalScope('multitenancy')
+            ->where('empresa_id', $empresaId)
+            ->where('status', true)
+            ->orderBy('nombre')
+            ->get(['id', 'nombre']);
+
+        // Checklist dinámico de post-atención para esta empresa/sucursal
+        $sucursalId = $reparacion->sucursal_id ?? $user->sucursal_id;
+        $checklistService = app(PostServicioChecklistService::class);
+
+        $checklistItems = [];
+        if (\Illuminate\Support\Facades\Schema::hasTable('reparacion_checklist_items')) {
+            $checklistItems = $checklistService->getChecklistForBranch($empresaId, $sucursalId);
+        }
+
         return Inertia::render('admin/Reparaciones/Show', [
-            'orden' => $reparacion,
-            'empresa' => $empresa,
+            'orden'              => $reparacion,
+            'empresa'            => $empresa,
             'productosRepuestos' => $productosRepuestos,
-            'tecnicos' => $tecnicos,
-            'clientes' => $clientes,
-            'marcas' => $marcas,
-            'categorias' => $categorias,
-            'currencySymbol' => $this->getCurrencySymbol(),
+            'tecnicos'           => $tecnicos,
+            'clientes'           => $clientes,
+            'marcas'             => $marcas,
+            'categorias'         => $categorias,
+            'currencySymbol'     => $this->getCurrencySymbol(),
+            'sucursales'         => $sucursales,
+            'checklist_items'    => $checklistItems,
         ]);
     }
+
 
     public function reportePdf(OrdenReparacion $reparacion)
     {
@@ -1085,11 +1107,30 @@ class ReparacionController extends Controller
         }
         $reparacion->load($relations);
 
+        $user       = auth()->user();
+        $empresaId  = $reparacion->empresa_id ?? $user->empresa_id;
+        $sucursalId = $reparacion->sucursal_id ?? $user->sucursal_id;
+
+        $sucursales = \App\Models\Sucursal::withoutGlobalScope('multitenancy')
+            ->where('empresa_id', $empresaId)
+            ->where('status', true)
+            ->orderBy('nombre')
+            ->get(['id', 'nombre']);
+
+        $checklistItems = [];
+        if (\Illuminate\Support\Facades\Schema::hasTable('reparacion_checklist_items')) {
+            $checklistService = app(PostServicioChecklistService::class);
+            $checklistItems   = $checklistService->getChecklistForBranch($empresaId, $sucursalId);
+        }
+
         return Inertia::render('admin/Reparaciones/PostServicio', [
-            'orden' => $reparacion,
-            'currencySymbol' => $this->getCurrencySymbol(),
+            'orden'           => $reparacion,
+            'currencySymbol'  => $this->getCurrencySymbol(),
+            'sucursales'      => $sucursales,
+            'checklist_items' => $checklistItems,
         ]);
     }
+
 
     public function savePostServicio(Request $request, OrdenReparacion $reparacion)
     {

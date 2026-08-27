@@ -7,9 +7,11 @@ use Illuminate\Support\Facades\Route;
 
 use App\Http\Controllers\ContactController;
 use App\Http\Controllers\Admin\TestimonioController;
+use App\Http\Controllers\Admin\ReparacionController;
 use App\Models\SubscriptionPlan;
 use App\Models\Testimonio;
 use Inertia\Inertia;
+
 
 Route::get('/', function () {
     SubscriptionPlan::ensureDefaultPlansExist();
@@ -69,21 +71,6 @@ Route::middleware(['auth', 'verified'])->group(function () {
         });
     });
 });
-
-use App\Http\Controllers\ProveedorPreRegistroController;
-use App\Http\Controllers\EmpleadoPreRegistroController;
-use App\Http\Controllers\VisitaTemporalPreRegistroController;
-use App\Http\Controllers\Admin\ReparacionController;
-
-Route::get('/preregistro/{token}', [ProveedorPreRegistroController::class, 'showWizard'])->name('preregistro.wizard');
-Route::post('/preregistro/{token}', [ProveedorPreRegistroController::class, 'submitWizard'])->name('preregistro.submit');
-
-Route::get('/preregistro-empleado/{token}', [EmpleadoPreRegistroController::class, 'showWizard'])->name('preregistro-empleado.wizard');
-Route::post('/preregistro-empleado/{token}', [EmpleadoPreRegistroController::class, 'submitWizard'])->name('preregistro-empleado.submit');
-
-Route::get('/preregistro-visita/{token}', [VisitaTemporalPreRegistroController::class, 'showWizard'])->name('preregistro-visita.wizard');
-Route::post('/preregistro-visita/{token}', [VisitaTemporalPreRegistroController::class, 'submitWizard'])->name('preregistro-visita.submit');
-Route::post('/preregistro-visita/{token}/tipo-servicio', [VisitaTemporalPreRegistroController::class, 'storeTipoServicio'])->name('preregistro-visita.tipo-servicio.store');
 
   Route::get('admin/reparaciones/{reparacion}/reporte-pdf', [ReparacionController::class, 'reportePdf'])
         ->name('reparaciones.reporte-pdf');

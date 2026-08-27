@@ -13,6 +13,7 @@ import {
     Upload,
     RefreshCw,
     Trash2,
+    Layers,
 } from 'lucide-react';
 import React, { useState, useRef, useEffect } from 'react';
 import { Breadcrumbs } from '@/components/breadcrumbs';
@@ -25,11 +26,15 @@ import { useTranslate } from '@/hooks/use-translate';
 import { notifySuccess, notifyError } from '@/utils/notifications';
 import { compressImage } from '@/utils/imageOptimizer';
 import { cn } from '@/lib/utils';
+import ChecklistConfigModal, { ChecklistItem } from '@/components/reparaciones/ChecklistConfigModal';
 
 interface Props {
     orden: any;
     currencySymbol: string;
+    sucursales?: { id: number; nombre: string }[];
+    checklist_items?: Record<string, ChecklistItem[]>;
 }
+
 
 const FUNCIONES_VALIDACION_FINAL = [
     'Equipo enciende',
@@ -108,16 +113,28 @@ const FOTOS_POST_REPARACION_ANGULOS = [
     },
 ];
 
-export default function PostServicio({ orden, currencySymbol }: Props) {
+export default function PostServicio({ 
+    orden, 
+    currencySymbol,
+    sucursales = [],
+    checklist_items: propChecklistItems = {},
+}: Props) {
     const { __ } = useTranslate();
     const [activeTab, setActiveTab] = useState<'validacion' | 'limpieza_qc' | 'fotos_obs'>('validacion');
+    const [openConfigModal, setOpenConfigModal] = useState(false);
+    const [checklistGrouped, setChecklistGrouped] = useState<Record<string, ChecklistItem[]>>(
+        propChecklistItems || {}
+    );
 
     const postServicioData = orden.post_servicio_json || null;
 
     const [validacionFinalState, setValidacionFinalState] = useState<Record<string, { estado: 'correcto' | 'incorrecto'; obs: string }>>(() => {
         if (postServicioData?.validacion) return postServicioData.validacion;
         const init: Record<string, { estado: 'correcto' | 'incorrecto'; obs: string }> = {};
-        FUNCIONES_VALIDACION_FINAL.forEach((fn) => {
+        const sourceList = (propChecklistItems?.validacion && propChecklistItems.validacion.length > 0)
+            ? propChecklistItems.validacion.filter((i: any) => i.activo).map((i: any) => i.nombre)
+            : FUNCIONES_VALIDACION_FINAL;
+        sourceList.forEach((fn) => {
             init[fn] = { estado: 'correcto', obs: '' };
         });
         return init;
@@ -126,11 +143,42 @@ export default function PostServicio({ orden, currencySymbol }: Props) {
     const [limpiezaFinalState, setLimpiezaFinalState] = useState<Record<string, boolean>>(() => {
         if (postServicioData?.limpieza) return postServicioData.limpieza;
         const init: Record<string, boolean> = {};
-        LIMPIEZA_FINAL_LIST.forEach((item) => {
+        const sourceList = (propChecklistItems?.limpieza && propChecklistItems.limpieza.length > 0)
+            ? propChecklistItems.limpieza.filter((i: any) => i.activo).map((i: any) => i.nombre)
+            : LIMPIEZA_FINAL_LIST;
+        sourceList.forEach((item) => {
             init[item] = true;
         });
         return init;
     });
+
+    const handleChecklistUpdated = React.useCallback((newGrouped: Record<string, ChecklistItem[]>) => {
+        setChecklistGrouped(newGrouped);
+        if (newGrouped.validacion) {
+            const activeVal = newGrouped.validacion.filter((i) => i.activo).map((i) => i.nombre);
+            setValidacionFinalState((prev) => {
+                const next = { ...prev };
+                activeVal.forEach((name) => {
+                    if (!next[name]) {
+                        next[name] = { estado: 'correcto', obs: '' };
+                    }
+                });
+                return next;
+            });
+        }
+        if (newGrouped.limpieza) {
+            const activeLimp = newGrouped.limpieza.filter((i) => i.activo).map((i) => i.nombre);
+            setLimpiezaFinalState((prev) => {
+                const next = { ...prev };
+                activeLimp.forEach((name) => {
+                    if (next[name] === undefined) {
+                        next[name] = true;
+                    }
+                });
+                return next;
+            });
+        }
+    }, []);
 
     const [controlCalidadState, setControlCalidadState] = useState<Record<string, boolean>>(() => {
         if (postServicioData?.qc) return postServicioData.qc;
@@ -143,6 +191,7 @@ export default function PostServicio({ orden, currencySymbol }: Props) {
             equipo_listo_entrega: true,
         };
     });
+
 
     const [observacionesFinalesInput, setObservacionesFinalesInput] = useState<string>(postServicioData?.observaciones || '');
     const [fotosPostState, setFotosPostState] = useState<Record<string, string>>(() => {
@@ -454,29 +503,41 @@ export default function PostServicio({ orden, currencySymbol }: Props) {
                                     </p>
                                 </div>
 
-                                <Button
-                                    type="button"
-                                    variant="outline"
-                                    size="sm"
-                                    onClick={() => {
-                                        setValidacionFinalState((prev) => {
-                                            const copy = { ...prev };
-                                            FUNCIONES_VALIDACION_FINAL.forEach((fn) => {
-                                                copy[fn] = { ...copy[fn], estado: 'correcto' };
+                                <div className="flex items-center gap-2 flex-wrap">
+                                    <Button
+                                        type="button"
+                                        size="sm"
+                                        variant="outline"
+                                        onClick={() => setOpenConfigModal(true)}
+                                        className="text-xs font-bold bg-white text-slate-700 border-slate-300 hover:bg-slate-50 dark:bg-slate-800 dark:text-slate-200 dark:border-slate-700 gap-1.5 rounded-xl shadow-xs"
+                                    >
+                                        <Layers className="w-3.5 h-3.5 text-emerald-600" />
+                                        {__('⚙️ Configurar Plantilla')}
+                                    </Button>
+                                    <Button
+                                        type="button"
+                                        variant="outline"
+                                        size="sm"
+                                        onClick={() => {
+                                            setValidacionFinalState((prev) => {
+                                                const copy = { ...prev };
+                                                Object.keys(copy).forEach((fn) => {
+                                                    copy[fn] = { ...copy[fn], estado: 'correcto' };
+                                                });
+                                                return copy;
                                             });
-                                            return copy;
-                                        });
-                                        notifySuccess(__('Todas las funciones marcadas como correctas.'));
-                                    }}
-                                    className="text-xs font-bold bg-emerald-50 text-emerald-700 border-emerald-200 hover:bg-emerald-100 dark:bg-emerald-950 dark:text-emerald-300 dark:border-emerald-800 gap-1.5 rounded-xl shadow-xs"
-                                >
-                                    ✨ {__('Marcar Todos Correctos')}
-                                </Button>
+                                            notifySuccess(__('Todas las funciones marcadas como correctas.'));
+                                        }}
+                                        className="text-xs font-bold bg-emerald-50 text-emerald-700 border-emerald-200 hover:bg-emerald-100 dark:bg-emerald-950 dark:text-emerald-300 dark:border-emerald-800 gap-1.5 rounded-xl shadow-xs"
+                                    >
+                                        ✨ {__('Marcar Todos Correctos')}
+                                    </Button>
+                                </div>
                             </CardHeader>
 
                             <CardContent className="p-6">
                                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
-                                    {FUNCIONES_VALIDACION_FINAL.map((fn) => {
+                                    {Object.keys(validacionFinalState).map((fn) => {
                                         const current = validacionFinalState[fn] || { estado: 'correcto', obs: '' };
                                         const isOk = current.estado === 'correcto';
                                         return (
@@ -554,15 +615,26 @@ export default function PostServicio({ orden, currencySymbol }: Props) {
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                             {/* LIMPIEZA FINAL */}
                             <Card className="border-slate-200 dark:border-slate-800 shadow-md">
-                                <CardHeader className="bg-slate-50 dark:bg-slate-900/50 border-b border-slate-100 dark:border-slate-800 py-3.5">
+                                <CardHeader className="bg-slate-50 dark:bg-slate-900/50 border-b border-slate-100 dark:border-slate-800 py-3.5 flex flex-row items-center justify-between">
                                     <CardTitle className="text-sm font-black text-slate-900 dark:text-slate-100 flex items-center gap-2">
                                         <Sparkles className="w-4 h-4 text-emerald-500" />
-                                        {__('Limpieza & Ensamblado Final (5 Puntos)')}
+                                        {__('Limpieza & Ensamblado Final')}
                                     </CardTitle>
+                                    <Button
+                                        type="button"
+                                        size="sm"
+                                        variant="outline"
+                                        onClick={() => setOpenConfigModal(true)}
+                                        className="text-xs font-bold h-7 px-2 bg-white text-slate-700 border-slate-300 hover:bg-slate-50 dark:bg-slate-800 dark:text-slate-200 dark:border-slate-700 gap-1 rounded-lg"
+                                    >
+                                        <Layers className="w-3 h-3 text-emerald-600" />
+                                        {__('Configurar')}
+                                    </Button>
                                 </CardHeader>
                                 <CardContent className="p-5 space-y-3">
-                                    {LIMPIEZA_FINAL_LIST.map((item) => {
+                                    {Object.keys(limpiezaFinalState).map((item) => {
                                         const isChecked = limpiezaFinalState[item] ?? true;
+
                                         return (
                                             <div
                                                 key={item}
@@ -949,6 +1021,16 @@ export default function PostServicio({ orden, currencySymbol }: Props) {
                     </div>
                 )}
             </div>
+
+            {/* MODAL CONFIGURACIÓN DEL CHECKLIST */}
+            <ChecklistConfigModal
+                open={openConfigModal}
+                onOpenChange={setOpenConfigModal}
+                sucursales={sucursales}
+                initialSucursalId={orden.sucursal_id || null}
+                onItemsUpdated={handleChecklistUpdated}
+            />
         </>
     );
 }
+

@@ -468,7 +468,13 @@ export default function AdminSaasLayout({
                                             href: '/admin/servicios',
                                             permission: 'servicios.view',
                                         },
+                                        {
+                                            title: 'Post reparación',
+                                            href: '/admin/reparaciones/post-reparacion',
+                                            permission: 'reparaciones.view',
+                                        },
                                     ].filter(item => hasPermission(item.permission));
+
 
                                     if (servicioTecnicoItems.length === 0) return null;
 

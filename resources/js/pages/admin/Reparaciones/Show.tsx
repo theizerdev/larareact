@@ -34,7 +34,7 @@ import {
     Pencil,
     Info,
 } from 'lucide-react';
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useMemo, useCallback } from 'react';
 import { QRCodeSVG } from '@/components/qr-code-svg';
 import { BarcodeSVG } from '@/components/barcode-svg';
 import { Breadcrumbs } from '@/components/breadcrumbs';
@@ -50,6 +50,7 @@ import { useTranslate } from '@/hooks/use-translate';
 import { notifySuccess, notifyError } from '@/utils/notifications';
 import { compressImage } from '@/utils/imageOptimizer';
 import { cn } from '@/lib/utils';
+import ChecklistConfigModal, { ChecklistItem } from '@/components/reparaciones/ChecklistConfigModal';
 
 interface Item {
     id: number;
@@ -118,6 +119,7 @@ interface Orden {
     historial: Historial[];
     fotos?: Foto[];
     evidencias_fotos?: Record<string, string>;
+    sucursal_id?: number;
 }
 
 interface ProductoRepuesto {
@@ -154,7 +156,10 @@ interface Props {
     currencySymbol: string;
     marcas?: MarcaItem[];
     categorias?: CategoriaItem[];
+    sucursales?: { id: number; nombre: string }[];
+    checklist_items?: Record<string, ChecklistItem[]>;
 }
+
 
 const DOT_COORDS_VIEW: Record<number, { x: number; y: number }> = {
     1: { x: 50, y: 50 },
@@ -554,7 +559,9 @@ export default function ShowReparacion({
     clientes = [], 
     marcas = [], 
     categorias = [], 
-    currencySymbol 
+    currencySymbol,
+    sucursales = [],
+    checklist_items: propChecklistItems = {},
 }: Props) {
     const { __ } = useTranslate();
     const pageProps = usePage<any>().props;
@@ -563,6 +570,7 @@ export default function ShowReparacion({
         || pageProps.empresa 
         || pageProps.auth?.user?.empresa 
         || (pageProps as any)?.auth?.empresa;
+
 
     const [isPrintModalOpen, setIsPrintModalOpen] = useState(false);
     const [printType, setPrintType] = useState<'cliente' | 'tecnico'>('cliente');
@@ -977,6 +985,11 @@ export default function ShowReparacion({
     const [isSavingPreservicioInline, setIsSavingPreservicioInline] = useState(false);
 
     // ESTADO E INICIALIZACIÓN PARA FORMULARIO DIRECTO INTERACTIVO DE POST-ATENCIÓN (VALIDACIÓN FINAL & QC)
+    const [openChecklistConfigModal, setOpenChecklistConfigModal] = useState(false);
+    const [checklistGrouped, setChecklistGrouped] = useState<Record<string, ChecklistItem[]>>(
+        propChecklistItems || {}
+    );
+
     const FUNCIONES_VALIDACION_LIST = React.useMemo(() => [
         'Pantalla / Touch Display',
         'Prueba de Llamadas & Micrófono Audio',
@@ -1004,13 +1017,37 @@ export default function ShowReparacion({
         'Carga Inalámbrica Qi',
     ], []);
 
+    const activeValidacionItems = useMemo(() => {
+        if (checklistGrouped?.validacion) {
+            return checklistGrouped.validacion.filter((i) => Boolean(i.activo));
+        }
+        return [];
+    }, [checklistGrouped?.validacion]);
+
+    const activeLimpiezaItems = useMemo(() => {
+        if (checklistGrouped?.limpieza) {
+            return checklistGrouped.limpieza.filter((i) => Boolean(i.activo));
+        }
+        return [];
+    }, [checklistGrouped?.limpieza]);
+
+    const activeQcItems = useMemo(() => {
+        if (checklistGrouped?.qc) {
+            return checklistGrouped.qc.filter((i) => Boolean(i.activo));
+        }
+        return [];
+    }, [checklistGrouped?.qc]);
+
     const [validacionFormState, setValidacionFormState] = useState<Record<string, { estado: 'correcto' | 'incorrecto'; obs: string }>>(() => {
         const existing = postServicioData?.validacion;
         if (existing !== undefined && existing !== null && typeof existing === 'object') {
             return existing;
         }
         const init: Record<string, { estado: 'correcto' | 'incorrecto'; obs: string }> = {};
-        FUNCIONES_VALIDACION_LIST.forEach((fn) => {
+        const sourceList = (propChecklistItems?.validacion && propChecklistItems.validacion.length > 0)
+            ? propChecklistItems.validacion.filter((i: any) => i.activo).map((i: any) => i.nombre)
+            : FUNCIONES_VALIDACION_LIST;
+        sourceList.forEach((fn: string) => {
             init[fn] = { estado: 'correcto', obs: '' };
         });
         return init;
@@ -1022,16 +1059,49 @@ export default function ShowReparacion({
             return existing;
         }
         const init: Record<string, boolean> = {};
-        LIMPIEZA_FINAL_LIST.forEach((item) => {
+        const sourceList = (propChecklistItems?.limpieza && propChecklistItems.limpieza.length > 0)
+            ? propChecklistItems.limpieza.filter((i: any) => i.activo).map((i: any) => i.nombre)
+            : LIMPIEZA_FINAL_LIST;
+        sourceList.forEach((item: string) => {
             init[item] = true;
         });
         return init;
     });
 
+    const handleChecklistUpdated = React.useCallback((newGrouped: Record<string, ChecklistItem[]>) => {
+        setChecklistGrouped(newGrouped);
+        if (newGrouped.validacion) {
+            const activeVal = newGrouped.validacion.filter((i) => i.activo).map((i) => i.nombre);
+            setValidacionFormState((prev) => {
+                const next = { ...prev };
+                activeVal.forEach((name) => {
+                    if (!next[name]) {
+                        next[name] = { estado: 'correcto', obs: '' };
+                    }
+                });
+                return next;
+            });
+        }
+        if (newGrouped.limpieza) {
+            const activeLimp = newGrouped.limpieza.filter((i) => i.activo).map((i) => i.nombre);
+            setLimpiezaFormState((prev) => {
+                const next = { ...prev };
+                activeLimp.forEach((name) => {
+                    if (next[name] === undefined) {
+                        next[name] = true;
+                    }
+                });
+                return next;
+            });
+        }
+    }, []);
+
+
     const [openAddCustomValidacionModal, setOpenAddCustomValidacionModal] = useState(false);
     const [newCustomValidacionName, setNewCustomValidacionName] = useState('');
     const [openAddCustomLimpiezaModal, setOpenAddCustomLimpiezaModal] = useState(false);
     const [newCustomLimpiezaName, setNewCustomLimpiezaName] = useState('');
+
 
     const [qcFormState, setQcFormState] = useState<Record<string, boolean>>(() => {
         const existing = postServicioData?.qc || {};
@@ -1089,6 +1159,10 @@ export default function ShowReparacion({
             delete updated[keyToDelete];
             return updated;
         });
+        setChecklistGrouped((prev) => ({
+            ...prev,
+            validacion: (prev.validacion || []).filter((i) => i.nombre !== keyToDelete),
+        }));
         notifySuccess(__('Punto de validación eliminado: ') + keyToDelete);
     };
 
@@ -1099,6 +1173,23 @@ export default function ShowReparacion({
             setValidacionFormState((prev) => ({
                 ...prev,
                 [trimmed]: { estado: 'correcto', obs: '' },
+            }));
+            setChecklistGrouped((prev) => ({
+                ...prev,
+                validacion: [
+                    ...(prev.validacion || []),
+                    {
+                        id: Date.now(),
+                        empresa_id: orden.empresa_id || 1,
+                        sucursal_id: orden.sucursal_id || null,
+                        seccion: 'validacion',
+                        nombre: trimmed,
+                        icono: '📌',
+                        orden: (prev.validacion || []).length + 1,
+                        activo: true,
+                        is_default: false,
+                    },
+                ],
             }));
             notifySuccess(__('Nuevo punto de validación añadido: ') + trimmed);
         }
@@ -1112,6 +1203,10 @@ export default function ShowReparacion({
             delete updated[keyToDelete];
             return updated;
         });
+        setChecklistGrouped((prev) => ({
+            ...prev,
+            limpieza: (prev.limpieza || []).filter((i) => i.nombre !== keyToDelete),
+        }));
         notifySuccess(__('Paso de limpieza eliminado: ') + keyToDelete);
     };
 
@@ -1123,6 +1218,23 @@ export default function ShowReparacion({
                 ...prev,
                 [trimmed]: true,
             }));
+            setChecklistGrouped((prev) => ({
+                ...prev,
+                limpieza: [
+                    ...(prev.limpieza || []),
+                    {
+                        id: Date.now(),
+                        empresa_id: orden.empresa_id || 1,
+                        sucursal_id: orden.sucursal_id || null,
+                        seccion: 'limpieza',
+                        nombre: trimmed,
+                        icono: '✨',
+                        orden: (prev.limpieza || []).length + 1,
+                        activo: true,
+                        is_default: false,
+                    },
+                ],
+            }));
             notifySuccess(__('Nuevo paso de limpieza añadido: ') + trimmed);
         }
         setNewCustomLimpiezaName('');
@@ -1131,11 +1243,28 @@ export default function ShowReparacion({
 
     const handleSavePostServicioInline = () => {
         setIsSavingPostInline(true);
+
+        const filteredValidacion: Record<string, { estado: 'correcto' | 'incorrecto'; obs: string }> = {};
+        activeValidacionItems.forEach((item) => {
+            filteredValidacion[item.nombre] = validacionFormState[item.nombre] || { estado: 'correcto', obs: '' };
+        });
+
+        const filteredLimpieza: Record<string, boolean> = {};
+        activeLimpiezaItems.forEach((item) => {
+            filteredLimpieza[item.nombre] = limpiezaFormState[item.nombre] !== undefined ? Boolean(limpiezaFormState[item.nombre]) : true;
+        });
+
+        const filteredQc: Record<string, boolean> = {};
+        activeQcItems.forEach((item) => {
+            const k = (item as any).key || item.nombre;
+            filteredQc[k] = qcFormState[k] !== undefined ? Boolean(qcFormState[k]) : true;
+        });
+
         const updatedPostJson = {
             ...(postServicioData || {}),
-            validacion: validacionFormState,
-            limpieza: limpiezaFormState,
-            qc: qcFormState,
+            validacion: filteredValidacion,
+            limpieza: filteredLimpieza,
+            qc: filteredQc,
             observaciones: observacionesPostInput,
             fecha_validacion: new Date().toISOString(),
         };
@@ -2651,7 +2780,17 @@ export default function ShowReparacion({
                                                 </p>
                                             </div>
 
-                                            <div className="flex items-center gap-2">
+                                            <div className="flex items-center gap-2 flex-wrap">
+                                                <Button
+                                                    type="button"
+                                                    size="sm"
+                                                    variant="outline"
+                                                    onClick={() => setOpenChecklistConfigModal(true)}
+                                                    className="border-emerald-300 text-emerald-800 dark:border-emerald-700 dark:text-emerald-200 hover:bg-emerald-50 dark:hover:bg-emerald-950 text-xs font-bold gap-1.5 rounded-lg shadow-xs"
+                                                >
+                                                    <Layers className="w-3.5 h-3.5 text-emerald-600" />
+                                                    {__('⚙️ Configurar Plantilla')}
+                                                </Button>
                                                 <Button
                                                     type="button"
                                                     size="sm"
@@ -2672,11 +2811,12 @@ export default function ShowReparacion({
                                                     {isSavingPostInline ? __('Guardando...') : __('💾 Guardar Cambios en BD')}
                                                 </Button>
                                             </div>
+
                                         </div>
                                     </CardHeader>
 
                                     <CardContent className="p-6 space-y-8">
-                                        {/* 1. VALIDACIÓN FINAL (24 FUNCIONES DE CONTROL ELECTRÓNICO) */}
+                                        {/* 1. VALIDACIÓN FINAL (FUNCIONES DE CONTROL ELECTRÓNICO ACTIVAS) */}
                                         <div className="space-y-4">
                                             <div className="flex items-center justify-between flex-wrap gap-2 pb-2 border-b border-slate-100 dark:border-slate-800">
                                                 <div className="space-y-0.5">
@@ -2684,7 +2824,7 @@ export default function ShowReparacion({
                                                         <Activity className="w-4 h-4 text-emerald-600" />
                                                         {__('1. Validación Final de Funciones Electrónicas')}
                                                         <Badge className="bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-200 text-xs font-mono font-bold">
-                                                            {Object.keys(validacionFormState).length} {__('Puntos')}
+                                                            {activeValidacionItems.length} {__('Puntos')}
                                                         </Badge>
                                                     </h4>
                                                     <p className="text-xs text-slate-400">
@@ -2704,72 +2844,83 @@ export default function ShowReparacion({
                                                 </Button>
                                             </div>
 
-                                            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3.5">
-                                                {Object.entries(validacionFormState).map(([fnKey, fnVal]) => {
-                                                    const isOk = fnVal.estado === 'correcto';
-                                                    return (
-                                                        <div
-                                                            key={fnKey}
-                                                            className={cn(
-                                                                "p-3 rounded-xl border text-xs flex flex-col justify-between space-y-2 transition-all shadow-xs",
-                                                                isOk
-                                                                    ? "bg-emerald-50/60 border-emerald-200 dark:bg-emerald-950/20 dark:border-emerald-900"
-                                                                    : "bg-rose-50/70 border-rose-200 dark:bg-rose-950/30 dark:border-rose-900"
-                                                            )}
-                                                        >
-                                                            <div className="flex items-center justify-between gap-2">
-                                                                <span className="font-bold text-slate-900 dark:text-slate-100 text-xs truncate">{fnKey}</span>
-                                                                <div className="flex items-center gap-1 shrink-0">
-                                                                    <button
-                                                                        type="button"
-                                                                        onClick={() => setValidacionFormState((prev) => ({ ...prev, [fnKey]: { ...prev[fnKey], estado: 'correcto' } }))}
-                                                                        className={cn(
-                                                                            "px-2 py-1 rounded-md text-[10px] font-bold transition-all",
-                                                                            isOk ? "bg-emerald-600 text-white shadow-xs" : "bg-slate-200 text-slate-600 dark:bg-slate-800 dark:text-slate-400 hover:bg-slate-300"
-                                                                        )}
-                                                                    >
-                                                                        🟢 Correcto
-                                                                    </button>
-                                                                    <button
-                                                                        type="button"
-                                                                        onClick={() => setValidacionFormState((prev) => ({ ...prev, [fnKey]: { ...prev[fnKey], estado: 'incorrecto' } }))}
-                                                                        className={cn(
-                                                                            "px-2 py-1 rounded-md text-[10px] font-bold transition-all",
-                                                                            !isOk ? "bg-rose-600 text-white shadow-xs" : "bg-slate-200 text-slate-600 dark:bg-slate-800 dark:text-slate-400 hover:bg-slate-300"
-                                                                        )}
-                                                                    >
-                                                                        🔴 Incorrecto
-                                                                    </button>
-                                                                    <button
-                                                                        type="button"
-                                                                        onClick={() => handleDeleteValidacionItem(fnKey)}
-                                                                        className="p-1 rounded-md text-slate-400 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/50 transition-colors ml-1"
-                                                                        title={__('Eliminar este punto de validación')}
-                                                                    >
-                                                                        <Trash2 className="w-3.5 h-3.5" />
-                                                                    </button>
+                                            {activeValidacionItems.length === 0 ? (
+                                                <div className="p-8 text-center border-2 border-dashed border-slate-200 dark:border-slate-800 rounded-2xl bg-slate-50/50 dark:bg-slate-900/30 text-slate-400 text-xs italic">
+                                                    {__('No hay puntos de validación técnica activos configurados.')}
+                                                </div>
+                                            ) : (
+                                                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3.5">
+                                                    {activeValidacionItems.map((item) => {
+                                                        const fnKey = item.nombre;
+                                                        const fnVal = validacionFormState[fnKey] || { estado: 'correcto', obs: '' };
+                                                        const isOk = fnVal.estado === 'correcto';
+                                                        return (
+                                                            <div
+                                                                key={item.id ? `val-${item.id}-${fnKey}` : `val-${fnKey}`}
+                                                                className={cn(
+                                                                    "p-3 rounded-xl border text-xs flex flex-col justify-between space-y-2 transition-all shadow-xs",
+                                                                    isOk
+                                                                        ? "bg-emerald-50/60 border-emerald-200 dark:bg-emerald-950/20 dark:border-emerald-900"
+                                                                        : "bg-rose-50/70 border-rose-200 dark:bg-rose-950/30 dark:border-rose-900"
+                                                                )}
+                                                            >
+                                                                <div className="flex items-center justify-between gap-2">
+                                                                    <div className="flex items-center gap-2 min-w-0">
+                                                                        <span className="text-base select-none shrink-0">{item.icono || '⚡'}</span>
+                                                                        <span className="font-bold text-slate-900 dark:text-slate-100 text-xs truncate" title={fnKey}>{fnKey}</span>
+                                                                    </div>
+                                                                    <div className="flex items-center gap-1 shrink-0">
+                                                                        <button
+                                                                            type="button"
+                                                                            onClick={() => setValidacionFormState((prev) => ({ ...prev, [fnKey]: { ...(prev[fnKey] || {}), estado: 'correcto' } }))}
+                                                                            className={cn(
+                                                                                "px-2 py-1 rounded-md text-[10px] font-bold transition-all cursor-pointer",
+                                                                                isOk ? "bg-emerald-600 text-white shadow-xs" : "bg-slate-200 text-slate-600 dark:bg-slate-800 dark:text-slate-400 hover:bg-slate-300"
+                                                                            )}
+                                                                        >
+                                                                            🟢 {__('Correcto')}
+                                                                        </button>
+                                                                        <button
+                                                                            type="button"
+                                                                            onClick={() => setValidacionFormState((prev) => ({ ...prev, [fnKey]: { ...(prev[fnKey] || {}), estado: 'incorrecto' } }))}
+                                                                            className={cn(
+                                                                                "px-2 py-1 rounded-md text-[10px] font-bold transition-all cursor-pointer",
+                                                                                !isOk ? "bg-rose-600 text-white shadow-xs" : "bg-slate-200 text-slate-600 dark:bg-slate-800 dark:text-slate-400 hover:bg-slate-300"
+                                                                            )}
+                                                                        >
+                                                                            🔴 {__('Incorrecto')}
+                                                                        </button>
+                                                                        <button
+                                                                            type="button"
+                                                                            onClick={() => handleDeleteValidacionItem(fnKey)}
+                                                                            className="p-1 rounded-md text-slate-400 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/50 transition-colors ml-1 cursor-pointer"
+                                                                            title={__('Eliminar este punto de validación')}
+                                                                        >
+                                                                            <Trash2 className="w-3.5 h-3.5" />
+                                                                        </button>
+                                                                    </div>
                                                                 </div>
-                                                            </div>
 
-                                                            {!isOk && (
-                                                                <Input
-                                                                    type="text"
-                                                                    placeholder={__('Escriba observación de la falla o detalle técnico...')}
-                                                                    value={fnVal.obs}
-                                                                    onChange={(e) => {
-                                                                        const val = e.target.value;
-                                                                        setValidacionFormState((prev) => ({
-                                                                            ...prev,
-                                                                            [fnKey]: { ...prev[fnKey], obs: val },
-                                                                        }));
-                                                                    }}
-                                                                    className="h-8 text-xs bg-white dark:bg-slate-950 border-rose-200 text-rose-900 dark:text-rose-100 placeholder:text-rose-300"
-                                                                />
-                                                            )}
-                                                        </div>
-                                                    );
-                                                })}
-                                            </div>
+                                                                {!isOk && (
+                                                                    <Input
+                                                                        type="text"
+                                                                        placeholder={__('Escriba observación de la falla o detalle técnico...')}
+                                                                        value={fnVal.obs || ''}
+                                                                        onChange={(e) => {
+                                                                            const val = e.target.value;
+                                                                            setValidacionFormState((prev) => ({
+                                                                                ...prev,
+                                                                                [fnKey]: { ...(prev[fnKey] || { estado: 'incorrecto' }), obs: val },
+                                                                            }));
+                                                                        }}
+                                                                        className="h-8 text-xs bg-white dark:bg-slate-950 border-rose-200 text-rose-900 dark:text-rose-100 placeholder:text-rose-300"
+                                                                    />
+                                                                )}
+                                                            </div>
+                                                        );
+                                                    })}
+                                                </div>
+                                            )}
                                         </div>
 
                                         {/* 2. LIMPIEZA FINAL Y CONTROL DE CALIDAD */}
@@ -2789,7 +2940,7 @@ export default function ShowReparacion({
                                                 <div className="space-y-2 border border-slate-200 dark:border-slate-800 rounded-2xl p-4 bg-slate-50/50 dark:bg-slate-950">
                                                     <div className="flex items-center justify-between gap-2 mb-2">
                                                         <span className="text-xs font-black text-slate-700 dark:text-slate-300 uppercase tracking-wider">
-                                                            ✨ Protocolo de Limpieza ({Object.keys(limpiezaFormState).length} Puntos)
+                                                            ✨ Protocolo de Limpieza ({activeLimpiezaItems.length} Puntos)
                                                         </span>
                                                         <Button
                                                             type="button"
@@ -2802,65 +2953,84 @@ export default function ShowReparacion({
                                                             {__('+ Agregar Paso')}
                                                         </Button>
                                                     </div>
-                                                    {Object.entries(limpiezaFormState).map(([item, isChecked]) => {
-                                                        return (
-                                                            <div
-                                                                key={item}
-                                                                onClick={() => setLimpiezaFormState((prev) => ({ ...prev, [item]: !prev[item] }))}
-                                                                className={cn(
-                                                                    "flex items-center justify-between p-2.5 rounded-xl border text-xs font-bold cursor-pointer transition-all shadow-xs select-none",
-                                                                    isChecked
-                                                                        ? "bg-emerald-50 dark:bg-emerald-950/30 border-emerald-300 text-emerald-900 dark:text-emerald-200"
-                                                                        : "bg-rose-50 dark:bg-rose-950/30 border-rose-200 text-rose-900 dark:text-rose-200"
-                                                                )}
-                                                            >
-                                                                <span className="truncate pr-1">{item}</span>
-                                                                <div className="flex items-center gap-1.5 shrink-0">
-                                                                    <Badge className={cn("text-[10px] font-extrabold px-2 py-0.5", isChecked ? "bg-emerald-600 text-white" : "bg-rose-600 text-white")}>
-                                                                        {isChecked ? '✅ Sí' : '❌ No'}
-                                                                    </Badge>
-                                                                    <button
-                                                                        type="button"
-                                                                        onClick={(e) => {
-                                                                            e.stopPropagation();
-                                                                            handleDeleteLimpiezaItem(item);
-                                                                        }}
-                                                                        className="p-0.5 rounded text-slate-400 hover:text-rose-600 hover:bg-rose-100/50 transition-colors"
-                                                                        title={__('Eliminar este paso de limpieza')}
-                                                                    >
-                                                                        <Trash2 className="w-3.5 h-3.5" />
-                                                                    </button>
-                                                                </div>
-                                                            </div>
-                                                        );
-                                                    })}
-                                                </div>
-
-                                                {/* CONTROL DE CALIDAD QC (6 PUNTOS) */}
-                                                <div className="space-y-2 border border-slate-200 dark:border-slate-800 rounded-2xl p-4 bg-slate-50/50 dark:bg-slate-950">
-                                                    <span className="text-xs font-black text-slate-700 dark:text-slate-300 uppercase tracking-wider block mb-2">
-                                                        🛡️ Liberación de Calidad (QC 6 Puntos)
-                                                    </span>
-                                                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                                                        {CONTROL_CALIDAD_LIST.map((item) => {
-                                                            const isChecked = Boolean(qcFormState[item.key]);
+                                                    {activeLimpiezaItems.length === 0 ? (
+                                                        <div className="p-4 text-center text-slate-400 text-xs italic">
+                                                            {__('No hay pasos de limpieza activos configurados.')}
+                                                        </div>
+                                                    ) : (
+                                                        activeLimpiezaItems.map((item) => {
+                                                            const stepName = item.nombre;
+                                                            const isChecked = limpiezaFormState[stepName] !== undefined ? Boolean(limpiezaFormState[stepName]) : true;
                                                             return (
                                                                 <div
-                                                                    key={item.key}
-                                                                    onClick={() => setQcFormState((prev) => ({ ...prev, [item.key]: !prev[item.key] }))}
+                                                                    key={item.id ? `limp-${item.id}-${stepName}` : `limp-${stepName}`}
+                                                                    onClick={() => setLimpiezaFormState((prev) => ({ ...prev, [stepName]: !(prev[stepName] !== undefined ? prev[stepName] : true) }))}
                                                                     className={cn(
-                                                                        "flex items-center gap-2 p-2.5 rounded-xl border text-xs font-bold cursor-pointer transition-all shadow-xs select-none",
+                                                                        "flex items-center justify-between p-2.5 rounded-xl border text-xs font-bold cursor-pointer transition-all shadow-xs select-none",
                                                                         isChecked
-                                                                            ? "bg-emerald-50 border-emerald-300 text-emerald-900 dark:bg-emerald-950/40 dark:text-emerald-200"
-                                                                            : "bg-slate-100 border-slate-200 text-slate-500"
+                                                                            ? "bg-emerald-50 dark:bg-emerald-950/30 border-emerald-300 text-emerald-900 dark:text-emerald-200"
+                                                                            : "bg-rose-50 dark:bg-rose-950/30 border-rose-200 text-rose-900 dark:text-rose-200"
                                                                     )}
                                                                 >
-                                                                    <span>{isChecked ? '☑️' : '⬜'}</span>
-                                                                    <span>{item.label}</span>
+                                                                    <div className="flex items-center gap-2 min-w-0">
+                                                                        <span className="text-base select-none shrink-0">{item.icono || '✨'}</span>
+                                                                        <span className="truncate pr-1">{stepName}</span>
+                                                                    </div>
+                                                                    <div className="flex items-center gap-1.5 shrink-0">
+                                                                        <Badge className={cn("text-[10px] font-extrabold px-2 py-0.5", isChecked ? "bg-emerald-600 text-white" : "bg-rose-600 text-white")}>
+                                                                            {isChecked ? '✅ ' + __('Sí') : '❌ ' + __('No')}
+                                                                        </Badge>
+                                                                        <button
+                                                                            type="button"
+                                                                            onClick={(e) => {
+                                                                                e.stopPropagation();
+                                                                                handleDeleteLimpiezaItem(stepName);
+                                                                            }}
+                                                                            className="p-0.5 rounded text-slate-400 hover:text-rose-600 hover:bg-rose-100/50 transition-colors cursor-pointer"
+                                                                            title={__('Eliminar este paso de limpieza')}
+                                                                        >
+                                                                            <Trash2 className="w-3.5 h-3.5" />
+                                                                        </button>
+                                                                    </div>
                                                                 </div>
                                                             );
-                                                        })}
-                                                    </div>
+                                                        })
+                                                    )}
+                                                </div>
+
+                                                {/* CONTROL DE CALIDAD QC */}
+                                                <div className="space-y-2 border border-slate-200 dark:border-slate-800 rounded-2xl p-4 bg-slate-50/50 dark:bg-slate-950">
+                                                    <span className="text-xs font-black text-slate-700 dark:text-slate-300 uppercase tracking-wider block mb-2">
+                                                        🛡️ Liberación de Calidad (QC {activeQcItems.length} Puntos)
+                                                    </span>
+                                                    {activeQcItems.length === 0 ? (
+                                                        <div className="p-4 text-center text-slate-400 text-xs italic">
+                                                            {__('No hay puntos de control de calidad activos configurados.')}
+                                                        </div>
+                                                    ) : (
+                                                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                                                            {activeQcItems.map((item) => {
+                                                                const qcKey = (item as any).key || item.nombre;
+                                                                const isChecked = qcFormState[qcKey] !== undefined ? Boolean(qcFormState[qcKey]) : true;
+                                                                return (
+                                                                    <div
+                                                                        key={item.id ? `qc-${item.id}-${qcKey}` : `qc-${qcKey}`}
+                                                                        onClick={() => setQcFormState((prev) => ({ ...prev, [qcKey]: !isChecked }))}
+                                                                        className={cn(
+                                                                            "flex items-center gap-2 p-2.5 rounded-xl border text-xs font-bold cursor-pointer transition-all shadow-xs select-none",
+                                                                            isChecked
+                                                                                ? "bg-emerald-50 border-emerald-300 text-emerald-900 dark:bg-emerald-950/40 dark:text-emerald-200"
+                                                                                : "bg-slate-100 border-slate-200 text-slate-500"
+                                                                        )}
+                                                                    >
+                                                                        <span className="text-sm select-none shrink-0">{item.icono || '🛡️'}</span>
+                                                                        <span className="text-xs">{isChecked ? '☑️' : '⬜'}</span>
+                                                                        <span className="truncate">{item.nombre}</span>
+                                                                    </div>
+                                                                );
+                                                            })}
+                                                        </div>
+                                                    )}
                                                 </div>
                                             </div>
                                         </div>
@@ -5157,7 +5327,16 @@ export default function ShowReparacion({
                 </DialogContent>
             </Dialog>
 
+            {/* MODAL CONFIGURACIÓN GLOBAL / SUCURSAL DEL CHECKLIST DE POST-ATENCIÓN */}
+            <ChecklistConfigModal
+                open={openChecklistConfigModal}
+                onOpenChange={setOpenChecklistConfigModal}
+                sucursales={sucursales}
+                initialSucursalId={orden.sucursal_id || null}
+                onItemsUpdated={handleChecklistUpdated}
+            />
 
         </>
     );
 }
+
