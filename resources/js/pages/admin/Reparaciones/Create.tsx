@@ -85,7 +85,11 @@ interface ServicioItem {
     nombre: string;
     precio: number;
     categoria_id?: number | null;
+    marca_id?: number | null;
+    modelo_id?: number | null;
     categoria?: { id: number; nombre: string } | null;
+    marca?: { id: number; nombre: string } | null;
+    modelo?: { id: number; nombre_comercial: string; codigo_modelo?: string | null } | null;
 }
 
 interface CartServicio {
@@ -662,14 +666,40 @@ export default function CreateReparacion({ clientes: initialClientes, marcas: in
         };
     }, []);
 
-    // Servicios filtrados por la búsqueda en tiempo real
+    // Encontrar ID de categoría si coincide con el texto de tipo_dispositivo
+    const activeCategoriaId = categorias.find(
+        (c) => c.nombre.toLowerCase().trim() === (data.tipo_dispositivo || '').toLowerCase().trim()
+    )?.id;
+
+    const activeMarcaId = data.marca_id ? Number(data.marca_id) : (selectedMarcaId ? Number(selectedMarcaId) : null);
+    const activeModeloId = data.modelo_id ? Number(data.modelo_id) : null;
+
+    // Servicios compatibles según la selección de Categoría, Marca y Modelo
     const serviciosFiltrados = serviciosList.filter((s) => {
+        // 1. Filtrado por jerarquía de equipo (Categoría -> Marca -> Modelo)
+        if (s.modelo_id) {
+            // Si el servicio es exclusivo de un modelo, solo mostrar si coincide el modelo seleccionado
+            if (!activeModeloId || s.modelo_id !== activeModeloId) return false;
+        } else if (s.marca_id) {
+            // Si el servicio es de una marca, debe coincidir con la marca seleccionada
+            if (!activeMarcaId || s.marca_id !== activeMarcaId) return false;
+            // Si además tiene categoría asignada, debe coincidir si hay categoría seleccionada
+            if (s.categoria_id && activeCategoriaId && s.categoria_id !== activeCategoriaId) return false;
+        } else if (s.categoria_id) {
+            // Si el servicio es de una categoría, debe coincidir con la categoría seleccionada
+            if (!activeCategoriaId || s.categoria_id !== activeCategoriaId) return false;
+        }
+        // Si no tiene modelo, ni marca, ni categoría es un servicio universal (siempre disponible)
+
+        // 2. Filtro de búsqueda por texto
         if (!searchServicioTerm || searchServicioTerm.trim() === '') return true;
         const term = searchServicioTerm.toLowerCase().trim();
         return (
             s.nombre.toLowerCase().includes(term) ||
             (s.codigo && s.codigo.toLowerCase().includes(term)) ||
-            (s.categoria?.nombre && s.categoria.nombre.toLowerCase().includes(term))
+            (s.categoria?.nombre && s.categoria.nombre.toLowerCase().includes(term)) ||
+            (s.marca?.nombre && s.marca.nombre.toLowerCase().includes(term)) ||
+            (s.modelo?.nombre_comercial && s.modelo.nombre_comercial.toLowerCase().includes(term))
         );
     });
 
@@ -938,9 +968,13 @@ export default function CreateReparacion({ clientes: initialClientes, marcas: in
 
         setIsCreatingServicio(true);
         try {
+            const precioNum = newServicioData.precio ? Number(newServicioData.precio) : 0;
             const payload = {
-                ...newServicioData,
-                precio: newServicioData.precio ? Number(newServicioData.precio) : 0,
+                categoria_id: newServicioData.categoria_id || activeCategoriaId || null,
+                marca_id: newServicioData.marca_id || activeMarcaId || null,
+                modelo_id: newServicioData.modelo_id || activeModeloId || null,
+                nombre: newServicioData.nombre.trim(),
+                precio: precioNum,
             };
             const dataRes = await postJson('/admin/reparaciones/quick-servicio', payload);
             if (dataRes.success) {
@@ -951,16 +985,17 @@ export default function CreateReparacion({ clientes: initialClientes, marcas: in
                     servicio_id: newServicio.id,
                     nombre: newServicio.nombre,
                     codigo: newServicio.codigo || '',
-                    precio: 0,
+                    precio: Number(newServicio.precio || 0),
                     cantidad: 1,
-                    subtotal: 0,
+                    subtotal: Number(newServicio.precio || 0),
                     categoria_nombre: newServicio.categoria?.nombre || '',
                 };
                 const updatedCart = [...cartServicios, newCartItem];
                 setCartServicios(updatedCart);
+                updateCostoEstimadoWithCart(updatedCart);
 
                 setOpenNewServicioModal(false);
-                setNewServicioData({ categoria_id: '', nombre: '', codigo: '', descripcion: '', precio: '0' });
+                setNewServicioData({ categoria_id: '', nombre: '', codigo: '', descripcion: '', precio: '' });
                 notifySuccess(__('Nuevo servicio creado y agregado a la orden.'));
             } else {
                 notifyError(__('Ocurrió un error al registrar el servicio.'));
@@ -1617,12 +1652,31 @@ export default function CreateReparacion({ clientes: initialClientes, marcas: in
                                                 </DialogTitle>
                                             </DialogHeader>
                                             <div className="space-y-3 py-2 text-xs">
+                                                <div className="p-2 rounded bg-purple-50 dark:bg-purple-950/40 border border-purple-200 dark:border-purple-800 text-purple-800 dark:text-purple-300 space-y-0.5">
+                                                    <p className="text-[10px] font-bold uppercase">{__('Se asociará automáticamente a:')}</p>
+                                                    <p className="font-semibold text-xs">
+                                                        {data.tipo_dispositivo || __('General')} &gt; {data.marca_nombre || __('Cualquier Marca')} &gt; {data.modelo_nombre || __('Cualquier Modelo')}
+                                                    </p>
+                                                </div>
                                                 <div>
                                                     <Label className="text-xs font-semibold">{__('Nombre del Servicio *')}</Label>
                                                     <Input
                                                         value={newServicioData.nombre}
                                                         onChange={(e) => setNewServicioData({ ...newServicioData, nombre: e.target.value })}
-                                                        placeholder={__('ej: Cambio de Pantalla iPhone 14')}
+                                                        placeholder={__('ej: Cambio de Pantalla OLED, Batería...')}
+                                                        className="text-xs h-8 mt-1"
+                                                        required
+                                                    />
+                                                </div>
+                                                <div>
+                                                    <Label className="text-xs font-semibold">{__('Precio Base ($)')}</Label>
+                                                    <Input
+                                                        type="number"
+                                                        step="0.01"
+                                                        min="0"
+                                                        value={newServicioData.precio}
+                                                        onChange={(e) => setNewServicioData({ ...newServicioData, precio: e.target.value })}
+                                                        placeholder="0.00"
                                                         className="text-xs h-8 mt-1"
                                                     />
                                                 </div>
@@ -1635,6 +1689,17 @@ export default function CreateReparacion({ clientes: initialClientes, marcas: in
                                     </Dialog>
                                 </CardHeader>
                                 <CardContent className="p-3 space-y-2">
+                                    {(data.tipo_dispositivo || data.marca_nombre || data.modelo_nombre) && (
+                                        <div className="text-[10px] text-purple-700 dark:text-purple-300 bg-purple-50/70 dark:bg-purple-950/30 px-2 py-1 rounded border border-purple-100 dark:border-purple-900 flex items-center justify-between">
+                                            <span className="truncate">
+                                                <span className="font-semibold">{__('Equipo:')}</span> {data.tipo_dispositivo || '-'} &gt; {data.marca_nombre || '-'} &gt; {data.modelo_nombre || '-'}
+                                            </span>
+                                            <span className="font-bold text-purple-600 dark:text-purple-400 text-[9px] flex-shrink-0 ml-1">
+                                                {serviciosFiltrados.length} {__('disponibles')}
+                                            </span>
+                                        </div>
+                                    )}
+
                                     <div ref={servicioRef} className="relative">
                                         <div className="relative">
                                             <Search className="w-3.5 h-3.5 absolute left-2.5 top-2.5 text-purple-600 pointer-events-none" />
@@ -1645,14 +1710,14 @@ export default function CreateReparacion({ clientes: initialClientes, marcas: in
                                                     setIsServicioDropdownOpen(true);
                                                 }}
                                                 onFocus={() => setIsServicioDropdownOpen(true)}
-                                                placeholder={__('Buscar servicio (ej: Pantalla, Limpieza)...')}
+                                                placeholder={__('Buscar o seleccionar servicio...')}
                                                 className="text-xs h-8 pl-8 font-medium"
                                             />
                                         </div>
 
                                         {/* DROPDOWN SERVICIOS */}
                                         {isServicioDropdownOpen && (
-                                            <div className="absolute left-0 right-0 z-50 mt-1 max-h-48 overflow-y-auto bg-white dark:bg-slate-900 rounded-lg border border-slate-200 dark:border-slate-800 shadow-xl divide-y divide-slate-100 dark:divide-slate-800">
+                                            <div className="absolute left-0 right-0 z-50 mt-1 max-h-56 overflow-y-auto bg-white dark:bg-slate-900 rounded-lg border border-slate-200 dark:border-slate-800 shadow-xl divide-y divide-slate-100 dark:divide-slate-800">
                                                 {serviciosFiltrados.length > 0 ? (
                                                     serviciosFiltrados.map((s) => (
                                                         <button
@@ -1663,13 +1728,45 @@ export default function CreateReparacion({ clientes: initialClientes, marcas: in
                                                                 setIsServicioDropdownOpen(false);
                                                                 setSearchServicioTerm('');
                                                             }}
-                                                            className="w-full px-3 py-2 text-left text-xs hover:bg-purple-50 dark:hover:bg-purple-950/40 flex items-center justify-between transition-colors"
+                                                            className="w-full px-3 py-2 text-left text-xs hover:bg-purple-50 dark:hover:bg-purple-950/40 flex items-center justify-between transition-colors gap-2"
                                                         >
-                                                            <span className="font-bold text-slate-900 dark:text-slate-100 block">{s.nombre}</span>
+                                                            <div className="flex-1 min-w-0">
+                                                                <span className="font-bold text-slate-900 dark:text-slate-100 block truncate">{s.nombre}</span>
+                                                                <div className="flex items-center gap-1.5 text-[10px] text-slate-400 mt-0.5">
+                                                                    {s.modelo ? (
+                                                                        <span className="text-purple-600 dark:text-purple-400 font-medium">
+                                                                            {s.modelo.nombre_comercial}
+                                                                        </span>
+                                                                    ) : s.marca ? (
+                                                                        <span className="text-slate-500">{s.marca.nombre}</span>
+                                                                    ) : s.categoria ? (
+                                                                        <span className="text-slate-400">{s.categoria.nombre}</span>
+                                                                    ) : (
+                                                                        <span className="italic">{__('Universal')}</span>
+                                                                    )}
+                                                                </div>
+                                                            </div>
+                                                            {Number(s.precio || 0) > 0 && (
+                                                                <span className="font-mono font-bold text-xs text-emerald-600 dark:text-emerald-400 flex-shrink-0">
+                                                                    {currencySymbol}{Number(s.precio).toFixed(2)}
+                                                                </span>
+                                                            )}
                                                         </button>
                                                     ))
                                                 ) : (
-                                                    <div className="p-2 text-[10px] text-center text-slate-400">{__('No se encontraron servicios.')}</div>
+                                                    <div className="p-3 text-[11px] text-center text-slate-400 space-y-1">
+                                                        <p>{__('No hay servicios registrados para este equipo.')}</p>
+                                                        <button
+                                                            type="button"
+                                                            onClick={() => {
+                                                                setIsServicioDropdownOpen(false);
+                                                                setOpenNewServicioModal(true);
+                                                            }}
+                                                            className="text-purple-600 font-bold hover:underline text-xs"
+                                                        >
+                                                            + {__('Crear servicio para este modelo')}
+                                                        </button>
+                                                    </div>
                                                 )}
                                             </div>
                                         )}

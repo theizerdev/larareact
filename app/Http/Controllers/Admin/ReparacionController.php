@@ -101,11 +101,15 @@ class ReparacionController extends Controller
             ->get(['id', 'nombre']);
 
         $servicios = \App\Models\Servicio::withoutGlobalScope('multitenancy')
-            ->with(['categoria' => fn ($q) => $q->withoutGlobalScope('multitenancy')])
+            ->with([
+                'categoria' => fn ($q) => $q->withoutGlobalScope('multitenancy'),
+                'marca' => fn ($q) => $q->withoutGlobalScope('multitenancy'),
+                'modelo' => fn ($q) => $q->withoutGlobalScope('multitenancy'),
+            ])
             ->where('empresa_id', $empresaId)
             ->where('estado', true)
             ->orderBy('nombre')
-            ->get(['id', 'codigo', 'nombre', 'precio', 'categoria_id']);
+            ->get(['id', 'codigo', 'nombre', 'precio', 'categoria_id', 'marca_id', 'modelo_id']);
 
         return Inertia::render('admin/Reparaciones/Index', [
             'ordenes' => $ordenes,
@@ -150,11 +154,15 @@ class ReparacionController extends Controller
             ->get(['id', 'nombre']);
 
         $servicios = \App\Models\Servicio::withoutGlobalScope('multitenancy')
-            ->with(['categoria' => fn ($q) => $q->withoutGlobalScope('multitenancy')])
+            ->with([
+                'categoria' => fn ($q) => $q->withoutGlobalScope('multitenancy'),
+                'marca' => fn ($q) => $q->withoutGlobalScope('multitenancy'),
+                'modelo' => fn ($q) => $q->withoutGlobalScope('multitenancy'),
+            ])
             ->where('empresa_id', $empresaId)
             ->where('estado', true)
             ->orderBy('nombre')
-            ->get(['id', 'codigo', 'nombre', 'precio', 'categoria_id']);
+            ->get(['id', 'codigo', 'nombre', 'precio', 'categoria_id', 'marca_id', 'modelo_id']);
 
         return Inertia::render('admin/Reparaciones/Create', [
             'clientes' => $clientes,
@@ -192,6 +200,8 @@ class ReparacionController extends Controller
     {
         $validated = $request->validate([
             'categoria_id' => 'nullable|exists:categorias,id',
+            'marca_id' => 'nullable|exists:marcas,id',
+            'modelo_id' => 'nullable|exists:modelos,id',
             'nombre' => 'required|string|max:255',
             'codigo' => 'nullable|string|max:100',
             'descripcion' => 'nullable|string',
@@ -220,7 +230,11 @@ class ReparacionController extends Controller
             'descripcion' => $descripcion,
         ]);
 
-        $servicio->load('categoria:id,nombre');
+        $servicio->load([
+            'categoria:id,nombre',
+            'marca:id,nombre',
+            'modelo:id,nombre_comercial,codigo_modelo'
+        ]);
 
         return response()->json([
             'success' => true,
