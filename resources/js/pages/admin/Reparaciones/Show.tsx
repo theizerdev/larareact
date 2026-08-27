@@ -35,6 +35,7 @@ import {
 } from 'lucide-react';
 import React, { useState, useRef, useEffect } from 'react';
 import { QRCodeSVG } from '@/components/qr-code-svg';
+import { BarcodeSVG } from '@/components/barcode-svg';
 import { Breadcrumbs } from '@/components/breadcrumbs';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -4601,17 +4602,21 @@ export default function ShowReparacion({ orden, productosRepuestos = [], tecnico
                                 )}
                             </div>
 
-                            {/* CÓDIGO QR Y CÓDIGO DE REPARACIÓN PARA CONSULTA Y BÚSQUEDA */}
-                            <div className="text-center py-2.5 flex flex-col items-center bg-gray-50/50">
-                                <QRCodeSVG
-                                    value={orden.numero_orden}
-                                    size={110}
-                                />
-                                <div className="text-[9.5px] font-black uppercase mt-1.5 font-mono tracking-wider">
+                            {/* CÓDIGO DE BARRAS Y CÓDIGO DE REPARACIÓN PARA CONSULTA Y BÚSQUEDA */}
+                            <div className="text-center py-2.5 flex flex-col items-center">
+                                <div className="w-full max-w-[250px] overflow-hidden flex justify-center py-1">
+                                    <BarcodeSVG
+                                        value={orden.numero_orden}
+                                        width={1.6}
+                                        height={48}
+                                        displayValue={false}
+                                    />
+                                </div>
+                                <div className="text-[10px] font-black uppercase mt-1 font-mono tracking-wider">
                                     CÓDIGO DE REPARACIÓN: {orden.numero_orden}
                                 </div>
                                 <div className="text-[7.5px] text-gray-700 font-semibold font-mono">
-                                    Escanee para consultar estado o cobrar en POS
+                                    Escanee el código para consultar estado o cobrar en POS
                                 </div>
                             </div>
 
@@ -4656,12 +4661,16 @@ export default function ShowReparacion({ orden, productosRepuestos = [], tecnico
 
                             <div className="border-b border-dashed border-black my-1.5"></div>
 
-                            {/* CÓDIGO QR PARA ESCANEAR */}
+                            {/* CÓDIGO DE BARRAS PARA ESCANEAR */}
                             <div className="text-center pt-1 pb-1 flex flex-col items-center">
-                                <QRCodeSVG
-                                    value={orden.numero_orden}
-                                    size={120}
-                                />
+                                <div className="w-full max-w-[250px] overflow-hidden flex justify-center py-0.5">
+                                    <BarcodeSVG
+                                        value={orden.numero_orden}
+                                        width={1.6}
+                                        height={45}
+                                        displayValue={false}
+                                    />
+                                </div>
                                 <div className="text-[8.5px] font-bold uppercase mt-1 font-mono">CÓDIGO DE REPARACIÓN: {orden.numero_orden}</div>
                                 <div className="text-[7px] text-gray-600 font-mono">
                                     Escanee para consultar estado o abrir detalle en el sistema

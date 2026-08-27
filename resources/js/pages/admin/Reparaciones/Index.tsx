@@ -27,6 +27,7 @@ import { useTranslate } from '@/hooks/use-translate';
 import { cleanParams, cn } from '@/lib/utils';
 import { notifySuccess, notifyError } from '@/utils/notifications';
 import { QRCodeSVG } from '@/components/qr-code-svg';
+import { BarcodeSVG } from '@/components/barcode-svg';
 import type { Paginated } from '@/types/app';
 
 const DOT_COORDS_VIEW: Record<number, { x: number; y: number }> = {
@@ -979,17 +980,21 @@ export default function IndexReparaciones({ ordenes, counts, tecnicos, currencyS
                                 )}
                             </div>
 
-                            {/* CÓDIGO QR Y CÓDIGO DE REPARACIÓN */}
-                            <div className="text-center py-2.5 flex flex-col items-center bg-gray-50/50">
-                                <QRCodeSVG
-                                    value={printOrden.numero_orden}
-                                    size={110}
-                                />
-                                <div className="text-[9.5px] font-black uppercase mt-1.5 font-mono tracking-wider">
+                            {/* CÓDIGO DE BARRAS Y CÓDIGO DE REPARACIÓN */}
+                            <div className="text-center py-2.5 flex flex-col items-center">
+                                <div className="w-full max-w-[250px] overflow-hidden flex justify-center py-1">
+                                    <BarcodeSVG
+                                        value={printOrden.numero_orden}
+                                        width={1.6}
+                                        height={48}
+                                        displayValue={false}
+                                    />
+                                </div>
+                                <div className="text-[10px] font-black uppercase mt-1 font-mono tracking-wider">
                                     CÓDIGO DE REPARACIÓN: {printOrden.numero_orden}
                                 </div>
                                 <div className="text-[7.5px] text-gray-700 font-semibold font-mono">
-                                    Escanee para consultar estado o cobrar en POS
+                                    Escanee el código para consultar estado o cobrar en POS
                                 </div>
                             </div>
 
