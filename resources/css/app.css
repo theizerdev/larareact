@@ -214,3 +214,133 @@ html[data-sidebar="dark"]:not(.dark) {
     --sidebar-accent: oklch(0.25 0 0);
     --sidebar-accent-foreground: oklch(0.985 0 0);
 }
+
+/* ==========================================================================
+   Portfolio Welcome Page Styles & Swiper Customization
+   ========================================================================== */
+
+@keyframes float-blob {
+    0%, 100% { transform: translate(0px, 0px) scale(1); }
+    33% { transform: translate(30px, -50px) scale(1.1); }
+    66% { transform: translate(-20px, 20px) scale(0.9); }
+}
+
+.animate-blob {
+    animation: float-blob 20s infinite ease-in-out;
+}
+
+.animation-delay-2000 {
+    animation-delay: 2s;
+}
+
+.animation-delay-4000 {
+    animation-delay: 4s;
+}
+
+@keyframes blink-cursor {
+    50% { border-color: transparent; }
+}
+
+.animate-blink {
+    animation: blink-cursor 0.75s step-end infinite;
+}
+
+.swiper-wrapper-linear .swiper-wrapper {
+    transition-timing-function: linear !important;
+}
+
+.projects-swiper .swiper-pagination-bullet {
+    background: #94a3b8;
+    opacity: 0.5;
+    transition: all 0.3s ease;
+}
+
+.projects-swiper .swiper-pagination-bullet-active {
+    background: #4f46e5 !important;
+    opacity: 1;
+    width: 24px;
+    border-radius: 9999px;
+}
+
+.projects-swiper .swiper-button-next,
+.projects-swiper .swiper-button-prev {
+    color: #4f46e5 !important;
+    background: rgba(255, 255, 255, 0.95);
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    box-shadow: 0 4px 14px rgba(0, 0, 0, 0.1);
+    border: 1px solid rgba(226, 232, 240, 0.9);
+    transition: all 0.2s ease;
+}
+
+.projects-swiper .swiper-button-next:hover,
+.projects-swiper .swiper-button-prev:hover {
+    background: #ffffff;
+    transform: scale(1.08);
+    box-shadow: 0 6px 18px rgba(79, 70, 229, 0.18);
+}
+
+.projects-swiper .swiper-button-next::after,
+.projects-swiper .swiper-button-prev::after {
+    font-size: 14px;
+    font-weight: bold;
+}
+
+/* ==========================================================================
+   Apple & Stripe Minimalist Premium Aesthetics
+   ========================================================================== */
+
+.apple-glass-nav {
+    background: rgba(255, 255, 255, 0.8);
+    backdrop-filter: saturate(180%) blur(20px);
+    -webkit-backdrop-filter: saturate(180%) blur(20px);
+    border: 1px solid rgba(226, 232, 240, 0.7);
+}
+
+.dark .apple-glass-nav {
+    background: rgba(15, 23, 42, 0.8);
+    backdrop-filter: saturate(180%) blur(20px);
+    -webkit-backdrop-filter: saturate(180%) blur(20px);
+    border: 1px solid rgba(30, 41, 59, 0.7);
+}
+
+.bento-card {
+    background: #ffffff;
+    border: 1px solid rgba(226, 232, 240, 0.8);
+    border-radius: 1.5rem;
+    box-shadow: 0 4px 20px -2px rgba(0, 0, 0, 0.03);
+    transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.dark .bento-card {
+    background: rgba(15, 23, 42, 0.6);
+    backdrop-filter: blur(12px);
+    border: 1px solid rgba(30, 41, 59, 0.8);
+    box-shadow: 0 4px 25px -2px rgba(0, 0, 0, 0.3);
+}
+
+.bento-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 12px 30px -4px rgba(0, 0, 0, 0.06);
+    border-color: rgba(99, 102, 241, 0.4);
+}
+
+.dark .bento-card:hover {
+    box-shadow: 0 12px 35px -4px rgba(0, 0, 0, 0.5);
+    border-color: rgba(129, 140, 248, 0.4);
+}
+
+.apple-gradient-text {
+    background: linear-gradient(135deg, #0f172a 0%, #475569 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+}
+
+.dark .apple-gradient-text {
+    background: linear-gradient(135deg, #ffffff 0%, #94a3b8 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+}
+
+

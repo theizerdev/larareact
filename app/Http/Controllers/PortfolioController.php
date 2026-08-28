@@ -19,11 +19,15 @@ class PortfolioController extends Controller
      */
     public function index(): Response
     {
-        // Record visit
-        Visit::create([
-            'ip_address' => request()->ip(),
-            'user_agent' => request()->userAgent(),
-        ]);
+        // Record visit safely
+        try {
+            Visit::create([
+                'ip_address' => request()->ip(),
+                'user_agent' => request()->userAgent(),
+            ]);
+        } catch (\Throwable $e) {
+            // Silently continue if visit logging fails
+        }
 
         $about = About::first();
         $projects = Project::orderBy('order', 'asc')->get();
