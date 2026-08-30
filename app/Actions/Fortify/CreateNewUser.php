@@ -65,7 +65,7 @@ class CreateNewUser implements CreatesNewUsers
                 'status' => true,
                 'api_key' => Str::random(32),
                 'whatsapp_api_key' => Str::random(32),
-                'whatsapp_api_url' => config('whatsapp.api_url', 'http://169.58.168.213:3000'),
+                'whatsapp_api_url' => config('whatsapp.api_url', 'http://127.0.0.1:3000'),
                 'whatsapp_active' => true,
                 'whatsapp_status' => 'disconnected',
                 'subscription_status' => 'trial',
@@ -73,16 +73,23 @@ class CreateNewUser implements CreatesNewUsers
                 'max_sucursales' => 1,
             ]);
 
-            // Crear el nombre de instancia agrupado y limpio para WhatsApp (ej: "Bajo el Reloj" -> "bajoelreloj")
+            // Crear el nombre de instancia único y limpio para WhatsApp (ej: "vitalmed_7")
             $baseForInstance = $nombreComercial ?: $input['company_name'];
-            $cleanInstanceName = preg_replace('/[^a-zA-Z0-9_-]/', '', str_replace(['/', ' '], '', strtolower($baseForInstance)));
-            if (empty($cleanInstanceName)) {
-                $cleanInstanceName = 'empresa_'.$empresa->id;
-            }
+            $cleanSlug = preg_replace('/[^a-zA-Z0-9_-]/', '', str_replace(['/', ' '], '', strtolower($baseForInstance)));
+            $cleanInstanceName = !empty($cleanSlug) ? ($cleanSlug . '_' . $empresa->id) : ('empresa_' . $empresa->id);
 
             $empresa->update([
                 'whatsapp_instance' => $cleanInstanceName,
             ]);
+
+            // Crear instancia inmediatamente en el microservicio de WhatsApp
+            try {
+                WhatsAppService::forCompany($empresa)
+                    ->setTimeout(4)
+                    ->createInstance($cleanInstanceName, $empresa->whatsapp_api_key);
+            } catch (\Throwable $e) {
+                Log::warning("WhatsApp auto-create instance warning: " . $e->getMessage());
+            }
 
             $trialPlan = \App\Models\SubscriptionPlan::where('nombre', 'like', '%Prueba%')->first()
                 ?? \App\Models\SubscriptionPlan::first();

@@ -171,13 +171,25 @@ class WhatsAppService
     public function createInstance(?string $name = null, ?string $customToken = null): ?array
     {
         $instanceName = $name ?? $this->instanceName;
+        $token = $customToken ?? $this->apiKey;
+        $masterKey = config('whatsapp.api_key', 'my_secret_key_123');
 
         try {
-            $response = $this->client()->post("{$this->baseUrl}/api/instance/create", [
+            $response = Http::withHeaders([
+                'x-api-key' => $masterKey,
+                'X-Company-Id' => (string) $this->companyId,
+                'Content-Type' => 'application/json',
+                'Accept' => 'application/json',
+            ])->timeout($this->timeout)->post("{$this->baseUrl}/api/instance/create", [
                 'name' => $instanceName,
-                'token' => $customToken,
+                'token' => $token,
             ]);
 
+            if ($response->successful()) {
+                return $response->json();
+            }
+
+            Log::warning("WhatsApp createInstance returned status {$response->status()}: {$response->body()}");
             return $response->json();
         } catch (\Exception $e) {
             Log::error('WhatsApp Create Instance Error: '.$e->getMessage(), [
