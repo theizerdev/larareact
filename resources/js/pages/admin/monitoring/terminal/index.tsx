@@ -152,11 +152,20 @@ export default function TerminalIndex({ system_info, empresas, presets }: Termin
         setCommandLog((prev) => [cmd, ...prev.filter((c) => c !== cmd)]);
 
         try {
-            const response = await axios.post('/admin/monitoring/terminal/execute', {
-                command: cmd,
+            const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '';
+
+            const response = await fetch('/admin/monitoring/terminal/execute', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Accept': 'application/json',
+                    'X-CSRF-TOKEN': csrfToken,
+                    'X-Requested-With': 'XMLHttpRequest',
+                },
+                body: JSON.stringify({ command: cmd }),
             });
 
-            const data = response.data;
+            const data = await response.json();
             const newItem: TerminalHistoryItem = {
                 id: `cmd-${Date.now()}-${Math.random()}`,
                 command: data.command || cmd,
@@ -171,8 +180,6 @@ export default function TerminalIndex({ system_info, empresas, presets }: Termin
             setHistory((prev) => [...prev, newItem]);
         } catch (error: any) {
             const errorMsg =
-                error?.response?.data?.error ||
-                error?.response?.data?.message ||
                 error?.message ||
                 'Error de conexión al ejecutar el comando.';
 
