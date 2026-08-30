@@ -56,15 +56,7 @@ class HandleInertiaRequests extends Middleware
         $userPermissions = [];
 
         if ($user) {
-            $isSuperAdmin = $user->id === 1
-                || $user->hasRole('Super Administrador')
-                || $user->hasRole('super-admin')
-                || $user->hasRole('Super Admin')
-                || \Illuminate\Support\Facades\DB::table('model_has_roles')
-                    ->join('roles', 'roles.id', '=', 'model_has_roles.role_id')
-                    ->where('model_has_roles.model_id', $user->id)
-                    ->whereIn('roles.name', ['Super Administrador', 'super-admin', 'Super Admin'])
-                    ->exists();
+            $isSuperAdmin = $user->isSuperAdmin();
 
             $userRoles = $user->getRoleNames()->toArray();
             if ($isSuperAdmin && ! in_array('Super Administrador', $userRoles)) {

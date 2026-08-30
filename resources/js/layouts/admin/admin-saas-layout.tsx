@@ -796,7 +796,14 @@ export default function AdminSaasLayout({
 
                                 {/* Monitoring Group */}
                                 {(() => {
+                                    const isSuperAdminUser = Boolean(auth?.user?.is_super_admin);
+
                                     const monitoringItems = [
+                                        ...(isSuperAdminUser ? [{
+                                            title: 'Terminal Artisan',
+                                            href: '/admin/monitoring/terminal',
+                                            permission: 'monitoreo.server',
+                                        }] : []),
                                         {
                                             title: 'Database',
                                             href: dbMonitoringIndex.url(),
