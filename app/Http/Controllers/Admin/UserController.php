@@ -358,15 +358,30 @@ class UserController extends Controller
         $targetEmpresaId = $user->empresa_id ?: 1;
         setPermissionsTeamId($targetEmpresaId);
 
-        $roleModels = \Spatie\Permission\Models\Role::whereIn('name', $roleNames)
-            ->where(function ($q) use ($targetEmpresaId) {
-                $q->where('empresa_id', $targetEmpresaId)
-                  ->orWhereNull('empresa_id');
-            })
-            ->get();
+        $roleModels = collect();
+        foreach ($roleNames as $roleName) {
+            // Buscar específicamente el rol de la empresa del usuario
+            $role = \App\Models\Role::on('landlord')
+                ->where('name', $roleName)
+                ->where('empresa_id', $targetEmpresaId)
+                ->first();
 
-        if ($roleModels->isEmpty() && ! empty($roleNames)) {
-            $roleModels = \Spatie\Permission\Models\Role::whereIn('name', $roleNames)->get();
+            if (! $role) {
+                $role = \App\Models\Role::on('landlord')
+                    ->where('name', $roleName)
+                    ->whereNull('empresa_id')
+                    ->first();
+            }
+
+            if (! $role) {
+                $role = \App\Models\Role::on('landlord')
+                    ->where('name', $roleName)
+                    ->first();
+            }
+
+            if ($role) {
+                $roleModels->push($role);
+            }
         }
 
         DB::connection('landlord')->table('model_has_roles')

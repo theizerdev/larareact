@@ -131,19 +131,45 @@ class CreateNewUser implements CreatesNewUsers
             // 3. Sincronizar rol Administrador exclusivo para la nueva empresa
             setPermissionsTeamId($empresa->id);
 
-            $adminRole = \Spatie\Permission\Models\Role::on('landlord')->firstOrCreate([
+            $adminRole = \App\Models\Role::on('landlord')->firstOrCreate([
                 'name' => 'Administrador',
                 'guard_name' => 'web',
                 'empresa_id' => $empresa->id,
             ]);
 
-            $permissions = \Spatie\Permission\Models\Permission::on('landlord')
+            $permissions = \App\Models\Permission::on('landlord')
                 ->where('name', '!=', 'subscriptions.manage')
                 ->get();
             
             $adminRole->syncPermissions($permissions);
 
-            // Asignar en model_has_roles de landlord
+            // Crear roles base adicionales para la empresa (Técnico y Vendedor)
+            $tecnicoRole = \App\Models\Role::on('landlord')->firstOrCreate([
+                'name' => 'Técnico',
+                'guard_name' => 'web',
+                'empresa_id' => $empresa->id,
+            ]);
+            $tecnicoPermissions = \App\Models\Permission::on('landlord')->whereIn('name', [
+                'dashboard.view',
+                'reparaciones.view', 'reparaciones.create', 'reparaciones.edit',
+                'inventario.view', 'clientes.view',
+            ])->get();
+            $tecnicoRole->syncPermissions($tecnicoPermissions);
+
+            $vendedorRole = \App\Models\Role::on('landlord')->firstOrCreate([
+                'name' => 'Vendedor',
+                'guard_name' => 'web',
+                'empresa_id' => $empresa->id,
+            ]);
+            $vendedorPermissions = \App\Models\Permission::on('landlord')->whereIn('name', [
+                'dashboard.view',
+                'pos.view', 'pos.create',
+                'clientes.view', 'clientes.create',
+                'inventario.view',
+            ])->get();
+            $vendedorRole->syncPermissions($vendedorPermissions);
+
+            // Asignar rol Administrador en model_has_roles de landlord
             DB::connection('landlord')->table('model_has_roles')
                 ->where('model_type', get_class($user))
                 ->where('model_id', $user->id)
