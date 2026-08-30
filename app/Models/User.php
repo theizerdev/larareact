@@ -39,6 +39,8 @@ use Spatie\Permission\Traits\HasRoles;
  */
 class User extends Authenticatable implements PasskeyUser
 {
+    protected $connection = 'landlord';
+
     protected $fillable = [
         'name',
         'username',

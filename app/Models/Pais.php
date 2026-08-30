@@ -6,6 +6,8 @@ use Illuminate\Database\Eloquent\Model;
 
 class Pais extends Model
 {
+    protected $connection = 'landlord';
+
     protected $table = 'pais';
 
     protected $fillable = [

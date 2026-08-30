@@ -11,6 +11,8 @@ class Subscription extends Model
 {
     use HasFactory;
 
+    protected $connection = 'landlord';
+
     protected $table = 'subscriptions';
 
     protected $fillable = [
