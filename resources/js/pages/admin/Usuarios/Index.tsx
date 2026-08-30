@@ -70,6 +70,7 @@ interface Pais {
 interface Role {
     id: number;
     name: string;
+    empresa_id?: number | null;
 }
 
 interface Empresa {
@@ -200,11 +201,24 @@ export default function UsersIndexPage({
     // Filtrar sucursales según la empresa seleccionada
     const filteredSucursales = useMemo(() => {
         if (!data.empresa_id) {
-return [];
-}
+            return [];
+        }
 
         return sucursales.filter((s) => s.empresa_id === Number(data.empresa_id));
     }, [data.empresa_id, sucursales]);
+
+    // Filtrar roles según la empresa seleccionada
+    const filteredRoles = useMemo(() => {
+        if (!data.empresa_id) {
+            return roles.filter((r) => !r.empresa_id || r.empresa_id === 1);
+        }
+        const empId = Number(data.empresa_id);
+        const specificRoles = roles.filter((r) => r.empresa_id === empId);
+        if (specificRoles.length > 0) {
+            return specificRoles;
+        }
+        return roles.filter((r) => !r.empresa_id || r.empresa_id === 1);
+    }, [data.empresa_id, roles]);
 
     // ── Handlers ───────────────────────────────────────────────────────────────
 
@@ -738,11 +752,20 @@ return;
                                 <Select
                                     value={String(data.empresa_id)}
                                     onValueChange={(v) => {
-                                        setData((prev) => ({
-                                            ...prev,
-                                            empresa_id: v,
-                                            sucursal_id: '', // Reset sucursal if company changes
-                                        }));
+                                        setData((prev) => {
+                                            const empId = v ? Number(v) : null;
+                                            const newRoles = empId
+                                                ? roles.filter((r) => r.empresa_id === empId)
+                                                : roles.filter((r) => !r.empresa_id || r.empresa_id === 1);
+                                            const currentRoleValid = newRoles.some((r) => prev.roles.includes(r.name));
+
+                                            return {
+                                                ...prev,
+                                                empresa_id: v,
+                                                sucursal_id: '', // Reset sucursal if company changes
+                                                roles: currentRoleValid ? prev.roles : (newRoles.length > 0 ? [newRoles[0].name] : []),
+                                            };
+                                        });
                                     }}
                                 >
                                     <SelectTrigger id="empresa_id" className="w-full">
@@ -811,15 +834,16 @@ return;
                                 <Select
                                     value={data.roles[0] || ''}
                                     onValueChange={(val) => setData('roles', val ? [val] : [])}
+                                    disabled={Boolean(!data.empresa_id && auth.user && auth.user.id === 1 && empresas.length > 0)}
                                 >
                                     <SelectTrigger id="role_select" className="w-full">
-                                        <SelectValue placeholder={__('Seleccione un rol...')} />
+                                        <SelectValue placeholder={!data.empresa_id && auth.user && auth.user.id === 1 ? __('Seleccione primero una empresa...') : __('Seleccione un rol...')} />
                                     </SelectTrigger>
                                     <SelectContent>
-                                        {roles
+                                        {filteredRoles
                                             .filter((r) => !['Super Administrador', 'super-admin', 'Super Admin'].includes(r.name))
                                             .map((r) => (
-                                                <SelectItem key={r.id} value={r.name}>
+                                                <SelectItem key={`${r.id}-${r.name}`} value={r.name}>
                                                     <span className="capitalize">{r.name}</span>
                                                 </SelectItem>
                                             ))}

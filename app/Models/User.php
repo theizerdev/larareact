@@ -134,4 +134,15 @@ class User extends Authenticatable implements PasskeyUser
     {
         return $this->belongsTo(Pais::class, 'pais_telefono_id');
     }
+
+    public function roles(): \Illuminate\Database\Eloquent\Relations\MorphToMany
+    {
+        return $this->morphToMany(
+            config('permission.models.role', \Spatie\Permission\Models\Role::class),
+            'model',
+            config('permission.table_names.model_has_roles', 'model_has_roles'),
+            config('permission.column_names.model_morph_key', 'model_id'),
+            app(\Spatie\Permission\PermissionRegistrar::class)->pivotRole
+        )->withPivot('empresa_id');
+    }
 }

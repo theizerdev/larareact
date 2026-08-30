@@ -11,6 +11,7 @@ use App\Models\Pais;
 use App\Models\Sucursal;
 use App\Models\User;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Log;
@@ -102,20 +103,35 @@ class UserController extends Controller
             })->count(),
         ];
 
+        $rolesQuery = DB::connection('landlord')->table('roles')
+            ->whereNotIn('name', ['Super Administrador', 'super-admin', 'Super Admin'])
+            ->orderBy('name');
+
+        if (! $isSuperAdmin && $currentUser?->empresa_id) {
+            $rolesQuery->where(function ($sq) use ($currentUser) {
+                $sq->where('empresa_id', $currentUser->empresa_id)
+                   ->orWhereNull('empresa_id');
+            });
+        }
+
+        $roles = $rolesQuery->get(['id', 'name', 'empresa_id']);
+
+        $sucursalesQuery = DB::connection('landlord')->table('sucursales')
+            ->where('status', true)
+            ->orderBy('nombre');
+
+        if (! $isSuperAdmin && $currentUser?->empresa_id) {
+            $sucursalesQuery->where('empresa_id', $currentUser->empresa_id);
+        }
+
+        $sucursales = $sucursalesQuery->get(['id', 'nombre', 'empresa_id']);
+
         return inertia('admin/Usuarios/Index', [
             'users' => UserResource::collection($users),
             'stats' => $stats,
-            'roles' => Role::whereNotIn('name', ['Super Administrador', 'super-admin', 'Super Admin'])
-                ->when(! $isSuperAdmin, function ($q) use ($currentUser) {
-                    $q->where(function ($sq) use ($currentUser) {
-                        $sq->where('empresa_id', $currentUser?->empresa_id)
-                           ->orWhereNull('empresa_id');
-                    });
-                })
-                ->orderBy('name')
-                ->get(['id', 'name']),
+            'roles' => $roles,
             'empresas' => Empresa::where('status', true)->orderBy('razon_social')->get(['id', 'razon_social']),
-            'sucursales' => Sucursal::where('status', true)->orderBy('nombre')->get(['id', 'nombre', 'empresa_id']),
+            'sucursales' => $sucursales,
             'paises' => Pais::where('activo', true)
                 ->orderBy('nombre')
                 ->get(['id', 'nombre', 'codigo_iso2', 'codigo_telefonico']),
@@ -148,7 +164,7 @@ class UserController extends Controller
             $user = User::create($validated);
 
             if (isset($validated['roles'])) {
-                $user->syncRoles($validated['roles']);
+                $this->syncUserRoles($user, $validated['roles']);
             }
 
             $whatsappSent = false;
@@ -230,7 +246,7 @@ class UserController extends Controller
             $user->update($validated);
 
             if (isset($validated['roles'])) {
-                $user->syncRoles($validated['roles']);
+                $this->syncUserRoles($user, $validated['roles']);
             }
 
             return back()->with('notification', [
@@ -332,5 +348,41 @@ class UserController extends Controller
         }
 
         return $cleanPhone;
+    }
+
+    /**
+     * Sincroniza los roles del usuario asegurando el team_id (empresa_id) correcto en multi-tenancy.
+     */
+    private function syncUserRoles(User $user, array $roleNames): void
+    {
+        $targetEmpresaId = $user->empresa_id ?: 1;
+        setPermissionsTeamId($targetEmpresaId);
+
+        $roleModels = \Spatie\Permission\Models\Role::whereIn('name', $roleNames)
+            ->where(function ($q) use ($targetEmpresaId) {
+                $q->where('empresa_id', $targetEmpresaId)
+                  ->orWhereNull('empresa_id');
+            })
+            ->get();
+
+        if ($roleModels->isEmpty() && ! empty($roleNames)) {
+            $roleModels = \Spatie\Permission\Models\Role::whereIn('name', $roleNames)->get();
+        }
+
+        DB::connection('landlord')->table('model_has_roles')
+            ->where('model_type', get_class($user))
+            ->where('model_id', $user->id)
+            ->delete();
+
+        foreach ($roleModels as $roleModel) {
+            DB::connection('landlord')->table('model_has_roles')->insert([
+                'role_id' => $roleModel->id,
+                'model_type' => get_class($user),
+                'model_id' => $user->id,
+                'empresa_id' => $targetEmpresaId,
+            ]);
+        }
+
+        app(\Spatie\Permission\PermissionRegistrar::class)->forgetCachedPermissions();
     }
 }
