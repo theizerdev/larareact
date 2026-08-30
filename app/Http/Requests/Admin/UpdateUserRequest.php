@@ -26,14 +26,14 @@ class UpdateUserRequest extends FormRequest
 
         return [
             'name' => ['required', 'string', 'max:255'],
-            'username' => ['nullable', 'string', 'max:255', Rule::unique('users', 'username')->ignore($userId)],
-            'email' => ['required', 'string', 'email', 'max:255', Rule::unique('users', 'email')->ignore($userId)],
+            'username' => ['nullable', 'string', 'max:255', Rule::unique('landlord.users', 'username')->ignore($userId)],
+            'email' => ['required', 'string', 'email', 'max:255', Rule::unique('landlord.users', 'email')->ignore($userId)],
             'password' => ['nullable', 'string', 'min:8'],
             'sueldo_base' => ['nullable', 'numeric', 'min:0'],
             'telefono' => ['nullable', 'string', 'max:255'],
-            'pais_telefono_id' => ['nullable', 'exists:pais,id'],
+            'pais_telefono_id' => ['nullable', 'exists:landlord.pais,id'],
             'status' => ['required', Rule::in(['activo', 'inactivo', 'suspendido'])],
-            'empresa_id' => ['nullable', 'exists:empresas,id'],
+            'empresa_id' => ['nullable', 'exists:landlord.empresas,id'],
             'sucursal_id' => ['nullable', 'exists:sucursales,id'],
             'roles' => ['array'],
         ];

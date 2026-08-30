@@ -454,7 +454,7 @@ class ReparacionController extends Controller
             'contrasena_patron' => 'nullable|string|max:255',
             'descripcion_falla' => 'required|string',
             'observaciones_fisicas' => 'nullable|string',
-            'tecnico_id' => 'nullable|exists:users,id',
+            'tecnico_id' => 'nullable|exists:landlord.users,id',
             'comision_tecnico_pct' => 'nullable|numeric|min:0|max:100',
             'costo_estimado' => 'required|numeric|min:0',
             'anticipo' => 'nullable|numeric|min:0',
@@ -725,7 +725,7 @@ class ReparacionController extends Controller
             'contrasena_patron' => 'nullable|string|max:255',
             'descripcion_falla' => 'required|string',
             'observaciones_fisicas' => 'nullable|string',
-            'tecnico_id' => 'nullable|exists:users,id',
+            'tecnico_id' => 'nullable|exists:landlord.users,id',
         ]);
 
         $oldMarca = $reparacion->marca_nombre;
@@ -845,7 +845,7 @@ class ReparacionController extends Controller
         $validated = $request->validate([
             'estado_orden' => 'required|in:recibido,en_diagnostico,presupuestado,en_reparacion,esperando_repuesto,reparado,entregado,cancelado',
             'comentario' => 'nullable|string',
-            'tecnico_id' => 'nullable|exists:users,id',
+            'tecnico_id' => 'nullable|exists:landlord.users,id',
             'observaciones_fisicas' => 'nullable|string',
             'contrasena_patron' => 'nullable|string',
             'inspeccion_json' => 'nullable',

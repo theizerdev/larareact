@@ -67,7 +67,7 @@ class ModeloController extends Controller
             'imagen_url' => 'nullable|string|max:255',
             'specs_overrides' => 'nullable|array',
             'estado' => 'boolean',
-            'empresa_id' => 'nullable|exists:empresas,id',
+            'empresa_id' => 'nullable|exists:landlord.empresas,id',
             'sucursal_id' => 'nullable|exists:sucursales,id',
         ]);
 
@@ -111,7 +111,7 @@ class ModeloController extends Controller
             'imagen_url' => 'nullable|string|max:255',
             'specs_overrides' => 'nullable|array',
             'estado' => 'boolean',
-            'empresa_id' => 'nullable|exists:empresas,id',
+            'empresa_id' => 'nullable|exists:landlord.empresas,id',
             'sucursal_id' => 'nullable|exists:sucursales,id',
         ]);
 

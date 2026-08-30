@@ -30,10 +30,10 @@ class CreateNewUser implements CreatesNewUsers
             'company_name' => ['required', 'string', 'max:255'],
             'nombre_comercial' => ['nullable', 'string', 'max:255'],
             'representante_legal' => ['required', 'string', 'max:255'],
-            'email' => ['required', 'string', 'email', 'max:255', 'unique:users,email'],
+            'email' => ['required', 'string', 'email', 'max:255', 'unique:landlord.users,email'],
             'password' => $this->passwordRules(),
             'company_phone' => ['nullable', 'string', 'max:255'],
-            'pais_id' => ['nullable', 'exists:pais,id'],
+            'pais_id' => ['nullable', 'exists:landlord.pais,id'],
         ], [
             'company_name.required' => __('El nombre de la empresa es obligatorio.'),
             'representante_legal.required' => __('El nombre del representante legal es obligatorio.'),

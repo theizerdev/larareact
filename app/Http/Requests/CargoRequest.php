@@ -23,9 +23,9 @@ class CargoRequest extends FormRequest
             'nombre' => 'required|string|max:255',
             'descripcion' => 'nullable|string|max:255',
             'departamento_id' => 'required|exists:departamentos,id',
-            'empresa_id' => 'required|exists:empresas,id',
+            'empresa_id' => 'required|exists:landlord.empresas,id',
             'sucursal_id' => 'required|exists:sucursales,id',
-            'user_id' => 'required|exists:users,id',
+            'user_id' => 'required|exists:landlord.users,id',
             'status' => 'nullable|integer|in:0,1',
         ];
     }

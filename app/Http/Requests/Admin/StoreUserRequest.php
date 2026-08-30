@@ -24,14 +24,14 @@ class StoreUserRequest extends FormRequest
     {
         return [
             'name' => ['required', 'string', 'max:255'],
-            'username' => ['nullable', 'string', 'max:255', 'unique:users,username'],
-            'email' => ['required', 'string', 'email', 'max:255', 'unique:users,email'],
+            'username' => ['nullable', 'string', 'max:255', 'unique:landlord.users,username'],
+            'email' => ['required', 'string', 'email', 'max:255', 'unique:landlord.users,email'],
             'password' => ['required', 'string', 'min:8'],
             'sueldo_base' => ['nullable', 'numeric', 'min:0'],
             'telefono' => ['nullable', 'string', 'max:255'],
-            'pais_telefono_id' => ['nullable', 'exists:pais,id'],
+            'pais_telefono_id' => ['nullable', 'exists:landlord.pais,id'],
             'status' => ['required', Rule::in(['activo', 'inactivo', 'suspendido'])],
-            'empresa_id' => ['nullable', 'exists:empresas,id'],
+            'empresa_id' => ['nullable', 'exists:landlord.empresas,id'],
             'sucursal_id' => ['nullable', 'exists:sucursales,id'],
             'roles' => ['array'],
             'send_welcome_whatsapp' => ['nullable', 'boolean'],

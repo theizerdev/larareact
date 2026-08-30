@@ -26,8 +26,8 @@ class StoreEmpresaRequest extends FormRequest
         return [
             'razon_social' => ['required', 'string', 'max:255'],
             'nombre_comercial' => ['nullable', 'string', 'max:255'],
-            'documento' => ['required', 'string', 'max:255', 'unique:empresas,documento'],
-            'pais_id' => ['nullable', 'exists:pais,id'],
+            'documento' => ['required', 'string', 'max:255', 'unique:landlord.empresas,documento'],
+            'pais_id' => ['nullable', 'exists:landlord.pais,id'],
             'direccion' => ['nullable', 'string'],
             'latitud' => ['nullable', 'numeric'],
             'longitud' => ['nullable', 'numeric'],

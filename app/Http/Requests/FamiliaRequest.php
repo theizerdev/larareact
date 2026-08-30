@@ -28,7 +28,7 @@ class FamiliaRequest extends FormRequest
             'descripcion' => ['nullable', 'string'],
             'specs_json' => ['nullable', 'array'],
             'estado' => ['boolean'],
-            'empresa_id' => ['nullable', 'exists:empresas,id'],
+            'empresa_id' => ['nullable', 'exists:landlord.empresas,id'],
             'sucursal_id' => ['nullable', 'exists:sucursales,id'],
         ];
     }

@@ -50,7 +50,7 @@ class StoreProductoRequest extends FormRequest
             'clave_sat_unidad' => ['nullable', 'string', 'max:20'],
             'objeto_impuesto_sat' => ['nullable', 'string', 'max:5'],
             'estado' => ['boolean'],
-            'empresa_id' => ['nullable', 'exists:empresas,id'],
+            'empresa_id' => ['nullable', 'exists:landlord.empresas,id'],
             'sucursal_id' => ['nullable', 'exists:sucursales,id'],
         ];
     }

@@ -22,10 +22,10 @@ class SucursalRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'empresa_id' => ['required', 'exists:empresas,id'],
+            'empresa_id' => ['required', 'exists:landlord.empresas,id'],
             'nombre' => ['required', 'string', 'max:255'],
             'telefono' => ['nullable', 'string', 'max:255'],
-            'pais_telefono_id' => ['nullable', 'exists:pais,id'],
+            'pais_telefono_id' => ['nullable', 'exists:landlord.pais,id'],
             'direccion' => ['nullable', 'string'],
             'latitud' => ['nullable', 'numeric'],
             'longitud' => ['nullable', 'numeric'],

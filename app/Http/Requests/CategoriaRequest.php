@@ -25,7 +25,7 @@ class CategoriaRequest extends FormRequest
             'nombre' => ['required', 'string', 'max:255'],
             'icono' => ['nullable', 'string', 'max:255'],
             'estado' => ['boolean'],
-            'empresa_id' => ['nullable', 'exists:empresas,id'],
+            'empresa_id' => ['nullable', 'exists:landlord.empresas,id'],
             'sucursal_id' => ['nullable', 'exists:sucursales,id'],
         ];
     }
