@@ -7,6 +7,7 @@ use App\Models\Pais;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Validation\Rule;
 
 class PaisController extends Controller
 {
@@ -60,8 +61,8 @@ class PaisController extends Controller
     {
         $validated = $request->validate([
             'nombre' => 'required|string|max:255',
-            'codigo_iso2' => 'required|string|max:2|unique:pais,codigo_iso2',
-            'codigo_iso3' => 'required|string|max:3|unique:pais,codigo_iso3',
+            'codigo_iso2' => ['required', 'string', 'max:2', Rule::unique('landlord.pais', 'codigo_iso2')],
+            'codigo_iso3' => ['required', 'string', 'max:3', Rule::unique('landlord.pais', 'codigo_iso3')],
             'codigo_telefonico' => 'nullable|string|max:10',
             'moneda_principal' => 'nullable|string|max:3',
             'idioma_principal' => 'nullable|string|max:5',
@@ -99,8 +100,8 @@ class PaisController extends Controller
     {
         $validated = $request->validate([
             'nombre' => 'required|string|max:255',
-            'codigo_iso2' => 'required|string|max:2|unique:pais,codigo_iso2,'.$pais->id,
-            'codigo_iso3' => 'required|string|max:3|unique:pais,codigo_iso3,'.$pais->id,
+            'codigo_iso2' => ['required', 'string', 'max:2', Rule::unique('landlord.pais', 'codigo_iso2')->ignore($pais->id)],
+            'codigo_iso3' => ['required', 'string', 'max:3', Rule::unique('landlord.pais', 'codigo_iso3')->ignore($pais->id)],
             'codigo_telefonico' => 'nullable|string|max:10',
             'moneda_principal' => 'nullable|string|max:3',
             'idioma_principal' => 'nullable|string|max:5',
