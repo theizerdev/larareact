@@ -147,16 +147,16 @@ class CreateNewUser implements CreatesNewUsers
             return $user;
         });
 
-        // 5. Creación de instancia y notificación en segundo plano tras confirmar la transacción DB (sin bloquear el registro)
+        // 5. Aprovisionamiento asíncrono de la base de datos del tenant
         if ($createdEmpresa) {
-            try {
-                $cleanName = $createdEmpresa->whatsapp_instance ?: ('empresa_'.$createdEmpresa->id);
-                WhatsAppService::forCompany($createdEmpresa)
-                    ->setTimeout(5)
-                    ->createInstance($cleanName);
-            } catch (\Throwable $e) {
-                Log::warning('No se pudo crear la instancia inicial en el motor WhatsApp: '.$e->getMessage());
-            }
+            $phone = $input['company_phone'] ?? ($input['phone'] ?? null);
+            $paisId = $input['pais_id'] ?? ($input['pais_telefono_id'] ?? null);
+
+            \App\Jobs\ProvisionTenantDatabaseJob::dispatch($createdEmpresa->id, [
+                'telefono' => $phone,
+                'pais_telefono_id' => $paisId,
+                'direccion' => 'Dirección Principal',
+            ]);
         }
 
         $phone = $input['company_phone'] ?? ($input['phone'] ?? null);

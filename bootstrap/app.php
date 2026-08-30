@@ -30,6 +30,7 @@ return Application::configure(basePath: dirname(__DIR__))
         $middleware->web(append: [
             SetLocale::class,
             HandleAppearance::class,
+            \App\Http\Middleware\TenantSwitchMiddleware::class,
             \App\Http\Middleware\SetPermissionsTeam::class,
             HandleInertiaRequests::class,
             AddLinkHeadersForPreloadedAssets::class,

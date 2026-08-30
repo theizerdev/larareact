@@ -6,6 +6,7 @@ use App\Models\Empresa;
 use App\Models\OrdenReparacion;
 use App\Models\OrdenReparacionHistorial;
 use App\Models\Pais;
+use App\Services\Tenancy\TenantManager;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Inertia\Response;
@@ -61,28 +62,30 @@ class PublicReparacionTrackingController extends Controller
             // Normalizar código (incluyendo apóstrofes de escáner en español)
             $cleanCode = strtoupper(preg_replace('/\s+/', '', str_replace(["'", "´", "`"], '-', $queryCode)));
 
-            $query = OrdenReparacion::query();
+            $findOrden = function () use ($cleanCode, $queryCode, $targetEmpresa) {
+                $query = OrdenReparacion::query();
 
-            // Si hay empresa objetivo, filtrar estrictamente por empresa_id
-            if ($targetEmpresa) {
-                $query->where('empresa_id', $targetEmpresa->id);
-            }
+                if ($targetEmpresa) {
+                    $query->where('empresa_id', $targetEmpresa->id);
+                }
 
-            $orden = $query->where(function ($q) use ($cleanCode, $queryCode) {
-                $q->where('numero_orden', $cleanCode)
-                  ->orWhere('numero_orden', 'REP-' . str_pad(preg_replace('/[^0-9]/', '', $cleanCode), 6, '0', STR_PAD_LEFT))
-                  ->orWhere('imei_serie', $cleanCode)
-                  ->orWhere('imei_serie', $queryCode);
-            })
-            ->with([
-                'empresa',
-                'sucursal',
-                'marca',
-                'modelo',
-                'items.servicio',
-                'historial' => fn ($q) => $q->orderBy('created_at', 'desc'),
-            ])
-            ->first();
+                return $query->where(function ($q) use ($cleanCode, $queryCode) {
+                    $q->where('numero_orden', $cleanCode)
+                      ->orWhere('numero_orden', 'REP-' . str_pad(preg_replace('/[^0-9]/', '', $cleanCode), 6, '0', STR_PAD_LEFT))
+                      ->orWhere('imei_serie', $cleanCode)
+                      ->orWhere('imei_serie', $queryCode);
+                })
+                ->with([
+                    'sucursal',
+                    'marca',
+                    'modelo',
+                    'items.servicio',
+                    'historial' => fn ($q) => $q->orderBy('created_at', 'desc'),
+                ])
+                ->first();
+            };
+
+            $orden = $targetEmpresa ? TenantManager::executeInTenant($targetEmpresa, $findOrden) : $findOrden();
 
             if ($orden) {
                 // Actualizar empresa objetivo si venía de fallback
@@ -227,54 +230,60 @@ class PublicReparacionTrackingController extends Controller
             'motivo' => 'nullable|string|max:500',
         ]);
 
-        $query = OrdenReparacion::where('numero_orden', strtoupper(trim($numeroOrden)));
-
+        $targetEmpresaId = null;
         if ($empresaParam) {
             $targetEmpresaId = is_numeric($empresaParam) ? (int)$empresaParam : Empresa::where('id', $empresaParam)->orWhere('slug', $empresaParam)->value('id');
+        }
+
+        $processDecision = function () use ($numeroOrden, $targetEmpresaId, $validated) {
+            $query = OrdenReparacion::where('numero_orden', strtoupper(trim($numeroOrden)));
+
             if ($targetEmpresaId) {
                 $query->where('empresa_id', $targetEmpresaId);
             }
-        }
 
-        $orden = $query->firstOrFail();
+            $orden = $query->firstOrFail();
 
-        if ($validated['decision'] === 'aprobar') {
+            if ($validated['decision'] === 'aprobar') {
+                $orden->update([
+                    'estado_orden' => 'en_reparacion',
+                ]);
+
+                OrdenReparacionHistorial::create([
+                    'orden_id' => $orden->id,
+                    'user_id' => null,
+                    'estado_anterior' => $orden->getOriginal('estado_orden') ?: 'presupuestado',
+                    'estado_nuevo' => 'en_reparacion',
+                    'comentario' => __('Presupuesto APROBADO por el cliente a través del portal de seguimiento web.'),
+                ]);
+
+                return back()->with('notification', [
+                    'type' => 'success',
+                    'message' => __('¡Excelente! Has aprobado el presupuesto. Nuestro equipo técnico continuará con la reparación.'),
+                ]);
+            }
+
+            // Rechazar
             $orden->update([
-                'estado_orden' => 'en_reparacion',
+                'estado_orden' => 'cancelado',
             ]);
+
+            $motivoTexto = !empty($validated['motivo']) ? " Motivo: " . $validated['motivo'] : '';
 
             OrdenReparacionHistorial::create([
                 'orden_id' => $orden->id,
                 'user_id' => null,
                 'estado_anterior' => $orden->getOriginal('estado_orden') ?: 'presupuestado',
-                'estado_nuevo' => 'en_reparacion',
-                'comentario' => __('Presupuesto APROBADO por el cliente a través del portal de seguimiento web.'),
+                'estado_nuevo' => 'cancelado',
+                'comentario' => __('Presupuesto RECHAZADO por el cliente desde el portal web.') . $motivoTexto,
             ]);
 
             return back()->with('notification', [
-                'type' => 'success',
-                'message' => __('¡Excelente! Has aprobado el presupuesto. Nuestro equipo técnico continuará con la reparación.'),
+                'type' => 'warning',
+                'message' => __('Has rechazado el presupuesto. Tu equipo se encuentra listo para retiro o revisión adicional en taller.'),
             ]);
-        }
+        };
 
-        // Rechazar
-        $orden->update([
-            'estado_orden' => 'cancelado',
-        ]);
-
-        $motivoTexto = !empty($validated['motivo']) ? " Motivo: " . $validated['motivo'] : '';
-
-        OrdenReparacionHistorial::create([
-            'orden_id' => $orden->id,
-            'user_id' => null,
-            'estado_anterior' => $orden->getOriginal('estado_orden') ?: 'presupuestado',
-            'estado_nuevo' => 'cancelado',
-            'comentario' => __('Presupuesto RECHAZADO por el cliente desde el portal web.') . $motivoTexto,
-        ]);
-
-        return back()->with('notification', [
-            'type' => 'warning',
-            'message' => __('Has rechazado el presupuesto. Tu equipo se encuentra listo para retiro o revisión adicional en taller.'),
-        ]);
+        return $targetEmpresaId ? TenantManager::executeInTenant($targetEmpresaId, $processDecision) : $processDecision();
     }
 }
