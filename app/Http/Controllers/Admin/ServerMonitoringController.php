@@ -172,8 +172,8 @@ class ServerMonitoringController extends Controller
             $lines = file('/proc/net/dev');
             if ($lines && count($lines) > 2) {
                 foreach (array_slice($lines, 2) as $line) {
-                    $parts = array_values(array_filter(explode(' ', trim($line))));
-                    if (count($parts) >= 10 && strpos($parts[0], 'lo:') === false) {
+                    $parts = preg_split('/[:\s]+/', trim($line));
+                    if (count($parts) >= 11 && $parts[0] !== 'lo') {
                         $rxBytes += (float) ($parts[1] ?? 0);
                         $txBytes += (float) ($parts[9] ?? 0);
                     }

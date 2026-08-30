@@ -113,7 +113,7 @@ export default function ServerMonitoring({ serverInfo }: PageProps) {
     }, []);
 
     // Opciones del gráfico de línea en vivo (CPU & RAM)
-    const lineChartOptions = {
+    const lineChartOptions: any = {
         chart: {
             id: 'live-system-resources',
             animations: {
@@ -153,7 +153,7 @@ export default function ServerMonitoring({ serverInfo }: PageProps) {
             position: 'top' as const,
             labels: { colors: '#94a3b8' },
         },
-        tooltip: { theme: 'dark' },
+        tooltip: { theme: 'dark' as const },
     };
 
     const lineChartSeries = [
