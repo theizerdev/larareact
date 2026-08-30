@@ -147,23 +147,29 @@ class RoleController extends Controller
                 'required',
                 'string',
                 'max:255',
-                \Illuminate\Validation\Rule::unique('roles', 'name')->where('empresa_id', $empresaId),
+                \Illuminate\Validation\Rule::unique('landlord.roles', 'name')->where('empresa_id', $empresaId),
             ],
             'permissions' => 'array',
-            'permissions.*' => 'exists:permissions,name',
+            'permissions.*' => 'exists:landlord.permissions,name',
+        ], [
+            'name.unique' => __('Ya existe un rol con este nombre en su empresa.'),
         ]);
 
-        DB::transaction(function () use ($validated, $empresaId) {
-            $role = Role::create([
-                'name' => $validated['name'],
-                'guard_name' => 'web',
-                'empresa_id' => $empresaId,
-            ]);
+        try {
+            DB::transaction(function () use ($validated, $empresaId) {
+                $role = Role::create([
+                    'name' => $validated['name'],
+                    'guard_name' => 'web',
+                    'empresa_id' => $empresaId,
+                ]);
 
-            if (isset($validated['permissions'])) {
-                $role->syncPermissions($validated['permissions']);
-            }
-        });
+                if (isset($validated['permissions'])) {
+                    $role->syncPermissions($validated['permissions']);
+                }
+            });
+        } catch (\Illuminate\Database\UniqueConstraintViolationException $e) {
+            return back()->withErrors(['name' => __('Ya existe un rol con este nombre en su empresa.')]);
+        }
 
         return back();
     }
@@ -172,6 +178,7 @@ class RoleController extends Controller
     {
         $user = auth()->user();
         $empresaId = $user?->empresa_id;
+        $targetEmpresaId = $role->empresa_id ?? $empresaId;
 
         if (in_array($role->name, ['Super Admin', 'Super Administrador'])) {
             return back()->withErrors(['name' => 'No puedes cambiar el nombre del Super Administrador.']);
@@ -182,23 +189,29 @@ class RoleController extends Controller
                 'required',
                 'string',
                 'max:255',
-                \Illuminate\Validation\Rule::unique('roles', 'name')
-                    ->where('empresa_id', $empresaId)
+                \Illuminate\Validation\Rule::unique('landlord.roles', 'name')
+                    ->where('empresa_id', $targetEmpresaId)
                     ->ignore($role->id),
             ],
             'permissions' => 'array',
-            'permissions.*' => 'exists:permissions,name',
+            'permissions.*' => 'exists:landlord.permissions,name',
+        ], [
+            'name.unique' => __('Ya existe un rol con este nombre en su empresa.'),
         ]);
 
-        DB::transaction(function () use ($role, $validated) {
-            $role->update(['name' => $validated['name']]);
+        try {
+            DB::transaction(function () use ($role, $validated) {
+                $role->update(['name' => $validated['name']]);
 
-            if (isset($validated['permissions'])) {
-                $role->syncPermissions($validated['permissions']);
-            } else {
-                $role->syncPermissions([]); // Clear if none selected
-            }
-        });
+                if (isset($validated['permissions'])) {
+                    $role->syncPermissions($validated['permissions']);
+                } else {
+                    $role->syncPermissions([]); // Clear if none selected
+                }
+            });
+        } catch (\Illuminate\Database\UniqueConstraintViolationException $e) {
+            return back()->withErrors(['name' => __('Ya existe un rol con este nombre en su empresa.')]);
+        }
 
         return back();
     }
