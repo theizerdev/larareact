@@ -32,6 +32,14 @@ class TenantManager
     }
 
     /**
+     * Alias for currentTenantId.
+     */
+    public static function getCurrentTenantId(): ?int
+    {
+        return self::$currentTenantId;
+    }
+
+    /**
      * Get the currently active tenant Empresa model.
      */
     public static function currentTenant(): ?Empresa

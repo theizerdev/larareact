@@ -25,6 +25,7 @@ import {
     CreditCard,
     Star,
     MessageSquare,
+    Database,
 } from 'lucide-react';
 import { Building2, GitBranch, Briefcase, Calendar, Smartphone, Wallet, Boxes, Calculator, Wrench } from 'lucide-react';
 import * as React from 'react';
@@ -994,6 +995,64 @@ export default function AdminSaasLayout({
                         </div>
 
                         <div className="flex items-center gap-2">
+                            {/* Database & Tenant Connection Status Badge */}
+                            {(() => {
+                                const tenantConn = (page.props as any).tenant_connection;
+                                if (!tenantConn?.database) return null;
+
+                                const dbName = tenantConn.database;
+                                const isTenant = tenantConn.is_tenant;
+                                const empresaNombre = tenantConn.empresa_nombre;
+
+                                return (
+                                    <Tooltip>
+                                        <TooltipTrigger asChild>
+                                            <div className="hidden sm:flex items-center gap-2 px-3 py-1 rounded-full text-xs font-medium border bg-slate-50/90 dark:bg-slate-900/90 border-slate-200/80 dark:border-slate-800 text-slate-700 dark:text-slate-200 shadow-xs hover:bg-slate-100 dark:hover:bg-slate-800/80 transition-colors cursor-pointer select-none">
+                                                <span className="relative flex h-2 w-2">
+                                                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                                                    <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
+                                                </span>
+                                                <Database className="w-3.5 h-3.5 text-indigo-500 dark:text-indigo-400 shrink-0" />
+                                                <span className="font-mono font-bold text-slate-900 dark:text-slate-100 max-w-[160px] truncate">
+                                                    {dbName}
+                                                </span>
+                                                {isTenant && (
+                                                    <span className="hidden xl:inline-block text-[10px] px-1.5 py-0.2 rounded bg-indigo-50 dark:bg-indigo-950/60 text-indigo-600 dark:text-indigo-400 font-semibold border border-indigo-200/60 dark:border-indigo-800/40">
+                                                        Tenant
+                                                    </span>
+                                                )}
+                                            </div>
+                                        </TooltipTrigger>
+                                        <TooltipContent side="bottom" className="p-3 max-w-xs space-y-2 text-xs bg-popover text-popover-foreground border shadow-md">
+                                            <div className="font-semibold text-sm flex items-center gap-1.5 border-b pb-1">
+                                                <Database className="w-4 h-4 text-emerald-500" />
+                                                <span>Conexión de Base de Datos</span>
+                                            </div>
+                                            <div className="grid grid-cols-[auto_1fr] gap-x-2 gap-y-1 text-[11px]">
+                                                <span className="text-muted-foreground font-medium">Base de datos:</span>
+                                                <span className="font-mono font-bold text-primary">{dbName}</span>
+
+                                                <span className="text-muted-foreground font-medium">Empresa:</span>
+                                                <span className="font-medium truncate">{empresaNombre}</span>
+
+                                                <span className="text-muted-foreground font-medium">Esquema:</span>
+                                                <span className="text-emerald-600 dark:text-emerald-400 font-medium">
+                                                    {isTenant ? 'Inquilino Aislado (Multi-DB)' : 'Base Central (Landlord)'}
+                                                </span>
+
+                                                <span className="text-muted-foreground font-medium">Host:</span>
+                                                <span className="font-mono">127.0.0.1:3306</span>
+
+                                                <span className="text-muted-foreground font-medium">Estado:</span>
+                                                <span className="text-emerald-600 dark:text-emerald-400 font-semibold flex items-center gap-1">
+                                                    ● Conectado en vivo
+                                                </span>
+                                            </div>
+                                        </TooltipContent>
+                                    </Tooltip>
+                                );
+                            })()}
+
                             {/* Subscription Status Badge */}
                             {(() => {
                                 const sub = (page.props as any).subscription;

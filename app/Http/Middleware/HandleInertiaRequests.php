@@ -133,6 +133,14 @@ class HandleInertiaRequests extends Middleware
                     'max_sucursales' => $sub?->max_sucursales ?? $empresa->max_sucursales ?? 1,
                 ];
             })() : null,
+
+            'tenant_connection' => [
+                'database' => \Illuminate\Support\Facades\DB::connection()->getDatabaseName(),
+                'connection_name' => \Illuminate\Support\Facades\DB::getDefaultConnection(),
+                'tenant_id' => \App\Services\Tenancy\TenantManager::currentTenantId() ?? $empresa?->id,
+                'empresa_nombre' => $empresa?->razon_social ?? $empresa?->nombre_comercial ?? 'Base Central',
+                'is_tenant' => \App\Services\Tenancy\TenantManager::currentTenantId() !== null || ($empresa && $empresa->id > 1),
+            ],
           
         ];
     }

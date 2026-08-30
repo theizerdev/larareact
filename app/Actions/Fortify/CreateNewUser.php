@@ -45,7 +45,7 @@ class CreateNewUser implements CreatesNewUsers
         $createdUser = null;
         $otpCode = null;
 
-        $createdUser = DB::transaction(function () use ($input, &$createdEmpresa, &$otpCode) {
+        $createdUser = DB::connection('landlord')->transaction(function () use ($input, &$createdEmpresa, &$otpCode) {
             $phone = $input['company_phone'] ?? ($input['phone'] ?? null);
             $paisId = $input['pais_id'] ?? ($input['pais_telefono_id'] ?? null);
             $nombreComercial = ! empty($input['nombre_comercial']) ? trim($input['nombre_comercial']) : null;
@@ -99,8 +99,8 @@ class CreateNewUser implements CreatesNewUsers
                 'estado' => 'trial',
             ]);
 
-            // 2. Crear Sucursal Principal con los datos de la empresa
-            $sucursal = Sucursal::create([
+            // 2. Crear Sucursal Principal en landlord
+            $sucursal = Sucursal::on('landlord')->create([
                 'empresa_id' => $empresa->id,
                 'nombre' => 'Sucursal Principal',
                 'pais_telefono_id' => $paisId,
@@ -124,16 +124,32 @@ class CreateNewUser implements CreatesNewUsers
             // 3. Sincronizar rol Administrador exclusivo para la nueva empresa
             setPermissionsTeamId($empresa->id);
 
-            $adminRole = \Spatie\Permission\Models\Role::firstOrCreate([
+            $adminRole = \Spatie\Permission\Models\Role::on('landlord')->firstOrCreate([
                 'name' => 'Administrador',
                 'guard_name' => 'web',
                 'empresa_id' => $empresa->id,
             ]);
 
-            $permissions = \Spatie\Permission\Models\Permission::where('name', '!=', 'subscriptions.manage')->get();
+            $permissions = \Spatie\Permission\Models\Permission::on('landlord')
+                ->where('name', '!=', 'subscriptions.manage')
+                ->get();
+            
             $adminRole->syncPermissions($permissions);
 
-            $user->assignRole($adminRole);
+            // Asignar en model_has_roles de landlord
+            DB::connection('landlord')->table('model_has_roles')
+                ->where('model_type', get_class($user))
+                ->where('model_id', $user->id)
+                ->delete();
+
+            DB::connection('landlord')->table('model_has_roles')->insert([
+                'role_id' => $adminRole->id,
+                'model_type' => get_class($user),
+                'model_id' => $user->id,
+                'empresa_id' => $empresa->id,
+            ]);
+
+            app(\Spatie\Permission\PermissionRegistrar::class)->forgetCachedPermissions();
 
             // 4. Generar código OTP de 8 dígitos para verificación de WhatsApp
             $otpCode = str_pad((string) random_int(0, 99999999), 8, '0', STR_PAD_LEFT);
