@@ -33,31 +33,42 @@ class AuditLogController extends Controller
             $query->where(function ($q) use ($empresaId) {
                 $q->where('empresa_id', $empresaId)
                   ->orWhere('properties->empresa_id', $empresaId)
-                  ->orWhereHasMorph('causer', [\App\Models\User::class], function ($userQuery) use ($empresaId) {
-                      $userQuery->where('empresa_id', $empresaId);
-                  });
+                  ->orWhereNull('empresa_id');
             });
         }
 
         // Filtrado opcional por Sucursal (si está asignada o seleccionada)
         if ($filterSucursal && $filterSucursal !== 'all') {
-            $query->where(function ($q) use ($filterSucursal) {
+            $sucursalUserIds = \App\Models\User::where('sucursal_id', $filterSucursal)->pluck('id');
+
+            $query->where(function ($q) use ($filterSucursal, $sucursalUserIds) {
                 $q->where('sucursal_id', $filterSucursal)
-                  ->orWhere('properties->sucursal_id', $filterSucursal)
-                  ->orWhereHasMorph('causer', [\App\Models\User::class], function ($userQuery) use ($filterSucursal) {
-                      $userQuery->where('sucursal_id', $filterSucursal);
-                  });
+                  ->orWhere('properties->sucursal_id', $filterSucursal);
+
+                if ($sucursalUserIds->isNotEmpty()) {
+                    $q->orWhere(function ($subQ) use ($sucursalUserIds) {
+                        $subQ->where('causer_type', \App\Models\User::class)
+                             ->whereIn('causer_id', $sucursalUserIds);
+                    });
+                }
             });
         }
 
         if ($search) {
-            $query->where(function ($q) use ($search) {
+            $searchUserIds = \App\Models\User::where('name', 'like', "%{$search}%")
+                ->orWhere('email', 'like', "%{$search}%")
+                ->pluck('id');
+
+            $query->where(function ($q) use ($search, $searchUserIds) {
                 $q->where('description', 'like', "%{$search}%")
-                  ->orWhere('event', 'like', "%{$search}%")
-                  ->orWhereHasMorph('causer', [\App\Models\User::class], function ($uq) use ($search) {
-                      $uq->where('name', 'like', "%{$search}%")
-                        ->orWhere('email', 'like', "%{$search}%");
-                  });
+                  ->orWhere('event', 'like', "%{$search}%");
+
+                if ($searchUserIds->isNotEmpty()) {
+                    $q->orWhere(function ($subQ) use ($searchUserIds) {
+                        $subQ->where('causer_type', \App\Models\User::class)
+                             ->whereIn('causer_id', $searchUserIds);
+                    });
+                }
             });
         }
 

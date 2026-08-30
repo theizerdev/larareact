@@ -16,7 +16,7 @@ class QueueMonitoringController extends Controller
         $queueConnection = config('queue.default');
 
         // Trabajos Pendientes en la tabla de base de datos
-        $pendingJobs = DB::table('jobs')
+        $pendingJobs = DB::connection('landlord')->table('jobs')
             ->select('id', 'queue', 'attempts', 'reserved_at', 'available_at', 'created_at')
             ->get()
             ->map(function ($job) {
@@ -31,7 +31,7 @@ class QueueMonitoringController extends Controller
             });
 
         // Trabajos Fallidos
-        $failedJobs = DB::table('failed_jobs')
+        $failedJobs = DB::connection('landlord')->table('failed_jobs')
             ->select('id', 'connection', 'queue', 'failed_at', 'exception')
             ->orderBy('failed_at', 'desc')
             ->get()
@@ -93,7 +93,7 @@ class QueueMonitoringController extends Controller
      */
     public function destroy($id)
     {
-        DB::table('failed_jobs')->where('id', $id)->delete();
+        DB::connection('landlord')->table('failed_jobs')->where('id', $id)->delete();
 
         return back()->with('notification', [
             'type' => 'success',
@@ -106,7 +106,7 @@ class QueueMonitoringController extends Controller
      */
     public function destroyAll()
     {
-        DB::table('failed_jobs')->truncate();
+        DB::connection('landlord')->table('failed_jobs')->truncate();
 
         return back()->with('notification', [
             'type' => 'success',

@@ -19,7 +19,7 @@ class SessionMonitoringController extends Controller
         $currentUser = $request->user();
 
         // Obtener solo las sesiones de usuarios autenticados
-        $query = DB::table('sessions')
+        $query = DB::connection('landlord')->table('sessions')
             ->join('users', 'sessions.user_id', '=', 'users.id')
             ->select(
                 'sessions.id',
@@ -100,7 +100,7 @@ class SessionMonitoringController extends Controller
             ]);
         }
 
-        DB::table('sessions')->where('id', $id)->delete();
+        DB::connection('landlord')->table('sessions')->where('id', $id)->delete();
 
         return back()->with('notification', [
             'type' => 'success',
