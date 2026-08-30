@@ -29,6 +29,11 @@ import {
     Calculator,
     Scale,
     BookOpen,
+    Wrench,
+    QrCode,
+    Database,
+    Activity,
+    Shield,
 } from 'lucide-react';
 import React, { useState } from 'react';
 import { useTranslate } from '@/hooks/use-translate';
@@ -234,15 +239,15 @@ export default function Welcome() {
                             <Sparkles className="w-3.5 h-3.5 text-[#ff5a00]" />
                             <span>
                                 {isVenezuela
-                                    ? __('Novedad: Sincronización Tasa Oficial BCV & WhatsApp Engine')
-                                    : __('Novedad: Punto de Venta Ultrarrápido & WhatsApp Engine Integrado')}
+                                    ? __('Novedad: Multi-Tenant Cloud · WhatsApp Engine · Taller de Reparaciones con QR · Tasa BCV')
+                                    : __('Novedad: Multi-Tenant Cloud · WhatsApp Engine · Taller de Reparaciones con QR · POS Pro')}
                             </span>
                             <ChevronRight className="w-3.5 h-3.5" />
                         </div>
 
                         {/* Titular Principal H1 */}
                         <h1 className="text-4xl sm:text-6xl lg:text-7xl font-black text-[#08264e] tracking-tight max-w-5xl mx-auto leading-[1.15]">
-                            {__('El Punto de Venta')} <br />
+                            {__('El Punto de Venta & Taller')} <br />
                             <span className="bg-gradient-to-r from-[#ff5a00] via-orange-500 to-amber-500 bg-clip-text text-transparent">
                                 {__('que Hace Crecer tu Negocio')}
                             </span>
@@ -250,7 +255,7 @@ export default function Welcome() {
 
                         {/* Subtítulo */}
                         <p className="text-lg sm:text-xl text-slate-600 max-w-3xl mx-auto font-normal leading-relaxed">
-                            {__('Procesa ventas en segundos, automatiza recibos por WhatsApp, controla tu Contabilidad completa (Diario, Mayor, P&L, Impuestos, Excel 10 Pestañas) y gestiona tus divisas en tiempo real.')}
+                            {__('Punto de Venta ultrarrápido, Taller de Reparaciones con seguimiento por QR, WhatsApp Engine automatizado, Contabilidad fiscal y arquitectura Cloud Multi-Tenant con base de datos 100% dedicada por empresa.')}
                         </p>
 
                         {/* Botones CTA */}
@@ -381,7 +386,7 @@ export default function Welcome() {
 
                         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
                             {/* Card 1: POS */}
-                            <div className="bg-white border border-slate-200 hover:border-orange-400 p-8 rounded-2xl space-y-4 shadow-sm hover:shadow-lg transition-all hover:-translate-y-1 group">
+                            <div id="pos" className="bg-white border border-slate-200 hover:border-orange-400 p-8 rounded-2xl space-y-4 shadow-sm hover:shadow-lg transition-all hover:-translate-y-1 group">
                                 <div className="w-12 h-12 rounded-xl bg-orange-50 border border-orange-200 text-[#ff5a00] flex items-center justify-center group-hover:scale-110 transition-transform">
                                     <Zap className="w-6 h-6" />
                                 </div>
@@ -391,20 +396,53 @@ export default function Welcome() {
                                 </p>
                             </div>
 
-                            {/* Card 2: WhatsApp */}
+                            {/* Card 2: Servicio Técnico & Taller */}
+                            <div id="taller" className="bg-white border border-slate-200 hover:border-blue-500 p-8 rounded-2xl space-y-4 shadow-sm hover:shadow-lg transition-all hover:-translate-y-1 group">
+                                <div className="w-12 h-12 rounded-xl bg-blue-50 border border-blue-200 text-blue-600 flex items-center justify-center group-hover:scale-110 transition-transform">
+                                    <Wrench className="w-6 h-6" />
+                                </div>
+                                <h3 className="text-xl font-bold text-[#08264e]">{__('Servicio Técnico & Taller con QR')}</h3>
+                                <p className="text-slate-600 text-sm leading-relaxed">
+                                    {__('Recepción de equipos con checklist de ingreso, asignación de repuestos, cálculo de comisiones y tracking público en vivo por código QR.')}
+                                </p>
+                            </div>
+
+                            {/* Card 3: WhatsApp Engine */}
                             <div id="whatsapp" className="bg-white border border-slate-200 hover:border-emerald-400 p-8 rounded-2xl space-y-4 shadow-sm hover:shadow-lg transition-all hover:-translate-y-1 group">
                                 <div className="w-12 h-12 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-600 flex items-center justify-center group-hover:scale-110 transition-transform">
                                     <Smartphone className="w-6 h-6" />
                                 </div>
                                 <h3 className="text-xl font-bold text-[#08264e]">{__('WhatsApp Engine Integrado')}</h3>
                                 <p className="text-slate-600 text-sm leading-relaxed">
-                                    {__('Envío automático de mensajes de bienvenida con credenciales claras (Email, Usuario, Password) y comprobantes de compra.')}
+                                    {__('Envío automático de mensajes de bienvenida con credenciales, comprobantes de compra, estatus de reparación y códigos OTP.')}
                                 </p>
                             </div>
 
-                            {/* Card 3: Arqueo de Caja */}
-                            <div className="bg-white border border-slate-200 hover:border-blue-400 p-8 rounded-2xl space-y-4 shadow-sm hover:shadow-lg transition-all hover:-translate-y-1 group">
-                                <div className="w-12 h-12 rounded-xl bg-blue-50 border border-blue-200 text-[#08264e] flex items-center justify-center group-hover:scale-110 transition-transform">
+                            {/* Card 4: Multi-Tenant Database */}
+                            <div className="bg-white border border-slate-200 hover:border-cyan-500 p-8 rounded-2xl space-y-4 shadow-sm hover:shadow-lg transition-all hover:-translate-y-1 group">
+                                <div className="w-12 h-12 rounded-xl bg-cyan-50 border border-cyan-200 text-cyan-600 flex items-center justify-center group-hover:scale-110 transition-transform">
+                                    <Database className="w-6 h-6" />
+                                </div>
+                                <h3 className="text-xl font-bold text-[#08264e]">{__('Cloud Multi-Tenant 100% Aislado')}</h3>
+                                <p className="text-slate-600 text-sm leading-relaxed">
+                                    {__('Cada empresa dispone de su propia base de datos dedicada. Privacidad total, máxima seguridad y rendimiento optimizado sin esquemas compartidos.')}
+                                </p>
+                            </div>
+
+                            {/* Card 5: Roles y Permisos Granulares */}
+                            <div className="bg-white border border-slate-200 hover:border-indigo-500 p-8 rounded-2xl space-y-4 shadow-sm hover:shadow-lg transition-all hover:-translate-y-1 group">
+                                <div className="w-12 h-12 rounded-xl bg-indigo-50 border border-indigo-200 text-indigo-600 flex items-center justify-center group-hover:scale-110 transition-transform">
+                                    <ShieldCheck className="w-6 h-6" />
+                                </div>
+                                <h3 className="text-xl font-bold text-[#08264e]">{__('Roles & 100+ Permisos por Sector')}</h3>
+                                <p className="text-slate-600 text-sm leading-relaxed">
+                                    {__('Control de acceso granular por equipos: Administradores, Técnicos, Cajeros y Vendedores con más de 100 permisos clasificados por módulos.')}
+                                </p>
+                            </div>
+
+                            {/* Card 6: Arqueo de Caja */}
+                            <div className="bg-white border border-slate-200 hover:border-rose-400 p-8 rounded-2xl space-y-4 shadow-sm hover:shadow-lg transition-all hover:-translate-y-1 group">
+                                <div className="w-12 h-12 rounded-xl bg-rose-50 border border-rose-200 text-rose-600 flex items-center justify-center group-hover:scale-110 transition-transform">
                                     <Lock className="w-6 h-6" />
                                 </div>
                                 <h3 className="text-xl font-bold text-[#08264e]">{__('Arqueo Estricto por Aperturador')}</h3>
@@ -413,7 +451,7 @@ export default function Welcome() {
                                 </p>
                             </div>
 
-                            {/* Card 4: Multimoneda / BCV */}
+                            {/* Card 7: Multimoneda / BCV */}
                             <div className="bg-white border border-slate-200 hover:border-amber-400 p-8 rounded-2xl space-y-4 shadow-sm hover:shadow-lg transition-all hover:-translate-y-1 group">
                                 <div className="w-12 h-12 rounded-xl bg-amber-50 border border-amber-200 text-amber-600 flex items-center justify-center group-hover:scale-110 transition-transform">
                                     <Coins className="w-6 h-6" />
@@ -428,18 +466,18 @@ export default function Welcome() {
                                 </p>
                             </div>
 
-                            {/* Card 5: Inventario */}
+                            {/* Card 8: Inventario */}
                             <div className="bg-white border border-slate-200 hover:border-orange-400 p-8 rounded-2xl space-y-4 shadow-sm hover:shadow-lg transition-all hover:-translate-y-1 group">
                                 <div className="w-12 h-12 rounded-xl bg-orange-50 border border-orange-200 text-[#ff5a00] flex items-center justify-center group-hover:scale-110 transition-transform">
                                     <Package className="w-6 h-6" />
                                 </div>
                                 <h3 className="text-xl font-bold text-[#08264e]">{__('Inventario & Alertas de Stock')}</h3>
                                 <p className="text-slate-600 text-sm leading-relaxed">
-                                    {__('Control de existencias mínimas, compras a proveedores, categorías, marcas y servicios de reparación.')}
+                                    {__('Control de existencias mínimas, compras a proveedores, categorías, marcas, códigos de barras y servicios de reparación.')}
                                 </p>
                             </div>
 
-                            {/* Card 6: Ventas a Crédito */}
+                            {/* Card 9: Ventas a Crédito */}
                             <div className="bg-white border border-slate-200 hover:border-emerald-400 p-8 rounded-2xl space-y-4 shadow-sm hover:shadow-lg transition-all hover:-translate-y-1 group">
                                 <div className="w-12 h-12 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-600 flex items-center justify-center group-hover:scale-110 transition-transform">
                                     <Wallet className="w-6 h-6" />
@@ -450,7 +488,7 @@ export default function Welcome() {
                                 </p>
                             </div>
 
-                            {/* Card 7: Contabilidad Completa & Libros Fiscales */}
+                            {/* Card 10: Contabilidad Completa & Libros Fiscales */}
                             <div className="bg-white border border-slate-200 hover:border-purple-400 p-8 rounded-2xl space-y-4 shadow-sm hover:shadow-lg transition-all hover:-translate-y-1 group">
                                 <div className="w-12 h-12 rounded-xl bg-purple-50 border border-purple-200 text-purple-600 flex items-center justify-center group-hover:scale-110 transition-transform">
                                     <FileSpreadsheet className="w-6 h-6" />
@@ -458,6 +496,17 @@ export default function Welcome() {
                                 <h3 className="text-xl font-bold text-[#08264e]">{__('Contabilidad & Libros Fiscales')}</h3>
                                 <p className="text-slate-600 text-sm leading-relaxed">
                                     {__('Plan de Cuentas, Libro Diario, Libro Mayor, Balance General, P&L, Libros IVA/IGTF y exportación Excel (.xlsx) de 10 pestañas.')}
+                                </p>
+                            </div>
+
+                            {/* Card 11: Telemetría & Monitoreo en Vivo */}
+                            <div className="bg-white border border-slate-200 hover:border-teal-400 p-8 rounded-2xl space-y-4 shadow-sm hover:shadow-lg transition-all hover:-translate-y-1 group">
+                                <div className="w-12 h-12 rounded-xl bg-teal-50 border border-teal-200 text-teal-600 flex items-center justify-center group-hover:scale-110 transition-transform">
+                                    <Activity className="w-6 h-6" />
+                                </div>
+                                <h3 className="text-xl font-bold text-[#08264e]">{__('Monitoreo en Vivo & Telemetría')}</h3>
+                                <p className="text-slate-600 text-sm leading-relaxed">
+                                    {__('Métricas 100% reales de CPU, memoria RAM, rendimiento de red, logs del sistema y Terminal Artisan integrada para máxima estabilidad.')}
                                 </p>
                             </div>
                         </div>
@@ -531,6 +580,113 @@ export default function Welcome() {
                                             <p className="text-emerald-700 underline font-bold">🌐 http://fixsale.app/login</p>
                                             <span className="text-[9px] text-slate-400 text-right block pt-1">10:45 AM ✓✓</span>
                                         </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                {/* ─── SECCIÓN INTERACTIVA: TALLER DE REPARACIONES & TRACKING QR ────────── */}
+                <section id="taller-showcase" className="py-20 bg-slate-900 text-white border-y border-slate-800 relative overflow-hidden">
+                    <div className="absolute top-0 right-0 w-96 h-96 bg-blue-500/10 rounded-full blur-3xl pointer-events-none" />
+                    <div className="absolute bottom-0 left-0 w-96 h-96 bg-orange-500/10 rounded-full blur-3xl pointer-events-none" />
+
+                    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
+                        <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
+                            {/* Card Visual: Mockup de Tracking en Vivo y QR */}
+                            <div className="order-2 lg:order-1 flex justify-center">
+                                <div className="w-full max-w-md bg-slate-800/90 border border-slate-700/80 backdrop-blur-xl rounded-3xl p-6 shadow-2xl space-y-6 text-left font-sans">
+                                    {/* Header de Orden */}
+                                    <div className="flex items-center justify-between border-b border-slate-700 pb-4">
+                                        <div>
+                                            <div className="flex items-center gap-2">
+                                                <span className="px-2.5 py-1 rounded-md text-[11px] font-mono font-bold bg-blue-500/20 text-blue-400 border border-blue-500/30">
+                                                    ORDEN #REP-2026-089
+                                                </span>
+                                            </div>
+                                            <h4 className="text-lg font-bold text-white mt-1">iPhone 14 Pro Max</h4>
+                                            <p className="text-xs text-slate-400 font-medium">Cliente: Carlos Mendoza · +58 412 555-0192</p>
+                                        </div>
+                                        <div className="w-12 h-12 rounded-xl bg-slate-900 border border-slate-700 p-1 flex items-center justify-center shadow-inner">
+                                            <QrCode className="w-8 h-8 text-orange-400" />
+                                        </div>
+                                    </div>
+
+                                    {/* Status Pulse */}
+                                    <div className="flex items-center justify-between bg-emerald-950/50 border border-emerald-500/30 p-3.5 rounded-xl">
+                                        <div className="flex items-center gap-2.5">
+                                            <span className="relative flex h-3 w-3">
+                                                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                                                <span className="relative inline-flex rounded-full h-3 w-3 bg-emerald-500"></span>
+                                            </span>
+                                            <div>
+                                                <p className="text-xs font-bold text-emerald-300 uppercase tracking-wider">{__('Estado Actual')}</p>
+                                                <p className="text-sm font-black text-white">{__('Listo para Entrega')}</p>
+                                            </div>
+                                        </div>
+                                        <span className="text-xs font-mono font-bold text-emerald-400 bg-emerald-500/20 px-2.5 py-1 rounded-full">
+                                            100% {__('Completado')}
+                                        </span>
+                                    </div>
+
+                                    {/* Checklist de Diagnóstico */}
+                                    <div className="space-y-2.5 bg-slate-900/60 p-4 rounded-xl border border-slate-700/50 text-xs">
+                                        <p className="text-slate-400 font-bold uppercase tracking-wider text-[10px]">{__('Checklist de Pruebas & Repuestos')}</p>
+                                        <div className="grid grid-cols-2 gap-2 text-slate-300">
+                                            <div className="flex items-center gap-1.5 text-emerald-400">
+                                                <CheckCircle2 className="w-3.5 h-3.5" />
+                                                <span className="text-white">Pantalla OLED Original</span>
+                                            </div>
+                                            <div className="flex items-center gap-1.5 text-emerald-400">
+                                                <CheckCircle2 className="w-3.5 h-3.5" />
+                                                <span className="text-white">Batería 100% Salud</span>
+                                            </div>
+                                            <div className="flex items-center gap-1.5 text-emerald-400">
+                                                <CheckCircle2 className="w-3.5 h-3.5" />
+                                                <span className="text-white">Face ID Calibrado</span>
+                                            </div>
+                                            <div className="flex items-center gap-1.5 text-emerald-400">
+                                                <CheckCircle2 className="w-3.5 h-3.5" />
+                                                <span className="text-white">Cámara & Audio OK</span>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    {/* Footer Tracking Link */}
+                                    <div className="flex items-center justify-between text-xs text-slate-400 pt-1">
+                                        <span>{__('Tracking público sin login requerido')}</span>
+                                        <span className="font-mono text-orange-400 font-bold flex items-center gap-1">
+                                            fixsale.app/track/qr <ArrowRight className="w-3 h-3" />
+                                        </span>
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* Texto Explicativo */}
+                            <div className="order-1 lg:order-2 space-y-6 text-left">
+                                <span className="text-xs font-bold font-mono uppercase tracking-widest text-[#ff5a00] bg-orange-500/10 border border-orange-500/30 px-3.5 py-1.5 rounded-full">
+                                    {__('Servicio Técnico & Taller Pro')}
+                                </span>
+                                <h2 className="text-3xl sm:text-4xl font-black text-white tracking-tight leading-tight">
+                                    {__('Taller de Reparaciones con Seguimiento en Vivo por Código QR')}
+                                </h2>
+                                <p className="text-slate-300 text-base leading-relaxed">
+                                    {__('Tus clientes ya no necesitan llamar para preguntar por su equipo. Genera órdenes de servicio con checklist de ingreso, asigna repuestos del inventario y entrega un ticket con QR para consulta pública en tiempo real.')}
+                                </p>
+
+                                <div className="space-y-3 pt-2">
+                                    <div className="flex items-start gap-3 text-sm text-slate-300 font-medium">
+                                        <CheckCircle2 className="w-5 h-5 text-orange-400 shrink-0 mt-0.5" />
+                                        <span>{__('Checklist de ingreso y pruebas físicas (pantalla, táctil, carga, cámaras, audio).')}</span>
+                                    </div>
+                                    <div className="flex items-start gap-3 text-sm text-slate-300 font-medium">
+                                        <CheckCircle2 className="w-5 h-5 text-orange-400 shrink-0 mt-0.5" />
+                                        <span>{__('Asignación de técnicos con liquidación y comisiones de mano de obra.')}</span>
+                                    </div>
+                                    <div className="flex items-start gap-3 text-sm text-slate-300 font-medium">
+                                        <CheckCircle2 className="w-5 h-5 text-orange-400 shrink-0 mt-0.5" />
+                                        <span>{__('Notificaciones automáticas de cambio de estado por WhatsApp con enlace público.')}</span>
                                     </div>
                                 </div>
                             </div>
@@ -820,6 +976,18 @@ export default function Welcome() {
                                     a: __('Al registrarte obtienes acceso inmediato e ilimitado a todos los módulos del sistema durante 7 días continuos. No requieres ingresar tarjeta de crédito.'),
                                 },
                                 {
+                                    q: __('¿Mis datos e inventario están completamente aislados de otras empresas?'),
+                                    a: __('Sí. FixSale implementa una arquitectura Cloud Multi-Tenant con base de datos MySQL físicamente dedicada para cada empresa (fixsale_tenant_{id}). Tus clientes, ventas, inventario y registros contables nunca se comparten ni se mezclan con ningún otro negocio.'),
+                                },
+                                {
+                                    q: __('¿Cómo funciona el seguimiento de reparaciones por código QR para mis clientes?'),
+                                    a: __('Cada orden de servicio técnico genera automáticamente un código QR y un enlace público de tracking. Tu cliente puede escanear el ticket impreso o tocar el enlace recibido por WhatsApp para consultar el avance del trabajo, repuestos utilizados y aviso de entrega en vivo sin requerir contraseña.'),
+                                },
+                                {
+                                    q: __('¿Puedo personalizar los roles y permisos de mis colaboradores?'),
+                                    a: __('Totalmente. El sistema cuenta con más de 100 permisos granulares clasificados por áreas de trabajo (Ventas/POS, Taller, Inventario, Caja, Finanzas, Administración). Puedes crear roles a medida como Técnicos, Cajeros, Recepcionistas o Vendedores asignando solo los módulos necesarios.'),
+                                },
+                                {
                                     q: __('¿Solo el usuario que abre la caja puede realizar el cierre?'),
                                     a: __('Sí. Por políticas de control y seguridad financiera, únicamente el usuario que realiza la apertura de la caja tiene los permisos para efectuar el Cierre Z de su turno.'),
                                 },
@@ -833,7 +1001,7 @@ export default function Welcome() {
                                 },
                                 {
                                     q: __('¿Cómo se envían los mensajes por WhatsApp?'),
-                                    a: __('El sistema incluye un motor de WhatsApp integrado que puedes conectar escaneando un código QR. Permite enviar credenciales de acceso a nuevos usuarios y comprobantes de compra.'),
+                                    a: __('El sistema incluye un motor de WhatsApp integrado con microservicio dedicado que puedes conectar escaneando un código QR. Permite enviar credenciales de acceso, comprobantes de compra, avisos de reparación y códigos OTP.'),
                                 },
                                 {
                                     q: __('¿FixSale incluye módulo de contabilidad y exportación fiscal en Excel?'),
