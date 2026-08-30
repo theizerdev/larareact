@@ -54,7 +54,7 @@ use App\Http\Controllers\Admin\SuperAdminDashboardController;
 use App\Http\Controllers\Auth\WhatsAppVerificationController;
 use App\Http\Middleware\EnsureWhatsAppIsVerified;
 
-Route::middleware(['auth', 'verified'])->group(function () {
+Route::middleware(['auth'])->group(function () {
     Route::get('/verify-whatsapp', [WhatsAppVerificationController::class, 'show'])->name('verify-whatsapp.index');
     Route::post('/verify-whatsapp/verify', [WhatsAppVerificationController::class, 'verify'])->name('verify-whatsapp.verify');
     Route::post('/verify-whatsapp/resend', [WhatsAppVerificationController::class, 'resend'])->name('verify-whatsapp.resend');

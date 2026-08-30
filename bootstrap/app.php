@@ -34,6 +34,7 @@ return Application::configure(basePath: dirname(__DIR__))
             \App\Http\Middleware\SetPermissionsTeam::class,
             HandleInertiaRequests::class,
             \App\Http\Middleware\CheckSubscriptionStatus::class,
+            \App\Http\Middleware\EnsureWhatsAppIsVerified::class,
         ]);
 
         $middleware->validateCsrfTokens(except: [

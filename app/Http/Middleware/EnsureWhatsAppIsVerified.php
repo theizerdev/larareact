@@ -17,17 +17,34 @@ class EnsureWhatsAppIsVerified
     {
         $user = $request->user();
 
-        // No realizar redirección en peticiones JSON, API o AJAX
-        if ($request->expectsJson() || $request->wantsJson() || $request->ajax() || $request->header('X-Requested-With') === 'XMLHttpRequest') {
+        if (! $user) {
             return $next($request);
         }
 
-        // Si hay un usuario autenticado y tiene teléfono pero no ha sido verificado aún por WhatsApp
-        if ($user && ! empty($user->telefono) && ! $user->whatsapp_verified_at) {
-            // Permitir el acceso solo a las rutas de verificación de whatsapp y logout
-            if (! $request->is('verify-whatsapp*') && ! $request->is('logout')) {
-                return redirect()->route('verify-whatsapp.index');
+        // Rutas que siempre están permitidas sin verificación previa
+        if (
+            $request->is('verify-whatsapp*') ||
+            $request->is('logout') ||
+            $request->is('login') ||
+            $request->is('register') ||
+            $request->is('forgot-password*') ||
+            $request->is('reset-password*') ||
+            $request->is('locale*')
+        ) {
+            return $next($request);
+        }
+
+        // Para peticiones API puras, responder con JSON 403
+        if ($request->is('api/*')) {
+            if (! empty($user->telefono) && ! $user->whatsapp_verified_at) {
+                return response()->json(['message' => __('Verificación de WhatsApp requerida.')], 403);
             }
+            return $next($request);
+        }
+
+        // 1. Verificación obligatoria de código OTP de WhatsApp
+        if (! empty($user->telefono) && ! $user->whatsapp_verified_at) {
+            return redirect()->route('verify-whatsapp.index');
         }
 
         // 2. Redirección obligatoria para Administradores mientras WhatsApp no esté conectado
@@ -48,7 +65,7 @@ class EnsureWhatsAppIsVerified
         if ($isAdmin) {
             $empresa = $user->empresa ?? ($user->empresa_id ? \App\Models\Empresa::find($user->empresa_id) : null);
             if ($empresa && (bool) $empresa->whatsapp_active && $empresa->whatsapp_status !== 'connected') {
-                if (! $request->is('admin/integrations/whatsapp*') && ! $request->is('verify-whatsapp*') && ! $request->is('logout')) {
+                if (! $request->is('admin/integrations/whatsapp*')) {
                     session()->flash('notification', [
                         'type' => 'info',
                         'message' => __('Atención: Debe vincular su cuenta de WhatsApp para comenzar a utilizar la plataforma.'),

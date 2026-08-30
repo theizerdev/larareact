@@ -122,6 +122,8 @@ class User extends Authenticatable implements PasskeyUser
         return [
             'email_verified_at' => 'datetime',
             'phone_verified_at' => 'datetime',
+            'whatsapp_verified_at' => 'datetime',
+            'whatsapp_otp_expires_at' => 'datetime',
             'two_factor_confirmed_at' => 'datetime',
             'password' => 'hashed',
             'sueldo_base' => 'decimal:2',
