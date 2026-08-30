@@ -96,9 +96,12 @@ return new class extends Migration {
             $table->id();
             $table->unsignedBigInteger('empresa_id')->nullable()->index();
             $table->foreignId('sucursal_id')->nullable()->constrained('sucursales')->nullOnDelete();
-            $table->string('periodo');
-            $table->decimal('monto_meta', 15, 2);
-            $table->decimal('monto_alcanzado', 15, 2)->default(0.00);
+            $table->integer('year');
+            $table->integer('month');
+            $table->decimal('base_sales', 12, 2)->default(0.00);
+            $table->decimal('increment_percentage', 5, 2)->default(0.00);
+            $table->decimal('target_amount', 12, 2)->default(0.00);
+            $table->text('notes')->nullable();
             $table->timestamps();
         });
 

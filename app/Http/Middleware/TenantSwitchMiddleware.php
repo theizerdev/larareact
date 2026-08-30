@@ -22,7 +22,13 @@ class TenantSwitchMiddleware
             $isSuperAdmin = $user->id === 1
                 || (method_exists($user, 'hasRole') && ($user->hasRole('Super Administrador') || $user->hasRole('super-admin') || $user->hasRole('Super Admin')));
 
-            $targetTenantId = ($isSuperAdmin && $impersonatedTenantId) ? $impersonatedTenantId : $user->empresa_id;
+            $impersonatedTenantId = session('impersonate_tenant_id') 
+                ?? session('impersonated_tenant_id') 
+                ?? session('active_empresa_id');
+
+            $targetTenantId = ($isSuperAdmin && $impersonatedTenantId) 
+                ? $impersonatedTenantId 
+                : ($user->empresa_id ?: 1);
 
             if ($targetTenantId) {
                 if (! TenantManager::databaseExists($targetTenantId)) {
