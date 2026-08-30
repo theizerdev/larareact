@@ -474,17 +474,15 @@ class WhatsAppService
     }
 
     /**
-     * 📊 Obtener estadísticas de la cola de envíos y límites de calentamiento
+     * 📊 Obtener estadísticas de la cola de envíos, límites de calentamiento y salud de la cuenta
      */
     public function getQueueStats(?string $instance = null): ?array
     {
         $instanceName = $instance ?? $this->instanceName;
 
-        // Obtener límite configurado de la empresa en BD
         $empresa = Empresa::find($this->companyId);
-        $dailyLimit = (int) ($empresa?->whatsapp_rate_limit ?? 300);
+        $dailyLimit = (int) ($empresa?->whatsapp_rate_limit ?? 100);
 
-        // Mensajes locales enviados hoy
         $sentToday = WhatsAppMessage::where('direction', 'outbound')
             ->whereDate('created_at', today())
             ->count();
@@ -500,15 +498,16 @@ class WhatsAppService
 
         $remoteStats = null;
         try {
-            $response = $this->client()->timeout(4)->get("{$this->baseUrl}/api/message/queue/{$instanceName}");
+            $response = $this->client()->timeout(5)->get("{$this->baseUrl}/api/message/queue-status/{$instanceName}");
             if ($response->successful()) {
-                $remoteStats = $response->json();
+                $body = $response->json();
+                $remoteStats = $body['stats'] ?? $body;
             }
         } catch (\Throwable $e) {
             // Continúa con métricas sincronizadas locales
         }
 
-        $effectiveSent = max($sentToday, (int) ($remoteStats['sentToday'] ?? 0));
+        $effectiveSent = max($sentToday, (int) ($remoteStats['dailySentCount'] ?? $remoteStats['sentToday'] ?? 0));
         $effectiveDailyLimit = (int) ($remoteStats['dailyLimit'] ?? $dailyLimit);
         $remaining = max(0, $effectiveDailyLimit - $effectiveSent);
 
@@ -522,14 +521,27 @@ class WhatsAppService
             'sentToday' => $effectiveSent,
             'dailyLimit' => $effectiveDailyLimit,
             'remaining' => $remaining,
-            'queued' => (int) ($remoteStats['inQueue'] ?? $remoteStats['queued'] ?? $inQueue),
-            'inQueue' => (int) ($remoteStats['inQueue'] ?? $remoteStats['queued'] ?? $inQueue),
+            'queued' => (int) ($remoteStats['queuedCount'] ?? $remoteStats['inQueue'] ?? $inQueue),
+            'inQueue' => (int) ($remoteStats['queuedCount'] ?? $remoteStats['inQueue'] ?? $inQueue),
             'failedToday' => (int) ($remoteStats['failedToday'] ?? $failedToday),
             'warmupMode' => (bool) ($remoteStats['warmupMode'] ?? $dbWarmupMode),
+            'warmupDay' => (int) ($remoteStats['warmupDay'] ?? 1),
+            'warmupStartDate' => $remoteStats['warmupStartDate'] ?? null,
+            'warmupInitialLimit' => (int) ($remoteStats['warmupInitialLimit'] ?? 10),
+            'warmupIncrementPerDay' => (int) ($remoteStats['warmupIncrementPerDay'] ?? 10),
+            'warmupTargetLimit' => (int) ($remoteStats['warmupTargetLimit'] ?? 100),
+            'mutateMediaHash' => (bool) ($remoteStats['mutateMediaHash'] ?? true),
+            'totalSentCount' => (int) ($remoteStats['totalSentCount'] ?? 0),
+            'totalReceivedCount' => (int) ($remoteStats['totalReceivedCount'] ?? 0),
+            'inboundOutboundRatio' => (float) ($remoteStats['inboundOutboundRatio'] ?? 1.0),
+            'consecutiveFailures' => (int) ($remoteStats['consecutiveFailures'] ?? 0),
+            'circuitBreakerActive' => (bool) ($remoteStats['circuitBreakerActive'] ?? false),
+            'circuitBreakerUntil' => $remoteStats['circuitBreakerUntil'] ?? null,
             'workingHoursEnabled' => (bool) ($remoteStats['workingHoursEnabled'] ?? $dbWorkingHoursEnabled),
             'workingHoursStart' => $remoteStats['workingHoursStart'] ?? $dbWorkingHoursStart,
             'workingHoursEnd' => $remoteStats['workingHoursEnd'] ?? $dbWorkingHoursEnd,
             'proxyUrl' => $remoteStats['proxyUrl'] ?? $dbProxyUrl,
+            'backupProxyUrl' => $remoteStats['backupProxyUrl'] ?? null,
         ];
     }
 
@@ -601,6 +613,92 @@ class WhatsAppService
     }
 
     /**
+     * 🔥 Configurar Curva de Calentamiento Automática Progresiva (Ramp-Up Schedule)
+     */
+    public function configureWarmupSchedule(int $initialLimit = 10, int $incrementPerDay = 10, int $targetLimit = 100, bool $enabled = true, ?string $instance = null): ?array
+    {
+        return $this->updateAntiBan([
+            'warmupMode' => $enabled,
+            'warmupInitialLimit' => $initialLimit,
+            'warmupIncrementPerDay' => $incrementPerDay,
+            'warmupTargetLimit' => $targetLimit,
+            'warmupDay' => 1,
+            'warmupStartDate' => now()->toISOString(),
+        ], $instance);
+    }
+
+    /**
+     * ⚡ Desactivar el Disyuntor (Circuit Breaker) y reanudar envíos tras una pausa preventiva
+     */
+    public function resetCircuitBreaker(?string $instance = null): ?array
+    {
+        $instanceName = $instance ?? $this->instanceName;
+
+        try {
+            $response = $this->client()->post("{$this->baseUrl}/api/instance/{$instanceName}/circuit-breaker/reset");
+
+            return $response->json();
+        } catch (\Exception $e) {
+            Log::error('WhatsApp Reset Circuit Breaker Error: '.$e->getMessage(), [
+                'instance' => $instanceName,
+            ]);
+
+            return null;
+        }
+    }
+
+    /**
+     * 🎨 Activar/Desactivar la Mutación de Hash Multimedia (Anti-Fingerprinting)
+     */
+    public function setMediaMutation(bool $enabled = true, ?string $instance = null): ?array
+    {
+        return $this->updateAntiBan([
+            'mutateMediaHash' => $enabled,
+        ], $instance);
+    }
+
+    /**
+     * 📤 Enviar archivo multimedia local subiéndolo como Multipart (con mutación automática)
+     */
+    public function sendLocalMedia(string $to, string $filePath, string $mediaType = 'image', string $caption = '', array $variables = [], ?string $instance = null): ?array
+    {
+        $instanceName = $instance ?? $this->instanceName;
+        $formattedPhone = self::formatPhoneNumber($to, $this->countryCode);
+        $fileName = basename($filePath);
+
+        if (! file_exists($filePath)) {
+            Log::error("WhatsApp Send Local Media: Archivo no encontrado en {$filePath}");
+            return null;
+        }
+
+        try {
+            $response = Http::withHeaders([
+                'x-api-key' => (string) ($this->apiKey ?? ''),
+                'X-Company-Id' => (string) $this->companyId,
+            ])
+            ->timeout($this->timeout)
+            ->attach('file', file_get_contents($filePath), $fileName)
+            ->post("{$this->baseUrl}/api/message/send-multimedia/{$instanceName}", [
+                'to' => $formattedPhone,
+                'mediaType' => $mediaType,
+                'caption' => $caption,
+                'variables' => (object) $variables,
+                'simulateTyping' => true,
+            ]);
+
+            return $response->json();
+        } catch (\Exception $e) {
+            Log::error('WhatsApp Send Local Media Error: '.$e->getMessage(), [
+                'to' => $to,
+                'filePath' => $filePath,
+                'instance' => $instanceName,
+            ]);
+
+            return null;
+        }
+    }
+
+    /**
      * ⚙️ Ajustar límite diario y modo calentamiento rápidamente
      */
     public function setDailyLimit(int $limit, bool $warmupMode = true, ?string $instance = null): ?array
@@ -624,22 +722,172 @@ class WhatsAppService
     }
 
     /**
-     * 🌐 Configurar Proxy HTTP/SOCKS5 dedicado para la instancia
+     * 🌐 Configurar Proxy HTTP/SOCKS5 principal y de contingencia (Failover)
      */
-    public function setProxy(string $proxyUrl, ?string $instance = null): ?array
+    public function setProxies(string $proxyUrl, ?string $backupProxyUrl = null, ?string $instance = null): ?array
     {
         return $this->updateAntiBan([
             'proxyUrl' => $proxyUrl,
+            'backupProxyUrl' => $backupProxyUrl,
         ], $instance);
+    }
+
+    /**
+     * 🌐 Configurar Proxy HTTP/SOCKS5 dedicado para la instancia (Legacy)
+     */
+    public function setProxy(string $proxyUrl, ?string $instance = null): ?array
+    {
+        return $this->setProxies($proxyUrl, null, $instance);
     }
 
     /**
      * 🎲 Previsualizar variaciones generadas por una plantilla Spintax
      */
+    /**
+     * 🛡️ Envía una reacción de emoji a un mensaje para humanizar la conversación (ej: "👍", "❤️", "🔥", "🙏")
+     */
+    /**
+     * 💬 Enviar mensaje dividido en múltiples burbujas encadenadas (Multi-Bubble Chaining)
+     */
+    public function sendMultiBubble(string $to, array $bubbles, array $variables = [], ?string $instance = null): ?array
+    {
+        $chainedText = implode("
+===
+", $bubbles);
+        return $this->sendMessage($to, $chainedText, $variables, false, null, $instance);
+    }
+
+    /**
+     * 🔒 Activar/Desactivar Cuarentena de 7 días para Chips Nuevos (New SIM Isolation)
+     */
+    public function setNewSimQuarantine(bool $enabled = true, ?string $instance = null): ?array
+    {
+        return $this->updateAntiBan([
+            'isNewSim' => $enabled,
+        ], $instance);
+    }
+
+    /**
+     * �� Activar/Desactivar Modulación Circadiana Biológica
+     */
+    public function setCircadianModulation(bool $enabled = true, ?string $instance = null): ?array
+    {
+        return $this->updateAntiBan([
+            'circadianModulation' => $enabled,
+        ], $instance);
+    }
+
+    /**
+     * 🔗 Activar/Desactivar Sanitización Dinámica de Enlaces (Link Cloaking)
+     */
+    public function setLinkCloaking(bool $enabled = true, ?string $instance = null): ?array
+    {
+        return $this->updateAntiBan([
+            'linkCloaking' => $enabled,
+        ], $instance);
+    }
+
+    /**
+     * 🤝 Activar/Desactivar Red de Calentamiento Cruzado P2P
+     */
+    public function setP2PWarmup(bool $enabled = true, ?string $instance = null): ?array
+    {
+        return $this->updateAntiBan([
+            'p2pWarmupEnabled' => $enabled,
+        ], $instance);
+    }
+
+    /**
+     * 🛑 Desactivar el Freno de Emergencia (Emergency Brake)
+     */
+    public function resetEmergencyBrake(?string $instance = null): ?array
+    {
+        $instanceName = $instance ?? $this->instanceName;
+
+        try {
+            $response = $this->client()->post("{$this->baseUrl}/api/instance/{$instanceName}/emergency-brake/reset");
+
+            return $response->json();
+        } catch (\Exception $e) {
+            Log::error('WhatsApp Reset Emergency Brake Error: '.$e->getMessage(), [
+                'instance' => $instanceName,
+            ]);
+
+            return null;
+        }
+    }
+
+    /**
+     * 🤝 Disparar manualmente una ronda de diálogo cruzado P2P
+     */
+    public function triggerP2PWarmupRound(): ?array
+    {
+        try {
+            $response = $this->client()->post("{$this->baseUrl}/api/instance/p2p-warmup/trigger");
+
+            return $response->json();
+        } catch (\Exception $e) {
+            Log::error('WhatsApp Trigger P2P Warmup Error: '.$e->getMessage());
+
+            return null;
+        }
+    }
+
+    public function sendReaction(string $to, string $messageId, string $emoji, bool $fromMe = false, ?string $instance = null): ?array
+    {
+        $instanceName = $instance ?? $this->instanceName;
+        $formattedPhone = self::formatPhoneNumber($to, $this->countryCode);
+
+        try {
+            $response = $this->client()->post("{$this->baseUrl}/api/message/react/{$instanceName}", [
+                'to' => $formattedPhone,
+                'messageId' => $messageId,
+                'emoji' => $emoji,
+                'fromMe' => $fromMe,
+            ]);
+
+            return $response->json();
+        } catch (\Exception $e) {
+            Log::error('WhatsApp Send Reaction Error: '.$e->getMessage(), [
+                'to' => $to,
+                'messageId' => $messageId,
+                'emoji' => $emoji,
+            ]);
+
+            return null;
+        }
+    }
+
+    /**
+     * 🛡️ Despacha una campaña masiva balanceando la carga en modo Round-Robin entre múltiples instancias
+     */
+    public function broadcastBalanced(array $instances, array $recipients, string $message, array $variables = [], ?string $mediaUrl = null, ?string $caption = null): ?array
+    {
+        try {
+            $response = $this->client()->post("{$this->baseUrl}/api/message/broadcast-balanced", [
+                'instances' => $instances,
+                'recipients' => $recipients,
+                'text' => $message,
+                'variables' => (object) $variables,
+                'mediaUrl' => $mediaUrl,
+                'caption' => $caption,
+            ]);
+
+            return $response->json();
+        } catch (\Exception $e) {
+            Log::error('WhatsApp Balanced Broadcast Error: '.$e->getMessage(), [
+                'instances' => $instances,
+                'count' => count($recipients),
+            ]);
+
+            return null;
+        }
+    }
+
     public function previewSpintax(string $template, int $count = 5, array $variables = []): ?array
     {
         try {
-            $response = $this->client()->post("{$this->baseUrl}/api/message/spintax-preview", [
+            $response = $this->client()->post("{$this->baseUrl}/api/message/spintax/preview", [
                 'text' => $template,
                 'count' => $count,
                 'variables' => (object) $variables,
