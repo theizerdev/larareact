@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { Head, usePage } from '@inertiajs/react';
-import AdminLayout from '@/layouts/admin/admin-saas-layout';
+import { Breadcrumbs } from '@/components/breadcrumbs';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
@@ -283,12 +283,18 @@ export default function TerminalIndex({ system_info, empresas, presets }: Termin
     };
 
     return (
-        <AdminLayout>
+        <div className="space-y-6">
             <Head title="Terminal Artisan - Monitoreo Avanzado" />
 
-            <div className="space-y-6 max-w-7xl mx-auto pb-12">
-                {/* Header Principal */}
-                <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b pb-5">
+            <Breadcrumbs
+                breadcrumbs={[
+                    { title: 'Monitoreo', href: '#' },
+                    { title: 'Terminal Artisan', href: '/admin/monitoring/terminal' },
+                ]}
+            />
+
+            {/* Header Principal */}
+            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b pb-5">
                     <div>
                         <div className="flex items-center gap-2.5">
                             <div className="p-2.5 rounded-xl bg-slate-900 dark:bg-slate-800 text-emerald-400 border border-slate-700 shadow-sm">
@@ -564,67 +570,66 @@ export default function TerminalIndex({ system_info, empresas, presets }: Termin
                         </Button>
                     </form>
                 </div>
-            </div>
 
-            {/* Modal para selección de parámetros (Empresa) */}
-            <Dialog open={isParamModalOpen} onOpenChange={setIsParamModalOpen}>
-                <DialogContent className="sm:max-w-md">
-                    <DialogHeader>
-                        <DialogTitle className="text-base font-bold flex items-center gap-2">
-                            <Building2Icon className="size-4 text-indigo-500" />
-                            <span>Seleccionar Empresa para el Comando</span>
-                        </DialogTitle>
-                        <DialogDescription className="text-xs">
-                            Este comando requiere especificar el ID de la empresa a procesar.
-                        </DialogDescription>
-                    </DialogHeader>
+                {/* Modal para selección de parámetros (Empresa) */}
+                <Dialog open={isParamModalOpen} onOpenChange={setIsParamModalOpen}>
+                    <DialogContent className="sm:max-w-md">
+                        <DialogHeader>
+                            <DialogTitle className="text-base font-bold flex items-center gap-2">
+                                <Building2Icon className="size-4 text-indigo-500" />
+                                <span>Seleccionar Empresa para el Comando</span>
+                            </DialogTitle>
+                            <DialogDescription className="text-xs">
+                                Este comando requiere especificar el ID de la empresa a procesar.
+                            </DialogDescription>
+                        </DialogHeader>
 
-                    <div className="space-y-4 py-2">
-                        <div className="p-3 rounded-xl bg-muted/40 border text-xs font-mono">
-                            <span className="text-muted-foreground">Comando base:</span>{' '}
-                            <span className="text-foreground font-bold">{selectedPreset?.command}</span>
+                        <div className="space-y-4 py-2">
+                            <div className="p-3 rounded-xl bg-muted/40 border text-xs font-mono">
+                                <span className="text-muted-foreground">Comando base:</span>{' '}
+                                <span className="text-foreground font-bold">{selectedPreset?.command}</span>
+                            </div>
+
+                            <div className="space-y-1.5">
+                                <label className="text-xs font-bold text-foreground">
+                                    Empresa Destino:
+                                </label>
+                                <Select value={selectedEmpresaId} onValueChange={setSelectedEmpresaId}>
+                                    <SelectTrigger className="h-10 text-xs font-medium">
+                                        <SelectValue placeholder="Selecciona una empresa" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        {empresas.map((emp) => (
+                                            <SelectItem key={emp.id} value={String(emp.id)} className="text-xs">
+                                                #{emp.id} - {emp.razon_social} {emp.whatsapp_instance ? `(${emp.whatsapp_instance})` : ''}
+                                            </SelectItem>
+                                        ))}
+                                    </SelectContent>
+                                </Select>
+                            </div>
                         </div>
 
-                        <div className="space-y-1.5">
-                            <label className="text-xs font-bold text-foreground">
-                                Empresa Destino:
-                            </label>
-                            <Select value={selectedEmpresaId} onValueChange={setSelectedEmpresaId}>
-                                <SelectTrigger className="h-10 text-xs font-medium">
-                                    <SelectValue placeholder="Selecciona una empresa" />
-                                </SelectTrigger>
-                                <SelectContent>
-                                    {empresas.map((emp) => (
-                                        <SelectItem key={emp.id} value={String(emp.id)} className="text-xs">
-                                            #{emp.id} - {emp.razon_social} {emp.whatsapp_instance ? `(${emp.whatsapp_instance})` : ''}
-                                        </SelectItem>
-                                    ))}
-                                </SelectContent>
-                            </Select>
-                        </div>
-                    </div>
-
-                    <DialogFooter className="gap-2">
-                        <Button
-                            type="button"
-                            variant="outline"
-                            onClick={() => setIsParamModalOpen(false)}
-                            className="h-9 text-xs font-semibold"
-                        >
-                            Cancelar
-                        </Button>
-                        <Button
-                            type="button"
-                            onClick={handleConfirmParamModal}
-                            disabled={!selectedEmpresaId}
-                            className="h-9 text-xs font-semibold bg-emerald-600 hover:bg-emerald-500 text-white"
-                        >
-                            Ejecutar Comando
-                        </Button>
-                    </DialogFooter>
-                </DialogContent>
-            </Dialog>
-        </AdminLayout>
+                        <DialogFooter className="gap-2">
+                            <Button
+                                type="button"
+                                variant="outline"
+                                onClick={() => setIsParamModalOpen(false)}
+                                className="h-9 text-xs font-semibold"
+                            >
+                                Cancelar
+                            </Button>
+                            <Button
+                                type="button"
+                                onClick={handleConfirmParamModal}
+                                disabled={!selectedEmpresaId}
+                                className="h-9 text-xs font-semibold bg-emerald-600 hover:bg-emerald-500 text-white"
+                            >
+                                Ejecutar Comando
+                            </Button>
+                        </DialogFooter>
+                    </DialogContent>
+                </Dialog>
+        </div>
     );
 }
 
