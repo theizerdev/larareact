@@ -35,7 +35,7 @@ class AppServiceProvider extends ServiceProvider
                 || $user->hasRole('Super Administrador')
                 || $user->hasRole('super-admin')
                 || $user->hasRole('Super Admin')
-                || \Illuminate\Support\Facades\DB::table('model_has_roles')
+                || \Illuminate\Support\Facades\DB::connection('landlord')->table('model_has_roles')
                     ->join('roles', 'roles.id', '=', 'model_has_roles.role_id')
                     ->where('model_has_roles.model_id', $user->id)
                     ->whereIn('roles.name', ['Super Administrador', 'super-admin', 'Super Admin'])

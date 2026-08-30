@@ -1,5 +1,5 @@
 import { Head, useForm, router } from '@inertiajs/react';
-import { Shield, Plus, Key, MoreVertical, Pencil, Trash2 } from 'lucide-react';
+import { Shield, Plus, Key, MoreVertical, Pencil, Trash2, Search, CheckSquare, Square, AlertCircle, Layers, CheckCircle2 } from 'lucide-react';
 import React, { useState } from 'react';
 import { Breadcrumbs } from '@/components/breadcrumbs';
 import { FilterBar, FilterField } from '@/components/filter-bar';
@@ -34,10 +34,12 @@ import {
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
+import { Badge } from '@/components/ui/badge';
 import { useTranslate } from '@/hooks/use-translate';
 import type { Auth } from '@/types';
 import { notifySuccess, notifyError } from '@/utils/notifications';
 import { Switch } from '@/components/ui/switch';
+import { cn } from '@/lib/utils';
 
 interface User {
     id: number;
@@ -83,6 +85,42 @@ interface RolesPageProps {
     };
 }
 
+const formatSectorName = (sector: string) => {
+    const map: Record<string, string> = {
+        administracion: 'Administración',
+        punto_de_venta: 'Punto de Venta',
+        reparaciones: 'Servicio Técnico',
+        equipos: 'Catálogo de Equipos',
+        inventario: 'Inventario',
+        contabilidad: 'Contabilidad',
+        configuracion: 'Configuración',
+        seguridad: 'Seguridad & Accesos',
+        monitoreo: 'Monitoreo SaaS',
+        fondo_mensual: 'Fondo Mensual',
+        compras: 'Compras & Proveedores',
+    };
+    return map[sector.toLowerCase()] || sector.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
+};
+
+const formatModuleName = (module: string) => {
+    const map: Record<string, string> = {
+        fondo_mensual: 'Fondo de Mes',
+        cuentas_por_pagar: 'Cuentas por Pagar',
+        punto_de_venta: 'Punto de Venta',
+        reparaciones: 'Reparaciones & Taller',
+        catalogo_servicios: 'Catálogo de Servicios',
+        ajustes_stock: 'Ajustes de Stock',
+        kardex: 'Kardex de Movimientos',
+        plan_cuentas: 'Plan de Cuentas',
+        libro_diario: 'Libro Diario',
+        libro_mayor: 'Libro Mayor',
+        post_reparacion: 'Post Reparación',
+        metas: 'Metas de Ventas',
+        cajas: 'Cajas & Flujo',
+    };
+    return map[module.toLowerCase()] || module.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
+};
+
 export default function RolesIndexPage({ auth, roles, stats, groupedPermissions, filters }: RolesPageProps) {
     const { __ } = useTranslate();
 
@@ -95,6 +133,7 @@ export default function RolesIndexPage({ auth, roles, stats, groupedPermissions,
     const [editingRole, setEditingRole] = useState<Role | null>(null);
     const [deletingRole, setDeletingRole] = useState<Role | null>(null);
     const [searchTerm, setSearchTerm] = useState(filters.search || '');
+    const [modalPermissionFilter, setModalPermissionFilter] = useState('');
 
     // Formulario Inertia
     const { data, setData, post, put, processing, errors, reset } = useForm({
@@ -370,125 +409,283 @@ return false;
 
             {/* Modal de Creación / Edición */}
             <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
-                <DialogContent className="sm:max-w-[768px] max-h-[90vh] flex flex-col p-0">
+                <DialogContent className="sm:max-w-5xl w-[96vw] max-h-[92vh] h-[820px] flex flex-col p-0 overflow-hidden shadow-2xl rounded-2xl border-border/80 bg-card">
                     <form onSubmit={handleSubmit} className="flex flex-col h-full overflow-hidden">
-                        <DialogHeader className="p-6 pb-4 border-b">
-                            <DialogTitle>
-                                {editingRole ? __('Edit Role') : __('New Role')}
-                            </DialogTitle>
-                            <DialogDescription>
-                                {__('Define the role name and choose permissions grouped by sector.')}
-                            </DialogDescription>
+                        {/* Header */}
+                        <DialogHeader className="p-6 pb-4 border-b bg-muted/20">
+                            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                                <div>
+                                    <DialogTitle className="text-xl font-bold flex items-center gap-2">
+                                        <div className="p-2 rounded-lg bg-indigo-500/10 text-indigo-600 dark:text-indigo-400">
+                                            <Shield className="size-5" />
+                                        </div>
+                                        <span>{editingRole ? __('Editar Rol') : __('Nuevo Rol')}</span>
+                                    </DialogTitle>
+                                    <DialogDescription className="text-xs sm:text-sm text-muted-foreground mt-1">
+                                        {__('Define el nombre del rol y personaliza los permisos del sistema por sector.')}
+                                    </DialogDescription>
+                                </div>
+                                <div className="flex items-center gap-2 shrink-0">
+                                    <Badge variant="outline" className="px-3 py-1.5 bg-indigo-50 dark:bg-indigo-950/60 text-indigo-700 dark:text-indigo-300 border-indigo-200 dark:border-indigo-800 text-xs font-semibold">
+                                        <Key className="size-3.5 mr-1.5 text-indigo-500 shrink-0" />
+                                        {data.permissions.length} / {allSystemPermissionNames.length} permisos activos
+                                    </Badge>
+                                </div>
+                            </div>
                         </DialogHeader>
 
-                        <div className="flex-1 overflow-y-auto p-6 space-y-6">
-                            {/* Nombre del Rol */}
-                            <div className="grid gap-2">
-                                <Label htmlFor="name">{__('Role Name')} *</Label>
-                                <Input
-                                    id="name"
-                                    value={data.name}
-                                    onChange={(e) => setData('name', e.target.value)}
-                                    placeholder={__('e.g., Editor, supervisor')}
-                                    required
-                                />
-                                {errors.name && (
-                                    <p className="text-red-500 text-xs mt-1">{errors.name}</p>
-                                )}
-                            </div>
+                        {/* Body */}
+                        <div className="flex-1 overflow-y-auto p-6 space-y-5 custom-scrollbar">
+                            {/* Error Alert */}
+                            {errors.name && (
+                                <div className="flex items-center gap-2.5 p-3.5 rounded-xl bg-red-500/10 border border-red-500/30 text-red-600 dark:text-red-400 text-xs font-medium animate-in fade-in">
+                                    <AlertCircle className="size-4 shrink-0 text-red-500" />
+                                    <span>{errors.name}</span>
+                                </div>
+                            )}
 
-                            {/* Selector de Permisos Agrupados */}
-                            <div className="space-y-4">
-                                <div className="flex items-center justify-between">
-                                    <Label className="text-sm font-medium">{__('Permissions Assignment')}</Label>
-                                    <div className="flex items-center space-x-2 bg-muted/40 px-3 py-1.5 rounded-lg border border-border">
-                                        <Switch
-                                            id="toggle-all-permissions"
-                                            checked={isAllSystemPermissionsSelected}
-                                            onCheckedChange={handleSelectAllSystemPermissions}
+                            {/* Fila: Nombre del Rol + Buscador de Permisos */}
+                            <div className="grid grid-cols-1 md:grid-cols-12 gap-4 items-end">
+                                <div className="md:col-span-6 space-y-1.5">
+                                    <Label htmlFor="role-name" className="text-xs font-semibold text-foreground/90">
+                                        {__('Nombre del Rol')} <span className="text-red-500">*</span>
+                                    </Label>
+                                    <Input
+                                        id="role-name"
+                                        value={data.name}
+                                        onChange={(e) => setData('name', e.target.value)}
+                                        placeholder={__('Ej: Administrador de Taller, Cajero Principal...')}
+                                        className="h-10 text-sm font-medium"
+                                        required
+                                    />
+                                </div>
+
+                                <div className="md:col-span-6 space-y-1.5">
+                                    <Label htmlFor="perm-search" className="text-xs font-semibold text-foreground/90">
+                                        {__('Filtrar Permisos en Tiempo Real')}
+                                    </Label>
+                                    <div className="relative">
+                                        <Search className="absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted-foreground/60" />
+                                        <Input
+                                            id="perm-search"
+                                            value={modalPermissionFilter}
+                                            onChange={(e) => setModalPermissionFilter(e.target.value)}
+                                            placeholder={__('Buscar por acción (ej: ver, crear, caja, ventas)...')}
+                                            className="h-10 pl-9 text-sm"
                                         />
-                                        <Label htmlFor="toggle-all-permissions" className="text-xs font-semibold cursor-pointer select-none">
-                                            {__('Select all permissions')}
-                                        </Label>
+                                        {modalPermissionFilter && (
+                                            <button
+                                                type="button"
+                                                onClick={() => setModalPermissionFilter('')}
+                                                className="absolute top-1/2 right-3 -translate-y-1/2 text-xs text-muted-foreground hover:text-foreground font-semibold"
+                                            >
+                                                Limpiar
+                                            </button>
+                                        )}
                                     </div>
                                 </div>
-                                <Tabs defaultValue={Object.keys(groupedPermissions)[0]} className="w-full">
-                                    <TabsList className="grid w-full grid-flow-col bg-muted/60 p-1 mb-4">
-                                        {Object.keys(groupedPermissions).map((sector) => (
-                                            <TabsTrigger key={sector} value={sector} className="capitalize text-xs py-1.5">
-                                                {__(sector)}
-                                            </TabsTrigger>
-                                        ))}
+                            </div>
+
+                            {/* Selector Maestro de Permisos del Sistema */}
+                            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-3 rounded-xl bg-muted/40 border border-border/80">
+                                <div className="flex items-center gap-2">
+                                    <Layers className="size-4 text-indigo-500 shrink-0" />
+                                    <span className="text-xs font-semibold text-foreground">
+                                        {__('Asignación de Permisos por Sector y Módulo')}
+                                    </span>
+                                </div>
+
+                                <div className="flex items-center gap-2 shrink-0">
+                                    <Switch
+                                        id="toggle-all-permissions"
+                                        checked={isAllSystemPermissionsSelected}
+                                        onCheckedChange={handleSelectAllSystemPermissions}
+                                    />
+                                    <Label htmlFor="toggle-all-permissions" className="text-xs font-semibold cursor-pointer select-none">
+                                        {__('Seleccionar todo el sistema')}
+                                    </Label>
+                                </div>
+                            </div>
+
+                            {/* Tabs por Sector */}
+                            <Tabs defaultValue={Object.keys(groupedPermissions)[0]} className="w-full">
+                                <div className="overflow-x-auto pb-1 custom-scrollbar">
+                                    <TabsList className="inline-flex w-auto min-w-full justify-start gap-1.5 bg-muted/50 p-1.5 rounded-xl border border-border/60">
+                                        {Object.entries(groupedPermissions).map(([sector, modules]) => {
+                                            const allSectorPerms: Permission[] = [];
+                                            Object.values(modules).forEach(perms => allSectorPerms.push(...perms));
+                                            const selectedInSector = allSectorPerms.filter(p => data.permissions.includes(p.name)).length;
+
+                                            return (
+                                                <TabsTrigger
+                                                    key={sector}
+                                                    value={sector}
+                                                    className="px-3.5 py-1.5 text-xs font-semibold rounded-lg data-[state=active]:bg-background data-[state=active]:text-primary data-[state=active]:shadow-xs transition-all shrink-0 flex items-center gap-1.5"
+                                                >
+                                                    <span>{formatSectorName(sector)}</span>
+                                                    <span className={cn(
+                                                        "text-[10px] px-1.5 py-0.2 rounded-full font-bold",
+                                                        selectedInSector > 0
+                                                            ? "bg-indigo-100 text-indigo-700 dark:bg-indigo-950 dark:text-indigo-300"
+                                                            : "bg-muted text-muted-foreground"
+                                                    )}>
+                                                        {selectedInSector}/{allSectorPerms.length}
+                                                    </span>
+                                                </TabsTrigger>
+                                            );
+                                        })}
                                     </TabsList>
+                                </div>
 
-                                    {Object.entries(groupedPermissions).map(([sector, modules]) => (
-                                        <TabsContent key={sector} value={sector}>
-                                            <div className="h-[320px] overflow-y-auto rounded-md border p-4 bg-background">
-                                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                                    {Object.entries(modules).map(([module, permissions]) => {
-                                                        const isAllSelected = isAllModulePermissionsSelected(permissions);
+                                {Object.entries(groupedPermissions).map(([sector, modules]) => {
+                                    const allSectorPerms: Permission[] = [];
+                                    Object.values(modules).forEach(perms => allSectorPerms.push(...perms));
+                                    const isAllSectorSelected = allSectorPerms.length > 0 && allSectorPerms.every(p => data.permissions.includes(p.name));
 
-                                                        return (
-                                                            <div key={module} className="border rounded-lg p-3 bg-muted/40 space-y-2.5">
-                                                                {/* Cabecera del Módulo con Checkbox maestro */}
-                                                                <div className="flex items-center justify-between border-b pb-1">
-                                                                    <span className="text-xs font-semibold capitalize text-foreground/80">
-                                                                        {__(module)}
-                                                                    </span>
-                                                                    <div className="flex items-center space-x-1">
+                                    const handleSectorSelectAll = (checked: boolean) => {
+                                        const sectorNames = allSectorPerms.map(p => p.name);
+                                        if (checked) {
+                                            const merged = Array.from(new Set([...data.permissions, ...sectorNames]));
+                                            setData('permissions', merged);
+                                        } else {
+                                            setData('permissions', data.permissions.filter(n => !sectorNames.includes(n)));
+                                        }
+                                    };
+
+                                    return (
+                                        <TabsContent key={sector} value={sector} className="mt-3 focus-visible:outline-none">
+                                            {/* Sector header toggle */}
+                                            <div className="flex items-center justify-between px-3 py-2 mb-3 rounded-lg bg-indigo-50/50 dark:bg-indigo-950/20 border border-indigo-100 dark:border-indigo-900/40">
+                                                <div className="flex items-center gap-2">
+                                                    <CheckCircle2 className="size-4 text-indigo-600 dark:text-indigo-400" />
+                                                    <span className="text-xs font-bold text-foreground">
+                                                        Sector: {formatSectorName(sector)}
+                                                    </span>
+                                                </div>
+                                                <div className="flex items-center gap-1.5">
+                                                    <Checkbox
+                                                        id={`sector-toggle-${sector}`}
+                                                        checked={isAllSectorSelected}
+                                                        onCheckedChange={(checked) => handleSectorSelectAll(!!checked)}
+                                                    />
+                                                    <Label htmlFor={`sector-toggle-${sector}`} className="text-xs font-semibold text-muted-foreground cursor-pointer select-none">
+                                                        {__('Seleccionar todo en este sector')}
+                                                    </Label>
+                                                </div>
+                                            </div>
+
+                                            {/* Cards Grid de Módulos */}
+                                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                                                {Object.entries(modules).map(([module, permissions]) => {
+                                                    const filteredPermissions = modalPermissionFilter
+                                                        ? permissions.filter(p =>
+                                                            p.name.toLowerCase().includes(modalPermissionFilter.toLowerCase()) ||
+                                                            p.slug.toLowerCase().includes(modalPermissionFilter.toLowerCase())
+                                                        )
+                                                        : permissions;
+
+                                                    if (filteredPermissions.length === 0) return null;
+
+                                                    const isAllSelected = isAllModulePermissionsSelected(permissions);
+                                                    const selectedCount = permissions.filter(p => data.permissions.includes(p.name)).length;
+
+                                                    return (
+                                                        <div
+                                                            key={module}
+                                                            className={cn(
+                                                                "border rounded-xl p-3.5 bg-card/90 transition-all flex flex-col justify-between shadow-2xs hover:border-indigo-300 dark:hover:border-indigo-700",
+                                                                selectedCount > 0 && "border-indigo-200/90 dark:border-indigo-900/70 bg-indigo-50/10"
+                                                            )}
+                                                        >
+                                                            {/* Cabecera del Módulo con Checkbox maestro */}
+                                                            <div>
+                                                                <div className="flex items-center justify-between border-b pb-2 mb-2.5">
+                                                                    <div className="flex items-center gap-1.5">
+                                                                        <span className="text-xs font-bold text-foreground">
+                                                                            {formatModuleName(module)}
+                                                                        </span>
+                                                                        <span className="text-[10px] px-1.5 py-0.2 rounded-full font-semibold bg-muted text-muted-foreground">
+                                                                            {selectedCount}/{permissions.length}
+                                                                        </span>
+                                                                    </div>
+                                                                    <div className="flex items-center space-x-1.5">
                                                                         <Checkbox
                                                                             id={`module-${sector}-${module}`}
                                                                             checked={isAllSelected}
                                                                             onCheckedChange={(checked) => handleModuleToggle(permissions, !!checked)}
                                                                         />
-                                                                        <Label htmlFor={`module-${sector}-${module}`} className="text-[10px] text-muted-foreground cursor-pointer select-none">
-                                                                            {__('All')}
+                                                                        <Label htmlFor={`module-${sector}-${module}`} className="text-[11px] font-semibold text-muted-foreground cursor-pointer select-none">
+                                                                            {__('Todos')}
                                                                         </Label>
                                                                     </div>
                                                                 </div>
 
                                                                 {/* Lista de Permisos del Módulo */}
-                                                                <div className="space-y-1.5 pl-1">
-                                                                    {permissions.map((p) => (
-                                                                        <div key={p.id} className="flex items-start space-x-2">
-                                                                            <Checkbox
-                                                                                id={`perm-${p.id}`}
-                                                                                checked={data.permissions.includes(p.name)}
-                                                                                onCheckedChange={(checked) => handlePermissionToggle(p.name, !!checked)}
-                                                                            />
-                                                                            <Label
-                                                                                htmlFor={`perm-${p.id}`}
-                                                                                className="text-xs font-normal leading-none cursor-pointer select-none"
-                                                                                title={p.name}
+                                                                <div className="space-y-1 pl-0.5">
+                                                                    {filteredPermissions.map((p) => {
+                                                                        const isChecked = data.permissions.includes(p.name);
+
+                                                                        return (
+                                                                            <div
+                                                                                key={p.id}
+                                                                                onClick={() => handlePermissionToggle(p.name, !isChecked)}
+                                                                                className={cn(
+                                                                                    "flex items-start gap-2.5 p-1.5 rounded-lg transition-colors cursor-pointer select-none hover:bg-muted/60",
+                                                                                    isChecked && "bg-indigo-50/60 dark:bg-indigo-950/30"
+                                                                                )}
                                                                             >
-                                                                                {p.slug}
-                                                                            </Label>
-                                                                        </div>
-                                                                    ))}
+                                                                                <Checkbox
+                                                                                    id={`perm-${p.id}`}
+                                                                                    checked={isChecked}
+                                                                                    onCheckedChange={(checked) => handlePermissionToggle(p.name, !!checked)}
+                                                                                    onClick={(e) => e.stopPropagation()}
+                                                                                    className="mt-0.5"
+                                                                                />
+                                                                                <Label
+                                                                                    htmlFor={`perm-${p.id}`}
+                                                                                    className="text-xs font-medium leading-tight cursor-pointer select-none text-foreground/90"
+                                                                                    title={p.name}
+                                                                                >
+                                                                                    {p.slug}
+                                                                                </Label>
+                                                                            </div>
+                                                                        );
+                                                                    })}
                                                                 </div>
                                                             </div>
-                                                        );
-                                                    })}
-                                                </div>
+                                                        </div>
+                                                    );
+                                                })}
                                             </div>
                                         </TabsContent>
-                                    ))}
-                                </Tabs>
-                            </div>
+                                    );
+                                })}
+                            </Tabs>
                         </div>
 
-                        <DialogFooter className="p-6 pt-4 border-t bg-muted/20">
-                            <Button
-                                type="button"
-                                variant="outline"
-                                onClick={() => setIsModalOpen(false)}
-                                disabled={processing}
-                            >
-                                {__('Cancel')}
-                            </Button>
-                            <Button type="submit" disabled={processing}>
-                                {processing ? __('Saving...') : __('Save Changes')}
-                            </Button>
+                        {/* Footer */}
+                        <DialogFooter className="p-4 px-6 border-t bg-muted/20 flex flex-row items-center justify-between gap-3">
+                            <span className="text-xs text-muted-foreground font-medium hidden sm:inline">
+                                {data.permissions.length} permisos seleccionados para este rol
+                            </span>
+                            <div className="flex items-center gap-2 ml-auto">
+                                <Button
+                                    type="button"
+                                    variant="outline"
+                                    onClick={() => setIsModalOpen(false)}
+                                    disabled={processing}
+                                    className="h-9 text-xs font-semibold"
+                                >
+                                    {__('Cancelar')}
+                                </Button>
+                                <Button
+                                    type="submit"
+                                    disabled={processing}
+                                    className="h-9 text-xs font-semibold bg-indigo-600 hover:bg-indigo-700 text-white shadow-xs"
+                                >
+                                    {processing ? __('Guardando...') : __('Guardar Cambios')}
+                                </Button>
+                            </div>
                         </DialogFooter>
                     </form>
                 </DialogContent>
