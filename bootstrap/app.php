@@ -33,7 +33,6 @@ return Application::configure(basePath: dirname(__DIR__))
             \App\Http\Middleware\TenantSwitchMiddleware::class,
             \App\Http\Middleware\SetPermissionsTeam::class,
             HandleInertiaRequests::class,
-            AddLinkHeadersForPreloadedAssets::class,
             \App\Http\Middleware\CheckSubscriptionStatus::class,
         ]);
 
