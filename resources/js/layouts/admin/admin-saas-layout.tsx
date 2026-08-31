@@ -609,11 +609,11 @@ export default function AdminSaasLayout({
                                             href: '/admin/cuentas-por-pagar',
                                             permission: 'compras.cxp',
                                         },
-                                        {
+                                        ...(isSuperAdmin ? [{
                                             title: 'Testimonios & Reseñas',
                                             href: '/admin/testimonios',
                                             permission: 'dashboard.view',
-                                        },
+                                        }] : []),
                                     ].filter(item => hasPermission(item.permission));
 
                                     if (adminItems.length === 0) return null;

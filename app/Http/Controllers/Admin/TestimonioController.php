@@ -9,11 +9,26 @@ use Inertia\Inertia;
 
 class TestimonioController extends Controller
 {
+    private function checkSuperAdmin(): void
+    {
+        $user = auth()->user();
+        $isSuperAdmin = $user && (
+            $user->id === 1 ||
+            (method_exists($user, 'hasRole') && ($user->hasRole('Super Administrador') || $user->hasRole('super-admin') || $user->hasRole('Super Admin')))
+        );
+
+        if (! $isSuperAdmin) {
+            abort(403, __('Acceso exclusivo para el Super Administrador.'));
+        }
+    }
+
     /**
      * Muestra el listado de testimonios para administración.
      */
     public function index()
     {
+        $this->checkSuperAdmin();
+
         $testimonios = Testimonio::orderBy('orden', 'asc')
             ->orderBy('id', 'desc')
             ->get();
@@ -28,6 +43,8 @@ class TestimonioController extends Controller
      */
     public function store(Request $request)
     {
+        $this->checkSuperAdmin();
+
         $validated = $request->validate([
             'nombre_cliente' => ['required', 'string', 'max:255'],
             'empresa_cargo' => ['nullable', 'string', 'max:255'],
@@ -62,6 +79,8 @@ class TestimonioController extends Controller
      */
     public function update(Request $request, Testimonio $testimonio)
     {
+        $this->checkSuperAdmin();
+
         $validated = $request->validate([
             'nombre_cliente' => ['required', 'string', 'max:255'],
             'empresa_cargo' => ['nullable', 'string', 'max:255'],
@@ -85,6 +104,8 @@ class TestimonioController extends Controller
      */
     public function toggleStatus(Testimonio $testimonio)
     {
+        $this->checkSuperAdmin();
+
         $testimonio->update([
             'activo' => ! $testimonio->activo,
         ]);
@@ -97,6 +118,8 @@ class TestimonioController extends Controller
      */
     public function toggleFeatured(Testimonio $testimonio)
     {
+        $this->checkSuperAdmin();
+
         $testimonio->update([
             'destacado' => ! $testimonio->destacado,
         ]);
@@ -109,6 +132,8 @@ class TestimonioController extends Controller
      */
     public function destroy(Testimonio $testimonio)
     {
+        $this->checkSuperAdmin();
+
         $testimonio->delete();
 
         return redirect()->back()->with('success', __('Testimonio eliminado exitosamente.'));
