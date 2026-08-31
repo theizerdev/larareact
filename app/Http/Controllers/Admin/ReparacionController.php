@@ -843,7 +843,7 @@ class ReparacionController extends Controller
         }
 
         $validated = $request->validate([
-            'estado_orden' => 'required|in:recibido,en_diagnostico,presupuestado,en_reparacion,esperando_repuesto,reparado,entregado,cancelado',
+            'estado_orden' => 'required|in:recibido,en_diagnostico,presupuestado,reincidencia,en_reparacion,esperando_repuesto,reparado,entregado,cancelado',
             'comentario' => 'nullable|string',
             'tecnico_id' => 'nullable|exists:landlord.users,id',
             'observaciones_fisicas' => 'nullable|string',
@@ -905,10 +905,26 @@ class ReparacionController extends Controller
             'comentario' => $validated['comentario'] ?? "Cambio de estado a " . ucfirst(str_replace('_', ' ', $nuevoEstado)),
         ]);
 
-        return back()->with('notification', [
+        // Si el estado cambia a reparado, enviar notificación de WhatsApp al cliente
+        $waUrl = null;
+        if ($nuevoEstado === 'reparado' && $estadoAnterior !== 'reparado') {
+            $waUrl = $this->sendWhatsAppNotificationOnPostServicioCompleted($reparacion);
+        }
+
+        $message = $nuevoEstado === 'reparado'
+            ? "Estado actualizado a Listo / Reparado. Notificación de retiro enviada al cliente."
+            : "Estado actualizado exitosamente.";
+
+        $redirect = back()->with('notification', [
             'type' => 'success',
-            'message' => "Proceso de preservicio e inspección iniciado correctamente.",
+            'message' => $message,
         ]);
+
+        if ($waUrl) {
+            $redirect->with('whatsapp_url', $waUrl);
+        }
+
+        return $redirect;
     }
 
     public function addItem(Request $request, OrdenReparacion $reparacion)

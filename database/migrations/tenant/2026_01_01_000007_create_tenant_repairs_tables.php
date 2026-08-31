@@ -39,6 +39,7 @@ return new class extends Migration
                 'recibido',
                 'en_diagnostico',
                 'presupuestado',
+                'reincidencia',
                 'en_reparacion',
                 'esperando_repuesto',
                 'reparado',
