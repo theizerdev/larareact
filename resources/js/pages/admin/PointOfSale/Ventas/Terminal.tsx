@@ -147,6 +147,19 @@ export default function Terminal({
     const isSuperAdmin = Boolean(pageProps?.auth?.user?.is_super_admin);
     const canCloseActiveRegister = !activeRegister || activeRegister.user_id === currentUserId || isSuperAdmin;
 
+    const sharedEmpresa = pageProps?.empresa || pageProps?.auth?.user?.empresa;
+    const rawLogo = empresa?.logo || sharedEmpresa?.logo || sharedEmpresa?.logo_mini;
+    const cleanLogo = rawLogo ? (rawLogo.includes('/storage//storage/') ? rawLogo.replace('/storage//storage/', '/storage/') : rawLogo) : null;
+
+    const currentEmpresa: EmpresaData = {
+        razon_social: empresa?.razon_social || sharedEmpresa?.razon_social || sharedEmpresa?.nombre || sharedEmpresa?.nombre_comercial || 'FixSale',
+        documento: empresa?.documento || sharedEmpresa?.documento,
+        telefono: empresa?.telefono || sharedEmpresa?.telefono,
+        email: empresa?.email || sharedEmpresa?.email,
+        direccion: empresa?.direccion || sharedEmpresa?.direccion,
+        logo: cleanLogo,
+    };
+
     // Local catalog state to allow live stock updates
     const [localCatalog, setLocalCatalog] = useState<CatalogItem[]>(catalog);
 
@@ -2566,10 +2579,10 @@ export default function Terminal({
                                     {/* LOGO & BUSINESS HEADER (IDENTICAL TO ADMIN/VENTAS) */}
                                     <div className="text-center space-y-1">
                                         <div className="flex items-center justify-center gap-2">
-                                            {empresa?.logo ? (
+                                            {currentEmpresa.logo ? (
                                                 <img
-                                                    src={empresa.logo}
-                                                    alt={empresa.razon_social || 'Logo Empresa'}
+                                                    src={currentEmpresa.logo}
+                                                    alt={currentEmpresa.razon_social || 'Logo Empresa'}
                                                     className="h-12 max-w-[180px] object-contain drop-shadow-sm"
                                                 />
                                             ) : (
@@ -2584,20 +2597,20 @@ export default function Terminal({
                                             )}
                                         </div>
                                         <div className="text-sm font-bold text-slate-800 uppercase">
-                                            {empresa?.razon_social || 'Servitec POS & Servicios'}
+                                            {currentEmpresa.razon_social || 'Servitec POS & Servicios'}
                                         </div>
-                                        {empresa?.documento && (
+                                        {currentEmpresa.documento && (
                                             <div className="text-[11px] font-mono text-slate-600">
-                                                {empresa.documento}
+                                                {currentEmpresa.documento}
                                             </div>
                                         )}
                                         <div className="text-[11px] text-slate-500">
-                                            {empresa?.telefono ? `Tel: ${empresa.telefono}` : 'Tel: +58 (0414) 123-4567'}
-                                            {empresa?.email ? ` | ${empresa.email}` : ''}
+                                            {currentEmpresa.telefono ? `Tel: ${currentEmpresa.telefono}` : 'Tel: +58 (0414) 123-4567'}
+                                            {currentEmpresa.email ? ` | ${currentEmpresa.email}` : ''}
                                         </div>
-                                        {empresa?.direccion && (
+                                        {currentEmpresa.direccion && (
                                             <div className="text-[10px] text-slate-400 italic">
-                                                {empresa.direccion}
+                                                {currentEmpresa.direccion}
                                             </div>
                                         )}
                                         {ticketHeaderMsg && (
@@ -3124,28 +3137,28 @@ export default function Terminal({
                         `}</style>
                         {/* LOGO DE LA EMPRESA O MARCA (IDENTICAL TO ADMIN/VENTAS) */}
                         <div className="text-center mb-1">
-                            {empresa?.logo ? (
+                            {currentEmpresa.logo ? (
                                 <img
-                                    src={empresa.logo}
-                                    alt={empresa.razon_social || 'Logo'}
+                                    src={currentEmpresa.logo}
+                                    alt={currentEmpresa.razon_social || 'Logo'}
                                     className="h-10 max-w-[160px] mx-auto object-contain"
                                 />
                             ) : (
-                                <div className="font-black text-base uppercase">{empresa?.razon_social || 'FixSale - Servitec POS'}</div>
+                                <div className="font-black text-base uppercase">{currentEmpresa.razon_social || 'FixSale - Servitec POS'}</div>
                             )}
                         </div>
 
-                        {empresa?.razon_social && (
-                            <div className="text-center font-bold text-xs uppercase">{empresa.razon_social}</div>
+                        {currentEmpresa.razon_social && (
+                            <div className="text-center font-bold text-xs uppercase">{currentEmpresa.razon_social}</div>
                         )}
-                        {empresa?.documento && (
-                            <div className="text-center text-[9px] font-mono">{empresa.documento}</div>
+                        {currentEmpresa.documento && (
+                            <div className="text-center text-[9px] font-mono">{currentEmpresa.documento}</div>
                         )}
                         <div className="text-center text-[9px] text-gray-700">
-                            {empresa?.telefono ? `Tel: ${empresa.telefono}` : ''} {empresa?.email ? `| ${empresa.email}` : ''}
+                            {currentEmpresa.telefono ? `Tel: ${currentEmpresa.telefono}` : ''} {currentEmpresa.email ? `| ${currentEmpresa.email}` : ''}
                         </div>
-                        {empresa?.direccion && (
-                            <div className="text-center text-[8px] text-gray-600">{empresa.direccion}</div>
+                        {currentEmpresa.direccion && (
+                            <div className="text-center text-[8px] text-gray-600">{currentEmpresa.direccion}</div>
                         )}
                         {ticketHeaderMsg && (
                             <div className="text-center text-[9px] text-gray-700 mt-0.5 font-medium">{ticketHeaderMsg}</div>
@@ -3281,28 +3294,28 @@ export default function Terminal({
 
                         {/* LOGO O ENCABEZADO DE EMPRESA */}
                         <div className="text-center mb-1">
-                            {empresa?.logo ? (
+                            {currentEmpresa.logo ? (
                                 <img
-                                    src={empresa.logo}
-                                    alt={empresa.razon_social || 'Logo'}
+                                    src={currentEmpresa.logo}
+                                    alt={currentEmpresa.razon_social || 'Logo'}
                                     className="h-10 max-w-[160px] mx-auto object-contain mb-1"
                                 />
                             ) : (
-                                <div className="font-black text-sm uppercase">{empresa?.razon_social || 'FixSale - Servitec POS'}</div>
+                                <div className="font-black text-sm uppercase">{currentEmpresa.razon_social || 'FixSale - Servitec POS'}</div>
                             )}
                         </div>
 
-                        {empresa?.razon_social && (
-                            <div className="text-center font-bold text-[10px] uppercase">{empresa.razon_social}</div>
+                        {currentEmpresa.razon_social && (
+                            <div className="text-center font-bold text-[10px] uppercase">{currentEmpresa.razon_social}</div>
                         )}
-                        {empresa?.documento && (
-                            <div className="text-center text-[9px] font-mono">{empresa.documento}</div>
+                        {currentEmpresa.documento && (
+                            <div className="text-center text-[9px] font-mono">{currentEmpresa.documento}</div>
                         )}
                         <div className="text-center text-[9px] text-gray-700">
-                            {empresa?.telefono ? `Tel: ${empresa.telefono}` : ''} {empresa?.email ? ` | ${empresa.email}` : ''}
+                            {currentEmpresa.telefono ? `Tel: ${currentEmpresa.telefono}` : ''} {currentEmpresa.email ? ` | ${currentEmpresa.email}` : ''}
                         </div>
-                        {empresa?.direccion && (
-                            <div className="text-center text-[8px] text-gray-600">{empresa.direccion}</div>
+                        {currentEmpresa.direccion && (
+                            <div className="text-center text-[8px] text-gray-600">{currentEmpresa.direccion}</div>
                         )}
 
                         <div className="border-b border-dashed border-black my-1"></div>

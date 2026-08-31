@@ -211,12 +211,12 @@ class SaleController extends Controller
             'heldSales' => $heldSales,
             'clientes' => $clientes,
             'empresa' => $empresa ? [
-                'razon_social' => $empresa->razon_social,
+                'razon_social' => $empresa->razon_social ?? $empresa->nombre ?? $empresa->nombre_comercial,
                 'documento' => $empresa->documento,
                 'telefono' => $empresa->telefono,
                 'email' => $empresa->email,
                 'direccion' => $empresa->direccion,
-                'logo' => $empresa->logo ? "/storage/{$empresa->logo}" : '/image/logo/5.png',
+                'logo' => $empresa->logo ? (str_starts_with($empresa->logo, '/') || str_starts_with($empresa->logo, 'http') ? $empresa->logo : "/storage/{$empresa->logo}") : ($empresa->logo_mini ? (str_starts_with($empresa->logo_mini, '/') || str_starts_with($empresa->logo_mini, 'http') ? $empresa->logo_mini : "/storage/{$empresa->logo_mini}") : '/image/logo/5.png'),
             ] : null,
         ]);
     }
@@ -288,12 +288,12 @@ class SaleController extends Controller
             'sales' => SaleResource::collection($sales),
             'currencySymbol' => $this->getCurrencySymbol(),
             'empresa' => $empresa ? [
-                'razon_social' => $empresa->razon_social,
+                'razon_social' => $empresa->razon_social ?? $empresa->nombre ?? $empresa->nombre_comercial,
                 'documento' => $empresa->documento,
                 'telefono' => $empresa->telefono,
                 'email' => $empresa->email,
                 'direccion' => $empresa->direccion,
-                'logo' => $empresa->logo ? "/storage/{$empresa->logo}" : '/image/logo/5.png',
+                'logo' => $empresa->logo ? (str_starts_with($empresa->logo, '/') || str_starts_with($empresa->logo, 'http') ? $empresa->logo : "/storage/{$empresa->logo}") : ($empresa->logo_mini ? (str_starts_with($empresa->logo_mini, '/') || str_starts_with($empresa->logo_mini, 'http') ? $empresa->logo_mini : "/storage/{$empresa->logo_mini}") : '/image/logo/5.png'),
             ] : null,
             'filters' => $request->only(['search', 'status', 'perPage']),
         ]);
