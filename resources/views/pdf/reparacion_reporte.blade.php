@@ -395,7 +395,28 @@
                     <div class="doc-title">Reporte Técnico Oficial</div>
                     <div class="doc-num">{{ $orden->numero_orden }}</div>
                     <div>
-                        <span class="badge-status">{{ str_replace('_', ' ', $orden->estado_orden) }}</span>
+                        @php
+                            $statusLabels = [
+                                'recibido' => '1-RECIBIDO',
+                                'en_diagnostico_presupuesto' => '2-EN DIAGNOSTICO Y PRESUPUESTO',
+                                'en_diagnostico' => '2-EN DIAGNOSTICO Y PRESUPUESTO',
+                                'confirmacion_presupuesto' => '3-CONFIRMACION DE PRESUPUESTO',
+                                'presupuestado' => '3-CONFIRMACION DE PRESUPUESTO',
+                                'espera_refaccion' => '4-ESPERA DE REFACCION',
+                                'esperando_repuesto' => '4-ESPERA DE REFACCION',
+                                'en_reparacion' => '5-EN REPARACION',
+                                'listo_reparado' => '6-LISTO PARA ENTREGAR REPARADO',
+                                'reparado' => '6-LISTO PARA ENTREGAR REPARADO',
+                                'listo_sin_solucion' => '7-LISTO PARA ENTREGAR SIN SOLUCION',
+                                'cancelado' => '7-LISTO PARA ENTREGAR SIN SOLUCION',
+                                'entregado_finalizado' => '8-ENTREGADO FINALIZADO',
+                                'entregado' => '8-ENTREGADO FINALIZADO',
+                                'reincidencia_garantia' => '8-REINCIDENCIA/GARANTIA',
+                                'reincidencia' => '8-REINCIDENCIA/GARANTIA',
+                            ];
+                            $displayStatus = $statusLabels[$orden->estado_orden] ?? strtoupper(str_replace('_', ' ', $orden->estado_orden));
+                        @endphp
+                        <span class="badge-status">{{ $displayStatus }}</span>
                     </div>
                     <div class="doc-dates">
                         <strong>Fecha de Recepción:</strong> {{ \Carbon\Carbon::parse($orden->fecha_recepcion)->format('d/m/Y H:i') }}<br>

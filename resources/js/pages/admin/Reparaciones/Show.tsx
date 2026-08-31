@@ -1921,23 +1921,32 @@ export default function ShowReparacion({
     const getStatusBadge = (st: string) => {
         switch (st) {
             case 'recibido':
-                return <Badge className="bg-amber-500/15 text-amber-700 dark:text-amber-300 border-amber-300 dark:border-amber-800 font-bold px-3 py-1 text-xs gap-1.5">🟡 {__('Recibido')}</Badge>;
+                return <Badge className="bg-amber-500/15 text-amber-700 dark:text-amber-300 border-amber-300 dark:border-amber-800 font-bold px-3 py-1 text-xs gap-1.5">🟡 1-RECIBIDO</Badge>;
+            case 'en_diagnostico_presupuesto':
             case 'en_diagnostico':
-                return <Badge className="bg-blue-500/15 text-blue-700 dark:text-blue-300 border-blue-300 dark:border-blue-800 font-bold px-3 py-1 text-xs gap-1.5">🔍 {__('En Diagnóstico')}</Badge>;
+                return <Badge className="bg-blue-500/15 text-blue-700 dark:text-blue-300 border-blue-300 dark:border-blue-800 font-bold px-3 py-1 text-xs gap-1.5">🔍 2-EN DIAGNOSTICO Y PRESUPUESTO</Badge>;
+            case 'confirmacion_presupuesto':
             case 'presupuestado':
-                return <Badge className="bg-indigo-500/15 text-indigo-700 dark:text-indigo-300 border-indigo-300 dark:border-indigo-800 font-bold px-3 py-1 text-xs gap-1.5">💵 {__('Presupuestado')}</Badge>;
-            case 'en_reparacion':
-                return <Badge className="bg-purple-500/15 text-purple-700 dark:text-purple-300 border-purple-300 dark:border-purple-800 font-bold px-3 py-1 text-xs gap-1.5">🛠️ {__('En Reparación')}</Badge>;
+                return <Badge className="bg-indigo-500/15 text-indigo-700 dark:text-indigo-300 border-indigo-300 dark:border-indigo-800 font-bold px-3 py-1 text-xs gap-1.5">⏳ 3-CONFIRMACION DE PRESUPUESTO</Badge>;
+            case 'espera_refaccion':
             case 'esperando_repuesto':
-                return <Badge className="bg-orange-500/15 text-orange-700 dark:text-orange-300 border-orange-300 dark:border-orange-800 font-bold px-3 py-1 text-xs gap-1.5">📦 {__('Esperando Repuesto')}</Badge>;
+                return <Badge className="bg-orange-500/15 text-orange-700 dark:text-orange-300 border-orange-300 dark:border-orange-800 font-bold px-3 py-1 text-xs gap-1.5">📦 4-ESPERA DE REFACCION</Badge>;
+            case 'en_reparacion':
+                return <Badge className="bg-purple-500/15 text-purple-700 dark:text-purple-300 border-purple-300 dark:border-purple-800 font-bold px-3 py-1 text-xs gap-1.5">🛠️ 5-EN REPARACION</Badge>;
+            case 'listo_reparado':
             case 'reparado':
-                return <Badge className="bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border-emerald-300 dark:border-emerald-800 font-bold px-3 py-1 text-xs gap-1.5">🟢 {__('Listo p/ Entrega')}</Badge>;
-            case 'entregado':
-                return <Badge className="bg-slate-900 text-white dark:bg-slate-100 dark:text-slate-900 font-bold px-3 py-1 text-xs gap-1.5">✅ {__('Entregado & Finalizado')}</Badge>;
+                return <Badge className="bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border-emerald-300 dark:border-emerald-800 font-bold px-3 py-1 text-xs gap-1.5">🟢 6-LISTO PARA ENTREGAR REPARADO</Badge>;
+            case 'listo_sin_solucion':
             case 'cancelado':
-                return <Badge className="bg-rose-500/15 text-rose-700 dark:text-rose-300 border-rose-300 dark:border-rose-800 font-bold px-3 py-1 text-xs gap-1.5">❌ {__('Cancelado')}</Badge>;
+                return <Badge className="bg-rose-500/15 text-rose-700 dark:text-rose-300 border-rose-300 dark:border-rose-800 font-bold px-3 py-1 text-xs gap-1.5">❌ 7-LISTO PARA ENTREGAR SIN SOLUCION</Badge>;
+            case 'entregado_finalizado':
+            case 'entregado':
+                return <Badge className="bg-slate-900 text-white dark:bg-slate-100 dark:text-slate-900 font-bold px-3 py-1 text-xs gap-1.5">✅ 8-ENTREGADO FINALIZADO</Badge>;
+            case 'reincidencia_garantia':
+            case 'reincidencia':
+                return <Badge className="bg-pink-500/15 text-pink-700 dark:text-pink-300 border-pink-300 dark:border-pink-800 font-bold px-3 py-1 text-xs gap-1.5">🔄 8-REINCIDENCIA/GARANTIA</Badge>;
             default:
-                return <Badge variant="outline">{st}</Badge>;
+                return <Badge variant="outline">{st?.replace(/_/g, ' ').toUpperCase()}</Badge>;
         }
     };
 
@@ -2038,7 +2047,7 @@ export default function ShowReparacion({
                                     size="sm"
                                     className={cn(
                                         "h-10 gap-2 text-xs font-bold text-white shadow-lg transition-all",
-                                        orden.estado_orden === 'reparado' || orden.estado_orden === 'entregado'
+                                        orden.estado_orden === 'reparado' || orden.estado_orden === 'listo_reparado' || orden.estado_orden === 'entregado' || orden.estado_orden === 'entregado_finalizado'
                                             ? "bg-emerald-600 hover:bg-emerald-500 shadow-emerald-950/40 ring-2 ring-emerald-400/50"
                                             : "bg-teal-600 hover:bg-teal-500 shadow-teal-950/40"
                                     )}
@@ -2071,14 +2080,15 @@ export default function ShowReparacion({
                                                     <SelectValue />
                                                 </SelectTrigger>
                                                 <SelectContent>
-                                                    <SelectItem value="recibido">🟡 Recibido</SelectItem>
-                                                    <SelectItem value="en_diagnostico">🔍 En Diagnóstico</SelectItem>
-                                                    <SelectItem value="presupuestado">💵 Presupuestado</SelectItem>
-                                                    <SelectItem value="en_reparacion">🛠️ En Reparación</SelectItem>
-                                                    <SelectItem value="esperando_repuesto">📦 Esperando Repuesto</SelectItem>
-                                                    <SelectItem value="reparado">🟢 Listo p/ Entrega</SelectItem>
-                                                    <SelectItem value="entregado">✅ Entregado & Finalizado</SelectItem>
-                                                    <SelectItem value="cancelado">❌ Sin Arreglo / Cancelado</SelectItem>
+                                                    <SelectItem value="recibido">🟡 1-RECIBIDO</SelectItem>
+                                                    <SelectItem value="en_diagnostico_presupuesto">🔍 2-EN DIAGNOSTICO Y PRESUPUESTO</SelectItem>
+                                                    <SelectItem value="confirmacion_presupuesto">⏳ 3-CONFIRMACION DE PRESUPUESTO</SelectItem>
+                                                    <SelectItem value="espera_refaccion">📦 4-ESPERA DE REFACCION</SelectItem>
+                                                    <SelectItem value="en_reparacion">🛠️ 5-EN REPARACION</SelectItem>
+                                                    <SelectItem value="listo_reparado">🟢 6-LISTO PARA ENTREGAR REPARADO</SelectItem>
+                                                    <SelectItem value="listo_sin_solucion">❌ 7-LISTO PARA ENTREGAR SIN SOLUCION</SelectItem>
+                                                    <SelectItem value="entregado_finalizado">✅ 8-ENTREGADO FINALIZADO</SelectItem>
+                                                    <SelectItem value="reincidencia_garantia">🔄 8-REINCIDENCIA/GARANTIA</SelectItem>
                                                 </SelectContent>
                                             </Select>
                                         </div>

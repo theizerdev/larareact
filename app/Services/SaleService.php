@@ -176,8 +176,8 @@ class SaleService
                             $reparacion->sale_id = $sale->id;
                             $reparacion->anticipo = (float) $reparacion->costo_estimado;
                             $reparacion->saldo_restante = 0.00;
-                            if ($reparacion->estado_orden === 'reparado') {
-                                $reparacion->estado_orden = 'entregado';
+                            if ($reparacion->estado_orden === 'reparado' || $reparacion->estado_orden === 'listo_reparado') {
+                                $reparacion->estado_orden = 'entregado_finalizado';
                                 $reparacion->fecha_entrega = now();
                             }
                             $reparacion->save();

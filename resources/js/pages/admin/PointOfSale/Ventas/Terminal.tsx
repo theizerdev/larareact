@@ -3001,7 +3001,16 @@ export default function Terminal({
                                             <div className="text-slate-500 dark:text-slate-400 text-xs mt-0.5">📱 {reparacionPagoModalItem.dispositivo || __('Dispositivo en Taller')}</div>
                                         </div>
                                         <Badge className="bg-purple-100 text-purple-800 dark:bg-purple-950 dark:text-purple-300 font-bold border-purple-300">
-                                            {reparacionPagoModalItem.estado_orden?.replace(/_/g, ' ').toUpperCase() || __('EN TALLER')}
+                                            {reparacionPagoModalItem.estado_orden === 'recibido' ? '1-RECIBIDO' :
+                                             (reparacionPagoModalItem.estado_orden === 'en_diagnostico_presupuesto' || reparacionPagoModalItem.estado_orden === 'en_diagnostico') ? '2-EN DIAGNOSTICO' :
+                                             (reparacionPagoModalItem.estado_orden === 'confirmacion_presupuesto' || reparacionPagoModalItem.estado_orden === 'presupuestado') ? '3-CONFIRMACION PRESUPUESTO' :
+                                             (reparacionPagoModalItem.estado_orden === 'espera_refaccion' || reparacionPagoModalItem.estado_orden === 'esperando_repuesto') ? '4-ESPERA REFACCION' :
+                                             reparacionPagoModalItem.estado_orden === 'en_reparacion' ? '5-EN REPARACION' :
+                                             (reparacionPagoModalItem.estado_orden === 'listo_reparado' || reparacionPagoModalItem.estado_orden === 'reparado') ? '6-LISTO REPARADO' :
+                                             (reparacionPagoModalItem.estado_orden === 'listo_sin_solucion' || reparacionPagoModalItem.estado_orden === 'cancelado') ? '7-SIN SOLUCION' :
+                                             (reparacionPagoModalItem.estado_orden === 'entregado_finalizado' || reparacionPagoModalItem.estado_orden === 'entregado') ? '8-ENTREGADO FINALIZADO' :
+                                             (reparacionPagoModalItem.estado_orden === 'reincidencia_garantia' || reparacionPagoModalItem.estado_orden === 'reincidencia') ? '8-REINCIDENCIA/GARANTIA' :
+                                             reparacionPagoModalItem.estado_orden?.replace(/_/g, ' ').toUpperCase() || __('EN TALLER')}
                                         </Badge>
                                     </div>
 

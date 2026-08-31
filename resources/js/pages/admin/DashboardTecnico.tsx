@@ -372,7 +372,7 @@ export default function DashboardTecnico({ tecnico, counts, misEquiposPendientes
 
         router.post(`/admin/reparaciones/${selectedOrden.id}/estado`, {
             tecnico_id: tecnico.id,
-            estado_orden: 'en_diagnostico',
+            estado_orden: 'en_diagnostico_presupuesto',
             observaciones_fisicas: observacionesFisicas,
             contrasena_patron: finalPasswordString,
             inspeccion_json: inspeccionPayload,
@@ -394,17 +394,32 @@ export default function DashboardTecnico({ tecnico, counts, misEquiposPendientes
     const getStatusBadge = (st: string) => {
         switch (st) {
             case 'recibido':
-                return <Badge className="bg-amber-500/15 text-amber-700 dark:text-amber-300 border-amber-300 font-bold text-xs">🟡 {__('Recibido')}</Badge>;
+                return <Badge className="bg-amber-500/15 text-amber-700 dark:text-amber-300 border-amber-300 font-bold text-xs">🟡 1-RECIBIDO</Badge>;
+            case 'en_diagnostico_presupuesto':
             case 'en_diagnostico':
-                return <Badge className="bg-blue-500/15 text-blue-700 dark:text-blue-300 border-blue-300 font-bold text-xs">🔍 {__('En Diagnóstico')}</Badge>;
-            case 'en_reparacion':
-                return <Badge className="bg-purple-500/15 text-purple-700 dark:text-purple-300 border-purple-300 font-bold text-xs">🛠️ {__('En Reparación')}</Badge>;
+                return <Badge className="bg-blue-500/15 text-blue-700 dark:text-blue-300 border-blue-300 font-bold text-xs">🔍 2-EN DIAGNOSTICO Y PRESUPUESTO</Badge>;
+            case 'confirmacion_presupuesto':
+            case 'presupuestado':
+                return <Badge className="bg-indigo-500/15 text-indigo-700 dark:text-indigo-300 border-indigo-300 font-bold text-xs">⏳ 3-CONFIRMACION DE PRESUPUESTO</Badge>;
+            case 'espera_refaccion':
             case 'esperando_repuesto':
-                return <Badge className="bg-orange-500/15 text-orange-700 dark:text-orange-300 border-orange-300 font-bold text-xs">📦 {__('Esperando Repuesto')}</Badge>;
+                return <Badge className="bg-orange-500/15 text-orange-700 dark:text-orange-300 border-orange-300 font-bold text-xs">📦 4-ESPERA DE REFACCION</Badge>;
+            case 'en_reparacion':
+                return <Badge className="bg-purple-500/15 text-purple-700 dark:text-purple-300 border-purple-300 font-bold text-xs">🛠️ 5-EN REPARACION</Badge>;
+            case 'listo_reparado':
             case 'reparado':
-                return <Badge className="bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border-emerald-300 font-bold text-xs">🟢 {__('Listo p/ Entrega')}</Badge>;
+                return <Badge className="bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border-emerald-300 font-bold text-xs">🟢 6-LISTO PARA ENTREGAR REPARADO</Badge>;
+            case 'listo_sin_solucion':
+            case 'cancelado':
+                return <Badge className="bg-rose-500/15 text-rose-700 dark:text-rose-300 border-rose-300 font-bold text-xs">❌ 7-LISTO PARA ENTREGAR SIN SOLUCION</Badge>;
+            case 'entregado_finalizado':
+            case 'entregado':
+                return <Badge className="bg-slate-900 text-white dark:bg-slate-100 dark:text-slate-900 font-bold text-xs">✅ 8-ENTREGADO FINALIZADO</Badge>;
+            case 'reincidencia_garantia':
+            case 'reincidencia':
+                return <Badge className="bg-pink-500/15 text-pink-700 dark:text-pink-300 border-pink-300 font-bold text-xs">🔄 8-REINCIDENCIA/GARANTIA</Badge>;
             default:
-                return <Badge variant="outline">{st}</Badge>;
+                return <Badge variant="outline">{st?.replace(/_/g, ' ').toUpperCase()}</Badge>;
         }
     };
 

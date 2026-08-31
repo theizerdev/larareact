@@ -252,7 +252,7 @@ class PublicReparacionTrackingController extends Controller
                 OrdenReparacionHistorial::create([
                     'orden_id' => $orden->id,
                     'user_id' => null,
-                    'estado_anterior' => $orden->getOriginal('estado_orden') ?: 'presupuestado',
+                    'estado_anterior' => $orden->getOriginal('estado_orden') ?: 'confirmacion_presupuesto',
                     'estado_nuevo' => 'en_reparacion',
                     'comentario' => __('Presupuesto APROBADO por el cliente a través del portal de seguimiento web.'),
                 ]);
@@ -265,7 +265,7 @@ class PublicReparacionTrackingController extends Controller
 
             // Rechazar
             $orden->update([
-                'estado_orden' => 'cancelado',
+                'estado_orden' => 'listo_sin_solucion',
             ]);
 
             $motivoTexto = !empty($validated['motivo']) ? " Motivo: " . $validated['motivo'] : '';
@@ -273,8 +273,8 @@ class PublicReparacionTrackingController extends Controller
             OrdenReparacionHistorial::create([
                 'orden_id' => $orden->id,
                 'user_id' => null,
-                'estado_anterior' => $orden->getOriginal('estado_orden') ?: 'presupuestado',
-                'estado_nuevo' => 'cancelado',
+                'estado_anterior' => $orden->getOriginal('estado_orden') ?: 'confirmacion_presupuesto',
+                'estado_nuevo' => 'listo_sin_solucion',
                 'comentario' => __('Presupuesto RECHAZADO por el cliente desde el portal web.') . $motivoTexto,
             ]);
 

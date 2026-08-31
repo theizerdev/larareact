@@ -824,6 +824,7 @@ class ReparacionController extends Controller
     }
 
     public function savePreservicio(Request $request, $reparacion)
+    {
         $reparacion = $reparacion instanceof OrdenReparacion ? $reparacion : OrdenReparacion::findOrFail($reparacion);
         if (!\Illuminate\Support\Facades\Schema::hasColumn('ordenes_reparacion', 'contrasena_patron')) {
             \Illuminate\Support\Facades\Schema::table('ordenes_reparacion', function (\Illuminate\Database\Schema\Blueprint $table) {
@@ -842,7 +843,7 @@ class ReparacionController extends Controller
         }
 
         $validated = $request->validate([
-            'estado_orden' => 'nullable|string|in:recibido,en_diagnostico,presupuestado,reincidencia,en_reparacion,esperando_repuesto,reparado,entregado,cancelado',
+            'estado_orden' => 'nullable|string|in:recibido,en_diagnostico_presupuesto,confirmacion_presupuesto,espera_refaccion,en_reparacion,listo_reparado,listo_sin_solucion,entregado_finalizado,reincidencia_garantia,en_diagnostico,presupuestado,reincidencia,esperando_repuesto,reparado,entregado,cancelado',
             'comentario' => 'nullable|string',
             'tecnico_id' => 'nullable',
             'observaciones_fisicas' => 'nullable|string',
@@ -1178,8 +1179,8 @@ class ReparacionController extends Controller
 
         if ($request->filled('estado_orden')) {
             $updateData['estado_orden'] = $request->input('estado_orden');
-        } else if ($reparacion->estado_orden !== 'entregado') {
-            $updateData['estado_orden'] = 'reparado';
+        } else if ($reparacion->estado_orden !== 'entregado' && $reparacion->estado_orden !== 'entregado_finalizado') {
+            $updateData['estado_orden'] = 'listo_reparado';
         }
 
         $reparacion->update($updateData);

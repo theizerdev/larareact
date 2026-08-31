@@ -59,6 +59,7 @@ interface ServicioItem {
 }
 
 interface EmpresaInfo {
+    id?: number;
     nombre: string;
     razon_social?: string;
     logo?: string;
@@ -103,23 +104,32 @@ interface Props {
 }
 
 const MILESTONES = [
-    { key: 'recibido', label: 'Recibido', desc: 'Equipo recibido en recepción' },
-    { key: 'en_diagnostico', label: 'En Diagnóstico', desc: 'Evaluación técnica de fallas' },
-    { key: 'presupuestado', label: 'Presupuestado', desc: 'Presupuesto listo' },
-    { key: 'en_reparacion', label: 'En Reparación', desc: 'Intervención en taller' },
-    { key: 'reparado', label: 'Listo / Reparado', desc: 'Superó control de calidad' },
-    { key: 'entregado', label: 'Entregado', desc: 'Equipo entregado con garantía' },
+    { key: 'recibido', label: '1-RECIBIDO', desc: 'Equipo recibido en recepción' },
+    { key: 'en_diagnostico_presupuesto', label: '2-EN DIAGNOSTICO', desc: 'Evaluación técnica y diagnóstico' },
+    { key: 'confirmacion_presupuesto', label: '3-PRESUPUESTO', desc: 'Aprobación del cliente' },
+    { key: 'espera_refaccion', label: '4-ESPERA REFACCIÓN', desc: 'En espera de repuestos' },
+    { key: 'en_reparacion', label: '5-EN REPARACIÓN', desc: 'Intervención técnica en taller' },
+    { key: 'listo_reparado', label: '6-LISTO ENTREGA', desc: 'Reparación completada y probada' },
+    { key: 'entregado_finalizado', label: '8-FINALIZADO', desc: 'Equipo entregado con garantía' },
 ];
 
 const ORDER_STATE_RANK: Record<string, number> = {
     recibido: 1,
+    en_diagnostico_presupuesto: 2,
     en_diagnostico: 2,
+    confirmacion_presupuesto: 3,
     presupuestado: 3,
-    esperando_repuesto: 3.5,
-    en_reparacion: 4,
-    reparado: 5,
-    entregado: 6,
+    espera_refaccion: 4,
+    esperando_repuesto: 4,
+    en_reparacion: 5,
+    listo_reparado: 6,
+    reparado: 6,
+    listo_sin_solucion: 0,
     cancelado: 0,
+    entregado_finalizado: 7,
+    entregado: 7,
+    reincidencia_garantia: 8,
+    reincidencia: 8,
 };
 
 export default function ReparacionTracking({
@@ -182,8 +192,8 @@ export default function ReparacionTracking({
     };
 
     const currentRank = orden ? (ORDER_STATE_RANK[orden.estado_orden] ?? 1) : 0;
-    const isCancelled = orden?.estado_orden === 'cancelado';
-    const isBudgetPending = orden?.estado_orden === 'presupuestado';
+    const isCancelled = orden?.estado_orden === 'cancelado' || orden?.estado_orden === 'listo_sin_solucion';
+    const isBudgetPending = orden?.estado_orden === 'presupuestado' || orden?.estado_orden === 'confirmacion_presupuesto';
 
     const formatDate = (dateStr?: string) => {
         if (!dateStr) return 'Pendiente';
@@ -217,100 +227,117 @@ export default function ReparacionTracking({
         )}`
         : null;
 
-    return (
-        <div className="min-h-screen bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 flex flex-col font-sans selection:bg-purple-500 selection:text-white">
-            <Head title={orden ? `Orden ${orden.numero_orden} | Seguimiento en Vivo` : 'Consultar Estado de Reparación'} />
+    const getTrackingStatusBadge = (st: string) => {
+        switch (st) {
+            case 'recibido':
+                return <Badge className="bg-amber-500 hover:bg-amber-500 text-white font-bold">🟡 1-RECIBIDO</Badge>;
+            case 'en_diagnostico_presupuesto':
+            case 'en_diagnostico':
+                return <Badge className="bg-blue-600 hover:bg-blue-600 text-white font-bold">🔍 2-EN DIAGNOSTICO Y PRESUPUESTO</Badge>;
+            case 'confirmacion_presupuesto':
+            case 'presupuestado':
+                return <Badge className="bg-indigo-600 hover:bg-indigo-600 text-white font-bold">⏳ 3-CONFIRMACION DE PRESUPUESTO</Badge>;
+            case 'espera_refaccion':
+            case 'esperando_repuesto':
+                return <Badge className="bg-orange-500 hover:bg-orange-500 text-white font-bold">📦 4-ESPERA DE REFACCION</Badge>;
+            case 'en_reparacion':
+                return <Badge className="bg-purple-600 hover:bg-purple-600 text-white font-bold">🛠️ 5-EN REPARACION</Badge>;
+            case 'listo_reparado':
+            case 'reparado':
+                return <Badge className="bg-emerald-600 hover:bg-emerald-600 text-white font-bold">🟢 6-LISTO PARA ENTREGAR REPARADO</Badge>;
+            case 'listo_sin_solucion':
+            case 'cancelado':
+                return <Badge variant="destructive" className="font-bold">❌ 7-LISTO PARA ENTREGAR SIN SOLUCION</Badge>;
+            case 'entregado_finalizado':
+            case 'entregado':
+                return <Badge className="bg-slate-900 dark:bg-slate-100 text-white dark:text-slate-900 font-bold">✅ 8-ENTREGADO FINALIZADO</Badge>;
+            case 'reincidencia_garantia':
+            case 'reincidencia':
+                return <Badge className="bg-pink-600 hover:bg-pink-600 text-white font-bold">🔄 8-REINCIDENCIA/GARANTIA</Badge>;
+            default:
+                return <Badge variant="outline">{st?.replace(/_/g, ' ').toUpperCase()}</Badge>;
+        }
+    };
 
-            {/* BARRA DE NAVEGACIÓN SUPERIOR */}
-            <header className="sticky top-0 z-40 w-full border-b border-slate-200/80 dark:border-slate-800/80 bg-white/90 dark:bg-slate-900/90 backdrop-blur-md transition-colors">
-                <div className="max-w-6xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between">
+    return (
+        <div className="min-h-screen bg-slate-50 dark:bg-slate-950 flex flex-col font-sans selection:bg-purple-500 selection:text-white">
+            <Head title={orden ? `Rastreo Orden ${orden.numero_orden}` : 'Rastreo de Reparación'} />
+
+            {/* HEADER COMPACTO CON LOGO DE EMPRESA */}
+            <header className="bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 sticky top-0 z-40">
+                <div className="max-w-5xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between">
                     <div className="flex items-center gap-3">
                         {activeEmpresa?.logo ? (
                             <img
                                 src={activeEmpresa.logo}
-                                alt={activeEmpresa.nombre || 'Logo'}
-                                className="h-9 w-auto max-w-[140px] object-contain"
+                                alt={activeEmpresa.nombre || 'FixSale'}
+                                className="h-9 w-auto object-contain rounded-lg"
+                                onError={(e) => {
+                                    (e.target as HTMLElement).style.display = 'none';
+                                }}
                             />
                         ) : (
-                            <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-purple-600 to-indigo-600 flex items-center justify-center text-white font-black shadow-md shadow-purple-500/20">
-                                <Wrench className="w-5 h-5" />
+                            <div className="w-9 h-9 rounded-xl bg-purple-600 text-white flex items-center justify-center font-black text-base shadow-sm">
+                                FS
                             </div>
                         )}
                         <div>
-                            <span className="font-bold text-sm sm:text-base tracking-tight block">
-                                {activeEmpresa?.nombre || 'Portal de Taller & Reparaciones'}
-                            </span>
-                            <span className="text-[11px] text-slate-500 dark:text-slate-400 block -mt-0.5">
-                                Seguimiento de Servicios Técnicos en Vivo
-                            </span>
+                            <h1 className="text-sm font-black text-slate-900 dark:text-white leading-tight">
+                                {activeEmpresa?.razon_social || activeEmpresa?.nombre || 'Centro de Servicio Técnico'}
+                            </h1>
+                            <p className="text-[11px] text-slate-500 dark:text-slate-400 font-medium">
+                                Portal de Seguimiento y Rastreo en Vivo
+                            </p>
                         </div>
                     </div>
 
                     <div className="flex items-center gap-2">
-                        {activeEmpresa?.whatsapp_phone && (
+                        {activeEmpresa?.telefono && (
                             <a
-                                href={`https://wa.me/${activeEmpresa.whatsapp_phone.replace(/[^0-9]/g, '')}`}
-                                target="_blank"
-                                rel="noreferrer"
-                                className="hidden sm:inline-flex items-center gap-1.5 text-xs font-semibold text-emerald-700 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/50 border border-emerald-200 dark:border-emerald-800/60 px-3 py-1.5 rounded-full hover:bg-emerald-100 transition-colors"
+                                href={`tel:${activeEmpresa.telefono}`}
+                                className="hidden sm:inline-flex items-center gap-1.5 text-xs text-slate-600 dark:text-slate-300 hover:text-purple-600 dark:hover:text-purple-400 font-semibold px-3 py-1.5 rounded-lg border border-slate-200 dark:border-slate-800 transition-colors"
                             >
-                                <MessageCircle className="w-3.5 h-3.5" />
-                                <span>Atención WhatsApp</span>
+                                <Phone className="w-3.5 h-3.5" />
+                                <span>{activeEmpresa.telefono}</span>
                             </a>
                         )}
                     </div>
                 </div>
             </header>
 
-            {/* SECCIÓN HERO CON BUSCADOR */}
-            <div className="relative overflow-hidden bg-gradient-to-b from-purple-900/10 via-indigo-900/5 to-transparent pt-10 pb-8 px-4 sm:px-6">
-                <div className="max-w-3xl mx-auto text-center space-y-4">
-                    <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-purple-100 dark:bg-purple-950/70 border border-purple-200 dark:border-purple-800 text-purple-700 dark:text-purple-300 text-xs font-bold shadow-xs">
-                        <Sparkles className="w-3.5 h-3.5 text-purple-600" />
-                        <span>Consulta Online 24/7 sin Iniciar Sesión</span>
+            {/* HERO BAR CON BUSCADOR RÁPIDO */}
+            <div className="bg-gradient-to-r from-purple-950 via-slate-900 to-slate-950 text-white py-8 px-4 sm:px-6 border-b border-purple-900/30">
+                <div className="max-w-xl mx-auto text-center space-y-4">
+                    <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-purple-500/20 text-purple-300 text-xs font-semibold border border-purple-500/30">
+                        <Search className="w-3.5 h-3.5" />
+                        <span>Consulta de Estado en Tiempo Real</span>
                     </div>
 
-                    <h1 className="text-3xl sm:text-4xl font-extrabold tracking-tight text-slate-900 dark:text-white">
-                        ¿Cómo va la reparación de tu equipo?
-                    </h1>
-                    <p className="text-sm sm:text-base text-slate-600 dark:text-slate-400 max-w-xl mx-auto">
-                        Ingresa el número de orden impreso en tu ticket (ej. <strong className="text-purple-600 dark:text-purple-400 font-mono">REP-000001</strong>) para conocer el estado y presupuesto en tiempo real.
+                    <h2 className="text-2xl sm:text-3xl font-black tracking-tight">
+                        ¿Cómo va tu reparación?
+                    </h2>
+                    <p className="text-xs sm:text-sm text-slate-300">
+                        Ingresa el número de folio de tu orden de servicio técnico para consultar el avance en taller y aprobar presupuestos.
                     </p>
 
-                    {/* FORMULARIO DE BÚSQUEDA */}
-                    <form onSubmit={handleSearch} className="pt-2 max-w-lg mx-auto">
-                        <div className="relative flex items-center shadow-lg shadow-purple-500/5 rounded-2xl bg-white dark:bg-slate-900 border-2 border-purple-200 dark:border-purple-900/60 p-1.5 focus-within:border-purple-600 transition-all">
-                            <Search className="w-5 h-5 text-slate-400 ml-3 shrink-0" />
+                    <form onSubmit={handleSearch} className="flex gap-2 max-w-md mx-auto pt-2">
+                        <div className="relative flex-1">
+                            <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
                             <Input
-                                type="text"
-                                placeholder="Escribe tu N° de orden (Ej: REP-000001)..."
                                 value={searchQuery}
                                 onChange={(e) => setSearchQuery(e.target.value)}
-                                className="border-0 shadow-none focus-visible:ring-0 text-base font-mono uppercase bg-transparent placeholder:normal-case placeholder:font-sans"
+                                placeholder="Ej: ORD-2026-0001"
+                                className="pl-9 bg-white/10 text-white placeholder:text-slate-400 border-white/20 focus-visible:ring-purple-400 font-mono text-sm uppercase h-11"
                             />
-                            <Button
-                                type="submit"
-                                disabled={isSubmittingSearch || !searchQuery.trim()}
-                                className="bg-purple-600 hover:bg-purple-700 text-white font-bold rounded-xl px-5 h-11 shrink-0 gap-1.5 shadow-md shadow-purple-600/20"
-                            >
-                                {isSubmittingSearch ? 'Buscando...' : 'Consultar'}
-                                <ArrowRight className="w-4 h-4" />
-                            </Button>
                         </div>
+                        <Button
+                            type="submit"
+                            disabled={isSubmittingSearch}
+                            className="bg-purple-600 hover:bg-purple-500 text-white font-bold h-11 px-5 shadow-lg shadow-purple-950/40"
+                        >
+                            {isSubmittingSearch ? <Clock className="w-4 h-4 animate-spin" /> : 'Consultar'}
+                        </Button>
                     </form>
-
-                    {/* MENSAJE DE NO ENCONTRADO */}
-                    {notFound && (
-                        <div className="pt-4 max-w-md mx-auto">
-                            <div className="p-4 rounded-xl bg-rose-50 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-900 text-rose-800 dark:text-rose-200 text-sm flex items-start gap-3 text-left">
-                                <AlertCircle className="w-5 h-5 text-rose-600 shrink-0 mt-0.5" />
-                                <div>
-                                    <strong className="block font-bold">Orden no localizada</strong>
-                                    <span>No encontramos ninguna reparación con el código <strong className="font-mono">{searchedCode}</strong>. Por favor verifica los dígitos de tu ticket e intenta de nuevo.</span>
-                                </div>
-                            </div>
-                        </div>
-                    )}
                 </div>
             </div>
 
@@ -325,13 +352,7 @@ export default function ReparacionTracking({
                                 <Badge className="bg-purple-600 hover:bg-purple-600 text-white font-mono text-sm px-2.5 py-0.5">
                                     {orden.numero_orden}
                                 </Badge>
-                                {isCancelled ? (
-                                    <Badge variant="destructive" className="font-bold">Cancelada</Badge>
-                                ) : (
-                                    <Badge className="bg-emerald-600 hover:bg-emerald-600 text-white font-bold capitalize">
-                                        {orden.estado_orden.replace('_', ' ')}
-                                    </Badge>
-                                )}
+                                {getTrackingStatusBadge(orden.estado_orden)}
                             </div>
                             <h2 className="text-xl sm:text-2xl font-black text-slate-900 dark:text-white flex items-center gap-2">
                                 {getDeviceIcon(orden.tipo_dispositivo)}

@@ -193,14 +193,15 @@ export default function IndexReparaciones({
     // Select2 Options (memoized)
     const statusOptions = useMemo(() => [
         { value: 'all', label: __('Todos los estados') },
-        { value: 'recibido', label: __('Recibido') },
-        { value: 'en_diagnostico', label: __('En Diagnóstico') },
-        { value: 'presupuestado', label: __('Presupuestado') },
-        { value: 'en_reparacion', label: __('En Reparación') },
-        { value: 'esperando_repuesto', label: __('Esperando Repuesto') },
-        { value: 'reparado', label: __('Listo p/ Entrega') },
-        { value: 'entregado', label: __('Entregado') },
-        { value: 'cancelado', label: __('Sin Arreglo') },
+        { value: 'recibido', label: '1-RECIBIDO' },
+        { value: 'en_diagnostico_presupuesto', label: '2-EN DIAGNOSTICO Y PRESUPUESTO' },
+        { value: 'confirmacion_presupuesto', label: '3-CONFIRMACION DE PRESUPUESTO' },
+        { value: 'espera_refaccion', label: '4-ESPERA DE REFACCION' },
+        { value: 'en_reparacion', label: '5-EN REPARACION' },
+        { value: 'listo_reparado', label: '6-LISTO PARA ENTREGAR REPARADO' },
+        { value: 'listo_sin_solucion', label: '7-LISTO PARA ENTREGAR SIN SOLUCION' },
+        { value: 'entregado_finalizado', label: '8-ENTREGADO FINALIZADO' },
+        { value: 'reincidencia_garantia', label: '8-REINCIDENCIA/GARANTIA' },
     ], [__]);
 
     const categoriaOptions = useMemo(() => [
@@ -533,60 +534,74 @@ export default function IndexReparaciones({
                 return (
                     <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-amber-50 text-amber-700 border border-amber-200 dark:bg-amber-950/30 dark:text-amber-400 dark:border-amber-900">
                         <span className="w-1.5 h-1.5 rounded-full bg-amber-500"></span>
-                        {__('Recibido')}
+                        1-RECIBIDO
                     </span>
                 );
+            case 'en_diagnostico_presupuesto':
             case 'en_diagnostico':
                 return (
                     <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-blue-50 text-blue-700 border border-blue-200 dark:bg-blue-950/30 dark:text-blue-400 dark:border-blue-900">
                         <span className="w-1.5 h-1.5 rounded-full bg-blue-500"></span>
-                        {__('En Diagnóstico')}
+                        2-EN DIAGNOSTICO Y PRESUPUESTO
                     </span>
                 );
+            case 'confirmacion_presupuesto':
             case 'presupuestado':
                 return (
                     <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-indigo-50 text-indigo-700 border border-indigo-200 dark:bg-indigo-950/30 dark:text-indigo-400 dark:border-indigo-900">
                         <span className="w-1.5 h-1.5 rounded-full bg-indigo-500"></span>
-                        {__('Presupuestado')}
+                        3-CONFIRMACION DE PRESUPUESTO
+                    </span>
+                );
+            case 'espera_refaccion':
+            case 'esperando_repuesto':
+                return (
+                    <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-orange-50 text-orange-700 border border-orange-200 dark:bg-orange-950/30 dark:text-orange-400 dark:border-orange-900">
+                        <span className="w-1.5 h-1.5 rounded-full bg-orange-500"></span>
+                        4-ESPERA DE REFACCION
                     </span>
                 );
             case 'en_reparacion':
                 return (
                     <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-purple-50 text-purple-700 border border-purple-200 dark:bg-purple-950/30 dark:text-purple-400 dark:border-purple-900">
                         <span className="w-1.5 h-1.5 rounded-full bg-purple-500"></span>
-                        {__('En Reparación')}
+                        5-EN REPARACION
                     </span>
                 );
-            case 'esperando_repuesto':
-                return (
-                    <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-orange-50 text-orange-700 border border-orange-200 dark:bg-orange-950/30 dark:text-orange-400 dark:border-orange-900">
-                        <span className="w-1.5 h-1.5 rounded-full bg-orange-500"></span>
-                        {__('Esperando Repuesto')}
-                    </span>
-                );
+            case 'listo_reparado':
             case 'reparado':
                 return (
                     <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200 dark:bg-emerald-950/30 dark:text-emerald-400 dark:border-emerald-900">
                         <span className="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
-                        {__('Listo p/ Entrega')}
+                        6-LISTO PARA ENTREGAR REPARADO
                     </span>
                 );
-            case 'entregado':
-                return (
-                    <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-slate-100 text-slate-800 border border-slate-300 dark:bg-slate-800 dark:text-slate-200 dark:border-slate-700">
-                        <span className="w-1.5 h-1.5 rounded-full bg-slate-600 dark:bg-slate-300"></span>
-                        {__('Entregado')}
-                    </span>
-                );
+            case 'listo_sin_solucion':
             case 'cancelado':
                 return (
                     <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-rose-50 text-rose-700 border border-rose-200 dark:bg-rose-950/30 dark:text-rose-400 dark:border-rose-900">
                         <span className="w-1.5 h-1.5 rounded-full bg-rose-500"></span>
-                        {__('Sin Arreglo')}
+                        7-LISTO PARA ENTREGAR SIN SOLUCION
+                    </span>
+                );
+            case 'entregado_finalizado':
+            case 'entregado':
+                return (
+                    <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-slate-100 text-slate-800 border border-slate-300 dark:bg-slate-800 dark:text-slate-200 dark:border-slate-700">
+                        <span className="w-1.5 h-1.5 rounded-full bg-slate-600 dark:bg-slate-300"></span>
+                        8-ENTREGADO FINALIZADO
+                    </span>
+                );
+            case 'reincidencia_garantia':
+            case 'reincidencia':
+                return (
+                    <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-pink-50 text-pink-700 border border-pink-200 dark:bg-pink-950/30 dark:text-pink-400 dark:border-pink-900">
+                        <span className="w-1.5 h-1.5 rounded-full bg-pink-500"></span>
+                        8-REINCIDENCIA/GARANTIA
                     </span>
                 );
             default:
-                return <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-slate-100 text-slate-700">{st}</span>;
+                return <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-slate-100 text-slate-700">{st?.replace(/_/g, ' ').toUpperCase()}</span>;
         }
     };
 
