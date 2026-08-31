@@ -97,11 +97,17 @@ return new class extends Migration
         Schema::create('reparacion_checklist_items', function (Blueprint $table) {
             $table->id();
             $table->unsignedBigInteger('empresa_id')->nullable()->index();
+            $table->foreignId('sucursal_id')->nullable()->constrained('sucursales')->nullOnDelete();
+            $table->string('seccion')->default('validacion');
             $table->string('nombre');
-            $table->string('categoria')->default('general');
-            $table->boolean('activo')->default(true);
+            $table->string('descripcion')->nullable();
+            $table->string('icono')->nullable();
             $table->integer('orden')->default(0);
+            $table->boolean('activo')->default(true);
+            $table->boolean('is_default')->default(false);
             $table->timestamps();
+
+            $table->index(['empresa_id', 'sucursal_id', 'seccion', 'activo'], 'chk_items_emp_suc_sec_act_idx');
         });
     }
 

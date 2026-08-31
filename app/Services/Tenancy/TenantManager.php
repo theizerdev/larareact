@@ -204,6 +204,26 @@ class TenantManager
     }
 
     /**
+     * Run migrations on all existing tenant databases.
+     */
+    public static function migrateAllTenants(): array
+    {
+        $results = [];
+        $databases = DB::connection('landlord')->select("SHOW DATABASES LIKE 'fixsale_tenant_%'");
+
+        foreach ($databases as $dbRow) {
+            $dbArray = (array) $dbRow;
+            $dbName = reset($dbArray);
+            if (preg_match('/^fixsale_tenant_(\d+)$/', $dbName, $matches)) {
+                $tenantId = (int) $matches[1];
+                $results[$tenantId] = self::migrateTenant($tenantId);
+            }
+        }
+
+        return $results;
+    }
+
+    /**
      * Fully provision a new tenant database: create DB, run migrations and seed defaults.
      */
     public static function provisionTenant(int|string $tenantId, ?array $empresaData = []): bool
