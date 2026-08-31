@@ -547,6 +547,30 @@ export default function AdminSaasLayout({
                             );
                         })()}
 
+                        {/* BioTime PRO Group (espejo de solo lectura de ZKTeco BioTime) */}
+                        {(() => {
+                            const biotimeItems = [
+                                { title: 'Relojes BioTime', href: '/admin/biotime/dispositivos', permission: 'biotime.view' },
+                                { title: 'Empleados BioTime', href: '/admin/biotime/empleados', permission: 'biotime.view' },
+                                { title: 'Marcajes BioTime', href: '/admin/biotime/marcajes', permission: 'biotime.view' },
+                            ].filter(item => hasPermission(item.permission));
+
+                            if (biotimeItems.length === 0) {
+                                return null;
+                            }
+
+                            return (
+                                <div className="pt-2">
+                                    <CollapsibleNavItem
+                                        title="BioTime PRO"
+                                        icon={Fingerprint}
+                                        collapsed={collapsed}
+                                        items={biotimeItems}
+                                    />
+                                </div>
+                            );
+                        })()}
+
                         {/* Settings Group */}
                         {(() => {
                             const settingsItems = [

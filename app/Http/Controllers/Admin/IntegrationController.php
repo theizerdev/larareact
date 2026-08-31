@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use App\Models\Empresa;
 use App\Models\Pais;
+use App\Services\BioTimeService;
 use App\Services\ControlAccesoService;
 use App\Services\JaakService;
 use App\Services\WhatsAppService;
@@ -46,6 +47,12 @@ class IntegrationController extends Controller
             'control_acceso_app_token' => $empresa->control_acceso_app_token,
             'control_acceso_user_token' => $empresa->control_acceso_user_token,
             'control_acceso_active' => (bool) $empresa->control_acceso_active,
+            'biotime_base_url' => $empresa->biotime_base_url,
+            'biotime_username' => $empresa->biotime_username,
+            // La contraseña nunca viaja al frontend: sólo si hay una guardada.
+            'biotime_password_set' => ! empty($empresa->biotime_password),
+            'biotime_active' => (bool) $empresa->biotime_active,
+            'biotime_last_sync_at' => $empresa->biotime_last_sync_at?->toIso8601String(),
         ]);
     }
 
@@ -209,6 +216,77 @@ class IntegrationController extends Controller
         }
 
         $result = (new ControlAccesoService($empresa))->testConnection();
+
+        return back()->with('notification', [
+            'type' => $result['success'] ? 'success' : 'error',
+            'message' => $result['message'],
+        ]);
+    }
+
+    /**
+     * Actualiza la configuración de BioTime PRO (ZKTeco) de la empresa del usuario.
+     *
+     * La contraseña sólo se reescribe si el formulario envía una nueva; enviar
+     * el campo vacío conserva la que ya estaba guardada.
+     */
+    public function updateBioTime(Request $request)
+    {
+        $empresa = $request->user()->empresa;
+
+        if (! $empresa) {
+            return back()->with('notification', [
+                'type' => 'error',
+                'message' => __('No active company associated with your user.'),
+            ]);
+        }
+
+        $validated = $request->validate([
+            'biotime_base_url' => 'nullable|url|max:255',
+            'biotime_username' => 'nullable|string|max:150',
+            'biotime_password' => 'nullable|string|max:255',
+            'biotime_active' => 'required|boolean',
+        ]);
+
+        $payload = [
+            'biotime_base_url' => $validated['biotime_base_url'] ? rtrim($validated['biotime_base_url'], '/') : null,
+            'biotime_username' => $validated['biotime_username'] ?? null,
+            'biotime_active' => $validated['biotime_active'],
+        ];
+
+        if (! empty($validated['biotime_password'])) {
+            $payload['biotime_password'] = $validated['biotime_password'];
+        }
+
+        $empresa->update($payload);
+
+        return back()->with('notification', [
+            'type' => 'success',
+            'message' => __('BioTime integration settings updated successfully.'),
+        ]);
+    }
+
+    /**
+     * Prueba la conexión con BioTime PRO usando las credenciales guardadas.
+     */
+    public function bioTimeTest(Request $request)
+    {
+        $empresa = $request->user()->empresa;
+
+        if (! $empresa) {
+            return back()->with('notification', [
+                'type' => 'error',
+                'message' => __('No active company associated with your user.'),
+            ]);
+        }
+
+        if (empty($empresa->biotime_base_url) || empty($empresa->biotime_username) || empty($empresa->biotime_password)) {
+            return back()->with('notification', [
+                'type' => 'error',
+                'message' => __('Please configure and save the URL, username and password before testing the connection.'),
+            ]);
+        }
+
+        $result = (new BioTimeService($empresa))->testConnection();
 
         return back()->with('notification', [
             'type' => $result['success'] ? 'success' : 'error',
