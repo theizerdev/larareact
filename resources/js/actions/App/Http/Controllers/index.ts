@@ -1,16 +1,15 @@
 import Auth from './Auth'
+import ContactController from './ContactController'
 import Admin from './Admin'
-import ProveedorPreRegistroController from './ProveedorPreRegistroController'
-import EmpleadoPreRegistroController from './EmpleadoPreRegistroController'
-import VisitaTemporalPreRegistroController from './VisitaTemporalPreRegistroController'
+import PublicReparacionTrackingController from './PublicReparacionTrackingController'
 import Settings from './Settings'
+
 const Controllers = {
     Auth: Object.assign(Auth, Auth),
-Admin: Object.assign(Admin, Admin),
-ProveedorPreRegistroController: Object.assign(ProveedorPreRegistroController, ProveedorPreRegistroController),
-EmpleadoPreRegistroController: Object.assign(EmpleadoPreRegistroController, EmpleadoPreRegistroController),
-VisitaTemporalPreRegistroController: Object.assign(VisitaTemporalPreRegistroController, VisitaTemporalPreRegistroController),
-Settings: Object.assign(Settings, Settings),
+    ContactController: Object.assign(ContactController, ContactController),
+    Admin: Object.assign(Admin, Admin),
+    PublicReparacionTrackingController: Object.assign(PublicReparacionTrackingController, PublicReparacionTrackingController),
+    Settings: Object.assign(Settings, Settings),
 }
 
 export default Controllers

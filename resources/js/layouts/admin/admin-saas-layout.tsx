@@ -69,6 +69,7 @@ import { index as usuariosIndex } from '@/routes/admin/usuarios';
 import { index as serverMonitoringIndex } from '@/routes/admin/monitoring/server';
 import { index as sessionMonitoringIndex } from '@/routes/admin/monitoring/sessions';
 import { index as logMonitoringIndex } from '@/routes/admin/monitoring/logs';
+import { index as activitiesMonitoringIndex } from '@/routes/admin/monitoring/activities';
 import { index as queuesMonitoringIndex } from '@/routes/admin/monitoring/queues';
 import { index as tasksMonitoringIndex } from '@/routes/admin/monitoring/tasks';
 import { index as integrationsIndex } from '@/routes/admin/integrations';
@@ -818,6 +819,11 @@ export default function AdminSaasLayout({
                                             title: 'User Sessions',
                                             href: sessionMonitoringIndex.url(),
                                             permission: 'monitoreo.logins',
+                                        },
+                                        {
+                                            title: 'Activity Log',
+                                            href: activitiesMonitoringIndex.url(),
+                                            permission: 'monitoreo.activities',
                                         },
                                         {
                                             title: 'System Logs',

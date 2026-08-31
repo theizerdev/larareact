@@ -1,46 +1,75 @@
 import DashboardController from './DashboardController'
-import CargoController from './CargoController'
+import SuperAdminDashboardController from './SuperAdminDashboardController'
+import TestimonioController from './TestimonioController'
+import ReparacionController from './ReparacionController'
+import ActivityMonitoringController from './ActivityMonitoringController'
+import ContabilidadController from './ContabilidadController'
+import CreditConfigController from './CreditConfigController'
 import DbMonitoringController from './DbMonitoringController'
-import DepartamentoController from './DepartamentoController'
-import EmpleadoController from './EmpleadoController'
 import EmpresaController from './EmpresaController'
+import CategoriaController from './CategoriaController'
+import MarcaController from './MarcaController'
+import FamiliaController from './FamiliaController'
+import ModeloController from './ModeloController'
+import ProductoController from './ProductoController'
 import IntegrationController from './IntegrationController'
+import Inventario from './Inventario'
 import LogMonitoringController from './LogMonitoringController'
+import AuditLogController from './AuditLogController'
+import NominaController from './NominaController'
 import PaisController from './PaisController'
+import PointOfSale from './PointOfSale'
+import MonthlyFundController from './MonthlyFundController'
+import StockAlertController from './StockAlertController'
 import ProveedorController from './ProveedorController'
-import ProveedorEmpleadoController from './ProveedorEmpleadoController'
-import ProveedorVehiculoController from './ProveedorVehiculoController'
 import QueueMonitoringController from './QueueMonitoringController'
-import ResponsableController from './ResponsableController'
+import ReparacionChecklistController from './ReparacionChecklistController'
 import RoleController from './RoleController'
 import ServerMonitoringController from './ServerMonitoringController'
 import SessionMonitoringController from './SessionMonitoringController'
+import SubscriptionController from './SubscriptionController'
+import SubscriptionPlanController from './SubscriptionPlanController'
 import SucursalController from './SucursalController'
 import TaskMonitoringController from './TaskMonitoringController'
+import TerminalController from './TerminalController'
 import UserController from './UserController'
-import VisitaTemporalController from './VisitaTemporalController'
+
 const Admin = {
     DashboardController: Object.assign(DashboardController, DashboardController),
-CargoController: Object.assign(CargoController, CargoController),
-DbMonitoringController: Object.assign(DbMonitoringController, DbMonitoringController),
-DepartamentoController: Object.assign(DepartamentoController, DepartamentoController),
-EmpleadoController: Object.assign(EmpleadoController, EmpleadoController),
-EmpresaController: Object.assign(EmpresaController, EmpresaController),
-IntegrationController: Object.assign(IntegrationController, IntegrationController),
-LogMonitoringController: Object.assign(LogMonitoringController, LogMonitoringController),
-PaisController: Object.assign(PaisController, PaisController),
-ProveedorController: Object.assign(ProveedorController, ProveedorController),
-ProveedorEmpleadoController: Object.assign(ProveedorEmpleadoController, ProveedorEmpleadoController),
-ProveedorVehiculoController: Object.assign(ProveedorVehiculoController, ProveedorVehiculoController),
-QueueMonitoringController: Object.assign(QueueMonitoringController, QueueMonitoringController),
-ResponsableController: Object.assign(ResponsableController, ResponsableController),
-RoleController: Object.assign(RoleController, RoleController),
-ServerMonitoringController: Object.assign(ServerMonitoringController, ServerMonitoringController),
-SessionMonitoringController: Object.assign(SessionMonitoringController, SessionMonitoringController),
-SucursalController: Object.assign(SucursalController, SucursalController),
-TaskMonitoringController: Object.assign(TaskMonitoringController, TaskMonitoringController),
-UserController: Object.assign(UserController, UserController),
-VisitaTemporalController: Object.assign(VisitaTemporalController, VisitaTemporalController),
+    SuperAdminDashboardController: Object.assign(SuperAdminDashboardController, SuperAdminDashboardController),
+    TestimonioController: Object.assign(TestimonioController, TestimonioController),
+    ReparacionController: Object.assign(ReparacionController, ReparacionController),
+    ActivityMonitoringController: Object.assign(ActivityMonitoringController, ActivityMonitoringController),
+    ContabilidadController: Object.assign(ContabilidadController, ContabilidadController),
+    CreditConfigController: Object.assign(CreditConfigController, CreditConfigController),
+    DbMonitoringController: Object.assign(DbMonitoringController, DbMonitoringController),
+    EmpresaController: Object.assign(EmpresaController, EmpresaController),
+    CategoriaController: Object.assign(CategoriaController, CategoriaController),
+    MarcaController: Object.assign(MarcaController, MarcaController),
+    FamiliaController: Object.assign(FamiliaController, FamiliaController),
+    ModeloController: Object.assign(ModeloController, ModeloController),
+    ProductoController: Object.assign(ProductoController, ProductoController),
+    IntegrationController: Object.assign(IntegrationController, IntegrationController),
+    Inventario: Object.assign(Inventario, Inventario),
+    LogMonitoringController: Object.assign(LogMonitoringController, LogMonitoringController),
+    AuditLogController: Object.assign(AuditLogController, AuditLogController),
+    NominaController: Object.assign(NominaController, NominaController),
+    PaisController: Object.assign(PaisController, PaisController),
+    PointOfSale: Object.assign(PointOfSale, PointOfSale),
+    MonthlyFundController: Object.assign(MonthlyFundController, MonthlyFundController),
+    StockAlertController: Object.assign(StockAlertController, StockAlertController),
+    ProveedorController: Object.assign(ProveedorController, ProveedorController),
+    QueueMonitoringController: Object.assign(QueueMonitoringController, QueueMonitoringController),
+    ReparacionChecklistController: Object.assign(ReparacionChecklistController, ReparacionChecklistController),
+    RoleController: Object.assign(RoleController, RoleController),
+    ServerMonitoringController: Object.assign(ServerMonitoringController, ServerMonitoringController),
+    SessionMonitoringController: Object.assign(SessionMonitoringController, SessionMonitoringController),
+    SubscriptionController: Object.assign(SubscriptionController, SubscriptionController),
+    SubscriptionPlanController: Object.assign(SubscriptionPlanController, SubscriptionPlanController),
+    SucursalController: Object.assign(SucursalController, SucursalController),
+    TaskMonitoringController: Object.assign(TaskMonitoringController, TaskMonitoringController),
+    TerminalController: Object.assign(TerminalController, TerminalController),
+    UserController: Object.assign(UserController, UserController),
 }
 
 export default Admin
