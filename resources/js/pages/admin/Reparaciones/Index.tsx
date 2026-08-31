@@ -517,14 +517,62 @@ export default function IndexReparaciones({
         const phone = o.cliente?.telefono || o.cliente_telefono;
         if (!phone) return;
         const cleanPhone = phone.replace(/[^0-9]/g, '');
-        const clientName = o.cliente?.nombre || o.cliente_nombre;
-        const brandName = o.marca?.nombre || o.marca_nombre;
-        const modelName = o.modelo?.nombre_comercial || o.modelo_nombre;
+        const clientName = o.cliente?.nombre || o.cliente_nombre || 'Estimado(a) Cliente';
+        const brandName = o.marca?.nombre || o.marca_nombre || '';
+        const modelName = o.modelo?.nombre_comercial || o.modelo_nombre || '';
+        const deviceName = `${brandName} ${modelName}`.trim() || 'Equipo';
         const empresaId = o.empresa_id || o.empresa?.id || empresaInfo?.id || 1;
+        const empName = empresaInfo?.razon_social || empresaInfo?.nombre || empresaInfo?.nombre_comercial || 'FixSale';
         const trackingUrl = `${window.location.origin}/reparacion/${empresaId}/consultar?orden=${o.numero_orden}`;
-        const msg = encodeURIComponent(
-            `Hola *${clientName}*, le saludamos del Servicio Tecnico.\nSu equipo *${brandName} ${modelName}* (Orden *${o.numero_orden}*) se encuentra actualmente en estado: *${o.estado_orden.toUpperCase().replace('_', ' ')}*.\nSaldo pendiente: *${currencySymbol}${formatNum(o.saldo_restante)}*.\n\nConsulte el estado en vivo o apruebe su presupuesto aqui:\n${trackingUrl}`
-        );
+        const falla = o.descripcion_falla || 'Revisión técnica general';
+        const costoEstimado = formatNum(o.costo_estimado);
+        const anticipo = formatNum(o.anticipo);
+        const saldo = formatNum(o.saldo_restante);
+        const garantia = o.garantia_dias || 30;
+        const fecha = o.fecha_recepcion ? new Date(o.fecha_recepcion).toLocaleDateString('es-ES') : 'hoy';
+
+        let text = '';
+        switch (o.estado_orden) {
+            case 'recibido':
+                text = `👋 Hola *${clientName}*, le saludamos de *${empName}*.\n\n📱 Hemos recibido su equipo *${deviceName}* (Orden *${o.numero_orden}*).\n*Falla reportada:* ${falla}\n*Fecha de ingreso:* ${fecha}\n\nNuestro equipo técnico iniciará la revisión y diagnóstico a la brevedad.\n\n🔎 Consulte el avance en vivo aquí:\n${trackingUrl}`;
+                break;
+            case 'en_diagnostico_presupuesto':
+            case 'en_diagnostico':
+                text = `🔍 Hola *${clientName}*, su equipo *${deviceName}* (Orden *${o.numero_orden}*) se encuentra en fase de *DIAGNÓSTICO TÉCNICO Y PRESUPUESTO*.\n\n🛠️ Estamos evaluando componentes y costos para brindarle una cotización transparente.\n\n🔎 Seguimiento en vivo:\n${trackingUrl}`;
+                break;
+            case 'confirmacion_presupuesto':
+            case 'presupuestado':
+                text = `💵 Hola *${clientName}*, tenemos listo el presupuesto para su equipo *${deviceName}* (Orden *${o.numero_orden}*).\n\n💰 *Presupuesto Total:* *${currencySymbol}${costoEstimado}*\n💳 *Anticipo abonado:* *${currencySymbol}${anticipo}*\n🏷️ *Saldo pendiente:* *${currencySymbol}${saldo}*\n\nPor favor revise y apruebe o rechace su presupuesto directamente en nuestro portal web:\n👉 ${trackingUrl}\n\nO responda a este mensaje para confirmar y proceder con la reparación.`;
+                break;
+            case 'espera_refaccion':
+            case 'esperando_repuesto':
+                text = `📦 Hola *${clientName}*, le informamos sobre su orden *${o.numero_orden}* (*${deviceName}*):\n\nEl equipo se encuentra en *ESPERA DE REFACCIONES / REPUESTOS* para garantizar una reparación con repuestos de óptima calidad.\n\nEn cuanto recibamos las piezas continuaremos con la intervención técnica.\n🔎 Consulte el estado en vivo: ${trackingUrl}`;
+                break;
+            case 'en_reparacion':
+                text = `🛠️ Hola *${clientName}*, le informamos que su equipo *${deviceName}* (Orden *${o.numero_orden}*) está *EN PROCESO DE REPARACIÓN ACTIVA* en nuestro laboratorio técnico.\n\nLe avisaremos apenas concluyan las pruebas de control de calidad.\n🔎 Seguimiento: ${trackingUrl}`;
+                break;
+            case 'listo_reparado':
+            case 'reparado':
+                text = `🟢 ¡Buenas noticias *${clientName}*! Su equipo *${deviceName}* (Orden *${o.numero_orden}*) ha sido *REPARADO EXITOSAMENTE* y superó las pruebas de calidad.\n\n🎉 Ya puede pasar a retirarlo por nuestra sucursal.\n💰 *Saldo a liquidar:* *${currencySymbol}${saldo}*\n🛡️ *Garantía del servicio:* ${garantia} días\n\n📌 Detalles y ubicación: ${trackingUrl}\n¡Le esperamos!`;
+                break;
+            case 'listo_sin_solucion':
+            case 'cancelado':
+                text = `📋 Hola *${clientName}*, le informamos que su equipo *${deviceName}* (Orden *${o.numero_orden}*) se encuentra disponible para retiro en sucursal como *SIN SOLUCIÓN / CANCELADO*.\n\n🏢 Puede pasar a retirarlo en nuestro horario habitual.\n💰 *Saldo pendiente:* *${currencySymbol}${saldo}*\n\n📌 Detalles de su orden: ${trackingUrl}`;
+                break;
+            case 'entregado_finalizado':
+            case 'entregado':
+                text = `✅ ¡Gracias por su preferencia *${clientName}*! Su orden *${o.numero_orden}* (*${deviceName}*) ha sido *ENTREGADA Y FINALIZADA* con éxito.\n\n🛡️ Su servicio cuenta con *${garantia} días de garantía*.\n\n📄 Puede consultar o descargar su comprobante aquí:\n${trackingUrl}\n\n¡Gracias por confiar en *${empName}*!`;
+                break;
+            case 'reincidencia_garantia':
+            case 'reincidencia':
+                text = `🔄 Hola *${clientName}*, hemos recibido su equipo *${deviceName}* (Orden *${o.numero_orden}*) por concepto de *REINCIDENCIA / APLICACIÓN DE GARANTÍA*.\n\nNuestro equipo técnico dará prioridad a la revisión de su caso para brindarle una solución oportuna.\n\n🔎 Consulte el estado en vivo: ${trackingUrl}`;
+                break;
+            default:
+                text = `Hola *${clientName}*, le saludamos de *${empName}* respecto a su orden *${o.numero_orden}* (${deviceName}).\n\nEstado actual: *${o.estado_orden.toUpperCase().replace(/_/g, ' ')}*.\nSeguimiento: ${trackingUrl}`;
+                break;
+        }
+
+        const msg = encodeURIComponent(text);
         window.open(`https://wa.me/${cleanPhone}?text=${msg}`, '_blank');
     };
 

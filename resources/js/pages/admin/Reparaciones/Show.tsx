@@ -85,6 +85,7 @@ interface Historial {
 interface Orden {
     id: number;
     numero_orden: string;
+    cliente_id?: number;
     cliente_nombre: string;
     cliente_telefono?: string;
     tipo_dispositivo: string;
@@ -111,6 +112,8 @@ interface Orden {
     fecha_prometida?: string;
     fecha_estimada_entrega?: string;
     fecha_entrega?: string;
+    empresa_id?: number;
+    empresa?: any;
     tecnico?: { id: number; name: string };
     cliente?: { id: number; nombre: string; telefono?: string; email?: string };
     marca?: { id: number; nombre: string };
@@ -140,7 +143,7 @@ interface ProductoRepuesto {
 interface MarcaItem {
     id: number;
     nombre: string;
-    modelos?: { id: number; nombre_comercial: string; codigo_modelo?: string }[];
+    modelos?: { id: number; nombre_comercial: string; codigo_modelo?: string; numero_modelo?: string }[];
 }
 
 interface CategoriaItem {
@@ -153,6 +156,7 @@ interface Props {
     empresa?: any;
     productosRepuestos: ProductoRepuesto[];
     tecnicos: { id: number; name: string }[];
+    clientes?: any[];
     currencySymbol: string;
     marcas?: MarcaItem[];
     categorias?: CategoriaItem[];
@@ -1773,6 +1777,107 @@ export default function ShowReparacion({
     const [nuevoEstado, setNuevoEstado] = useState(orden.estado_orden);
     const [comentarioEstado, setComentarioEstado] = useState('');
     const [tecnicoAsignadoId, setTecnicoAsignadoId] = useState(orden.tecnico?.id ? String(orden.tecnico.id) : '');
+    const [notificarWhatsAppOnStatusChange, setNotificarWhatsAppOnStatusChange] = useState(true);
+
+    // Modal de WhatsApp con Plantillas por Estado
+    const [openWhatsAppModal, setOpenWhatsAppModal] = useState(false);
+    const [selectedWhatsAppEstado, setSelectedWhatsAppEstado] = useState(orden.estado_orden);
+    const [customWhatsAppMsg, setCustomWhatsAppMsg] = useState('');
+
+    const generateWhatsAppTemplate = (st: string, ordenData: any, currSym: string, empName: string, origin: string) => {
+        const clientName = ordenData.cliente?.nombre || ordenData.cliente_nombre || 'Estimado(a) Cliente';
+        const brand = ordenData.marca?.nombre || ordenData.marca_nombre || '';
+        const model = ordenData.modelo?.nombre_comercial || ordenData.modelo_nombre || '';
+        const deviceName = `${brand} ${model}`.trim() || 'Equipo';
+        const empresaId = ordenData.empresa_id || ordenData.empresa?.id || empresa?.id || 1;
+        const trackingUrl = `${origin}/reparacion/${empresaId}/consultar?orden=${ordenData.numero_orden}`;
+        const falla = ordenData.descripcion_falla || 'Revisión técnica general';
+        const costoEstimado = Number(ordenData.costo_estimado || 0).toFixed(2);
+        const anticipo = Number(ordenData.anticipo || 0).toFixed(2);
+        const saldo = Number(ordenData.saldo_restante || 0).toFixed(2);
+        const garantia = ordenData.garantia_dias || 30;
+        const fecha = ordenData.fecha_recepcion ? new Date(ordenData.fecha_recepcion).toLocaleDateString('es-ES') : 'hoy';
+
+        switch (st) {
+            case 'recibido':
+                return `👋 Hola *${clientName}*, le saludamos de *${empName}*.\n\n📱 Hemos recibido su equipo *${deviceName}* (Orden *${ordenData.numero_orden}*).\n*Falla reportada:* ${falla}\n*Fecha de ingreso:* ${fecha}\n\nNuestro equipo técnico iniciará la revisión y diagnóstico a la brevedad.\n\n🔎 Consulte el avance en vivo aquí:\n${trackingUrl}`;
+            case 'en_diagnostico_presupuesto':
+            case 'en_diagnostico':
+                return `🔍 Hola *${clientName}*, su equipo *${deviceName}* (Orden *${ordenData.numero_orden}*) se encuentra en fase de *DIAGNÓSTICO TÉCNICO Y PRESUPUESTO*.\n\n🛠️ Estamos evaluando componentes y costos para brindarle una cotización transparente.\n\n🔎 Seguimiento en vivo:\n${trackingUrl}`;
+            case 'confirmacion_presupuesto':
+            case 'presupuestado':
+                return `💵 Hola *${clientName}*, tenemos listo el presupuesto para su equipo *${deviceName}* (Orden *${ordenData.numero_orden}*).\n\n💰 *Presupuesto Total:* *${currSym}${costoEstimado}*\n💳 *Anticipo abonado:* *${currSym}${anticipo}*\n🏷️ *Saldo pendiente:* *${currSym}${saldo}*\n\nPor favor revise y apruebe o rechace su presupuesto directamente en nuestro portal web:\n👉 ${trackingUrl}\n\nO responda a este mensaje para confirmar y proceder con la reparación.`;
+            case 'espera_refaccion':
+            case 'esperando_repuesto':
+                return `📦 Hola *${clientName}*, le informamos sobre su orden *${ordenData.numero_orden}* (*${deviceName}*):\n\nEl equipo se encuentra en *ESPERA DE REFACCIONES / REPUESTOS* para garantizar una reparación con repuestos de óptima calidad.\n\nEn cuanto recibamos las piezas continuaremos con la intervención técnica.\n🔎 Consulte el estado en vivo: ${trackingUrl}`;
+            case 'en_reparacion':
+                return `🛠️ Hola *${clientName}*, le informamos que su equipo *${deviceName}* (Orden *${ordenData.numero_orden}*) está *EN PROCESO DE REPARACIÓN ACTIVA* en nuestro laboratorio técnico.\n\nLe avisaremos apenas concluyan las pruebas de control de calidad.\n🔎 Seguimiento: ${trackingUrl}`;
+            case 'listo_reparado':
+            case 'reparado':
+                return `🟢 ¡Buenas noticias *${clientName}*! Su equipo *${deviceName}* (Orden *${ordenData.numero_orden}*) ha sido *REPARADO EXITOSAMENTE* y superó las pruebas de calidad.\n\n🎉 Ya puede pasar a retirarlo por nuestra sucursal.\n💰 *Saldo a liquidar:* *${currSym}${saldo}*\n🛡️ *Garantía del servicio:* ${garantia} días\n\n📌 Detalles y ubicación: ${trackingUrl}\n¡Le esperamos!`;
+            case 'listo_sin_solucion':
+            case 'cancelado':
+                return `📋 Hola *${clientName}*, le informamos que su equipo *${deviceName}* (Orden *${ordenData.numero_orden}*) se encuentra disponible para retiro en sucursal como *SIN SOLUCIÓN / CANCELADO*.\n\n🏢 Puede pasar a retirarlo en nuestro horario habitual.\n💰 *Saldo pendiente:* *${currSym}${saldo}*\n\n📌 Detalles de su orden: ${trackingUrl}`;
+            case 'entregado_finalizado':
+            case 'entregado':
+                return `✅ ¡Gracias por su preferencia *${clientName}*! Su orden *${ordenData.numero_orden}* (*${deviceName}*) ha sido *ENTREGADA Y FINALIZADA* con éxito.\n\n🛡️ Su servicio cuenta con *${garantia} días de garantía*.\n\n📄 Puede consultar o descargar su comprobante aquí:\n${trackingUrl}\n\n¡Gracias por confiar en *${empName}*!`;
+            case 'reincidencia_garantia':
+            case 'reincidencia':
+                return `🔄 Hola *${clientName}*, hemos recibido su equipo *${deviceName}* (Orden *${ordenData.numero_orden}*) por concepto de *REINCIDENCIA / APLICACIÓN DE GARANTÍA*.\n\nNuestro equipo técnico dará prioridad a la revisión de su caso para brindarle una solución oportuna.\n\n🔎 Consulte el estado en vivo: ${trackingUrl}`;
+            default:
+                return `Hola *${clientName}*, le saludamos de *${empName}* respecto a su orden *${ordenData.numero_orden}* (${deviceName}).\n\nEstado actual: *${st.toUpperCase().replace(/_/g, ' ')}*.\nSeguimiento: ${trackingUrl}`;
+        }
+    };
+
+    const handleOpenWhatsAppModal = (estadoToUse?: string) => {
+        const targetSt = estadoToUse || orden.estado_orden;
+        setSelectedWhatsAppEstado(targetSt);
+        const empName = empresa?.razon_social || empresa?.nombre || empresa?.nombre_comercial || 'FixSale';
+        const msg = generateWhatsAppTemplate(targetSt, orden, currencySymbol, empName, window.location.origin);
+        setCustomWhatsAppMsg(msg);
+        setOpenWhatsAppModal(true);
+    };
+
+    const handleWhatsAppEstadoSelect = (val: string) => {
+        setSelectedWhatsAppEstado(val);
+        const empName = empresa?.razon_social || empresa?.nombre || empresa?.nombre_comercial || 'FixSale';
+        const msg = generateWhatsAppTemplate(val, orden, currencySymbol, empName, window.location.origin);
+        setCustomWhatsAppMsg(msg);
+    };
+
+    const handleSendWhatsAppMessage = () => {
+        const phone = orden.cliente?.telefono || orden.cliente_telefono;
+        if (!phone) {
+            notifyError(__('El cliente no tiene un teléfono registrado.'));
+            return;
+        }
+        const cleanPhone = phone.replace(/[^0-9]/g, '');
+        const encoded = encodeURIComponent(customWhatsAppMsg);
+        window.open(`https://wa.me/${cleanPhone}?text=${encoded}`, '_blank');
+        setOpenWhatsAppModal(false);
+    };
+
+    const handleUpdateEstado = () => {
+        const targetSt = nuevoEstado;
+        router.post(
+            `/admin/reparaciones/${orden.id}/estado`,
+            {
+                estado_orden: targetSt,
+                comentario: comentarioEstado,
+                tecnico_id: tecnicoAsignadoId || null,
+            },
+            {
+                onSuccess: () => {
+                    setOpenStatusModal(false);
+                    notifySuccess(__('Estado actualizado exitosamente.'));
+                    if (notificarWhatsAppOnStatusChange && (orden.cliente?.telefono || orden.cliente_telefono)) {
+                        handleOpenWhatsAppModal(targetSt);
+                    }
+                },
+                onError: () => notifyError(__('Ocurrió un error al actualizar el estado.')),
+            }
+        );
+    };
 
     // Formulario de Repuesto (Select2 Buscador en tiempo real)
     const [selectedProductoId, setSelectedProductoId] = useState('');
@@ -1836,24 +1941,6 @@ export default function ShowReparacion({
     const totalPresupuestoActual = Math.max(0, manoObraActual);
     const saldoRestanteActual = Math.max(0, totalPresupuestoActual - anticipoActual);
 
-    const handleUpdateEstado = () => {
-        router.post(
-            `/admin/reparaciones/${orden.id}/estado`,
-            {
-                estado_orden: nuevoEstado,
-                comentario: comentarioEstado,
-                tecnico_id: tecnicoAsignadoId || null,
-            },
-            {
-                onSuccess: () => {
-                    setOpenStatusModal(false);
-                    notifySuccess(__('Estado actualizado exitosamente.'));
-                },
-                onError: () => notifyError(__('Ocurrió un error al actualizar el estado.')),
-            }
-        );
-    };
-
     const handleAddItem = (e: React.FormEvent) => {
         e.preventDefault();
         if (!selectedProductoId) return;
@@ -1902,20 +1989,6 @@ export default function ShowReparacion({
                 onError: () => notifyError(__('Error al guardar ajustes financieros.')),
             }
         );
-    };
-
-    const sendWhatsApp = () => {
-        const phone = orden.cliente?.telefono || orden.cliente_telefono;
-        if (!phone) return;
-        const cleanPhone = phone.replace(/[^0-9]/g, '');
-        const clientName = orden.cliente?.nombre || orden.cliente_nombre;
-        const deviceName = `${orden.marca?.nombre || orden.marca_nombre} ${orden.modelo?.nombre_comercial || orden.modelo_nombre}`;
-        const empresaId = orden.empresa_id || orden.empresa?.id || pageUser?.empresa_id || 1;
-        const trackingUrl = `${window.location.origin}/reparacion/${empresaId}/consultar?orden=${orden.numero_orden}`;
-        const msg = encodeURIComponent(
-            `Hola *${clientName}*, le saludamos de Servicio Tecnico.\nInformacion sobre su orden *${orden.numero_orden}* (${deviceName}):\n\n*Estado actual:* *${orden.estado_orden.toUpperCase().replace('_', ' ')}*\n*Presupuesto Total:* *${currencySymbol}${formatNum(orden.costo_estimado)}*\n*Saldo Pendiente:* *${currencySymbol}${formatNum(orden.saldo_restante)}*\n\nConsulte el estado en vivo o apruebe su presupuesto aqui:\n${trackingUrl}`
-        );
-        window.open(`https://wa.me/${cleanPhone}?text=${msg}`, '_blank');
     };
 
     const getStatusBadge = (st: string) => {
@@ -2022,7 +2095,7 @@ export default function ShowReparacion({
                             </Link>
 
                             {(orden.cliente?.telefono || orden.cliente_telefono) && (
-                                <Button size="sm" onClick={sendWhatsApp} className="h-10 gap-2 text-xs font-bold bg-emerald-600 hover:bg-emerald-500 text-white shadow-lg shadow-emerald-950/40">
+                                <Button size="sm" onClick={() => handleOpenWhatsAppModal()} className="h-10 gap-2 text-xs font-bold bg-emerald-600 hover:bg-emerald-500 text-white shadow-lg shadow-emerald-950/40">
                                     <Send className="w-4 h-4" />
                                     {__('WhatsApp')}
                                 </Button>
@@ -2057,6 +2130,7 @@ export default function ShowReparacion({
                                 </Button>
                             </a>
 
+                            {/* MODAL DE CAMBIO DE ESTADO */}
                             <Dialog open={openStatusModal} onOpenChange={setOpenStatusModal}>
                                 <DialogTrigger asChild>
                                     <Button size="sm" className="h-10 gap-2 text-xs font-bold bg-purple-600 hover:bg-purple-500 text-white shadow-lg shadow-purple-950/50">
@@ -2119,6 +2193,22 @@ export default function ShowReparacion({
                                                 className="text-xs mt-1"
                                             />
                                         </div>
+
+                                        {(orden.cliente?.telefono || orden.cliente_telefono) && (
+                                            <div className="flex items-center gap-2 pt-2 border-t border-slate-100 dark:border-slate-800">
+                                                <input
+                                                    type="checkbox"
+                                                    id="notificarWhatsAppOnStatusChange"
+                                                    checked={notificarWhatsAppOnStatusChange}
+                                                    onChange={(e) => setNotificarWhatsAppOnStatusChange(e.target.checked)}
+                                                    className="w-4 h-4 text-emerald-600 rounded border-slate-300 focus:ring-emerald-500 cursor-pointer"
+                                                />
+                                                <label htmlFor="notificarWhatsAppOnStatusChange" className="text-xs font-semibold text-slate-700 dark:text-slate-300 cursor-pointer flex items-center gap-1.5">
+                                                    <Send className="w-3.5 h-3.5 text-emerald-600" />
+                                                    {__('Abrir plantilla de WhatsApp tras guardar')}
+                                                </label>
+                                            </div>
+                                        )}
                                     </div>
 
                                     <div className="flex items-center justify-end gap-2 pt-2 border-t border-slate-100 dark:border-slate-800">
@@ -2128,6 +2218,83 @@ export default function ShowReparacion({
                                         <Button size="sm" onClick={handleUpdateEstado} className="h-8 text-xs font-bold bg-purple-600 hover:bg-purple-700 text-white">
                                             {__('Guardar Estado')}
                                         </Button>
+                                    </div>
+                                </DialogContent>
+                            </Dialog>
+
+                            {/* MODAL ENRIQUECIDO DE WHATSAPP CON 9 PLANTILLAS */}
+                            <Dialog open={openWhatsAppModal} onOpenChange={setOpenWhatsAppModal}>
+                                <DialogContent className="sm:max-w-lg">
+                                    <DialogHeader>
+                                        <DialogTitle className="flex items-center gap-2 text-base font-bold text-slate-900 dark:text-slate-100">
+                                            <div className="w-8 h-8 rounded-lg bg-emerald-500/10 text-emerald-600 flex items-center justify-center">
+                                                <Send className="w-4 h-4" />
+                                            </div>
+                                            {__('Enviar Plantilla de WhatsApp')}
+                                        </DialogTitle>
+                                    </DialogHeader>
+
+                                    <div className="space-y-4 py-2">
+                                        <div>
+                                            <Label className="text-xs font-semibold text-slate-600 dark:text-slate-400">{__('Plantilla por Estado')}</Label>
+                                            <Select value={selectedWhatsAppEstado} onValueChange={handleWhatsAppEstadoSelect}>
+                                                <SelectTrigger className="text-xs h-10 mt-1">
+                                                    <SelectValue />
+                                                </SelectTrigger>
+                                                <SelectContent>
+                                                    <SelectItem value="recibido">🟡 1-RECIBIDO</SelectItem>
+                                                    <SelectItem value="en_diagnostico_presupuesto">🔍 2-EN DIAGNOSTICO Y PRESUPUESTO</SelectItem>
+                                                    <SelectItem value="confirmacion_presupuesto">⏳ 3-CONFIRMACION DE PRESUPUESTO</SelectItem>
+                                                    <SelectItem value="espera_refaccion">📦 4-ESPERA DE REFACCION</SelectItem>
+                                                    <SelectItem value="en_reparacion">🛠️ 5-EN REPARACION</SelectItem>
+                                                    <SelectItem value="listo_reparado">🟢 6-LISTO PARA ENTREGAR REPARADO</SelectItem>
+                                                    <SelectItem value="listo_sin_solucion">❌ 7-LISTO PARA ENTREGAR SIN SOLUCION</SelectItem>
+                                                    <SelectItem value="entregado_finalizado">✅ 8-ENTREGADO FINALIZADO</SelectItem>
+                                                    <SelectItem value="reincidencia_garantia">🔄 8-REINCIDENCIA/GARANTIA</SelectItem>
+                                                </SelectContent>
+                                            </Select>
+                                        </div>
+
+                                        <div className="text-xs text-slate-500 bg-slate-50 dark:bg-slate-900 p-2.5 rounded-lg border border-slate-200 dark:border-slate-800 flex items-center justify-between">
+                                            <span>Destinatario: <strong className="text-slate-800 dark:text-slate-200">{orden.cliente?.nombre || orden.cliente_nombre}</strong></span>
+                                            <span className="font-mono text-emerald-600 dark:text-emerald-400 font-bold">{orden.cliente?.telefono || orden.cliente_telefono || 'Sin teléfono'}</span>
+                                        </div>
+
+                                        <div>
+                                            <Label className="text-xs font-semibold text-slate-600 dark:text-slate-400">{__('Mensaje a Enviar (Editable)')}</Label>
+                                            <Textarea
+                                                value={customWhatsAppMsg}
+                                                onChange={(e) => setCustomWhatsAppMsg(e.target.value)}
+                                                rows={9}
+                                                className="text-xs font-mono mt-1 bg-white dark:bg-slate-950 leading-relaxed border-slate-200 dark:border-slate-800"
+                                            />
+                                        </div>
+                                    </div>
+
+                                    <div className="flex items-center justify-between gap-2 pt-3 border-t border-slate-100 dark:border-slate-800">
+                                        <Button
+                                            variant="outline"
+                                            size="sm"
+                                            onClick={() => copyToClipboard(customWhatsAppMsg, __('Mensaje'))}
+                                            className="h-9 text-xs gap-1.5"
+                                        >
+                                            <Copy className="w-3.5 h-3.5" />
+                                            {__('Copiar Texto')}
+                                        </Button>
+
+                                        <div className="flex items-center gap-2">
+                                            <Button variant="ghost" size="sm" onClick={() => setOpenWhatsAppModal(false)} className="h-9 text-xs">
+                                                {__('Cerrar')}
+                                            </Button>
+                                            <Button
+                                                size="sm"
+                                                onClick={handleSendWhatsAppMessage}
+                                                className="h-9 text-xs font-bold bg-emerald-600 hover:bg-emerald-700 text-white gap-1.5 shadow-md shadow-emerald-950/30"
+                                            >
+                                                <Send className="w-3.5 h-3.5" />
+                                                {__('Abrir WhatsApp')}
+                                            </Button>
+                                        </div>
                                     </div>
                                 </DialogContent>
                             </Dialog>
