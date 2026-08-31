@@ -33,7 +33,7 @@ export default function Register({ passwordRules, paises = [] }: Props) {
         <>
             <Head title="Crear Cuenta" />
             <Form
-                {...store.form()}
+                action={store()}
                 resetOnSuccess={['password', 'password_confirmation']}
                 disableWhileProcessing
                 className="flex flex-col gap-4"

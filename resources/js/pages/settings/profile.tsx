@@ -38,7 +38,7 @@ export default function Profile({
                     description="Actualiza tu nombre y dirección de correo electrónico"
                 >
                     <Form
-                        {...ProfileController.update.form()}
+                        action={ProfileController.update()}
                         options={{
                             preserveScroll: true,
                         }}
