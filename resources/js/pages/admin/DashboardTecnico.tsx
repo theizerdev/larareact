@@ -378,6 +378,8 @@ export default function DashboardTecnico({ tecnico, counts, misEquiposPendientes
             inspeccion_json: inspeccionPayload,
             comentario: __('Proceso de preservicio e inspección inicial guardado por el técnico.'),
         }, {
+            preserveScroll: true,
+            preserveState: true,
             onSuccess: () => {
                 setIsPreservicioOpen(false);
                 setIsSubmitting(false);

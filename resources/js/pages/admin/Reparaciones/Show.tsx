@@ -831,9 +831,17 @@ export default function ShowReparacion({
     const tienePreservicioCompletado = React.useMemo(() => {
         if (!inspeccionData) return false;
         if (inspeccionData.completado === true || inspeccionData.estado === 'completado') return true;
+        const keysFisica = Object.keys(inspeccionData.fisica || {});
+        const keysEstado = Object.keys(inspeccionData.estado || {});
         const keysFuncionales = Object.keys(inspeccionData.pruebas_funcionales || {});
         const keysEsteticas = Object.keys(inspeccionData.revision_estetica || {});
-        return keysFuncionales.length > 0 || keysEsteticas.length > 0;
+        return (
+            keysFisica.length > 0 ||
+            keysEstado.length > 0 ||
+            keysFuncionales.length > 0 ||
+            keysEsteticas.length > 0 ||
+            Boolean(inspeccionData.fecha_registro)
+        );
     }, [inspeccionData]);
 
     const tienePreservicio = Boolean(
@@ -1270,12 +1278,14 @@ export default function ShowReparacion({
         };
 
         router.post(
-            `/admin/reparaciones/${orden.id}/estado`,
+            `/admin/reparaciones/${orden.id}/post-servicio`,
             {
                 estado_orden: orden.estado_orden,
                 post_servicio_json: updatedPostJson,
             },
             {
+                preserveScroll: true,
+                preserveState: true,
                 onSuccess: () => {
                     notifySuccess(__('Validación post-atención guardada correctamente.'));
                 },
@@ -1348,20 +1358,24 @@ export default function ShowReparacion({
         setIsSavingPreservicioInline(true);
         const updatedInspeccionJson = {
             ...(inspeccionData || {}),
+            completado: true,
             tipo_bloqueo: isPatron ? 'patron' : isSinBloqueo ? 'sin_bloqueo' : 'pin',
             patron_dots: patronDotsFromStr,
             fisica: inspeccionFisicaForm,
             estado: inspeccionEstadoForm,
+            fecha_registro: new Date().toISOString(),
         };
 
         router.post(
-            `/admin/reparaciones/${orden.id}/estado`,
+            `/admin/reparaciones/${orden.id}/preservicio`,
             {
                 estado_orden: orden.estado_orden,
                 inspeccion_json: updatedInspeccionJson,
                 observaciones_fisicas: observacionesFisicasForm,
             },
             {
+                preserveScroll: true,
+                preserveState: true,
                 onSuccess: () => {
                     notifySuccess(__('Preservicio e inspección inicial guardados exitosamente.'));
                 },
@@ -1593,7 +1607,7 @@ export default function ShowReparacion({
             fecha_registro: new Date().toISOString(),
         };
 
-        router.post(`/admin/reparaciones/${orden.id}/estado`, {
+        router.post(`/admin/reparaciones/${orden.id}/post-servicio`, {
             estado_orden: orden.estado_orden === 'reparado' || orden.estado_orden === 'entregado' ? orden.estado_orden : 'reparado',
             post_servicio_json: postPayload,
             comentario: __('Validación Final, Limpieza & Control de Calidad Post-Atención registrado.'),
@@ -1665,16 +1679,21 @@ export default function ShowReparacion({
         setIsSubmittingPreservicio(true);
 
         const inspeccionPayload = {
+            ...(inspeccionData || {}),
+            completado: true,
             fisica: inspeccionFisica,
             estado: estadoEquipo,
+            fecha_registro: new Date().toISOString(),
         };
 
-        router.post(`/admin/reparaciones/${orden.id}/estado`, {
+        router.post(`/admin/reparaciones/${orden.id}/preservicio`, {
             estado_orden: orden.estado_orden || 'en_diagnostico',
             observaciones_fisicas: observacionesFisicasInput,
             inspeccion_json: inspeccionPayload,
             comentario: __('Inspección inicial de preservicio registrada / actualizada.'),
         }, {
+            preserveScroll: true,
+            preserveState: true,
             onSuccess: () => {
                 setIsPreservicioModalOpen(false);
                 setIsSubmittingPreservicio(false);

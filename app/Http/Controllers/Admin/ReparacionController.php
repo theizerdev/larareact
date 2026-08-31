@@ -823,9 +823,8 @@ class ReparacionController extends Controller
         return back()->withErrors(['message' => __('Acceso denegado.')]);
     }
 
-    public function updateEstado(Request $request, OrdenReparacion $reparacion)
-    {
-        // Auto-provisionar columnas en la base de datos si la migración no fue ejecutada manualmente
+    public function savePreservicio(Request $request, $reparacion)
+        $reparacion = $reparacion instanceof OrdenReparacion ? $reparacion : OrdenReparacion::findOrFail($reparacion);
         if (!\Illuminate\Support\Facades\Schema::hasColumn('ordenes_reparacion', 'contrasena_patron')) {
             \Illuminate\Support\Facades\Schema::table('ordenes_reparacion', function (\Illuminate\Database\Schema\Blueprint $table) {
                 $table->string('contrasena_patron')->nullable()->after('observaciones_fisicas');
@@ -843,9 +842,9 @@ class ReparacionController extends Controller
         }
 
         $validated = $request->validate([
-            'estado_orden' => 'required|in:recibido,en_diagnostico,presupuestado,reincidencia,en_reparacion,esperando_repuesto,reparado,entregado,cancelado',
+            'estado_orden' => 'nullable|string|in:recibido,en_diagnostico,presupuestado,reincidencia,en_reparacion,esperando_repuesto,reparado,entregado,cancelado',
             'comentario' => 'nullable|string',
-            'tecnico_id' => 'nullable|exists:landlord.users,id',
+            'tecnico_id' => 'nullable',
             'observaciones_fisicas' => 'nullable|string',
             'contrasena_patron' => 'nullable|string',
             'inspeccion_json' => 'nullable',
@@ -853,11 +852,15 @@ class ReparacionController extends Controller
         ]);
 
         $estadoAnterior = $reparacion->estado_orden;
-        $nuevoEstado = $validated['estado_orden'];
+        $nuevoEstado = !empty($validated['estado_orden']) ? $validated['estado_orden'] : $estadoAnterior;
 
-        $updateData = ['estado_orden' => $nuevoEstado];
-        if (isset($validated['tecnico_id'])) {
-            $updateData['tecnico_id'] = $validated['tecnico_id'];
+        $updateData = [];
+        if (!empty($validated['estado_orden'])) {
+            $updateData['estado_orden'] = $nuevoEstado;
+        }
+
+        if (array_key_exists('tecnico_id', $validated)) {
+            $updateData['tecnico_id'] = !empty($validated['tecnico_id']) ? $validated['tecnico_id'] : null;
         }
 
         if ($request->has('observaciones_fisicas')) {
@@ -895,15 +898,20 @@ class ReparacionController extends Controller
             $updateData['fecha_entrega'] = now();
         }
 
-        $reparacion->update($updateData);
+        if (!empty($updateData)) {
+            $reparacion->update($updateData);
+        }
 
-        OrdenReparacionHistorial::create([
-            'orden_id' => $reparacion->id,
-            'user_id' => auth()->id(),
-            'estado_anterior' => $estadoAnterior,
-            'estado_nuevo' => $nuevoEstado,
-            'comentario' => $validated['comentario'] ?? "Cambio de estado a " . ucfirst(str_replace('_', ' ', $nuevoEstado)),
-        ]);
+        // Registrar en historial si cambió el estado o si se incluyó un comentario
+        if ($nuevoEstado !== $estadoAnterior || !empty($validated['comentario'])) {
+            OrdenReparacionHistorial::create([
+                'orden_id' => $reparacion->id,
+                'user_id' => auth()->id(),
+                'estado_anterior' => $estadoAnterior,
+                'estado_nuevo' => $nuevoEstado,
+                'comentario' => $validated['comentario'] ?? "Cambio de estado a " . ucfirst(str_replace('_', ' ', $nuevoEstado)),
+            ]);
+        }
 
         // Si el estado cambia a reparado, enviar notificación de WhatsApp al cliente
         $waUrl = null;
@@ -915,7 +923,7 @@ class ReparacionController extends Controller
             ? "Estado actualizado a Listo / Reparado. Notificación de retiro enviada al cliente."
             : "Estado actualizado exitosamente.";
 
-        $redirect = back()->with('notification', [
+        $redirect = redirect()->route('admin.reparaciones.show', $reparacion->id)->with('notification', [
             'type' => 'success',
             'message' => $message,
         ]);

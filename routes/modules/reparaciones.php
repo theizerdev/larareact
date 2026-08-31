@@ -42,8 +42,19 @@ Route::middleware(['verified'])->group(function () {
         ->name('reparaciones.checklist.copy-to-branch');
 
     Route::resource('reparaciones', ReparacionController::class);
+    Route::get('reparaciones/{reparacion}/preservicio', function ($reparacion) {
+        return redirect()->route('admin.reparaciones.show', $reparacion);
+    });
+    Route::post('reparaciones/{reparacion}/preservicio', [ReparacionController::class, 'savePreservicio'])
+        ->name('reparaciones.save-preservicio');
+    Route::get('reparaciones/{reparacion}/estado', function ($reparacion) {
+        return redirect()->route('admin.reparaciones.show', $reparacion);
+    });
     Route::post('reparaciones/{reparacion}/estado', [ReparacionController::class, 'updateEstado'])
         ->name('reparaciones.update-estado');
+    Route::get('reparaciones/{reparacion}/update-estado', function ($reparacion) {
+        return redirect()->route('admin.reparaciones.show', $reparacion);
+    });
     Route::post('reparaciones/{reparacion}/update-estado', [ReparacionController::class, 'updateEstado']);
     Route::post('reparaciones/{reparacion}/update-datos', [ReparacionController::class, 'updateDatos'])
         ->name('reparaciones.update-datos');
@@ -57,8 +68,9 @@ Route::middleware(['verified'])->group(function () {
         ->name('reparaciones.remove-item');
     Route::post('reparaciones/{reparacion}/costos', [ReparacionController::class, 'updateCostos'])
         ->name('reparaciones.update-costos');
-    Route::get('reparaciones/{reparacion}/post-servicio', [ReparacionController::class, 'postServicioForm'])
-        ->name('reparaciones.post-servicio');
+    Route::get('reparaciones/{reparacion}/post-servicio', function ($reparacion) {
+        return redirect()->route('admin.reparaciones.show', $reparacion);
+    });
     Route::post('reparaciones/{reparacion}/post-servicio', [ReparacionController::class, 'savePostServicio'])
         ->name('reparaciones.save-post-servicio');
 });
