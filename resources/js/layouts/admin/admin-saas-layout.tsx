@@ -805,14 +805,7 @@ export default function AdminSaasLayout({
 
                                 {/* Monitoring Group */}
                                 {(() => {
-                                    const isSuperAdminUser = Boolean(auth?.user?.is_super_admin);
-
                                     const monitoringItems = [
-                                        ...(isSuperAdminUser ? [{
-                                            title: 'Terminal Artisan',
-                                            href: '/admin/monitoring/terminal',
-                                            permission: 'monitoreo.server',
-                                        }] : []),
                                         ...(isSuperAdmin ? [
                                             {
                                                 title: 'Terminal Artisan',
@@ -846,11 +839,6 @@ export default function AdminSaasLayout({
                                             permission: 'monitoreo.database',
                                         },
                                         {
-                                            title: 'Server',
-                                            href: serverMonitoringIndex.url(),
-                                            permission: 'monitoreo.server',
-                                        },
-                                        {
                                             title: 'User Sessions',
                                             href: sessionMonitoringIndex.url(),
                                             permission: 'monitoreo.logins',
@@ -859,21 +847,6 @@ export default function AdminSaasLayout({
                                             title: 'Activity Log',
                                             href: activitiesMonitoringIndex.url(),
                                             permission: 'monitoreo.activities',
-                                        },
-                                        {
-                                            title: 'System Logs',
-                                            href: logMonitoringIndex.url(),
-                                            permission: 'monitoreo.view',
-                                        },
-                                        {
-                                            title: 'Queue Monitor',
-                                            href: queuesMonitoringIndex.url(),
-                                            permission: 'monitoreo.view',
-                                        },
-                                        {
-                                            title: 'Scheduled Tasks',
-                                            href: tasksMonitoringIndex.url(),
-                                            permission: 'monitoreo.view',
                                         },
                                     ].filter(item => hasPermission(item.permission));
 

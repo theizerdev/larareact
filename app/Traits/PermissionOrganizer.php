@@ -11,7 +11,6 @@ trait PermissionOrganizer
      */
     public function getPermissionsBySector()
     {
-        $permissions = Permission::orderBy('sector')->orderBy('module')->orderBy('name')->get();
         $user = auth()->user();
         $isSuperAdmin = $user && (
             $user->id === 1 ||
