@@ -823,6 +823,11 @@ class ReparacionController extends Controller
         return back()->withErrors(['message' => __('Acceso denegado.')]);
     }
 
+    public function updateEstado(Request $request, $reparacion)
+    {
+        return $this->savePreservicio($request, $reparacion);
+    }
+
     public function savePreservicio(Request $request, $reparacion)
     {
         $reparacion = $reparacion instanceof OrdenReparacion ? $reparacion : OrdenReparacion::findOrFail($reparacion);
@@ -895,7 +900,7 @@ class ReparacionController extends Controller
             }
         }
 
-        if ($nuevoEstado === 'entregado' && !$reparacion->fecha_entrega) {
+        if (($nuevoEstado === 'entregado' || $nuevoEstado === 'entregado_finalizado') && !$reparacion->fecha_entrega) {
             $updateData['fecha_entrega'] = now();
         }
 
@@ -914,14 +919,14 @@ class ReparacionController extends Controller
             ]);
         }
 
-        // Si el estado cambia a reparado, enviar notificación de WhatsApp al cliente
+        // Si el estado cambia a reparado / listo para entrega, enviar notificación de WhatsApp si está configurado
         $waUrl = null;
-        if ($nuevoEstado === 'reparado' && $estadoAnterior !== 'reparado') {
+        if (($nuevoEstado === 'reparado' || $nuevoEstado === 'listo_reparado') && $estadoAnterior !== 'reparado' && $estadoAnterior !== 'listo_reparado') {
             $waUrl = $this->sendWhatsAppNotificationOnPostServicioCompleted($reparacion);
         }
 
-        $message = $nuevoEstado === 'reparado'
-            ? "Estado actualizado a Listo / Reparado. Notificación de retiro enviada al cliente."
+        $message = ($nuevoEstado === 'reparado' || $nuevoEstado === 'listo_reparado')
+            ? "Estado actualizado a Listo para Entregar Reparado."
             : "Estado actualizado exitosamente.";
 
         $redirect = redirect()->route('admin.reparaciones.show', $reparacion->id)->with('notification', [
