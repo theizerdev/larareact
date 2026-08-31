@@ -1,255 +1,205 @@
 import { Head, router } from '@inertiajs/react';
 import {
-    Activity as ActivityIcon,
+    Activity,
+    PlusCircle,
+    Edit3,
+    Trash2,
+    LogIn,
+    LogOut,
+    Globe,
+    User as UserIcon,
+    Eye,
+    Calendar,
     Search,
-    Filter,
     Clock,
-    User,
+    FileText,
     RefreshCw,
     Download,
-    Trash2,
-    Eye,
-    Layers,
-    Calendar,
-    ChevronLeft,
-    ChevronRight,
-    ArrowUpDown,
-    CheckCircle2,
-    AlertCircle,
-    XCircle,
-    Info,
+    Filter,
     Copy,
     Check,
-    ExternalLink,
-    FileSpreadsheet,
-    Code2,
-    Laptop,
-    Smartphone,
-    Globe,
-    Database,
-    Sparkles,
+    Server,
     Shield,
-    ShoppingCart,
-    DollarSign,
-    Package,
-    Wrench,
-    FileText,
-    KeyRound,
-    UserCheck,
-    MapPin,
-    Flame,
-    History,
-    FileDown,
-    SlidersHorizontal,
     X,
-    Maximize2,
-    Columns
+    Building2,
 } from 'lucide-react';
-import React, { useState, useMemo, useEffect } from 'react';
-import Swal from 'sweetalert2';
+import React, { useState } from 'react';
 import { Breadcrumbs } from '@/components/breadcrumbs';
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import type { ColumnDef } from '@/components/data-table';
+import { DataTable } from '@/components/data-table';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import {
     Dialog,
     DialogContent,
-    DialogDescription,
     DialogHeader,
     DialogTitle,
+    DialogFooter,
 } from '@/components/ui/dialog';
-import {
-    DropdownMenu,
-    DropdownMenuContent,
-    DropdownMenuItem,
-    DropdownMenuLabel,
-    DropdownMenuSeparator,
-    DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from '@/components/ui/sheet';
-import { Switch } from '@/components/ui/switch';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { useInitials } from '@/hooks/use-initials';
 import { useTranslate } from '@/hooks/use-translate';
+import { cleanParams, cn } from '@/lib/utils';
+import type { Paginated } from '@/types/app';
 
-interface DiffItem {
-    field: string;
-    old: any;
-    new: any;
+interface ActivityUser {
+    id: number;
+    name: string;
+    email: string;
 }
 
-interface ActivityItem {
+interface EmpresaItem {
+    id: number;
+    razon_social: string;
+    nombre_comercial?: string | null;
+}
+
+interface FieldChange {
+    field_key: string;
+    field_label: string;
+    old_value: string;
+    new_value: string;
+}
+
+interface ActivityLogItem {
     id: number;
     log_name: string;
     description: string;
     event: string;
-    subject_type: string | null;
-    subject_name: string | null;
-    subject_id: number | null;
-    causer: {
-        id: number;
-        name: string;
-        email: string;
-        profile_photo_url?: string | null;
-    } | null;
-    empresa_id: number | null;
-    sucursal_id: number | null;
-    ip_address: string | null;
-    latitude?: string | number | null;
-    longitude?: string | number | null;
-    url: string | null;
-    method: string | null;
-    browser: string;
-    os: string;
-    device: string;
+    subject_type: string;
+    subject_type_raw: string;
+    subject_id?: number | null;
+    causer?: ActivityUser | null;
+    empresa_id?: number | null;
+    empresa_nombre?: string | null;
+    sucursal_id?: number | null;
     properties: Record<string, any>;
-    diff: DiffItem[];
-    batch_uuid: string | null;
-    created_at: string | null;
-    created_at_human: string | null;
+    field_changes: FieldChange[];
+    ip_address: string;
+    method: string;
+    device_info: string;
+    url?: string | null;
+    table?: string | null;
+    created_at: string;
+    created_at_human: string;
 }
 
-interface StatsData {
-    total: number;
-    today: number;
-    yesterday: number;
-    created_count: number;
-    updated_count: number;
-    deleted_count: number;
-    auth_count: number;
-    top_modules: Array<{ name: string; count: number }>;
-}
-
-interface FilterOptions {
-    log_names: string[];
-    users: Array<{ id: number; name: string; email: string }>;
-    empresas: Array<{ id: number; razon_social: string; nombre_comercial: string | null }>;
-    events: Array<{ value: string; label: string }>;
-}
-
-interface PaginationLinks {
-    url: string | null;
-    label: string;
-    active: boolean;
-}
-
-interface PaginatedActivities {
-    data: ActivityItem[];
-    current_page: number;
-    last_page: number;
-    per_page: number;
-    total: number;
-    from: number | null;
-    to: number | null;
-    links: PaginationLinks[];
-}
-
-interface PageProps {
-    activities: PaginatedActivities;
-    stats: StatsData;
-    filters: {
-        search: string | null;
-        log_name: string;
-        event: string;
-        causer_id: string;
-        empresa_id: string;
-        date_range: string;
-        start_date: string | null;
-        end_date: string | null;
-        per_page: number;
+interface Props {
+    activities: Paginated<ActivityLogItem>;
+    stats: {
+        total: number;
+        today: number;
+        created: number;
+        updated: number;
+        deleted: number;
+        today_pct: number;
+        created_pct: number;
+        updated_pct: number;
+        deleted_pct: number;
     };
-    filterOptions: FilterOptions;
-    isSuperAdmin: boolean;
+    users: ActivityUser[];
+    empresas?: EmpresaItem[];
+    isSuperAdmin?: boolean;
+    modelsList: { raw: string; label: string }[];
+    filters: {
+        search?: string;
+        event?: string;
+        subject_type?: string;
+        causer_id?: string;
+        empresa_id?: string;
+        date_from?: string;
+        date_to?: string;
+        perPage?: string;
+    };
 }
 
-export default function ActivityMonitoring({
+export default function ActivityMonitoringPage({
     activities,
     stats,
+    users,
+    empresas = [],
+    isSuperAdmin = false,
+    modelsList,
     filters,
-    filterOptions,
-    isSuperAdmin,
-}: PageProps) {
+}: Props) {
     const { __ } = useTranslate();
-    const getInitials = useInitials();
 
-    // Estado local de filtros
-    const [search, setSearch] = useState(filters.search || '');
-    const [logName, setLogName] = useState(filters.log_name || 'all');
-    const [event, setEvent] = useState(filters.event || 'all');
-    const [causerId, setCauserId] = useState(filters.causer_id || 'all');
-    const [empresaId, setEmpresaId] = useState(filters.empresa_id || 'all');
-    const [dateRange, setDateRange] = useState(filters.date_range || '30_days');
-    const [startDate, setStartDate] = useState(filters.start_date || '');
-    const [endDate, setEndDate] = useState(filters.end_date || '');
-    const [perPage, setPerPage] = useState(String(filters.per_page || 25));
+    const breadcrumbs = [
+        { title: __('Dashboard'), href: '/admin/dashboard' },
+        { title: __('Monitoreo'), href: '/admin/monitoring/server' },
+        { title: __('Registros de Actividad del Sistema'), href: '/admin/monitoring/activities' },
+    ];
 
-    // Estados de UI
-    const [activeTab, setActiveTab] = useState('table');
-    const [selectedActivity, setSelectedActivity] = useState<ActivityItem | null>(null);
-    const [inspectorOpen, setInspectorOpen] = useState(false);
+    // States
+    const [selectedActivity, setSelectedActivity] = useState<ActivityLogItem | null>(null);
+    const [activeTab, setActiveTab] = useState<'changes' | 'json' | 'context'>('changes');
     const [copiedJson, setCopiedJson] = useState(false);
-    const [autoRefresh, setAutoRefresh] = useState(false);
-    const [isRefreshing, setIsRefreshing] = useState(false);
 
-    // Auto-refresh timer
-    useEffect(() => {
-        if (!autoRefresh) return;
-        const interval = setInterval(() => {
-            handleRefresh(true);
-        }, 15000);
-        return () => clearInterval(interval);
-    }, [autoRefresh]);
+    // Confirmation dialog for Clear
+    const [showClearConfirm, setShowClearConfirm] = useState(false);
+
+    // Filters state
+    const [searchTerm, setSearchTerm] = useState(filters.search || '');
+    const [eventFilter, setEventFilter] = useState(filters.event || '');
+    const [modelFilter, setModelFilter] = useState(filters.subject_type || '');
+    const [causerFilter, setCauserFilter] = useState(filters.causer_id || '');
+    const [empresaFilter, setEmpresaFilter] = useState(filters.empresa_id || '');
+    const [dateFromFilter, setDateFromFilter] = useState(filters.date_from || '');
+    const [dateToFilter, setDateToFilter] = useState(filters.date_to || '');
+    const [perPageFilter, setPerPageFilter] = useState(filters.perPage || '15');
 
     const handleApplyFilters = () => {
         router.get(
-            '/admin/monitoring/activities',
-            {
-                search: search || undefined,
-                log_name: logName !== 'all' ? logName : undefined,
-                event: event !== 'all' ? event : undefined,
-                causer_id: causerId !== 'all' ? causerId : undefined,
-                empresa_id: empresaId !== 'all' ? empresaId : undefined,
-                date_range: dateRange,
-                start_date: dateRange === 'custom' && startDate ? startDate : undefined,
-                end_date: dateRange === 'custom' && endDate ? endDate : undefined,
-                per_page: perPage,
-            },
-            {
-                preserveState: true,
-                preserveScroll: true,
-            }
+            window.location.pathname,
+            cleanParams({
+                search: searchTerm,
+                event: eventFilter,
+                subject_type: modelFilter,
+                causer_id: causerFilter,
+                empresa_id: empresaFilter,
+                date_from: dateFromFilter,
+                date_to: dateToFilter,
+                perPage: perPageFilter,
+            }),
+            { preserveState: true, preserveScroll: true }
         );
     };
 
     const handleResetFilters = () => {
-        setSearch('');
-        setLogName('all');
-        setEvent('all');
-        setCauserId('all');
-        setEmpresaId('all');
-        setDateRange('30_days');
-        setStartDate('');
-        setEndDate('');
-        setPerPage('25');
-        router.get('/admin/monitoring/activities', {}, { preserveState: true, preserveScroll: true });
+        setSearchTerm('');
+        setEventFilter('');
+        setModelFilter('');
+        setCauserFilter('');
+        setEmpresaFilter('');
+        setDateFromFilter('');
+        setDateToFilter('');
+        setPerPageFilter('15');
+        router.get(window.location.pathname, {}, { preserveState: true, preserveScroll: true });
     };
 
-    const handleRefresh = (silent = false) => {
-        if (!silent) setIsRefreshing(true);
-        router.reload({
-            onFinish: () => {
-                if (!silent) setIsRefreshing(false);
-            },
+    const handleRefresh = () => {
+        router.reload({ preserveScroll: true });
+    };
+
+    const handleExportCsv = () => {
+        const queryParams = new URLSearchParams();
+        if (empresaFilter) queryParams.set('empresa_id', empresaFilter);
+        if (searchTerm) queryParams.set('search', searchTerm);
+        if (eventFilter) queryParams.set('event', eventFilter);
+        if (modelFilter) queryParams.set('subject_type', modelFilter);
+        if (causerFilter) queryParams.set('causer_id', causerFilter);
+        if (dateFromFilter) queryParams.set('date_from', dateFromFilter);
+        if (dateToFilter) queryParams.set('date_to', dateToFilter);
+
+        const qs = queryParams.toString();
+        window.location.href = `/admin/monitoring/activities/export${qs ? '?' + qs : ''}`;
+    };
+
+    const handleClearAll = () => {
+        router.delete('/admin/monitoring/activities/clear', {
+            data: { empresa_id: empresaFilter || undefined },
+            onSuccess: () => setShowClearConfirm(false),
         });
-    };
-
-    const handleOpenInspector = (activity: ActivityItem) => {
-        setSelectedActivity(activity);
-        setInspectorOpen(true);
     };
 
     const handleCopyJson = () => {
@@ -259,447 +209,400 @@ export default function ActivityMonitoring({
         setTimeout(() => setCopiedJson(false), 2000);
     };
 
-    const handleDeleteActivity = (id: number) => {
-        Swal.fire({
-            title: __('¿Eliminar registro de actividad?'),
-            text: __('Esta acción eliminará de forma permanente este registro de auditoría.'),
-            icon: 'warning',
-            showCancelButton: true,
-            confirmButtonText: __('Sí, eliminar'),
-            cancelButtonText: __('Cancelar'),
-            confirmButtonColor: '#ef4444',
-        }).then((res) => {
-            if (res.isConfirmed) {
-                router.delete(`/admin/monitoring/activities/${id}`, {
-                    preserveScroll: true,
-                    onSuccess: () => {
-                        if (selectedActivity?.id === id) {
-                            setInspectorOpen(false);
-                        }
-                    },
-                });
+    const getEventPill = (event: string, logName: string) => {
+        if (logName === 'autenticacion' || logName === 'auth') {
+            if (event === 'logout') {
+                return (
+                    <Badge variant="outline" className="bg-amber-50 text-amber-700 border-amber-300 dark:bg-amber-950/40 dark:text-amber-300 dark:border-amber-800 gap-1 text-[11px] font-bold tracking-wide uppercase px-2.5 py-1">
+                        <LogOut className="w-3 h-3" />
+                        [➔ CIERRE DE SESIÓN
+                    </Badge>
+                );
             }
-        });
-    };
-
-    const handleClearOldLogs = () => {
-        Swal.fire({
-            title: __('¿Purgar registros antiguos?'),
-            text: __('Selecciona el rango de antigüedad a depurar para optimizar la base de datos.'),
-            icon: 'warning',
-            input: 'select',
-            inputOptions: {
-                '90': __('Anteriores a 90 días'),
-                '60': __('Anteriores a 60 días'),
-                '30': __('Anteriores a 30 días'),
-            },
-            inputValue: '90',
-            showCancelButton: true,
-            confirmButtonText: __('Purgar Registros'),
-            cancelButtonText: __('Cancelar'),
-            confirmButtonColor: '#ef4444',
-        }).then((res) => {
-            if (res.isConfirmed && res.value) {
-                router.delete('/admin/monitoring/activities/clear', {
-                    data: { days: res.value },
-                    preserveScroll: true,
-                });
-            }
-        });
-    };
-
-    // Helper de colores e iconos para el Módulo
-    const getModuleBadge = (logName: string) => {
-        switch (logName?.toLowerCase()) {
-            case 'ventas':
-                return {
-                    label: 'Ventas',
-                    icon: ShoppingCart,
-                    color: 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20',
-                };
-            case 'caja':
-                return {
-                    label: 'Caja POS',
-                    icon: DollarSign,
-                    color: 'bg-teal-500/10 text-teal-600 dark:text-teal-400 border-teal-500/20',
-                };
-            case 'inventario':
-                return {
-                    label: 'Inventario',
-                    icon: Package,
-                    color: 'bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 border-indigo-500/20',
-                };
-            case 'reparaciones':
-                return {
-                    label: 'Reparaciones',
-                    icon: Wrench,
-                    color: 'bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/20',
-                };
-            case 'contabilidad':
-                return {
-                    label: 'Contabilidad',
-                    icon: FileText,
-                    color: 'bg-violet-500/10 text-violet-600 dark:text-violet-400 border-violet-500/20',
-                };
-            case 'seguridad':
-            case 'auth':
-                return {
-                    label: 'Seguridad / Auth',
-                    icon: Shield,
-                    color: 'bg-blue-500/10 text-blue-600 dark:text-blue-400 border-blue-500/20',
-                };
-            case 'clientes':
-                return {
-                    label: 'Clientes',
-                    icon: UserCheck,
-                    color: 'bg-sky-500/10 text-sky-600 dark:text-sky-400 border-sky-500/20',
-                };
-            case 'compras':
-                return {
-                    label: 'Compras',
-                    icon: Layers,
-                    color: 'bg-fuchsia-500/10 text-fuchsia-600 dark:text-fuchsia-400 border-fuchsia-500/20',
-                };
-            default:
-                return {
-                    label: logName ? logName.toUpperCase() : 'GENERAL',
-                    icon: ActivityIcon,
-                    color: 'bg-slate-500/10 text-slate-600 dark:text-slate-400 border-slate-500/20',
-                };
+            return (
+                <Badge variant="outline" className="bg-emerald-50 text-emerald-700 border-emerald-300 dark:bg-emerald-950/40 dark:text-emerald-300 dark:border-emerald-800 gap-1 text-[11px] font-bold tracking-wide uppercase px-2.5 py-1">
+                    <LogIn className="w-3 h-3" />
+                    ➔] INICIO DE SESIÓN
+                </Badge>
+            );
         }
-    };
 
-    // Helper de colores e iconos para el Evento
-    const getEventBadge = (event: string) => {
-        switch (event?.toLowerCase()) {
+        switch (event) {
             case 'created':
-                return {
-                    label: 'Creación',
-                    color: 'bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border-emerald-500/30 font-bold',
-                };
+                return (
+                    <Badge variant="outline" className="bg-emerald-50 text-emerald-700 border-emerald-300 dark:bg-emerald-950/40 dark:text-emerald-300 dark:border-emerald-800 gap-1 text-[11px] font-bold tracking-wide uppercase px-2.5 py-1">
+                        <PlusCircle className="w-3 h-3" />
+                        + CREADO
+                    </Badge>
+                );
             case 'updated':
-                return {
-                    label: 'Modificación',
-                    color: 'bg-amber-500/15 text-amber-700 dark:text-amber-300 border-amber-500/30 font-bold',
-                };
+                return (
+                    <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-300 dark:bg-blue-950/40 dark:text-blue-300 dark:border-blue-800 gap-1 text-[11px] font-bold tracking-wide uppercase px-2.5 py-1">
+                        <Edit3 className="w-3 h-3" />
+                        EDITADO
+                    </Badge>
+                );
             case 'deleted':
-                return {
-                    label: 'Eliminación',
-                    color: 'bg-rose-500/15 text-rose-700 dark:text-rose-300 border-rose-500/30 font-bold',
-                };
-            case 'login':
-                return {
-                    label: 'Inicio de Sesión',
-                    color: 'bg-blue-500/15 text-blue-700 dark:text-blue-300 border-blue-500/30 font-bold',
-                };
+                return (
+                    <Badge variant="outline" className="bg-rose-50 text-rose-700 border-rose-300 dark:bg-rose-950/40 dark:text-rose-300 dark:border-rose-800 gap-1 text-[11px] font-bold tracking-wide uppercase px-2.5 py-1">
+                        <Trash2 className="w-3 h-3" />
+                        ELIMINADO
+                    </Badge>
+                );
             default:
-                return {
-                    label: event ? event.toUpperCase() : 'ACCIÓN',
-                    color: 'bg-slate-500/15 text-slate-700 dark:text-slate-300 border-slate-500/30 font-bold',
-                };
+                return (
+                    <Badge variant="outline" className="bg-slate-100 text-slate-700 border-slate-300 dark:bg-slate-900 dark:text-slate-300 text-[11px] font-bold uppercase px-2.5 py-1">
+                        {event}
+                    </Badge>
+                );
         }
     };
 
-    // Agrupación por fechas para la vista de Línea de Tiempo (Timeline)
-    const timelineGroups = useMemo(() => {
-        const groups: Record<string, ActivityItem[]> = {};
-        activities.data.forEach((act) => {
-            const dateKey = act.created_at ? act.created_at.split(' ')[0] : 'Desconocida';
-            if (!groups[dateKey]) {
-                groups[dateKey] = [];
-            }
-            groups[dateKey].push(act);
-        });
-        return groups;
-    }, [activities.data]);
-
-    return (
-        <div className="min-h-screen bg-slate-50/50 dark:bg-slate-950 p-4 md:p-8 space-y-6">
-            <Head title={__('Registro de Actividades - Monitoreo Avanzado')} />
-
-            {/* Breadcrumbs y Header */}
-            <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+    const columns: ColumnDef<ActivityLogItem>[] = [
+        {
+            header: 'FECHA Y HORA',
+            cell: (act) => (
                 <div>
-                    <Breadcrumbs
-                        breadcrumbs={[
-                            { title: __('Dashboard'), href: '/dashboard' },
-                            { title: __('Monitoreo'), href: '/admin/monitoring/server' },
-                            { title: __('Registro de Actividades'), href: '#' },
-                        ]}
-                    />
-                    <div className="flex items-center gap-3 mt-1.5">
-                        <div className="p-2 rounded-xl bg-gradient-to-br from-indigo-500/20 to-purple-500/20 text-indigo-600 dark:text-indigo-400 border border-indigo-500/30 shadow-sm">
-                            <ActivityIcon className="h-6 w-6" />
-                        </div>
-                        <div>
-                            <h1 className="text-2xl md:text-3xl font-black tracking-tight text-slate-900 dark:text-white font-mono">
-                                {__('Centro de Auditoría & Actividades')}
-                            </h1>
-                            <p className="text-xs md:text-sm text-slate-500 dark:text-slate-400">
-                                {__('Monitoreo en tiempo real de operaciones, transacciones, cambios y auditoría forense del sistema.')}
-                            </p>
-                        </div>
+                    <p className="text-xs font-semibold text-slate-800 dark:text-slate-200">{act.created_at}</p>
+                    <p className="text-[11px] font-medium text-indigo-600 dark:text-indigo-400 mt-0.5">{act.created_at_human}</p>
+                </div>
+            ),
+        },
+        {
+            header: 'ACTOR / USUARIO',
+            cell: (act) => (
+                <div className="flex items-center gap-2.5">
+                    <div className="w-8 h-8 rounded-full bg-indigo-100 dark:bg-indigo-950 border border-indigo-200 dark:border-indigo-800 flex items-center justify-center font-bold text-xs text-indigo-700 dark:text-indigo-300 shrink-0">
+                        {act.causer ? act.causer.name.substring(0, 2).toUpperCase() : 'SYS'}
+                    </div>
+                    <div className="min-w-0">
+                        <p className="font-bold text-xs text-slate-900 dark:text-slate-100 truncate">
+                            {act.causer ? act.causer.name : 'Sistema'}
+                        </p>
+                        {act.causer && (
+                            <p className="text-[11px] text-muted-foreground truncate">{act.causer.email}</p>
+                        )}
+                        {isSuperAdmin && act.empresa_nombre && (
+                            <span className="inline-flex items-center gap-1 text-[10px] text-indigo-600 dark:text-indigo-400 font-semibold mt-0.5">
+                                <Building2 className="w-2.5 h-2.5" />
+                                {act.empresa_nombre}
+                            </span>
+                        )}
                     </div>
                 </div>
+            ),
+        },
+        {
+            header: 'ACCIÓN',
+            cell: (act) => getEventPill(act.event, act.log_name),
+        },
+        {
+            header: 'ENTIDAD / MODELO',
+            cell: (act) => (
+                <div>
+                    <span className="text-xs font-semibold text-slate-800 dark:text-slate-200 block">{act.subject_type}</span>
+                    {act.subject_id ? (
+                        <span className="text-[11px] font-mono text-muted-foreground">ID: #{act.subject_id}</span>
+                    ) : (
+                        <span className="text-[11px] text-slate-400">-</span>
+                    )}
+                </div>
+            ),
+        },
+        {
+            header: 'DETALLE DE DESCRIPCIÓN',
+            cell: (act) => (
+                <div className="max-w-sm">
+                    <p className="font-semibold text-xs text-slate-900 dark:text-slate-100 truncate" title={act.description}>
+                        {act.description}
+                    </p>
+                    <p className="text-[11px] text-muted-foreground truncate mt-0.5">
+                        {act.causer ? act.causer.name : 'Sistema'}
+                    </p>
+                </div>
+            ),
+        },
+        {
+            header: 'IP Y DISPOSITIVO',
+            hideOn: 'mobile',
+            cell: (act) => (
+                <div>
+                    <p className="text-xs font-mono font-semibold text-slate-800 dark:text-slate-200">{act.ip_address}</p>
+                    <p className="text-[11px] text-muted-foreground">{act.device_info}</p>
+                </div>
+            ),
+        },
+        {
+            header: 'INSPECCIONAR',
+            className: 'text-right',
+            stopRowClick: true,
+            cell: (act) => (
+                <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-8 w-8 text-indigo-600 hover:text-indigo-700 hover:bg-indigo-50 dark:text-indigo-400 dark:hover:bg-indigo-950/40 rounded-full"
+                    onClick={() => {
+                        setSelectedActivity(act);
+                        setActiveTab(act.field_changes.length > 0 ? 'changes' : 'json');
+                    }}
+                >
+                    <Eye className="w-4 h-4" />
+                </Button>
+            ),
+        },
+    ];
 
-                {/* Acciones Globales */}
-                <div className="flex flex-wrap items-center gap-2">
-                    <div className="flex items-center gap-2 bg-white dark:bg-slate-900 px-3 py-1.5 rounded-lg border border-slate-200 dark:border-slate-800 shadow-sm text-xs font-semibold">
-                        <Switch
-                            checked={autoRefresh}
-                            onCheckedChange={setAutoRefresh}
-                            id="auto-refresh-toggle"
-                        />
-                        <label htmlFor="auto-refresh-toggle" className="cursor-pointer select-none text-slate-600 dark:text-slate-400 flex items-center gap-1.5">
-                            <span className={`inline-block h-2 w-2 rounded-full ${autoRefresh ? 'bg-emerald-500 animate-pulse' : 'bg-slate-400'}`} />
-                            {__('En Vivo (15s)')}
-                        </label>
+    return (
+        <>
+            <Head title="Monitoreo de Actividad del Sistema" />
+
+            <div className="space-y-6">
+                <Breadcrumbs breadcrumbs={breadcrumbs} />
+
+                {/* Header Header Bar */}
+                <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+                    <div>
+                        <div className="flex items-center gap-2.5">
+                            <Activity className="h-7 w-7 text-indigo-600 dark:text-indigo-400" />
+                            <h1 className="text-2xl font-extrabold tracking-tight text-slate-900 dark:text-slate-100">
+                                Monitoreo de Actividad del Sistema
+                            </h1>
+                        </div>
+                        <p className="text-sm text-muted-foreground mt-1">
+                            Auditoría de acciones del sistema, cambios en modelos, operaciones de usuarios y registros históricos de actividad.
+                        </p>
                     </div>
 
-                    <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => handleRefresh(false)}
-                        disabled={isRefreshing}
-                        className="bg-white dark:bg-slate-900"
-                    >
-                        <RefreshCw className={`h-4 w-4 mr-1.5 ${isRefreshing ? 'animate-spin text-indigo-500' : ''}`} />
-                        {__('Refrescar')}
-                    </Button>
-
-                    <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                            <Button variant="outline" size="sm" className="bg-white dark:bg-slate-900">
-                                <Download className="h-4 w-4 mr-1.5 text-emerald-500" />
-                                {__('Exportar')}
-                            </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end" className="w-48">
-                            <DropdownMenuLabel className="text-xs">{__('Formatos de Descarga')}</DropdownMenuLabel>
-                            <DropdownMenuSeparator />
-                            <DropdownMenuItem asChild>
-                                <a
-                                    href={`/admin/monitoring/activities/export?format=csv&log_name=${logName}&event=${event}&date_range=${dateRange}&search=${search}`}
-                                    className="cursor-pointer flex items-center"
-                                >
-                                    <FileSpreadsheet className="h-4 w-4 mr-2 text-emerald-600" />
-                                    {__('Descargar como CSV')}
-                                </a>
-                            </DropdownMenuItem>
-                            <DropdownMenuItem asChild>
-                                <a
-                                    href={`/admin/monitoring/activities/export?format=json&log_name=${logName}&event=${event}&date_range=${dateRange}&search=${search}`}
-                                    className="cursor-pointer flex items-center"
-                                >
-                                    <Code2 className="h-4 w-4 mr-2 text-indigo-600" />
-                                    {__('Descargar como JSON')}
-                                </a>
-                            </DropdownMenuItem>
-                        </DropdownMenuContent>
-                    </DropdownMenu>
-
-                    {isSuperAdmin && (
+                    <div className="flex flex-wrap items-center gap-2.5">
+                        <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={handleRefresh}
+                            className="h-9 gap-1.5 text-xs font-semibold"
+                        >
+                            <RefreshCw className="h-3.5 w-3.5" />
+                            Refresh
+                        </Button>
+                        <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={handleExportCsv}
+                            className="h-9 gap-1.5 text-xs font-semibold"
+                        >
+                            <Download className="h-3.5 w-3.5" />
+                            Exportar CSV
+                        </Button>
                         <Button
                             variant="destructive"
                             size="sm"
-                            onClick={handleClearOldLogs}
-                            className="shadow-sm"
+                            onClick={() => setShowClearConfirm(true)}
+                            className="h-9 gap-1.5 text-xs font-semibold bg-rose-600 hover:bg-rose-700 text-white"
                         >
-                            <Trash2 className="h-4 w-4 mr-1.5" />
-                            {__('Purgar Logs')}
+                            <Trash2 className="h-3.5 w-3.5" />
+                            Vaciar Actividad
                         </Button>
-                    )}
+                    </div>
                 </div>
-            </div>
 
-            {/* Tarjetas de Métricas & KPIs */}
-            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
-                {/* 1. Total Actividades */}
-                <Card className="bg-white/80 dark:bg-slate-900/80 backdrop-blur-md border-slate-200/80 dark:border-slate-800 shadow-sm relative overflow-hidden group hover:border-indigo-500/50 transition-all">
-                    <CardContent className="p-4">
+                {/* 5 Stat Cards */}
+                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-5">
+                    {/* Card 1: Total */}
+                    <div className="rounded-xl border border-indigo-200 bg-white p-4 shadow-sm dark:border-indigo-950 dark:bg-slate-900 relative overflow-hidden">
                         <div className="flex items-center justify-between">
-                            <p className="text-xs font-semibold text-slate-500 dark:text-slate-400">{__('Total Histórico')}</p>
-                            <ActivityIcon className="h-4 w-4 text-indigo-500" />
+                            <span className="text-[11px] font-bold uppercase tracking-wider text-slate-500 flex items-center gap-1">
+                                TOTAL REGISTROS <Check className="w-3 h-3 text-indigo-500" />
+                            </span>
+                            <div className="rounded-lg bg-indigo-50 p-2 text-indigo-600 dark:bg-indigo-950/50 dark:text-indigo-400">
+                                <Activity className="h-4 w-4" />
+                            </div>
                         </div>
-                        <div className="mt-2">
-                            <h3 className="text-2xl font-black tracking-tight text-slate-900 dark:text-white font-mono">
-                                {stats.total.toLocaleString()}
-                            </h3>
-                            <p className="text-[11px] text-slate-500 mt-0.5">{__('Eventos registrados')}</p>
+                        <div className="mt-3">
+                            <span className="text-2xl font-extrabold text-slate-900 dark:text-slate-100">{stats.total}</span>
                         </div>
-                    </CardContent>
-                </Card>
+                        <div className="mt-2 flex items-center justify-between text-[11px] text-slate-500">
+                            <span>Acciones registradas</span>
+                            <span className="font-bold text-indigo-600 bg-indigo-50 px-1.5 py-0.5 rounded dark:bg-indigo-950 dark:text-indigo-400">100%</span>
+                        </div>
+                        <div className="mt-3 h-1.5 w-full bg-slate-100 dark:bg-slate-800 rounded-full overflow-hidden">
+                            <div className="h-full bg-indigo-600 rounded-full w-full"></div>
+                        </div>
+                    </div>
 
-                {/* 2. Actividades Hoy */}
-                <Card className="bg-white/80 dark:bg-slate-900/80 backdrop-blur-md border-slate-200/80 dark:border-slate-800 shadow-sm relative overflow-hidden group hover:border-emerald-500/50 transition-all">
-                    <CardContent className="p-4">
+                    {/* Card 2: Hoy */}
+                    <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-800 dark:bg-slate-900">
                         <div className="flex items-center justify-between">
-                            <p className="text-xs font-semibold text-slate-500 dark:text-slate-400">{__('Actividades Hoy')}</p>
-                            <Clock className="h-4 w-4 text-emerald-500" />
+                            <span className="text-[11px] font-bold uppercase tracking-wider text-slate-500">HOY</span>
+                            <div className="rounded-lg bg-blue-50 p-2 text-blue-600 dark:bg-blue-950/50 dark:text-blue-400">
+                                <Calendar className="h-4 w-4" />
+                            </div>
                         </div>
-                        <div className="mt-2">
-                            <h3 className="text-2xl font-black tracking-tight text-emerald-600 dark:text-emerald-400 font-mono">
-                                {stats.today.toLocaleString()}
-                            </h3>
-                            <p className="text-[11px] text-slate-500 mt-0.5 flex items-center gap-1">
-                                <span>{stats.yesterday} ayer</span>
-                            </p>
+                        <div className="mt-3">
+                            <span className="text-2xl font-extrabold text-slate-900 dark:text-slate-100">{stats.today}</span>
                         </div>
-                    </CardContent>
-                </Card>
+                        <div className="mt-2 flex items-center justify-between text-[11px] text-slate-500">
+                            <span>Acciones en las últimas 24h</span>
+                            <span className="font-bold text-blue-600 bg-blue-50 px-1.5 py-0.5 rounded dark:bg-blue-950 dark:text-blue-400">{stats.today_pct}%</span>
+                        </div>
+                        <div className="mt-3 h-1.5 w-full bg-slate-100 dark:bg-slate-800 rounded-full overflow-hidden">
+                            <div className="h-full bg-blue-600 rounded-full" style={{ width: `${Math.min(stats.today_pct, 100)}%` }}></div>
+                        </div>
+                    </div>
 
-                {/* 3. Creaciones */}
-                <Card className="bg-white/80 dark:bg-slate-900/80 backdrop-blur-md border-slate-200/80 dark:border-slate-800 shadow-sm relative overflow-hidden group hover:border-teal-500/50 transition-all">
-                    <CardContent className="p-4">
+                    {/* Card 3: Creado */}
+                    <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-800 dark:bg-slate-900">
                         <div className="flex items-center justify-between">
-                            <p className="text-xs font-semibold text-slate-500 dark:text-slate-400">{__('Creaciones')}</p>
-                            <CheckCircle2 className="h-4 w-4 text-teal-500" />
+                            <span className="text-[11px] font-bold uppercase tracking-wider text-slate-500">CREADO</span>
+                            <div className="rounded-lg bg-emerald-50 p-2 text-emerald-600 dark:bg-emerald-950/50 dark:text-emerald-400">
+                                <PlusCircle className="h-4 w-4" />
+                            </div>
                         </div>
-                        <div className="mt-2">
-                            <h3 className="text-2xl font-black tracking-tight text-teal-600 dark:text-teal-400 font-mono">
-                                {stats.created_count.toLocaleString()}
-                            </h3>
-                            <p className="text-[11px] text-teal-600/80 mt-0.5">created</p>
+                        <div className="mt-3">
+                            <span className="text-2xl font-extrabold text-emerald-600 dark:text-emerald-400">{stats.created}</span>
                         </div>
-                    </CardContent>
-                </Card>
+                        <div className="mt-2 flex items-center justify-between text-[11px] text-slate-500">
+                            <span>Nuevos registros</span>
+                            <span className="font-bold text-emerald-600 bg-emerald-50 px-1.5 py-0.5 rounded dark:bg-emerald-950 dark:text-emerald-400">{stats.created_pct}%</span>
+                        </div>
+                        <div className="mt-3 h-1.5 w-full bg-slate-100 dark:bg-slate-800 rounded-full overflow-hidden">
+                            <div className="h-full bg-emerald-500 rounded-full" style={{ width: `${Math.min(stats.created_pct, 100)}%` }}></div>
+                        </div>
+                    </div>
 
-                {/* 4. Modificaciones */}
-                <Card className="bg-white/80 dark:bg-slate-900/80 backdrop-blur-md border-slate-200/80 dark:border-slate-800 shadow-sm relative overflow-hidden group hover:border-amber-500/50 transition-all">
-                    <CardContent className="p-4">
+                    {/* Card 4: Actualizado */}
+                    <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-800 dark:bg-slate-900">
                         <div className="flex items-center justify-between">
-                            <p className="text-xs font-semibold text-slate-500 dark:text-slate-400">{__('Modificaciones')}</p>
-                            <ArrowUpDown className="h-4 w-4 text-amber-500" />
+                            <span className="text-[11px] font-bold uppercase tracking-wider text-slate-500">ACTUALIZADO</span>
+                            <div className="rounded-lg bg-indigo-50 p-2 text-indigo-600 dark:bg-indigo-950/50 dark:text-indigo-400">
+                                <Edit3 className="h-4 w-4" />
+                            </div>
                         </div>
-                        <div className="mt-2">
-                            <h3 className="text-2xl font-black tracking-tight text-amber-600 dark:text-amber-400 font-mono">
-                                {stats.updated_count.toLocaleString()}
-                            </h3>
-                            <p className="text-[11px] text-amber-600/80 mt-0.5">updated</p>
+                        <div className="mt-3">
+                            <span className="text-2xl font-extrabold text-indigo-600 dark:text-indigo-400">{stats.updated}</span>
                         </div>
-                    </CardContent>
-                </Card>
+                        <div className="mt-2 flex items-center justify-between text-[11px] text-slate-500">
+                            <span>Registros modificados</span>
+                            <span className="font-bold text-indigo-600 bg-indigo-50 px-1.5 py-0.5 rounded dark:bg-indigo-950 dark:text-indigo-400">{stats.updated_pct}%</span>
+                        </div>
+                        <div className="mt-3 h-1.5 w-full bg-slate-100 dark:bg-slate-800 rounded-full overflow-hidden">
+                            <div className="h-full bg-indigo-600 rounded-full" style={{ width: `${Math.min(stats.updated_pct, 100)}%` }}></div>
+                        </div>
+                    </div>
 
-                {/* 5. Eliminaciones */}
-                <Card className="bg-white/80 dark:bg-slate-900/80 backdrop-blur-md border-slate-200/80 dark:border-slate-800 shadow-sm relative overflow-hidden group hover:border-rose-500/50 transition-all">
-                    <CardContent className="p-4">
+                    {/* Card 5: Eliminado */}
+                    <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-800 dark:bg-slate-900">
                         <div className="flex items-center justify-between">
-                            <p className="text-xs font-semibold text-slate-500 dark:text-slate-400">{__('Eliminaciones')}</p>
-                            <Trash2 className="h-4 w-4 text-rose-500" />
+                            <span className="text-[11px] font-bold uppercase tracking-wider text-slate-500">ELIMINADO</span>
+                            <div className="rounded-lg bg-rose-50 p-2 text-rose-600 dark:bg-rose-950/50 dark:text-rose-400">
+                                <Trash2 className="h-4 w-4" />
+                            </div>
                         </div>
-                        <div className="mt-2">
-                            <h3 className="text-2xl font-black tracking-tight text-rose-600 dark:text-rose-400 font-mono">
-                                {stats.deleted_count.toLocaleString()}
-                            </h3>
-                            <p className="text-[11px] text-rose-600/80 mt-0.5">deleted</p>
+                        <div className="mt-3">
+                            <span className="text-2xl font-extrabold text-rose-600 dark:text-rose-400">{stats.deleted}</span>
                         </div>
-                    </CardContent>
-                </Card>
+                        <div className="mt-2 flex items-center justify-between text-[11px] text-slate-500">
+                            <span>Registros eliminados</span>
+                            <span className="font-bold text-rose-600 bg-rose-50 px-1.5 py-0.5 rounded dark:bg-rose-950 dark:text-rose-400">{stats.deleted_pct}%</span>
+                        </div>
+                        <div className="mt-3 h-1.5 w-full bg-slate-100 dark:bg-slate-800 rounded-full overflow-hidden">
+                            <div className="h-full bg-rose-500 rounded-full" style={{ width: `${Math.min(stats.deleted_pct, 100)}%` }}></div>
+                        </div>
+                    </div>
+                </div>
 
-                {/* 6. Inicios de Sesión */}
-                <Card className="bg-white/80 dark:bg-slate-900/80 backdrop-blur-md border-slate-200/80 dark:border-slate-800 shadow-sm relative overflow-hidden group hover:border-blue-500/50 transition-all">
-                    <CardContent className="p-4">
-                        <div className="flex items-center justify-between">
-                            <p className="text-xs font-semibold text-slate-500 dark:text-slate-400">{__('Autenticaciones')}</p>
-                            <KeyRound className="h-4 w-4 text-blue-500" />
-                        </div>
-                        <div className="mt-2">
-                            <h3 className="text-2xl font-black tracking-tight text-blue-600 dark:text-blue-400 font-mono">
-                                {stats.auth_count.toLocaleString()}
-                            </h3>
-                            <p className="text-[11px] text-blue-600/80 mt-0.5">auth / login</p>
-                        </div>
-                    </CardContent>
-                </Card>
-            </div>
-
-            {/* Barra de Filtros Avanzados */}
-            <Card className="bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 shadow-sm">
-                <CardContent className="p-4 space-y-3">
-                    <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
-                        {/* Buscador de Texto */}
-                        <div className="lg:col-span-2 relative">
-                            <Search className="absolute left-3 top-2.5 h-4 w-4 text-slate-400" />
-                            <Input
-                                type="text"
-                                placeholder={__('Buscar por descripción, usuario, IP, entidad...')}
-                                value={search}
-                                onChange={(e) => setSearch(e.target.value)}
-                                onKeyDown={(e) => e.key === 'Enter' && handleApplyFilters()}
-                                className="pl-9 h-9 text-xs"
-                            />
-                            {search && (
-                                <button
-                                    onClick={() => setSearch('')}
-                                    className="absolute right-2.5 top-2.5 text-slate-400 hover:text-slate-600"
-                                >
-                                    <X className="h-4 w-4" />
-                                </button>
-                            )}
-                        </div>
-
-                        {/* Selector de Módulo (Log Name) */}
+                {/* Filter Box */}
+                <div className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-800 dark:bg-slate-900 space-y-4">
+                    <div className={`grid grid-cols-1 gap-4 ${isSuperAdmin && empresas.length > 0 ? 'sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5' : 'md:grid-cols-4'}`}>
+                        {/* Search Term */}
                         <div>
-                            <Select value={logName} onValueChange={setLogName}>
+                            <label className="text-[11px] font-bold text-slate-600 dark:text-slate-400 uppercase tracking-wider block mb-1.5">
+                                Término de Búsqueda
+                            </label>
+                            <div className="relative">
+                                <Search className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
+                                <Input
+                                    placeholder="Buscar descripción, usuario, IP..."
+                                    className="pl-9 h-9 text-xs"
+                                    value={searchTerm}
+                                    onChange={(e) => setSearchTerm(e.target.value)}
+                                />
+                            </div>
+                        </div>
+
+                        {/* Company Filter (Super Admin) */}
+                        {isSuperAdmin && empresas.length > 0 && (
+                            <div>
+                                <label className="text-[11px] font-bold text-slate-600 dark:text-slate-400 uppercase tracking-wider block mb-1.5">
+                                    Empresa
+                                </label>
+                                <Select value={empresaFilter} onValueChange={setEmpresaFilter}>
+                                    <SelectTrigger className="h-9 text-xs">
+                                        <SelectValue placeholder="Todas las Empresas" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        <SelectItem value="">Todas las Empresas</SelectItem>
+                                        {empresas.map((emp) => (
+                                            <SelectItem key={emp.id} value={String(emp.id)}>
+                                                {emp.nombre_comercial ? `${emp.nombre_comercial} (${emp.razon_social})` : emp.razon_social}
+                                            </SelectItem>
+                                        ))}
+                                    </SelectContent>
+                                </Select>
+                            </div>
+                        )}
+
+                        {/* Event Filter */}
+                        <div>
+                            <label className="text-[11px] font-bold text-slate-600 dark:text-slate-400 uppercase tracking-wider block mb-1.5">
+                                Tipo de Evento
+                            </label>
+                            <Select value={eventFilter} onValueChange={setEventFilter}>
                                 <SelectTrigger className="h-9 text-xs">
-                                    <SelectValue placeholder={__('Módulo')} />
+                                    <SelectValue placeholder="Todos los Eventos" />
                                 </SelectTrigger>
                                 <SelectContent>
-                                    <SelectItem value="all">{__('Todos los Módulos')}</SelectItem>
-                                    {filterOptions.log_names.map((name) => (
-                                        <SelectItem key={name} value={name}>
-                                            {name.toUpperCase()}
+                                    <SelectItem value="">Todos los Eventos</SelectItem>
+                                    <SelectItem value="created">Creados (+ CREADO)</SelectItem>
+                                    <SelectItem value="updated">Actualizados (EDITADO)</SelectItem>
+                                    <SelectItem value="deleted">Eliminados (ELIMINADO)</SelectItem>
+                                    <SelectItem value="autenticacion">Accesos / Sesiones (AUTH)</SelectItem>
+                                </SelectContent>
+                            </Select>
+                        </div>
+
+                        {/* Entity / Model Filter */}
+                        <div>
+                            <label className="text-[11px] font-bold text-slate-600 dark:text-slate-400 uppercase tracking-wider block mb-1.5">
+                                Entidad / Modelo
+                            </label>
+                            <Select value={modelFilter} onValueChange={setModelFilter}>
+                                <SelectTrigger className="h-9 text-xs">
+                                    <SelectValue placeholder="Todos los Modelos" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    <SelectItem value="">Todos los Modelos</SelectItem>
+                                    {modelsList.map((m) => (
+                                        <SelectItem key={m.raw} value={m.raw}>
+                                            {m.label} ({m.raw})
                                         </SelectItem>
                                     ))}
                                 </SelectContent>
                             </Select>
                         </div>
 
-                        {/* Selector de Tipo de Evento */}
+                        {/* User / Actor Filter */}
                         <div>
-                            <Select value={event} onValueChange={setEvent}>
+                            <label className="text-[11px] font-bold text-slate-600 dark:text-slate-400 uppercase tracking-wider block mb-1.5">
+                                Usuario / Actor
+                            </label>
+                            <Select value={causerFilter} onValueChange={setCauserFilter}>
                                 <SelectTrigger className="h-9 text-xs">
-                                    <SelectValue placeholder={__('Evento')} />
+                                    <SelectValue placeholder="Todos los Usuarios" />
                                 </SelectTrigger>
                                 <SelectContent>
-                                    {filterOptions.events.map((ev) => (
-                                        <SelectItem key={ev.value} value={ev.value}>
-                                            {ev.label}
-                                        </SelectItem>
-                                    ))}
-                                </SelectContent>
-                            </Select>
-                        </div>
-
-                        {/* Selector de Rango de Fecha */}
-                        <div>
-                            <Select value={dateRange} onValueChange={setDateRange}>
-                                <SelectTrigger className="h-9 text-xs">
-                                    <SelectValue placeholder={__('Período')} />
-                                </SelectTrigger>
-                                <SelectContent>
-                                    <SelectItem value="today">{__('Hoy')}</SelectItem>
-                                    <SelectItem value="yesterday">{__('Ayer')}</SelectItem>
-                                    <SelectItem value="7_days">{__('Últimos 7 días')}</SelectItem>
-                                    <SelectItem value="30_days">{__('Últimos 30 días')}</SelectItem>
-                                    <SelectItem value="this_month">{__('Este mes')}</SelectItem>
-                                    <SelectItem value="all">{__('Todo el histórico')}</SelectItem>
-                                    <SelectItem value="custom">{__('Rango personalizado')}</SelectItem>
-                                </SelectContent>
-                            </Select>
-                        </div>
-
-                        {/* Selector de Usuario */}
-                        <div>
-                            <Select value={causerId} onValueChange={setCauserId}>
-                                <SelectTrigger className="h-9 text-xs">
-                                    <SelectValue placeholder={__('Usuario')} />
-                                </SelectTrigger>
-                                <SelectContent>
-                                    <SelectItem value="all">{__('Todos los Usuarios')}</SelectItem>
-                                    {filterOptions.users.map((u) => (
+                                    <SelectItem value="">Todos los Usuarios</SelectItem>
+                                    {users.map((u) => (
                                         <SelectItem key={u.id} value={String(u.id)}>
-                                            {u.name}
+                                            {u.name} ({u.email})
                                         </SelectItem>
                                     ))}
                                 </SelectContent>
@@ -707,53 +610,42 @@ export default function ActivityMonitoring({
                         </div>
                     </div>
 
-                    {/* Fila secundaria si hay rango personalizado o Super Admin */}
-                    <div className="flex flex-wrap items-center justify-between gap-3 pt-1 border-t border-slate-100 dark:border-slate-800/60">
-                        <div className="flex flex-wrap items-center gap-2">
-                            {dateRange === 'custom' && (
-                                <div className="flex items-center gap-2">
-                                    <Input
-                                        type="date"
-                                        value={startDate}
-                                        onChange={(e) => setStartDate(e.target.value)}
-                                        className="h-8 text-xs w-36"
-                                    />
-                                    <span className="text-xs text-slate-400">-</span>
-                                    <Input
-                                        type="date"
-                                        value={endDate}
-                                        onChange={(e) => setEndDate(e.target.value)}
-                                        className="h-8 text-xs w-36"
-                                    />
-                                </div>
-                            )}
+                    <div className="flex flex-col gap-4 pt-2 md:flex-row md:items-end md:justify-between border-t border-slate-100 dark:border-slate-800">
+                        <div className="flex flex-wrap items-center gap-3">
+                            <div>
+                                <label className="text-[11px] font-bold text-slate-600 dark:text-slate-400 uppercase tracking-wider block mb-1">
+                                    Desde Fecha
+                                </label>
+                                <Input
+                                    type="date"
+                                    value={dateFromFilter}
+                                    onChange={(e) => setDateFromFilter(e.target.value)}
+                                    className="h-9 text-xs w-36"
+                                />
+                            </div>
 
-                            {isSuperAdmin && filterOptions.empresas.length > 0 && (
-                                <div className="flex items-center gap-1.5">
-                                    <span className="text-xs text-slate-500 font-medium">{__('Empresa:')}</span>
-                                    <Select value={empresaId} onValueChange={setEmpresaId}>
-                                        <SelectTrigger className="h-8 text-xs w-48">
-                                            <SelectValue placeholder={__('Empresa')} />
-                                        </SelectTrigger>
-                                        <SelectContent>
-                                            <SelectItem value="all">{__('Todas las Empresas')}</SelectItem>
-                                            {filterOptions.empresas.map((emp) => (
-                                                <SelectItem key={emp.id} value={String(emp.id)}>
-                                                    {emp.nombre_comercial || emp.razon_social}
-                                                </SelectItem>
-                                            ))}
-                                        </SelectContent>
-                                    </Select>
-                                </div>
-                            )}
+                            <div>
+                                <label className="text-[11px] font-bold text-slate-600 dark:text-slate-400 uppercase tracking-wider block mb-1">
+                                    Hasta Fecha
+                                </label>
+                                <Input
+                                    type="date"
+                                    value={dateToFilter}
+                                    onChange={(e) => setDateToFilter(e.target.value)}
+                                    className="h-9 text-xs w-36"
+                                />
+                            </div>
 
-                            <div className="flex items-center gap-1.5">
-                                <span className="text-xs text-slate-500">{__('Por pág:')}</span>
-                                <Select value={perPage} onValueChange={setPerPage}>
-                                    <SelectTrigger className="h-8 text-xs w-20">
+                            <div>
+                                <label className="text-[11px] font-bold text-slate-600 dark:text-slate-400 uppercase tracking-wider block mb-1">
+                                    Por Página
+                                </label>
+                                <Select value={perPageFilter} onValueChange={setPerPageFilter}>
+                                    <SelectTrigger className="h-9 text-xs w-24">
                                         <SelectValue />
                                     </SelectTrigger>
                                     <SelectContent>
+                                        <SelectItem value="10">10</SelectItem>
                                         <SelectItem value="15">15</SelectItem>
                                         <SelectItem value="25">25</SelectItem>
                                         <SelectItem value="50">50</SelectItem>
@@ -763,551 +655,316 @@ export default function ActivityMonitoring({
                             </div>
                         </div>
 
-                        <div className="flex items-center gap-2">
+                        <div className="flex items-center gap-3">
                             <Button
-                                size="sm"
-                                variant="default"
                                 onClick={handleApplyFilters}
-                                className="h-8 text-xs bg-indigo-600 hover:bg-indigo-700 text-white font-semibold"
+                                className="h-9 gap-1.5 text-xs font-bold bg-indigo-600 hover:bg-indigo-700 text-white px-5"
                             >
-                                <Filter className="h-3.5 w-3.5 mr-1.5" />
-                                {__('Filtrar')}
+                                <Filter className="h-3.5 w-3.5" />
+                                Filtrar Resultados
                             </Button>
-                            <Button
-                                size="sm"
-                                variant="ghost"
+                            <button
                                 onClick={handleResetFilters}
-                                className="h-8 text-xs text-slate-500 hover:text-slate-800 dark:hover:text-slate-200"
+                                className="text-xs font-semibold text-slate-500 hover:text-slate-800 dark:hover:text-slate-200 transition-colors"
                             >
-                                {__('Limpiar')}
-                            </Button>
+                                Limpiar Filtros
+                            </button>
                         </div>
-                    </div>
-                </CardContent>
-            </Card>
-
-            {/* Vistas: Tabla / Línea de Tiempo / Análisis */}
-            <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
-                <div className="flex items-center justify-between border-b border-slate-200 dark:border-slate-800 pb-2">
-                    <TabsList className="bg-slate-200/60 dark:bg-slate-900 p-1 rounded-xl">
-                        <TabsTrigger value="table" className="text-xs font-semibold gap-1.5">
-                            <Columns className="h-3.5 w-3.5" />
-                            {__('Vista Tabla')}
-                        </TabsTrigger>
-                        <TabsTrigger value="timeline" className="text-xs font-semibold gap-1.5">
-                            <History className="h-3.5 w-3.5" />
-                            {__('Línea de Tiempo')}
-                        </TabsTrigger>
-                        <TabsTrigger value="modules" className="text-xs font-semibold gap-1.5">
-                            <Layers className="h-3.5 w-3.5" />
-                            {__('Distribución por Módulos')}
-                        </TabsTrigger>
-                    </TabsList>
-
-                    <div className="text-xs text-slate-500 font-medium">
-                        {__('Mostrando')} <span className="font-bold text-slate-700 dark:text-slate-300">{activities.from || 0}</span> - <span className="font-bold text-slate-700 dark:text-slate-300">{activities.to || 0}</span> {__('de')} <span className="font-bold text-slate-700 dark:text-slate-300">{activities.total.toLocaleString()}</span> {__('registros')}
                     </div>
                 </div>
 
-                {/* 1. Vista Tabla */}
-                <TabsContent value="table" className="m-0">
-                    <Card className="bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 shadow-sm overflow-hidden">
-                        <div className="overflow-x-auto">
-                            <Table>
-                                <TableHeader className="bg-slate-50/80 dark:bg-slate-950/60">
-                                    <TableRow className="border-b border-slate-200/80 dark:border-slate-800">
-                                        <TableHead className="w-16 font-bold text-xs"># ID</TableHead>
-                                        <TableHead className="w-36 font-bold text-xs">{__('Fecha / Hora')}</TableHead>
-                                        <TableHead className="w-48 font-bold text-xs">{__('Usuario')}</TableHead>
-                                        <TableHead className="w-32 font-bold text-xs">{__('Módulo')}</TableHead>
-                                        <TableHead className="w-32 font-bold text-xs">{__('Evento')}</TableHead>
-                                        <TableHead className="font-bold text-xs">{__('Descripción / Acción')}</TableHead>
-                                        <TableHead className="w-40 font-bold text-xs">{__('Entidad Afectada')}</TableHead>
-                                        <TableHead className="w-36 font-bold text-xs">{__('Origen (IP / Disp.)')}</TableHead>
-                                        <TableHead className="w-24 text-right font-bold text-xs">{__('Detalle')}</TableHead>
-                                    </TableRow>
-                                </TableHeader>
-                                <TableBody>
-                                    {activities.data.length === 0 ? (
-                                        <TableRow>
-                                            <TableCell colSpan={9} className="text-center py-12 text-slate-500">
-                                                <ActivityIcon className="h-10 w-10 mx-auto text-slate-300 dark:text-slate-700 mb-2" />
-                                                <p className="font-semibold text-slate-700 dark:text-slate-300">{__('No se encontraron registros de actividad.')}</p>
-                                                <p className="text-xs text-slate-400 mt-1">{__('Intenta modificando los filtros de búsqueda o fecha.')}</p>
-                                            </TableCell>
-                                        </TableRow>
-                                    ) : (
-                                        activities.data.map((act) => {
-                                            const mod = getModuleBadge(act.log_name);
-                                            const ev = getEventBadge(act.event);
-                                            const ModIcon = mod.icon;
+                {/* Table Data */}
+                <div className="rounded-xl border border-slate-200 bg-white shadow-sm dark:border-slate-800 dark:bg-slate-900 overflow-hidden">
+                    <DataTable
+                        columns={columns}
+                        data={activities.data}
+                        pagination={activities}
+                        onRowClick={(act) => {
+                            setSelectedActivity(act);
+                            setActiveTab(act.field_changes.length > 0 ? 'changes' : 'json');
+                        }}
+                    />
+                </div>
+            </div>
 
-                                            return (
-                                                <TableRow
-                                                    key={act.id}
-                                                    onClick={() => handleOpenInspector(act)}
-                                                    className="cursor-pointer hover:bg-slate-50/80 dark:hover:bg-slate-800/50 transition-colors border-b border-slate-100 dark:border-slate-800/60 text-xs"
-                                                >
-                                                    {/* ID */}
-                                                    <TableCell className="font-mono text-slate-400 font-medium">
-                                                        #{act.id}
-                                                    </TableCell>
-
-                                                    {/* Fecha y Hora */}
-                                                    <TableCell>
-                                                        <div className="flex flex-col">
-                                                            <span className="font-semibold text-slate-900 dark:text-slate-100">
-                                                                {act.created_at ? act.created_at.split(' ')[0] : ''}
-                                                            </span>
-                                                            <span className="text-[11px] text-slate-400 font-mono">
-                                                                {act.created_at ? act.created_at.split(' ')[1] : ''} ({act.created_at_human})
-                                                            </span>
-                                                        </div>
-                                                    </TableCell>
-
-                                                    {/* Usuario */}
-                                                    <TableCell onClick={(e) => e.stopPropagation()}>
-                                                        <div className="flex items-center gap-2">
-                                                            <Avatar className="h-7 w-7 border border-slate-200 dark:border-slate-700">
-                                                                {act.causer?.profile_photo_url && (
-                                                                    <AvatarImage src={act.causer.profile_photo_url} alt={act.causer.name} />
-                                                                )}
-                                                                <AvatarFallback className="text-[10px] font-bold bg-indigo-50 text-indigo-700 dark:bg-indigo-950 dark:text-indigo-300">
-                                                                    {getInitials(act.causer?.name || 'Sis')}
-                                                                </AvatarFallback>
-                                                            </Avatar>
-                                                            <div className="flex flex-col truncate max-w-[140px]">
-                                                                <span className="font-semibold text-slate-900 dark:text-slate-100 truncate">
-                                                                    {act.causer ? act.causer.name : __('Sistema')}
-                                                                </span>
-                                                                {act.causer && (
-                                                                    <span className="text-[10px] text-slate-400 truncate">
-                                                                        {act.causer.email}
-                                                                    </span>
-                                                                )}
-                                                            </div>
-                                                        </div>
-                                                    </TableCell>
-
-                                                    {/* Módulo */}
-                                                    <TableCell>
-                                                        <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-md border text-[11px] font-medium ${mod.color}`}>
-                                                            <ModIcon className="h-3 w-3" />
-                                                            {mod.label}
-                                                        </span>
-                                                    </TableCell>
-
-                                                    {/* Evento */}
-                                                    <TableCell>
-                                                        <span className={`inline-flex items-center px-2 py-0.5 rounded-md border text-[10px] ${ev.color}`}>
-                                                            {ev.label}
-                                                        </span>
-                                                    </TableCell>
-
-                                                    {/* Descripción */}
-                                                    <TableCell>
-                                                        <div className="flex flex-col max-w-md">
-                                                            <span className="text-slate-800 dark:text-slate-200 font-medium line-clamp-2">
-                                                                {act.description}
-                                                            </span>
-                                                            {act.diff.length > 0 && (
-                                                                <span className="text-[10px] text-indigo-600 dark:text-indigo-400 font-semibold mt-0.5">
-                                                                    ✨ {act.diff.length} {__('campos modificados')}
-                                                                </span>
-                                                            )}
-                                                        </div>
-                                                    </TableCell>
-
-                                                    {/* Entidad Afectada */}
-                                                    <TableCell>
-                                                        {act.subject_name ? (
-                                                            <div className="flex items-center gap-1 text-slate-700 dark:text-slate-300 font-medium">
-                                                                <Badge variant="outline" className="text-[10px] py-0 bg-slate-100 dark:bg-slate-800">
-                                                                    {act.subject_name} #{act.subject_id}
-                                                                </Badge>
-                                                            </div>
-                                                        ) : (
-                                                            <span className="text-slate-400">-</span>
-                                                        )}
-                                                    </TableCell>
-
-                                                    {/* Origen (IP / Disp) */}
-                                                    <TableCell>
-                                                        <div className="flex flex-col text-[11px]">
-                                                            <span className="font-mono text-slate-600 dark:text-slate-300 flex items-center gap-1">
-                                                                <Globe className="h-3 w-3 text-slate-400" />
-                                                                {act.ip_address || '127.0.0.1'}
-                                                            </span>
-                                                            <span className="text-[10px] text-slate-400 truncate max-w-[120px]">
-                                                                {act.os} • {act.browser}
-                                                            </span>
-                                                        </div>
-                                                    </TableCell>
-
-                                                    {/* Acciones */}
-                                                    <TableCell className="text-right" onClick={(e) => e.stopPropagation()}>
-                                                        <div className="flex items-center justify-end gap-1">
-                                                            <Button
-                                                                size="sm"
-                                                                variant="ghost"
-                                                                onClick={() => handleOpenInspector(act)}
-                                                                className="h-7 w-7 p-0 text-slate-500 hover:text-indigo-600"
-                                                                title={__('Inspeccionar detalles')}
-                                                            >
-                                                                <Eye className="h-4 w-4" />
-                                                            </Button>
-                                                            {isSuperAdmin && (
-                                                                <Button
-                                                                    size="sm"
-                                                                    variant="ghost"
-                                                                    onClick={() => handleDeleteActivity(act.id)}
-                                                                    className="h-7 w-7 p-0 text-slate-400 hover:text-rose-600"
-                                                                    title={__('Eliminar registro')}
-                                                                >
-                                                                    <Trash2 className="h-3.5 w-3.5" />
-                                                                </Button>
-                                                            )}
-                                                        </div>
-                                                    </TableCell>
-                                                </TableRow>
-                                            );
-                                        })
-                                    )}
-                                </TableBody>
-                            </Table>
-                        </div>
-
-                        {/* Paginador */}
-                        {activities.links.length > 3 && (
-                            <div className="flex items-center justify-between px-4 py-3 border-t border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/50">
-                                <div className="text-xs text-slate-500">
-                                    {__('Página')} {activities.current_page} {__('de')} {activities.last_page}
-                                </div>
-                                <div className="flex items-center gap-1">
-                                    {activities.links.map((link, idx) => {
-                                        if (!link.url && link.label === '&laquo; Previous') {
-                                            return null;
-                                        }
-                                        if (!link.url && link.label === 'Next &raquo;') {
-                                            return null;
-                                        }
-
-                                        let label = link.label;
-                                        if (label.includes('Previous')) label = __('Anterior');
-                                        if (label.includes('Next')) label = __('Siguiente');
-
-                                        return (
-                                            <Button
-                                                key={idx}
-                                                size="sm"
-                                                variant={link.active ? 'default' : 'outline'}
-                                                className={`h-8 text-xs ${link.active ? 'bg-indigo-600 text-white' : 'bg-white dark:bg-slate-900'}`}
-                                                disabled={!link.url}
-                                                onClick={() => link.url && router.get(link.url, {}, { preserveState: true, preserveScroll: true })}
-                                                dangerouslySetInnerHTML={{ __html: label }}
-                                            />
-                                        );
-                                    })}
-                                </div>
-                            </div>
-                        )}
-                    </Card>
-                </TabsContent>
-
-                {/* 2. Vista Línea de Tiempo (Timeline) */}
-                <TabsContent value="timeline" className="m-0">
-                    <Card className="bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 p-6 shadow-sm">
-                        <div className="space-y-8">
-                            {Object.keys(timelineGroups).length === 0 ? (
-                                <div className="text-center py-12 text-slate-400">
-                                    {__('No hay actividades para mostrar en la línea de tiempo.')}
-                                </div>
-                            ) : (
-                                Object.entries(timelineGroups).map(([date, acts]) => (
-                                    <div key={date} className="relative">
-                                        <div className="sticky top-0 z-10 bg-slate-100 dark:bg-slate-800 px-3 py-1 rounded-full text-xs font-black inline-flex items-center gap-1.5 shadow-sm text-slate-700 dark:text-slate-300 font-mono mb-4">
-                                            <Calendar className="h-3.5 w-3.5 text-indigo-500" />
-                                            {date}
-                                        </div>
-
-                                        <div className="relative pl-6 space-y-4 before:absolute before:left-2.5 before:top-2 before:bottom-0 before:w-0.5 before:bg-slate-200 dark:before:bg-slate-800">
-                                            {acts.map((act) => {
-                                                const mod = getModuleBadge(act.log_name);
-                                                const ev = getEventBadge(act.event);
-                                                const ModIcon = mod.icon;
-
-                                                return (
-                                                    <div
-                                                        key={act.id}
-                                                        onClick={() => handleOpenInspector(act)}
-                                                        className="group relative flex flex-col md:flex-row md:items-center justify-between gap-3 p-3.5 rounded-xl border border-slate-200/80 dark:border-slate-800 bg-slate-50/40 dark:bg-slate-950/40 hover:bg-white dark:hover:bg-slate-800 hover:shadow-md transition-all cursor-pointer"
-                                                    >
-                                                        {/* Punto indicador */}
-                                                        <div className="absolute -left-6 top-4 h-3 w-3 rounded-full border-2 border-white dark:border-slate-900 bg-indigo-600 shadow-sm" />
-
-                                                        <div className="flex items-start gap-3">
-                                                            <div className={`p-2 rounded-lg border shrink-0 ${mod.color}`}>
-                                                                <ModIcon className="h-4 w-4" />
-                                                            </div>
-                                                            <div>
-                                                                <div className="flex flex-wrap items-center gap-2">
-                                                                    <span className="font-bold text-xs text-slate-900 dark:text-white">
-                                                                        {act.description}
-                                                                    </span>
-                                                                    <span className={`text-[10px] px-1.5 py-0.2 rounded border ${ev.color}`}>
-                                                                        {ev.label}
-                                                                    </span>
-                                                                </div>
-                                                                <p className="text-xs text-slate-500 dark:text-slate-400 mt-1 flex items-center gap-2">
-                                                                    <span className="font-medium text-slate-700 dark:text-slate-300">
-                                                                        {act.causer ? act.causer.name : __('Sistema')}
-                                                                    </span>
-                                                                    {act.subject_name && (
-                                                                        <>
-                                                                            <span>•</span>
-                                                                            <span>{act.subject_name} #{act.subject_id}</span>
-                                                                        </>
-                                                                    )}
-                                                                </p>
-                                                            </div>
-                                                        </div>
-
-                                                        <div className="flex items-center gap-3 self-end md:self-center text-xs text-slate-400 font-mono">
-                                                            <span>{act.created_at ? act.created_at.split(' ')[1] : ''}</span>
-                                                            <Button size="sm" variant="ghost" className="h-7 w-7 p-0 text-slate-400 group-hover:text-indigo-600">
-                                                                <Maximize2 className="h-3.5 w-3.5" />
-                                                            </Button>
-                                                        </div>
-                                                    </div>
-                                                );
-                                            })}
-                                        </div>
-                                    </div>
-                                ))
-                            )}
-                        </div>
-                    </Card>
-                </TabsContent>
-
-                {/* 3. Vista Distribución por Módulos */}
-                <TabsContent value="modules" className="m-0">
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <Card className="bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800">
-                            <CardHeader>
-                                <CardTitle className="text-base font-bold flex items-center gap-2">
-                                    <Layers className="h-5 w-5 text-indigo-500" />
-                                    {__('Módulos con Mayor Actividad')}
-                                </CardTitle>
-                                <CardDescription className="text-xs">
-                                    {__('Distribución porcentual de eventos generados por canal / área del sistema.')}
-                                </CardDescription>
-                            </CardHeader>
-                            <CardContent className="space-y-4">
-                                {stats.top_modules.map((item, idx) => {
-                                    const percentage = stats.total > 0 ? Math.round((item.count / stats.total) * 100) : 0;
-                                    return (
-                                        <div key={idx} className="space-y-1.5">
-                                            <div className="flex items-center justify-between text-xs">
-                                                <span className="font-semibold text-slate-700 dark:text-slate-300">{item.name}</span>
-                                                <span className="font-mono text-slate-500">{item.count.toLocaleString()} ({percentage}%)</span>
-                                            </div>
-                                            <div className="h-2 w-full bg-slate-100 dark:bg-slate-800 rounded-full overflow-hidden">
-                                                <div
-                                                    className="h-full bg-gradient-to-r from-indigo-500 to-purple-600 rounded-full transition-all duration-500"
-                                                    style={{ width: `${percentage}%` }}
-                                                />
-                                            </div>
-                                        </div>
-                                    );
-                                })}
-                            </CardContent>
-                        </Card>
-
-                        <Card className="bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800">
-                            <CardHeader>
-                                <CardTitle className="text-base font-bold flex items-center gap-2">
-                                    <Shield className="h-5 w-5 text-emerald-500" />
-                                    {__('Resumen de Integridad & Seguridad')}
-                                </CardTitle>
-                                <CardDescription className="text-xs">
-                                    {__('Puntos clave del registro auditado conforme a estándares de seguridad.')}
-                                </CardDescription>
-                            </CardHeader>
-                            <CardContent className="space-y-3 text-xs">
-                                <div className="p-3 rounded-lg bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 flex items-start gap-3">
-                                    <CheckCircle2 className="h-5 w-5 text-emerald-500 shrink-0 mt-0.5" />
-                                    <div>
-                                        <h4 className="font-bold text-slate-900 dark:text-white">{__('Trazabilidad Completa (Full Audit Trail)')}</h4>
-                                        <p className="text-slate-500 mt-0.5">
-                                            {__('Todas las acciones críticas en Ventas, Cajas, Inventario, Créditos y Reparaciones capturan dirección IP, agente de usuario y comparación de valores antes y después.')}
-                                        </p>
-                                    </div>
-                                </div>
-
-                                <div className="p-3 rounded-lg bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 flex items-start gap-3">
-                                    <Database className="h-5 w-5 text-indigo-500 shrink-0 mt-0.5" />
-                                    <div>
-                                        <h4 className="font-bold text-slate-900 dark:text-white">{__('Aislamiento Multi-Tenant')}</h4>
-                                        <p className="text-slate-500 mt-0.5">
-                                            {__('Los registros están segmentados por empresa y sucursal. Los administradores solo tienen visibilidad sobre su propio entorno operativo.')}
-                                        </p>
-                                    </div>
-                                </div>
-                            </CardContent>
-                        </Card>
-                    </div>
-                </TabsContent>
-            </Tabs>
-
-            {/* Modal / Sheet Inspector de Actividad (Diff & Metadata Viewer) */}
-            <Sheet open={inspectorOpen} onOpenChange={setInspectorOpen}>
-                <SheetContent className="w-full sm:max-w-2xl overflow-y-auto bg-white dark:bg-slate-950 border-l border-slate-200 dark:border-slate-800 p-6">
+            {/* Inspect Activity Modal */}
+            <Dialog open={!!selectedActivity} onOpenChange={(open) => !open && setSelectedActivity(null)}>
+                <DialogContent className="max-w-3xl max-h-[85vh] flex flex-col p-0 gap-0 overflow-hidden">
                     {selectedActivity && (
-                        <div className="space-y-6">
-                            <SheetHeader className="space-y-2">
+                        <>
+                            {/* Modal Header */}
+                            <DialogHeader className="p-6 pb-4 border-b border-slate-100 dark:border-slate-800">
                                 <div className="flex items-center justify-between">
-                                    <span className="font-mono text-xs text-slate-400 font-bold">
-                                        ACTIVITY #{selectedActivity.id}
-                                    </span>
-                                    <span className={`text-[10px] px-2 py-0.5 rounded border ${getEventBadge(selectedActivity.event).color}`}>
-                                        {getEventBadge(selectedActivity.event).label}
+                                    <div className="flex items-center gap-2">
+                                        <span className="font-mono text-xs font-bold text-muted-foreground bg-slate-100 dark:bg-slate-800 px-2 py-0.5 rounded">
+                                            #{selectedActivity.id}
+                                        </span>
+                                        {getEventPill(selectedActivity.event, selectedActivity.log_name)}
+                                    </div>
+                                    <span className="text-xs font-medium text-muted-foreground">
+                                        {selectedActivity.created_at} ({selectedActivity.created_at_human})
                                     </span>
                                 </div>
-                                <SheetTitle className="text-lg font-black text-slate-900 dark:text-white">
+
+                                <DialogTitle className="text-base font-extrabold text-slate-900 dark:text-slate-100 mt-2">
                                     {selectedActivity.description}
-                                </SheetTitle>
-                                <SheetDescription className="text-xs text-slate-500">
-                                    {selectedActivity.created_at} ({selectedActivity.created_at_human})
-                                </SheetDescription>
-                            </SheetHeader>
+                                </DialogTitle>
+                            </DialogHeader>
 
-                            {/* Resumen del Usuario y Entidad */}
-                            <div className="grid grid-cols-2 gap-3 p-3.5 rounded-xl bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-xs">
-                                <div>
-                                    <span className="text-slate-400 font-medium block text-[11px]">{__('Usuario Causante')}</span>
-                                    <span className="font-bold text-slate-900 dark:text-white block mt-0.5">
-                                        {selectedActivity.causer ? selectedActivity.causer.name : __('Sistema')}
-                                    </span>
-                                    <span className="text-slate-500 text-[10px] block">
-                                        {selectedActivity.causer?.email || __('Operación automática')}
-                                    </span>
-                                </div>
-                                <div>
-                                    <span className="text-slate-400 font-medium block text-[11px]">{__('Entidad / Recurso')}</span>
-                                    <span className="font-bold text-indigo-600 dark:text-indigo-400 block mt-0.5">
-                                        {selectedActivity.subject_name || __('General')} {selectedActivity.subject_id ? `#${selectedActivity.subject_id}` : ''}
-                                    </span>
-                                    <span className="text-slate-500 text-[10px] block truncate font-mono">
-                                        {selectedActivity.subject_type || 'N/A'}
-                                    </span>
-                                </div>
-                            </div>
-
-                            {/* Comparación Visual de Cambios (Diff) */}
-                            {selectedActivity.diff.length > 0 && (
-                                <div className="space-y-2">
-                                    <h4 className="text-xs font-black uppercase tracking-wider text-slate-700 dark:text-slate-300 flex items-center gap-1.5">
-                                        <Sparkles className="h-4 w-4 text-amber-500" />
-                                        {__('Cambios Realizados (Diferencias)')}
-                                    </h4>
-                                    <div className="rounded-xl border border-slate-200 dark:border-slate-800 overflow-hidden text-xs">
-                                        <Table>
-                                            <TableHeader className="bg-slate-100/70 dark:bg-slate-900">
-                                                <TableRow>
-                                                    <TableHead className="w-1/3 font-bold text-xs">{__('Campo')}</TableHead>
-                                                    <TableHead className="w-1/3 font-bold text-xs text-rose-600 dark:text-rose-400">{__('Valor Anterior')}</TableHead>
-                                                    <TableHead className="w-1/3 font-bold text-xs text-emerald-600 dark:text-emerald-400">{__('Valor Nuevo')}</TableHead>
-                                                </TableRow>
-                                            </TableHeader>
-                                            <TableBody>
-                                                {selectedActivity.diff.map((item, i) => (
-                                                    <TableRow key={i} className="border-b border-slate-100 dark:border-slate-800/60 font-mono">
-                                                        <TableCell className="font-semibold text-slate-800 dark:text-slate-200">
-                                                            {item.field}
-                                                        </TableCell>
-                                                        <TableCell className="bg-rose-50/50 dark:bg-rose-950/20 text-rose-700 dark:text-rose-300">
-                                                            {item.old !== null && item.old !== undefined
-                                                                ? (typeof item.old === 'object' ? JSON.stringify(item.old) : String(item.old))
-                                                                : <span className="text-slate-400 italic">null</span>}
-                                                        </TableCell>
-                                                        <TableCell className="bg-emerald-50/50 dark:bg-emerald-950/20 text-emerald-700 dark:text-emerald-300 font-bold">
-                                                            {item.new !== null && item.new !== undefined
-                                                                ? (typeof item.new === 'object' ? JSON.stringify(item.new) : String(item.new))
-                                                                : <span className="text-slate-400 italic">null</span>}
-                                                        </TableCell>
-                                                    </TableRow>
-                                                ))}
-                                            </TableBody>
-                                        </Table>
-                                    </div>
-                                </div>
-                            )}
-
-                            {/* Metadatos de Red y Dispositivo */}
-                            <div className="space-y-2">
-                                <h4 className="text-xs font-black uppercase tracking-wider text-slate-700 dark:text-slate-300 flex items-center gap-1.5">
-                                    <Globe className="h-4 w-4 text-indigo-500" />
-                                    {__('Información de Origen & Dispositivo')}
-                                </h4>
-                                <div className="grid grid-cols-2 gap-2 text-xs">
-                                    <div className="p-2.5 rounded-lg bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800">
-                                        <span className="text-slate-400 text-[10px] block font-medium">{__('Dirección IP')}</span>
-                                        <span className="font-mono font-bold text-slate-900 dark:text-white mt-0.5 block">
-                                            {selectedActivity.ip_address || '127.0.0.1'}
-                                        </span>
-                                    </div>
-                                    <div className="p-2.5 rounded-lg bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800">
-                                        <span className="text-slate-400 text-[10px] block font-medium">{__('Dispositivo / SO')}</span>
-                                        <span className="font-bold text-slate-900 dark:text-white mt-0.5 block truncate">
-                                            {selectedActivity.os} • {selectedActivity.browser}
-                                        </span>
-                                    </div>
-                                    {selectedActivity.url && (
-                                        <div className="col-span-2 p-2.5 rounded-lg bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800">
-                                            <span className="text-slate-400 text-[10px] block font-medium">{__('Ruta / Método HTTP')}</span>
-                                            <span className="font-mono text-[11px] text-slate-800 dark:text-slate-200 mt-0.5 block truncate">
-                                                <Badge variant="outline" className="mr-1.5 text-[9px] py-0">{selectedActivity.method || 'GET'}</Badge>
-                                                {selectedActivity.url}
-                                            </span>
-                                        </div>
+                            {/* Modal Navigation Tabs */}
+                            <div className="flex items-center gap-2 px-6 pt-3 border-b border-slate-100 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/50">
+                                <button
+                                    onClick={() => setActiveTab('changes')}
+                                    className={cn(
+                                        'pb-3 text-xs font-bold tracking-wider uppercase transition-colors border-b-2 flex items-center gap-1.5',
+                                        activeTab === 'changes'
+                                            ? 'border-indigo-600 text-indigo-600 dark:text-indigo-400'
+                                            : 'border-transparent text-muted-foreground hover:text-slate-800 dark:hover:text-slate-200'
                                     )}
-                                </div>
+                                >
+                                    <Edit3 className="w-3.5 h-3.5" />
+                                    Cambios Realizados ({selectedActivity.field_changes.length})
+                                </button>
+
+                                <button
+                                    onClick={() => setActiveTab('json')}
+                                    className={cn(
+                                        'pb-3 text-xs font-bold tracking-wider uppercase transition-colors border-b-2 flex items-center gap-1.5',
+                                        activeTab === 'json'
+                                            ? 'border-indigo-600 text-indigo-600 dark:text-indigo-400'
+                                            : 'border-transparent text-muted-foreground hover:text-slate-800 dark:hover:text-slate-200'
+                                    )}
+                                >
+                                    <FileText className="w-3.5 h-3.5" />
+                                    Payload JSON
+                                </button>
+
+                                <button
+                                    onClick={() => setActiveTab('context')}
+                                    className={cn(
+                                        'pb-3 text-xs font-bold tracking-wider uppercase transition-colors border-b-2 flex items-center gap-1.5',
+                                        activeTab === 'context'
+                                            ? 'border-indigo-600 text-indigo-600 dark:text-indigo-400'
+                                            : 'border-transparent text-muted-foreground hover:text-slate-800 dark:hover:text-slate-200'
+                                    )}
+                                >
+                                    <Globe className="w-3.5 h-3.5" />
+                                    Contexto y Origen
+                                </button>
                             </div>
 
-                            {/* Payload JSON Crudo */}
-                            <div className="space-y-2">
-                                <div className="flex items-center justify-between">
-                                    <h4 className="text-xs font-black uppercase tracking-wider text-slate-700 dark:text-slate-300 flex items-center gap-1.5">
-                                        <Code2 className="h-4 w-4 text-purple-500" />
-                                        {__('Payload JSON Completo')}
-                                    </h4>
-                                    <Button
-                                        size="sm"
-                                        variant="outline"
-                                        onClick={handleCopyJson}
-                                        className="h-7 text-xs"
-                                    >
-                                        {copiedJson ? (
-                                            <>
-                                                <Check className="h-3.5 w-3.5 mr-1 text-emerald-500" />
-                                                {__('Copiado')}
-                                            </>
+                            {/* Modal Content Body */}
+                            <div className="p-6 overflow-y-auto max-h-[50vh] space-y-4 bg-slate-50/30 dark:bg-slate-950/20">
+                                {/* TAB 1: CHANGES DIFF */}
+                                {activeTab === 'changes' && (
+                                    <div>
+                                        {selectedActivity.field_changes.length === 0 ? (
+                                            <div className="text-center py-10 text-muted-foreground space-y-2">
+                                                <Shield className="w-8 h-8 mx-auto text-slate-300 dark:text-slate-700" />
+                                                <p className="text-xs font-semibold">No se detectaron diferencias de atributos específicos para este evento.</p>
+                                                <p className="text-[11px]">Este registro contiene metadatos globales de ejecución.</p>
+                                            </div>
                                         ) : (
-                                            <>
-                                                <Copy className="h-3.5 w-3.5 mr-1" />
-                                                {__('Copiar')}
-                                            </>
+                                            <div className="rounded-xl border border-slate-200 dark:border-slate-800 overflow-hidden bg-white dark:bg-slate-900 shadow-sm">
+                                                <table className="w-full text-left text-xs">
+                                                    <thead className="bg-slate-50 dark:bg-slate-950 border-b border-slate-200 dark:border-slate-800 text-slate-500 font-bold uppercase text-[10px] tracking-wider">
+                                                        <tr>
+                                                            <th className="py-2.5 px-3">CAMPO</th>
+                                                            <th className="py-2.5 px-3 text-rose-600 dark:text-rose-400">VALOR ANTERIOR</th>
+                                                            <th className="py-2.5 px-3 text-emerald-600 dark:text-emerald-400">VALOR NUEVO</th>
+                                                        </tr>
+                                                    </thead>
+                                                    <tbody className="divide-y divide-slate-100 dark:divide-slate-800 font-mono text-[11px]">
+                                                        {selectedActivity.field_changes.map((change, idx) => (
+                                                            <tr key={idx} className="hover:bg-slate-50/50 dark:hover:bg-slate-800/40">
+                                                                <td className="py-2.5 px-3 font-sans font-bold text-slate-800 dark:text-slate-200">
+                                                                    {change.field_label}
+                                                                    <span className="block text-[10px] text-muted-foreground font-mono font-normal">
+                                                                        {change.field_key}
+                                                                    </span>
+                                                                </td>
+                                                                <td className="py-2.5 px-3 bg-rose-50/40 dark:bg-rose-950/20 text-rose-700 dark:text-rose-300 break-all">
+                                                                    {change.old_value}
+                                                                </td>
+                                                                <td className="py-2.5 px-3 bg-emerald-50/40 dark:bg-emerald-950/20 text-emerald-700 dark:text-emerald-300 font-bold break-all">
+                                                                    {change.new_value}
+                                                                </td>
+                                                            </tr>
+                                                        ))}
+                                                    </tbody>
+                                                </table>
+                                            </div>
                                         )}
-                                    </Button>
-                                </div>
-                                <pre className="p-3.5 rounded-xl bg-slate-900 text-slate-200 text-[11px] font-mono overflow-x-auto max-h-60 border border-slate-800">
-                                    {JSON.stringify(selectedActivity.properties, null, 2)}
-                                </pre>
+                                    </div>
+                                )}
+
+                                {/* TAB 2: JSON RAW */}
+                                {activeTab === 'json' && (
+                                    <div className="relative">
+                                        <div className="absolute right-3 top-3 z-10">
+                                            <Button
+                                                variant="outline"
+                                                size="sm"
+                                                onClick={handleCopyJson}
+                                                className="h-7 text-[11px] gap-1 bg-slate-900 text-white border-slate-700 hover:bg-slate-800 hover:text-white"
+                                            >
+                                                {copiedJson ? (
+                                                    <>
+                                                        <Check className="w-3 h-3 text-emerald-400" />
+                                                        Copiado!
+                                                    </>
+                                                ) : (
+                                                    <>
+                                                        <Copy className="w-3 h-3" />
+                                                        Copiar JSON
+                                                    </>
+                                                )}
+                                            </Button>
+                                        </div>
+
+                                        <pre className="p-4 rounded-xl bg-slate-950 text-slate-200 text-[11px] font-mono overflow-x-auto max-h-[40vh] border border-slate-800 leading-relaxed">
+                                            {JSON.stringify(selectedActivity.properties, null, 2)}
+                                        </pre>
+                                    </div>
+                                )}
+
+                                {/* TAB 3: CONTEXT */}
+                                {activeTab === 'context' && (
+                                    <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                                        {/* Actor Card */}
+                                        <div className="p-4 rounded-xl border border-slate-200 bg-white shadow-sm dark:border-slate-800 dark:bg-slate-900 space-y-3">
+                                            <div className="flex items-center gap-2 text-xs font-bold text-slate-500 uppercase tracking-wider">
+                                                <UserIcon className="w-4 h-4 text-indigo-500" />
+                                                ACTOR / USUARIO
+                                            </div>
+
+                                            <div className="flex items-center gap-3 pt-1">
+                                                <div className="w-10 h-10 rounded-full bg-indigo-50 text-indigo-700 dark:bg-indigo-950 dark:text-indigo-300 font-extrabold flex items-center justify-center text-xs shrink-0">
+                                                    {selectedActivity.causer ? selectedActivity.causer.name.substring(0, 2).toUpperCase() : 'SYS'}
+                                                </div>
+                                                <div>
+                                                    <h4 className="font-bold text-sm text-slate-900 dark:text-slate-100">
+                                                        {selectedActivity.causer ? selectedActivity.causer.name : 'Sistema'}
+                                                    </h4>
+                                                    {selectedActivity.causer && (
+                                                        <p className="text-xs text-muted-foreground">{selectedActivity.causer.email}</p>
+                                                    )}
+                                                </div>
+                                            </div>
+
+                                            {selectedActivity.causer && (
+                                                <div className="pt-2">
+                                                    <Badge variant="outline" className="text-[11px] font-mono bg-slate-50">
+                                                        User ID: #{selectedActivity.causer.id}
+                                                    </Badge>
+                                                </div>
+                                            )}
+
+                                            {selectedActivity.empresa_nombre && (
+                                                <div className="pt-2 border-t border-slate-100 dark:border-slate-800">
+                                                    <span className="text-[10px] uppercase font-bold text-slate-400 block">{__('Empresa')}</span>
+                                                    <span className="text-xs font-bold text-slate-800 dark:text-slate-200 flex items-center gap-1 mt-0.5">
+                                                        <Building2 className="w-3.5 h-3.5 text-indigo-500" />
+                                                        {selectedActivity.empresa_nombre} (ID #{selectedActivity.empresa_id})
+                                                    </span>
+                                                </div>
+                                            )}
+                                        </div>
+
+                                        {/* Entity Card */}
+                                        <div className="p-4 rounded-xl border border-slate-200 bg-white shadow-sm dark:border-slate-800 dark:bg-slate-900 space-y-3">
+                                            <div className="flex items-center gap-2 text-xs font-bold text-slate-500 uppercase tracking-wider">
+                                                <Server className="w-4 h-4 text-indigo-500" />
+                                                ENTIDAD OBJETIVO
+                                            </div>
+
+                                            <div className="space-y-2 pt-1 text-xs">
+                                                <div className="flex items-center justify-between">
+                                                    <span className="text-muted-foreground">Clase Entidad:</span>
+                                                    <Badge variant="outline" className="font-mono text-[11px]">
+                                                        {selectedActivity.subject_type}
+                                                    </Badge>
+                                                </div>
+                                                <div className="flex items-center justify-between">
+                                                    <span className="text-muted-foreground">ID Registro:</span>
+                                                    <span className="font-mono font-bold text-slate-800 dark:text-slate-200">
+                                                        #{selectedActivity.subject_id || '-'}
+                                                    </span>
+                                                </div>
+                                                <div className="flex items-center justify-between">
+                                                    <span className="text-muted-foreground">Tabla BD:</span>
+                                                    <span className="font-mono font-bold text-slate-800 dark:text-slate-200">
+                                                        {selectedActivity.table || '-'}
+                                                    </span>
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        {/* Environment Card */}
+                                        <div className="p-4 rounded-xl border border-slate-200 bg-white shadow-sm dark:border-slate-800 dark:bg-slate-900 space-y-3">
+                                            <div className="flex items-center gap-2 text-xs font-bold text-slate-500 uppercase tracking-wider">
+                                                <Globe className="w-4 h-4 text-indigo-500" />
+                                                ENTORNO DE LA PETICIÓN
+                                            </div>
+
+                                            <div className="space-y-2 pt-1 text-xs">
+                                                <div>
+                                                    <span className="text-muted-foreground block text-[10px] uppercase font-bold">DIRECCIÓN IP</span>
+                                                    <span className="font-mono font-bold text-slate-800 dark:text-slate-200">
+                                                        {selectedActivity.ip_address}
+                                                    </span>
+                                                </div>
+                                                <div>
+                                                    <span className="text-muted-foreground block text-[10px] uppercase font-bold">MÉTODO HTTP Y URL</span>
+                                                    <p className="font-mono text-[11px] text-slate-800 dark:text-slate-200 truncate" title={selectedActivity.url || ''}>
+                                                        [{selectedActivity.method}] {selectedActivity.url || '-'}
+                                                    </p>
+                                                </div>
+                                                <div>
+                                                    <span className="text-muted-foreground block text-[10px] uppercase font-bold">USER AGENT</span>
+                                                    <p className="font-mono text-[10px] text-slate-600 dark:text-slate-400 line-clamp-2" title={selectedActivity.device_info}>
+                                                        {selectedActivity.device_info}
+                                                    </p>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                )}
                             </div>
-                        </div>
+
+                            {/* Modal Footer */}
+                            <div className="p-4 border-t border-slate-100 dark:border-slate-800 bg-white dark:bg-slate-900 flex justify-end">
+                                <Button variant="outline" size="sm" onClick={() => setSelectedActivity(null)}>
+                                    Cerrar
+                                </Button>
+                            </div>
+                        </>
                     )}
-                </SheetContent>
-            </Sheet>
-        </div>
+                </DialogContent>
+            </Dialog>
+
+            {/* Clear Confirm Dialog */}
+            <Dialog open={showClearConfirm} onOpenChange={setShowClearConfirm}>
+                <DialogContent className="sm:max-w-[450px]">
+                    <DialogHeader>
+                        <DialogTitle className="flex items-center gap-2 text-rose-600">
+                            <Shield className="w-5 h-5" />
+                            ¿Vaciar todo el historial de actividad?
+                        </DialogTitle>
+                    </DialogHeader>
+                    <p className="text-sm text-muted-foreground mt-2">
+                        Esta acción eliminará de forma permanente todos los registros de auditoría y actividad almacenados en el sistema. Esta acción no se puede deshacer.
+                    </p>
+                    <DialogFooter className="mt-6 flex justify-end gap-3">
+                        <Button variant="outline" size="sm" onClick={() => setShowClearConfirm(false)}>
+                            Cancelar
+                        </Button>
+                        <Button variant="destructive" size="sm" onClick={handleClearAll} className="bg-rose-600 hover:bg-rose-700">
+                            Sí, Vaciar Historial
+                        </Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
+        </>
     );
 }

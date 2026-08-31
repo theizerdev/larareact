@@ -2,69 +2,24 @@
 
 namespace App\Http\Controllers\Admin;
 
-use App\Helpers\UserAgentParser;
 use App\Http\Controllers\Controller;
 use App\Models\Empresa;
 use App\Models\User;
+use App\Traits\HasSpanishActivityLog;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Response;
 use Inertia\Inertia;
+use Inertia\Response;
 use Spatie\Activitylog\Models\Activity;
+use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class ActivityMonitoringController extends Controller
 {
     /**
-     * Mapeo de modelos a nombres legibles en español.
+     * Display system activity logs with rich auditing details.
      */
-    protected static array $modelNames = [
-        'Sale' => 'Venta',
-        'HeldSale' => 'Venta en Espera',
-        'SalePayment' => 'Pago de Venta',
-        'CashRegister' => 'Caja Registradora',
-        'CashMovement' => 'Movimiento de Caja',
-        'Producto' => 'Producto / Repuesto',
-        'Product' => 'Producto',
-        'Categoria' => 'Categoría',
-        'Category' => 'Categoría',
-        'Marca' => 'Marca',
-        'Brand' => 'Marca',
-        'Familia' => 'Familia de Modelos',
-        'Modelo' => 'Modelo de Dispositivo',
-        'Servicio' => 'Servicio Técnico',
-        'OrdenReparacion' => 'Orden de Reparación',
-        'OrdenReparacionItem' => 'Ítem de Reparación',
-        'OrdenReparacionHistorial' => 'Historial de Reparación',
-        'OrdenReparacionFoto' => 'Foto de Reparación',
-        'ReparacionChecklistItem' => 'Ítem de Checklist',
-        'Cliente' => 'Cliente',
-        'Customer' => 'Cliente',
-        'Proveedor' => 'Proveedor',
-        'Supplier' => 'Proveedor',
-        'Compra' => 'Compra',
-        'CompraItem' => 'Ítem de Compra',
-        'CompraPago' => 'Pago a Proveedor',
-        'CierreMensual' => 'Cierre Mensual',
-        'AsientoContable' => 'Asiento Contable',
-        'ApunteContable' => 'Apunte Contable',
-        'CuentaContable' => 'Cuenta Contable',
-        'ConfiguracionContable' => 'Configuración Contable',
-        'Nomina' => 'Nómina',
-        'NominaDetalle' => 'Detalle de Nómina',
-        'User' => 'Usuario',
-        'Role' => 'Rol',
-        'Permission' => 'Permiso',
-        'Empresa' => 'Empresa',
-        'Sucursal' => 'Sucursal',
-        'WhatsAppMessage' => 'Mensaje de WhatsApp',
-        'WhatsAppTemplate' => 'Plantilla de WhatsApp',
-    ];
-
-    /**
-     * Muestra el panel principal de monitoreo de actividades (Activity Log).
-     */
-    public function index(Request $request)
+    public function index(Request $request): Response
     {
         $currentUser = $request->user();
         $isSuperAdmin = $currentUser->id === 1
@@ -72,23 +27,10 @@ class ActivityMonitoringController extends Controller
             || $currentUser->hasRole('super-admin')
             || $currentUser->hasRole('Super Admin');
 
-        // Filtros
-        $search = $request->input('search');
-        $logName = $request->input('log_name', 'all');
-        $event = $request->input('event', 'all');
-        $causerId = $request->input('causer_id', 'all');
-        $empresaId = $request->input('empresa_id', 'all');
-        $dateRange = $request->input('date_range', '30_days');
-        $startDate = $request->input('start_date');
-        $endDate = $request->input('end_date');
-        $perPage = (int) $request->input('per_page', 25);
-        if (! in_array($perPage, [15, 25, 50, 100])) {
-            $perPage = 25;
-        }
+        $query = Activity::with(['causer', 'subject']);
 
-        $query = Activity::with(['causer'])->latest('id');
-
-        // Aislamiento Multi-tenant
+        // Filter by company (empresa_id)
+        $empresaId = $request->input('empresa_id');
         if (! $isSuperAdmin) {
             if ($currentUser->empresa_id) {
                 $query->where('empresa_id', $currentUser->empresa_id);
@@ -99,293 +41,294 @@ class ActivityMonitoringController extends Controller
                         ->orWhereNull('sucursal_id');
                 });
             }
-        } elseif ($empresaId !== 'all' && is_numeric($empresaId)) {
+        } elseif ($empresaId && $empresaId !== 'all' && is_numeric($empresaId)) {
             $query->where('empresa_id', (int) $empresaId);
         }
 
-        // Filtro por Canal / Log Name
-        if ($logName !== 'all' && ! empty($logName)) {
-            $query->where('log_name', $logName);
-        }
-
-        // Filtro por Evento
-        if ($event !== 'all' && ! empty($event)) {
-            if ($event === 'login') {
-                $query->where('log_name', 'auth');
-            } else {
-                $query->where(function ($q) use ($event) {
-                    $q->where('event', $event)
-                        ->orWhere('description', 'like', "%{$event}%");
-                });
-            }
-        }
-
-        // Filtro por Usuario Causante
-        if ($causerId !== 'all' && is_numeric($causerId)) {
-            $query->where('causer_id', (int) $causerId);
-        }
-
-        // Filtro por Fechas
-        $query = $this->applyDateFilter($query, $dateRange, $startDate, $endDate);
-
-        // Filtro de Búsqueda de Texto
-        if (! empty($search)) {
+        // Search filter
+        if ($search = $request->input('search')) {
             $query->where(function ($q) use ($search) {
                 $q->where('description', 'like', "%{$search}%")
                     ->orWhere('log_name', 'like', "%{$search}%")
-                    ->orWhere('subject_type', 'like', "%{$search}%")
+                    ->orWhere('event', 'like', "%{$search}%")
                     ->orWhere('properties', 'like', "%{$search}%")
-                    ->orWhereHasMorph('causer', [User::class], function ($uq) use ($search) {
-                        $uq->where('name', 'like', "%{$search}%")
-                            ->orWhere('email', 'like', "%{$search}%");
+                    ->orWhereHasMorph('causer', [User::class], function ($userQuery) use ($search) {
+                        $userQuery->where('name', 'like', "%{$search}%")
+                            ->orWhere('email', 'like', "%{$search}%")
+                            ->orWhere('username', 'like', "%{$search}%");
                     });
             });
         }
 
-        // Métricas y Estadísticas Globales (según scope de tenant)
-        $stats = $this->calculateStats($currentUser, $isSuperAdmin, $empresaId);
-
-        // Paginación
-        $activities = $query->paginate($perPage)->withQueryString();
-
-        // Formateo de Actividades para el Frontend
-        $formattedActivities = $activities->through(function ($act) {
-            return $this->formatActivity($act);
-        });
-
-        // Opciones de filtros para los selectores
-        $filterOptions = $this->getFilterOptions($currentUser, $isSuperAdmin);
-
-        return Inertia::render('admin/monitoring/activities/index', [
-            'activities' => $formattedActivities,
-            'stats' => $stats,
-            'filters' => [
-                'search' => $search,
-                'log_name' => $logName,
-                'event' => $event,
-                'causer_id' => $causerId,
-                'empresa_id' => $empresaId,
-                'date_range' => $dateRange,
-                'start_date' => $startDate,
-                'end_date' => $endDate,
-                'per_page' => $perPage,
-            ],
-            'filterOptions' => $filterOptions,
-            'isSuperAdmin' => $isSuperAdmin,
-        ]);
-    }
-
-    /**
-     * Formatea un registro de actividad para la vista.
-     */
-    protected function formatActivity(Activity $act): array
-    {
-        $props = $act->properties ? $act->properties->toArray() : [];
-        $userAgent = $props['user_agent'] ?? null;
-        $ip = $props['ip'] ?? $props['ip_address'] ?? null;
-        $parsedAgent = UserAgentParser::parse($userAgent);
-
-        // Determinar nombre del modelo en español
-        $subjectBase = $act->subject_type ? class_basename($act->subject_type) : null;
-        $subjectLabel = $subjectBase ? (self::$modelNames[$subjectBase] ?? $subjectBase) : null;
-
-        // Detectar evento normalizado
-        $detectedEvent = $act->event;
-        if (! $detectedEvent) {
-            if ($act->log_name === 'auth' || str_contains($act->description, 'user_logged_in') || str_contains($act->description, 'login')) {
-                $detectedEvent = 'login';
-            } elseif (str_contains($act->description, 'creó') || str_contains($act->description, 'created')) {
-                $detectedEvent = 'created';
-            } elseif (str_contains($act->description, 'actualizó') || str_contains($act->description, 'updated')) {
-                $detectedEvent = 'updated';
-            } elseif (str_contains($act->description, 'eliminó') || str_contains($act->description, 'deleted')) {
-                $detectedEvent = 'deleted';
+        // Event filter
+        if ($event = $request->input('event')) {
+            if ($event === 'autenticacion' || $event === 'auth') {
+                $query->where(function ($q) {
+                    $q->where('log_name', 'autenticacion')
+                        ->orWhere('log_name', 'auth');
+                });
             } else {
-                $detectedEvent = 'custom';
+                $query->where('event', $event);
             }
         }
 
-        // Extracción de diferencias (Old vs New Attributes)
-        $diff = [];
-        $attributes = $props['attributes'] ?? [];
-        $old = $props['old'] ?? [];
+        // Entity / Model filter
+        if ($subjectType = $request->input('subject_type')) {
+            $query->where('subject_type', 'like', "%{$subjectType}%");
+        }
 
-        if (! empty($attributes) || ! empty($old)) {
-            $allKeys = array_unique(array_merge(array_keys($attributes), array_keys($old)));
-            foreach ($allKeys as $key) {
-                if (in_array($key, ['created_at', 'updated_at', 'deleted_at', 'password', 'remember_token'])) {
-                    continue;
-                }
-                $diff[] = [
-                    'field' => $key,
-                    'old' => $old[$key] ?? null,
-                    'new' => $attributes[$key] ?? null,
+        // User filter
+        if ($causer_id = $request->input('causer_id')) {
+            $query->where('causer_type', User::class)
+                ->where('causer_id', $causer_id);
+        }
+
+        // Date filters
+        if ($dateFrom = $request->input('date_from')) {
+            $query->whereDate('created_at', '>=', $dateFrom);
+        }
+
+        if ($dateTo = $request->input('date_to')) {
+            $query->whereDate('created_at', '<=', $dateTo);
+        }
+
+        $perPage = (int) $request->input('perPage', 15);
+        $activities = $query->latest('id')->paginate($perPage)->withQueryString();
+
+        // Load company names map for fast lookup
+        $empresasMap = Empresa::on('landlord')->pluck('razon_social', 'id')->toArray();
+
+        // Transform items for the frontend
+        $activities->getCollection()->transform(function ($activity) use ($empresasMap) {
+            $properties = $activity->properties ? $activity->properties->toArray() : [];
+
+            $causer = null;
+            if ($activity->causer) {
+                $causer = [
+                    'id' => $activity->causer->id,
+                    'name' => $activity->causer->name,
+                    'email' => $activity->causer->email,
                 ];
             }
-        }
 
-        return [
-            'id' => $act->id,
-            'log_name' => $act->log_name ?? 'default',
-            'description' => $act->description,
-            'event' => $detectedEvent,
-            'subject_type' => $act->subject_type,
-            'subject_name' => $subjectLabel,
-            'subject_id' => $act->subject_id,
-            'causer' => $act->causer ? [
-                'id' => $act->causer->id,
-                'name' => $act->causer->name,
-                'email' => $act->causer->email,
-                'profile_photo_url' => $act->causer->profile_photo_url ?? null,
-            ] : null,
-            'empresa_id' => $act->empresa_id,
-            'sucursal_id' => $act->sucursal_id,
-            'ip_address' => $ip,
-            'latitude' => $props['latitude'] ?? null,
-            'longitude' => $props['longitude'] ?? null,
-            'url' => $props['url'] ?? null,
-            'method' => $props['method'] ?? null,
-            'browser' => $parsedAgent['browser'],
-            'os' => $parsedAgent['os'],
-            'device' => $parsedAgent['device'],
-            'properties' => $props,
-            'diff' => $diff,
-            'batch_uuid' => $act->batch_uuid,
-            'created_at' => $act->created_at ? $act->created_at->format('Y-m-d H:i:s') : null,
-            'created_at_human' => $act->created_at ? $act->created_at->diffForHumans() : null,
-        ];
-    }
+            // Extract Class Basename and map to Spanish
+            $rawSubjectType = $activity->subject_type ? class_basename($activity->subject_type) : 'Sistema';
+            $modelNamesMap = User::getModelNamesMap();
+            $fieldLabelsMap = User::getFieldLabelsMap();
+            $subjectTypeFormatted = $modelNamesMap[$rawSubjectType] ?? $rawSubjectType;
 
-    /**
-     * Aplica los filtros de fecha a la consulta.
-     */
-    protected function applyDateFilter($query, string $dateRange, ?string $startDate, ?string $endDate)
-    {
-        return match ($dateRange) {
-            'today' => $query->whereDate('created_at', Carbon::today()),
-            'yesterday' => $query->whereDate('created_at', Carbon::yesterday()),
-            '7_days' => $query->where('created_at', '>=', Carbon::now()->subDays(7)),
-            '30_days' => $query->where('created_at', '>=', Carbon::now()->subDays(30)),
-            'this_month' => $query->where('created_at', '>=', Carbon::now()->startOfMonth()),
-            'custom' => $query->when($startDate, fn ($q) => $q->where('created_at', '>=', Carbon::parse($startDate)->startOfDay()))
-                ->when($endDate, fn ($q) => $q->where('created_at', '<=', Carbon::parse($endDate)->endOfDay())),
-            default => $query,
-        };
-    }
+            // Build Field Changes (diffs)
+            $fieldChanges = [];
+            $attributes = $properties['attributes'] ?? [];
+            $old = $properties['old'] ?? [];
 
-    /**
-     * Calcula estadísticas globales para las tarjetas superiores.
-     */
-    protected function calculateStats($currentUser, bool $isSuperAdmin, $empresaId): array
-    {
-        $baseQuery = Activity::query();
+            if (! empty($attributes)) {
+                foreach ($attributes as $key => $newValue) {
+                    if (in_array($key, ['updated_at', 'created_at', 'deleted_at', 'password', 'remember_token', 'two_factor_secret'])) {
+                        continue;
+                    }
 
-        if (! $isSuperAdmin) {
-            if ($currentUser->empresa_id) {
-                $baseQuery->where('empresa_id', $currentUser->empresa_id);
+                    $oldValue = $old[$key] ?? null;
+
+                    $formattedOld = is_bool($oldValue) ? ($oldValue ? 'Sí' : 'No') : (is_null($oldValue) || $oldValue === '' ? '-' : (is_array($oldValue) ? json_encode($oldValue, JSON_UNESCAPED_UNICODE) : (string) $oldValue));
+                    $formattedNew = is_bool($newValue) ? ($newValue ? 'Sí' : 'No') : (is_null($newValue) || $newValue === '' ? '-' : (is_array($newValue) ? json_encode($newValue, JSON_UNESCAPED_UNICODE) : (string) $newValue));
+
+                    $label = $fieldLabelsMap[$key] ?? ucfirst(str_replace('_', ' ', $key));
+
+                    $fieldChanges[] = [
+                        'field_key' => $key,
+                        'field_label' => $label,
+                        'old_value' => $formattedOld,
+                        'new_value' => $formattedNew,
+                    ];
+                }
             }
-        } elseif ($empresaId !== 'all' && is_numeric($empresaId)) {
-            $baseQuery->where('empresa_id', (int) $empresaId);
-        }
 
-        $totalActivities = (clone $baseQuery)->count();
-        $todayActivities = (clone $baseQuery)->whereDate('created_at', Carbon::today())->count();
-        $yesterdayActivities = (clone $baseQuery)->whereDate('created_at', Carbon::yesterday())->count();
+            $method = $properties['method'] ?? ($properties['evento'] === 'login' ? 'POST' : 'GET');
+            $ipAddress = $properties['ip_address'] ?? ($properties['ip'] ?? 'N/A');
+            $userAgent = $properties['user_agent'] ?? null;
 
-        $createdEvents = (clone $baseQuery)->where('event', 'created')->count();
-        $updatedEvents = (clone $baseQuery)->where('event', 'updated')->count();
-        $deletedEvents = (clone $baseQuery)->where('event', 'deleted')->count();
-        $authEvents = (clone $baseQuery)->where('log_name', 'auth')->count();
+            // Simple Device / Browser Parser
+            $deviceInfo = 'Desktop';
+            if ($userAgent) {
+                if (str_contains($userAgent, 'Windows')) {
+                    $deviceInfo = 'Windows';
+                } elseif (str_contains($userAgent, 'Macintosh') || str_contains($userAgent, 'Mac OS')) {
+                    $deviceInfo = 'macOS';
+                } elseif (str_contains($userAgent, 'Linux')) {
+                    $deviceInfo = 'Linux';
+                } elseif (str_contains($userAgent, 'Android')) {
+                    $deviceInfo = 'Android';
+                } elseif (str_contains($userAgent, 'iPhone') || str_contains($userAgent, 'iPad')) {
+                    $deviceInfo = 'iOS';
+                }
 
-        // Top módulos más activos
-        $topModules = (clone $baseQuery)
-            ->select('log_name', DB::raw('count(*) as total'))
-            ->groupBy('log_name')
-            ->orderByDesc('total')
-            ->limit(5)
-            ->get()
-            ->map(fn ($item) => [
-                'name' => ucfirst($item->log_name ?? 'General'),
-                'count' => $item->total,
-            ]);
+                if (str_contains($userAgent, 'Chrome') && ! str_contains($userAgent, 'Edg')) {
+                    $deviceInfo .= ' • Chrome';
+                } elseif (str_contains($userAgent, 'Firefox')) {
+                    $deviceInfo .= ' • Firefox';
+                } elseif (str_contains($userAgent, 'Safari') && ! str_contains($userAgent, 'Chrome')) {
+                    $deviceInfo .= ' • Safari';
+                } elseif (str_contains($userAgent, 'Edg')) {
+                    $deviceInfo .= ' • Edge';
+                }
+            }
 
-        return [
-            'total' => $totalActivities,
-            'today' => $todayActivities,
-            'yesterday' => $yesterdayActivities,
-            'created_count' => $createdEvents,
-            'updated_count' => $updatedEvents,
-            'deleted_count' => $deletedEvents,
-            'auth_count' => $authEvents,
-            'top_modules' => $topModules,
-        ];
-    }
+            return [
+                'id' => $activity->id,
+                'log_name' => $activity->log_name,
+                'description' => $activity->description,
+                'event' => $activity->event ?? ($properties['evento'] ?? 'custom'),
+                'subject_type' => $subjectTypeFormatted,
+                'subject_type_raw' => $rawSubjectType,
+                'subject_id' => $activity->subject_id,
+                'causer' => $causer,
+                'empresa_id' => $activity->empresa_id,
+                'empresa_nombre' => $empresasMap[$activity->empresa_id] ?? null,
+                'sucursal_id' => $activity->sucursal_id,
+                'properties' => $properties,
+                'field_changes' => $fieldChanges,
+                'ip_address' => $ipAddress,
+                'method' => $method,
+                'device_info' => $deviceInfo,
+                'url' => $properties['url'] ?? null,
+                'table' => $properties['tabla'] ?? null,
+                'created_at' => $activity->created_at ? $activity->created_at->format('Y-m-d H:i:s') : null,
+                'created_at_human' => $activity->created_at ? $activity->created_at->diffForHumans() : null,
+            ];
+        });
 
-    /**
-     * Obtiene listas de opciones para los filtros de búsqueda.
-     */
-    protected function getFilterOptions($currentUser, bool $isSuperAdmin): array
-    {
-        $logNamesQuery = Activity::select('log_name')->distinct()->whereNotNull('log_name');
+        // Statistics (scoped by company if selected)
+        $baseStatQuery = Activity::query();
         if (! $isSuperAdmin && $currentUser->empresa_id) {
-            $logNamesQuery->where('empresa_id', $currentUser->empresa_id);
+            $baseStatQuery->where('empresa_id', $currentUser->empresa_id);
+        } elseif ($empresaId && $empresaId !== 'all' && is_numeric($empresaId)) {
+            $baseStatQuery->where('empresa_id', (int) $empresaId);
         }
-        $logNames = $logNamesQuery->pluck('log_name')->filter()->values();
 
+        $totalRecords = (clone $baseStatQuery)->count();
+        $todayCount = (clone $baseStatQuery)->whereDate('created_at', Carbon::today())->count();
+        $createdCount = (clone $baseStatQuery)->where('event', 'created')->count();
+        $updatedCount = (clone $baseStatQuery)->where('event', 'updated')->count();
+        $deletedCount = (clone $baseStatQuery)->where('event', 'deleted')->count();
+
+        $stats = [
+            'total' => $totalRecords,
+            'today' => $todayCount,
+            'created' => $createdCount,
+            'updated' => $updatedCount,
+            'deleted' => $deletedCount,
+            'today_pct' => $totalRecords > 0 ? round(($todayCount / $totalRecords) * 100) : 0,
+            'created_pct' => $totalRecords > 0 ? round(($createdCount / $totalRecords) * 100) : 0,
+            'updated_pct' => $totalRecords > 0 ? round(($updatedCount / $totalRecords) * 100) : 0,
+            'deleted_pct' => $totalRecords > 0 ? round(($deletedCount / $totalRecords) * 100) : 0,
+        ];
+
+        // Available models for filter dropdown
+        $rawModelsQuery = Activity::distinct()->whereNotNull('subject_type');
+        if (! $isSuperAdmin && $currentUser->empresa_id) {
+            $rawModelsQuery->where('empresa_id', $currentUser->empresa_id);
+        } elseif ($empresaId && $empresaId !== 'all' && is_numeric($empresaId)) {
+            $rawModelsQuery->where('empresa_id', (int) $empresaId);
+        }
+        $rawModels = $rawModelsQuery->pluck('subject_type')->filter()->values();
+        $modelsList = $rawModels->map(function ($type) {
+            $base = class_basename($type);
+            $map = User::getModelNamesMap();
+
+            return [
+                'raw' => $base,
+                'label' => $map[$base] ?? $base,
+            ];
+        })->unique('raw')->values();
+
+        // Users query
         $usersQuery = User::select('id', 'name', 'email')->orderBy('name');
         if (! $isSuperAdmin && $currentUser->empresa_id) {
             $usersQuery->where('empresa_id', $currentUser->empresa_id);
+        } elseif ($empresaId && $empresaId !== 'all' && is_numeric($empresaId)) {
+            $usersQuery->where('empresa_id', (int) $empresaId);
         }
-        $users = $usersQuery->limit(100)->get();
+        $users = $usersQuery->get();
 
+        // Empresas list for Super Admins
         $empresas = [];
         if ($isSuperAdmin) {
             $empresas = Empresa::on('landlord')->select('id', 'razon_social', 'nombre_comercial')->orderBy('razon_social')->get();
         }
 
-        return [
-            'log_names' => $logNames,
+        return Inertia::render('admin/monitoring/activities/index', [
+            'activities' => $activities,
+            'stats' => $stats,
             'users' => $users,
             'empresas' => $empresas,
-            'events' => [
-                ['value' => 'all', 'label' => 'Todos los Eventos'],
-                ['value' => 'created', 'label' => 'Creación (created)'],
-                ['value' => 'updated', 'label' => 'Modificación (updated)'],
-                ['value' => 'deleted', 'label' => 'Eliminación (deleted)'],
-                ['value' => 'login', 'label' => 'Inicio de Sesión (login)'],
-            ],
-        ];
-    }
-
-    /**
-     * Elimina un registro individual de auditoría.
-     */
-    public function destroy($id, Request $request)
-    {
-        $currentUser = $request->user();
-        $isSuperAdmin = $currentUser->id === 1
-            || $currentUser->hasRole('Super Administrador')
-            || $currentUser->hasRole('super-admin');
-
-        $activity = Activity::findOrFail($id);
-
-        if (! $isSuperAdmin && $activity->empresa_id !== $currentUser->empresa_id) {
-            return back()->with('notification', [
-                'type' => 'error',
-                'message' => __('No tienes permiso para eliminar este registro.'),
-            ]);
-        }
-
-        $activity->delete();
-
-        return back()->with('notification', [
-            'type' => 'success',
-            'message' => __('Registro de auditoría eliminado exitosamente.'),
+            'isSuperAdmin' => $isSuperAdmin,
+            'modelsList' => $modelsList,
+            'filters' => $request->only(['search', 'event', 'subject_type', 'causer_id', 'empresa_id', 'date_from', 'date_to', 'perPage']),
         ]);
     }
 
     /**
-     * Purga o limpia registros antiguos de actividad.
+     * Export activity logs to CSV file.
+     */
+    public function export(Request $request): StreamedResponse
+    {
+        $fileName = 'actividad_sistema_'.now()->format('Y-m-d_H-i-s').'.csv';
+        $currentUser = $request->user();
+        $isSuperAdmin = $currentUser->id === 1
+            || $currentUser->hasRole('Super Administrador')
+            || $currentUser->hasRole('super-admin')
+            || $currentUser->hasRole('Super Admin');
+        $empresaId = $request->input('empresa_id');
+
+        $response = new StreamedResponse(function () use ($currentUser, $isSuperAdmin, $empresaId) {
+            $handle = fopen('php://output', 'w');
+            // Write BOM for UTF-8 Excel compatibility
+            fputs($handle, "\xEF\xBB\xBF");
+
+            fputcsv($handle, ['ID', 'Fecha y Hora', 'Empresa ID', 'Usuario', 'Email Usuario', 'Accion / Evento', 'Entidad / Modelo', 'ID Registro', 'Descripcion', 'IP', 'Metodo HTTP']);
+
+            $exportQuery = Activity::with(['causer'])->latest('id');
+
+            if (! $isSuperAdmin && $currentUser->empresa_id) {
+                $exportQuery->where('empresa_id', $currentUser->empresa_id);
+            } elseif ($empresaId && $empresaId !== 'all' && is_numeric($empresaId)) {
+                $exportQuery->where('empresa_id', (int) $empresaId);
+            }
+
+            $exportQuery->chunk(500, function ($activities) use ($handle) {
+                foreach ($activities as $act) {
+                    $props = $act->properties ? $act->properties->toArray() : [];
+                    $causer = $act->causer;
+                    $subjectType = $act->subject_type ? class_basename($act->subject_type) : 'Sistema';
+
+                    fputcsv($handle, [
+                        $act->id,
+                        $act->created_at ? $act->created_at->format('Y-m-d H:i:s') : '',
+                        $act->empresa_id ?? '1',
+                        $causer ? $causer->name : 'Sistema',
+                        $causer ? $causer->email : '',
+                        $act->event ?? ($props['evento'] ?? ''),
+                        $subjectType,
+                        $act->subject_id ?? '',
+                        $act->description,
+                        $props['ip_address'] ?? ($props['ip'] ?? 'N/A'),
+                        $props['method'] ?? 'GET',
+                    ]);
+                }
+            });
+
+            fclose($handle);
+        });
+
+        $response->headers->set('Content-Type', 'text/csv; charset=UTF-8');
+        $response->headers->set('Content-Disposition', "attachment; filename=\"{$fileName}\"");
+
+        return $response;
+    }
+
+    /**
+     * Truncate/Clear all activity logs.
      */
     public function clear(Request $request)
     {
@@ -394,129 +337,19 @@ class ActivityMonitoringController extends Controller
             || $currentUser->hasRole('Super Administrador')
             || $currentUser->hasRole('super-admin');
 
-        $days = (int) $request->input('days', 90);
-        if ($days < 7) {
-            $days = 7;
+        $empresaId = $request->input('empresa_id');
+
+        if (! $isSuperAdmin && $currentUser->empresa_id) {
+            Activity::where('empresa_id', $currentUser->empresa_id)->delete();
+        } elseif ($isSuperAdmin && $empresaId && $empresaId !== 'all') {
+            Activity::where('empresa_id', $empresaId)->delete();
+        } else {
+            Activity::truncate();
         }
-
-        $query = Activity::where('created_at', '<', Carbon::now()->subDays($days));
-
-        if (! $isSuperAdmin) {
-            $query->where('empresa_id', $currentUser->empresa_id);
-        }
-
-        $count = $query->delete();
 
         return back()->with('notification', [
             'type' => 'success',
-            'message' => __("Se eliminaron {$count} registros de actividad anteriores a {$days} días."),
+            'message' => __('System activity logs cleared successfully.'),
         ]);
-    }
-
-    /**
-     * Exporta los registros de actividad filtrados en formato CSV o JSON.
-     */
-    public function export(Request $request)
-    {
-        $currentUser = $request->user();
-        $isSuperAdmin = $currentUser->id === 1
-            || $currentUser->hasRole('Super Administrador')
-            || $currentUser->hasRole('super-admin');
-
-        $format = $request->input('format', 'csv');
-        $search = $request->input('search');
-        $logName = $request->input('log_name', 'all');
-        $event = $request->input('event', 'all');
-        $dateRange = $request->input('date_range', '30_days');
-        $startDate = $request->input('start_date');
-        $endDate = $request->input('end_date');
-
-        $query = Activity::with(['causer'])->latest('id')->limit(5000);
-
-        if (! $isSuperAdmin && $currentUser->empresa_id) {
-            $query->where('empresa_id', $currentUser->empresa_id);
-        }
-
-        if ($logName !== 'all' && ! empty($logName)) {
-            $query->where('log_name', $logName);
-        }
-
-        if ($event !== 'all' && ! empty($event)) {
-            if ($event === 'login') {
-                $query->where('log_name', 'auth');
-            } else {
-                $query->where('event', $event);
-            }
-        }
-
-        $query = $this->applyDateFilter($query, $dateRange, $startDate, $endDate);
-
-        if (! empty($search)) {
-            $query->where(function ($q) use ($search) {
-                $q->where('description', 'like', "%{$search}%")
-                    ->orWhere('properties', 'like', "%{$search}%");
-            });
-        }
-
-        $activities = $query->get();
-
-        if ($format === 'json') {
-            return Response::json($activities, 200, [
-                'Content-Disposition' => 'attachment; filename="activity_log_export_' . now()->format('Y-m-d_His') . '.json"',
-            ]);
-        }
-
-        // Exportación CSV
-        $filename = 'activity_log_export_' . now()->format('Y-m-d_His') . '.csv';
-        $headers = [
-            'Content-Type' => 'text/csv; charset=UTF-8',
-            'Content-Disposition' => "attachment; filename=\"{$filename}\"",
-        ];
-
-        $callback = function () use ($activities) {
-            $handle = fopen('php://output', 'w');
-            // UTF-8 BOM para soporte correcto de caracteres y acentos en Excel
-            fprintf($handle, chr(0xEF) . chr(0xBB) . chr(0xBF));
-
-            fputcsv($handle, [
-                'ID',
-                'Fecha / Hora',
-                'Módulo (Canal)',
-                'Evento',
-                'Descripción',
-                'Usuario Responsable',
-                'Email Usuario',
-                'Entidad (Subject)',
-                'ID Entidad',
-                'IP Origen',
-                'Empresa ID',
-                'Sucursal ID',
-            ]);
-
-            foreach ($activities as $act) {
-                $props = $act->properties ? $act->properties->toArray() : [];
-                $ip = $props['ip'] ?? $props['ip_address'] ?? '';
-                $subjectBase = $act->subject_type ? class_basename($act->subject_type) : '';
-
-                fputcsv($handle, [
-                    $act->id,
-                    $act->created_at ? $act->created_at->format('Y-m-d H:i:s') : '',
-                    $act->log_name ?? '',
-                    $act->event ?? '',
-                    $act->description ?? '',
-                    $act->causer ? $act->causer->name : ($props['identificador_registro'] ?? 'Sistema'),
-                    $act->causer ? $act->causer->email : '',
-                    $subjectBase,
-                    $act->subject_id ?? '',
-                    $ip,
-                    $act->empresa_id ?? '',
-                    $act->sucursal_id ?? '',
-                ]);
-            }
-
-            fclose($handle);
-        };
-
-        return Response::stream($callback, 200, $headers);
     }
 }

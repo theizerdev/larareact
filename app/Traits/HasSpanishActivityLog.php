@@ -314,6 +314,16 @@ trait HasSpanishActivityLog
         'acepta_movimiento' => 'Acepta Movimiento',
     ];
 
+    public static function getModelNamesMap(): array
+    {
+        return static::$modelNamesMap;
+    }
+
+    public static function getFieldLabelsMap(): array
+    {
+        return static::$fieldLabelsMap;
+    }
+
     protected static function getModelNameInSpanish(): string
     {
         return static::$modelNamesMap[class_basename(static::class)] ?? class_basename(static::class);
