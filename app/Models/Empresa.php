@@ -60,6 +60,12 @@ class Empresa extends Model
         'jaak_api_key',
         'jaak_environment',
         'jaak_active',
+        'biotime_base_url',
+        'biotime_username',
+        'biotime_password',
+        'biotime_active',
+        'biotime_last_sync_at',
+        'biotime_last_transaction_id',
     ];
 
     protected function casts(): array
@@ -76,6 +82,10 @@ class Empresa extends Model
             'control_acceso_active' => 'boolean',
             'jaak_api_key' => 'encrypted',
             'jaak_active' => 'boolean',
+            'biotime_password' => 'encrypted',
+            'biotime_active' => 'boolean',
+            'biotime_last_sync_at' => 'datetime',
+            'biotime_last_transaction_id' => 'integer',
         ];
     }
 

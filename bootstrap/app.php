@@ -36,6 +36,15 @@ return Application::configure(basePath: dirname(__DIR__))
             ->withoutOverlapping()
             ->onOneServer()
             ->appendOutputTo(storage_path('logs/asistencia-descansos.log'));
+
+        // Espejo de solo lectura de BioTime PRO (relojes, empleados, catálogos
+        // y marcajes). Incremental: sólo trae lo nuevo desde la última corrida.
+        $schedule->command('biotime:sync')
+            ->everyFifteenMinutes()
+            ->withoutOverlapping(10)
+            ->onOneServer()
+            ->runInBackground()
+            ->appendOutputTo(storage_path('logs/biotime-sync.log'));
     })
     ->withMiddleware(function (Middleware $middleware): void {
         // La app corre detrás del Apache del host, que termina TLS y reenvía por HTTP
