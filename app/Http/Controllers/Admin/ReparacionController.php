@@ -824,68 +824,7 @@ class ReparacionController extends Controller
     }
 
     public function savePreservicio(Request $request, $reparacion)
-    {
         $reparacion = $reparacion instanceof OrdenReparacion ? $reparacion : OrdenReparacion::findOrFail($reparacion);
-
-        if (!\Illuminate\Support\Facades\Schema::hasColumn('ordenes_reparacion', 'contrasena_patron')) {
-            \Illuminate\Support\Facades\Schema::table('ordenes_reparacion', function (\Illuminate\Database\Schema\Blueprint $table) {
-                $table->string('contrasena_patron')->nullable()->after('observaciones_fisicas');
-            });
-        }
-        if (!\Illuminate\Support\Facades\Schema::hasColumn('ordenes_reparacion', 'inspeccion_json')) {
-            \Illuminate\Support\Facades\Schema::table('ordenes_reparacion', function (\Illuminate\Database\Schema\Blueprint $table) {
-                $table->json('inspeccion_json')->nullable()->after('contrasena_patron');
-            });
-        }
-
-        $updateData = [];
-
-        if ($request->has('inspeccion_json')) {
-            $inspeccionVal = $request->input('inspeccion_json');
-            $updateData['inspeccion_json'] = is_array($inspeccionVal) ? $inspeccionVal : json_decode($inspeccionVal, true);
-        }
-
-        if ($request->has('observaciones_fisicas')) {
-            $updateData['observaciones_fisicas'] = $request->input('observaciones_fisicas');
-        }
-
-        if ($request->has('contrasena_patron')) {
-            $updateData['contrasena_patron'] = $request->input('contrasena_patron');
-        }
-
-        if ($request->filled('estado_orden')) {
-            $updateData['estado_orden'] = $request->input('estado_orden');
-        }
-
-        if ($request->filled('tecnico_id')) {
-            $updateData['tecnico_id'] = $request->input('tecnico_id');
-        }
-
-        if (!empty($updateData)) {
-            $reparacion->update($updateData);
-        }
-
-        if ($request->filled('comentario')) {
-            OrdenReparacionHistorial::create([
-                'orden_id' => $reparacion->id,
-                'user_id' => auth()->id(),
-                'estado_anterior' => $reparacion->estado_orden,
-                'estado_nuevo' => $updateData['estado_orden'] ?? $reparacion->estado_orden,
-                'comentario' => $request->input('comentario'),
-            ]);
-        }
-
-        return redirect()->route('admin.reparaciones.show', $reparacion->id)->with('notification', [
-            'type' => 'success',
-            'message' => __('Preservicio e inspección inicial guardados exitosamente.'),
-        ]);
-    }
-
-    public function updateEstado(Request $request, $reparacion)
-    {
-        $reparacion = $reparacion instanceof OrdenReparacion ? $reparacion : OrdenReparacion::findOrFail($reparacion);
-
-        // Auto-provisionar columnas en la base de datos si la migración no fue ejecutada manualmente
         if (!\Illuminate\Support\Facades\Schema::hasColumn('ordenes_reparacion', 'contrasena_patron')) {
             \Illuminate\Support\Facades\Schema::table('ordenes_reparacion', function (\Illuminate\Database\Schema\Blueprint $table) {
                 $table->string('contrasena_patron')->nullable()->after('observaciones_fisicas');

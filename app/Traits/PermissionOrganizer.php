@@ -12,6 +12,25 @@ trait PermissionOrganizer
     public function getPermissionsBySector()
     {
         $permissions = Permission::orderBy('sector')->orderBy('module')->orderBy('name')->get();
+        $user = auth()->user();
+        $isSuperAdmin = $user && (
+            $user->id === 1 ||
+            (method_exists($user, 'hasRole') && ($user->hasRole('Super Administrador') || $user->hasRole('super-admin') || $user->hasRole('Super Admin')))
+        );
+
+        $query = Permission::orderBy('sector')->orderBy('module')->orderBy('name');
+
+        if (! $isSuperAdmin) {
+            $query->where('sector', '!=', 'contabilidad')
+                  ->where('module', '!=', 'contabilidad')
+                  ->whereNotIn('name', [
+                      'monitoreo.server',
+                      'monitoreo.view',
+                      'subscriptions.manage',
+                  ]);
+        }
+
+        $permissions = $query->get();
 
         return $permissions->groupBy('sector')->map(function ($sectorPermissions) {
             return $sectorPermissions->groupBy('module');

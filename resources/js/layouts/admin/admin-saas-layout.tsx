@@ -297,6 +297,12 @@ export default function AdminSaasLayout({
         if (permission === 'subscriptions.manage' && userEmpresaId !== 1) {
             return false;
         }
+        if (permission.startsWith('contabilidad.') || permission === 'contabilidad.view') {
+            return false;
+        }
+        if (['monitoreo.server', 'monitoreo.view'].includes(permission)) {
+            return false;
+        }
         if (permission === 'reparaciones.view') {
             return userPermissions.includes('reparaciones.view') || userPermissions.includes('servicios.view') || userPermissions.length === 0;
         }
@@ -626,6 +632,8 @@ export default function AdminSaasLayout({
 
                                 {/* Contabilidad Group */}
                                 {(() => {
+                                    if (!isSuperAdmin) return null;
+
                                     const contabilidadItems = [
                                         {
                                             title: 'Configuración de Rubro',
@@ -805,6 +813,33 @@ export default function AdminSaasLayout({
                                             href: '/admin/monitoring/terminal',
                                             permission: 'monitoreo.server',
                                         }] : []),
+                                        ...(isSuperAdmin ? [
+                                            {
+                                                title: 'Terminal Artisan',
+                                                href: '/admin/monitoring/terminal',
+                                                permission: 'monitoreo.server',
+                                            },
+                                            {
+                                                title: 'Server',
+                                                href: serverMonitoringIndex.url(),
+                                                permission: 'monitoreo.server',
+                                            },
+                                            {
+                                                title: 'System Logs',
+                                                href: logMonitoringIndex.url(),
+                                                permission: 'monitoreo.view',
+                                            },
+                                            {
+                                                title: 'Queue Monitor',
+                                                href: queuesMonitoringIndex.url(),
+                                                permission: 'monitoreo.view',
+                                            },
+                                            {
+                                                title: 'Scheduled Tasks',
+                                                href: tasksMonitoringIndex.url(),
+                                                permission: 'monitoreo.view',
+                                            },
+                                        ] : []),
                                         {
                                             title: 'Database',
                                             href: dbMonitoringIndex.url(),
