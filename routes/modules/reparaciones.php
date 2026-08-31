@@ -42,11 +42,6 @@ Route::middleware(['verified'])->group(function () {
         ->name('reparaciones.checklist.copy-to-branch');
 
     Route::resource('reparaciones', ReparacionController::class);
-    Route::get('reparaciones/{reparacion}/preservicio', function ($reparacion) {
-        return redirect()->route('admin.reparaciones.show', $reparacion);
-    });
-    Route::post('reparaciones/{reparacion}/preservicio', [ReparacionController::class, 'savePreservicio'])
-        ->name('reparaciones.save-preservicio');
     Route::get('reparaciones/{reparacion}/estado', function ($reparacion) {
         return redirect()->route('admin.reparaciones.show', $reparacion);
     });
@@ -70,9 +65,6 @@ Route::middleware(['verified'])->group(function () {
         ->name('reparaciones.update-costos');
     Route::get('reparaciones/{reparacion}/post-servicio', [ReparacionController::class, 'postServicioForm'])
         ->name('reparaciones.post-servicio');
-    Route::get('reparaciones/{reparacion}/post-servicio', function ($reparacion) {
-        return redirect()->route('admin.reparaciones.show', $reparacion);
-    });
     Route::post('reparaciones/{reparacion}/post-servicio', [ReparacionController::class, 'savePostServicio'])
         ->name('reparaciones.save-post-servicio');
 });
