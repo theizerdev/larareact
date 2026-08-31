@@ -1689,12 +1689,24 @@ export default function Terminal({
 
                 {/* MODAL CORTE DE CAJA (F8) ESTILO ELEVENTA */}
                 <Dialog open={isCorteOpen} onOpenChange={setIsCorteOpen}>
-                    <DialogContent className="sm:max-w-xl max-h-[90vh] overflow-y-auto">
-                        <DialogHeader>
-                            <DialogTitle className="flex items-center gap-2 text-amber-600 text-lg">
-                                <Calculator className="w-5 h-5" />
-                                {__('Corte de Caja / Arqueo de Turno (F8)')}
-                            </DialogTitle>
+                    <DialogContent className="max-w-4xl sm:max-w-4xl w-[95vw] max-h-[90vh] overflow-y-auto">
+                        <DialogHeader className="pr-8">
+                            <div className="flex items-center justify-between gap-3">
+                                <DialogTitle className="flex items-center gap-2 text-amber-600 text-lg">
+                                    <Calculator className="w-5 h-5" />
+                                    {__('Corte de Caja / Arqueo de Turno (F8)')}
+                                </DialogTitle>
+                                <Button
+                                    type="button"
+                                    variant="outline"
+                                    size="sm"
+                                    onClick={() => window.print()}
+                                    className="gap-1.5 h-8 px-3 text-xs font-bold text-slate-700 dark:text-slate-200 border-slate-300 dark:border-slate-700 hover:bg-amber-50 hover:text-amber-700 hover:border-amber-400 dark:hover:bg-slate-800 transition-colors shadow-2xs"
+                                >
+                                    <Printer className="w-3.5 h-3.5 text-amber-600 dark:text-amber-400" />
+                                    <span>{__('Imprimir')}</span>
+                                </Button>
+                            </div>
                             <DialogDescription>
                                 {__('Revise los totales acumulados del turno actual y realice el arqueo para el cierre de caja.')}
                             </DialogDescription>
@@ -1703,7 +1715,7 @@ export default function Terminal({
                         {activeRegisterSummary ? (
                             <form onSubmit={handleCorteSubmit} className="space-y-4 py-2">
                                 {/* Resumen Superior de Dinero */}
-                                <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                                     <div className="p-3 bg-slate-50 dark:bg-slate-800 border rounded-lg">
                                         <span className="text-xs text-muted-foreground font-semibold block">{__('Fondo Inicial (Efectivo)')}</span>
                                         <span className="text-lg font-bold font-mono text-slate-800 dark:text-slate-200">
@@ -1726,132 +1738,137 @@ export default function Terminal({
                                     </div>
                                 </div>
 
-                                {/* Balance Esperado en Cajón Físico */}
-                                <div className="p-4 bg-indigo-50 dark:bg-indigo-950/40 border border-indigo-200 dark:border-indigo-900 rounded-xl space-y-1.5 text-center">
-                                    <span className="text-xs font-bold text-indigo-700 dark:text-indigo-300 uppercase tracking-wider block">
-                                        {__('Dinero Esperado en Efectivo / Cajón')}
-                                    </span>
-                                    <span className="text-3xl font-extrabold font-mono text-indigo-600 dark:text-indigo-300 block">
-                                        {currencySymbol}{expectedCashBal.toFixed(2)}
-                                    </span>
-                                    <span className="text-[11px] text-indigo-700/80 dark:text-indigo-300/80 font-mono block">
-                                        {__('Fondo Inicial')} ({currencySymbol}{activeRegisterSummary.opening_amount.toFixed(2)}) + {__('Efectivo')} (+{currencySymbol}{(activeRegisterSummary.cash_inflows ?? (activeRegisterSummary.by_payment_method?.efectivo?.net ?? 0)).toFixed(2)}) - {__('Salidas')} (-{currencySymbol}{activeRegisterSummary.outflows.toFixed(2)})
-                                    </span>
-                                    {(activeRegisterSummary.electronic_inflows ?? 0) > 0 && (
-                                        <div className="mt-2 pt-2 border-t border-indigo-200 dark:border-indigo-900 text-xs text-slate-600 dark:text-slate-300 flex items-center justify-center gap-1.5">
-                                            <CreditCard className="w-3.5 h-3.5 text-indigo-500" />
-                                            <span>
-                                                {__('Ventas con Tarjeta / Transferencias')}: <strong className="text-slate-800 dark:text-slate-100 font-mono">+{currencySymbol}{(activeRegisterSummary.electronic_inflows ?? 0).toFixed(2)}</strong> ({__('Acreditadas en cuenta bancaria, no en cajón')})
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 items-start">
+                                    {/* Columna Izquierda: Esperado y Desglose */}
+                                    <div className="space-y-4">
+                                        {/* Balance Esperado en Cajón Físico */}
+                                        <div className="p-4 bg-indigo-50 dark:bg-indigo-950/40 border border-indigo-200 dark:border-indigo-900 rounded-xl space-y-1.5 text-center">
+                                            <span className="text-xs font-bold text-indigo-700 dark:text-indigo-300 uppercase tracking-wider block">
+                                                {__('Dinero Esperado en Efectivo / Cajón')}
                                             </span>
-                                        </div>
-                                    )}
-                                </div>
-
-                                {/* Desglose por Formas de Pago */}
-                                <div className="border rounded-xl p-3.5 space-y-2.5 bg-slate-50/70 dark:bg-slate-800/70">
-                                    <h4 className="text-xs font-bold uppercase text-muted-foreground flex items-center justify-between">
-                                        <span className="flex items-center gap-1.5"><CreditCard className="w-3.5 h-3.5" />{__('Desglose por Forma de Pago')}</span>
-                                        <span className="text-[11px] font-mono font-normal">Tasa: $1 USD = ${valorDolar.toFixed(2)} MXN</span>
-                                    </h4>
-                                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs font-medium">
-                                        {Object.entries(activeRegisterSummary.by_payment_method).map(([method, val]) => {
-                                            const label = method === 'efectivo' ? __('Efectivo (MXN)') :
-                                                method === 'dolar' ? __('💵 Dólares (USD)') :
-                                                    method === 'transferencia' ? __('Transferencia') :
-                                                        method === 'tarjeta' ? __('Tarjeta (Débito/Crédito)') :
-                                                            method === 'credito' ? __('Venta a Crédito (Fiado)') :
-                                                                method.replace('_', ' ');
-                                            const netVal = val.net;
-                                            const usdVal = valorDolar > 0 ? netVal / valorDolar : 0;
-
-                                            return (
-                                                <div key={method} className="flex items-center justify-between p-2.5 bg-white dark:bg-slate-900 rounded-lg border shadow-xs">
-                                                    <span className="font-semibold text-slate-800 dark:text-slate-200">{label}:</span>
-                                                    <div className="text-right font-mono">
-                                                        <span className="font-bold text-emerald-600 block">{currencySymbol}{netVal.toFixed(2)} MXN</span>
-                                                        {method === 'dolar' && (
-                                                            <span className="text-[11px] font-extrabold text-emerald-700 dark:text-emerald-300 block">
-                                                                💵 ${usdVal.toFixed(2)} USD
-                                                            </span>
-                                                        )}
-                                                    </div>
+                                            <span className="text-3xl font-extrabold font-mono text-indigo-600 dark:text-indigo-300 block">
+                                                {currencySymbol}{expectedCashBal.toFixed(2)}
+                                            </span>
+                                            <span className="text-[11px] text-indigo-700/80 dark:text-indigo-300/80 font-mono block">
+                                                {__('Fondo Inicial')} ({currencySymbol}{activeRegisterSummary.opening_amount.toFixed(2)}) + {__('Efectivo')} (+{currencySymbol}{(activeRegisterSummary.cash_inflows ?? (activeRegisterSummary.by_payment_method?.efectivo?.net ?? 0)).toFixed(2)}) - {__('Salidas')} (-{currencySymbol}{activeRegisterSummary.outflows.toFixed(2)})
+                                            </span>
+                                            {(activeRegisterSummary.electronic_inflows ?? 0) > 0 && (
+                                                <div className="mt-2 pt-2 border-t border-indigo-200 dark:border-indigo-900 text-xs text-slate-600 dark:text-slate-300 flex items-center justify-center gap-1.5">
+                                                    <CreditCard className="w-3.5 h-3.5 text-indigo-500 shrink-0" />
+                                                    <span className="text-left">
+                                                        {__('Ventas con Tarjeta / Transferencias')}: <strong className="text-slate-800 dark:text-slate-100 font-mono">+{currencySymbol}{(activeRegisterSummary.electronic_inflows ?? 0).toFixed(2)}</strong> ({__('Acreditadas en cuenta bancaria, no en cajón')})
+                                                    </span>
                                                 </div>
-                                            );
-                                        })}
-                                    </div>
-                                </div>
-
-                                {/* Arqueo Físico (Efectivo Contado MXN + USD) */}
-                                <div className="p-4 border rounded-xl space-y-3 bg-amber-50/50 dark:bg-amber-950/30 border-amber-200 dark:border-amber-900">
-                                    <div className="flex items-center justify-between">
-                                        <Label className="font-bold text-slate-800 dark:text-slate-200 flex items-center gap-1.5 text-sm">
-                                            <Scale className="w-4 h-4 text-amber-600" />
-                                            {__('Conteo Físico en Cajón de Efectivo')}
-                                        </Label>
-                                        <span className="text-xs text-muted-foreground font-semibold">{__('Ingrese el dinero real contado')}</span>
-                                    </div>
-
-                                    <div className="grid grid-cols-2 gap-3">
-                                        <div className="space-y-1">
-                                            <Label className="text-xs font-semibold">{__('Efectivo Pesos ($ MXN)')}</Label>
-                                            <Input
-                                                type="number"
-                                                step="0.01"
-                                                min="0"
-                                                placeholder={expectedCashBal.toFixed(2)}
-                                                value={countedAmountInput}
-                                                onChange={(e) => setCountedAmountInput(e.target.value)}
-                                                className="font-mono text-lg font-bold bg-white dark:bg-slate-900"
-                                            />
+                                            )}
                                         </div>
 
-                                        <div className="space-y-1">
-                                            <Label className="text-xs font-semibold text-emerald-700 dark:text-emerald-300 flex items-center gap-1">
-                                                <Coins className="w-3 h-3" />
-                                                {__('Efectivo Dólares ($ USD)')}
+                                        {/* Desglose por Formas de Pago */}
+                                        <div className="border rounded-xl p-3.5 space-y-2.5 bg-slate-50/70 dark:bg-slate-800/70">
+                                            <h4 className="text-xs font-bold uppercase text-muted-foreground flex items-center justify-between">
+                                                <span className="flex items-center gap-1.5"><CreditCard className="w-3.5 h-3.5" />{__('Desglose por Forma de Pago')}</span>
+                                                <span className="text-[11px] font-mono font-normal">Tasa: $1 USD = ${valorDolar.toFixed(2)} MXN</span>
+                                            </h4>
+                                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs font-medium">
+                                                {Object.entries(activeRegisterSummary.by_payment_method).map(([method, val]) => {
+                                                    const label = method === 'efectivo' ? __('Efectivo (MXN)') :
+                                                        method === 'dolar' ? __('💵 Dólares (USD)') :
+                                                            method === 'transferencia' ? __('Transferencia') :
+                                                                method === 'tarjeta' ? __('Tarjeta (Débito/Crédito)') :
+                                                                    method === 'credito' ? __('Venta a Crédito (Fiado)') :
+                                                                        method.replace('_', ' ');
+                                                    const netVal = val.net;
+                                                    const usdVal = valorDolar > 0 ? netVal / valorDolar : 0;
+
+                                                    return (
+                                                        <div key={method} className="flex items-center justify-between p-2.5 bg-white dark:bg-slate-900 rounded-lg border shadow-xs">
+                                                            <span className="font-semibold text-slate-800 dark:text-slate-200">{label}:</span>
+                                                            <div className="text-right font-mono">
+                                                                <span className="font-bold text-emerald-600 block">{currencySymbol}{netVal.toFixed(2)} MXN</span>
+                                                                {method === 'dolar' && (
+                                                                    <span className="text-[11px] font-extrabold text-emerald-700 dark:text-emerald-300 block">
+                                                                        💵 ${usdVal.toFixed(2)} USD
+                                                                    </span>
+                                                                )}
+                                                            </div>
+                                                        </div>
+                                                    );
+                                                })}
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    {/* Columna Derecha: Arqueo Físico y Diferencias */}
+                                    <div className="p-4 border rounded-xl space-y-4 bg-amber-50/50 dark:bg-amber-950/30 border-amber-200 dark:border-amber-900">
+                                        <div className="flex items-center justify-between">
+                                            <Label className="font-bold text-slate-800 dark:text-slate-200 flex items-center gap-1.5 text-sm">
+                                                <Scale className="w-4 h-4 text-amber-600" />
+                                                {__('Conteo Físico en Cajón de Efectivo')}
                                             </Label>
-                                            <div className="relative">
+                                            <span className="text-xs text-muted-foreground font-semibold">{__('Ingrese el dinero real contado')}</span>
+                                        </div>
+
+                                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                                            <div className="space-y-1">
+                                                <Label className="text-xs font-semibold">{__('Efectivo Pesos ($ MXN)')}</Label>
                                                 <Input
                                                     type="number"
                                                     step="0.01"
                                                     min="0"
-                                                    placeholder="0.00"
-                                                    value={countedUSDInput}
-                                                    onChange={(e) => setCountedUSDInput(e.target.value)}
-                                                    className="font-mono text-lg font-bold bg-white dark:bg-slate-900 pr-12"
+                                                    placeholder={expectedCashBal.toFixed(2)}
+                                                    value={countedAmountInput}
+                                                    onChange={(e) => setCountedAmountInput(e.target.value)}
+                                                    className="font-mono text-lg font-bold bg-white dark:bg-slate-900"
                                                 />
-                                                <span className="absolute right-3 top-2.5 text-xs font-bold text-muted-foreground font-mono">USD</span>
+                                            </div>
+
+                                            <div className="space-y-1">
+                                                <Label className="text-xs font-semibold text-emerald-700 dark:text-emerald-300 flex items-center gap-1">
+                                                    <Coins className="w-3 h-3" />
+                                                    {__('Efectivo Dólares ($ USD)')}
+                                                </Label>
+                                                <div className="relative">
+                                                    <Input
+                                                        type="number"
+                                                        step="0.01"
+                                                        min="0"
+                                                        placeholder="0.00"
+                                                        value={countedUSDInput}
+                                                        onChange={(e) => setCountedUSDInput(e.target.value)}
+                                                        className="font-mono text-lg font-bold bg-white dark:bg-slate-900 pr-12"
+                                                    />
+                                                    <span className="absolute right-3 top-2.5 text-xs font-bold text-muted-foreground font-mono">USD</span>
+                                                </div>
                                             </div>
                                         </div>
+
+                                        {/* Muestra Total Físico Combinado y Diferencia */}
+                                        {(countedAmountInput !== '' || countedUSDInput !== '') && (
+                                            <div className="space-y-2 pt-2 border-t border-amber-200 dark:border-amber-900">
+                                                <div className="flex justify-between text-xs font-mono font-semibold text-slate-700 dark:text-slate-300">
+                                                    <span>{__('Total Físico en Cajón (MXN + USD):')}</span>
+                                                    <span className="font-bold text-indigo-600 dark:text-indigo-400">
+                                                        {currencySymbol}{totalCountedCombinedMXN.toFixed(2)} MXN
+                                                    </span>
+                                                </div>
+
+                                                <div className={cn(
+                                                    "flex items-center justify-between p-3 rounded-lg font-bold text-sm font-mono",
+                                                    diffBalCombined === 0
+                                                        ? "bg-emerald-100 text-emerald-800 dark:bg-emerald-950/60 dark:text-emerald-300"
+                                                        : diffBalCombined > 0
+                                                            ? "bg-blue-100 text-blue-800 dark:bg-blue-950/60 dark:text-blue-300"
+                                                            : "bg-rose-100 text-rose-800 dark:bg-rose-950/60 dark:text-rose-300"
+                                                )}>
+                                                    <span>
+                                                        {diffBalCombined === 0 ? __('Cuadre Perfecto (0.00)') : diffBalCombined > 0 ? __('Sobrante en Caja:') : __('Faltante en Caja:')}
+                                                    </span>
+                                                    <span>
+                                                        {diffBalCombined > 0 ? '+' : ''}{currencySymbol}{diffBalCombined.toFixed(2)} MXN
+                                                    </span>
+                                                </div>
+                                            </div>
+                                        )}
                                     </div>
-
-                                    {/* Muestra Total Físico Combinado y Diferencia */}
-                                    {(countedAmountInput !== '' || countedUSDInput !== '') && (
-                                        <div className="space-y-1.5 pt-1 border-t border-amber-200 dark:border-amber-900">
-                                            <div className="flex justify-between text-xs font-mono font-semibold text-slate-700 dark:text-slate-300">
-                                                <span>{__('Total Físico en Cajón (MXN + USD):')}</span>
-                                                <span className="font-bold text-indigo-600 dark:text-indigo-400">
-                                                    {currencySymbol}{totalCountedCombinedMXN.toFixed(2)} MXN
-                                                </span>
-                                            </div>
-
-                                            <div className={cn(
-                                                "flex items-center justify-between p-2.5 rounded-lg font-bold text-xs font-mono",
-                                                diffBalCombined === 0
-                                                    ? "bg-emerald-100 text-emerald-800 dark:bg-emerald-950/60 dark:text-emerald-300"
-                                                    : diffBalCombined > 0
-                                                        ? "bg-blue-100 text-blue-800 dark:bg-blue-950/60 dark:text-blue-300"
-                                                        : "bg-rose-100 text-rose-800 dark:bg-rose-950/60 dark:text-rose-300"
-                                            )}>
-                                                <span>
-                                                    {diffBalCombined === 0 ? __('Cuadre Perfecto (0.00)') : diffBalCombined > 0 ? __('Sobrante en Caja:') : __('Faltante en Caja:')}
-                                                </span>
-                                                <span>
-                                                    {diffBalCombined > 0 ? '+' : ''}{currencySymbol}{diffBalCombined.toFixed(2)} MXN
-                                                </span>
-                                            </div>
-                                        </div>
-                                    )}
                                 </div>
 
                                 <DialogFooter className="gap-2 pt-2">
@@ -3223,6 +3240,191 @@ export default function Terminal({
                         <div className="border-b border-dashed border-black my-1"></div>
                         <div className="text-center text-[10px] font-bold uppercase">{ticketFooterMsg}</div>
                         <div className="text-center text-[9px] text-gray-600">Servitec POS - Formato {printerPaperSize}</div>
+                    </div>
+                )}
+
+                {/* FORMATO TICKET DE IMPRESIÓN PARA TICKETERA POS (80MM / 58MM - ARQUEO / CORTE DE TURNO) */}
+                {isCorteOpen && activeRegisterSummary && (
+                    <div
+                        id="printable-arqueo-ticket"
+                        className={`hidden print:block text-black bg-white font-mono p-2 text-xs mx-auto ${
+                            printerPaperSize === '58mm' ? 'w-[58mm] max-w-[58mm]' : 'w-[80mm] max-w-[80mm]'
+                        }`}
+                    >
+                        <style>{`
+                            @media print {
+                                body * {
+                                    visibility: hidden !important;
+                                }
+                                #printable-arqueo-ticket, #printable-arqueo-ticket * {
+                                    visibility: visible !important;
+                                }
+                                #printable-arqueo-ticket {
+                                    position: absolute !important;
+                                    left: 0 !important;
+                                    top: 0 !important;
+                                    width: ${printerPaperSize === '58mm' ? '58mm' : '80mm'} !important;
+                                    max-width: ${printerPaperSize === '58mm' ? '58mm' : '80mm'} !important;
+                                    margin: 0 !important;
+                                    padding: ${printerPaperSize === '58mm' ? '2mm' : '4mm'} !important;
+                                    background: white !important;
+                                    color: black !important;
+                                    font-family: 'Courier New', Courier, monospace, sans-serif !important;
+                                    font-size: ${printerPaperSize === '58mm' ? '9px' : '11px'} !important;
+                                }
+                                @page {
+                                    size: ${printerPaperSize === '58mm' ? '58mm' : '80mm'} auto;
+                                    margin: 0;
+                                }
+                            }
+                        `}</style>
+
+                        {/* LOGO O ENCABEZADO DE EMPRESA */}
+                        <div className="text-center mb-1">
+                            {empresa?.logo ? (
+                                <img
+                                    src={empresa.logo}
+                                    alt={empresa.razon_social || 'Logo'}
+                                    className="h-10 max-w-[160px] mx-auto object-contain mb-1"
+                                />
+                            ) : (
+                                <div className="font-black text-sm uppercase">{empresa?.razon_social || 'FixSale - Servitec POS'}</div>
+                            )}
+                        </div>
+
+                        {empresa?.razon_social && (
+                            <div className="text-center font-bold text-[10px] uppercase">{empresa.razon_social}</div>
+                        )}
+                        {empresa?.documento && (
+                            <div className="text-center text-[9px] font-mono">{empresa.documento}</div>
+                        )}
+                        <div className="text-center text-[9px] text-gray-700">
+                            {empresa?.telefono ? `Tel: ${empresa.telefono}` : ''} {empresa?.email ? ` | ${empresa.email}` : ''}
+                        </div>
+                        {empresa?.direccion && (
+                            <div className="text-center text-[8px] text-gray-600">{empresa.direccion}</div>
+                        )}
+
+                        <div className="border-b border-dashed border-black my-1"></div>
+                        <div className="text-center font-bold uppercase text-[11px] tracking-wider">
+                            {__('ARQUEO / CORTE DE TURNO')}
+                        </div>
+                        <div className="border-b border-dashed border-black my-1"></div>
+
+                        <div className="space-y-0.5 text-[10px]">
+                            <div className="flex justify-between">
+                                <span>CAJA #:</span>
+                                <span className="font-bold">#{activeRegister?.id || 'POS'}</span>
+                            </div>
+                            <div className="flex justify-between">
+                                <span>CAJERO:</span>
+                                <span>{activeRegister?.user?.name || pageProps?.auth?.user?.name || 'Cajero POS'}</span>
+                            </div>
+                            <div className="flex justify-between">
+                                <span>APERTURA:</span>
+                                <span>{activeRegister?.opened_at ? new Date(activeRegister.opened_at).toLocaleString() : new Date().toLocaleString()}</span>
+                            </div>
+                            <div className="flex justify-between">
+                                <span>FECHA IMPRESIÓN:</span>
+                                <span>{new Date().toLocaleString()}</span>
+                            </div>
+                        </div>
+
+                        <div className="border-b border-dashed border-black my-1"></div>
+                        <div className="text-center font-bold text-[10px] uppercase">{__('RESUMEN DE FLUJO')}</div>
+                        <div className="border-b border-dashed border-black my-1"></div>
+
+                        <div className="space-y-1 text-[10px]">
+                            <div className="flex justify-between">
+                                <span>Fondo Inicial:</span>
+                                <span>{currencySymbol}{(activeRegisterSummary.opening_amount ?? activeRegister?.opening_amount ?? 0).toFixed(2)}</span>
+                            </div>
+                            <div className="flex justify-between">
+                                <span>Total Ingresos (+):</span>
+                                <span>+{currencySymbol}{(activeRegisterSummary.inflows ?? 0).toFixed(2)}</span>
+                            </div>
+                            <div className="flex justify-between">
+                                <span>Total Salidas (-):</span>
+                                <span>-{currencySymbol}{(activeRegisterSummary.outflows ?? 0).toFixed(2)}</span>
+                            </div>
+                            <div className="flex justify-between font-bold border-t border-dotted border-black pt-1">
+                                <span>Dinero Esperado:</span>
+                                <span>{currencySymbol}{expectedCashBal.toFixed(2)}</span>
+                            </div>
+                        </div>
+
+                        {/* DESGLOSE POR FORMA DE PAGO */}
+                        {activeRegisterSummary.by_payment_method && Object.keys(activeRegisterSummary.by_payment_method).length > 0 && (
+                            <>
+                                <div className="border-b border-dashed border-black my-1"></div>
+                                <div className="text-center font-bold text-[10px] uppercase">{__('DESGLOSE FORMAS DE PAGO')}</div>
+                                <div className="border-b border-dashed border-black my-1"></div>
+                                <div className="space-y-1 text-[10px]">
+                                    {Object.entries(activeRegisterSummary.by_payment_method).map(([method, val]: any) => {
+                                        const label = method === 'efectivo' ? __('Efectivo (MXN)') :
+                                            method === 'dolar' ? __('💵 Dólares (USD)') :
+                                                method === 'transferencia' ? __('Transferencia') :
+                                                    method === 'tarjeta' ? __('Tarjeta Débito/Crédito') :
+                                                        method === 'credito' ? __('Venta a Crédito (Fiado)') :
+                                                            method.replace('_', ' ');
+                                        const netVal = typeof val === 'object' && val !== null ? (val.net ?? 0) : Number(val ?? 0);
+                                        return (
+                                            <div key={method} className="flex justify-between">
+                                                <span className="capitalize">{label}:</span>
+                                                <span className="font-mono font-bold">{currencySymbol}{netVal.toFixed(2)}</span>
+                                            </div>
+                                        );
+                                    })}
+                                </div>
+                            </>
+                        )}
+
+                        {/* RESULTADO DEL ARQUEO FÍSICO (SI SE HA INGRESADO CONTEO) */}
+                        {(countedAmountInput !== '' || countedUSDInput !== '') && (
+                            <>
+                                <div className="border-b border-dashed border-black my-1"></div>
+                                <div className="text-center font-bold text-[10px] uppercase">{__('RESULTADO DEL ARQUEO')}</div>
+                                <div className="border-b border-dashed border-black my-1"></div>
+                                <div className="space-y-1 text-[10px]">
+                                    <div className="flex justify-between">
+                                        <span>Esperado Cajón:</span>
+                                        <span>{currencySymbol}{expectedCashBal.toFixed(2)}</span>
+                                    </div>
+                                    {countedAmountInput !== '' && (
+                                        <div className="flex justify-between">
+                                            <span>Conteo MXN:</span>
+                                            <span>{currencySymbol}{countedMXN.toFixed(2)}</span>
+                                        </div>
+                                    )}
+                                    {countedUSDInput !== '' && (
+                                        <div className="flex justify-between">
+                                            <span>Conteo USD:</span>
+                                            <span>${countedUSD.toFixed(2)} USD</span>
+                                        </div>
+                                    )}
+                                    <div className="flex justify-between font-bold border-t border-dotted border-black pt-0.5">
+                                        <span>Total Físico Contado:</span>
+                                        <span>{currencySymbol}{totalCountedCombinedMXN.toFixed(2)}</span>
+                                    </div>
+                                    <div className="flex justify-between font-bold">
+                                        <span>Diferencia:</span>
+                                        <span>
+                                            {diffBalCombined === 0 ? '0.00 (Cuadre Perfecto)' : `${diffBalCombined > 0 ? '+' : ''}${currencySymbol}${diffBalCombined.toFixed(2)} (${diffBalCombined > 0 ? 'Sobrante' : 'Faltante'})`}
+                                        </span>
+                                    </div>
+                                </div>
+                            </>
+                        )}
+
+                        <div className="border-b border-dashed border-black my-2"></div>
+
+                        <div className="text-center text-[10px] space-y-4 pt-2">
+                            <div>
+                                <p>_____________________________________</p>
+                                <p className="mt-1 font-bold">{__('Firma Cajero')}: {activeRegister?.user?.name || pageProps?.auth?.user?.name || 'Cajero'}</p>
+                            </div>
+                            <p className="text-[9px] italic">{__('Comprobante generado desde Servitec POS')}</p>
+                        </div>
                     </div>
                 )}
             </div>
