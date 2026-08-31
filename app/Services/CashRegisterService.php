@@ -60,18 +60,28 @@ class CashRegisterService
         $inflows = (float) $register->movements()->where('type', 'inflow')->sum('amount');
         $outflows = (float) $register->movements()->where('type', 'outflow')->sum('amount');
         $openingAmount = (float) $register->opening_amount;
-        $expectedAmount = $openingAmount + $inflows - $outflows;
+
+        // Cash physical drawer expected amount (efectivo y dólares)
+        $cashInflows = (float) $register->movements()
+            ->where('type', 'inflow')
+            ->whereIn('metodo_pago', ['efectivo', 'dolar'])
+            ->sum('amount');
+        $cashOutflows = (float) $register->movements()
+            ->where('type', 'outflow')
+            ->whereIn('metodo_pago', ['efectivo', 'dolar'])
+            ->sum('amount');
+        $expectedCashAmount = $openingAmount + $cashInflows - $cashOutflows;
 
         $data = [
-            'closing_amount' => $expectedAmount,
-            'expected_amount' => $expectedAmount,
+            'closing_amount' => $expectedCashAmount,
+            'expected_amount' => $expectedCashAmount,
             'closed_at' => Carbon::now(),
             'status' => 'closed',
         ];
 
         if ($countedAmount !== null) {
             $data['counted_amount'] = $countedAmount;
-            $data['difference'] = $countedAmount - $expectedAmount;
+            $data['difference'] = $countedAmount - $expectedCashAmount;
         }
 
         $register->update($data);

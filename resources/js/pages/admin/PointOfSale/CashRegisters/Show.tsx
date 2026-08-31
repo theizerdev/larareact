@@ -117,7 +117,7 @@ export default function Show({ caja, summary }: Props) {
     const currencySymbol = summary.currency_symbol || '$';
     const rateUSD = summary.valor_dolar || 20.0;
 
-    const expectedAmount = summary.current_balance;
+    const expectedAmount = summary.expected_cash_balance ?? summary.current_balance;
     const countedMXNNum = parseFloat(countedAmount) || 0;
     const countedUSDNum = parseFloat(countedUSDShow) || 0;
     const totalCountedCombined = countedMXNNum + (countedUSDNum * rateUSD);
@@ -820,21 +820,28 @@ export default function Show({ caja, summary }: Props) {
                         </DialogHeader>
 
                         <form onSubmit={handleConfirmClose} className="space-y-5 py-2">
-                            <div className="rounded-xl bg-slate-50 dark:bg-slate-900 border p-4 space-y-3 text-sm">
+                            <div className="rounded-xl bg-slate-50 dark:bg-slate-900 border p-4 space-y-2.5 text-sm">
                                 <div className="flex justify-between items-center">
-                                    <span className="text-muted-foreground">{__('Fondo Inicial (MXN)')}:</span>
+                                    <span className="text-muted-foreground">{__('Fondo Inicial (Efectivo)')}:</span>
                                     <span className="font-mono font-semibold">{currencySymbol}{(caja.opening_amount ?? 0).toFixed(2)}</span>
                                 </div>
                                 <div className="flex justify-between items-center text-emerald-600">
-                                    <span>{__('Total Ingresos')}:</span>
+                                    <span>{__('Ventas Totales del Turno')}:</span>
                                     <span className="font-mono font-semibold">+{currencySymbol}{(summary.inflows ?? 0).toFixed(2)}</span>
                                 </div>
                                 <div className="flex justify-between items-center text-rose-600">
-                                    <span>{__('Total Egresos')}:</span>
+                                    <span>{__('Total Egresos / Salidas')}:</span>
                                     <span className="font-mono font-semibold">-{currencySymbol}{(summary.outflows ?? 0).toFixed(2)}</span>
                                 </div>
                                 <div className="pt-2 border-t flex justify-between items-center font-bold">
-                                    <span>{__('Esperado en Caja (MXN)')}:</span>
+                                    <div>
+                                        <span className="block">{__('Dinero Esperado en Efectivo / Cajón')}:</span>
+                                        {(summary.electronic_inflows ?? 0) > 0 && (
+                                            <span className="text-[11px] font-normal text-muted-foreground block">
+                                                * {__('Excluye')} {currencySymbol}{(summary.electronic_inflows ?? 0).toFixed(2)} {__('en tarjetas/transferencias')}
+                                            </span>
+                                        )}
+                                    </div>
                                     <div className="text-right font-mono">
                                         <span className="text-lg block text-indigo-600 dark:text-indigo-400">{currencySymbol}{(expectedAmount ?? 0).toFixed(2)}</span>
                                         {summary.valor_dolar && summary.valor_dolar > 0 && (

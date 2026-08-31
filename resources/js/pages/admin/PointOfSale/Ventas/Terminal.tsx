@@ -342,11 +342,11 @@ export default function Terminal({
     const [countedUSDInput, setCountedUSDInput] = useState('');
 
     // Calculated difference for Corte de Caja
-    const expectedBal = activeRegisterSummary?.expected_balance ?? 0;
+    const expectedCashBal = activeRegisterSummary?.expected_cash_balance ?? activeRegisterSummary?.expected_balance ?? 0;
     const countedMXN = parseFloat(countedAmountInput) || 0;
     const countedUSD = parseFloat(countedUSDInput) || 0;
     const totalCountedCombinedMXN = countedMXN + (countedUSD * (valorDolar || 1));
-    const diffBalCombined = totalCountedCombinedMXN - expectedBal;
+    const diffBalCombined = totalCountedCombinedMXN - expectedCashBal;
 
     // Movement / Entradas y Salidas Modal
     const [isMovementModalOpen, setIsMovementModalOpen] = useState(false);
@@ -977,7 +977,7 @@ export default function Terminal({
             return;
         }
 
-        const counted = countedAmountInput !== '' ? parseFloat(countedAmountInput) : null;
+        const counted = (countedAmountInput !== '' || countedUSDInput !== '') ? totalCountedCombinedMXN : null;
 
         router.post(
             `/admin/cajas/${activeRegister.id}/close`,
@@ -1705,35 +1705,46 @@ export default function Terminal({
                                 {/* Resumen Superior de Dinero */}
                                 <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
                                     <div className="p-3 bg-slate-50 dark:bg-slate-800 border rounded-lg">
-                                        <span className="text-xs text-muted-foreground font-semibold block">{__('Fondo Inicial')}</span>
+                                        <span className="text-xs text-muted-foreground font-semibold block">{__('Fondo Inicial (Efectivo)')}</span>
                                         <span className="text-lg font-bold font-mono text-slate-800 dark:text-slate-200">
                                             {currencySymbol}{activeRegisterSummary.opening_amount.toFixed(2)}
                                         </span>
                                     </div>
 
                                     <div className="p-3 bg-emerald-50 dark:bg-emerald-950/30 border border-emerald-200 dark:border-emerald-900 rounded-lg">
-                                        <span className="text-xs text-emerald-700 dark:text-emerald-400 font-semibold block">{__('Total Ingresos (+)')}</span>
+                                        <span className="text-xs text-emerald-700 dark:text-emerald-400 font-semibold block">{__('Ventas Totales del Turno (+)')}</span>
                                         <span className="text-lg font-bold font-mono text-emerald-600 dark:text-emerald-400">
                                             +{currencySymbol}{activeRegisterSummary.inflows.toFixed(2)}
                                         </span>
                                     </div>
 
                                     <div className="p-3 bg-rose-50 dark:bg-rose-950/30 border border-rose-200 dark:border-rose-900 rounded-lg">
-                                        <span className="text-xs text-rose-700 dark:text-rose-400 font-semibold block">{__('Total Salidas (-)')}</span>
+                                        <span className="text-xs text-rose-700 dark:text-rose-400 font-semibold block">{__('Total Salidas / Egresos (-)')}</span>
                                         <span className="text-lg font-bold font-mono text-rose-600 dark:text-rose-400">
                                             -{currencySymbol}{activeRegisterSummary.outflows.toFixed(2)}
                                         </span>
                                     </div>
                                 </div>
 
-                                {/* Balance Esperado */}
-                                <div className="p-4 bg-indigo-50 dark:bg-indigo-950/40 border border-indigo-200 dark:border-indigo-900 rounded-xl text-center">
+                                {/* Balance Esperado en Cajón Físico */}
+                                <div className="p-4 bg-indigo-50 dark:bg-indigo-950/40 border border-indigo-200 dark:border-indigo-900 rounded-xl space-y-1.5 text-center">
                                     <span className="text-xs font-bold text-indigo-700 dark:text-indigo-300 uppercase tracking-wider block">
                                         {__('Dinero Esperado en Efectivo / Cajón')}
                                     </span>
-                                    <span className="text-3xl font-extrabold font-mono text-indigo-600 dark:text-indigo-300">
-                                        {currencySymbol}{activeRegisterSummary.expected_balance.toFixed(2)}
+                                    <span className="text-3xl font-extrabold font-mono text-indigo-600 dark:text-indigo-300 block">
+                                        {currencySymbol}{expectedCashBal.toFixed(2)}
                                     </span>
+                                    <span className="text-[11px] text-indigo-700/80 dark:text-indigo-300/80 font-mono block">
+                                        {__('Fondo Inicial')} ({currencySymbol}{activeRegisterSummary.opening_amount.toFixed(2)}) + {__('Efectivo')} (+{currencySymbol}{(activeRegisterSummary.cash_inflows ?? (activeRegisterSummary.by_payment_method?.efectivo?.net ?? 0)).toFixed(2)}) - {__('Salidas')} (-{currencySymbol}{activeRegisterSummary.outflows.toFixed(2)})
+                                    </span>
+                                    {(activeRegisterSummary.electronic_inflows ?? 0) > 0 && (
+                                        <div className="mt-2 pt-2 border-t border-indigo-200 dark:border-indigo-900 text-xs text-slate-600 dark:text-slate-300 flex items-center justify-center gap-1.5">
+                                            <CreditCard className="w-3.5 h-3.5 text-indigo-500" />
+                                            <span>
+                                                {__('Ventas con Tarjeta / Transferencias')}: <strong className="text-slate-800 dark:text-slate-100 font-mono">+{currencySymbol}{(activeRegisterSummary.electronic_inflows ?? 0).toFixed(2)}</strong> ({__('Acreditadas en cuenta bancaria, no en cajón')})
+                                            </span>
+                                        </div>
+                                    )}
                                 </div>
 
                                 {/* Desglose por Formas de Pago */}
@@ -1747,7 +1758,7 @@ export default function Terminal({
                                             const label = method === 'efectivo' ? __('Efectivo (MXN)') :
                                                 method === 'dolar' ? __('💵 Dólares (USD)') :
                                                     method === 'transferencia' ? __('Transferencia') :
-                                                        method === 'tarjeta' ? __('Tarjeta') :
+                                                        method === 'tarjeta' ? __('Tarjeta (Débito/Crédito)') :
                                                             method === 'credito' ? __('Venta a Crédito (Fiado)') :
                                                                 method.replace('_', ' ');
                                             const netVal = val.net;
@@ -1787,7 +1798,7 @@ export default function Terminal({
                                                 type="number"
                                                 step="0.01"
                                                 min="0"
-                                                placeholder={activeRegisterSummary.expected_balance.toFixed(2)}
+                                                placeholder={expectedCashBal.toFixed(2)}
                                                 value={countedAmountInput}
                                                 onChange={(e) => setCountedAmountInput(e.target.value)}
                                                 className="font-mono text-lg font-bold bg-white dark:bg-slate-900"

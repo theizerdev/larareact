@@ -49,7 +49,26 @@ class SaleController extends Controller
             $inflows = (float) $activeRegister->movements()->where('type', 'inflow')->sum('amount');
             $outflows = (float) $activeRegister->movements()->where('type', 'outflow')->sum('amount');
             $openingAmount = (float) $activeRegister->opening_amount;
-            $expectedBalance = $openingAmount + $inflows - $outflows;
+            $totalShiftBalance = $openingAmount + $inflows - $outflows;
+
+            // Cash movements that physically enter/leave the drawer
+            $cashInflows = (float) $activeRegister->movements()
+                ->where('type', 'inflow')
+                ->whereIn('metodo_pago', ['efectivo', 'dolar'])
+                ->sum('amount');
+
+            $cashOutflows = (float) $activeRegister->movements()
+                ->where('type', 'outflow')
+                ->whereIn('metodo_pago', ['efectivo', 'dolar'])
+                ->sum('amount');
+
+            // Non-cash movements (tarjeta, transferencia, etc.)
+            $electronicInflows = (float) $activeRegister->movements()
+                ->where('type', 'inflow')
+                ->whereNotIn('metodo_pago', ['efectivo', 'dolar'])
+                ->sum('amount');
+
+            $expectedCashBalance = $openingAmount + $cashInflows - $cashOutflows;
 
             $paymentBreakdown = $cashService->getPaymentMethodBreakdown($activeRegister);
 
@@ -59,7 +78,13 @@ class SaleController extends Controller
                 'opening_amount' => $openingAmount,
                 'inflows' => $inflows,
                 'outflows' => $outflows,
-                'expected_balance' => $expectedBalance,
+                'cash_inflows' => $cashInflows,
+                'cash_outflows' => $cashOutflows,
+                'electronic_inflows' => $electronicInflows,
+                'expected_cash_balance' => $expectedCashBalance,
+                'expected_balance' => $expectedCashBalance,
+                'total_turn_sales' => $inflows,
+                'total_turn_balance' => $totalShiftBalance,
                 'by_payment_method' => $paymentBreakdown,
             ];
         }
