@@ -572,8 +572,18 @@ export default function IndexReparaciones({
                 break;
         }
 
-        const msg = encodeURIComponent(text);
-        window.open(`https://wa.me/${cleanPhone}?text=${msg}`, '_blank');
+        router.post(
+            `/admin/reparaciones/${o.id}/notificar-whatsapp`,
+            {
+                mensaje: text,
+                telefono: phone,
+                estado: o.estado_orden,
+            },
+            {
+                onSuccess: () => notifySuccess(__('Notificación enviada exitosamente al cliente.')),
+                onError: (err: any) => notifyError(err?.message || __('Error al enviar notificación.')),
+            }
+        );
     };
 
     const getStatusBadge = (st: string) => {

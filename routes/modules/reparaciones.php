@@ -67,6 +67,8 @@ Route::middleware(['verified'])->group(function () {
         ->name('reparaciones.post-servicio');
     Route::post('reparaciones/{reparacion}/post-servicio', [ReparacionController::class, 'savePostServicio'])
         ->name('reparaciones.save-post-servicio');
+    Route::post('reparaciones/{reparacion}/notificar-whatsapp', [ReparacionController::class, 'notificarWhatsApp'])
+        ->name('reparaciones.notificar-whatsapp');
 });
 
 

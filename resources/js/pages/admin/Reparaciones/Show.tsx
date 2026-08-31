@@ -33,6 +33,8 @@ import {
     Search,
     Pencil,
     Info,
+    Loader2,
+    ExternalLink,
 } from 'lucide-react';
 import React, { useState, useRef, useEffect, useMemo, useCallback } from 'react';
 import { QRCodeSVG } from '@/components/qr-code-svg';
@@ -1783,6 +1785,7 @@ export default function ShowReparacion({
     const [openWhatsAppModal, setOpenWhatsAppModal] = useState(false);
     const [selectedWhatsAppEstado, setSelectedWhatsAppEstado] = useState(orden.estado_orden);
     const [customWhatsAppMsg, setCustomWhatsAppMsg] = useState('');
+    const [isSendingWhatsApp, setIsSendingWhatsApp] = useState(false);
 
     const generateWhatsAppTemplate = (st: string, ordenData: any, currSym: string, empName: string, origin: string) => {
         const clientName = ordenData.cliente?.nombre || ordenData.cliente_nombre || 'Estimado(a) Cliente';
@@ -1851,10 +1854,39 @@ export default function ShowReparacion({
             notifyError(__('El cliente no tiene un teléfono registrado.'));
             return;
         }
+
+        setIsSendingWhatsApp(true);
+        router.post(
+            `/admin/reparaciones/${orden.id}/notificar-whatsapp`,
+            {
+                mensaje: customWhatsAppMsg,
+                telefono: phone,
+                estado: selectedWhatsAppEstado,
+            },
+            {
+                onSuccess: () => {
+                    setIsSendingWhatsApp(false);
+                    setOpenWhatsAppModal(false);
+                    notifySuccess(__('Notificación enviada exitosamente al cliente.'));
+                },
+                onError: (errors: any) => {
+                    setIsSendingWhatsApp(false);
+                    notifyError(errors?.message || __('Error al procesar el envío de la notificación.'));
+                },
+                onFinish: () => setIsSendingWhatsApp(false),
+            }
+        );
+    };
+
+    const handleOpenWhatsAppWebDirect = () => {
+        const phone = orden.cliente?.telefono || orden.cliente_telefono;
+        if (!phone) {
+            notifyError(__('El cliente no tiene un teléfono registrado.'));
+            return;
+        }
         const cleanPhone = phone.replace(/[^0-9]/g, '');
         const encoded = encodeURIComponent(customWhatsAppMsg);
         window.open(`https://wa.me/${cleanPhone}?text=${encoded}`, '_blank');
-        setOpenWhatsAppModal(false);
     };
 
     const handleUpdateEstado = () => {
@@ -2222,7 +2254,7 @@ export default function ShowReparacion({
                                 </DialogContent>
                             </Dialog>
 
-                            {/* MODAL ENRIQUECIDO DE WHATSAPP CON 9 PLANTILLAS */}
+                            {/* MODAL ENRIQUECIDO DE WHATSAPP CON 9 PLANTILLAS Y PROTOCOLO OFICIAL */}
                             <Dialog open={openWhatsAppModal} onOpenChange={setOpenWhatsAppModal}>
                                 <DialogContent className="sm:max-w-lg">
                                     <DialogHeader>
@@ -2230,7 +2262,7 @@ export default function ShowReparacion({
                                             <div className="w-8 h-8 rounded-lg bg-emerald-500/10 text-emerald-600 flex items-center justify-center">
                                                 <Send className="w-4 h-4" />
                                             </div>
-                                            {__('Enviar Plantilla de WhatsApp')}
+                                            {__('Enviar Notificación de WhatsApp')}
                                         </DialogTitle>
                                     </DialogHeader>
 
@@ -2272,15 +2304,28 @@ export default function ShowReparacion({
                                     </div>
 
                                     <div className="flex items-center justify-between gap-2 pt-3 border-t border-slate-100 dark:border-slate-800">
-                                        <Button
-                                            variant="outline"
-                                            size="sm"
-                                            onClick={() => copyToClipboard(customWhatsAppMsg, __('Mensaje'))}
-                                            className="h-9 text-xs gap-1.5"
-                                        >
-                                            <Copy className="w-3.5 h-3.5" />
-                                            {__('Copiar Texto')}
-                                        </Button>
+                                        <div className="flex items-center gap-1.5">
+                                            <Button
+                                                variant="outline"
+                                                size="sm"
+                                                onClick={() => copyToClipboard(customWhatsAppMsg, __('Mensaje'))}
+                                                className="h-9 text-xs gap-1.5"
+                                            >
+                                                <Copy className="w-3.5 h-3.5" />
+                                                {__('Copiar')}
+                                            </Button>
+
+                                            <Button
+                                                variant="ghost"
+                                                size="sm"
+                                                onClick={handleOpenWhatsAppWebDirect}
+                                                className="h-9 text-xs gap-1.5 text-slate-600 dark:text-slate-400 hover:text-emerald-600"
+                                                title={__('Abrir alternativamente en WhatsApp Web')}
+                                            >
+                                                <ExternalLink className="w-3.5 h-3.5" />
+                                                {__('WhatsApp Web')}
+                                            </Button>
+                                        </div>
 
                                         <div className="flex items-center gap-2">
                                             <Button variant="ghost" size="sm" onClick={() => setOpenWhatsAppModal(false)} className="h-9 text-xs">
@@ -2288,11 +2333,21 @@ export default function ShowReparacion({
                                             </Button>
                                             <Button
                                                 size="sm"
+                                                disabled={isSendingWhatsApp}
                                                 onClick={handleSendWhatsAppMessage}
                                                 className="h-9 text-xs font-bold bg-emerald-600 hover:bg-emerald-700 text-white gap-1.5 shadow-md shadow-emerald-950/30"
                                             >
-                                                <Send className="w-3.5 h-3.5" />
-                                                {__('Abrir WhatsApp')}
+                                                {isSendingWhatsApp ? (
+                                                    <>
+                                                        <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                                                        {__('Enviando Notificación...')}
+                                                    </>
+                                                ) : (
+                                                    <>
+                                                        <Send className="w-3.5 h-3.5" />
+                                                        {__('Enviar Notificación')}
+                                                    </>
+                                                )}
                                             </Button>
                                         </div>
                                     </div>
