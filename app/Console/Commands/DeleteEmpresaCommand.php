@@ -72,6 +72,8 @@ class DeleteEmpresaCommand extends Command
         $deletedCounts = [];
 
         try {
+            DB::statement('SET FOREIGN_KEY_CHECKS=0;');
+
             DB::transaction(function () use ($companyId, &$deletedCounts) {
                 // Obtener IDs de usuarios y roles asociados a la empresa
                 $userIds = DB::table('users')->where('empresa_id', $companyId)->pluck('id')->toArray();
@@ -115,10 +117,22 @@ class DeleteEmpresaCommand extends Command
                 $deletedCounts['empresas'] = DB::table('empresas')->where('id', $companyId)->delete();
             });
 
+            // Eliminar base de datos del tenant si existe
+            try {
+                if (\App\Services\Tenancy\TenantManager::databaseExists($companyId)) {
+                    \App\Services\Tenancy\TenantManager::dropTenantDatabase($companyId);
+                    $this->info(" 🗑️ Base de datos física del tenant 'fixsale_tenant_{$companyId}' eliminada.");
+                }
+            } catch (\Throwable $e) {
+                $this->warn(" ⚠️ Advertencia al eliminar la BD física del tenant: " . $e->getMessage());
+            }
+
             $this->info(" ✅ Datos relacionales eliminados correctamente de la base de datos.");
         } catch (\Throwable $e) {
             $this->error(" ❌ Error en la eliminación en BD: " . $e->getMessage());
             return Command::FAILURE;
+        } finally {
+            DB::statement('SET FOREIGN_KEY_CHECKS=1;');
         }
 
         // 3. Ajustar secuencias de AUTO_INCREMENT para mantener la numeración correlativa limpia (1, 2, 3...)
