@@ -1,6 +1,7 @@
 import { Link, router, usePage } from '@inertiajs/react';
 import {
     Bell,
+    BellRing,
     Check,
     ChevronLeft,
     ChevronRight,
@@ -17,6 +18,8 @@ import {
     User,
     Globe,
     Menu,
+    Volume2,
+    VolumeX,
     X,
     Activity,
     Link2,
@@ -35,6 +38,7 @@ import {
     DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { Input } from '@/components/ui/input';
+import { Switch } from '@/components/ui/switch';
 import {
     Tooltip,
     TooltipContent,
@@ -42,6 +46,7 @@ import {
     TooltipTrigger,
 } from '@/components/ui/tooltip';
 import { useAppearance } from '@/hooks/use-appearance';
+import { useDesktopNotifications } from '@/hooks/use-desktop-notifications';
 import { useInitials } from '@/hooks/use-initials';
 import { useTemplateSettings } from '@/hooks/use-template-settings';
 import { useTranslate } from '@/hooks/use-translate';
@@ -273,6 +278,9 @@ export default function AdminSaasLayout({
     };
 
     const unreadCount = unreadNotificationsCount;
+
+    // Avisos del sistema operativo + sonido para las notificaciones.
+    const desktopNotif = useDesktopNotifications();
 
     return (
         <TooltipProvider delayDuration={0}>
@@ -998,6 +1006,70 @@ export default function AdminSaasLayout({
                                             )
                                         )}
                                     </div>
+
+                                    {desktopNotif.supported && (
+                                        <>
+                                            <DropdownMenuSeparator />
+                                            <div className="px-3 py-2.5">
+                                                {desktopNotif.permission === 'denied' ? (
+                                                    <p className="text-xs text-muted-foreground">
+                                                        {__('Desktop notifications are blocked in your browser settings.')}
+                                                    </p>
+                                                ) : !desktopNotif.enabled ? (
+                                                    <Button
+                                                        variant="outline"
+                                                        size="sm"
+                                                        className="w-full justify-start gap-2 text-xs"
+                                                        onClick={() => {
+                                                            void desktopNotif.enable();
+                                                        }}
+                                                    >
+                                                        <BellRing className="size-4" />
+                                                        {__('Enable desktop notifications')}
+                                                    </Button>
+                                                ) : (
+                                                    <div className="space-y-2.5">
+                                                        <div className="flex items-center justify-between">
+                                                            <span className="flex items-center gap-2 text-xs font-medium">
+                                                                <BellRing className="size-4" />
+                                                                {__('Desktop notifications')}
+                                                            </span>
+                                                            <Switch
+                                                                checked={desktopNotif.enabled}
+                                                                onCheckedChange={(value) =>
+                                                                    value
+                                                                        ? void desktopNotif.enable()
+                                                                        : desktopNotif.disable()
+                                                                }
+                                                            />
+                                                        </div>
+                                                        <div className="flex items-center justify-between">
+                                                            <span className="flex items-center gap-2 text-xs font-medium">
+                                                                {desktopNotif.soundEnabled ? (
+                                                                    <Volume2 className="size-4" />
+                                                                ) : (
+                                                                    <VolumeX className="size-4" />
+                                                                )}
+                                                                {__('Sound')}
+                                                            </span>
+                                                            <Switch
+                                                                checked={desktopNotif.soundEnabled}
+                                                                onCheckedChange={desktopNotif.setSoundEnabled}
+                                                            />
+                                                        </div>
+                                                        <Button
+                                                            variant="ghost"
+                                                            size="sm"
+                                                            className="h-auto w-full px-2 py-1 text-xs text-muted-foreground"
+                                                            onClick={desktopNotif.sendTest}
+                                                        >
+                                                            {__('Send test notification')}
+                                                        </Button>
+                                                    </div>
+                                                )}
+                                            </div>
+                                        </>
+                                    )}
                                 </DropdownMenuContent>
                             </DropdownMenu>
 
