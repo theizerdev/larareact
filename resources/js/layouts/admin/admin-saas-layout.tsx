@@ -410,7 +410,7 @@ export default function AdminSaasLayout({
                                     permission: 'proveedores.view',
                                 },
                                 {
-                                    title: 'Producers',
+                                    title: 'Commercial Partners',
                                     href: '/admin/productores',
                                     permission: 'productores.view',
                                 },

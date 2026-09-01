@@ -247,8 +247,8 @@ export default function Dashboard({ moduleStats }: Props) {
             badgeColor: 'bg-purple-500/10 text-purple-500',
         },
         {
-            name: 'Productores',
-            desc: 'Productores agrícolas y personal',
+            name: 'Socio Comercial',
+            desc: 'Socios comerciales agrícolas y personal',
             icon: UserCheck,
             href: '/admin/productores',
             count: `${overview.productores?.total || 0} activos`,
