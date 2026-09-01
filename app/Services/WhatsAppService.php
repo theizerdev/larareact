@@ -85,7 +85,7 @@ class WhatsAppService
         }
 
         if (! $this->apiKey) {
-            $this->apiKey = config('whatsapp.api_key', 'test-api-key-vargas-centro');
+            $this->apiKey = config('whatsapp.api_key', 'my_secret_key_123');
         }
 
         if (! $this->instanceName) {
@@ -114,7 +114,7 @@ class WhatsAppService
 
         if ($empresaModel) {
             $this->companyId = (int) $empresaModel->id;
-            $this->apiKey = $empresaModel->whatsapp_api_key ?? config('whatsapp.api_key', 'test-api-key-vargas-centro');
+            $this->apiKey = $empresaModel->whatsapp_api_key ?? config('whatsapp.api_key', 'my_secret_key_123');
             if (! empty($empresaModel->whatsapp_api_url)) {
                 $this->baseUrl = rtrim($empresaModel->whatsapp_api_url, '/');
             }
@@ -129,7 +129,7 @@ class WhatsAppService
         }
 
         $this->companyId = 1;
-        $this->apiKey = config('whatsapp.api_key', 'test-api-key-vargas-centro');
+        $this->apiKey = config('whatsapp.api_key', 'my_secret_key_123');
         $this->instanceName = 'empresa_1';
         $this->countryCode = '+58';
     }

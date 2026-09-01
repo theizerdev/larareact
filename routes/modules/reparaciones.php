@@ -63,6 +63,11 @@ Route::middleware(['verified'])->group(function () {
         ->name('reparaciones.remove-item');
     Route::post('reparaciones/{reparacion}/costos', [ReparacionController::class, 'updateCostos'])
         ->name('reparaciones.update-costos');
+    Route::get('reparaciones/{reparacion}/preservicio', function ($reparacion) {
+        return redirect()->route('admin.reparaciones.show', $reparacion);
+    });
+    Route::post('reparaciones/{reparacion}/preservicio', [ReparacionController::class, 'savePreservicio'])
+        ->name('reparaciones.preservicio');
     Route::get('reparaciones/{reparacion}/post-servicio', [ReparacionController::class, 'postServicioForm'])
         ->name('reparaciones.post-servicio');
     Route::post('reparaciones/{reparacion}/post-servicio', [ReparacionController::class, 'savePostServicio'])

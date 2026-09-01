@@ -1065,7 +1065,7 @@ class ReparacionController extends Controller
                     'orden' => $reparacion->numero_orden,
                     'equipo' => trim(($reparacion->marca?->nombre ?? $reparacion->marca_nombre ?? '') . ' ' . ($reparacion->modelo?->nombre_comercial ?? $reparacion->modelo_nombre ?? '')),
                 ],
-                true
+                false
             );
 
             if (!empty($validated['estado'])) {
