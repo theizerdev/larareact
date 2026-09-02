@@ -124,6 +124,87 @@ function NavItem({ item, collapsed }: { item: NavItem; collapsed: boolean }) {
     );
 }
 
+type CollapsibleLeaf = { title: string; href: string };
+type CollapsibleEntry =
+    | CollapsibleLeaf
+    | { title: string; children: CollapsibleLeaf[] };
+
+const isGroupEntry = (
+    item: CollapsibleEntry,
+): item is { title: string; children: CollapsibleLeaf[] } => 'children' in item;
+
+const collapsibleHrefs = (items: CollapsibleEntry[]): string[] =>
+    items.flatMap((item) =>
+        isGroupEntry(item) ? item.children.map((c) => c.href) : [item.href],
+    );
+
+// Sub-grupo desplegable dentro de un CollapsibleNavItem (p. ej. "BioTime PRO"
+// vive aquí dentro de "Reloj Checador"). Sin icono, solo título + chevron.
+function NestedNavGroup({
+    title,
+    items,
+}: {
+    title: string;
+    items: CollapsibleLeaf[];
+}) {
+    const { url } = usePage();
+    const { __ } = useTranslate();
+
+    const isAnyActive = items.some((item) => url.startsWith(item.href));
+    const [isOpen, setIsOpen] = React.useState(isAnyActive);
+
+    React.useEffect(() => {
+        if (isAnyActive) {
+            setIsOpen(true);
+        }
+    }, [isAnyActive]);
+
+    return (
+        <div className="space-y-1">
+            <button
+                onClick={(e) => {
+                    e.preventDefault();
+                    setIsOpen(!isOpen);
+                }}
+                className={cn(
+                    'group flex w-full items-center justify-between rounded-lg px-3 py-2 text-sm font-medium transition-all text-sidebar-foreground/60 hover:text-sidebar-accent-foreground',
+                    isAnyActive && 'text-sidebar-foreground/90 font-semibold',
+                )}
+            >
+                <span className="whitespace-nowrap">{__(title)}</span>
+                {isOpen ? (
+                    <ChevronDown className="size-4 text-slate-500 group-hover:text-slate-300" />
+                ) : (
+                    <ChevronRight className="size-4 text-slate-500 group-hover:text-slate-300" />
+                )}
+            </button>
+
+            {isOpen && (
+                <div className="pl-4 space-y-1">
+                    {items.map((item, idx) => {
+                        const active = url === item.href || url.startsWith(item.href);
+
+                        return (
+                            <Link
+                                key={idx}
+                                href={item.href}
+                                className={cn(
+                                    'flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-all block',
+                                    active
+                                        ? 'text-primary font-semibold'
+                                        : 'text-sidebar-foreground/60 hover:text-sidebar-accent-foreground',
+                                )}
+                            >
+                                {__(item.title)}
+                            </Link>
+                        );
+                    })}
+                </div>
+            )}
+        </div>
+    );
+}
+
 function CollapsibleNavItem({
     title,
     icon: Icon,
@@ -132,14 +213,14 @@ function CollapsibleNavItem({
 }: {
     title: string;
     icon: React.ComponentType<any>;
-    items: { title: string; href: string }[];
+    items: CollapsibleEntry[];
     collapsed: boolean;
 }) {
     const { url } = usePage();
     const { __ } = useTranslate();
 
     // Determine if any of the sub-items are active
-    const isAnyActive = items.some((item) => url.startsWith(item.href));
+    const isAnyActive = collapsibleHrefs(items).some((href) => url.startsWith(href));
 
     // State to toggle open/closed
     const [isOpen, setIsOpen] = React.useState(isAnyActive);
@@ -173,18 +254,38 @@ function CollapsibleNavItem({
                 <TooltipContent side="right">
                     <div className="flex flex-col gap-1 p-1">
                         <p className="font-semibold text-white border-b border-sidebar-border pb-1 mb-1">{__(title)}</p>
-                        {items.map((item, idx) => (
-                            <Link
-                                key={idx}
-                                href={item.href}
-                                className={cn(
-                                    'text-xs py-1 px-2 rounded hover:bg-sidebar-accent block',
-                                    url.startsWith(item.href) ? 'text-primary font-semibold' : 'text-sidebar-foreground/80'
-                                )}
-                            >
-                                {__(item.title)}
-                            </Link>
-                        ))}
+                        {items.map((item, idx) =>
+                            isGroupEntry(item) ? (
+                                <div key={idx} className="mt-1">
+                                    <p className="text-[10px] font-semibold uppercase tracking-wide text-sidebar-foreground/50 px-2 pt-1">
+                                        {__(item.title)}
+                                    </p>
+                                    {item.children.map((child, cIdx) => (
+                                        <Link
+                                            key={cIdx}
+                                            href={child.href}
+                                            className={cn(
+                                                'text-xs py-1 px-2 rounded hover:bg-sidebar-accent block',
+                                                url.startsWith(child.href) ? 'text-primary font-semibold' : 'text-sidebar-foreground/80'
+                                            )}
+                                        >
+                                            {__(child.title)}
+                                        </Link>
+                                    ))}
+                                </div>
+                            ) : (
+                                <Link
+                                    key={idx}
+                                    href={item.href}
+                                    className={cn(
+                                        'text-xs py-1 px-2 rounded hover:bg-sidebar-accent block',
+                                        url.startsWith(item.href) ? 'text-primary font-semibold' : 'text-sidebar-foreground/80'
+                                    )}
+                                >
+                                    {__(item.title)}
+                                </Link>
+                            )
+                        )}
                     </div>
                 </TooltipContent>
             </Tooltip>
@@ -214,6 +315,16 @@ function CollapsibleNavItem({
             {isOpen && (
                 <div className="pl-9 space-y-1 transition-all duration-300">
                     {items.map((item, idx) => {
+                        if (isGroupEntry(item)) {
+                            return (
+                                <NestedNavGroup
+                                    key={idx}
+                                    title={item.title}
+                                    items={item.children}
+                                />
+                            );
+                        }
+
                         const active = url === item.href || (url.startsWith(item.href) && item.href.length > 22 && !url.includes('/garita'));
 
                         return (
@@ -541,14 +652,21 @@ export default function AdminSaasLayout({
                                 },
                             ].filter(item => hasPermission(item.permission) || hasPermission('asistencia.view'));
 
-                            // BioTime PRO (espejo de solo lectura de ZKTeco BioTime) ahora vive dentro de Reloj Checador
+                            // BioTime PRO (espejo de solo lectura de ZKTeco BioTime): sub-menú
+                            // desplegable propio dentro de Reloj Checador, para no mezclarlo con
+                            // los demás asuntos de asistencia.
                             const biotimeItems = [
                                 { title: 'Relojes BioTime', href: '/admin/biotime/dispositivos', permission: 'biotime.view' },
                                 { title: 'Empleados BioTime', href: '/admin/biotime/empleados', permission: 'biotime.view' },
                                 { title: 'Marcajes BioTime', href: '/admin/biotime/marcajes', permission: 'biotime.view' },
                             ].filter(item => hasPermission(item.permission));
 
-                            const relojChecadorItems = [...asistenciaItems, ...biotimeItems];
+                            const relojChecadorItems = [
+                                ...asistenciaItems,
+                                ...(biotimeItems.length > 0
+                                    ? [{ title: 'BioTime PRO', children: biotimeItems }]
+                                    : []),
+                            ];
 
                             if (relojChecadorItems.length === 0) return null;
 
@@ -611,6 +729,16 @@ export default function AdminSaasLayout({
                                     title: 'Validations',
                                     href: '/admin/integrations/validaciones',
                                     permission: 'jaak.view',
+                                },
+                                {
+                                    title: 'Reloj Checador',
+                                    href: '/admin/integrations/reloj-checador',
+                                    permission: 'integrations.view',
+                                },
+                                {
+                                    title: 'Control de Acceso',
+                                    href: '/admin/integrations/control-acceso',
+                                    permission: 'integrations.view',
                                 },
                             ].filter(item => hasPermission(item.permission));
 

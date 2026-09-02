@@ -629,6 +629,54 @@ class IntegrationController extends Controller
     }
 
     /**
+     * Muestra la página de integración de Reloj Checador (BioTime PRO) de la empresa.
+     * Solo lectura: replica el subconjunto de props de index() para esta integración.
+     */
+    public function relojChecadorIndex(Request $request)
+    {
+        $empresa = $request->user()->empresa;
+
+        if (! $empresa) {
+            return redirect()->route('dashboard')->with('notification', [
+                'type' => 'error',
+                'message' => __('No active company associated with your user.'),
+            ]);
+        }
+
+        return inertia('admin/integrations/reloj-checador', [
+            'biotime_base_url' => $empresa->biotime_base_url,
+            'biotime_username' => $empresa->biotime_username,
+            // La contraseña nunca viaja al frontend: sólo si hay una guardada.
+            'biotime_password_set' => ! empty($empresa->biotime_password),
+            'biotime_active' => (bool) $empresa->biotime_active,
+            'biotime_last_sync_at' => $empresa->biotime_last_sync_at?->toIso8601String(),
+        ]);
+    }
+
+    /**
+     * Muestra la página de integración del Middleware de Control de Acceso de la empresa.
+     * Solo lectura: replica el subconjunto de props de index() para esta integración.
+     */
+    public function controlAccesoIndex(Request $request)
+    {
+        $empresa = $request->user()->empresa;
+
+        if (! $empresa) {
+            return redirect()->route('dashboard')->with('notification', [
+                'type' => 'error',
+                'message' => __('No active company associated with your user.'),
+            ]);
+        }
+
+        return inertia('admin/integrations/control-acceso', [
+            'control_acceso_base_url' => $empresa->control_acceso_base_url,
+            'control_acceso_app_token' => $empresa->control_acceso_app_token,
+            'control_acceso_user_token' => $empresa->control_acceso_user_token,
+            'control_acceso_active' => (bool) $empresa->control_acceso_active,
+        ]);
+    }
+
+    /**
      * Actualiza la configuración de JAAK (KYC) de la empresa del usuario.
      */
     public function updateJaak(Request $request)

@@ -5,6 +5,11 @@ use Illuminate\Support\Facades\Route;
 
 Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('/integrations', [IntegrationController::class, 'index'])->name('integrations.index')->can('integrations.view');
+
+    // Páginas de integración segmentadas por especialidad (solo lectura + render, igual que validaciones)
+    Route::get('/integrations/reloj-checador', [IntegrationController::class, 'relojChecadorIndex'])->name('integrations.reloj-checador.index')->can('integrations.view');
+    Route::get('/integrations/control-acceso', [IntegrationController::class, 'controlAccesoIndex'])->name('integrations.control-acceso.index')->can('integrations.view');
+
     Route::get('/integrations/map', [IntegrationController::class, 'mapboxMap'])->name('integrations.mapbox.map')->can('integrations.view');
     Route::get('/integrations/map/navigation', [IntegrationController::class, 'mapboxNavigation'])->name('integrations.mapbox.navigation')->can('integrations.view');
     Route::put('/integrations/mapbox', [IntegrationController::class, 'updateMapbox'])->name('integrations.mapbox.update')->can('integrations.edit');
