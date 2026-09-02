@@ -95,5 +95,14 @@ class User extends Authenticatable implements PasskeyUser
     {
         return $this->belongsTo(Pais::class, 'pais_telefono_id');
     }
+
+    /**
+     * Empleado vinculado a esta cuenta (autoservicio de asistencia).
+     * Null si el usuario es un operador/admin sin registro de empleado.
+     */
+    public function empleado()
+    {
+        return $this->hasOne(Empleado::class, 'user_id');
+    }
 }
 

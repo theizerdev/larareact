@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use App\Models\AsistenciaMarcaje;
+use App\Models\AsistenciaResumenDiario;
 use App\Models\ConfiguracionAsistencia;
 use App\Models\Empleado;
 use App\Models\Sucursal;
@@ -154,6 +155,68 @@ class KioskoApiController extends Controller
     }
 
     /**
+     * Autoservicio: devuelve el empleado vinculado a la cuenta autenticada
+     * (empleados.user_id), con la misma forma que buscar(). 404 si la cuenta
+     * no corresponde a un empleado.
+     */
+    public function miEmpleado(Request $request)
+    {
+        $user = $request->user();
+
+        $empleado = Empleado::with(['turnoLaboral', 'departamento', 'cargo'])
+            ->where('user_id', $user->id)
+            ->where('status', true)
+            ->first();
+
+        if (! $empleado) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Tu cuenta no está vinculada a un empleado.',
+            ], 404);
+        }
+
+        $ultimoMarcaje = AsistenciaMarcaje::where('empleado_id', $empleado->id)
+            ->whereDate('fecha_hora', Carbon::today())
+            ->latest('fecha_hora')
+            ->first();
+
+        $siguienteMarcaje = 'entrada';
+        if ($ultimoMarcaje) {
+            switch ($ultimoMarcaje->tipo_marcaje) {
+                case 'entrada': $siguienteMarcaje = 'salida_comida'; break;
+                case 'salida_comida': $siguienteMarcaje = 'entrada_comida'; break;
+                case 'entrada_comida': $siguienteMarcaje = 'salida'; break;
+                case 'descanso_inicio': $siguienteMarcaje = 'descanso_fin'; break;
+                case 'descanso_fin': $siguienteMarcaje = 'descanso_inicio'; break;
+                case 'incidente_inicio': $siguienteMarcaje = 'incidente_fin'; break;
+                case 'incidente_fin': $siguienteMarcaje = 'salida'; break;
+                case 'salida': $siguienteMarcaje = 'entrada'; break;
+            }
+        }
+
+        return response()->json([
+            'success' => true,
+            'empleado' => [
+                'id' => $empleado->id,
+                'nombre_completo' => $empleado->nombre_completo,
+                'documento_identidad' => $empleado->codigo_acceso ?: $empleado->documento_identidad,
+                'codigo_acceso' => $empleado->codigo_acceso ?: $empleado->documento_identidad,
+                'numero_empleado' => $empleado->codigo_acceso,
+                'departamento' => $empleado->departamento?->nombre,
+                'cargo' => $empleado->cargo?->nombre,
+                'turno' => $empleado->turnoLaboral?->nombre ?? 'Sin turno asignado',
+                'foto_empleado' => $empleado->foto_empleado ? asset('storage/'.$empleado->foto_empleado) : null,
+                'ultimo_marcaje_tipo' => $ultimoMarcaje?->tipo_marcaje,
+            ],
+            'ultimo_marcaje' => $ultimoMarcaje ? [
+                'tipo' => $ultimoMarcaje->tipo_marcaje,
+                'hora' => Carbon::parse($ultimoMarcaje->fecha_hora)->format('H:i:s'),
+            ] : null,
+            'sugerencia_marcaje' => $siguienteMarcaje,
+        ]);
+    }
+
+    /**
      * Registrar un marcaje enviado desde la app móvil.
      */
     public function registrar(Request $request, CalculoAsistenciaLftService $calculoService)
@@ -179,6 +242,15 @@ class KioskoApiController extends Controller
                 'success' => false,
                 'message' => 'Empleado no encontrado o inactivo.',
             ], 404);
+        }
+
+        // Autoservicio: si la cuenta autenticada está vinculada a un empleado,
+        // solo puede registrar SUS PROPIOS marcajes (ignora empleado_id ajenos).
+        // Las cuentas de operador/admin (sin empleado vinculado) pueden registrar
+        // a cualquier empleado, como en el kiosko.
+        $propioEmpleado = $request->user()?->empleado;
+        if ($propioEmpleado) {
+            $empleado = $propioEmpleado;
         }
 
         $now = Carbon::now();
@@ -243,6 +315,49 @@ class KioskoApiController extends Controller
                 'hora' => $marcaje->fecha_hora->format('H:i:s'),
                 'fecha' => $marcaje->fecha_hora->format('d/m/Y'),
             ],
+        ]);
+    }
+
+    /**
+     * Historial de asistencia del empleado vinculado al usuario (autoservicio):
+     * sus marcajes recientes + resumen de la semana en curso.
+     */
+    public function miHistorial(Request $request)
+    {
+        $empleado = Empleado::where('user_id', $request->user()->id)->first();
+
+        if (! $empleado) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Tu cuenta no está vinculada a un empleado.',
+            ], 404);
+        }
+
+        $desde = Carbon::today()->subDays(14);
+
+        $marcajes = AsistenciaMarcaje::where('empleado_id', $empleado->id)
+            ->where('fecha_hora', '>=', $desde)
+            ->orderBy('fecha_hora', 'desc')
+            ->limit(100)
+            ->get()
+            ->map(fn (AsistenciaMarcaje $m) => [
+                'tipo' => $m->tipo_marcaje,
+                'fecha' => Carbon::parse($m->fecha_hora)->format('d/m/Y'),
+                'hora' => Carbon::parse($m->fecha_hora)->format('H:i:s'),
+            ]);
+
+        $resumen = AsistenciaResumenDiario::where('empleado_id', $empleado->id)
+            ->where('fecha', '>=', Carbon::now()->startOfWeek())
+            ->get();
+
+        return response()->json([
+            'empleado' => ['nombre_completo' => $empleado->nombre_completo],
+            'resumen_semana' => [
+                'horas_ordinarias' => (float) $resumen->sum('horas_ordinarias'),
+                'horas_extra' => (float) $resumen->sum('horas_extra_diarias'),
+                'dias_asistidos' => $resumen->count(),
+            ],
+            'marcajes' => $marcajes,
         ]);
     }
 }
