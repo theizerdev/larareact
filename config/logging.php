@@ -73,6 +73,14 @@ return [
             'replace_placeholders' => true,
         ],
 
+        'peoplesoft' => [
+            'driver' => 'daily',
+            'path' => storage_path('logs/peoplesoft.log'),
+            'level' => env('LOG_LEVEL', 'debug'),
+            'days' => env('LOG_DAILY_DAYS', 14),
+            'replace_placeholders' => true,
+        ],
+
         'biotime' => [
             'driver' => 'daily',
             'path' => storage_path('logs/biotime.log'),

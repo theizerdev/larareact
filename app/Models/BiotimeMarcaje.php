@@ -11,6 +11,14 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
  * IMPORTANTE: es una tabla independiente de asistencia_marcajes. No alimenta
  * el cálculo LFT/pre-nómina ni dispara notificaciones. Sin LogsActivity a
  * propósito (el histórico son decenas de miles de filas).
+ *
+ * Los @property de abajo son sólo para el análisis estático: PHPStan no lee
+ * el método casts() de Laravel 11 y sin ellos da por string lo que en
+ * ejecución es un Carbon.
+ *
+ * @property \Illuminate\Support\Carbon|null $punch_time
+ * @property \Illuminate\Support\Carbon|null $upload_time
+ * @property array<string,mixed>|null $raw
  */
 class BiotimeMarcaje extends Model
 {
