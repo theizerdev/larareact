@@ -541,7 +541,16 @@ export default function AdminSaasLayout({
                                 },
                             ].filter(item => hasPermission(item.permission) || hasPermission('asistencia.view'));
 
-                            if (asistenciaItems.length === 0) return null;
+                            // BioTime PRO (espejo de solo lectura de ZKTeco BioTime) ahora vive dentro de Reloj Checador
+                            const biotimeItems = [
+                                { title: 'Relojes BioTime', href: '/admin/biotime/dispositivos', permission: 'biotime.view' },
+                                { title: 'Empleados BioTime', href: '/admin/biotime/empleados', permission: 'biotime.view' },
+                                { title: 'Marcajes BioTime', href: '/admin/biotime/marcajes', permission: 'biotime.view' },
+                            ].filter(item => hasPermission(item.permission));
+
+                            const relojChecadorItems = [...asistenciaItems, ...biotimeItems];
+
+                            if (relojChecadorItems.length === 0) return null;
 
                             return (
                                 <div className="pt-2">
@@ -549,31 +558,7 @@ export default function AdminSaasLayout({
                                         title="Reloj Checador"
                                         icon={Activity}
                                         collapsed={collapsed}
-                                        items={asistenciaItems}
-                                    />
-                                </div>
-                            );
-                        })()}
-
-                        {/* BioTime PRO Group (espejo de solo lectura de ZKTeco BioTime) */}
-                        {(() => {
-                            const biotimeItems = [
-                                { title: 'Relojes BioTime', href: '/admin/biotime/dispositivos', permission: 'biotime.view' },
-                                { title: 'Empleados BioTime', href: '/admin/biotime/empleados', permission: 'biotime.view' },
-                                { title: 'Marcajes BioTime', href: '/admin/biotime/marcajes', permission: 'biotime.view' },
-                            ].filter(item => hasPermission(item.permission));
-
-                            if (biotimeItems.length === 0) {
-                                return null;
-                            }
-
-                            return (
-                                <div className="pt-2">
-                                    <CollapsibleNavItem
-                                        title="BioTime PRO"
-                                        icon={Fingerprint}
-                                        collapsed={collapsed}
-                                        items={biotimeItems}
+                                        items={relojChecadorItems}
                                     />
                                 </div>
                             );
