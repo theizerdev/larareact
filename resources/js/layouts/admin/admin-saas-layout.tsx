@@ -256,6 +256,12 @@ export default function AdminSaasLayout({
         return userPermissions.includes(permission);
     };
 
+    // Visibilidad del menú controlada por el superadmin (global, solo visual).
+    // Ausencia de clave = visible. Ocultar aquí no afecta permisos ni rutas.
+    const isSuperAdmin = (auth as any)?.user?.is_super_admin === true;
+    const menuVisibility = ((page.props as any)?.menuVisibility || {}) as Record<string, boolean>;
+    const isMenuVisible = (key: string) => menuVisibility[key] !== false;
+
     const [notifications, setNotifications] = React.useState([
         {
             id: '1',
@@ -392,44 +398,51 @@ export default function AdminSaasLayout({
                         }
 
                         {/* Organization Group */}
-                        {(() => {
+                        {isMenuVisible('organization') && (() => {
                             const orgItems = [
                                 {
                                     title: 'Branches',
                                     href: sucursalesIndex.url(),
                                     permission: 'sucursales.view',
+                                    key: 'organization.branches',
                                 },
                                 {
                                     title: 'Departments',
                                     href: departamentosIndex.url(),
                                     permission: 'departamentos.view',
+                                    key: 'organization.departments',
                                 },
                                 {
                                     title: 'Positions',
                                     href: cargosIndex.url(),
                                     permission: 'cargos.view',
+                                    key: 'organization.positions',
                                 },
                                 {
                                     title: 'Responsibles',
                                     href: responsablesIndex.url(),
                                     permission: 'responsables.view',
+                                    key: 'organization.responsibles',
                                 },
                                 {
                                     title: 'Employees',
                                     href: '/admin/empleados',
                                     permission: 'empleados.view',
+                                    key: 'organization.employees',
                                 },
                                 {
                                     title: 'Suppliers',
                                     href: '/admin/proveedores',
                                     permission: 'proveedores.view',
+                                    key: 'organization.suppliers',
                                 },
                                 {
                                     title: 'Producers',
                                     href: '/admin/productores',
                                     permission: 'productores.view',
+                                    key: 'organization.partners',
                                 },
-                            ].filter(item => hasPermission(item.permission));
+                            ].filter(item => hasPermission(item.permission) && isMenuVisible(item.key));
 
                             if (orgItems.length === 0) return null;
 
@@ -446,24 +459,27 @@ export default function AdminSaasLayout({
                         })()}
 
                         {/* Visits Group */}
-                        {(() => {
+                        {isMenuVisible('visits') && (() => {
                             const visitsItems = [
                                 {
                                     title: 'Temporary Visits',
                                     href: '/admin/visitas-temporales',
                                     permission: 'visitas_temporales.view',
+                                    key: 'visits.temporary',
                                 },
                                 {
                                     title: 'Facility Accesses',
                                     href: '/admin/visitas-accesos',
                                     permission: 'visitas_temporales.view',
+                                    key: 'visits.accesses',
                                 },
                                 {
                                     title: 'Gate Control (QR Reader)',
                                     href: '/admin/visitas-accesos/garita',
                                     permission: 'visitas_temporales.view',
+                                    key: 'visits.gate',
                                 },
-                            ].filter(item => hasPermission(item.permission));
+                            ].filter(item => hasPermission(item.permission) && isMenuVisible(item.key));
 
                             if (visitsItems.length === 0) return null;
 
@@ -480,34 +496,39 @@ export default function AdminSaasLayout({
                         })()}
 
                         {/* Access Control Group */}
-                        {(() => {
+                        {isMenuVisible('access_control') && (() => {
                             const controlAccesoItems = [
                                 {
                                     title: 'IVMS Employees',
                                     href: '/admin/control-acceso/empleados',
                                     permission: 'control_acceso.view',
+                                    key: 'access_control.ivms_employees',
                                 },
                                 {
                                     title: 'Access Cards',
                                     href: '/admin/control-acceso/tarjetas',
                                     permission: 'control_acceso.view',
+                                    key: 'access_control.cards',
                                 },
                                 {
                                     title: 'Pedestrian Access Events',
                                     href: '/admin/control-acceso/eventos-peatonales',
                                     permission: 'control_acceso.view',
+                                    key: 'access_control.pedestrian_events',
                                 },
                                 {
                                     title: 'Vehicles',
                                     href: '/admin/control-acceso/vehiculos',
                                     permission: 'control_acceso.view',
+                                    key: 'access_control.vehicles',
                                 },
                                 {
                                     title: 'Vehicle Access Events',
                                     href: '/admin/control-acceso/eventos-vehiculares',
                                     permission: 'control_acceso.view',
+                                    key: 'access_control.vehicle_events',
                                 },
-                            ].filter(item => hasPermission(item.permission));
+                            ].filter(item => hasPermission(item.permission) && isMenuVisible(item.key));
 
                             if (controlAccesoItems.length === 0) return null;
 
@@ -524,29 +545,33 @@ export default function AdminSaasLayout({
                         })()}
 
                         {/* Asistencia & Reloj Checador Group */}
-                        {(() => {
+                        {isMenuVisible('reloj_checador') && (() => {
                             const asistenciaItems = [
                                 {
                                     title: 'Kiosko Checador',
                                     href: '/admin/reloj-checador/kiosko',
                                     permission: 'asistencia.kiosko',
+                                    key: 'reloj_checador.kiosko',
                                 },
                                 {
                                     title: 'Pre-Nómina y Horas Extra',
                                     href: '/admin/asistencia/calculo-nomina',
                                     permission: 'asistencia.nomina',
+                                    key: 'reloj_checador.nomina',
                                 },
                                 {
                                     title: 'Bitácora de Marcajes',
                                     href: '/admin/asistencia/bitacora',
                                     permission: 'asistencia.bitacora',
+                                    key: 'reloj_checador.bitacora',
                                 },
                                 {
                                     title: 'Configuración y Turnos',
                                     href: '/admin/asistencia/configuracion',
                                     permission: 'asistencia.configuracion',
+                                    key: 'reloj_checador.configuracion',
                                 },
-                            ].filter(item => hasPermission(item.permission) || hasPermission('asistencia.view'));
+                            ].filter(item => (hasPermission(item.permission) || hasPermission('asistencia.view')) && isMenuVisible(item.key));
 
                             if (asistenciaItems.length === 0) return null;
 
@@ -563,27 +588,36 @@ export default function AdminSaasLayout({
                         })()}
 
                         {/* Settings Group */}
-                        {(() => {
+                        {isMenuVisible('settings') && (() => {
                             const settingsItems = [
                                 {
                                     title: 'Companies',
                                     href: empresasIndex.url(),
                                     permission: 'empresas.view',
+                                    key: 'settings.companies',
                                 },
                                 {
                                     title: 'Countries',
                                     href: paisesIndex.url(),
                                     permission: 'paises.view',
+                                    key: 'settings.countries',
                                 },
 
                                 {
                                     title: 'Appearance',
                                     href: appearanceEdit().url,
                                     permission: 'empresas.view',
+                                    key: 'settings.appearance',
                                 },
-                            ].filter(item => hasPermission(item.permission));
+                            ].filter(item => hasPermission(item.permission) && isMenuVisible(item.key));
 
-                            if (settingsItems.length === 0) return null;
+                            // Solo superadmin: panel para ocultar/mostrar módulos del menú.
+                            // No es ocultable, se añade después del filtro de visibilidad.
+                            const settingsWithSuper = isSuperAdmin
+                                ? [...settingsItems, { title: 'Menu Visibility', href: '/admin/configuracion/menu-visibilidad' }]
+                                : settingsItems;
+
+                            if (settingsWithSuper.length === 0) return null;
 
                             return (
                                 <div className="pt-2">
@@ -591,26 +625,34 @@ export default function AdminSaasLayout({
                                         title="Settings"
                                         icon={Settings}
                                         collapsed={collapsed}
-                                        items={settingsItems}
+                                        items={settingsWithSuper}
                                     />
                                 </div>
                             );
                         })()}
 
                         {/* Integrations Group */}
-                        {(() => {
+                        {isMenuVisible('integrations') && (() => {
                             const integrationsItems = [
                                 {
                                     title: 'Catalog',
                                     href: integrationsIndex.url(),
                                     permission: 'integrations.view',
+                                    key: 'integrations.catalog',
                                 },
                                 {
                                     title: 'Validations',
                                     href: '/admin/integrations/validaciones',
                                     permission: 'jaak.view',
+                                    key: 'integrations.validations',
                                 },
-                            ].filter(item => hasPermission(item.permission));
+                                {
+                                    title: 'Control de Acceso',
+                                    href: '/admin/integrations/control-acceso',
+                                    permission: 'integrations.view',
+                                    key: 'integrations.control_acceso',
+                                },
+                            ].filter(item => hasPermission(item.permission) && isMenuVisible(item.key));
 
                             if (integrationsItems.length === 0) return null;
 
@@ -627,19 +669,21 @@ export default function AdminSaasLayout({
                         })()}
 
                         {/* Security Group */}
-                        {(() => {
+                        {isMenuVisible('security') && (() => {
                             const securityItems = [
                                 {
                                     title: 'Users',
                                     href: usuariosIndex.url(),
                                     permission: 'users.view',
+                                    key: 'security.users',
                                 },
                                 {
                                     title: 'Roles',
                                     href: rolesIndex.url(),
                                     permission: 'roles.view',
+                                    key: 'security.roles',
                                 },
-                            ].filter(item => hasPermission(item.permission));
+                            ].filter(item => hasPermission(item.permission) && isMenuVisible(item.key));
 
                             if (securityItems.length === 0) return null;
 
@@ -656,44 +700,51 @@ export default function AdminSaasLayout({
                         })()}
 
                         {/* Monitoring Group */}
-                        {(() => {
+                        {isMenuVisible('monitoring') && (() => {
                             const monitoringItems = [
                                 {
                                     title: 'Database',
                                     href: dbMonitoringIndex.url(),
                                     permission: 'monitoreo.database',
+                                    key: 'monitoring.database',
                                 },
                                 {
                                     title: 'Server',
                                     href: serverMonitoringIndex.url(),
                                     permission: 'monitoreo.server',
+                                    key: 'monitoring.server',
                                 },
                                 {
                                     title: 'User Sessions',
                                     href: sessionMonitoringIndex.url(),
                                     permission: 'monitoreo.logins',
+                                    key: 'monitoring.sessions',
                                 },
                                 {
                                     title: 'System Activity',
                                     href: '/admin/monitoring/activity',
                                     permission: 'monitoreo.activities',
+                                    key: 'monitoring.activity',
                                 },
                                 {
                                     title: 'System Logs',
                                     href: logMonitoringIndex.url(),
                                     permission: 'monitoreo.view',
+                                    key: 'monitoring.logs',
                                 },
                                 {
                                     title: 'Queue Monitor',
                                     href: queuesMonitoringIndex.url(),
                                     permission: 'monitoreo.view',
+                                    key: 'monitoring.queues',
                                 },
                                 {
                                     title: 'Scheduled Tasks',
                                     href: tasksMonitoringIndex.url(),
                                     permission: 'monitoreo.view',
+                                    key: 'monitoring.tasks',
                                 },
-                            ].filter(item => hasPermission(item.permission) || hasPermission('monitoreo.view'));
+                            ].filter(item => (hasPermission(item.permission) || hasPermission('monitoreo.view')) && isMenuVisible(item.key));
 
                             if (monitoringItems.length === 0) return null;
 
