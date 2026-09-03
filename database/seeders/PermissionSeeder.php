@@ -62,6 +62,9 @@ class PermissionSeeder extends Seeder
                 // Nuevos permisos JAAK (Validaciones / KYC)
                 'jaak.view' => 'Ver configuración de JAAK',
                 'jaak.manage' => 'Gestionar configuración JAAK',
+                // Permisos ZapSign (firma electrónica, dentro de Validaciones)
+                'zapsign.view' => 'Ver configuración de ZapSign',
+                'zapsign.manage' => 'Gestionar configuración ZapSign',
                 // Módulo Validaciones (resultados de identidad / KYC de las personas)
                 'validaciones.view' => 'Ver validaciones de identidad',
                 'validaciones.manage' => 'Gestionar / revalidar validaciones',
@@ -171,6 +174,7 @@ class PermissionSeeder extends Seeder
                     str_starts_with($permission, 'integrations.') => 'integraciones',
                     str_starts_with($permission, 'whatsapp.') => 'integraciones',
                     str_starts_with($permission, 'jaak.') => 'integraciones',
+                    str_starts_with($permission, 'zapsign.') => 'integraciones',
                     str_starts_with($permission, 'validaciones.') => 'validaciones',
                     str_starts_with($permission, 'proveedores.') => 'proveedores',
                     str_starts_with($permission, 'productores.') => 'productores',

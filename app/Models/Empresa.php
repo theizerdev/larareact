@@ -60,6 +60,9 @@ class Empresa extends Model
         'jaak_api_key',
         'jaak_environment',
         'jaak_active',
+        'zapsign_api_token',
+        'zapsign_environment',
+        'zapsign_active',
     ];
 
     protected function casts(): array
@@ -76,6 +79,8 @@ class Empresa extends Model
             'control_acceso_active' => 'boolean',
             'jaak_api_key' => 'encrypted',
             'jaak_active' => 'boolean',
+            'zapsign_api_token' => 'encrypted',
+            'zapsign_active' => 'boolean',
         ];
     }
 

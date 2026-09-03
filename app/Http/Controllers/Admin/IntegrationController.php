@@ -8,6 +8,7 @@ use App\Models\Pais;
 use App\Services\ControlAccesoService;
 use App\Services\JaakService;
 use App\Services\WhatsAppService;
+use App\Services\ZapSignService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Artisan;
 
@@ -547,6 +548,11 @@ class IntegrationController extends Controller
             'jaak_api_key' => $empresa->jaak_api_key,
             'jaak_environment' => $empresa->jaak_environment ?? 'sandbox',
             'jaak_active' => (bool) $empresa->jaak_active,
+            // tokenDe() en vez del atributo directo: si el valor guardado no se
+            // puede descifrar devuelve null en lugar de reventar la pantalla.
+            'zapsign_api_token' => ZapSignService::tokenDe($empresa),
+            'zapsign_environment' => $empresa->zapsign_environment ?? 'production',
+            'zapsign_active' => (bool) $empresa->zapsign_active,
         ]);
     }
 
@@ -627,6 +633,73 @@ class IntegrationController extends Controller
         }
 
         $result = (new JaakService($empresa))->testConnection();
+
+        return back()->with('notification', [
+            'type' => $result['success'] ? 'success' : 'error',
+            'message' => $result['message'],
+        ]);
+    }
+
+    /**
+     * Actualiza la configuración de ZapSign (firma electrónica) de la empresa.
+     */
+    public function updateZapsign(Request $request)
+    {
+        $empresa = $request->user()->empresa;
+
+        if (! $empresa) {
+            return back()->with('notification', [
+                'type' => 'error',
+                'message' => __('No active company associated with your user.'),
+            ]);
+        }
+
+        $validated = $request->validate([
+            'zapsign_api_token' => 'nullable|string|max:4000',
+            'zapsign_environment' => 'required|in:sandbox,production',
+            'zapsign_active' => 'required|boolean',
+        ]);
+
+        $token = $validated['zapsign_api_token'] !== null ? trim($validated['zapsign_api_token']) : '';
+
+        // Activar sin token deja la integración en un estado inservible que sólo
+        // se manifiesta al primer uso: se rechaza aquí, antes de guardar.
+        if ($validated['zapsign_active'] && $token === '') {
+            return back()->withErrors([
+                'zapsign_api_token' => __('An API Token is required to enable the ZapSign integration.'),
+            ])->with('notification', [
+                'type' => 'error',
+                'message' => __('An API Token is required to enable the ZapSign integration.'),
+            ]);
+        }
+
+        $empresa->update([
+            'zapsign_api_token' => $token !== '' ? $token : null,
+            'zapsign_environment' => $validated['zapsign_environment'],
+            'zapsign_active' => $validated['zapsign_active'],
+        ]);
+
+        return back()->with('notification', [
+            'type' => 'success',
+            'message' => __('ZapSign integration settings updated successfully.'),
+        ]);
+    }
+
+    /**
+     * Prueba la conexión con ZapSign usando las credenciales guardadas.
+     */
+    public function zapsignTest(Request $request)
+    {
+        $empresa = $request->user()->empresa;
+
+        if (! $empresa) {
+            return back()->with('notification', [
+                'type' => 'error',
+                'message' => __('No active company associated with your user.'),
+            ]);
+        }
+
+        $result = (new ZapSignService($empresa))->testConnection();
 
         return back()->with('notification', [
             'type' => $result['success'] ? 'success' : 'error',

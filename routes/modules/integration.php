@@ -31,4 +31,10 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('/integrations/validaciones', [IntegrationController::class, 'validacionesIndex'])->name('integrations.validaciones.index')->can('jaak.view');
     Route::put('/integrations/jaak', [IntegrationController::class, 'updateJaak'])->name('integrations.jaak.update')->can('jaak.manage');
     Route::post('/integrations/jaak/test', [IntegrationController::class, 'jaakTest'])->name('integrations.jaak.test')->can('jaak.manage');
+
+    // ZapSign (Validaciones) Integration Routes
+    // La pantalla que las contiene es /integrations/validaciones (can jaak.view);
+    // escribir y probar la conexión requiere su propio permiso.
+    Route::put('/integrations/zapsign', [IntegrationController::class, 'updateZapsign'])->name('integrations.zapsign.update')->can('zapsign.manage');
+    Route::post('/integrations/zapsign/test', [IntegrationController::class, 'zapsignTest'])->name('integrations.zapsign.test')->can('zapsign.manage');
 });
