@@ -143,6 +143,7 @@ export default function Terminal({
     const pageProps = usePage().props as any;
     const isVenezuela = Boolean(pageProps?.isVenezuela);
     const currencyCode = pageProps?.currencyCode || 'MXN';
+    const currentUserId = pageProps?.auth?.user?.id;
     const userRoles: any[] = Array.isArray(pageProps?.auth?.user?.roles) ? pageProps.auth.user.roles : [];
     const isAdmin = Boolean(
         pageProps?.auth?.user?.is_super_admin ||
@@ -285,8 +286,8 @@ export default function Terminal({
     const fetchRecentSales = async () => {
         setIsLoadingRecentSales(true);
         try {
-            const res = await fetch('/admin/ventas?perPage=10', {
-                headers: { 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest' },
+            const res = await fetch('/admin/ventas?perPage=10&format=json', {
+                headers: { 'Accept': 'application/json' },
             });
             const data = await res.json();
             const rawSales =
