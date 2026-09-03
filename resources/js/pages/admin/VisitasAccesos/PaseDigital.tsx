@@ -844,7 +844,7 @@ export default function PaseDigital({ invitacion }: PaseDigitalProps) {
 
     return (
         <>
-            <Head title={`Pase Digital N° ${invitacion.codigo_invitacion} - Driscoll's`} />
+            <Head title={`Pase Digital N° ${invitacion.codigo_invitacion} - ${invitacion.empresa?.razon_social || 'Control de Accesos'}`} />
 
             <div className="min-h-screen bg-slate-50 dark:bg-slate-950 text-slate-800 dark:text-slate-100 flex flex-col font-sans">
 
@@ -854,7 +854,7 @@ export default function PaseDigital({ invitacion }: PaseDigitalProps) {
                         <div className="flex items-center gap-3">
                             <ShieldCheck className="w-8 h-8 text-emerald-400 shrink-0" />
                             <div>
-                                <span className="font-extrabold text-xl tracking-tight block leading-none">DRISCOLL'S</span>
+                                <span className="font-extrabold text-xl tracking-tight block leading-none">{(invitacion.empresa?.razon_social || 'CONTROL DE ACCESOS').toUpperCase()}</span>
                                 <span className="text-xs text-emerald-200 font-medium tracking-wider uppercase">Portal Público de Accesos</span>
                             </div>
                         </div>
@@ -1373,10 +1373,10 @@ export default function PaseDigital({ invitacion }: PaseDigitalProps) {
                                 );
                             })()}
 
-                            {/* 4. SECCIÓN: ACOMPAÑANTES DE INGRESO A DRISCOLL'S */}
+                            {/* 4. SECCIÓN: ACOMPAÑANTES DE INGRESO */}
                             <div className="space-y-4 pt-4 border-t border-slate-200 dark:border-slate-800">
                                 <label className="text-xs font-extrabold text-slate-700 dark:text-slate-300 uppercase tracking-wider flex items-center justify-between">
-                                    <span className="flex items-center gap-2"><Users className="w-5 h-5 text-emerald-600" /> 4. Acompañantes que Accederán a Driscoll's</span>
+                                    <span className="flex items-center gap-2"><Users className="w-5 h-5 text-emerald-600" /> 4. Acompañantes que Accederán a las instalaciones</span>
                                     <span className="text-xs text-slate-500 font-normal">({data.acompanantes.length} seleccionados)</span>
                                 </label>
 
@@ -1764,7 +1764,7 @@ export default function PaseDigital({ invitacion }: PaseDigitalProps) {
                 {/* Footer Institucional Público */}
                 <footer className="bg-white dark:bg-slate-900 border-t border-slate-200 dark:border-slate-800 py-6 px-4 text-center text-xs text-slate-500 mt-auto">
                     <div className="max-w-4xl mx-auto space-y-1">
-                        <p>© {new Date().getFullYear()} Driscoll's. Todos los derechos reservados.</p>
+                        <p>© {new Date().getFullYear()} {invitacion.empresa?.razon_social || 'Control de Accesos'}. Todos los derechos reservados.</p>
                         <p className="text-[11px] text-slate-400">Presente este pase digital al llegar a la garita de seguridad.</p>
                     </div>
                 </footer>

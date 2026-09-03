@@ -967,7 +967,7 @@ export default function Index({
                                 id="pre_razon_social_rancho"
                                 required
                                 className="mt-1"
-                                placeholder="ej. Agrícola Driscoll's S.P.R. de R.L."
+                                placeholder="ej. Agrícola Ejemplo S.P.R. de R.L."
                                 value={preRegistroForm.data.razon_social_rancho}
                                 onChange={(e) => preRegistroForm.setData('razon_social_rancho', e.target.value)}
                             />

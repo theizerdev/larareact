@@ -193,7 +193,7 @@ export default function CarnetPage({ empleado }: CarnetPageProps) {
                         </Link>
                     ) : (
                         <span className="text-xs font-semibold text-emerald-700 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/60 px-2.5 py-1 rounded-full border border-emerald-200 dark:border-emerald-800">
-                            🪪 Carnet Digital Driscoll's
+                            🪪 Carnet Digital {empleado.empresa?.razon_social || ''}
                         </span>
                     )}
 

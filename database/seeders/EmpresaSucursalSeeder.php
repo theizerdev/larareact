@@ -13,15 +13,17 @@ class EmpresaSucursalSeeder extends Seeder
      */
     public function run(): void
     {
-        // 1. Crear o actualizar la empresa principal Driscoll's con ID 1
+        // 1. Crear o actualizar la empresa demo con ID 1
         $empresa = Empresa::updateOrCreate([
             'id' => 1,
         ], [
-            'razon_social' => "Driscoll's, Inc.",
-            'documento' => 'J-12345678-0',
-            'direccion' => "Av. Principal Driscoll's",
-            'telefono' => '+52 436 117 4564',
-            'email' => 'contacto@driscolls.com',
+            'razon_social' => 'Empresa Demo',
+            'documento' => 'DEMO-000000',
+            'direccion' => 'Dirección de ejemplo 123',
+            'telefono' => '+52 55 0000 0000',
+            'email' => 'demo@empresademo.com',
+            'logo' => '/image/logo/aliados/360-global-it-logo.png',
+            'logo_mini' => '/image/logo/aliados/360-global-it-logo.png',
             'status' => true,
         ]);
 
@@ -30,9 +32,9 @@ class EmpresaSucursalSeeder extends Seeder
             'id' => 1,
         ], [
             'empresa_id' => $empresa->id,
-            'nombre' => 'Cooler Purépero',
-            'telefono' => '+52 436 117 4564',
-            'direccion' => "Cooler Purépero, Michoacán",
+            'nombre' => 'Sucursal Principal',
+            'telefono' => '+52 55 0000 0000',
+            'direccion' => 'Dirección de ejemplo 123',
             'status' => true,
         ]);
     }

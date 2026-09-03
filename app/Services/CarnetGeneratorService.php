@@ -127,10 +127,16 @@ class CarnetGeneratorService
                 }
             }
 
-            // --- 5. Logotipo institucional (Hoshō) ---
-            $logoPath = public_path('image/logo/hosho/lockup.png');
-            if (!file_exists($logoPath)) {
-                $logoPath = public_path('image/logo/driscolls_logo.png');
+            // --- 5. Logotipo institucional (logo de la empresa, o genérico si no tiene) ---
+            $logoPath = null;
+            if ($empleado->empresa?->logo) {
+                $empresaLogoPath = public_path(ltrim($empleado->empresa->logo, '/'));
+                if (file_exists($empresaLogoPath)) {
+                    $logoPath = $empresaLogoPath;
+                }
+            }
+            if (!$logoPath) {
+                $logoPath = public_path('image/logo/hosho/lockup.png');
             }
             if (file_exists($logoPath)) {
                 $logoData = @file_get_contents($logoPath);
@@ -256,10 +262,16 @@ class CarnetGeneratorService
                 }
             }
 
-            // --- 5. Logotipo institucional (Hoshō) ---
-            $logoPath = public_path('image/logo/hosho/lockup.png');
-            if (!file_exists($logoPath)) {
-                $logoPath = public_path('image/logo/driscolls_logo.png');
+            // --- 5. Logotipo institucional (logo de la empresa, o genérico si no tiene) ---
+            $logoPath = null;
+            if ($proveedor->empresa?->logo) {
+                $empresaLogoPath = public_path(ltrim($proveedor->empresa->logo, '/'));
+                if (file_exists($empresaLogoPath)) {
+                    $logoPath = $empresaLogoPath;
+                }
+            }
+            if (!$logoPath) {
+                $logoPath = public_path('image/logo/hosho/lockup.png');
             }
             if (file_exists($logoPath)) {
                 $logoData = @file_get_contents($logoPath);
@@ -384,10 +396,16 @@ class CarnetGeneratorService
                 }
             }
 
-            // --- 5. Logotipo institucional (Hoshō) ---
-            $logoPath = public_path('image/logo/hosho/lockup.png');
-            if (!file_exists($logoPath)) {
-                $logoPath = public_path('image/logo/driscolls_logo.png');
+            // --- 5. Logotipo institucional (logo de la empresa, o genérico si no tiene) ---
+            $logoPath = null;
+            if ($productor->empresa?->logo) {
+                $empresaLogoPath = public_path(ltrim($productor->empresa->logo, '/'));
+                if (file_exists($empresaLogoPath)) {
+                    $logoPath = $empresaLogoPath;
+                }
+            }
+            if (!$logoPath) {
+                $logoPath = public_path('image/logo/hosho/lockup.png');
             }
             if (file_exists($logoPath)) {
                 $logoData = @file_get_contents($logoPath);

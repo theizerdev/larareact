@@ -1,7 +1,7 @@
 {
     "name": "Reloj Checador",
     "short_name": "Kiosko",
-    "description": "Sistema de control de asistencia reloj checador para empleados Driscoll's",
+    "description": "Sistema de control de asistencia reloj checador para empleados",
     "start_url": "/admin/reloj-checador/kiosko",
     "scope": "/",
     "display": "fullscreen",

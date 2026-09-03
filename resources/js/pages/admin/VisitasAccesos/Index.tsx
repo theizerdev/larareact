@@ -2982,7 +2982,7 @@ export default function Index({
                             {/* PASO 2 — Responsable / Anfitrión (siempre visible) */}
                             <div className="space-y-2" ref={invResponsableRef}>
                                 <Label className="text-xs font-bold uppercase tracking-wider text-slate-500">
-                                    {invTipoAcceso === 'visitante' ? __('Anfitrión / Responsable Driscoll\'s') : __('Responsable Driscoll\'s')}
+                                    {invTipoAcceso === 'visitante' ? __('Anfitrión / Responsable') : __('Responsable de la Empresa')}
                                     <span className="text-rose-500"> *</span>
                                 </Label>
 

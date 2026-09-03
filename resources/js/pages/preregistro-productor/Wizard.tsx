@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Head } from '@inertiajs/react';
+import { Head, usePage } from '@inertiajs/react';
 import { 
     Sprout, 
     Building2, 
@@ -82,6 +82,7 @@ interface VehiculoForm {
 
 export default function Wizard({ preRegistro, paises, mapbox_api_key, mapbox_active }: PreRegistroProps) {
     const { __ } = useTranslate();
+    const { name: appName } = usePage().props as any;
     const [step, setStep] = useState(1);
     const [step1SubTab, setStep1SubTab] = useState('general');
     const [isSubmitting, setIsSubmitting] = useState(false);
@@ -1311,7 +1312,7 @@ export default function Wizard({ preRegistro, paises, mapbox_api_key, mapbox_act
             </Dialog>
 
             <footer className="py-4 text-center text-xs text-slate-400 border-t border-slate-200 dark:border-slate-800">
-                &copy; {new Date().getFullYear()} Driscolls App. {__('All rights reserved.')}
+                &copy; {new Date().getFullYear()} {appName}. {__('All rights reserved.')}
             </footer>
         </div>
     );

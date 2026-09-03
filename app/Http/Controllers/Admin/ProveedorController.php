@@ -152,7 +152,6 @@ class ProveedorController extends Controller
             $whatsappService = new \App\Services\WhatsAppService($empresa);
 
             $link = url("/preregistro/{$token}");
-            $terminos    = url("https://www.driscolls.com/Privacy-and-Terms  ");
 
             $sucursalNombre = $user->sucursal?->nombre ?? ($empresa->razon_social ?? $empresa->nombre_comercial ?? 'Nuestras Instalaciones');
 
@@ -163,7 +162,7 @@ class ProveedorController extends Controller
                 . "Será Indispensable contar de cada colaborador con: INE vigente y Chaleco de seguridad*\n\n"
                 . "Ingresar a:\n"
                 . $link. "\n\n"
-                . "Para cualquier duda adicional, podrá consultar el aviso de privacidad en: {$terminos}";
+                . "Para cualquier duda adicional, contacta directamente a *{$sucursalNombre}*.";
 
             $whatsappService->sendMessage($to, $message, true);
         } catch (\Exception $e) {

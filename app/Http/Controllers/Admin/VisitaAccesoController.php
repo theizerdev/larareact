@@ -732,7 +732,6 @@ class VisitaAccesoController extends Controller
                     $prefix     = $pais ? preg_replace('/[^0-9]/', '', $pais->codigo_telefonico) : '51';
                     $to         = $prefix . $cleanPhone;
                     $paseUrl    = url("/pase-digital/{$invitacion->uuid}");
-                    $terminos    = url("https://www.driscolls.com/Privacy-and-Terms  ");
                     $msg  = "Hola *{$invitacion->visitante_nombre}*,\n\n";
                     $msg .= "Se ha generado tu Pre-Registro  de visita a las instalaciones de *{$empresa->razon_social}*.\n\n";
                     $msg .= "📅 *Fecha:* {$invitacion->fecha_estimada}\n";
@@ -740,7 +739,7 @@ class VisitaAccesoController extends Controller
                     $msg .= "🎫 *Referencia N°:* {$invitacion->codigo_invitacion}\n\n";
                     $msg .= "📝 *PASO REQUERIDO:* Ingresa al siguiente enlace para completar tus datos de vehículo, identificación y activar tu Pase QR:\n";
                     $msg .= "🔗 {$paseUrl}\n\n";
-                    $msg .= "Para cualquier duda adicional, podrá consultar el aviso de privacidad en: {$terminos}";
+                    $msg .= "Para cualquier duda adicional, contacta directamente a *{$empresa->razon_social}*.";
 
                     $ws = new WhatsAppService($empresa);
                     $ws->sendMessage($to, $msg, true);
