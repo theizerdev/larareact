@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\Admin\ReparacionController;
 use App\Http\Controllers\Admin\ReparacionChecklistController;
+use App\Http\Controllers\Admin\ReparacionPreservicioChecklistController;
 use Illuminate\Support\Facades\Route;
 
 Route::middleware(['verified'])->group(function () {
@@ -17,6 +18,28 @@ Route::middleware(['verified'])->group(function () {
         ->name('reparaciones.check-imei');
     Route::get('reparaciones/api-find', [ReparacionController::class, 'apiFind'])
         ->name('reparaciones.api-find');
+
+    // ── GESTIÓN DE CHECKLIST DE PRESERVICIO / INSPECCIÓN POR EMPRESA/SUCURSAL (Debe ir antes de resource) ──
+    Route::get('reparaciones/preservicio-config', [ReparacionPreservicioChecklistController::class, 'indexPage'])
+        ->name('reparaciones.preservicio-config');
+    Route::get('reparaciones/preservicio/checklist', [ReparacionPreservicioChecklistController::class, 'index'])
+        ->name('reparaciones.preservicio-checklist.index');
+    Route::post('reparaciones/preservicio/checklist', [ReparacionPreservicioChecklistController::class, 'store'])
+        ->name('reparaciones.preservicio-checklist.store');
+    Route::put('reparaciones/preservicio/checklist/{item}', [ReparacionPreservicioChecklistController::class, 'update'])
+        ->name('reparaciones.preservicio-checklist.update');
+    Route::delete('reparaciones/preservicio/checklist/{item}', [ReparacionPreservicioChecklistController::class, 'destroy'])
+        ->name('reparaciones.preservicio-checklist.destroy');
+    Route::post('reparaciones/preservicio/checklist/reorder', [ReparacionPreservicioChecklistController::class, 'reorder'])
+        ->name('reparaciones.preservicio-checklist.reorder');
+    Route::post('reparaciones/preservicio/checklist/batch-toggle', [ReparacionPreservicioChecklistController::class, 'batchToggle'])
+        ->name('reparaciones.preservicio-checklist.batch-toggle');
+    Route::post('reparaciones/preservicio/checklist/{item}/duplicate', [ReparacionPreservicioChecklistController::class, 'duplicate'])
+        ->name('reparaciones.preservicio-checklist.duplicate');
+    Route::post('reparaciones/preservicio/checklist/reset-defaults', [ReparacionPreservicioChecklistController::class, 'resetDefaults'])
+        ->name('reparaciones.preservicio-checklist.reset');
+    Route::post('reparaciones/preservicio/checklist/copy-to-branch', [ReparacionPreservicioChecklistController::class, 'copyToBranch'])
+        ->name('reparaciones.preservicio-checklist.copy-to-branch');
 
     // ── GESTIÓN DE CHECKLIST DE POST-ATENCIÓN POR EMPRESA/SUCURSAL (Debe ir antes de resource) ──
     Route::get('reparaciones/post-reparacion', [ReparacionChecklistController::class, 'indexPage'])

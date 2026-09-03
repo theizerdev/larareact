@@ -53,6 +53,7 @@ import { notifySuccess, notifyError } from '@/utils/notifications';
 import { compressImage } from '@/utils/imageOptimizer';
 import { cn } from '@/lib/utils';
 import ChecklistConfigModal, { ChecklistItem } from '@/components/reparaciones/ChecklistConfigModal';
+import PreservicioChecklistConfigModal, { PreservicioItem } from '@/components/reparaciones/PreservicioChecklistConfigModal';
 
 interface Item {
     id: number;
@@ -164,6 +165,7 @@ interface Props {
     categorias?: CategoriaItem[];
     sucursales?: { id: number; nombre: string }[];
     checklist_items?: Record<string, ChecklistItem[]>;
+    preservicio_items?: Record<string, PreservicioItem[]>;
 }
 
 
@@ -568,6 +570,7 @@ export default function ShowReparacion({
     currencySymbol,
     sucursales = [],
     checklist_items: propChecklistItems = {},
+    preservicio_items: propPreservicioItems = {},
 }: Props) {
     const { __ } = useTranslate();
     const pageProps = usePage<any>().props;
@@ -950,20 +953,45 @@ export default function ShowReparacion({
     const [postCameraFacingMode, setPostCameraFacingMode] = useState<'environment' | 'user'>('environment');
 
     // ESTADO E INICIALIZACIÓN PARA FORMULARIO DIRECTO INTERACTIVO DE PRESERVICIO
-    const DEFAULT_FISICA_ITEMS = React.useMemo(() => [
-        'Pantalla',
-        'Cristal trasero',
-        'Marco',
-        'Botones',
-        'Bandeja SIM',
-        'Cámara trasera',
-        'Cámara frontal',
-        'Tornillos',
-        'Tapa trasera',
-        'Puerto de carga',
-        'Humedad visible',
-        'Equipo doblado',
-    ], []);
+    const [openPreservicioConfigModal, setOpenPreservicioConfigModal] = useState(false);
+    const [preservicioGrouped, setPreservicioGrouped] = useState<Record<string, PreservicioItem[]>>(
+        propPreservicioItems || {}
+    );
+
+    const handlePreservicioUpdated = (grouped: Record<string, PreservicioItem[]>) => {
+        setPreservicioGrouped(grouped);
+        if (grouped.fisica && grouped.fisica.length > 0) {
+            setInspeccionFisicaForm((prev) => {
+                const next = { ...prev };
+                grouped.fisica.forEach((item) => {
+                    if (item.activo && !next[item.nombre]) {
+                        next[item.nombre] = { estado: 'bueno', obs: '' };
+                    }
+                });
+                return next;
+            });
+        }
+    };
+
+    const DEFAULT_FISICA_ITEMS = React.useMemo(() => {
+        if (preservicioGrouped?.fisica && preservicioGrouped.fisica.length > 0) {
+            return preservicioGrouped.fisica.filter((i) => i.activo).map((i) => i.nombre);
+        }
+        return [
+            'Pantalla',
+            'Cristal trasero',
+            'Marco',
+            'Botones',
+            'Bandeja SIM',
+            'Cámara trasera',
+            'Cámara frontal',
+            'Tornillos',
+            'Tapa trasera',
+            'Puerto de carga',
+            'Humedad visible',
+            'Equipo doblado',
+        ];
+    }, [preservicioGrouped]);
 
     const [inspeccionFisicaForm, setInspeccionFisicaForm] = useState<Record<string, { estado: 'bueno' | 'malo' | 'na'; obs: string }>>(() => {
         const existing = inspeccionData?.fisica;
@@ -2771,7 +2799,17 @@ export default function ShowReparacion({
                                                 </p>
                                             </div>
 
-                                            <div className="flex items-center gap-2">
+                                            <div className="flex items-center gap-2 flex-wrap">
+                                                <Button
+                                                    type="button"
+                                                    size="sm"
+                                                    variant="outline"
+                                                    onClick={() => setOpenPreservicioConfigModal(true)}
+                                                    className="border-indigo-300 text-indigo-800 dark:border-indigo-700 dark:text-indigo-200 hover:bg-indigo-50 dark:hover:bg-indigo-950 text-xs font-bold gap-1.5 rounded-lg shadow-xs"
+                                                >
+                                                    <Layers className="w-3.5 h-3.5 text-indigo-600" />
+                                                    {__('⚙️ Configurar Plantilla')}
+                                                </Button>
                                                 <Button
                                                     type="button"
                                                     size="sm"
@@ -5577,6 +5615,15 @@ export default function ShowReparacion({
                     </form>
                 </DialogContent>
             </Dialog>
+
+            {/* MODAL CONFIGURACIÓN GLOBAL / SUCURSAL DEL CHECKLIST DE PRESERVICIO */}
+            <PreservicioChecklistConfigModal
+                open={openPreservicioConfigModal}
+                onOpenChange={setOpenPreservicioConfigModal}
+                sucursales={sucursales}
+                initialSucursalId={orden.sucursal_id || null}
+                onItemsUpdated={handlePreservicioUpdated}
+            />
 
             {/* MODAL CONFIGURACIÓN GLOBAL / SUCURSAL DEL CHECKLIST DE POST-ATENCIÓN */}
             <ChecklistConfigModal

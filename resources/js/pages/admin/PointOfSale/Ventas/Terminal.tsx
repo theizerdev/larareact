@@ -167,6 +167,17 @@ export default function Terminal({
         setLocalCatalog(catalog);
     }, [catalog]);
 
+    useEffect(() => {
+        const notif = pageProps?.notification || pageProps?.flash?.notification;
+        if (notif?.message) {
+            if (notif.type === 'error') {
+                notifyError(notif.message);
+            } else if (notif.type === 'success') {
+                notifySuccess(notif.message);
+            }
+        }
+    }, [pageProps?.notification, pageProps?.flash?.notification]);
+
     // Zero stock modal state
     const [isZeroStockModalOpen, setIsZeroStockModalOpen] = useState(false);
     const [zeroStockTargetItem, setZeroStockTargetItem] = useState<CatalogItem | null>(null);
@@ -996,10 +1007,20 @@ export default function Terminal({
             `/admin/cajas/${activeRegister.id}/close`,
             { counted_amount: counted },
             {
-                onSuccess: () => {
+                onSuccess: (page) => {
                     setIsCorteOpen(false);
-                    notifySuccess(__('Corte de Caja realizado exitosamente. La caja ha sido cerrada.'));
-                    router.reload();
+                    setCountedAmountInput('');
+                    setCountedUSDInput('');
+                    const notif = (page.props as any)?.notification || (page.props as any)?.flash?.notification;
+                    if (notif?.message) {
+                        if (notif.type === 'error') {
+                            notifyError(notif.message);
+                        } else {
+                            notifySuccess(notif.message);
+                        }
+                    } else {
+                        notifySuccess(__('Corte de Caja realizado exitosamente. La caja ha sido cerrada.'));
+                    }
                 },
                 onError: () => notifyError(__('Error al realizar el corte de caja.')),
             }

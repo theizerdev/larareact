@@ -16,6 +16,7 @@ use App\Models\Pais;
 use App\Models\Producto;
 use App\Models\User;
 use App\Services\PostServicioChecklistService;
+use App\Services\PreservicioChecklistService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Inertia\Inertia;
@@ -653,10 +654,16 @@ class ReparacionController extends Controller
         // Checklist dinámico de post-atención para esta empresa/sucursal
         $sucursalId = $reparacion->sucursal_id ?? $user->sucursal_id;
         $checklistService = app(PostServicioChecklistService::class);
+        $preservicioService = app(PreservicioChecklistService::class);
 
         $checklistItems = [];
         if (\Illuminate\Support\Facades\Schema::hasTable('reparacion_checklist_items')) {
             $checklistItems = $checklistService->getChecklistForBranch($empresaId, $sucursalId);
+        }
+
+        $preservicioItems = [];
+        if (\Illuminate\Support\Facades\Schema::hasTable('reparacion_preservicio_items')) {
+            $preservicioItems = $preservicioService->getChecklistForBranch($empresaId, $sucursalId);
         }
 
         return Inertia::render('admin/Reparaciones/Show', [
@@ -670,6 +677,7 @@ class ReparacionController extends Controller
             'currencySymbol'     => $this->getCurrencySymbol(),
             'sucursales'         => $sucursales,
             'checklist_items'    => $checklistItems,
+            'preservicio_items'  => $preservicioItems,
         ]);
     }
 

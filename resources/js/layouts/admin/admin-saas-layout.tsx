@@ -477,6 +477,11 @@ export default function AdminSaasLayout({
                                             permission: 'servicios.view',
                                         },
                                         {
+                                            title: 'Preservicio / Inspección',
+                                            href: '/admin/reparaciones/preservicio-config',
+                                            permission: 'reparaciones.view',
+                                        },
+                                        {
                                             title: 'Post reparación',
                                             href: '/admin/reparaciones/post-reparacion',
                                             permission: 'reparaciones.view',

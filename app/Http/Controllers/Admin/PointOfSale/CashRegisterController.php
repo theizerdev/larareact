@@ -114,6 +114,10 @@ class CashRegisterController extends Controller
 
     public function show(CashRegister $caja, CashRegisterService $service)
     {
+        if ($caja->getConnectionName() !== DB::getDefaultConnection()) {
+            $caja = CashRegister::findOrFail($caja->id);
+        }
+
         $caja->load([
             'user',
             'movements' => function ($query) {
@@ -185,6 +189,10 @@ class CashRegisterController extends Controller
 
     public function addMovement(Request $request, CashRegister $caja, CashRegisterService $service)
     {
+        if ($caja->getConnectionName() !== DB::getDefaultConnection()) {
+            $caja = CashRegister::findOrFail($caja->id);
+        }
+
         if ($caja->status !== 'open') {
             return back()->with('notification', [
                 'type' => 'error',
@@ -218,6 +226,10 @@ class CashRegisterController extends Controller
 
     public function close(Request $request, CashRegister $caja, CashRegisterService $service)
     {
+        if ($caja->getConnectionName() !== DB::getDefaultConnection()) {
+            $caja = CashRegister::findOrFail($caja->id);
+        }
+
         if ($caja->status !== 'open') {
             return back()->with('notification', [
                 'type' => 'error',
@@ -227,7 +239,8 @@ class CashRegisterController extends Controller
 
         $user = $request->user();
         $isOwner = $caja->user_id === $user->id;
-        $isSuperAdmin = $user->id === 1 || $user->hasRole('Super Administrador');
+        $isSuperAdmin = $user->id === 1
+            || (method_exists($user, 'hasRole') && ($user->hasRole('Super Administrador') || $user->hasRole('super-admin') || $user->hasRole('Super Admin')));
 
         if (! $isOwner && ! $isSuperAdmin) {
             $creatorName = $caja->user?->name ?? __('otro usuario');
