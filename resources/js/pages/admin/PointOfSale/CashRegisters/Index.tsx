@@ -216,11 +216,19 @@ export default function Index({ cajas, activeRegister, currencySymbol = '$', fil
         {
             header: __('Acciones'),
             className: 'text-right',
-            hideable: false,
             cell: (caja) => {
                 const currentUserId = pageProps.auth?.user?.id;
-                const isSuperAdmin = Boolean(pageProps.auth?.user?.is_super_admin);
-                const canClose = currentUserId === caja.user_id || isSuperAdmin;
+                const userRoles: any[] = Array.isArray(pageProps.auth?.user?.roles) ? pageProps.auth.user.roles : [];
+                const isAdmin = Boolean(
+                    pageProps.auth?.user?.is_super_admin ||
+                    pageProps.auth?.user?.is_admin ||
+                    currentUserId === 1 ||
+                    userRoles.some((r: any) => {
+                        const name = typeof r === 'string' ? r : r?.name;
+                        return name && ['administrador', 'admin', 'super administrador', 'super-admin'].includes(name.toLowerCase());
+                    })
+                );
+                const canClose = currentUserId === caja.user_id || isAdmin;
 
                 return (
                     <DropdownMenu>

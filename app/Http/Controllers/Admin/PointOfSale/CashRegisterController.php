@@ -239,14 +239,22 @@ class CashRegisterController extends Controller
 
         $user = $request->user();
         $isOwner = $caja->user_id === $user->id;
-        $isSuperAdmin = $user->id === 1
-            || (method_exists($user, 'hasRole') && ($user->hasRole('Super Administrador') || $user->hasRole('super-admin') || $user->hasRole('Super Admin')));
+        $isAdmin = $user->id === 1
+            || (method_exists($user, 'hasRole') && (
+                $user->hasRole('Administrador')
+                || $user->hasRole('administrador')
+                || $user->hasRole('Admin')
+                || $user->hasRole('admin')
+                || $user->hasRole('Super Administrador')
+                || $user->hasRole('super-admin')
+                || $user->hasRole('Super Admin')
+            ));
 
-        if (! $isOwner && ! $isSuperAdmin) {
+        if (! $isOwner && ! $isAdmin) {
             $creatorName = $caja->user?->name ?? __('otro usuario');
             return back()->with('notification', [
                 'type' => 'error',
-                'message' => __('Solo el usuario que aperturó esta caja (:user) puede realizar el cierre de la misma.', ['user' => $creatorName]),
+                'message' => __('Solo el usuario que aperturó esta caja (:user) o un Administrador puede realizar el cierre de la misma.', ['user' => $creatorName]),
             ]);
         }
 
