@@ -446,7 +446,7 @@ export default function AdminSaasLayout({
                                 <img
                                     src={(auth as any)?.user?.empresa?.logo_mini || (auth as any)?.user?.empresa?.logo || "/image/logo/hosho/icon-dark.png"}
                                     alt={(auth as any)?.user?.empresa?.razon_social || "Hoshō"}
-                                    className="h-9 w-auto object-contain"
+                                    className="h-9 w-auto object-contain transition-all duration-200 app-logo-invert dark:brightness-0 dark:invert"
                                 />
                             </div>
                         </Link>

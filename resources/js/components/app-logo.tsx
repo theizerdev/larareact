@@ -13,7 +13,7 @@ export default function AppLogo() {
                 <img
                     src={companyLogo}
                     alt={companyName || "Hoshō"}
-                    className="size-8 object-contain"
+                    className="size-8 object-contain transition-all duration-200 app-logo-invert dark:brightness-0 dark:invert"
                 />
             </div>
             <div className="ml-2 grid flex-1 text-left text-sm">

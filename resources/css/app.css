@@ -217,6 +217,15 @@ html[data-sidebar="dark"]:not(.dark) {
     --sidebar-accent-foreground: oklch(0.985 0 0);
 }
 
+/* Invert dark logos to white in dark mode or semi-dark sidebar */
+.app-logo-invert {
+    transition: filter 0.2s ease-in-out;
+}
+.dark .app-logo-invert,
+html[data-sidebar="dark"] .app-logo-invert {
+    filter: brightness(0) invert(1);
+}
+
 /* Custom Scrollbar */
 .custom-scrollbar::-webkit-scrollbar {
     width: 5px;
