@@ -40,8 +40,10 @@ class Departamento extends Model
     protected function casts(): array
     {
         return [
-            'latitud' => 'decimal:8',
-            'longitud' => 'decimal:8',
+            // Coherente con el resto de modelos: `decimal:8` serializaba a
+            // string y el frontend recibía coordenadas como texto.
+            'latitud' => 'float',
+            'longitud' => 'float',
             'status' => 'integer',
         ];
     }

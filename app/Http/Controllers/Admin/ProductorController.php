@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Admin;
 
+use App\Http\Controllers\Concerns\InteractsWithTransactions;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\ProductorRequest;
 use App\Models\Productor;
@@ -10,10 +11,14 @@ use App\Models\Empresa;
 use App\Models\Sucursal;
 use App\Models\User;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 use Inertia\Inertia;
 
 class ProductorController extends Controller
 {
+    use InteractsWithTransactions;
+
     public function index(Request $request)
     {
         $query = Productor::with(['pais', 'paisTelefono', 'empresa', 'sucursal', 'user'])
@@ -85,10 +90,29 @@ class ProductorController extends Controller
         $data['nombre_comercial_rancho'] = $data['nombre_comercial_rancho'] ?? $data['nombre_comercial'];
         $data['documento_identidad'] = $data['documento_identidad'] ?? $data['rfc'] ?? $data['curp'] ?? ('PROD_' . uniqid());
 
-        $productor = Productor::create($data);
-        $this->enviarCarnetWhatsAppInternal($productor);
+        $productor = null;
 
-        return redirect()->back();
+        $response = $this->transactional(
+            function () use ($data, &$productor) {
+                $productor = Productor::create($data);
+            },
+            successMessage: __('Producer created successfully'),
+            failureMessage: __('No se pudo registrar el productor. Verifique que el documento no esté duplicado e intente de nuevo.'),
+            errorKey: 'documento_identidad',
+            context: ['action' => 'productores.store'],
+        );
+
+        // WhatsApp SIEMPRE después del COMMIT y fuera de la transacción.
+        // Es una llamada HTTP a un tercero con timeout de decenas de segundos:
+        // dentro de la transacción mantendría abierto el bloqueo de escritura de
+        // SQLite todo ese tiempo y cualquier otra escritura de la aplicación
+        // fallaría con "database is locked". Que el envío falle no invalida el
+        // alta: el productor ya está persistido.
+        if ($productor !== null) {
+            $this->enviarCarnetWhatsAppInternal($productor);
+        }
+
+        return $response;
     }
 
     public function carnet(Productor $productor)
@@ -186,29 +210,69 @@ class ProductorController extends Controller
         $data['nombre_comercial_rancho'] = $data['nombre_comercial_rancho'] ?? $data['nombre_comercial'];
         $data['documento_identidad'] = $data['documento_identidad'] ?? $data['rfc'] ?? $data['curp'] ?? $productor->documento_identidad;
 
-        $productor->update($data);
-
-        return redirect()->back();
+        return $this->transactional(
+            function () use ($productor, $data) {
+                if (! $productor->update($data)) {
+                    throw new \RuntimeException("No se pudo actualizar el productor {$productor->id}.");
+                }
+            },
+            successMessage: __('Producer updated successfully'),
+            failureMessage: __('No se pudieron guardar los cambios del productor. Intente de nuevo.'),
+            errorKey: 'documento_identidad',
+            context: ['action' => 'productores.update', 'productor_id' => $productor->id],
+        );
     }
 
     public function destroy(Productor $productor)
     {
-        $productor->delete();
+        // Borrado en cascada a nivel de base de datos: al eliminar el productor
+        // desaparecen sus colaboradores, sus vehículos y su historial en
+        // `visitas_accesos`. Se deja constancia de lo que se destruye ANTES de
+        // hacerlo, porque después ya no hay forma de reconstruir el alcance.
+        $alcance = [
+            'productor_id' => $productor->id,
+            'documento_identidad' => $productor->documento_identidad,
+            'empleados' => DB::table('productor_empleados')->where('productor_id', $productor->id)->count(),
+            'vehiculos' => DB::table('productor_vehiculos')->where('productor_id', $productor->id)->count(),
+            'visitas_accesos' => DB::table('visitas_accesos')->where('productor_id', $productor->id)->count(),
+        ];
 
-        return redirect()->back();
+        Log::warning('Eliminación de productor con borrado en cascada', $alcance + [
+            'user_id' => auth()->id(),
+        ]);
+
+        return $this->transactional(
+            function () use ($productor) {
+                if (! $productor->delete()) {
+                    throw new \RuntimeException("No se pudo eliminar el productor {$productor->id}.");
+                }
+            },
+            successMessage: __('Producer deleted successfully'),
+            failureMessage: __('No se pudo eliminar el productor porque tiene registros dependientes.'),
+            errorKey: 'general',
+            context: ['action' => 'productores.destroy'] + $alcance,
+        );
     }
 
     public function toggleStatus(Request $request, Productor $productor)
     {
-        $request->validate([
+        $validated = $request->validate([
             'status' => 'required|string|in:activo,suspendido,en_revision',
         ]);
 
-        $productor->update([
-            'status' => $request->status,
-        ]);
+        return $this->transactional(
+            function () use ($productor, $validated) {
+                $fresh = Productor::whereKey($productor->getKey())->lockForUpdate()->firstOrFail();
 
-        return redirect()->back();
+                if (! $fresh->update(['status' => $validated['status']])) {
+                    throw new \RuntimeException("No se pudo cambiar el estado del productor {$productor->id}.");
+                }
+            },
+            successMessage: __('Estado actualizado correctamente'),
+            failureMessage: __('No se pudo actualizar el estado. Intente de nuevo.'),
+            errorKey: 'status',
+            context: ['action' => 'productores.toggleStatus', 'productor_id' => $productor->id],
+        );
     }
 
     public function generatePreRegistro(Request $request)
@@ -223,18 +287,28 @@ class ProductorController extends Controller
         $user = auth()->user();
         $token = bin2hex(random_bytes(16));
 
-        \App\Models\ProductorPreRegistro::create([
-            'razon_social_rancho' => $request->razon_social_rancho,
-            'nombre_comercial_rancho' => $request->nombre_comercial_rancho,
-            'pais_telefono_id' => $request->pais_telefono_id,
-            'telefono' => $request->telefono,
-            'token' => $token,
-            'expires_at' => now()->addHours(12),
-            'empresa_id' => $user->empresa_id,
-            'sucursal_id' => $user->sucursal_id,
-            'status' => 'pendiente',
-        ]);
+        $response = $this->transactional(
+            function () use ($request, $user, $token) {
+                \App\Models\ProductorPreRegistro::create([
+                    'razon_social_rancho' => $request->razon_social_rancho,
+                    'nombre_comercial_rancho' => $request->nombre_comercial_rancho,
+                    'pais_telefono_id' => $request->pais_telefono_id,
+                    'telefono' => $request->telefono,
+                    'token' => $token,
+                    'expires_at' => now()->addHours(12),
+                    'empresa_id' => $user->empresa_id,
+                    'sucursal_id' => $user->sucursal_id,
+                    'status' => 'pendiente',
+                ]);
+            },
+            successMessage: __('Producer pre-registration link sent via WhatsApp'),
+            failureMessage: __('No se pudo generar la invitación de pre-registro. Intente de nuevo.'),
+            errorKey: 'telefono',
+            context: ['action' => 'productores.generatePreRegistro'],
+        );
 
+        // Igual que en store(): el envío va después del COMMIT para no sostener
+        // el bloqueo de escritura durante una llamada HTTP externa.
         try {
             $pais = \App\Models\Pais::findOrFail($request->pais_telefono_id);
             $prefix = preg_replace('/[^0-9]/', '', $pais->codigo_telefonico);
@@ -262,6 +336,6 @@ class ProductorController extends Controller
             \Illuminate\Support\Facades\Log::error('Error al enviar WhatsApp de invitación de productor: ' . $e->getMessage());
         }
 
-        return redirect()->back();
+        return $response;
     }
 }

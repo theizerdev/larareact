@@ -4,6 +4,7 @@ namespace App\Models;
 
 use App\Traits\HasSpanishActivityLog;
 use App\Traits\Multitenantable;
+use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Spatie\Activitylog\LogOptions;
@@ -11,7 +12,7 @@ use Spatie\Activitylog\Traits\LogsActivity;
 
 class Sucursal extends Model
 {
-    use HasSpanishActivityLog, LogsActivity, Multitenantable;
+    use HasFactory, HasSpanishActivityLog, LogsActivity, Multitenantable;
 
     protected $table = 'sucursales';
 
@@ -39,8 +40,11 @@ class Sucursal extends Model
     protected function casts(): array
     {
         return [
-            'latitud' => 'decimal:8',
-            'longitud' => 'decimal:8',
+            // `decimal:8` devolvía string ("19.70000000") y el frontend
+            // recibía coordenadas como texto. `float` mantiene el mismo
+            // almacenamiento y unifica el tipo con Productor/Proveedor.
+            'latitud' => 'float',
+            'longitud' => 'float',
             'status' => 'boolean',
         ];
     }

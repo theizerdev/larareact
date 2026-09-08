@@ -2,11 +2,15 @@
 
 namespace App\Http\Requests;
 
+use App\Http\Requests\Concerns\ValidatesCoordinates;
+use Illuminate\Validation\Validator;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 
 class ProveedorRequest extends FormRequest
 {
+    use ValidatesCoordinates;
+
     /**
      * Determine if the user is authorized to make this request.
      */
@@ -38,12 +42,27 @@ class ProveedorRequest extends FormRequest
             'responsable' => ['nullable', 'string', 'max:255'],
             'curp' => ['nullable', 'string', 'max:18'],
             'pais_id' => ['required', 'exists:pais,id'],
-            'latitud' => ['nullable', 'numeric', 'between:-90,90'],
-            'longitud' => ['nullable', 'numeric', 'between:-180,180'],
+            ...$this->coordinateRules(),
             'status' => ['required', 'string', Rule::in(['activo', 'suspendido', 'en_revision'])],
             'empresa_id' => ['nullable'],
             'sucursal_id' => ['nullable'],
             'user_id' => ['nullable'],
         ];
+    }
+
+    /**
+     * Convierte a null los campos de coordenada vacíos antes de validar.
+     */
+    protected function prepareForValidation(): void
+    {
+        $this->merge($this->normalizedCoordinates());
+    }
+
+    /**
+     * Impide guardar media coordenada (latitud sin longitud o al revés).
+     */
+    public function withValidator(Validator $validator): void
+    {
+        $this->validateCoordinatePair($validator);
     }
 }

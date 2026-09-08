@@ -2,10 +2,13 @@
 
 namespace App\Models;
 
+use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
 class Pais extends Model
 {
+    use HasFactory;
+
     protected $table = 'pais';
 
     protected $fillable = [
@@ -33,6 +36,10 @@ class Pais extends Model
         return [
             'impuesto_predeterminado' => 'decimal:2',
             'activo' => 'boolean',
+            // Sin cast, el tipo dependía del driver (string en MySQL, float en
+            // SQLite) y el mapa recibía coordenadas de tipo variable.
+            'latitud' => 'float',
+            'longitud' => 'float',
         ];
     }
 

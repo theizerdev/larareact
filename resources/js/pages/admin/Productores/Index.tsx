@@ -1,4 +1,4 @@
-import { Head, useForm, router } from '@inertiajs/react';
+import { Head, useForm, router, usePage } from '@inertiajs/react';
 import type { ColumnDef } from '@/components/data-table';
 import {
     Sprout,
@@ -22,7 +22,7 @@ import {
     Send,
     QrCode,
 } from 'lucide-react';
-import React, { useState, useEffect, useRef, lazy, Suspense } from 'react';
+import React, { useState, useEffect, useRef, useCallback, lazy, Suspense } from 'react';
 import { toast } from 'sonner';
 
 import { Breadcrumbs } from '@/components/breadcrumbs';
@@ -46,7 +46,9 @@ import { cn } from '@/lib/utils';
 import PhoneInputGroup from '../Empresas/Partials/PhoneInputGroup';
 import ProductorEmpleadosModal from './Partials/ProductorEmpleadosModal';
 import ProductorVehiculosModal from './Partials/ProductorVehiculosModal';
-import MapboxMap, { MapAddressDetails } from '@/components/mapbox-map';
+import MapboxMap from '@/components/mapbox-map';
+import { isValidCoordinate, toCoordinate } from '@/lib/geocoding';
+import { useLocationSync, type LocationPatch } from '@/hooks/use-location-sync';
 
 interface Pais {
     id: number;
@@ -221,6 +223,9 @@ export default function Index({
     }, [searchTerm, statusFilter, paisFilter, perPageFilter]);
 
     // Default sucursal coordinates
+    const pageProps = usePage().props as any;
+    const mapboxApiKey: string | undefined = pageProps.mapbox_api_key || pageProps.auth?.user?.empresa?.mapbox_api_key;
+
     const defaultLat = sucursal?.latitud ? Number(sucursal.latitud) : (paises[0]?.latitud ? Number(paises[0].latitud) : 19.9868);
     const defaultLng = sucursal?.longitud ? Number(sucursal.longitud) : (paises[0]?.longitud ? Number(paises[0].longitud) : -102.2839);
 
@@ -256,10 +261,79 @@ export default function Index({
         telefono: '',
     });
 
+    // ── Ubicación: geocodificación progresiva + sincronización bidireccional ──
+    const paisSeleccionado = paises.find((p) => String(p.id) === String(data.pais_id));
+
+    const latNumerica = toCoordinate(data.latitud);
+    const lngNumerica = toCoordinate(data.longitud);
+
+    // Estable por referencia: el hook lo guarda en un ref y el actualizador
+    // funcional garantiza que nunca escribamos sobre datos obsoletos.
+    const aplicarUbicacion = useCallback((patch: LocationPatch) => {
+        setData((prev) => ({
+            ...prev,
+            ...(patch.latitud !== undefined ? { latitud: patch.latitud } : {}),
+            ...(patch.longitud !== undefined ? { longitud: patch.longitud } : {}),
+            ...(patch.direccion ? { direccion: patch.direccion } : {}),
+            ...(patch.codigo_postal ? { codigo_postal: patch.codigo_postal } : {}),
+            ...(patch.estado ? { estado: patch.estado } : {}),
+        }));
+    }, [setData]);
+
+    const {
+        status: geoStatus,
+        isBusy: geoIsBusy,
+        coordinateSource,
+        setManualCoordinates,
+        releaseManualCoordinates,
+    } = useLocationSync({
+        address: {
+            pais: paisSeleccionado?.nombre,
+            estado: data.estado,
+            direccion: data.direccion,
+            codigo_postal: data.codigo_postal,
+        },
+        lat: latNumerica,
+        lng: lngNumerica,
+        onResolved: aplicarUbicacion,
+        mapboxToken: mapboxApiKey,
+        countryIso2: paisSeleccionado?.codigo_iso2,
+        // Sólo geocodifica con el modal abierto en la pestaña de ubicación: sin
+        // esto se lanzarían peticiones de fondo por cada tecla en otra pestaña.
+        enabled: isCreateModalOpen && activeTab === 'location',
+    });
+
+    /** Lat/Lng tecleadas a mano: prevalecen y disparan la inversa. */
+    const handleCoordenadaManual = (campo: 'latitud' | 'longitud', valor: string) => {
+        const numero = valor.trim() === '' ? null : Number(valor);
+
+        if (numero === null || !Number.isFinite(numero)) {
+            setData(campo, valor.trim() === '' ? (null as any) : (valor as any));
+
+            return;
+        }
+
+        const siguienteLat = campo === 'latitud' ? numero : latNumerica;
+        const siguienteLng = campo === 'longitud' ? numero : lngNumerica;
+
+        // Mientras el par no sea válido sólo guardamos el campo; en cuanto lo es,
+        // se registran como manuales para que manden sobre el autocompletado.
+        if (isValidCoordinate(siguienteLat, siguienteLng)) {
+            setManualCoordinates(siguienteLat as number, siguienteLng as number);
+        } else {
+            setData(campo, numero as any);
+        }
+    };
+
     // Setup coordinates on country change
     const handlePaisChange = (paisId: string) => {
         setData('pais_id', paisId);
         const selectedPais = paises.find((p) => String(p.id) === paisId);
+
+        // Cambiar de país es una señal explícita de reubicación: se devuelve el
+        // control al autocompletado para que la dirección vuelva a afinar el pin.
+        releaseManualCoordinates();
+
         if (selectedPais && selectedPais.latitud && selectedPais.longitud) {
             setData((prev) => ({
                 ...prev,
@@ -864,32 +938,88 @@ export default function Index({
                                         </div>
                                     </div>
 
+                                    {/* Coordenadas manuales: prevalecen sobre la geocodificación */}
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+                                        <div>
+                                            <Label htmlFor="latitud">{__('Latitud')}</Label>
+                                            <Input
+                                                id="latitud"
+                                                type="number"
+                                                step="any"
+                                                inputMode="decimal"
+                                                className="mt-1.5 w-full font-mono"
+                                                placeholder="19.98680"
+                                                value={data.latitud ?? ''}
+                                                onChange={(e) => handleCoordenadaManual('latitud', e.target.value)}
+                                            />
+                                            {errors.latitud && (
+                                                <p className="mt-1 text-xs text-rose-500">{errors.latitud}</p>
+                                            )}
+                                        </div>
+
+                                        <div>
+                                            <Label htmlFor="longitud">{__('Longitud')}</Label>
+                                            <Input
+                                                id="longitud"
+                                                type="number"
+                                                step="any"
+                                                inputMode="decimal"
+                                                className="mt-1.5 w-full font-mono"
+                                                placeholder="-102.28390"
+                                                value={data.longitud ?? ''}
+                                                onChange={(e) => handleCoordenadaManual('longitud', e.target.value)}
+                                            />
+                                            {errors.longitud && (
+                                                <p className="mt-1 text-xs text-rose-500">{errors.longitud}</p>
+                                            )}
+                                        </div>
+                                    </div>
+
                                     {/* Mapbox Map centered at Sucursal Location as default */}
                                     <div className="space-y-2 pt-3">
-                                        <div className="flex items-center justify-between text-xs text-slate-500">
+                                        <div className="flex flex-wrap items-center justify-between gap-2 text-xs text-slate-500">
                                             <span className="flex items-center gap-1.5 font-medium">
                                                 <Navigation className="h-4 w-4 text-[#104a29]" />
                                                 {__('Click or drag marker on map to set rancho location (centered at your branch sucursal)')}
                                             </span>
-                                            <span className="font-mono text-[11px] bg-slate-200/60 dark:bg-slate-800 px-2 py-0.5 rounded">
-                                                Lat: {data.latitud?.toFixed(5) || '0'}, Lng: {data.longitud?.toFixed(5) || '0'}
+
+                                            <span className="flex items-center gap-2">
+                                                {geoIsBusy && (
+                                                    <span className="flex items-center gap-1 text-[11px] font-medium text-[#104a29]">
+                                                        <span className="h-2 w-2 animate-pulse rounded-full bg-[#104a29]" />
+                                                        {__('Localizando dirección...')}
+                                                    </span>
+                                                )}
+                                                {!geoIsBusy && geoStatus === 'not_found' && (
+                                                    <span className="text-[11px] font-medium text-amber-600">
+                                                        {__('No se encontró la dirección; ajuste el pin manualmente.')}
+                                                    </span>
+                                                )}
+                                                {!geoIsBusy && geoStatus === 'error' && (
+                                                    <span className="text-[11px] font-medium text-rose-500">
+                                                        {__('Servicio de mapas no disponible; puede capturar las coordenadas a mano.')}
+                                                    </span>
+                                                )}
+                                                {coordinateSource === 'manual' && !geoIsBusy && (
+                                                    <span className="text-[11px] font-medium text-emerald-600">
+                                                        {__('Coordenadas fijadas manualmente')}
+                                                    </span>
+                                                )}
+                                                <span className="rounded bg-slate-200/60 px-2 py-0.5 font-mono text-[11px] dark:bg-slate-800">
+                                                    Lat: {latNumerica !== null ? latNumerica.toFixed(5) : '—'}, Lng:{' '}
+                                                    {lngNumerica !== null ? lngNumerica.toFixed(5) : '—'}
+                                                </span>
                                             </span>
                                         </div>
 
                                         <MapboxMap
-                                            lat={data.latitud || defaultLat}
-                                            lng={data.longitud || defaultLng}
+                                            lat={latNumerica ?? defaultLat}
+                                            lng={lngNumerica ?? defaultLng}
                                             zoom={12}
-                                            onChange={(lat, lng, details?: MapAddressDetails) => {
-                                                setData((prev) => ({
-                                                    ...prev,
-                                                    latitud: lat,
-                                                    longitud: lng,
-                                                    ...(details?.codigo_postal ? { codigo_postal: details.codigo_postal } : {}),
-                                                    ...(details?.estado ? { estado: details.estado } : {}),
-                                                    ...(details?.direccion ? { direccion: details.direccion } : {}),
-                                                }));
-                                            }}
+                                            // El hook ya resuelve la dirección; que el mapa no
+                                            // lance su propia inversa evita duplicar la petición.
+                                            resolveAddress={false}
+                                            onChange={(lat, lng) => setManualCoordinates(lat, lng)}
                                             className="h-96 rounded-xl border border-slate-200 dark:border-slate-800 shadow-inner"
                                         />
                                     </div>

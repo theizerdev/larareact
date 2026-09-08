@@ -2,16 +2,17 @@
 
 namespace App\Http\Controllers\Admin;
 
+use App\Http\Controllers\Concerns\InteractsWithTransactions;
 use App\Http\Controllers\Controller;
 use App\Models\Empresa;
 use App\Models\Pais;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
 
 class EmpresaController extends Controller
 {
+    use InteractsWithTransactions;
+
     public function index(Request $request)
     {
         $search = $request->input('search');
@@ -72,24 +73,18 @@ class EmpresaController extends Controller
             'status' => 'boolean',
         ]);
 
-        try {
-            $empresa = new Empresa($validated);
-            $empresa->api_key = Str::random(32);
-            $empresa->whatsapp_api_key = Str::random(32);
-            $empresa->save();
-
-            return back()->with('notification', [
-                'type' => 'success',
-                'message' => __('Company created successfully.'),
-            ]);
-        } catch (\Exception $e) {
-            Log::error('Error al crear empresa: '.$e->getMessage());
-
-            return back()->with('notification', [
-                'type' => 'error',
-                'message' => __('There was an error creating the company. Please try again.'),
-            ]);
-        }
+        return $this->transactional(
+            function () use ($validated) {
+                $empresa = new Empresa($validated);
+                $empresa->api_key = Str::random(32);
+                $empresa->whatsapp_api_key = Str::random(32);
+                $empresa->save();
+            },
+            successMessage: __('Company created successfully.'),
+            failureMessage: __('There was an error creating the company. Please try again.'),
+            errorKey: 'documento',
+            context: ['action' => 'empresas.store'],
+        );
     }
 
     public function update(Request $request, Empresa $empresa)
@@ -110,43 +105,38 @@ class EmpresaController extends Controller
             'status' => 'boolean',
         ]);
 
-        try {
-            DB::transaction(function () use ($empresa, $validated) {
-                $empresa->update($validated);
-            });
-
-            return back()->with('notification', [
-                'type' => 'success',
-                'message' => __('Company updated successfully.'),
-            ]);
-        } catch (\Exception $e) {
-            Log::error("Error al actualizar empresa {$empresa->id}: ".$e->getMessage());
-
-            return back()->with('notification', [
-                'type' => 'error',
-                'message' => __('There was an error updating the company. Please try again.'),
-            ]);
-        }
+        return $this->transactional(
+            function () use ($empresa, $validated) {
+                // `update()` devuelve false si el modelo se marca como no
+                // guardable; obligamos a que un no-guardado sea un fallo visible
+                // y no una respuesta de éxito sin escritura.
+                if (! $empresa->update($validated)) {
+                    throw new \RuntimeException("No se pudo actualizar la empresa {$empresa->id}.");
+                }
+            },
+            successMessage: __('Company updated successfully.'),
+            failureMessage: __('There was an error updating the company. Please try again.'),
+            errorKey: 'documento',
+            context: ['action' => 'empresas.update', 'empresa_id' => $empresa->id],
+        );
     }
 
     public function toggleStatus(Empresa $empresa)
     {
-        try {
-            $empresa->status = ! $empresa->status;
-            $empresa->save();
-
-            return back()->with('notification', [
-                'type' => 'success',
-                'message' => __('Status updated successfully.'),
-            ]);
-        } catch (\Exception $e) {
-            Log::error("Error al cambiar estado de empresa {$empresa->id}: ".$e->getMessage());
-
-            return back()->with('notification', [
-                'type' => 'error',
-                'message' => __('There was an error updating the status. Please try again.'),
-            ]);
-        }
+        return $this->transactional(
+            function () use ($empresa) {
+                // Relectura con bloqueo dentro de la transacción: sin esto, dos
+                // peticiones simultáneas leen el mismo valor y el segundo toggle
+                // se pierde (lost update).
+                $fresh = Empresa::whereKey($empresa->getKey())->lockForUpdate()->firstOrFail();
+                $fresh->status = ! $fresh->status;
+                $fresh->save();
+            },
+            successMessage: __('Status updated successfully.'),
+            failureMessage: __('There was an error updating the status. Please try again.'),
+            errorKey: 'status',
+            context: ['action' => 'empresas.toggleStatus', 'empresa_id' => $empresa->id],
+        );
     }
 
     public function updateLogos(Request $request, Empresa $empresa)
@@ -156,30 +146,33 @@ class EmpresaController extends Controller
             'logo_mini' => 'nullable|image|mimes:jpeg,png,jpg,webp|max:2048',
         ]);
 
-        try {
-            if ($request->hasFile('logo')) {
-                $path = $request->file('logo')->store('empresas/logos', 'public');
-                $empresa->logo = '/storage/'.$path;
-            }
+        // Los ficheros se suben antes de abrir la transacción: escribir en disco
+        // no es transaccional y mantener la transacción abierta durante una
+        // subida alarga el bloqueo de escritura de SQLite sin necesidad.
+        $logoPath = $request->hasFile('logo')
+            ? '/storage/'.$request->file('logo')->store('empresas/logos', 'public')
+            : null;
 
-            if ($request->hasFile('logo_mini')) {
-                $path = $request->file('logo_mini')->store('empresas/logos_mini', 'public');
-                $empresa->logo_mini = '/storage/'.$path;
-            }
+        $logoMiniPath = $request->hasFile('logo_mini')
+            ? '/storage/'.$request->file('logo_mini')->store('empresas/logos_mini', 'public')
+            : null;
 
-            $empresa->save();
+        return $this->transactional(
+            function () use ($empresa, $logoPath, $logoMiniPath) {
+                if ($logoPath !== null) {
+                    $empresa->logo = $logoPath;
+                }
 
-            return back()->with('notification', [
-                'type' => 'success',
-                'message' => __('Logos updated successfully.'),
-            ]);
-        } catch (\Exception $e) {
-            Log::error("Error al actualizar logos de empresa {$empresa->id}: ".$e->getMessage());
+                if ($logoMiniPath !== null) {
+                    $empresa->logo_mini = $logoMiniPath;
+                }
 
-            return back()->with('notification', [
-                'type' => 'error',
-                'message' => __('There was an error updating the logos. Please try again.'),
-            ]);
-        }
+                $empresa->save();
+            },
+            successMessage: __('Logos updated successfully.'),
+            failureMessage: __('There was an error updating the logos. Please try again.'),
+            errorKey: 'logo',
+            context: ['action' => 'empresas.updateLogos', 'empresa_id' => $empresa->id],
+        );
     }
 }

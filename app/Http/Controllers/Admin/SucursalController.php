@@ -2,16 +2,17 @@
 
 namespace App\Http\Controllers\Admin;
 
+use App\Http\Controllers\Concerns\InteractsWithTransactions;
 use App\Http\Controllers\Controller;
 use App\Models\Empresa;
 use App\Models\Pais;
 use App\Models\Sucursal;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Log;
 
 class SucursalController extends Controller
 {
+    use InteractsWithTransactions;
+
     public function index(Request $request)
     {
         $search = $request->input('search');
@@ -73,21 +74,13 @@ class SucursalController extends Controller
             'status' => 'boolean',
         ]);
 
-        try {
-            Sucursal::create($validated);
-
-            return back()->with('notification', [
-                'type' => 'success',
-                'message' => __('Branch created successfully.'),
-            ]);
-        } catch (\Exception $e) {
-            Log::error('Error al crear sucursal: '.$e->getMessage());
-
-            return back()->with('notification', [
-                'type' => 'error',
-                'message' => __('There was an error creating the branch. Please try again.'),
-            ]);
-        }
+        return $this->transactional(
+            fn () => Sucursal::create($validated),
+            successMessage: __('Branch created successfully.'),
+            failureMessage: __('There was an error creating the branch. Please try again.'),
+            errorKey: 'nombre',
+            context: ['action' => 'sucursales.store'],
+        );
     }
 
     public function update(Request $request, Sucursal $sucursal)
@@ -105,61 +98,49 @@ class SucursalController extends Controller
             'status' => 'boolean',
         ]);
 
-        try {
-            DB::transaction(function () use ($sucursal, $validated) {
-                $sucursal->update($validated);
-            });
-
-            return back()->with('notification', [
-                'type' => 'success',
-                'message' => __('Branch updated successfully.'),
-            ]);
-        } catch (\Exception $e) {
-            Log::error("Error al actualizar sucursal {$sucursal->id}: ".$e->getMessage());
-
-            return back()->with('notification', [
-                'type' => 'error',
-                'message' => __('There was an error updating the branch. Please try again.'),
-            ]);
-        }
+        return $this->transactional(
+            function () use ($sucursal, $validated) {
+                if (! $sucursal->update($validated)) {
+                    throw new \RuntimeException("No se pudo actualizar la sucursal {$sucursal->id}.");
+                }
+            },
+            successMessage: __('Branch updated successfully.'),
+            failureMessage: __('There was an error updating the branch. Please try again.'),
+            errorKey: 'nombre',
+            context: ['action' => 'sucursales.update', 'sucursal_id' => $sucursal->id],
+        );
     }
 
     public function destroy(Sucursal $sucursal)
     {
-        try {
-            $sucursal->delete();
-
-            return back()->with('notification', [
-                'type' => 'success',
-                'message' => __('Branch deleted successfully.'),
-            ]);
-        } catch (\Exception $e) {
-            Log::error("Error al eliminar sucursal {$sucursal->id}: ".$e->getMessage());
-
-            return back()->with('notification', [
-                'type' => 'error',
-                'message' => __('There was an error deleting the branch. Please try again.'),
-            ]);
-        }
+        return $this->transactional(
+            function () use ($sucursal) {
+                // `delete()` devuelve false si un observer aborta el borrado, y
+                // 0 si la fila ya no existe. Ambos casos deben verse como fallo,
+                // no como un borrado que en realidad no ocurrió.
+                if (! $sucursal->delete()) {
+                    throw new \RuntimeException("No se pudo eliminar la sucursal {$sucursal->id}.");
+                }
+            },
+            successMessage: __('Branch deleted successfully.'),
+            failureMessage: __('There was an error deleting the branch. Please try again.'),
+            errorKey: 'general',
+            context: ['action' => 'sucursales.destroy', 'sucursal_id' => $sucursal->id],
+        );
     }
 
     public function toggleStatus(Sucursal $sucursal)
     {
-        try {
-            $sucursal->status = ! $sucursal->status;
-            $sucursal->save();
-
-            return back()->with('notification', [
-                'type' => 'success',
-                'message' => __('Status updated successfully.'),
-            ]);
-        } catch (\Exception $e) {
-            Log::error("Error al cambiar estado de sucursal {$sucursal->id}: ".$e->getMessage());
-
-            return back()->with('notification', [
-                'type' => 'error',
-                'message' => __('There was an error updating the status. Please try again.'),
-            ]);
-        }
+        return $this->transactional(
+            function () use ($sucursal) {
+                $fresh = Sucursal::whereKey($sucursal->getKey())->lockForUpdate()->firstOrFail();
+                $fresh->status = ! $fresh->status;
+                $fresh->save();
+            },
+            successMessage: __('Status updated successfully.'),
+            failureMessage: __('There was an error updating the status. Please try again.'),
+            errorKey: 'status',
+            context: ['action' => 'sucursales.toggleStatus', 'sucursal_id' => $sucursal->id],
+        );
     }
 }

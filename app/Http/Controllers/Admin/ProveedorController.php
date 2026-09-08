@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Admin;
 
+use App\Http\Controllers\Concerns\InteractsWithTransactions;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\ProveedorRequest;
 use App\Models\Proveedor;
@@ -10,10 +11,14 @@ use App\Models\Empresa;
 use App\Models\Sucursal;
 use App\Models\User;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 use Inertia\Inertia;
 
 class ProveedorController extends Controller
 {
+    use InteractsWithTransactions;
+
     public function index(Request $request)
     {
         $query = Proveedor::with(['pais', 'paisTelefono', 'empresa', 'sucursal', 'user'])
@@ -78,10 +83,26 @@ class ProveedorController extends Controller
         $data['user_id'] = $data['user_id'] ?? $user->id;
         $data['documento_identidad'] = $data['documento_identidad'] ?? $data['rfc'] ?? $data['curp'] ?? ('PROV_' . uniqid());
 
-        $proveedor = Proveedor::create($data);
-        $this->enviarCarnetWhatsAppInternal($proveedor);
+        $proveedor = null;
 
-        return redirect()->back();
+        $response = $this->transactional(
+            function () use ($data, &$proveedor) {
+                $proveedor = Proveedor::create($data);
+            },
+            successMessage: __('Supplier created successfully.'),
+            failureMessage: __('No se pudo registrar el proveedor. Verifique que el documento no esté duplicado e intente de nuevo.'),
+            errorKey: 'documento_identidad',
+            context: ['action' => 'proveedores.store'],
+        );
+
+        // Envío después del COMMIT: una llamada HTTP externa dentro de la
+        // transacción sostendría el bloqueo de escritura de SQLite durante
+        // decenas de segundos y bloquearía al resto de la aplicación.
+        if ($proveedor !== null) {
+            $this->enviarCarnetWhatsAppInternal($proveedor);
+        }
+
+        return $response;
     }
 
     public function update(ProveedorRequest $request, Proveedor $proveedor)
@@ -94,29 +115,68 @@ class ProveedorController extends Controller
         $data['user_id'] = $data['user_id'] ?? $proveedor->user_id ?? $user->id;
         $data['documento_identidad'] = $data['documento_identidad'] ?? $data['rfc'] ?? $data['curp'] ?? $proveedor->documento_identidad;
 
-        $proveedor->update($data);
-
-        return redirect()->back();
+        return $this->transactional(
+            function () use ($proveedor, $data) {
+                if (! $proveedor->update($data)) {
+                    throw new \RuntimeException("No se pudo actualizar el proveedor {$proveedor->id}.");
+                }
+            },
+            successMessage: __('Supplier updated successfully.'),
+            failureMessage: __('No se pudieron guardar los cambios del proveedor. Intente de nuevo.'),
+            errorKey: 'documento_identidad',
+            context: ['action' => 'proveedores.update', 'proveedor_id' => $proveedor->id],
+        );
     }
 
     public function destroy(Proveedor $proveedor)
     {
-        $proveedor->delete();
+        // Igual que en productores: la cascada de la base de datos arrastra
+        // colaboradores, vehículos y el historial de `visitas_accesos`. Se deja
+        // traza del alcance antes de borrar, porque después es irrecuperable.
+        $alcance = [
+            'proveedor_id' => $proveedor->id,
+            'documento_identidad' => $proveedor->documento_identidad,
+            'empleados' => DB::table('proveedor_empleados')->where('proveedor_id', $proveedor->id)->count(),
+            'vehiculos' => DB::table('proveedor_vehiculos')->where('proveedor_id', $proveedor->id)->count(),
+            'visitas_accesos' => DB::table('visitas_accesos')->where('proveedor_id', $proveedor->id)->count(),
+        ];
 
-        return redirect()->back();
+        Log::warning('Eliminación de proveedor con borrado en cascada', $alcance + [
+            'user_id' => auth()->id(),
+        ]);
+
+        return $this->transactional(
+            function () use ($proveedor) {
+                if (! $proveedor->delete()) {
+                    throw new \RuntimeException("No se pudo eliminar el proveedor {$proveedor->id}.");
+                }
+            },
+            successMessage: __('Supplier deleted successfully.'),
+            failureMessage: __('No se pudo eliminar el proveedor porque tiene registros dependientes.'),
+            errorKey: 'general',
+            context: ['action' => 'proveedores.destroy'] + $alcance,
+        );
     }
 
     public function toggleStatus(Request $request, Proveedor $proveedor)
     {
-        $request->validate([
+        $validated = $request->validate([
             'status' => 'required|string|in:activo,suspendido,en_revision',
         ]);
 
-        $proveedor->update([
-            'status' => $request->status,
-        ]);
+        return $this->transactional(
+            function () use ($proveedor, $validated) {
+                $fresh = Proveedor::whereKey($proveedor->getKey())->lockForUpdate()->firstOrFail();
 
-        return redirect()->back();
+                if (! $fresh->update(['status' => $validated['status']])) {
+                    throw new \RuntimeException("No se pudo cambiar el estado del proveedor {$proveedor->id}.");
+                }
+            },
+            successMessage: __('Estado actualizado correctamente'),
+            failureMessage: __('No se pudo actualizar el estado. Intente de nuevo.'),
+            errorKey: 'status',
+            context: ['action' => 'proveedores.toggleStatus', 'proveedor_id' => $proveedor->id],
+        );
     }
 
     public function generatePreRegistro(Request $request)

@@ -1,4 +1,4 @@
-import { Head, useForm, router } from '@inertiajs/react';
+import { Head, useForm, router, usePage } from '@inertiajs/react';
 import type { ColumnDef } from '@/components/data-table';
 import {
     Truck,
@@ -41,6 +41,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Textarea } from '@/components/ui/textarea';
 import { useTranslate } from '@/hooks/use-translate';
 import { cn } from '@/lib/utils';
+import { isValidCoordinate, reverseGeocode } from '@/lib/geocoding';
 import PhoneInputGroup from '../Empresas/Partials/PhoneInputGroup';
 import ProveedorEmpleadosModal from './Partials/ProveedorEmpleadosModal';
 import ProveedorVehiculosModal from './Partials/ProveedorVehiculosModal';
@@ -167,6 +168,11 @@ export default function ProveedoresIndexPage({
     sucursal: appSucursal,
 }: ProveedoresPageProps) {
     const { __ } = useTranslate();
+
+    // Mismo origen que usa `MapboxMap`, para que la caché del servicio de
+    // geocodificación acierte y no se dispare una segunda petición.
+    const pageProps = usePage().props as any;
+    const mapboxApiKey: string | undefined = pageProps.mapbox_api_key || pageProps.auth?.user?.empresa?.mapbox_api_key;
 
     const breadcrumbs = [
         { title: __('Dashboard'), href: '/admin/dashboard' },
@@ -408,6 +414,12 @@ export default function ProveedoresIndexPage({
     };
 
     const handleLocationSelected = async (lat: number, lng: number, address?: string) => {
+        if (!isValidCoordinate(lat, lng)) {
+            return;
+        }
+
+        // Escritura inmediata: el pin y el payload quedan sincronizados sin
+        // esperar a ninguna respuesta de red.
         setData((prev) => ({
             ...prev,
             latitud: lat,
@@ -415,27 +427,27 @@ export default function ProveedoresIndexPage({
             ...(address ? { direccion: address } : {}),
         }));
 
-        try {
-            const res = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&accept-language=en`);
-            if (res.ok) {
-                const result = await res.json();
-                const countryCode = result.address?.country_code?.toUpperCase();
-                if (countryCode) {
-                    const matchedPais = paises.find(p => p.codigo_iso2.toUpperCase() === countryCode);
-                    if (matchedPais) {
-                        setData(prev => ({
-                            ...prev,
-                            latitud: lat,
-                            longitud: lng,
-                            pais_id: String(matchedPais.id),
-                            ...(address ? {} : { direccion: result.display_name ?? '' })
-                        }));
-                    }
-                }
-            }
-        } catch (err) {
-            console.error("Error reverse geocoding for country:", err);
+        // El mapa ya resolvió estas mismas coordenadas, así que esto normalmente
+        // se sirve de la caché en memoria del servicio: cero peticiones extra.
+        // Antes aquí había un `fetch` suelto a Nominatim que duplicaba la
+        // llamada del mapa y podía llegar fuera de orden.
+        const result = await reverseGeocode(lat, lng, { mapboxToken: mapboxApiKey });
+
+        if (!result?.pais_iso2) {
+            return;
         }
+
+        const matchedPais = paises.find((p) => p.codigo_iso2?.toUpperCase() === result.pais_iso2);
+
+        if (!matchedPais) {
+            return;
+        }
+
+        setData((prev) => ({
+            ...prev,
+            pais_id: String(matchedPais.id),
+            ...(address || !result.direccion ? {} : { direccion: result.direccion }),
+        }));
     };
 
     const handleGetCurrentLocation = () => {

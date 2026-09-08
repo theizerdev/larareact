@@ -7,6 +7,125 @@ use Illuminate\Support\Facades\Log;
 
 class CarnetGeneratorService
 {
+    /** Segundos máximos de espera al proveedor externo de códigos QR. */
+    private const QR_TIMEOUT_SECONDS = 4;
+
+    /** Tope defensivo de descarga: un QR de 250x250 pesa unos pocos KB. */
+    private const QR_MAX_BYTES = 512 * 1024;
+
+    /**
+     * Presupuesto de píxeles al decodificar una imagen.
+     *
+     * GD descomprime a 4 bytes por píxel, así que 12 Mpx son ~48 MB. Por encima
+     * de eso, con `memory_limit=128M`, la decodificación aborta el proceso con
+     * un error fatal irrecuperable (no una excepción: no hay try/catch posible).
+     */
+    private const MAX_DECODE_PIXELS = 12_000_000;
+
+    /**
+     * Decodifica un fichero de imagen sólo si cabe en el presupuesto.
+     *
+     * Motivo: `public/image/logo/larareact_logo_transparent.png` mide
+     * 8600x4800 px (~157 MB decodificado). Al ser el logo preferido, cada
+     * generación de gafete agotaba la memoria de PHP y mataba la petición con
+     * un 500 sin cuerpo, después de haber persistido el registro. Comprobar las
+     * dimensiones con `getimagesize()` es barato y no descomprime nada.
+     *
+     * @return \GdImage|null `null` si no existe, no se puede leer o es demasiado grande.
+     */
+    private static function cargarImagenAcotada(string $path): ?\GdImage
+    {
+        if (! is_file($path) || ! is_readable($path)) {
+            return null;
+        }
+
+        $info = @getimagesize($path);
+
+        if ($info === false) {
+            return null;
+        }
+
+        [$ancho, $alto] = $info;
+
+        if ($ancho * $alto > self::MAX_DECODE_PIXELS) {
+            Log::warning('Imagen omitida en el gafete por exceder el presupuesto de memoria', [
+                'path' => basename($path),
+                'dimensiones' => "{$ancho}x{$alto}",
+                'mb_estimados' => round(($ancho * $alto * 4) / 1048576, 1),
+            ]);
+
+            return null;
+        }
+
+        $data = @file_get_contents($path);
+
+        if ($data === false || $data === '') {
+            return null;
+        }
+
+        $img = @imagecreatefromstring($data);
+
+        return $img instanceof \GdImage ? $img : null;
+    }
+
+    /**
+     * Devuelve el primer logotipo utilizable, saltando los que no quepan.
+     */
+    private static function cargarLogotipo(): ?\GdImage
+    {
+        $candidatos = [
+            public_path('image/logo/larareact_logo_transparent.png'),
+            public_path('image/logo/driscolls_logo.png'),
+            public_path('image/logo/driscolls_mini_d_logo.png'),
+        ];
+
+        foreach ($candidatos as $candidato) {
+            $img = self::cargarImagenAcotada($candidato);
+
+            if ($img !== null) {
+                return $img;
+            }
+        }
+
+        return null;
+    }
+
+    /**
+     * Descarga el PNG del QR con timeout acotado.
+     *
+     * `file_get_contents()` sobre una URL usa `default_socket_timeout` (60 s) y,
+     * con `max_execution_time=0` en producción, una caída del proveedor dejaba
+     * la petición colgada indefinidamente reteniendo un worker de Apache. Aquí
+     * se fija un timeout corto y, si falla, el gafete se genera sin QR en lugar
+     * de bloquear el alta del registro.
+     */
+    private static function descargarQr(string $url): ?string
+    {
+        $context = stream_context_create([
+            'http' => [
+                'timeout' => self::QR_TIMEOUT_SECONDS,
+                'ignore_errors' => true,
+                'header' => "Accept: image/png\r\n",
+            ],
+            'https' => [
+                'timeout' => self::QR_TIMEOUT_SECONDS,
+                'ignore_errors' => true,
+            ],
+        ]);
+
+        $data = @file_get_contents($url, false, $context, 0, self::QR_MAX_BYTES);
+
+        if ($data === false || $data === '') {
+            Log::warning('No se pudo obtener el código QR del proveedor externo', [
+                'url' => parse_url($url, PHP_URL_HOST),
+            ]);
+
+            return null;
+        }
+
+        return $data;
+    }
+
     /**
      * Genera la imagen PNG del carnet del empleado y retorna la ruta absoluta del archivo.
      */
@@ -115,7 +234,7 @@ class CarnetGeneratorService
 
             // --- 4. Código QR (Sección Inferior) ---
             $qrUrl = "https://api.qrserver.com/v1/create-qr-code/?size=250x250&data=" . urlencode($empleado->documento_identidad);
-            $qrData = @file_get_contents($qrUrl);
+            $qrData = self::descargarQr($qrUrl);
             if ($qrData) {
                 $qrImg = @imagecreatefromstring($qrData);
                 if ($qrImg) {
@@ -128,23 +247,14 @@ class CarnetGeneratorService
             }
 
             // --- 5. Logotipo Driscoll's ---
-            $logoPath = public_path('image/logo/larareact_logo_transparent.png');
-            if (!file_exists($logoPath)) {
-                $logoPath = public_path('image/logo/driscolls_logo.png');
-            }
-            if (file_exists($logoPath)) {
-                $logoData = @file_get_contents($logoPath);
-                if ($logoData) {
-                    $logoImg = @imagecreatefromstring($logoData);
-                    if ($logoImg) {
-                        $logoW = 340;
-                        $logoH = 140;
-                        $logoX = (int) (($width - $logoW) / 2);
-                        $logoY = 870;
-                        imagecopyresampled($im, $logoImg, $logoX, $logoY, 0, 0, $logoW, $logoH, imagesx($logoImg), imagesy($logoImg));
-                        imagedestroy($logoImg);
-                    }
-                }
+            $logoImg = self::cargarLogotipo();
+            if ($logoImg !== null) {
+                $logoW = 340;
+                $logoH = 140;
+                $logoX = (int) (($width - $logoW) / 2);
+                $logoY = 870;
+                imagecopyresampled($im, $logoImg, $logoX, $logoY, 0, 0, $logoW, $logoH, imagesx($logoImg), imagesy($logoImg));
+                imagedestroy($logoImg);
             }
 
             // Guardar imagen en storage
@@ -244,7 +354,7 @@ class CarnetGeneratorService
             // --- 4. Código QR ---
             $qrCodeData = $proveedor->curp ?: ($proveedor->rfc ?: ($proveedor->documento_identidad ?: "PROV_{$proveedor->id}"));
             $qrUrl = "https://api.qrserver.com/v1/create-qr-code/?size=250x250&data=" . urlencode($qrCodeData) . "&color=b91c1c";
-            $qrData = @file_get_contents($qrUrl);
+            $qrData = self::descargarQr($qrUrl);
             if ($qrData) {
                 $qrImg = @imagecreatefromstring($qrData);
                 if ($qrImg) {
@@ -257,23 +367,14 @@ class CarnetGeneratorService
             }
 
             // --- 5. Logotipo Driscoll's ---
-            $logoPath = public_path('image/logo/larareact_logo_transparent.png');
-            if (!file_exists($logoPath)) {
-                $logoPath = public_path('image/logo/driscolls_logo.png');
-            }
-            if (file_exists($logoPath)) {
-                $logoData = @file_get_contents($logoPath);
-                if ($logoData) {
-                    $logoImg = @imagecreatefromstring($logoData);
-                    if ($logoImg) {
-                        $logoW = 340;
-                        $logoH = 140;
-                        $logoX = (int) (($width - $logoW) / 2);
-                        $logoY = 870;
-                        imagecopyresampled($im, $logoImg, $logoX, $logoY, 0, 0, $logoW, $logoH, imagesx($logoImg), imagesy($logoImg));
-                        imagedestroy($logoImg);
-                    }
-                }
+            $logoImg = self::cargarLogotipo();
+            if ($logoImg !== null) {
+                $logoW = 340;
+                $logoH = 140;
+                $logoX = (int) (($width - $logoW) / 2);
+                $logoY = 870;
+                imagecopyresampled($im, $logoImg, $logoX, $logoY, 0, 0, $logoW, $logoH, imagesx($logoImg), imagesy($logoImg));
+                imagedestroy($logoImg);
             }
 
             $directory = storage_path('app/public/carnets');
@@ -372,7 +473,7 @@ class CarnetGeneratorService
             // --- 4. Código QR ---
             $qrCodeData = $productor->curp ?: ($productor->rfc ?: ($productor->documento_identidad ?: "PROD_{$productor->id}"));
             $qrUrl = "https://api.qrserver.com/v1/create-qr-code/?size=250x250&data=" . urlencode($qrCodeData) . "&color=1d4ed8";
-            $qrData = @file_get_contents($qrUrl);
+            $qrData = self::descargarQr($qrUrl);
             if ($qrData) {
                 $qrImg = @imagecreatefromstring($qrData);
                 if ($qrImg) {
@@ -385,23 +486,14 @@ class CarnetGeneratorService
             }
 
             // --- 5. Logotipo Driscoll's ---
-            $logoPath = public_path('image/logo/larareact_logo_transparent.png');
-            if (!file_exists($logoPath)) {
-                $logoPath = public_path('image/logo/driscolls_logo.png');
-            }
-            if (file_exists($logoPath)) {
-                $logoData = @file_get_contents($logoPath);
-                if ($logoData) {
-                    $logoImg = @imagecreatefromstring($logoData);
-                    if ($logoImg) {
-                        $logoW = 340;
-                        $logoH = 140;
-                        $logoX = (int) (($width - $logoW) / 2);
-                        $logoY = 870;
-                        imagecopyresampled($im, $logoImg, $logoX, $logoY, 0, 0, $logoW, $logoH, imagesx($logoImg), imagesy($logoImg));
-                        imagedestroy($logoImg);
-                    }
-                }
+            $logoImg = self::cargarLogotipo();
+            if ($logoImg !== null) {
+                $logoW = 340;
+                $logoH = 140;
+                $logoX = (int) (($width - $logoW) / 2);
+                $logoY = 870;
+                imagecopyresampled($im, $logoImg, $logoX, $logoY, 0, 0, $logoW, $logoH, imagesx($logoImg), imagesy($logoImg));
+                imagedestroy($logoImg);
             }
 
             $directory = storage_path('app/public/carnets');
