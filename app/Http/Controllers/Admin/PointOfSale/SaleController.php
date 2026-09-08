@@ -259,6 +259,8 @@ class SaleController extends Controller
         $search = $request->input('search');
         $status = $request->input('status');
         $perPage = $request->input('perPage', 10);
+        $scope = $request->input('scope'); // 'shift', 'today', 'all'
+        $cashRegisterId = $request->input('cash_register_id');
 
         $query = Sale::with(['user', 'items', 'payments']);
 
@@ -273,11 +275,28 @@ class SaleController extends Controller
             $query->where('estado', $status);
         }
 
+        // Filtro por Turno / Caja en curso o Ventas de Hoy
+        if ($scope === 'shift' && $cashRegisterId) {
+            $query->where('cash_register_id', $cashRegisterId);
+        } elseif ($scope === 'today') {
+            $query->whereDate('created_at', now()->toDateString());
+        } elseif ($cashRegisterId && $scope !== 'all') {
+            $query->where('cash_register_id', $cashRegisterId);
+        }
+
+        // Métricas de resumen para el filtro aplicado
+        $totalAmount = (float) (clone $query)->where('estado', '!=', 'anulada')->sum('total');
+        $totalCount = (int) (clone $query)->count();
+        $totalAnuladas = (int) (clone $query)->where('estado', 'anulada')->count();
+
         $sales = $query->orderBy('created_at', 'desc')->paginate($perPage)->withQueryString();
 
         if (! $request->header('X-Inertia') && ($request->wantsJson() || $request->query('format') === 'json')) {
             return response()->json([
                 'sales' => SaleResource::collection($sales),
+                'total_amount' => $totalAmount,
+                'total_count' => $totalCount,
+                'total_anuladas' => $totalAnuladas,
             ]);
         }
 
@@ -295,7 +314,7 @@ class SaleController extends Controller
                 'direccion' => $empresa->direccion,
                 'logo' => $empresa->logo ? (str_starts_with($empresa->logo, '/') || str_starts_with($empresa->logo, 'http') ? $empresa->logo : "/storage/{$empresa->logo}") : ($empresa->logo_mini ? (str_starts_with($empresa->logo_mini, '/') || str_starts_with($empresa->logo_mini, 'http') ? $empresa->logo_mini : "/storage/{$empresa->logo_mini}") : '/image/logo/5.png'),
             ] : null,
-            'filters' => $request->only(['search', 'status', 'perPage']),
+            'filters' => $request->only(['search', 'status', 'perPage', 'scope']),
         ]);
     }
 
@@ -307,6 +326,63 @@ class SaleController extends Controller
             'sale' => $venta,
             'currencySymbol' => $this->getCurrencySymbol(),
         ]);
+    }
+
+    public function destroy(Sale $venta, Request $request, SaleService $service)
+    {
+        $user = auth()->user();
+
+        $canDelete = $user->isSuperAdmin()
+            || $user->hasRole('Administrador')
+            || $user->hasRole('admin')
+            || $user->hasRole('super-admin')
+            || $user->id === 1
+            || $user->hasPermissionTo('ventas.anular')
+            || $user->hasPermissionTo('ventas.delete');
+
+        if (! $canDelete) {
+            if ($request->wantsJson() || $request->header('Accept') === 'application/json') {
+                return response()->json([
+                    'success' => false,
+                    'message' => __('No cuenta con permisos autorizados para anular o eliminar ventas.'),
+                ], 403);
+            }
+
+            return back()->with('notification', [
+                'type' => 'error',
+                'message' => __('No cuenta con permisos autorizados para anular o eliminar ventas.'),
+            ]);
+        }
+
+        try {
+            $service->cancelSale($venta, $user->id);
+
+            if ($request->wantsJson() || $request->header('Accept') === 'application/json') {
+                return response()->json([
+                    'success' => true,
+                    'message' => __("Venta :ticket anulada exitosamente y existencias revertidas.", ['ticket' => $venta->codigo_ticket]),
+                ]);
+            }
+
+            return back()->with('notification', [
+                'type' => 'success',
+                'message' => __("Venta :ticket anulada exitosamente y existencias revertidas.", ['ticket' => $venta->codigo_ticket]),
+            ]);
+        } catch (\Throwable $e) {
+            \Log::error('Error al anular venta: ' . $e->getMessage());
+
+            if ($request->wantsJson() || $request->header('Accept') === 'application/json') {
+                return response()->json([
+                    'success' => false,
+                    'message' => __('Error al anular la venta: ') . $e->getMessage(),
+                ], 500);
+            }
+
+            return back()->with('notification', [
+                'type' => 'error',
+                'message' => __('Error al anular la venta: ') . $e->getMessage(),
+            ]);
+        }
     }
 
     // ---- Held Sales (Ventas en Espera) ----

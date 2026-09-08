@@ -5,6 +5,7 @@ namespace App\Services;
 use App\Models\CashRegister;
 use App\Models\Cliente;
 use App\Models\Empresa;
+use App\Models\InventoryMovement;
 use App\Models\OrdenReparacion;
 use App\Models\Producto;
 use App\Models\Sale;
@@ -258,6 +259,136 @@ class SaleService
             } catch (\Throwable $e) {
                 // Registro contable silencioso ante fallos secundarios
             }
+
+            return $sale;
+        });
+    }
+
+    /**
+     * Anula una venta, revierte existencias en inventario, movimientos de caja y órdenes de reparación.
+     */
+    public function cancelSale(Sale $sale, int $userId): Sale
+    {
+        if ($sale->estado === 'anulada') {
+            return $sale;
+        }
+
+        return DB::transaction(function () use ($sale, $userId) {
+            $sale->loadMissing(['items', 'payments']);
+
+            // 1. Revertir inventario de productos y reparaciones asociadas
+            foreach ($sale->items as $item) {
+                if (($item->concepto_tipo ?? 'producto') === 'producto' && !empty($item->itemable_id)) {
+                    $producto = Producto::find($item->itemable_id);
+                    if ($producto && $producto->usa_inventario) {
+                        $oldStock = (float) ($producto->stock ?? 0);
+                        $qty = (float) $item->cantidad;
+                        $newStock = $oldStock + $qty;
+
+                        $producto->update(['stock' => $newStock]);
+
+                        InventoryMovement::create([
+                            'empresa_id' => $sale->empresa_id,
+                            'sucursal_id' => $sale->sucursal_id,
+                            'producto_id' => $producto->id,
+                            'user_id' => $userId,
+                            'tipo' => 'entrada',
+                            'motivo' => 'anulacion_venta',
+                            'cantidad' => $qty,
+                            'stock_anterior' => $oldStock,
+                            'stock_nuevo' => $newStock,
+                            'costo_unitario' => (float) ($producto->precio_costo ?? 0),
+                            'referencia' => "Anulación Venta {$sale->codigo_ticket}",
+                            'notas' => "Venta {$sale->codigo_ticket} anulada desde POS - existencias devueltas a inventario",
+                        ]);
+                    }
+                } elseif (in_array($item->concepto_tipo ?? '', ['reparacion', 'reparacion_anticipo', 'reparacion_liquidacion']) && !empty($item->itemable_id)) {
+                    $reparacion = OrdenReparacion::find($item->itemable_id);
+                    if ($reparacion) {
+                        $montoPago = (float) $item->subtotal;
+                        $estadoAnterior = $reparacion->estado_orden;
+
+                        if (($item->concepto_tipo ?? '') === 'reparacion_anticipo') {
+                            $nuevoAnticipo = max(0, (float) $reparacion->anticipo - $montoPago);
+                            $costoTotal = (float) max(
+                                $reparacion->costo_estimado ?? 0,
+                                ($reparacion->costo_mano_obra ?? 0) + ($reparacion->costo_repuestos ?? 0)
+                            );
+                            $nuevoSaldo = max(0, $costoTotal - $nuevoAnticipo);
+
+                            $reparacion->anticipo = $nuevoAnticipo;
+                            $reparacion->saldo_restante = $nuevoSaldo;
+
+                            if (in_array($reparacion->estado_orden, ['entregado_finalizado', 'entregado'])) {
+                                $reparacion->estado_orden = 'listo_reparado';
+                                $reparacion->sale_id = null;
+                                $reparacion->fecha_entrega = null;
+                            }
+                            $reparacion->save();
+
+                            \App\Models\OrdenReparacionHistorial::create([
+                                'orden_id' => $reparacion->id,
+                                'user_id' => $userId,
+                                'estado_anterior' => $estadoAnterior,
+                                'estado_nuevo' => $reparacion->estado_orden,
+                                'comentario' => "Venta {$sale->codigo_ticket} anulada desde POS. Anticipo de {$montoPago} revertido y saldo pendiente restaurado a {$nuevoSaldo}.",
+                            ]);
+                        } else {
+                            // Liquidación final revertida
+                            $costoTotal = (float) max(
+                                $reparacion->costo_estimado ?? 0,
+                                ($reparacion->costo_mano_obra ?? 0) + ($reparacion->costo_repuestos ?? 0)
+                            );
+                            $reparacion->sale_id = null;
+                            $reparacion->saldo_restante = $montoPago;
+                            if (in_array($reparacion->estado_orden, ['entregado_finalizado', 'entregado'])) {
+                                $reparacion->estado_orden = 'listo_reparado';
+                                $reparacion->fecha_entrega = null;
+                            }
+                            $reparacion->save();
+
+                            \App\Models\OrdenReparacionHistorial::create([
+                                'orden_id' => $reparacion->id,
+                                'user_id' => $userId,
+                                'estado_anterior' => $estadoAnterior,
+                                'estado_nuevo' => $reparacion->estado_orden,
+                                'comentario' => "Venta {$sale->codigo_ticket} anulada desde POS. Liquidación de {$montoPago} revertida y orden reabierta a LISTO/REPARADO.",
+                            ]);
+                        }
+                    }
+                }
+            }
+
+            // 2. Revertir ingresos en caja registradora registrando salidas compensatorias
+            if ($sale->cash_register_id) {
+                $cashRegister = CashRegister::find($sale->cash_register_id);
+                if ($cashRegister) {
+                    foreach ($sale->payments as $payment) {
+                        if ((float) $payment->monto > 0) {
+                            $this->cashRegisterService->addMovement(
+                                $cashRegister,
+                                'outflow',
+                                'anulacion_venta',
+                                $payment->metodo_pago,
+                                (float) $payment->monto,
+                                "Anulación Venta {$sale->codigo_ticket} - Reversión pago {$sale->cliente_nombre}",
+                                $userId
+                            );
+                        }
+                    }
+                }
+            }
+
+            // 3. Revertir saldo pendiente de cliente si fue venta a crédito
+            if ($sale->es_credito && !empty($sale->cliente_id) && (float) $sale->saldo_credito > 0) {
+                $cliente = Cliente::find($sale->cliente_id);
+                if ($cliente) {
+                    $cliente->decrement('saldo_pendiente', (float) $sale->saldo_credito);
+                }
+            }
+
+            // 4. Marcar venta como anulada
+            $sale->update(['estado' => 'anulada']);
 
             return $sale;
         });

@@ -27,7 +27,7 @@ Route::middleware(['verified'])->group(function () {
     // Terminal POS & Ventas
     Route::get('ventas/terminal', [SaleController::class, 'terminal'])->name('ventas.terminal');
     Route::post('ventas/valor-dolar', [SaleController::class, 'updateValorDolar'])->name('ventas.valor-dolar');
-    Route::resource('ventas', SaleController::class)->only(['index', 'store', 'show']);
+    Route::resource('ventas', SaleController::class)->only(['index', 'store', 'show', 'destroy']);
 
     // Ventas en Espera
     Route::post('ventas/hold', [SaleController::class, 'holdSale'])->name('ventas.hold');

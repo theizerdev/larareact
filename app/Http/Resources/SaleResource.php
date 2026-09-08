@@ -29,6 +29,7 @@ class SaleResource extends JsonResource
             'es_credito' => (bool) $this->es_credito,
             'saldo_credito' => (float) $this->saldo_credito,
             'estado' => $this->estado,
+            'cash_register_id' => $this->cash_register_id,
             'empresa_id' => $this->empresa_id,
             'sucursal_id' => $this->sucursal_id,
             'created_at' => $this->created_at?->toIso8601String(),

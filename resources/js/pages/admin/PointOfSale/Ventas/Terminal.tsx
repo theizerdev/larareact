@@ -23,6 +23,7 @@ import { useTranslate } from '@/hooks/use-translate';
 import { cn } from '@/lib/utils';
 import { notifySuccess, notifyError } from '@/utils/notifications';
 import { OpenCashRegisterModal } from '@/components/open-cash-register-modal';
+import { DeleteConfirmationDialog } from '@/components/delete-confirmation-dialog';
 
 interface CatalogItem {
     id: number;
@@ -154,6 +155,13 @@ export default function Terminal({
             return name && ['administrador', 'admin', 'super administrador', 'super-admin'].includes(name.toLowerCase());
         })
     );
+    const userPermissions: string[] = Array.isArray(pageProps?.auth?.user?.permissions) ? pageProps.auth.user.permissions : [];
+    const canDeleteSale = Boolean(
+        isAdmin ||
+        userPermissions.includes('ventas.anular') ||
+        userPermissions.includes('ventas.delete') ||
+        userPermissions.includes('ventas.eliminar')
+    );
     const canCloseActiveRegister = !activeRegister || activeRegister.user_id === currentUserId || isAdmin;
 
     const sharedEmpresa = pageProps?.empresa || pageProps?.auth?.user?.empresa;
@@ -277,27 +285,42 @@ export default function Terminal({
     const [isRecentSalesOpen, setIsRecentSalesOpen] = useState(false);
     const [recentSales, setRecentSales] = useState<any[]>([]);
     const [isLoadingRecentSales, setIsLoadingRecentSales] = useState(false);
+    const [salesScope, setSalesScope] = useState<'shift' | 'today' | 'all'>('shift');
+    const [salesSummary, setSalesSummary] = useState<{ total_amount: number; total_count: number; total_anuladas: number } | null>(null);
+
+    // Modal de confirmación para anular venta
+    const [saleToDelete, setSaleToDelete] = useState<any | null>(null);
+    const [isDeleteConfirmOpen, setIsDeleteConfirmOpen] = useState(false);
+    const [isDeletingSale, setIsDeletingSale] = useState(false);
 
     // Modal de Opciones de Pago para Reparaciones (Anticipo / Liquidación)
     const [isReparacionPagoModalOpen, setIsReparacionPagoModalOpen] = useState(false);
     const [reparacionPagoModalItem, setReparacionPagoModalItem] = useState<CatalogItem | null>(null);
     const [customAnticipoInput, setCustomAnticipoInput] = useState<string>('');
 
-    const fetchRecentSales = async () => {
+    const fetchRecentSales = async (targetScope: 'shift' | 'today' | 'all' = salesScope) => {
         setIsLoadingRecentSales(true);
         try {
-            const res = await fetch('/admin/ventas?perPage=10&format=json', {
+            const cashRegisterParam = activeRegister?.id ? `&cash_register_id=${activeRegister.id}` : '';
+            const res = await fetch(`/admin/ventas?perPage=50&format=json&scope=${targetScope}${cashRegisterParam}`, {
                 headers: { 'Accept': 'application/json' },
             });
             const data = await res.json();
             const rawSales =
+                data?.sales?.data ??
                 data?.props?.sales?.data ??
                 data?.props?.sales ??
-                data?.sales?.data ??
                 data?.sales ??
                 (Array.isArray(data) ? data : []);
 
             setRecentSales(Array.isArray(rawSales) ? rawSales : []);
+            if (data?.total_amount !== undefined) {
+                setSalesSummary({
+                    total_amount: Number(data.total_amount) || 0,
+                    total_count: Number(data.total_count) || 0,
+                    total_anuladas: Number(data.total_anuladas) || 0,
+                });
+            }
         } catch (error) {
             console.error('Error fetching recent sales:', error);
         } finally {
@@ -307,7 +330,57 @@ export default function Terminal({
 
     const handleOpenRecentSales = () => {
         setIsRecentSalesOpen(true);
-        fetchRecentSales();
+        const initialScope = activeRegister ? 'shift' : 'today';
+        setSalesScope(initialScope);
+        fetchRecentSales(initialScope);
+    };
+
+    const handleScopeChange = (newScope: 'shift' | 'today' | 'all') => {
+        setSalesScope(newScope);
+        fetchRecentSales(newScope);
+    };
+
+    const handleConfirmDeleteSale = (sale: any) => {
+        if (!canDeleteSale) {
+            notifyError(__('No cuenta con los permisos necesarios para anular ventas.'));
+            return;
+        }
+        if (sale.estado === 'anulada') {
+            notifyError(__('Esta venta ya se encuentra anulada.'));
+            return;
+        }
+        setSaleToDelete(sale);
+        setIsDeleteConfirmOpen(true);
+    };
+
+    const handleExecuteDeleteSale = async () => {
+        if (!saleToDelete) return;
+        setIsDeletingSale(true);
+        try {
+            const token = (document.querySelector('meta[name="csrf-token"]') as HTMLMetaElement)?.content || '';
+            const res = await fetch(`/admin/ventas/${saleToDelete.id}`, {
+                method: 'DELETE',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Accept': 'application/json',
+                    'X-CSRF-TOKEN': token,
+                },
+            });
+            const data = await res.json();
+            if (res.ok && data.success) {
+                notifySuccess(data.message || __('Venta anulada exitosamente y stock revertido.'));
+                setIsDeleteConfirmOpen(false);
+                setSaleToDelete(null);
+                fetchRecentSales(salesScope);
+                router.reload({ only: ['activeRegisterSummary', 'activeRegister'] });
+            } else {
+                notifyError(data.message || __('No se pudo anular la venta.'));
+            }
+        } catch (error) {
+            notifyError(__('Error de conexión al anular la venta.'));
+        } finally {
+            setIsDeletingSale(false);
+        }
     };
 
     // Valor del Dólar (Exchange Rate) Modal State
@@ -2782,77 +2855,280 @@ export default function Terminal({
                     </Dialog>
                 )}
 
-                {/* MODAL ÚLTIMAS VENTAS (F4) */}
+                {/* MODAL ÚLTIMAS VENTAS (F4) CON FILTROS POR TURNO Y DÍA */}
                 <Dialog open={isRecentSalesOpen} onOpenChange={setIsRecentSalesOpen}>
-                    <DialogContent className="sm:max-w-2xl max-h-[85vh] flex flex-col">
+                    <DialogContent className="sm:max-w-4xl max-h-[90vh] flex flex-col w-[96vw]">
                         <DialogHeader>
-                            <DialogTitle className="flex items-center gap-2 text-blue-600">
-                                <History className="w-5 h-5" />
-                                {__('Historial de Últimas Ventas (F4)')}
-                            </DialogTitle>
+                            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                                <DialogTitle className="flex items-center gap-2 text-blue-600 text-lg">
+                                    <History className="w-5 h-5" />
+                                    {__('Historial de Ventas (F4)')}
+                                </DialogTitle>
+                                <Button
+                                    type="button"
+                                    variant="outline"
+                                    size="sm"
+                                    onClick={() => fetchRecentSales(salesScope)}
+                                    disabled={isLoadingRecentSales}
+                                    className="h-8 text-xs font-bold gap-1 self-start sm:self-auto"
+                                >
+                                    <RefreshCw className={cn("w-3.5 h-3.5 text-blue-600", isLoadingRecentSales && "animate-spin")} />
+                                    {__('Actualizar')}
+                                </Button>
+                            </div>
                             <DialogDescription>
-                                {__('Consulte las ventas recientes procesadas en el sistema para reimprimir tickets o revisar detalles.')}
+                                {__('Consulte las ventas procesadas por turno en curso, ventas del día o histórico para reimprimir tickets o anular transacciones.')}
                             </DialogDescription>
                         </DialogHeader>
 
-                        <div className="flex-1 overflow-y-auto border rounded-xl divide-y my-2">
-                            {isLoadingRecentSales ? (
-                                <div className="p-8 text-center text-xs text-muted-foreground">
-                                    <RefreshCw className="w-6 h-6 animate-spin mx-auto mb-2 text-blue-600" />
-                                    {__('Cargando ventas recientes...')}
-                                </div>
-                            ) : recentSales.length > 0 ? (
-                                <table className="w-full text-left text-xs">
-                                    <thead className="bg-slate-100 dark:bg-slate-800 text-[11px] uppercase font-bold text-slate-600 dark:text-slate-300">
-                                        <tr>
-                                            <th className="p-2.5">Ticket</th>
-                                            <th className="p-2.5">Fecha</th>
-                                            <th className="p-2.5">Cliente</th>
-                                            <th className="p-2.5 text-right">Total</th>
-                                            <th className="p-2.5 text-center">Acciones</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody className="divide-y font-mono">
-                                        {recentSales.map((sale) => (
-                                            <tr key={sale.id} className="hover:bg-slate-50 dark:hover:bg-slate-800/60 transition-colors">
-                                                <td className="p-2.5 font-bold text-blue-600 dark:text-blue-400">{sale.codigo_ticket}</td>
-                                                <td className="p-2.5 text-slate-500">{new Date(sale.created_at).toLocaleDateString()}</td>
-                                                <td className="p-2.5 font-sans font-medium">{sale.cliente_nombre || 'Cliente General'}</td>
-                                                <td className="p-2.5 text-right font-bold text-emerald-600 font-mono">${Number(sale.total).toFixed(2)}</td>
-                                                <td className="p-2.5 text-center font-sans">
-                                                    <Button
-                                                        type="button"
-                                                        variant="outline"
-                                                        size="sm"
-                                                        className="h-7 text-xs font-bold gap-1 text-blue-600 border-blue-200 hover:bg-blue-50"
-                                                        onClick={() => {
-                                                            setCompletedSale(sale);
-                                                            setIsRecentSalesOpen(false);
-                                                        }}
-                                                    >
-                                                        <Printer className="w-3.5 h-3.5" />
-                                                        {__('Ver / Imprimir Ticket')}
-                                                    </Button>
-                                                </td>
-                                            </tr>
-                                        ))}
-                                    </tbody>
-                                </table>
-                            ) : (
-                                <div className="p-8 text-center text-xs text-muted-foreground">
-                                    <Receipt className="w-8 h-8 mx-auto mb-2 opacity-30" />
-                                    {__('No se encontraron ventas recientes.')}
+                        {/* SELECTOR DE FILTROS: TURNO EN CURSO / VENTAS DE HOY / TODAS */}
+                        <div className="flex flex-wrap items-center justify-between gap-2.5 pt-1 pb-2 border-b">
+                            <div className="flex flex-wrap items-center gap-1.5">
+                                {activeRegister && (
+                                    <Button
+                                        type="button"
+                                        size="sm"
+                                        variant={salesScope === 'shift' ? 'default' : 'outline'}
+                                        className={cn(
+                                            "h-8 text-xs font-bold gap-1.5",
+                                            salesScope === 'shift' ? "bg-blue-600 hover:bg-blue-700 text-white" : "bg-slate-50 dark:bg-slate-800"
+                                        )}
+                                        onClick={() => handleScopeChange('shift')}
+                                    >
+                                        <Building2 className="w-3.5 h-3.5" />
+                                        <span>{__('Turno en Curso (Caja #')}{activeRegister.id})</span>
+                                    </Button>
+                                )}
+
+                                <Button
+                                    type="button"
+                                    size="sm"
+                                    variant={salesScope === 'today' ? 'default' : 'outline'}
+                                    className={cn(
+                                        "h-8 text-xs font-bold gap-1.5",
+                                        salesScope === 'today' ? "bg-blue-600 hover:bg-blue-700 text-white" : "bg-slate-50 dark:bg-slate-800"
+                                    )}
+                                    onClick={() => handleScopeChange('today')}
+                                >
+                                    <Receipt className="w-3.5 h-3.5" />
+                                    <span>{__('Ventas de Hoy')}</span>
+                                </Button>
+
+                                <Button
+                                    type="button"
+                                    size="sm"
+                                    variant={salesScope === 'all' ? 'default' : 'outline'}
+                                    className={cn(
+                                        "h-8 text-xs font-bold gap-1.5",
+                                        salesScope === 'all' ? "bg-blue-600 hover:bg-blue-700 text-white" : "bg-slate-50 dark:bg-slate-800"
+                                    )}
+                                    onClick={() => handleScopeChange('all')}
+                                >
+                                    <Layers className="w-3.5 h-3.5" />
+                                    <span>{__('Todas las Ventas')}</span>
+                                </Button>
+                            </div>
+
+                            {/* RESUMEN RÁPIDO DE MONTOS Y CANTIDAD */}
+                            {salesSummary && (
+                                <div className="flex items-center gap-2 text-xs font-semibold bg-slate-50 dark:bg-slate-800/80 px-3 py-1.5 rounded-lg border">
+                                    <span className="text-muted-foreground">{__('Total Cobrado')}:</span>
+                                    <span className="font-mono font-black text-emerald-600 dark:text-emerald-400">
+                                        {currencySymbol}{salesSummary.total_amount.toFixed(2)}
+                                    </span>
+                                    <span className="text-slate-300 dark:text-slate-700">|</span>
+                                    <span className="text-muted-foreground">{salesSummary.total_count} {__('tickets')}</span>
+                                    {salesSummary.total_anuladas > 0 && (
+                                        <>
+                                            <span className="text-slate-300 dark:text-slate-700">|</span>
+                                            <Badge variant="destructive" className="px-1.5 py-0 text-[10px] font-bold">
+                                                {salesSummary.total_anuladas} {__('anuladas')}
+                                            </Badge>
+                                        </>
+                                    )}
                                 </div>
                             )}
                         </div>
 
-                        <DialogFooter>
+                        {/* TABLA DE VENTAS ORDENADAS DESCENDENTEMENTE */}
+                        <div className="flex-1 overflow-y-auto border rounded-xl divide-y my-2 min-h-[300px] max-h-[55vh]">
+                            {isLoadingRecentSales ? (
+                                <div className="p-12 text-center text-xs text-muted-foreground">
+                                    <RefreshCw className="w-7 h-7 animate-spin mx-auto mb-2 text-blue-600" />
+                                    {__('Cargando ventas del historial...')}
+                                </div>
+                            ) : recentSales.length > 0 ? (
+                                <table className="w-full text-left text-xs">
+                                    <thead className="bg-slate-100/90 dark:bg-slate-800/90 text-[11px] uppercase font-bold text-slate-600 dark:text-slate-300 sticky top-0 z-10 backdrop-blur-xs">
+                                        <tr>
+                                            <th className="p-2.5 px-3">Ticket</th>
+                                            <th className="p-2.5 px-3">Fecha y Hora</th>
+                                            <th className="p-2.5 px-3">Cliente</th>
+                                            <th className="p-2.5 px-3 text-center">Método</th>
+                                            <th className="p-2.5 px-3 text-center">Estado</th>
+                                            <th className="p-2.5 px-3 text-right">Total</th>
+                                            <th className="p-2.5 px-3 text-center">Acciones</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody className="divide-y font-mono">
+                                        {recentSales.map((sale) => {
+                                            const isAnulada = sale.estado === 'anulada';
+                                            const dateObj = new Date(sale.created_at || Date.now());
+                                            const isToday = new Date().toDateString() === dateObj.toDateString();
+                                            const dateFormatted = isToday ? __('Hoy') : dateObj.toLocaleDateString();
+                                            const timeFormatted = dateObj.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+
+                                            return (
+                                                <tr key={sale.id} className={cn(
+                                                    "transition-colors",
+                                                    isAnulada
+                                                        ? "bg-rose-50/40 dark:bg-rose-950/20 opacity-75"
+                                                        : "hover:bg-slate-50 dark:hover:bg-slate-800/60"
+                                                )}>
+                                                    <td className="p-2.5 px-3">
+                                                        <span className={cn(
+                                                            "font-bold block",
+                                                            isAnulada ? "text-slate-400 line-through" : "text-blue-600 dark:text-blue-400"
+                                                        )}>
+                                                            {sale.codigo_ticket}
+                                                        </span>
+                                                        {sale.cash_register_id && (
+                                                            <span className="text-[10px] text-muted-foreground font-sans">
+                                                                Caja #{sale.cash_register_id}
+                                                            </span>
+                                                        )}
+                                                    </td>
+                                                    <td className="p-2.5 px-3 font-sans">
+                                                        <span className="font-semibold block text-slate-800 dark:text-slate-200">
+                                                            {dateFormatted}
+                                                        </span>
+                                                        <span className="text-[10px] text-muted-foreground font-mono">
+                                                            {timeFormatted}
+                                                        </span>
+                                                    </td>
+                                                    <td className="p-2.5 px-3 font-sans font-medium text-slate-800 dark:text-slate-200">
+                                                        {sale.cliente_nombre || 'Cliente General'}
+                                                    </td>
+                                                    <td className="p-2.5 px-3 text-center font-sans">
+                                                        <Badge variant="outline" className="text-[10px] uppercase font-bold px-1.5 py-0 bg-slate-50 dark:bg-slate-800">
+                                                            {sale.metodo_pago === 'efectivo' ? __('Efectivo') :
+                                                             sale.metodo_pago === 'dolar' ? '💵 USD' :
+                                                             sale.metodo_pago === 'tarjeta' ? __('Tarjeta') :
+                                                             sale.metodo_pago === 'transferencia' ? __('Transf.') :
+                                                             sale.metodo_pago || 'POS'}
+                                                        </Badge>
+                                                    </td>
+                                                    <td className="p-2.5 px-3 text-center font-sans">
+                                                        {isAnulada ? (
+                                                            <Badge variant="destructive" className="text-[10px] font-bold uppercase px-1.5 py-0">
+                                                                {__('Anulada')}
+                                                            </Badge>
+                                                        ) : (
+                                                            <Badge className="bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border-emerald-300 text-[10px] font-bold uppercase px-1.5 py-0">
+                                                                {__('Completada')}
+                                                            </Badge>
+                                                        )}
+                                                    </td>
+                                                    <td className="p-2.5 px-3 text-right">
+                                                        <span className={cn(
+                                                            "font-bold font-mono text-sm block",
+                                                            isAnulada ? "line-through text-slate-400" : "text-emerald-600 dark:text-emerald-400"
+                                                        )}>
+                                                            {currencySymbol}{Number(sale.total).toFixed(2)}
+                                                        </span>
+                                                        {valorDolar > 0 && !isAnulada && (
+                                                            <span className="text-[10px] text-muted-foreground block font-mono">
+                                                                ≈ ${(Number(sale.total) / valorDolar).toFixed(2)} USD
+                                                            </span>
+                                                        )}
+                                                    </td>
+                                                    <td className="p-2.5 px-3 text-center font-sans">
+                                                        <div className="flex items-center justify-center gap-1.5">
+                                                            <Button
+                                                                type="button"
+                                                                variant="outline"
+                                                                size="sm"
+                                                                className="h-7 text-xs font-bold gap-1 text-blue-600 border-blue-200 hover:bg-blue-50 dark:border-blue-900/50 dark:hover:bg-blue-950/40"
+                                                                onClick={() => {
+                                                                    setCompletedSale(sale);
+                                                                    setIsRecentSalesOpen(false);
+                                                                }}
+                                                            >
+                                                                <Printer className="w-3.5 h-3.5" />
+                                                                <span>{__('Ticket')}</span>
+                                                            </Button>
+
+                                                            {canDeleteSale && !isAnulada && (
+                                                                <Button
+                                                                    type="button"
+                                                                    variant="outline"
+                                                                    size="sm"
+                                                                    className="h-7 text-xs font-bold gap-1 text-rose-600 border-rose-200 hover:bg-rose-50 dark:border-rose-900/60 dark:hover:bg-rose-950/50"
+                                                                    onClick={() => handleConfirmDeleteSale(sale)}
+                                                                >
+                                                                    <Trash2 className="w-3.5 h-3.5" />
+                                                                    <span>{__('Anular')}</span>
+                                                                </Button>
+                                                            )}
+                                                        </div>
+                                                    </td>
+                                                </tr>
+                                            );
+                                        })}
+                                    </tbody>
+                                </table>
+                            ) : (
+                                <div className="p-12 text-center text-xs text-muted-foreground">
+                                    <Receipt className="w-9 h-9 mx-auto mb-2 opacity-30 text-slate-400" />
+                                    <p className="font-bold text-sm text-slate-700 dark:text-slate-300 mb-1">
+                                        {__('No se encontraron ventas para este filtro.')}
+                                    </p>
+                                    <p className="text-slate-500">
+                                        {salesScope === 'shift'
+                                            ? __('No existen ventas registradas en el turno de caja actual.')
+                                            : salesScope === 'today'
+                                                ? __('No se han procesado ventas en el día de hoy.')
+                                                : __('No hay ventas registradas en el sistema.')}
+                                    </p>
+                                </div>
+                            )}
+                        </div>
+
+                        <DialogFooter className="flex items-center justify-between sm:justify-between w-full pt-1">
+                            <span className="text-[11px] text-muted-foreground font-sans">
+                                {canDeleteSale ? (
+                                    <span className="text-emerald-600 dark:text-emerald-400 font-semibold">
+                                        ✓ {__('Usted tiene permisos de cajero/administrador para anular ventas.')}
+                                    </span>
+                                ) : (
+                                    <span>
+                                        ℹ️ {__('La anulación de ventas requiere permisos de administrador.')}
+                                    </span>
+                                )}
+                            </span>
                             <Button type="button" variant="outline" onClick={() => setIsRecentSalesOpen(false)}>
                                 {__('Cerrar')}
                             </Button>
                         </DialogFooter>
                     </DialogContent>
                 </Dialog>
+
+                {/* DIÁLOGO DE CONFIRMACIÓN PARA ANULAR VENTA */}
+                <DeleteConfirmationDialog
+                    isOpen={isDeleteConfirmOpen}
+                    onClose={() => {
+                        setIsDeleteConfirmOpen(false);
+                        setSaleToDelete(null);
+                    }}
+                    onConfirm={handleExecuteDeleteSale}
+                    title={__('¿Anular / Eliminar esta venta?')}
+                    description={
+                        saleToDelete
+                            ? `¿Confirma la anulación del ticket ${saleToDelete.codigo_ticket} por ${currencySymbol}${Number(saleToDelete.total).toFixed(2)} (${saleToDelete.cliente_nombre || 'Cliente General'})? Se revertirán automáticamente las existencias de los productos al inventario y se registrará un egreso compensatorio en la caja registradora.`
+                            : __('Esta acción revertirá las existencias en inventario y el dinero en caja.')
+                    }
+                    isConfirming={isDeletingSale}
+                />
 
                 {/* MODAL DE CONFIGURACIÓN DE IMPRESORA TÉRMICA */}
                 <Dialog open={isPrinterConfigOpen} onOpenChange={setIsPrinterConfigOpen}>
