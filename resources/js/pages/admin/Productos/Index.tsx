@@ -444,7 +444,10 @@ export default function Index({ productos, categorias: categoriasProp, marcas: m
                 setIsNewCategoriaOpen(false);
                 setNewCategoriaNombre('');
             } else {
-                notifyError(resData.message || __('Error al crear la categoría.'));
+                const errorMsg = resData.errors
+                    ? Object.values(resData.errors).flat().join(', ')
+                    : (resData.message || __('Error al crear la categoría.'));
+                notifyError(errorMsg);
             }
         } catch (err) {
             notifyError(__('Error al crear la categoría.'));
@@ -485,7 +488,10 @@ export default function Index({ productos, categorias: categoriasProp, marcas: m
                 setIsNewMarcaOpen(false);
                 setNewMarcaNombre('');
             } else {
-                notifyError(resData.message || __('Error al crear la marca.'));
+                const errorMsg = resData.errors
+                    ? Object.values(resData.errors).flat().join(', ')
+                    : (resData.message || __('Error al crear la marca.'));
+                notifyError(errorMsg);
             }
         } catch (err) {
             notifyError(__('Error al crear la marca.'));
@@ -539,7 +545,10 @@ export default function Index({ productos, categorias: categoriasProp, marcas: m
                 setIsNewFamiliaOpen(false);
                 setNewFamiliaNombre('');
             } else {
-                notifyError(resData.message || __('Error al crear la familia.'));
+                const errorMsg = resData.errors
+                    ? Object.values(resData.errors).flat().join(', ')
+                    : (resData.message || __('Error al crear la familia.'));
+                notifyError(errorMsg);
             }
         } catch (err) {
             notifyError(__('Error al crear la familia.'));
@@ -565,7 +574,7 @@ export default function Index({ productos, categorias: categoriasProp, marcas: m
 
         setIsSavingModelo(true);
 
-        // Si no hay familia seleccionada o disponible para esta marca, crear una familia por defecto 'General'
+        // Si no hay familia seleccionada o disponible para esta marca, intentar crear una familia por defecto 'General'
         if (!familiaTargetId) {
             try {
                 const famRes = await fetch('/admin/familias', {
@@ -588,12 +597,8 @@ export default function Index({ productos, categorias: categoriasProp, marcas: m
                     setFamilias((prev) => [...prev, famData.data]);
                 }
             } catch (err) {
-                // Fallback
+                // Backend will handle default family if null
             }
-        }
-
-        if (!familiaTargetId) {
-            familiaTargetId = '1';
         }
 
         try {
@@ -608,7 +613,7 @@ export default function Index({ productos, categorias: categoriasProp, marcas: m
                     nombre_comercial: nombreTarget,
                     codigo_modelo: newModeloCodigo.trim() || null,
                     marca_id: marcaTargetId,
-                    familia_id: familiaTargetId,
+                    familia_id: familiaTargetId || null,
                     categoria_id: categoriaTargetId || null,
                     estado: true,
                 }),
@@ -620,9 +625,9 @@ export default function Index({ productos, categorias: categoriasProp, marcas: m
                     nombre: resData.data.nombre || resData.data.nombre_comercial,
                     nombre_comercial: resData.data.nombre_comercial,
                     codigo_modelo: resData.data.codigo_modelo,
-                    marca_id: Number(marcaTargetId),
-                    familia_id: Number(familiaTargetId),
-                    categoria_id: Number(categoriaTargetId || 0),
+                    marca_id: Number(resData.data.marca_id || marcaTargetId),
+                    familia_id: Number(resData.data.familia_id || familiaTargetId || 0),
+                    categoria_id: Number(resData.data.categoria_id || categoriaTargetId || 0),
                     marca: resData.data.marca || '',
                     familia: resData.data.familia || '',
                     categoria: resData.data.categoria || '',
@@ -639,7 +644,10 @@ export default function Index({ productos, categorias: categoriasProp, marcas: m
                 setNewModeloNombre('');
                 setNewModeloCodigo('');
             } else {
-                notifyError(resData.message || __('Error al crear el modelo.'));
+                const errorMsg = resData.errors
+                    ? Object.values(resData.errors).flat().join(', ')
+                    : (resData.message || __('Error al crear el modelo.'));
+                notifyError(errorMsg);
             }
         } catch (err) {
             notifyError(__('Error al crear el modelo.'));
@@ -687,7 +695,10 @@ export default function Index({ productos, categorias: categoriasProp, marcas: m
                     reset();
                     notifySuccess(__('Producto actualizado correctamente.'));
                 },
-                onError: () => notifyError(__('Error al actualizar el producto.')),
+                onError: (errs) => {
+                    const msg = Object.values(errs || {}).flat().join(', ');
+                    notifyError(msg || __('Error al actualizar el producto.'));
+                },
             });
         } else {
             post('/admin/productos', {
@@ -696,7 +707,10 @@ export default function Index({ productos, categorias: categoriasProp, marcas: m
                     reset();
                     notifySuccess(__('Producto creado correctamente.'));
                 },
-                onError: () => notifyError(__('Error al crear el producto.')),
+                onError: (errs) => {
+                    const msg = Object.values(errs || {}).flat().join(', ');
+                    notifyError(msg || __('Error al crear el producto.'));
+                },
             });
         }
     };

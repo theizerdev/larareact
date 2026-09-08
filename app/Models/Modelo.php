@@ -24,12 +24,14 @@ class Modelo extends Model
         'codigo_modelo',
         'imagen_url',
         'specs_overrides',
+        'especificaciones',
         'estado',
     ];
 
     protected $casts = [
         'estado' => 'boolean',
         'specs_overrides' => 'array',
+        'especificaciones' => 'array',
     ];
 
     public function empresa(): BelongsTo

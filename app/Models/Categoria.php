@@ -21,6 +21,7 @@ class Categoria extends Model
         'nombre',
         'slug',
         'icono',
+        'descripcion',
         'estado',
     ];
 

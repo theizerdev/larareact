@@ -1173,13 +1173,18 @@ class ReparacionController extends Controller
         $user = auth()->user();
         $empresaId = $user->empresa_id;
 
-        $marca = \App\Models\Marca::create([
+        $marcaData = [
             'empresa_id' => $empresaId,
             'sucursal_id' => $user->sucursal_id,
             'nombre' => $validated['nombre'],
-            'slug' => \Illuminate\Support\Str::slug($validated['nombre']),
             'estado' => true,
-        ]);
+        ];
+
+        if (\Illuminate\Support\Facades\Schema::hasColumn('marcas', 'slug')) {
+            $marcaData['slug'] = \Illuminate\Support\Str::slug($validated['nombre']);
+        }
+
+        $marca = \App\Models\Marca::create($marcaData);
 
         $marca->setRelation('modelos', collect([]));
 

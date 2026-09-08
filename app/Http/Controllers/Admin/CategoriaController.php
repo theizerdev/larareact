@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\CategoriaRequest;
 use App\Models\Categoria;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Str;
 
 class CategoriaController extends Controller
@@ -57,14 +58,28 @@ class CategoriaController extends Controller
     {
         $validated = $request->validated();
 
-        $validated['slug'] = Str::slug($validated['nombre']);
+        if (Schema::hasColumn('categorias', 'slug')) {
+            $validated['slug'] = Str::slug($validated['nombre']);
+        } else {
+            unset($validated['slug']);
+        }
+
+        if (!Schema::hasColumn('categorias', 'icono')) {
+            unset($validated['icono']);
+        }
 
         $categoria = Categoria::create($validated);
 
         if ($request->wantsJson()) {
             return response()->json([
                 'success' => true,
-                'data' => $categoria,
+                'data' => [
+                    'id' => $categoria->id,
+                    'nombre' => $categoria->nombre,
+                    'slug' => $categoria->slug ?? '',
+                    'icono' => $categoria->icono ?? '',
+                    'estado' => $categoria->estado,
+                ],
                 'message' => __('Category created successfully.'),
             ]);
         }
@@ -79,7 +94,15 @@ class CategoriaController extends Controller
     {
         $validated = $request->validated();
 
-        $validated['slug'] = Str::slug($validated['nombre']);
+        if (Schema::hasColumn('categorias', 'slug')) {
+            $validated['slug'] = Str::slug($validated['nombre']);
+        } else {
+            unset($validated['slug']);
+        }
+
+        if (!Schema::hasColumn('categorias', 'icono')) {
+            unset($validated['icono']);
+        }
 
         $categoria->update($validated);
 

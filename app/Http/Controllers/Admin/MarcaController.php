@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\MarcaRequest;
 use App\Models\Marca;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Str;
 
 class MarcaController extends Controller
@@ -38,14 +39,28 @@ class MarcaController extends Controller
     {
         $validated = $request->validated();
 
-        $validated['slug'] = Str::slug($validated['nombre']);
+        if (Schema::hasColumn('marcas', 'slug')) {
+            $validated['slug'] = Str::slug($validated['nombre']);
+        } else {
+            unset($validated['slug']);
+        }
+
+        if (!Schema::hasColumn('marcas', 'logo_url')) {
+            unset($validated['logo_url']);
+        }
 
         $marca = Marca::create($validated);
 
         if ($request->wantsJson()) {
             return response()->json([
                 'success' => true,
-                'data' => $marca,
+                'data' => [
+                    'id' => $marca->id,
+                    'nombre' => $marca->nombre,
+                    'slug' => $marca->slug ?? '',
+                    'logo_url' => $marca->logo_url ?? '',
+                    'estado' => $marca->estado,
+                ],
                 'message' => __('Brand created successfully.'),
             ]);
         }
@@ -60,7 +75,15 @@ class MarcaController extends Controller
     {
         $validated = $request->validated();
 
-        $validated['slug'] = Str::slug($validated['nombre']);
+        if (Schema::hasColumn('marcas', 'slug')) {
+            $validated['slug'] = Str::slug($validated['nombre']);
+        } else {
+            unset($validated['slug']);
+        }
+
+        if (!Schema::hasColumn('marcas', 'logo_url')) {
+            unset($validated['logo_url']);
+        }
 
         $marca->update($validated);
 

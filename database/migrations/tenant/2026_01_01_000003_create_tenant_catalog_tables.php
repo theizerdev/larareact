@@ -16,6 +16,8 @@ return new class extends Migration
             $table->unsignedBigInteger('empresa_id')->nullable()->index();
             $table->unsignedBigInteger('sucursal_id')->nullable()->index();
             $table->string('nombre');
+            $table->string('slug')->nullable();
+            $table->string('icono')->nullable();
             $table->text('descripcion')->nullable();
             $table->boolean('estado')->default(true);
             $table->timestamps();
@@ -26,6 +28,8 @@ return new class extends Migration
             $table->unsignedBigInteger('empresa_id')->nullable()->index();
             $table->unsignedBigInteger('sucursal_id')->nullable()->index();
             $table->string('nombre');
+            $table->string('slug')->nullable();
+            $table->string('logo_url')->nullable();
             $table->text('descripcion')->nullable();
             $table->boolean('estado')->default(true);
             $table->timestamps();

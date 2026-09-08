@@ -110,13 +110,15 @@ return new class extends Migration {
             $table->unsignedBigInteger('empresa_id')->nullable()->index();
             $table->foreignId('sucursal_id')->nullable()->constrained('sucursales')->nullOnDelete();
             $table->foreignId('producto_id')->constrained('productos')->cascadeOnDelete();
-            $table->unsignedBigInteger('user_id')->index();
+            $table->unsignedBigInteger('user_id')->nullable()->index();
             $table->enum('tipo', ['entrada', 'salida', 'ajuste']);
             $table->decimal('cantidad', 12, 3);
             $table->decimal('stock_anterior', 12, 3);
             $table->decimal('stock_nuevo', 12, 3);
             $table->string('motivo');
             $table->string('referencia')->nullable();
+            $table->decimal('costo_unitario', 12, 2)->nullable();
+            $table->text('notas')->nullable();
             $table->timestamps();
         });
     }

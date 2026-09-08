@@ -254,7 +254,10 @@ export default function Index({ modelos, marcas: marcasProp, familias: familiasP
                         setData('marca_id', String(creada.id));
                     }
                 },
-                onError: () => notifyError(__('Error al crear la marca.')),
+                onError: (errs) => {
+                    const msg = Object.values(errs || {}).flat().join(', ');
+                    notifyError(msg || __('Error al crear la marca.'));
+                },
                 onFinish: () => setIsSavingMarca(false),
             }
         );
@@ -284,7 +287,10 @@ export default function Index({ modelos, marcas: marcasProp, familias: familiasP
                         setData('categoria_id', String(creada.id));
                     }
                 },
-                onError: () => notifyError(__('Error al crear la categoría.')),
+                onError: (errs) => {
+                    const msg = Object.values(errs || {}).flat().join(', ');
+                    notifyError(msg || __('Error al crear la categoría.'));
+                },
                 onFinish: () => setIsSavingCategoria(false),
             }
         );
@@ -319,7 +325,10 @@ export default function Index({ modelos, marcas: marcasProp, familias: familiasP
                         setData('familia_id', String(creada.id));
                     }
                 },
-                onError: () => notifyError(__('Error al crear la familia.')),
+                onError: (errs) => {
+                    const msg = Object.values(errs || {}).flat().join(', ');
+                    notifyError(msg || __('Error al crear la familia.'));
+                },
                 onFinish: () => setIsSavingFamilia(false),
             }
         );
@@ -327,23 +336,36 @@ export default function Index({ modelos, marcas: marcasProp, familias: familiasP
 
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
+        const payload = {
+            ...data,
+            familia_id: data.familia_id === 'none' ? '' : data.familia_id,
+        };
+
         if (editingModelo) {
             put(`/admin/modelos/${editingModelo.id}`, {
+                ...payload,
                 onSuccess: () => {
                     setIsCreateOpen(false);
                     reset();
                     notifySuccess(__('Model updated successfully.'));
                 },
-                onError: () => notifyError(__('There was an error updating the model.')),
+                onError: (errs) => {
+                    const msg = Object.values(errs || {}).flat().join(', ');
+                    notifyError(msg || __('There was an error updating the model.'));
+                },
             });
         } else {
             post('/admin/modelos', {
+                ...payload,
                 onSuccess: () => {
                     setIsCreateOpen(false);
                     reset();
                     notifySuccess(__('Model created successfully.'));
                 },
-                onError: () => notifyError(__('There was an error creating the model.')),
+                onError: (errs) => {
+                    const msg = Object.values(errs || {}).flat().join(', ');
+                    notifyError(msg || __('There was an error creating the model.'));
+                },
             });
         }
     };
@@ -738,6 +760,11 @@ export default function Index({ modelos, marcas: marcasProp, familias: familiasP
                                             <SelectValue placeholder={__('Seleccione familia')} />
                                         </SelectTrigger>
                                         <SelectContent>
+                                            {filteredFamilias.length === 0 && (
+                                                <SelectItem value="none">
+                                                    {__('General (Automática)')}
+                                                </SelectItem>
+                                            )}
                                             {filteredFamilias.map((f) => (
                                                 <SelectItem key={f.id} value={String(f.id)}>
                                                     {f.nombre}

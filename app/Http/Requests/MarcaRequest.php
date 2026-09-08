@@ -24,6 +24,7 @@ class MarcaRequest extends FormRequest
         return [
             'nombre' => ['required', 'string', 'max:255'],
             'logo_url' => ['nullable', 'string', 'max:255'],
+            'descripcion' => ['nullable', 'string'],
             'estado' => ['boolean'],
             'empresa_id' => ['nullable', 'exists:landlord.empresas,id'],
             'sucursal_id' => ['nullable', 'exists:sucursales,id'],

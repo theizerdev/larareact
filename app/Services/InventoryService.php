@@ -5,9 +5,24 @@ namespace App\Services;
 use App\Models\InventoryMovement;
 use App\Models\Producto;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
 
 class InventoryService
 {
+    /**
+     * Filtra los atributos según las columnas reales disponibles en la tabla inventory_movements.
+     */
+    protected function buildMovementData(array $attributes): array
+    {
+        if (!Schema::hasColumn('inventory_movements', 'costo_unitario')) {
+            unset($attributes['costo_unitario']);
+        }
+        if (!Schema::hasColumn('inventory_movements', 'notas')) {
+            unset($attributes['notas']);
+        }
+        return $attributes;
+    }
+
     /**
      * Registra un movimiento de inventario en el Kardex.
      */
@@ -31,11 +46,11 @@ class InventoryService
             // Actualizar stock del producto si no ha sido actualizado previamente
             $producto->update(['stock' => $stockNuevo]);
 
-            return InventoryMovement::create([
+            return InventoryMovement::create($this->buildMovementData([
                 'empresa_id' => $producto->empresa_id ?? auth()->user()?->empresa_id,
                 'sucursal_id' => $producto->sucursal_id ?? auth()->user()?->sucursal_id,
                 'producto_id' => $producto->id,
-                'user_id' => auth()->id(),
+                'user_id' => auth()->id() ?? $producto->user_id ?? null,
                 'tipo' => $tipo,
                 'motivo' => $motivo,
                 'cantidad' => $cantidad,
@@ -44,7 +59,7 @@ class InventoryService
                 'costo_unitario' => $costoUnitario ?? (float) $producto->precio_compra,
                 'referencia' => $referencia,
                 'notas' => $notas,
-            ]);
+            ]));
         });
     }
 
@@ -57,7 +72,7 @@ class InventoryService
             return null;
         }
 
-        return InventoryMovement::create([
+        return InventoryMovement::create($this->buildMovementData([
             'empresa_id' => $producto->empresa_id ?? auth()->user()?->empresa_id,
             'sucursal_id' => $producto->sucursal_id ?? auth()->user()?->sucursal_id,
             'producto_id' => $producto->id,
@@ -70,7 +85,7 @@ class InventoryService
             'costo_unitario' => (float) $producto->precio_compra,
             'referencia' => 'ALTA-' . $producto->sku,
             'notas' => __('Registro de stock inicial al crear el producto en el catálogo.'),
-        ]);
+        ]));
     }
 
     /**
@@ -85,7 +100,7 @@ class InventoryService
         $diferencia = $stockNuevo - $stockAnterior;
         $tipo = $diferencia > 0 ? 'entrada' : 'salida';
 
-        return InventoryMovement::create([
+        return InventoryMovement::create($this->buildMovementData([
             'empresa_id' => $producto->empresa_id ?? auth()->user()?->empresa_id,
             'sucursal_id' => $producto->sucursal_id ?? auth()->user()?->sucursal_id,
             'producto_id' => $producto->id,
@@ -98,6 +113,6 @@ class InventoryService
             'costo_unitario' => (float) $producto->precio_compra,
             'referencia' => 'EDIT-' . $producto->sku,
             'notas' => __('Modificación manual de cantidad realizada desde el catálogo de productos.'),
-        ]);
+        ]));
     }
 }

@@ -21,6 +21,7 @@ class Marca extends Model
         'nombre',
         'slug',
         'logo_url',
+        'descripcion',
         'estado',
     ];
 

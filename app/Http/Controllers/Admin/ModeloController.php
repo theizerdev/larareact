@@ -60,8 +60,8 @@ class ModeloController extends Controller
     {
         $validated = $request->validate([
             'marca_id' => 'required|exists:marcas,id',
-            'familia_id' => 'required|exists:familias,id',
-            'categoria_id' => 'required|exists:categorias,id',
+            'familia_id' => 'nullable|exists:familias,id',
+            'categoria_id' => 'nullable|exists:categorias,id',
             'nombre_comercial' => 'required|string|max:255',
             'codigo_modelo' => 'nullable|string|max:255',
             'imagen_url' => 'nullable|string|max:255',
@@ -71,6 +71,39 @@ class ModeloController extends Controller
             'sucursal_id' => 'nullable|exists:sucursales,id',
         ]);
 
+        $user = auth()->user();
+        $empresaId = $user?->empresa_id;
+
+        // Auto-resolver o crear familia por defecto si no viene especificada
+        if (empty($validated['familia_id']) && !empty($validated['marca_id'])) {
+            $familia = Familia::where('marca_id', $validated['marca_id'])->first();
+            if (!$familia) {
+                $familia = Familia::create([
+                    'nombre' => 'General',
+                    'marca_id' => $validated['marca_id'],
+                    'empresa_id' => $empresaId,
+                    'sucursal_id' => $user?->sucursal_id,
+                    'estado' => true,
+                ]);
+            }
+            $validated['familia_id'] = $familia->id;
+        }
+
+        // Auto-resolver o crear categoría por defecto si no viene especificada
+        if (empty($validated['categoria_id'])) {
+            $categoria = Categoria::first();
+            if (!$categoria) {
+                $categoria = Categoria::create([
+                    'nombre' => 'General',
+                    'slug' => 'general',
+                    'empresa_id' => $empresaId,
+                    'sucursal_id' => $user?->sucursal_id,
+                    'estado' => true,
+                ]);
+            }
+            $validated['categoria_id'] = $categoria?->id;
+        }
+
         $modelo = Modelo::create($validated);
         $modelo->load(['marca', 'familia', 'categoria']);
 
@@ -79,7 +112,7 @@ class ModeloController extends Controller
                 'success' => true,
                 'data' => [
                     'id' => $modelo->id,
-                    'nombre' => $modelo->nombre_comercial . ($modelo->codigo_modelo ? ' (' . $modelo->codigo_modelo . ')' : ''),
+                    'nombre' => (($modelo->marca?->nombre ? "{$modelo->marca->nombre} " : '') . $modelo->nombre_comercial) . ($modelo->codigo_modelo ? ' (' . $modelo->codigo_modelo . ')' : ''),
                     'nombre_comercial' => $modelo->nombre_comercial,
                     'codigo_modelo' => $modelo->codigo_modelo,
                     'marca_id' => $modelo->marca_id,
@@ -104,8 +137,8 @@ class ModeloController extends Controller
     {
         $validated = $request->validate([
             'marca_id' => 'required|exists:marcas,id',
-            'familia_id' => 'required|exists:familias,id',
-            'categoria_id' => 'required|exists:categorias,id',
+            'familia_id' => 'nullable|exists:familias,id',
+            'categoria_id' => 'nullable|exists:categorias,id',
             'nombre_comercial' => 'required|string|max:255',
             'codigo_modelo' => 'nullable|string|max:255',
             'imagen_url' => 'nullable|string|max:255',
