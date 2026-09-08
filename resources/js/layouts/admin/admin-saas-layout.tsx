@@ -262,6 +262,21 @@ export default function AdminSaasLayout({
     const menuVisibility = ((page.props as any)?.menuVisibility || {}) as Record<string, boolean>;
     const isMenuVisible = (key: string) => menuVisibility[key] !== false;
 
+    const handleNotificationClick = (notification: { id: string; url?: string | null }) => {
+        if (notification.url) {
+            router.post(
+                `/notifications/${notification.id}/read`,
+                { redirect_to: notification.url },
+            );
+        } else {
+            router.post(
+                `/notifications/${notification.id}/read`,
+                {},
+                { preserveScroll: true, preserveState: true, only: ['notifications', 'unreadNotificationsCount'] },
+            );
+        }
+    };
+
     const markAsRead = (id: string) => {
         router.post(
             `/notifications/${id}/read`,
@@ -1019,8 +1034,8 @@ export default function AdminSaasLayout({
                                                         key={notification.id}
                                                         className="cursor-pointer px-3 py-3"
                                                         onClick={() =>
-                                                            markAsRead(
-                                                                notification.id,
+                                                            handleNotificationClick(
+                                                                notification,
                                                             )
                                                         }
                                                     >

@@ -31,6 +31,7 @@ class DescansoExcedidoNotification extends Notification
                 'concepto' => $this->concepto,
                 'minutos' => (string) $this->minutosExcedidos,
             ],
+            'url' => '/admin/asistencia/bitacora',
         ];
     }
 }

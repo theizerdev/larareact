@@ -31,6 +31,7 @@ class NuevoUsuarioNotification extends Notification
                 'usuario' => $this->nuevoUsuario->name,
                 'correo' => $this->nuevoUsuario->email,
             ],
+            'url' => '/admin/usuarios',
         ];
     }
 }

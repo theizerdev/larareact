@@ -28,6 +28,7 @@ class VisitaAccesoRegistradaNotification extends Notification
                 'nombre' => $this->nombreVisitante(),
                 'codigo' => $this->acceso->codigo_visitante,
             ],
+            'url' => '/admin/visitas-accesos',
         ];
     }
 

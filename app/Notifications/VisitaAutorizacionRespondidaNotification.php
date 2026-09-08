@@ -32,6 +32,7 @@ class VisitaAutorizacionRespondidaNotification extends Notification
                 'responsable' => $this->responsableNombre,
                 'empleado' => $this->empleadoNombre,
             ],
+            'url' => '/admin/visitas-accesos',
         ];
     }
 }

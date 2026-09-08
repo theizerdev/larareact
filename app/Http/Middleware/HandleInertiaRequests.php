@@ -70,11 +70,33 @@ class HandleInertiaRequests extends Middleware
                     'message' => __($n->data['message'] ?? '', $n->data['params'] ?? []),
                     'time' => $n->created_at->diffForHumans(),
                     'read' => ! is_null($n->read_at),
+                    'url' => $this->resolveNotificationUrl($n),
                 ])
                 : [],
             'unreadNotificationsCount' => $request->user()
                 ? fn () => $request->user()->unreadNotifications()->count()
                 : 0,
         ];
+    }
+
+    /**
+     * Resuelve la URL destino de una notificación para llevar al usuario a su origen.
+     */
+    private function resolveNotificationUrl($notification): ?string
+    {
+        if (! empty($notification->data['url'])) {
+            return $notification->data['url'];
+        }
+
+        return match ($notification->type) {
+            \App\Notifications\KycValidacionCompletadaNotification::class => '/admin/validaciones',
+            \App\Notifications\DescansoExcedidoNotification::class => '/admin/asistencia/bitacora',
+            \App\Notifications\VisitaAccesoRegistradaNotification::class => '/admin/visitas-accesos',
+            \App\Notifications\VisitaAutorizacionSolicitadaNotification::class => '/admin/visitas-accesos',
+            \App\Notifications\VisitaAutorizacionRespondidaNotification::class => '/admin/visitas-accesos',
+            \App\Notifications\NuevoUsuarioNotification::class => '/admin/usuarios',
+            \App\Notifications\WelcomeNotification::class => '/dashboard',
+            default => null,
+        };
     }
 }

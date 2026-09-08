@@ -20,6 +20,7 @@ class WelcomeNotification extends Notification
             'title' => 'Welcome to the system',
             'message' => 'Your account has been created successfully.',
             'params' => [],
+            'url' => '/dashboard',
         ];
     }
 }

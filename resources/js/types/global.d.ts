@@ -19,6 +19,7 @@ declare module '@inertiajs/core' {
                 message: string;
                 time: string;
                 read: boolean;
+                url?: string | null;
             }[];
             unreadNotificationsCount: number;
             [key: string]: unknown;
