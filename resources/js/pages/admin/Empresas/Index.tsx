@@ -14,8 +14,11 @@ import {
     Upload,
     X,
     Clock,
+    Loader2,
 } from 'lucide-react';
 import React, { useState, Suspense, lazy, useRef } from 'react';
+import { usePage } from '@inertiajs/react';
+import { useLocationGeocoding } from '@/hooks/use-location-geocoding';
 import { Breadcrumbs } from '@/components/breadcrumbs';
 import type { ColumnDef } from '@/components/data-table';
 import { DataTable } from '@/components/data-table';
@@ -175,7 +178,27 @@ export default function EmpresasIndexPage({ auth, empresas, stats, paises, filte
     }, [searchTerm, statusFilter, perPageFilter]);
 
     // ── Formulario Inertia ────────────────────────────────────────────────────
-    const { data, setData, post, put, processing, errors, reset } = useForm(initialForm);
+    const pageProps = usePage().props as any;
+    const mapboxApiKey = pageProps.mapbox_api_key || pageProps.auth?.user?.empresa?.mapbox_api_key;
+    const { forwardGeocode, isGeocoding } = useLocationGeocoding({
+        mapboxApiKey,
+        debounceMs: 700,
+    });
+
+    const { data, setData, post, put, processing, errors, reset, transform } = useForm(initialForm);
+
+    // Saneamiento de payload para persistencia atómica
+    React.useEffect(() => {
+        transform((raw: Record<string, any>) => ({
+            ...raw,
+            latitud: raw.latitud !== null && raw.latitud !== undefined && (raw.latitud as any) !== '' && !isNaN(Number(raw.latitud))
+                ? Number(raw.latitud)
+                : null,
+            longitud: raw.longitud !== null && raw.longitud !== undefined && (raw.longitud as any) !== '' && !isNaN(Number(raw.longitud))
+                ? Number(raw.longitud)
+                : null,
+        }));
+    }, [transform]);
 
     // ── Mapa: centro calculado según pais_id seleccionado ────────────────────
     const paisSeleccionado = paises.find((p) => p.id === Number(data.pais_id));
@@ -287,25 +310,37 @@ formData.append('logo_mini', logoMiniFile);
 
         if (editingEmpresa) {
             put(`/admin/empresas/${editingEmpresa.id}`, {
-                onSuccess: () => {
+                onSuccess: (page) => {
+                    const flashNotif = (page.props as any).notification;
+                    if (flashNotif && flashNotif.type === 'error') {
+                        notifyError(flashNotif.message || __('There was an error updating the company. Please try again.'));
+                        return;
+                    }
                     setIsModalOpen(false);
                     setEditingEmpresa(null);
                     reset();
                     notifySuccess(__('Company updated successfully.'));
                 },
-                onError: () => {
-                    notifyError(__('Please review the highlighted fields.'));
+                onError: (formErrors) => {
+                    const firstError = formErrors.general || formErrors.error || Object.values(formErrors)[0];
+                    notifyError(typeof firstError === 'string' ? firstError : __('Please review the highlighted fields.'));
                 },
             });
         } else {
             post('/admin/empresas', {
-                onSuccess: () => {
+                onSuccess: (page) => {
+                    const flashNotif = (page.props as any).notification;
+                    if (flashNotif && flashNotif.type === 'error') {
+                        notifyError(flashNotif.message || __('There was an error creating the company. Please try again.'));
+                        return;
+                    }
                     setIsModalOpen(false);
                     reset();
                     notifySuccess(__('Company created successfully.'));
                 },
-                onError: () => {
-                    notifyError(__('Please review the highlighted fields.'));
+                onError: (formErrors) => {
+                    const firstError = formErrors.general || formErrors.error || Object.values(formErrors)[0];
+                    notifyError(typeof firstError === 'string' ? firstError : __('Please review the highlighted fields.'));
                 },
             });
         }
@@ -315,12 +350,32 @@ formData.append('logo_mini', logoMiniFile);
         router.patch(`/admin/empresas/${empresa.id}/toggle-status`, {}, { preserveScroll: true });
     };
 
+    const handleAddressChange = (newAddress: string) => {
+        setData('direccion', newAddress);
+
+        if (newAddress.trim().length >= 4) {
+            forwardGeocode({
+                direccion: newAddress,
+                pais: paisSeleccionado?.nombre,
+            }).then((result) => {
+                if (result) {
+                    setData((prev) => ({
+                        ...prev,
+                        latitud: result.lat,
+                        longitud: result.lng,
+                        ...(result.zona_horaria && !prev.zona_horaria ? { zona_horaria: result.zona_horaria } : {}),
+                    }));
+                }
+            });
+        }
+    };
+
     const handleLocationSelected = (lat: number, lng: number, address?: string, timezone?: string) => {
         setData((prev) => ({
             ...prev,
             latitud:  lat,
             longitud: lng,
-            ...(address ? { direccion: address } : {}),
+            ...(address && !prev.direccion ? { direccion: address } : {}),
             ...(timezone ? { zona_horaria: timezone } : {}),
         }));
     };
@@ -760,13 +815,22 @@ formData.append('logo_mini', logoMiniFile);
 
                                 {/* Dirección */}
                                 <div>
-                                    <Label htmlFor="direccion">{__('Address')}</Label>
+                                    <div className="flex items-center justify-between">
+                                        <Label htmlFor="direccion">{__('Address')}</Label>
+                                        {isGeocoding && (
+                                            <span className="text-[11px] text-indigo-500 flex items-center gap-1">
+                                                <Loader2 className="w-3 h-3 animate-spin" />
+                                                {__('Locating on map...')}
+                                            </span>
+                                        )}
+                                    </div>
                                     <Textarea
                                         id="direccion"
                                         value={data.direccion || ''}
-                                        onChange={(e) => setData('direccion', e.target.value)}
-                                        placeholder={__('The address will be auto-filled when you click on the map...')}
+                                        onChange={(e) => handleAddressChange(e.target.value)}
+                                        placeholder={__('Type an address to auto-locate on map or click the map directly...')}
                                         rows={2}
+                                        className="mt-1"
                                     />
                                 </div>
 

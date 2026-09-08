@@ -11,6 +11,8 @@ use App\Models\Empresa;
 use App\Models\Sucursal;
 use App\Models\User;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 use Inertia\Inertia;
 
 class ProveedorController extends Controller
@@ -77,12 +79,49 @@ class ProveedorController extends Controller
         $data['empresa_id'] = $data['empresa_id'] ?? $user->empresa_id;
         $data['sucursal_id'] = $data['sucursal_id'] ?? $user->sucursal_id;
         $data['user_id'] = $data['user_id'] ?? $user->id;
-        $data['documento_identidad'] = $data['documento_identidad'] ?? $data['rfc'] ?? $data['curp'] ?? ('PROV_' . uniqid());
+        try {
+            $proveedor = null;
+            DB::transaction(function () use ($data, &$proveedor) {
+                $proveedor = AccessCodeService::createWithRetry(fn () => Proveedor::create($data));
+            });
 
-        $proveedor = AccessCodeService::createWithRetry(fn () => Proveedor::create($data));
-        $this->enviarCarnetWhatsAppInternal($proveedor);
+            // Envío de WhatsApp secundario sin romper persistencia
+            try {
+                $this->enviarCarnetWhatsAppInternal($proveedor);
+            } catch (\Exception $we) {
+                Log::warning('No se pudo enviar WhatsApp para proveedor '.$proveedor->id.': '.$we->getMessage());
+            }
 
-        return redirect()->back();
+            if ($request->expectsJson()) {
+                return response()->json([
+                    'success' => true,
+                    'message' => __('Supplier created successfully'),
+                    'data' => $proveedor,
+                ], 201);
+            }
+
+            return redirect()->back()->with('notification', [
+                'type' => 'success',
+                'message' => __('Supplier created successfully'),
+            ]);
+        } catch (\Exception $e) {
+            Log::error('Error al crear proveedor: '.$e->getMessage());
+
+            if ($request->expectsJson()) {
+                return response()->json([
+                    'success' => false,
+                    'message' => __('There was an error creating the supplier. Please try again.'),
+                ], 500);
+            }
+
+            return redirect()->back()
+                ->withInput()
+                ->withErrors(['general' => __('There was an error creating the supplier. Please try again.')])
+                ->with('notification', [
+                    'type' => 'error',
+                    'message' => __('There was an error creating the supplier. Please try again.'),
+                ]);
+        }
     }
 
     public function update(ProveedorRequest $request, Proveedor $proveedor)
@@ -95,16 +134,96 @@ class ProveedorController extends Controller
         $data['user_id'] = $data['user_id'] ?? $proveedor->user_id ?? $user->id;
         $data['documento_identidad'] = $data['documento_identidad'] ?? $data['rfc'] ?? $data['curp'] ?? $proveedor->documento_identidad;
 
-        $proveedor->update($data);
+        try {
+            DB::transaction(function () use ($proveedor, $data) {
+                $proveedor->update($data);
+            });
 
-        return redirect()->back();
+            if ($request->expectsJson()) {
+                return response()->json([
+                    'success' => true,
+                    'message' => __('Supplier updated successfully'),
+                    'data' => $proveedor,
+                ]);
+            }
+
+            return redirect()->back()->with('notification', [
+                'type' => 'success',
+                'message' => __('Supplier updated successfully'),
+            ]);
+        } catch (\Exception $e) {
+            Log::error("Error al actualizar proveedor {$proveedor->id}: ".$e->getMessage());
+
+            if ($request->expectsJson()) {
+                return response()->json([
+                    'success' => false,
+                    'message' => __('There was an error updating the supplier. Please try again.'),
+                ], 500);
+            }
+
+            return redirect()->back()
+                ->withInput()
+                ->withErrors(['general' => __('There was an error updating the supplier. Please try again.')])
+                ->with('notification', [
+                    'type' => 'error',
+                    'message' => __('There was an error updating the supplier. Please try again.'),
+                ]);
+        }
     }
 
-    public function destroy(Proveedor $proveedor)
+    public function destroy(Request $request, Proveedor $proveedor)
     {
-        $proveedor->delete();
+        try {
+            DB::transaction(function () use ($proveedor) {
+                $proveedor->delete();
+            });
 
-        return redirect()->back();
+            if ($request->expectsJson()) {
+                return response()->json([
+                    'success' => true,
+                    'message' => __('Supplier deleted successfully'),
+                ]);
+            }
+
+            return redirect()->back()->with('notification', [
+                'type' => 'success',
+                'message' => __('Supplier deleted successfully'),
+            ]);
+        } catch (\Illuminate\Database\QueryException $e) {
+            Log::error("Restricción al eliminar proveedor {$proveedor->id}: ".$e->getMessage());
+
+            $msg = __('No se puede eliminar el proveedor porque cuenta con colaboradores, vehículos o visitas asociadas.');
+
+            if ($request->expectsJson()) {
+                return response()->json([
+                    'success' => false,
+                    'message' => $msg,
+                ], 409);
+            }
+
+            return redirect()->back()
+                ->withErrors(['general' => $msg])
+                ->with('notification', [
+                    'type' => 'error',
+                    'message' => $msg,
+                ]);
+        } catch (\Exception $e) {
+            Log::error("Error al eliminar proveedor {$proveedor->id}: ".$e->getMessage());
+
+            if ($request->expectsJson()) {
+                return response()->json([
+                    'success' => false,
+                    'message' => __('There was an error deleting the supplier. Please try again.'),
+                ], 500);
+            }
+
+            return redirect()->back()
+                ->withErrors(['general' => __('There was an error deleting the supplier. Please try again.')])
+                ->with('notification', [
+                    'type' => 'error',
+                    'message' => __('There was an error deleting the supplier. Please try again.'),
+                ]);
+        }
     }
 
     public function toggleStatus(Request $request, Proveedor $proveedor)

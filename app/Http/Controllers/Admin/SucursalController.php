@@ -60,6 +60,11 @@ class SucursalController extends Controller
 
     public function store(Request $request)
     {
+        $request->merge([
+            'latitud' => $request->latitud === '' || $request->latitud === 'null' ? null : $request->latitud,
+            'longitud' => $request->longitud === '' || $request->longitud === 'null' ? null : $request->longitud,
+        ]);
+
         $validated = $request->validate([
             'empresa_id' => 'required|exists:empresas,id',
             'nombre' => 'required|string|max:255',
@@ -67,14 +72,25 @@ class SucursalController extends Controller
             'telefono' => 'nullable|string|max:255',
             'pais_telefono_id' => 'nullable|exists:pais,id',
             'direccion' => 'nullable|string',
-            'latitud' => 'nullable|numeric',
-            'longitud' => 'nullable|numeric',
+            'latitud' => 'nullable|numeric|between:-90,90',
+            'longitud' => 'nullable|numeric|between:-180,180',
             'zona_horaria' => 'nullable|string|max:100',
             'status' => 'boolean',
         ]);
 
         try {
-            Sucursal::create($validated);
+            $sucursal = null;
+            DB::transaction(function () use ($validated, &$sucursal) {
+                $sucursal = Sucursal::create($validated);
+            });
+
+            if ($request->expectsJson()) {
+                return response()->json([
+                    'success' => true,
+                    'message' => __('Branch created successfully.'),
+                    'data' => $sucursal,
+                ], 201);
+            }
 
             return back()->with('notification', [
                 'type' => 'success',
@@ -83,15 +99,30 @@ class SucursalController extends Controller
         } catch (\Exception $e) {
             Log::error('Error al crear sucursal: '.$e->getMessage());
 
-            return back()->with('notification', [
-                'type' => 'error',
-                'message' => __('There was an error creating the branch. Please try again.'),
-            ]);
+            if ($request->expectsJson()) {
+                return response()->json([
+                    'success' => false,
+                    'message' => __('There was an error creating the branch. Please try again.'),
+                ], 500);
+            }
+
+            return back()
+                ->withInput()
+                ->withErrors(['general' => __('There was an error creating the branch. Please try again.')])
+                ->with('notification', [
+                    'type' => 'error',
+                    'message' => __('There was an error creating the branch. Please try again.'),
+                ]);
         }
     }
 
     public function update(Request $request, Sucursal $sucursal)
     {
+        $request->merge([
+            'latitud' => $request->latitud === '' || $request->latitud === 'null' ? null : $request->latitud,
+            'longitud' => $request->longitud === '' || $request->longitud === 'null' ? null : $request->longitud,
+        ]);
+
         $validated = $request->validate([
             'empresa_id' => 'required|exists:empresas,id',
             'nombre' => 'required|string|max:255',
@@ -99,8 +130,8 @@ class SucursalController extends Controller
             'telefono' => 'nullable|string|max:255',
             'pais_telefono_id' => 'nullable|exists:pais,id',
             'direccion' => 'nullable|string',
-            'latitud' => 'nullable|numeric',
-            'longitud' => 'nullable|numeric',
+            'latitud' => 'nullable|numeric|between:-90,90',
+            'longitud' => 'nullable|numeric|between:-180,180',
             'zona_horaria' => 'nullable|string|max:100',
             'status' => 'boolean',
         ]);
@@ -110,6 +141,14 @@ class SucursalController extends Controller
                 $sucursal->update($validated);
             });
 
+            if ($request->expectsJson()) {
+                return response()->json([
+                    'success' => true,
+                    'message' => __('Branch updated successfully.'),
+                    'data' => $sucursal,
+                ]);
+            }
+
             return back()->with('notification', [
                 'type' => 'success',
                 'message' => __('Branch updated successfully.'),
@@ -117,29 +156,75 @@ class SucursalController extends Controller
         } catch (\Exception $e) {
             Log::error("Error al actualizar sucursal {$sucursal->id}: ".$e->getMessage());
 
-            return back()->with('notification', [
-                'type' => 'error',
-                'message' => __('There was an error updating the branch. Please try again.'),
-            ]);
+            if ($request->expectsJson()) {
+                return response()->json([
+                    'success' => false,
+                    'message' => __('There was an error updating the branch. Please try again.'),
+                ], 500);
+            }
+
+            return back()
+                ->withInput()
+                ->withErrors(['general' => __('There was an error updating the branch. Please try again.')])
+                ->with('notification', [
+                    'type' => 'error',
+                    'message' => __('There was an error updating the branch. Please try again.'),
+                ]);
         }
     }
 
-    public function destroy(Sucursal $sucursal)
+    public function destroy(Request $request, Sucursal $sucursal)
     {
         try {
-            $sucursal->delete();
+            DB::transaction(function () use ($sucursal) {
+                $sucursal->delete();
+            });
+
+            if ($request->expectsJson()) {
+                return response()->json([
+                    'success' => true,
+                    'message' => __('Branch deleted successfully.'),
+                ]);
+            }
 
             return back()->with('notification', [
                 'type' => 'success',
                 'message' => __('Branch deleted successfully.'),
             ]);
+        } catch (\Illuminate\Database\QueryException $e) {
+            Log::error("Restricción al eliminar sucursal {$sucursal->id}: ".$e->getMessage());
+
+            $msg = __('No se puede eliminar la sucursal porque tiene departamentos, empleados u otros registros asociados.');
+
+            if ($request->expectsJson()) {
+                return response()->json([
+                    'success' => false,
+                    'message' => $msg,
+                ], 409);
+            }
+
+            return back()
+                ->withErrors(['general' => $msg])
+                ->with('notification', [
+                    'type' => 'error',
+                    'message' => $msg,
+                ]);
         } catch (\Exception $e) {
             Log::error("Error al eliminar sucursal {$sucursal->id}: ".$e->getMessage());
 
-            return back()->with('notification', [
-                'type' => 'error',
-                'message' => __('There was an error deleting the branch. Please try again.'),
-            ]);
+            if ($request->expectsJson()) {
+                return response()->json([
+                    'success' => false,
+                    'message' => __('There was an error deleting the branch. Please try again.'),
+                ], 500);
+            }
+
+            return back()
+                ->withErrors(['general' => __('There was an error deleting the branch. Please try again.')])
+                ->with('notification', [
+                    'type' => 'error',
+                    'message' => __('There was an error deleting the branch. Please try again.'),
+                ]);
         }
     }
 

@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Http\Requests\EmpresaRequest;
 use App\Models\Empresa;
 use App\Models\Pais;
 use Illuminate\Http\Request;
@@ -54,29 +55,26 @@ class EmpresaController extends Controller
         ]);
     }
 
-    public function store(Request $request)
+    public function store(EmpresaRequest $request)
     {
-        $validated = $request->validate([
-            'razon_social' => 'required|string|max:255',
-            'nombre_comercial' => 'nullable|string|max:255',
-            'documento' => 'required|string|max:255|unique:empresas,documento',
-            'pais_id' => 'nullable|exists:pais,id',
-            'direccion' => 'nullable|string',
-            'latitud' => 'nullable|numeric',
-            'longitud' => 'nullable|numeric',
-            'zona_horaria' => 'nullable|string|max:100',
-            'telefono' => 'nullable|string|max:255',
-            'email' => 'nullable|email|max:255',
-            'representante_legal' => 'nullable|string|max:255',
-            'curp_representante_legal' => 'nullable|string|max:18',
-            'status' => 'boolean',
-        ]);
+        $validated = $request->validated();
+        $empresa = null;
 
         try {
-            $empresa = new Empresa($validated);
-            $empresa->api_key = Str::random(32);
-            $empresa->whatsapp_api_key = Str::random(32);
-            $empresa->save();
+            DB::transaction(function () use ($validated, &$empresa) {
+                $empresa = new Empresa($validated);
+                $empresa->api_key = Str::random(32);
+                $empresa->whatsapp_api_key = Str::random(32);
+                $empresa->save();
+            });
+
+            if ($request->expectsJson()) {
+                return response()->json([
+                    'success' => true,
+                    'message' => __('Company created successfully.'),
+                    'data' => $empresa,
+                ], 201);
+            }
 
             return back()->with('notification', [
                 'type' => 'success',
@@ -85,35 +83,39 @@ class EmpresaController extends Controller
         } catch (\Exception $e) {
             Log::error('Error al crear empresa: '.$e->getMessage());
 
-            return back()->with('notification', [
-                'type' => 'error',
-                'message' => __('There was an error creating the company. Please try again.'),
-            ]);
+            if ($request->expectsJson()) {
+                return response()->json([
+                    'success' => false,
+                    'message' => __('There was an error creating the company. Please try again.'),
+                ], 500);
+            }
+
+            return back()
+                ->withInput()
+                ->withErrors(['general' => __('There was an error creating the company. Please try again.')])
+                ->with('notification', [
+                    'type' => 'error',
+                    'message' => __('There was an error creating the company. Please try again.'),
+                ]);
         }
     }
 
-    public function update(Request $request, Empresa $empresa)
+    public function update(EmpresaRequest $request, Empresa $empresa)
     {
-        $validated = $request->validate([
-            'razon_social' => 'required|string|max:255',
-            'nombre_comercial' => 'nullable|string|max:255',
-            'documento' => 'required|string|max:255|unique:empresas,documento,'.$empresa->id,
-            'pais_id' => 'nullable|exists:pais,id',
-            'direccion' => 'nullable|string',
-            'latitud' => 'nullable|numeric',
-            'longitud' => 'nullable|numeric',
-            'zona_horaria' => 'nullable|string|max:100',
-            'telefono' => 'nullable|string|max:255',
-            'email' => 'nullable|email|max:255',
-            'representante_legal' => 'nullable|string|max:255',
-            'curp_representante_legal' => 'nullable|string|max:18',
-            'status' => 'boolean',
-        ]);
+        $validated = $request->validated();
 
         try {
             DB::transaction(function () use ($empresa, $validated) {
                 $empresa->update($validated);
             });
+
+            if ($request->expectsJson()) {
+                return response()->json([
+                    'success' => true,
+                    'message' => __('Company updated successfully.'),
+                    'data' => $empresa,
+                ]);
+            }
 
             return back()->with('notification', [
                 'type' => 'success',
@@ -122,18 +124,38 @@ class EmpresaController extends Controller
         } catch (\Exception $e) {
             Log::error("Error al actualizar empresa {$empresa->id}: ".$e->getMessage());
 
-            return back()->with('notification', [
-                'type' => 'error',
-                'message' => __('There was an error updating the company. Please try again.'),
-            ]);
+            if ($request->expectsJson()) {
+                return response()->json([
+                    'success' => false,
+                    'message' => __('There was an error updating the company. Please try again.'),
+                ], 500);
+            }
+
+            return back()
+                ->withInput()
+                ->withErrors(['general' => __('There was an error updating the company. Please try again.')])
+                ->with('notification', [
+                    'type' => 'error',
+                    'message' => __('There was an error updating the company. Please try again.'),
+                ]);
         }
     }
 
-    public function toggleStatus(Empresa $empresa)
+    public function toggleStatus(Request $request, Empresa $empresa)
     {
         try {
-            $empresa->status = ! $empresa->status;
-            $empresa->save();
+            DB::transaction(function () use ($empresa) {
+                $empresa->status = ! $empresa->status;
+                $empresa->save();
+            });
+
+            if ($request->expectsJson()) {
+                return response()->json([
+                    'success' => true,
+                    'message' => __('Status updated successfully.'),
+                    'status' => $empresa->status,
+                ]);
+            }
 
             return back()->with('notification', [
                 'type' => 'success',
@@ -142,10 +164,19 @@ class EmpresaController extends Controller
         } catch (\Exception $e) {
             Log::error("Error al cambiar estado de empresa {$empresa->id}: ".$e->getMessage());
 
-            return back()->with('notification', [
-                'type' => 'error',
-                'message' => __('There was an error updating the status. Please try again.'),
-            ]);
+            if ($request->expectsJson()) {
+                return response()->json([
+                    'success' => false,
+                    'message' => __('There was an error updating the status. Please try again.'),
+                ], 500);
+            }
+
+            return back()
+                ->withErrors(['general' => __('There was an error updating the status. Please try again.')])
+                ->with('notification', [
+                    'type' => 'error',
+                    'message' => __('There was an error updating the status. Please try again.'),
+                ]);
         }
     }
 

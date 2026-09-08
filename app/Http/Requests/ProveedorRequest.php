@@ -17,6 +17,36 @@ class ProveedorRequest extends FormRequest
     }
 
     /**
+     * Prepare inputs for validation (convert empty coordinate strings to null).
+     */
+    protected function prepareForValidation(): void
+    {
+        $sanitizeCoord = function ($value) {
+            if ($value === null) {
+                return null;
+            }
+            if (is_string($value)) {
+                $trimmed = trim($value);
+                if ($trimmed === '' || strcasecmp($trimmed, 'null') === 0 || strcasecmp($trimmed, 'undefined') === 0) {
+                    return null;
+                }
+                if (is_numeric($trimmed)) {
+                    return (float) $trimmed;
+                }
+            }
+            if (is_numeric($value)) {
+                return (float) $value;
+            }
+            return $value;
+        };
+
+        $this->merge([
+            'latitud' => $sanitizeCoord($this->latitud),
+            'longitud' => $sanitizeCoord($this->longitud),
+        ]);
+    }
+
+    /**
      * Get the validation rules that apply to the request.
      */
     public function rules(): array

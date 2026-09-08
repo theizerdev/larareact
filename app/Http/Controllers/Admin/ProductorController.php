@@ -11,6 +11,8 @@ use App\Models\Empresa;
 use App\Models\Sucursal;
 use App\Models\User;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 use Inertia\Inertia;
 
 class ProductorController extends Controller
@@ -86,10 +88,49 @@ class ProductorController extends Controller
         $data['nombre_comercial_rancho'] = $data['nombre_comercial_rancho'] ?? $data['nombre_comercial'];
         $data['documento_identidad'] = $data['documento_identidad'] ?? $data['rfc'] ?? $data['curp'] ?? ('PROD_' . uniqid());
 
-        $productor = AccessCodeService::createWithRetry(fn () => Productor::create($data));
-        $this->enviarCarnetWhatsAppInternal($productor);
+        try {
+            $productor = null;
+            DB::transaction(function () use ($data, &$productor) {
+                $productor = AccessCodeService::createWithRetry(fn () => Productor::create($data));
+            });
 
-        return redirect()->back();
+            // Envío de WhatsApp secundario sin romper persistencia
+            try {
+                $this->enviarCarnetWhatsAppInternal($productor);
+            } catch (\Exception $we) {
+                Log::warning('No se pudo enviar WhatsApp para productor '.$productor->id.': '.$we->getMessage());
+            }
+
+            if ($request->expectsJson()) {
+                return response()->json([
+                    'success' => true,
+                    'message' => __('Producer created successfully'),
+                    'data' => $productor,
+                ], 201);
+            }
+
+            return redirect()->back()->with('notification', [
+                'type' => 'success',
+                'message' => __('Producer created successfully'),
+            ]);
+        } catch (\Exception $e) {
+            Log::error('Error al crear productor: '.$e->getMessage());
+
+            if ($request->expectsJson()) {
+                return response()->json([
+                    'success' => false,
+                    'message' => __('There was an error creating the producer. Please try again.'),
+                ], 500);
+            }
+
+            return redirect()->back()
+                ->withInput()
+                ->withErrors(['general' => __('There was an error creating the producer. Please try again.')])
+                ->with('notification', [
+                    'type' => 'error',
+                    'message' => __('There was an error creating the producer. Please try again.'),
+                ]);
+        }
     }
 
     public function carnet(Productor $productor)
@@ -187,16 +228,96 @@ class ProductorController extends Controller
         $data['nombre_comercial_rancho'] = $data['nombre_comercial_rancho'] ?? $data['nombre_comercial'];
         $data['documento_identidad'] = $data['documento_identidad'] ?? $data['rfc'] ?? $data['curp'] ?? $productor->documento_identidad;
 
-        $productor->update($data);
+        try {
+            DB::transaction(function () use ($productor, $data) {
+                $productor->update($data);
+            });
 
-        return redirect()->back();
+            if ($request->expectsJson()) {
+                return response()->json([
+                    'success' => true,
+                    'message' => __('Producer updated successfully'),
+                    'data' => $productor,
+                ]);
+            }
+
+            return redirect()->back()->with('notification', [
+                'type' => 'success',
+                'message' => __('Producer updated successfully'),
+            ]);
+        } catch (\Exception $e) {
+            Log::error("Error al actualizar productor {$productor->id}: ".$e->getMessage());
+
+            if ($request->expectsJson()) {
+                return response()->json([
+                    'success' => false,
+                    'message' => __('There was an error updating the producer. Please try again.'),
+                ], 500);
+            }
+
+            return redirect()->back()
+                ->withInput()
+                ->withErrors(['general' => __('There was an error updating the producer. Please try again.')])
+                ->with('notification', [
+                    'type' => 'error',
+                    'message' => __('There was an error updating the producer. Please try again.'),
+                ]);
+        }
     }
 
-    public function destroy(Productor $productor)
+    public function destroy(Request $request, Productor $productor)
     {
-        $productor->delete();
+        try {
+            DB::transaction(function () use ($productor) {
+                $productor->delete();
+            });
 
-        return redirect()->back();
+            if ($request->expectsJson()) {
+                return response()->json([
+                    'success' => true,
+                    'message' => __('Producer deleted successfully'),
+                ]);
+            }
+
+            return redirect()->back()->with('notification', [
+                'type' => 'success',
+                'message' => __('Producer deleted successfully'),
+            ]);
+        } catch (\Illuminate\Database\QueryException $e) {
+            Log::error("Restricción al eliminar productor {$productor->id}: ".$e->getMessage());
+
+            $msg = __('No se puede eliminar el productor porque cuenta con colaboradores, vehículos o visitas asociadas.');
+
+            if ($request->expectsJson()) {
+                return response()->json([
+                    'success' => false,
+                    'message' => $msg,
+                ], 409);
+            }
+
+            return redirect()->back()
+                ->withErrors(['general' => $msg])
+                ->with('notification', [
+                    'type' => 'error',
+                    'message' => $msg,
+                ]);
+        } catch (\Exception $e) {
+            Log::error("Error al eliminar productor {$productor->id}: ".$e->getMessage());
+
+            if ($request->expectsJson()) {
+                return response()->json([
+                    'success' => false,
+                    'message' => __('There was an error deleting the producer. Please try again.'),
+                ], 500);
+            }
+
+            return redirect()->back()
+                ->withErrors(['general' => __('There was an error deleting the producer. Please try again.')])
+                ->with('notification', [
+                    'type' => 'error',
+                    'message' => __('There was an error deleting the producer. Please try again.'),
+                ]);
+        }
     }
 
     public function toggleStatus(Request $request, Productor $productor)

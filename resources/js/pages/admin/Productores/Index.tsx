@@ -21,9 +21,12 @@ import {
     Users,
     Send,
     QrCode,
+    Loader2,
 } from 'lucide-react';
 import React, { useState, useEffect, useRef, lazy, Suspense } from 'react';
+import { usePage } from '@inertiajs/react';
 import { toast } from 'sonner';
+import { useLocationGeocoding } from '@/hooks/use-location-geocoding';
 
 import { Breadcrumbs } from '@/components/breadcrumbs';
 import { ModuleHeader } from '@/components/module-header';
@@ -224,8 +227,16 @@ export default function Index({
     const defaultLat = sucursal?.latitud ? Number(sucursal.latitud) : (paises[0]?.latitud ? Number(paises[0].latitud) : 19.9868);
     const defaultLng = sucursal?.longitud ? Number(sucursal.longitud) : (paises[0]?.longitud ? Number(paises[0].longitud) : -102.2839);
 
+    // Setup Geocoding
+    const pageProps = usePage().props as any;
+    const mapboxApiKey = pageProps.mapbox_api_key || pageProps.auth?.user?.empresa?.mapbox_api_key;
+    const { forwardGeocode, isGeocoding } = useLocationGeocoding({
+        mapboxApiKey,
+        debounceMs: 700,
+    });
+
     // Main Productor Form
-    const { data, setData, post, put, reset, errors, processing, clearErrors } = useForm({
+    const { data, setData, post, put, reset, errors, processing, clearErrors, transform } = useForm({
         razon_social: '',
         nombre_comercial: '',
         rfc: '',
@@ -247,6 +258,18 @@ export default function Index({
         sucursal_id: sucursal ? String(sucursal.id) : '',
         user_id: '',
     });
+
+    React.useEffect(() => {
+        transform((raw: Record<string, any>) => ({
+            ...raw,
+            latitud: raw.latitud !== null && raw.latitud !== undefined && (raw.latitud as any) !== '' && !isNaN(Number(raw.latitud))
+                ? Number(raw.latitud)
+                : null,
+            longitud: raw.longitud !== null && raw.longitud !== undefined && (raw.longitud as any) !== '' && !isNaN(Number(raw.longitud))
+                ? Number(raw.longitud)
+                : null,
+        }));
+    }, [transform]);
 
     // Pre-registro Form
     const preRegistroForm = useForm({
@@ -319,19 +342,35 @@ export default function Index({
         e.preventDefault();
         if (editingProductor) {
             put(`/admin/productores/${editingProductor.id}`, {
-                onSuccess: () => {
+                onSuccess: (page: any) => {
+                    const notif = page.props?.notification;
+                    if (notif && notif.type === 'error') {
+                        toast.error(notif.message || __('Error al actualizar productor'));
+                        return;
+                    }
                     setIsCreateModalOpen(false);
                     toast.success(__('Producer updated successfully'));
                 },
-                onError: () => toast.error(__('Please check the form for errors')),
+                onError: (formErrors: any) => {
+                    const msg = formErrors.general || formErrors.error || Object.values(formErrors)[0];
+                    toast.error(typeof msg === 'string' ? msg : __('Please check the form for errors'));
+                },
             });
         } else {
             post('/admin/productores', {
-                onSuccess: () => {
+                onSuccess: (page: any) => {
+                    const notif = page.props?.notification;
+                    if (notif && notif.type === 'error') {
+                        toast.error(notif.message || __('Error al crear productor'));
+                        return;
+                    }
                     setIsCreateModalOpen(false);
                     toast.success(__('Producer created successfully'));
                 },
-                onError: () => toast.error(__('Please check the form for errors')),
+                onError: (formErrors: any) => {
+                    const msg = formErrors.general || formErrors.error || Object.values(formErrors)[0];
+                    toast.error(typeof msg === 'string' ? msg : __('Please check the form for errors'));
+                },
             });
         }
     };
@@ -340,7 +379,12 @@ export default function Index({
     const handlePreRegistroSubmit = (e: React.FormEvent) => {
         e.preventDefault();
         preRegistroForm.post('/admin/productores/pre-registro', {
-            onSuccess: () => {
+            onSuccess: (page: any) => {
+                const notif = page.props?.notification;
+                if (notif && notif.type === 'error') {
+                    toast.error(notif.message || __('Could not send pre-registration invitation'));
+                    return;
+                }
                 setIsPreRegistroModalOpen(false);
                 preRegistroForm.reset();
                 toast.success(__('Producer pre-registration link sent via WhatsApp'));
@@ -353,10 +397,19 @@ export default function Index({
     const handleDelete = () => {
         if (!deletingProductor) return;
         router.delete(`/admin/productores/${deletingProductor.id}`, {
-            onSuccess: () => {
+            onSuccess: (page: any) => {
+                const notif = page.props?.notification;
+                if (notif && notif.type === 'error') {
+                    toast.error(notif.message || __('Error al eliminar productor'));
+                    return;
+                }
                 setIsDeleteModalOpen(false);
                 setDeletingProductor(null);
                 toast.success(__('Producer deleted successfully'));
+            },
+            onError: (deleteErrors: any) => {
+                const msg = deleteErrors.general || deleteErrors.error || Object.values(deleteErrors)[0];
+                toast.error(typeof msg === 'string' ? msg : __('No se pudo eliminar el productor'));
             },
         });
     };
@@ -828,7 +881,16 @@ export default function Index({
                                                 className="mt-1.5 w-full"
                                                 placeholder="ej. Michoacán, Jalisco"
                                                 value={data.estado}
-                                                onChange={(e) => setData('estado', e.target.value)}
+                                                onChange={(e) => {
+                                                    const val = e.target.value;
+                                                    setData('estado', val);
+                                                    if (val.trim().length >= 3) {
+                                                        const p = paises.find((x) => String(x.id) === data.pais_id);
+                                                        forwardGeocode({ estado: val, pais: p?.nombre }).then((r) => {
+                                                            if (r) setData((prev) => ({ ...prev, latitud: r.lat, longitud: r.lng }));
+                                                        });
+                                                    }
+                                                }}
                                             />
                                         </div>
 
@@ -839,7 +901,16 @@ export default function Index({
                                                 className="mt-1.5 w-full"
                                                 placeholder="ej. 59600"
                                                 value={data.codigo_postal}
-                                                onChange={(e) => setData('codigo_postal', e.target.value)}
+                                                onChange={(e) => {
+                                                    const val = e.target.value;
+                                                    setData('codigo_postal', val);
+                                                    if (val.trim().length >= 4) {
+                                                        const p = paises.find((x) => String(x.id) === data.pais_id);
+                                                        forwardGeocode({ codigo_postal: val, estado: data.estado, pais: p?.nombre }).then((r) => {
+                                                            if (r) setData((prev) => ({ ...prev, latitud: r.lat, longitud: r.lng }));
+                                                        });
+                                                    }
+                                                }}
                                             />
                                         </div>
 
@@ -852,14 +923,31 @@ export default function Index({
                                         </div>
 
                                         <div className="md:col-span-2">
-                                            <Label htmlFor="direccion">{__('Dirección Completa del Rancho')}</Label>
+                                            <div className="flex items-center justify-between">
+                                                <Label htmlFor="direccion">{__('Dirección Completa del Rancho')}</Label>
+                                                {isGeocoding && (
+                                                    <span className="text-[11px] text-emerald-600 flex items-center gap-1 font-medium">
+                                                        <Loader2 className="w-3 h-3 animate-spin" />
+                                                        {__('Localizando rancho...')}
+                                                    </span>
+                                                )}
+                                            </div>
                                             <Textarea
                                                 id="direccion"
                                                 rows={2}
                                                 className="mt-1.5 w-full"
                                                 placeholder="ej. Carretera Zamora-Jacona Km 3, cerca de la sucursal"
                                                 value={data.direccion}
-                                                onChange={(e) => setData('direccion', e.target.value)}
+                                                onChange={(e) => {
+                                                    const val = e.target.value;
+                                                    setData('direccion', val);
+                                                    if (val.trim().length >= 4) {
+                                                        const p = paises.find((x) => String(x.id) === data.pais_id);
+                                                        forwardGeocode({ direccion: val, estado: data.estado, codigo_postal: data.codigo_postal, pais: p?.nombre }).then((r) => {
+                                                            if (r) setData((prev) => ({ ...prev, latitud: r.lat, longitud: r.lng }));
+                                                        });
+                                                    }
+                                                }}
                                             />
                                         </div>
                                     </div>
