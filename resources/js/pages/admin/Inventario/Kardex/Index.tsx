@@ -115,7 +115,7 @@ export default function KardexIndexPage({
 
     const breadcrumbs = [
         { title: __('Dashboard'), href: '/admin/dashboard' },
-        { title: __('Inventario'), href: '/admin/productos' },
+        { title: __('Productos'), href: '/admin/productos' },
         { title: __('Kardex de Movimientos'), href: '/admin/inventario/kardex' },
     ];
 

@@ -1025,8 +1025,8 @@ export default function Index({ productos, categorias: categoriasProp, marcas: m
 
     const breadcrumbs = [
         { title: __('Inicio'), href: '/dashboard' },
-        { title: __('Inventario'), href: '/admin/productos' },
-        { title: __('Productos & Variantes') },
+        { title: __('Productos'), href: '/admin/productos' },
+        { title: __('Inventario') },
     ];
 
     const filterFields: FilterField[] = [

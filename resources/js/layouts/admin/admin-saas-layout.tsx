@@ -27,7 +27,7 @@ import {
     MessageSquare,
     Database,
 } from 'lucide-react';
-import { Building2, GitBranch, Briefcase, Calendar, Smartphone, Wallet, Boxes, Calculator, Wrench } from 'lucide-react';
+import { Building2, GitBranch, Briefcase, Calendar, Smartphone, Wallet, Boxes, Calculator, Wrench, Package } from 'lucide-react';
 import * as React from 'react';
 import LanguageToggle from '@/components/language-toggle';
 import TemplateCustomizer from '@/components/template-customizer';
@@ -419,40 +419,84 @@ export default function AdminSaasLayout({
                                         />
                                     ))
                                 }
-                                {/* Equipos Group */}
+                                {/* Punto de Venta Group */}
                                 {(() => {
-                                    const equiposItems = [
+                                    const posItems = [
                                         {
-                                            title: 'Categorías',
-                                            href: '/admin/categorias',
-                                            permission: 'categorias.view',
+                                            title: 'Terminal POS',
+                                            href: '/admin/ventas/terminal',
+                                            permission: 'ventas.terminal',
                                         },
                                         {
-                                            title: 'Marcas',
-                                            href: '/admin/marcas',
-                                            permission: 'marcas.view',
+                                            title: 'Metas de Ventas',
+                                            href: '/admin/pos/metas',
+                                            permission: 'metas.view',
                                         },
                                         {
-                                            title: 'Familias',
-                                            href: '/admin/familias',
-                                            permission: 'familias.view',
+                                            title: 'Historial de Ventas',
+                                            href: '/admin/ventas',
+                                            permission: 'ventas.view',
                                         },
                                         {
-                                            title: 'Modelos',
-                                            href: '/admin/modelos',
-                                            permission: 'modelos.view',
+                                            title: 'Flujo de Caja',
+                                            href: '/admin/cajas',
+                                            permission: 'cajas.view',
+                                        },
+                                        {
+                                            title: 'Clientes',
+                                            href: '/admin/clientes',
+                                            permission: 'clientes.view',
+                                        },
+                                        {
+                                            title: 'Alertas de Stock',
+                                            href: '/admin/stock-alerts',
+                                            permission: 'ventas.view',
                                         },
                                     ].filter(item => hasPermission(item.permission));
 
-                                    if (equiposItems.length === 0) return null;
+                                    if (posItems.length === 0) return null;
 
                                     return (
                                         <div className="pt-2">
                                             <CollapsibleNavItem
-                                                title="Equipos"
-                                                icon={Smartphone}
+                                                title="Punto de Venta"
+                                                icon={Wallet}
                                                 collapsed={collapsed}
-                                                items={equiposItems}
+                                                items={posItems}
+                                            />
+                                        </div>
+                                    );
+                                })()}
+
+                                {/* Productos Group */}
+                                {(() => {
+                                    const productosItems = [
+                                        {
+                                            title: 'Inventario',
+                                            href: '/admin/productos',
+                                            permission: 'productos.view',
+                                        },
+                                        {
+                                            title: 'Ajustes de Stock',
+                                            href: '/admin/inventario/ajustes',
+                                            permission: 'inventario.view',
+                                        },
+                                        {
+                                            title: 'Kardex de Movimientos',
+                                            href: '/admin/inventario/kardex',
+                                            permission: 'inventario.view',
+                                        },
+                                    ].filter(item => hasPermission(item.permission));
+
+                                    if (productosItems.length === 0) return null;
+
+                                    return (
+                                        <div className="pt-2">
+                                            <CollapsibleNavItem
+                                                title="Productos"
+                                                icon={Package}
+                                                collapsed={collapsed}
+                                                items={productosItems}
                                             />
                                         </div>
                                     );
@@ -503,84 +547,40 @@ export default function AdminSaasLayout({
                                     );
                                 })()}
 
-                                {/* Inventario Group */}
+                                {/* Equipos Group */}
                                 {(() => {
-                                    const inventarioItems = [
+                                    const equiposItems = [
                                         {
-                                            title: 'Productos & Catálogo',
-                                            href: '/admin/productos',
-                                            permission: 'productos.view',
+                                            title: 'Categorías',
+                                            href: '/admin/categorias',
+                                            permission: 'categorias.view',
                                         },
                                         {
-                                            title: 'Ajustes de Stock',
-                                            href: '/admin/inventario/ajustes',
-                                            permission: 'inventario.view',
+                                            title: 'Marcas',
+                                            href: '/admin/marcas',
+                                            permission: 'marcas.view',
                                         },
                                         {
-                                            title: 'Kardex de Movimientos',
-                                            href: '/admin/inventario/kardex',
-                                            permission: 'inventario.view',
+                                            title: 'Familias',
+                                            href: '/admin/familias',
+                                            permission: 'familias.view',
+                                        },
+                                        {
+                                            title: 'Modelos',
+                                            href: '/admin/modelos',
+                                            permission: 'modelos.view',
                                         },
                                     ].filter(item => hasPermission(item.permission));
 
-                                    if (inventarioItems.length === 0) return null;
+                                    if (equiposItems.length === 0) return null;
 
                                     return (
                                         <div className="pt-2">
                                             <CollapsibleNavItem
-                                                title="Inventario"
-                                                icon={Boxes}
+                                                title="Equipos"
+                                                icon={Smartphone}
                                                 collapsed={collapsed}
-                                                items={inventarioItems}
-                                            />
-                                        </div>
-                                    );
-                                })()}
-
-                                {/* Punto de Venta Group */}
-                                {(() => {
-                                    const posItems = [
-                                        {
-                                            title: 'Terminal POS',
-                                            href: '/admin/ventas/terminal',
-                                            permission: 'ventas.terminal',
-                                        },
-                                        {
-                                            title: 'Metas de Ventas',
-                                            href: '/admin/pos/metas',
-                                            permission: 'metas.view',
-                                        },
-                                        {
-                                            title: 'Historial de Ventas',
-                                            href: '/admin/ventas',
-                                            permission: 'ventas.view',
-                                        },
-                                        {
-                                            title: 'Flujo de Caja',
-                                            href: '/admin/cajas',
-                                            permission: 'cajas.view',
-                                        },
-                                        {
-                                            title: 'Clientes',
-                                            href: '/admin/clientes',
-                                            permission: 'clientes.view',
-                                        },
-                                        {
-                                            title: 'Alertas de Stock',
-                                            href: '/admin/stock-alerts',
-                                            permission: 'ventas.view',
-                                        },
-                                    ].filter(item => hasPermission(item.permission));
-
-                                    if (posItems.length === 0) return null;
-
-                                    return (
-                                        <div className="pt-2">
-                                            <CollapsibleNavItem
-                                                title="Punto de Venta"
-                                                icon={Wallet}
-                                                collapsed={collapsed}
-                                                items={posItems}
+                                                items={equiposItems}
                                             />
                                         </div>
                                     );

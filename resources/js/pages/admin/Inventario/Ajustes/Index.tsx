@@ -141,7 +141,7 @@ export default function InventoryAdjustmentIndexPage({
 
     const breadcrumbs = [
         { title: __('Dashboard'), href: '/admin/dashboard' },
-        { title: __('Inventario'), href: '/admin/productos' },
+        { title: __('Productos'), href: '/admin/productos' },
         { title: __('Ajustes de Stock'), href: '/admin/inventario/ajustes' },
     ];
 
