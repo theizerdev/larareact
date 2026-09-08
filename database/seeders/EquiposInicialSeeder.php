@@ -4,85 +4,125 @@ namespace Database\Seeders;
 
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
 
 class EquiposInicialSeeder extends Seeder
 {
     public function run(): void
     {
-        $empresas = DB::table('empresas')->get();
+        if (Schema::hasTable('empresas')) {
+            $empresas = DB::table('empresas')->get();
+        } else {
+            // Contexto Multi-Tenant (base de datos dedicada como fixsale_tenant_X)
+            $tenantId = \App\Services\Tenancy\TenantManager::currentTenantId() ?? 1;
+            $empresas = collect([(object) ['id' => $tenantId]]);
+        }
+
         if ($empresas->isEmpty()) {
             return;
         }
 
         foreach ($empresas as $empresa) {
             $empresaId = $empresa->id;
-            $sucursalId = DB::table('sucursales')->where('empresa_id', $empresaId)->value('id') ?? $empresaId;
+
+            // Si existe la tabla sucursales, asegurar que haya una por defecto para la empresa
+            if (Schema::hasTable('sucursales')) {
+                $sucursal = DB::table('sucursales')->where('empresa_id', $empresaId)->first();
+                if (! $sucursal) {
+                    $sucursalId = DB::table('sucursales')->insertGetId([
+                        'empresa_id' => $empresaId,
+                        'nombre' => 'Sucursal Principal',
+                        'status' => true,
+                        'created_at' => now(),
+                        'updated_at' => now(),
+                    ]);
+                } else {
+                    $sucursalId = $sucursal->id;
+                }
+            } else {
+                $sucursalId = 1;
+            }
 
             // Evitar duplicados si ya existen categorías para esta empresa
             if (DB::table('categorias')->where('empresa_id', $empresaId)->exists()) {
                 continue;
             }
 
+            $hasCatSlug = Schema::hasColumn('categorias', 'slug');
+            $hasCatIcono = Schema::hasColumn('categorias', 'icono');
+            $hasCatDesc = Schema::hasColumn('categorias', 'descripcion');
+
             // 1. Categorías
-            $catSmartphoneId = DB::table('categorias')->insertGetId([
+            $catSmartphoneData = [
                 'nombre' => 'Smartphone',
-                'slug' => 'smartphone',
-                'icono' => 'smartphone',
                 'estado' => true,
                 'created_at' => now(),
                 'empresa_id' => $empresaId,
                 'sucursal_id' => $sucursalId,
                 'updated_at' => now(),
-            ]);
+            ];
+            if ($hasCatSlug) $catSmartphoneData['slug'] = 'smartphone';
+            if ($hasCatIcono) $catSmartphoneData['icono'] = 'smartphone';
+            if ($hasCatDesc) $catSmartphoneData['descripcion'] = 'Smartphones y teléfonos inteligentes';
+            $catSmartphoneId = DB::table('categorias')->insertGetId($catSmartphoneData);
 
-            $catTabletId = DB::table('categorias')->insertGetId([
+            $catTabletData = [
                 'nombre' => 'Tablet',
-                'slug' => 'tablet',
-                'icono' => 'tablet',
                 'estado' => true,
                 'created_at' => now(),
                 'empresa_id' => $empresaId,
                 'sucursal_id' => $sucursalId,
                 'updated_at' => now(),
-            ]);
+            ];
+            if ($hasCatSlug) $catTabletData['slug'] = 'tablet';
+            if ($hasCatIcono) $catTabletData['icono'] = 'tablet';
+            if ($hasCatDesc) $catTabletData['descripcion'] = 'Tablets y iPads';
+            $catTabletId = DB::table('categorias')->insertGetId($catTabletData);
 
-            $catWatchId = DB::table('categorias')->insertGetId([
+            $catWatchData = [
                 'nombre' => 'Smartwatch',
-                'slug' => 'smartwatch',
-                'icono' => 'watch',
                 'estado' => true,
                 'created_at' => now(),
                 'empresa_id' => $empresaId,
                 'sucursal_id' => $sucursalId,
                 'updated_at' => now(),
-            ]);
+            ];
+            if ($hasCatSlug) $catWatchData['slug'] = 'smartwatch';
+            if ($hasCatIcono) $catWatchData['icono'] = 'watch';
+            if ($hasCatDesc) $catWatchData['descripcion'] = 'Relojes inteligentes y wearables';
+            $catWatchId = DB::table('categorias')->insertGetId($catWatchData);
 
-        // 2. Marcas
-        $marcas = [
-            'Apple' => 'apple',
-            'Samsung' => 'samsung',
-            'Xiaomi' => 'xiaomi',
-            'Motorola' => 'motorola',
-            'Huawei' => 'huawei',
-            'Honor' => 'honor',
-            'OPPO' => 'oppo',
-            'Realme' => 'realme',
-            'Infinix' => 'infinix',
-            'Tecno' => 'tecno',
-        ];
+            // 2. Marcas
+            $hasMarcaSlug = Schema::hasColumn('marcas', 'slug');
+            $hasMarcaDesc = Schema::hasColumn('marcas', 'descripcion');
 
-        $marcaIds = [];
-        foreach ($marcas as $nombre => $slug) {
-            $marcaIds[$nombre] = DB::table('marcas')->insertGetId([
-                'nombre' => $nombre,
-                'slug' => $slug,
-                'estado' => true,
-                'created_at' => now(),
-                'empresa_id' => $empresaId,
-                'sucursal_id' => $sucursalId,
-                'updated_at' => now(),
-            ]);
-        }
+            $marcas = [
+                'Apple' => 'apple',
+                'Samsung' => 'samsung',
+                'Xiaomi' => 'xiaomi',
+                'Motorola' => 'motorola',
+                'Huawei' => 'huawei',
+                'Honor' => 'honor',
+                'OPPO' => 'oppo',
+                'Realme' => 'realme',
+                'Infinix' => 'infinix',
+                'Tecno' => 'tecno',
+            ];
+
+            $marcaIds = [];
+            foreach ($marcas as $nombre => $slug) {
+                $marcaData = [
+                    'nombre' => $nombre,
+                    'estado' => true,
+                    'created_at' => now(),
+                    'empresa_id' => $empresaId,
+                    'sucursal_id' => $sucursalId,
+                    'updated_at' => now(),
+                ];
+                if ($hasMarcaSlug) $marcaData['slug'] = $slug;
+                if ($hasMarcaDesc) $marcaData['descripcion'] = "Equipos de la marca {$nombre}";
+                $marcaIds[$nombre] = DB::table('marcas')->insertGetId($marcaData);
+            }
 
         // 3. Estructura completa de Familias y Modelos por Marca y Categoría
 

@@ -653,8 +653,8 @@ export default function InventoryAdjustmentIndexPage({
                                         {(data.tipo === 'entrada'
                                             ? MOTIVOS_ENTRADA
                                             : data.tipo === 'salida'
-                                            ? MOTIVOS_SALIDA
-                                            : MOTIVOS_AJUSTE
+                                                ? MOTIVOS_SALIDA
+                                                : MOTIVOS_AJUSTE
                                         ).map((m) => (
                                             <SelectItem key={m} value={m}>
                                                 {m}
