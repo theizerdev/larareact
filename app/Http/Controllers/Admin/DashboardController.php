@@ -35,19 +35,35 @@ class DashboardController extends Controller
             return $this->dashboardTecnico($user);
         }
 
-        $startDate = $request->input('start_date') ? Carbon::parse($request->input('start_date'))->startOfDay() : Carbon::today()->subDays(6)->startOfDay();
-        $endDate = $request->input('end_date') ? Carbon::parse($request->input('end_date'))->endOfDay() : Carbon::now()->endOfDay();
-
         $empresa = $user?->empresa;
         if (!$empresa && $user?->empresa_id) {
             $empresa = \App\Models\Empresa::find($user->empresa_id);
         }
 
-        $pais = $empresa?->pais ?? ($empresa?->pais_id ? \App\Models\Pais::find($empresa->pais_id) : null);
+        $pais = $empresa?->pais ?? $empresa?->paisTelefono ?? ($empresa?->pais_id ? \App\Models\Pais::find($empresa->pais_id) : null);
         $currencySymbol = $pais?->simbolo_moneda ?? '$';
         $currencyCode = $pais?->moneda_principal ?? 'MXN';
 
         $valorDolar = (float) ($empresa?->valor_dolar ?? 20.0);
+
+        // Zona horaria dinámica según la empresa del usuario y su país
+        $timezone = $empresa?->getTimezone() ?? $user?->getTimezone() ?? $pais?->zona_horaria ?? 'America/Mexico_City';
+
+        // Fecha actual en la zona horaria del usuario
+        $nowInTz = Carbon::now($timezone);
+        $todayFormatted = $nowInTz->format('d/m/Y');
+
+        // Rango de fechas del filtro personalizado convertido a UTC para consultar la BD
+        $startDateLocal = $request->input('start_date')
+            ? Carbon::parse($request->input('start_date'), $timezone)->startOfDay()
+            : $nowInTz->copy()->subDays(6)->startOfDay();
+
+        $endDateLocal = $request->input('end_date')
+            ? Carbon::parse($request->input('end_date'), $timezone)->endOfDay()
+            : $nowInTz->copy()->endOfDay();
+
+        $startDateUtc = $startDateLocal->copy()->setTimezone('UTC');
+        $endDateUtc = $endDateLocal->copy()->setTimezone('UTC');
 
         // Active Cash Register of User
         $activeRegister = CashRegister::getActiveRegister();
@@ -71,36 +87,38 @@ class DashboardController extends Controller
             ];
         }
 
-        // Today's Stats
-        $todayStart = Carbon::today()->startOfDay();
-        $todayEnd = Carbon::today()->endOfDay();
+        // Estadísticas de "Hoy": Rango exacto de 00:00:00 a 23:59:59 en la zona horaria de la empresa
+        $todayStartUtc = $nowInTz->copy()->startOfDay()->setTimezone('UTC');
+        $todayEndUtc = $nowInTz->copy()->endOfDay()->setTimezone('UTC');
 
         $todaySalesQuery = Sale::where('estado', 'completada')
-            ->whereBetween('created_at', [$todayStart, $todayEnd]);
+            ->whereBetween('created_at', [$todayStartUtc, $todayEndUtc]);
 
         $todayTotalMXN = (float) (clone $todaySalesQuery)->sum('total');
         $todayCount = (clone $todaySalesQuery)->count();
         $todayAverageTicket = $todayCount > 0 ? $todayTotalMXN / $todayCount : 0;
 
-        // Today USD Payments collected
-        $todayUSDPaymentsSumMXN = (float) SalePayment::whereHas('sale', function ($q) use ($todayStart, $todayEnd) {
-            $q->where('estado', 'completada')->whereBetween('created_at', [$todayStart, $todayEnd]);
+        // Today USD Payments collected en la zona horaria de la empresa
+        $todayUSDPaymentsSumMXN = (float) SalePayment::whereHas('sale', function ($q) use ($todayStartUtc, $todayEndUtc) {
+            $q->where('estado', 'completada')->whereBetween('created_at', [$todayStartUtc, $todayEndUtc]);
         })->where('metodo_pago', 'dolar')->sum('monto');
         $todayTotalUSD = $valorDolar > 0 ? $todayUSDPaymentsSumMXN / $valorDolar : 0;
 
         // Date Range Sales Query
         $rangeSales = Sale::where('estado', 'completada')
-            ->whereBetween('created_at', [$startDate, $endDate])
+            ->whereBetween('created_at', [$startDateUtc, $endDateUtc])
             ->get();
 
         $rangeTotal = (float) $rangeSales->sum('total');
         $rangeCount = $rangeSales->count();
 
-        // 1. Sales Trend Chart (Grouped by Date with continuous daily timeline)
+        // 1. Sales Trend Chart (Grouped by Date with continuous daily timeline in local timezone)
+        $offset = $nowInTz->format('P'); // Ej: -06:00 o -04:00
+
         $trendData = Sale::where('estado', 'completada')
-            ->whereBetween('created_at', [$startDate, $endDate])
+            ->whereBetween('created_at', [$startDateUtc, $endDateUtc])
             ->select(
-                DB::raw('DATE(created_at) as date'),
+                DB::raw("DATE(CONVERT_TZ(created_at, '+00:00', '{$offset}')) as date"),
                 DB::raw('SUM(total) as total_sales'),
                 DB::raw('COUNT(id) as total_orders')
             )
@@ -113,8 +131,8 @@ class DashboardController extends Controller
         $chartTotals = [];
         $chartOrders = [];
 
-        $currentDate = (clone $startDate)->startOfDay();
-        $targetEndDate = (clone $endDate)->startOfDay();
+        $currentDate = $startDateLocal->copy()->startOfDay();
+        $targetEndDate = $endDateLocal->copy()->startOfDay();
 
         while ($currentDate->lte($targetEndDate)) {
             $dateStr = $currentDate->format('Y-m-d');
@@ -128,8 +146,8 @@ class DashboardController extends Controller
         }
 
         // 2. Payment Methods Breakdown Chart (Range)
-        $paymentsBreakdown = SalePayment::whereHas('sale', function ($q) use ($startDate, $endDate) {
-            $q->where('estado', 'completada')->whereBetween('created_at', [$startDate, $endDate]);
+        $paymentsBreakdown = SalePayment::whereHas('sale', function ($q) use ($startDateUtc, $endDateUtc) {
+            $q->where('estado', 'completada')->whereBetween('created_at', [$startDateUtc, $endDateUtc]);
         })
         ->select('metodo_pago', DB::raw('SUM(monto) as total'))
         ->groupBy('metodo_pago')
@@ -151,8 +169,8 @@ class DashboardController extends Controller
         }
 
         // 3. Top 5 Best Selling Items
-        $topItems = SaleItem::whereHas('sale', function ($q) use ($startDate, $endDate) {
-            $q->where('estado', 'completada')->whereBetween('created_at', [$startDate, $endDate]);
+        $topItems = SaleItem::whereHas('sale', function ($q) use ($startDateUtc, $endDateUtc) {
+            $q->where('estado', 'completada')->whereBetween('created_at', [$startDateUtc, $endDateUtc]);
         })
         ->select('nombre', DB::raw('SUM(cantidad) as total_qty'), DB::raw('SUM(subtotal) as total_amount'))
         ->groupBy('nombre')
@@ -188,9 +206,11 @@ class DashboardController extends Controller
             'currencySymbol' => $currencySymbol,
             'currencyCode' => $currencyCode,
             'valorDolar' => $valorDolar,
+            'todayDate' => $todayFormatted,
+            'timezone' => $timezone,
             'filters' => [
-                'start_date' => $startDate->format('Y-m-d'),
-                'end_date' => $endDate->format('Y-m-d'),
+                'start_date' => $startDateLocal->format('Y-m-d'),
+                'end_date' => $endDateLocal->format('Y-m-d'),
             ],
             'todayStats' => [
                 'total_mxn' => $todayTotalMXN,

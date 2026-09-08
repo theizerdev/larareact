@@ -16,6 +16,7 @@ use App\Models\Servicio;
 use App\Models\OrdenReparacion;
 use App\Services\CashRegisterService;
 use App\Services\SaleService;
+use Carbon\Carbon;
 use Illuminate\Http\Request;
 
 class SaleController extends Controller
@@ -30,11 +31,9 @@ class SaleController extends Controller
             $empresa = Empresa::find($user->empresa_id);
         }
 
-        if ($empresa && $empresa->pais_id) {
-            $pais = Pais::find($empresa->pais_id);
-            if ($pais && !empty($pais->simbolo_moneda)) {
-                return $pais->simbolo_moneda;
-            }
+        $pais = $empresa?->pais ?? $empresa?->paisTelefono ?? ($empresa?->pais_id ? Pais::find($empresa->pais_id) : null);
+        if ($pais && !empty($pais->simbolo_moneda)) {
+            return $pais->simbolo_moneda;
         }
 
         return '$';
@@ -279,7 +278,10 @@ class SaleController extends Controller
         if ($scope === 'shift' && $cashRegisterId) {
             $query->where('cash_register_id', $cashRegisterId);
         } elseif ($scope === 'today') {
-            $query->whereDate('created_at', now()->toDateString());
+            $tz = auth()->user()?->getTimezone() ?? 'America/Mexico_City';
+            $todayStart = Carbon::now($tz)->startOfDay()->setTimezone('UTC');
+            $todayEnd = Carbon::now($tz)->endOfDay()->setTimezone('UTC');
+            $query->whereBetween('created_at', [$todayStart, $todayEnd]);
         } elseif ($cashRegisterId && $scope !== 'all') {
             $query->where('cash_register_id', $cashRegisterId);
         }

@@ -137,6 +137,27 @@ class Empresa extends Model
         return $this->belongsTo(Pais::class, 'pais_telefono_id');
     }
 
+    /**
+     * Obtiene la zona horaria dinámica de la empresa:
+     * 1. Directamente configurada en la empresa (zona_horaria)
+     * 2. Del país principal de la empresa (pais->zona_horaria)
+     * 3. Del país telefónico vinculado (paisTelefono->zona_horaria)
+     * 4. Valor predeterminado de la aplicación
+     */
+    public function getTimezone(): string
+    {
+        if (! empty($this->zona_horaria)) {
+            return $this->zona_horaria;
+        }
+
+        $pais = $this->pais ?? $this->paisTelefono;
+        if ($pais && ! empty($pais->zona_horaria)) {
+            return $pais->zona_horaria;
+        }
+
+        return config('app.timezone', 'America/Mexico_City');
+    }
+
     public function sucursales(): HasMany
     {
         return $this->hasMany(Sucursal::class, 'empresa_id');
@@ -303,5 +324,4 @@ class Empresa extends Model
     {
         return bin2hex(random_bytes(32));
     }
-   
 }

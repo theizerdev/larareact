@@ -61,6 +61,8 @@ interface Props {
     currencySymbol?: string;
     currencyCode?: string;
     valorDolar: number;
+    todayDate?: string;
+    timezone?: string;
     filters: {
         start_date: string;
         end_date: string;
@@ -102,6 +104,8 @@ export default function AdminDashboard({
     currencySymbol = '$',
     currencyCode = 'MXN',
     valorDolar = 20.0,
+    todayDate,
+    timezone,
     filters,
     todayStats,
     rangeStats,
@@ -316,7 +320,7 @@ export default function AdminDashboard({
                 <div className="space-y-2">
                     <h2 className="text-xs font-black uppercase tracking-wider text-muted-foreground flex items-center gap-1.5">
                         <Activity className="w-4 h-4 text-emerald-600" />
-                        {__('Generado Hoy')} ({new Date().toLocaleDateString()})
+                        {__('Generado Hoy')} ({todayDate || new Date().toLocaleDateString()})
                     </h2>
 
                     <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
