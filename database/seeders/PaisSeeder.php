@@ -54,12 +54,9 @@ class PaisSeeder extends Seeder
             ],
         ];
 
-        // Eliminar países que no sean México o Venezuela (verificado previamente que no tienen dependencias)
-        Pais::whereNotIn('codigo_iso2', ['MX', 'VE'])->delete();
-
-        // Insertar o actualizar México y Venezuela
+        // Insertar México y Venezuela únicamente si no existen
         foreach ($paises as $pais) {
-            Pais::updateOrCreate(
+            Pais::firstOrCreate(
                 ['codigo_iso2' => $pais['codigo_iso2']],
                 $pais
             );
