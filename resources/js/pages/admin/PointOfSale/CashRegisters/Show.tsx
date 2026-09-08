@@ -937,7 +937,7 @@ export default function Show({ caja, summary }: Props) {
             </div>
 
             {/* FORMATO TICKET DE IMPRESIÓN PARA TICKETERA POS (80MM / ARQUEO CORTE Z) */}
-            <div id="printable-arqueo-ticket" className="hidden print:block text-black bg-white font-mono p-2 text-xs w-[80mm] max-w-[80mm] mx-auto">
+            <div id="printable-arqueo-ticket" className="hidden print:block text-black bg-white font-mono font-bold p-2 text-xs w-[80mm] max-w-[80mm] mx-auto">
                 <style>{`
                     @media print {
                         body * {
@@ -945,6 +945,10 @@ export default function Show({ caja, summary }: Props) {
                         }
                         #printable-arqueo-ticket, #printable-arqueo-ticket * {
                             visibility: visible !important;
+                            font-weight: 700 !important;
+                            color: #000000 !important;
+                            -webkit-print-color-adjust: exact !important;
+                            print-color-adjust: exact !important;
                         }
                         #printable-arqueo-ticket {
                             position: absolute !important;
@@ -954,10 +958,15 @@ export default function Show({ caja, summary }: Props) {
                             max-width: 80mm !important;
                             margin: 0 !important;
                             padding: 4mm !important;
-                            background: white !important;
-                            color: black !important;
+                            background: #ffffff !important;
+                            color: #000000 !important;
                             font-family: 'Courier New', Courier, monospace, sans-serif !important;
-                            font-size: 11px !important;
+                            font-size: 13px !important;
+                            line-height: 1.3 !important;
+                        }
+                        #printable-arqueo-ticket .font-black,
+                        #printable-arqueo-ticket .font-extrabold {
+                            font-weight: 900 !important;
                         }
                         @page {
                             size: 80mm auto;
@@ -975,59 +984,59 @@ export default function Show({ caja, summary }: Props) {
                             className="h-10 max-w-[160px] mx-auto object-contain mb-1"
                         />
                     ) : (
-                        <div className="font-black text-sm uppercase">{empresa?.razon_social || 'Servitec POS'}</div>
+                        <div className="font-black text-base uppercase">{empresa?.razon_social || 'Servitec POS'}</div>
                     )}
                 </div>
 
                 {empresa?.razon_social && (
-                    <div className="text-center font-bold text-[10px] uppercase">{empresa.razon_social}</div>
+                    <div className="text-center font-black text-xs uppercase tracking-wide">{empresa.razon_social}</div>
                 )}
                 {empresa?.documento && (
-                    <div className="text-center text-[9px] font-mono">{empresa.documento}</div>
+                    <div className="text-center text-[11px] font-bold font-mono text-black">{empresa.documento}</div>
                 )}
-                <div className="text-center text-[9px] text-gray-700">
+                <div className="text-center text-[11px] font-bold text-black">
                     {empresa?.telefono ? `Tel: ${empresa.telefono}` : ''} {empresa?.email ? ` | ${empresa.email}` : ''}
                 </div>
                 {empresa?.direccion && (
-                    <div className="text-center text-[8px] text-gray-600">{empresa.direccion}</div>
+                    <div className="text-center text-[10.5px] font-bold text-black leading-tight">{empresa.direccion}</div>
                 )}
 
-                <div className="border-b border-dashed border-black my-1"></div>
-                <div className="text-center font-bold uppercase text-[11px] tracking-wider">
+                <div className="border-b-2 border-dashed border-black my-1.5"></div>
+                <div className="text-center font-black uppercase text-sm tracking-wider py-0.5">
                     {caja.status === 'closed' ? __('COMPROBANTE DE CORTE Z') : __('ARQUEO PARCIAL DE CAJA')}
                 </div>
-                <div className="border-b border-dashed border-black my-1"></div>
+                <div className="border-b-2 border-dashed border-black my-1.5"></div>
 
-                <div className="space-y-0.5 text-[10px]">
+                <div className="space-y-1 text-xs font-bold">
                     <div className="flex justify-between">
                         <span>CAJA #:</span>
-                        <span className="font-bold">#{caja.id}</span>
+                        <span className="font-black">#{caja.id}</span>
                     </div>
                     <div className="flex justify-between">
                         <span>CAJERO:</span>
-                        <span>{caja.user?.name}</span>
+                        <span className="font-bold">{caja.user?.name}</span>
                     </div>
                     <div className="flex justify-between">
                         <span>APERTURA:</span>
-                        <span>{new Date(caja.opened_at).toLocaleString()}</span>
+                        <span className="font-bold">{new Date(caja.opened_at).toLocaleString()}</span>
                     </div>
                     {caja.closed_at && (
                         <div className="flex justify-between">
                             <span>CIERRE:</span>
-                            <span>{new Date(caja.closed_at).toLocaleString()}</span>
+                            <span className="font-bold">{new Date(caja.closed_at).toLocaleString()}</span>
                         </div>
                     )}
                     <div className="flex justify-between">
                         <span>FECHA IMPRESIÓN:</span>
-                        <span>{new Date().toLocaleString()}</span>
+                        <span className="font-bold">{new Date().toLocaleString()}</span>
                     </div>
                 </div>
 
-                <div className="border-b border-dashed border-black my-1"></div>
-                <div className="text-center font-bold text-[10px] uppercase">{__('RESUMEN DE FLUJO')}</div>
-                <div className="border-b border-dashed border-black my-1"></div>
+                <div className="border-b-2 border-dashed border-black my-1.5"></div>
+                <div className="text-center font-black text-xs uppercase tracking-wide">{__('RESUMEN DE FLUJO')}</div>
+                <div className="border-b-2 border-dashed border-black my-1.5"></div>
 
-                <div className="space-y-1 text-[10px]">
+                <div className="space-y-1 text-xs font-bold">
                     <div className="flex justify-between">
                         <span>Fondo Inicial:</span>
                         <span>{currencySymbol}{(caja.opening_amount ?? 0).toFixed(2)}</span>
@@ -1040,7 +1049,7 @@ export default function Show({ caja, summary }: Props) {
                         <span>Total Salidas (-):</span>
                         <span>-{currencySymbol}{(summary.outflows ?? 0).toFixed(2)}</span>
                     </div>
-                    <div className="flex justify-between font-bold border-t border-dotted border-black pt-1">
+                    <div className="flex justify-between font-black text-sm border-t-2 border-dashed border-black pt-1 mt-1">
                         <span>Dinero Esperado:</span>
                         <span>{currencySymbol}{(expectedAmount ?? 0).toFixed(2)}</span>
                     </div>
@@ -1049,14 +1058,14 @@ export default function Show({ caja, summary }: Props) {
                 {/* DESGLOSE POR FORMA DE PAGO */}
                 {summary.by_payment_method && Object.keys(summary.by_payment_method).length > 0 && (
                     <>
-                        <div className="border-b border-dashed border-black my-1"></div>
-                        <div className="text-center font-bold text-[10px] uppercase">{__('DESGLOSE FORMAS DE PAGO')}</div>
-                        <div className="border-b border-dashed border-black my-1"></div>
-                        <div className="space-y-1 text-[10px]">
+                        <div className="border-b-2 border-dashed border-black my-1.5"></div>
+                        <div className="text-center font-black text-xs uppercase tracking-wide">{__('DESGLOSE FORMAS DE PAGO')}</div>
+                        <div className="border-b-2 border-dashed border-black my-1.5"></div>
+                        <div className="space-y-1 text-xs font-bold">
                             {Object.entries(summary.by_payment_method).map(([method, val]) => (
                                 <div key={method} className="flex justify-between">
-                                    <span className="capitalize">{formatMetodoPagoLabel(method)}:</span>
-                                    <span className="font-mono font-bold">{currencySymbol}{val.net.toFixed(2)}</span>
+                                    <span className="capitalize font-bold">{formatMetodoPagoLabel(method)}:</span>
+                                    <span className="font-mono font-black">{currencySymbol}{val.net.toFixed(2)}</span>
                                 </div>
                             ))}
                         </div>
@@ -1066,19 +1075,19 @@ export default function Show({ caja, summary }: Props) {
                 {/* RESULTADO DEL ARQUEO DE CIERRE */}
                 {caja.status === 'closed' && (
                     <>
-                        <div className="border-b border-dashed border-black my-1"></div>
-                        <div className="text-center font-bold text-[10px] uppercase">{__('RESULTADO DEL ARQUEO')}</div>
-                        <div className="border-b border-dashed border-black my-1"></div>
-                        <div className="space-y-1 text-[10px]">
+                        <div className="border-b-2 border-dashed border-black my-1.5"></div>
+                        <div className="text-center font-black text-xs uppercase tracking-wide">{__('RESULTADO DEL ARQUEO')}</div>
+                        <div className="border-b-2 border-dashed border-black my-1.5"></div>
+                        <div className="space-y-1 text-xs font-bold">
                             <div className="flex justify-between">
                                 <span>Esperado Sistema:</span>
-                                <span>{currencySymbol}{(caja.expected_amount ?? expectedAmount).toFixed(2)}</span>
+                                <span className="font-bold">{currencySymbol}{(caja.expected_amount ?? expectedAmount).toFixed(2)}</span>
                             </div>
                             <div className="flex justify-between font-bold">
                                 <span>Total Contado:</span>
-                                <span>{currencySymbol}{(caja.counted_amount ?? 0).toFixed(2)}</span>
+                                <span className="font-bold">{currencySymbol}{(caja.counted_amount ?? 0).toFixed(2)}</span>
                             </div>
-                            <div className="flex justify-between font-bold">
+                            <div className="flex justify-between font-black text-sm pt-0.5">
                                 <span>Diferencia:</span>
                                 <span>
                                     {(caja.difference ?? 0) >= 0 ? '+' : ''}{currencySymbol}{(caja.difference ?? 0).toFixed(2)}
@@ -1088,14 +1097,14 @@ export default function Show({ caja, summary }: Props) {
                     </>
                 )}
 
-                <div className="border-b border-dashed border-black my-2"></div>
+                <div className="border-b-2 border-dashed border-black my-2"></div>
 
-                <div className="text-center text-[10px] space-y-4 pt-2">
+                <div className="text-center text-xs font-bold space-y-3 pt-2">
                     <div>
-                        <p>_____________________________________</p>
-                        <p className="mt-1 font-bold">{__('Firma Cajero')}: {caja.user?.name}</p>
+                        <p className="font-bold tracking-widest">_____________________________________</p>
+                        <p className="mt-1.5 font-black text-xs uppercase">{__('Firma Cajero')}: {caja.user?.name}</p>
                     </div>
-                    <p className="text-[9px] italic">{__('Comprobante generado desde Servitec POS')}</p>
+                    <p className="text-[10.5px] font-bold italic">{__('Comprobante generado desde Servitec POS')}</p>
                 </div>
             </div>
         </>
