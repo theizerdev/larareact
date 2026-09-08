@@ -8,6 +8,8 @@ use Illuminate\Support\Facades\Route;
 Route::middleware(['verified'])->group(function () {
     Route::post('reparaciones/quick-cliente', [ReparacionController::class, 'storeCliente'])
         ->name('reparaciones.quick-cliente');
+    Route::post('reparaciones/quick-categoria', [ReparacionController::class, 'storeCategoria'])
+        ->name('reparaciones.quick-categoria');
     Route::post('reparaciones/quick-marca', [ReparacionController::class, 'storeMarca'])
         ->name('reparaciones.quick-marca');
     Route::post('reparaciones/quick-modelo', [ReparacionController::class, 'storeModelo'])

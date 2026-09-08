@@ -310,6 +310,7 @@ export default function CreateReparacion({ clientes: initialClientes, marcas: in
 
     const [clientesList, setClientesList] = useState<Cliente[]>(initialClientes || []);
     const [marcasList, setMarcasList] = useState<MarcaItem[]>(initialMarcas || []);
+    const [categoriasList, setCategoriasList] = useState<CategoriaItem[]>(categorias || []);
 
     // Búsqueda en tiempo real de Tipo de Dispositivo / Categoría (Select2 style)
     const [searchCategoriaTerm, setSearchCategoriaTerm] = useState('');
@@ -339,7 +340,11 @@ export default function CreateReparacion({ clientes: initialClientes, marcas: in
     });
     const [isCreatingClient, setIsCreatingClient] = useState(false);
 
-    // Modales de Marca y Modelo
+    // Modales de Categoría, Marca y Modelo
+    const [openNewCategoriaModal, setOpenNewCategoriaModal] = useState(false);
+    const [newCategoriaNombre, setNewCategoriaNombre] = useState('');
+    const [isCreatingCategoria, setIsCreatingCategoria] = useState(false);
+
     const [openNewMarcaModal, setOpenNewMarcaModal] = useState(false);
     const [newMarcaNombre, setNewMarcaNombre] = useState('');
     const [isCreatingMarca, setIsCreatingMarca] = useState(false);
@@ -667,7 +672,7 @@ export default function CreateReparacion({ clientes: initialClientes, marcas: in
     }, []);
 
     // Encontrar ID de categoría si coincide con el texto de tipo_dispositivo
-    const activeCategoriaId = categorias.find(
+    const activeCategoriaId = categoriasList.find(
         (c) => c.nombre.toLowerCase().trim() === (data.tipo_dispositivo || '').toLowerCase().trim()
     )?.id;
 
@@ -740,7 +745,7 @@ export default function CreateReparacion({ clientes: initialClientes, marcas: in
     });
 
     // Categorías filtradas por la búsqueda rápida (Select2)
-    const categoriasFiltradas = categorias.filter((cat) => {
+    const categoriasFiltradas = categoriasList.filter((cat) => {
         if (!searchCategoriaTerm || searchCategoriaTerm.trim() === '') return true;
         return cat.nombre.toLowerCase().includes(searchCategoriaTerm.toLowerCase().trim());
     });
@@ -883,6 +888,38 @@ export default function CreateReparacion({ clientes: initialClientes, marcas: in
             notifyError(__('Ocurrió un error al registrar el cliente.'));
         } finally {
             setIsCreatingClient(false);
+        }
+    };
+
+    const handleCreateNewCategoria = async (e?: React.SyntheticEvent) => {
+        if (e) {
+            e.preventDefault();
+            e.stopPropagation();
+        }
+        if (!newCategoriaNombre.trim()) return;
+
+        setIsCreatingCategoria(true);
+        try {
+            const dataRes = await postJson('/admin/reparaciones/quick-categoria', { nombre: newCategoriaNombre.trim() });
+            if (dataRes.success) {
+                const newCategoria: CategoriaItem = dataRes.categoria;
+                setCategoriasList((prev) => {
+                    const exists = prev.some((c) => c.id === newCategoria.id);
+                    return exists ? prev : [...prev, newCategoria];
+                });
+                setData('tipo_dispositivo', newCategoria.nombre);
+                setSearchCategoriaTerm(newCategoria.nombre);
+                setOpenNewCategoriaModal(false);
+                setNewCategoriaNombre('');
+                setIsCategoriaDropdownOpen(false);
+                notifySuccess(__('Nueva categoría registrada exitosamente.'));
+            } else {
+                notifyError(__('Ocurrió un error al registrar la categoría.'));
+            }
+        } catch (error) {
+            notifyError(__('Ocurrió un error al registrar la categoría.'));
+        } finally {
+            setIsCreatingCategoria(false);
         }
     };
 
@@ -1099,14 +1136,15 @@ export default function CreateReparacion({ clientes: initialClientes, marcas: in
     };
 
     const costoEstimadoNum = Number(data.costo_estimado || 0);
-    const anticipoNum = Number(data.anticipo || 0);
-    const saldoRestanteNum = Math.max(0, costoEstimadoNum - anticipoNum);
+    const anticipoNum = 0;
+    const saldoRestanteNum = costoEstimadoNum;
 
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
 
         transform((prevData) => ({
             ...prevData,
+            anticipo: '0',
             servicios_seleccionados: cartServicios,
             inspeccion_json: {
                 tipo_bloqueo: tipoSeguridad === 'patron' ? 'patron' : tipoSeguridad === 'pin_contrasena' ? 'pin' : 'sin_bloqueo',
@@ -1326,7 +1364,38 @@ export default function CreateReparacion({ clientes: initialClientes, marcas: in
                                     <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
                                         {/* CATEGORÍA */}
                                         <div ref={categoriaRef} className="relative">
-                                            <Label className="text-[11px] font-bold text-slate-700 dark:text-slate-300">{__('Tipo / Categoría *')}</Label>
+                                            <div className="flex items-center justify-between">
+                                                <Label className="text-[11px] font-bold text-slate-700 dark:text-slate-300">{__('Tipo / Categoría *')}</Label>
+                                                <Dialog open={openNewCategoriaModal} onOpenChange={setOpenNewCategoriaModal}>
+                                                    <DialogTrigger asChild>
+                                                        <button type="button" className="text-[9px] font-bold text-purple-600 hover:underline">+ Crear</button>
+                                                    </DialogTrigger>
+                                                    <DialogContent className="sm:max-w-md">
+                                                        <DialogHeader>
+                                                            <DialogTitle className="flex items-center gap-2 text-base font-bold text-slate-900 dark:text-slate-100">
+                                                                <Layers className="w-5 h-5 text-purple-600" />
+                                                                {__('Crear Nueva Categoría')}
+                                                            </DialogTitle>
+                                                        </DialogHeader>
+                                                        <div className="space-y-3 py-2 text-xs">
+                                                            <div>
+                                                                <Label className="text-xs font-semibold">{__('Nombre de la Categoría *')}</Label>
+                                                                <Input
+                                                                    value={newCategoriaNombre}
+                                                                    onChange={(e) => setNewCategoriaNombre(e.target.value)}
+                                                                    placeholder={__('ej: Smartphone, Laptop, Consola de Videojuegos')}
+                                                                    className="text-xs h-8 mt-1"
+                                                                />
+                                                            </div>
+                                                            <div className="flex items-center justify-end gap-2 pt-2 border-t border-slate-100 dark:border-slate-800">
+                                                                <Button type="button" variant="outline" size="sm" onClick={() => setOpenNewCategoriaModal(false)} className="h-8 text-xs">{__('Cancelar')}</Button>
+                                                                <Button type="button" onClick={(e) => handleCreateNewCategoria(e)} disabled={isCreatingCategoria} size="sm" className="h-8 text-xs font-bold bg-purple-600 hover:bg-purple-700 text-white">{__('Guardar Categoría')}</Button>
+                                                            </div>
+                                                        </div>
+                                                    </DialogContent>
+                                                </Dialog>
+                                            </div>
+
                                             <div className="relative mt-0.5">
                                                 <Input
                                                     value={isCategoriaDropdownOpen ? searchCategoriaTerm : data.tipo_dispositivo}
@@ -1355,25 +1424,58 @@ export default function CreateReparacion({ clientes: initialClientes, marcas: in
                                             {isCategoriaDropdownOpen && (
                                                 <div className="absolute left-0 right-0 z-50 mt-1 max-h-48 overflow-y-auto bg-white dark:bg-slate-900 rounded-lg border border-slate-200 dark:border-slate-800 shadow-xl divide-y divide-slate-100 dark:divide-slate-800">
                                                     {categoriasFiltradas.length > 0 ? (
-                                                        categoriasFiltradas.map((cat) => (
-                                                            <button
-                                                                key={cat.id}
-                                                                type="button"
-                                                                onClick={() => {
-                                                                    setData('tipo_dispositivo', cat.nombre);
-                                                                    setSearchCategoriaTerm(cat.nombre);
-                                                                    setIsCategoriaDropdownOpen(false);
-                                                                }}
-                                                                className={cn(
-                                                                    'w-full px-3 py-1.5 text-left text-xs flex items-center justify-between transition-colors',
-                                                                    data.tipo_dispositivo === cat.nombre ? 'bg-purple-50 dark:bg-purple-950/50 text-purple-700 font-bold' : 'hover:bg-slate-50 dark:hover:bg-slate-800 text-slate-800 dark:text-slate-200'
-                                                                )}
-                                                            >
-                                                                <span>{cat.nombre}</span>
-                                                            </button>
-                                                        ))
+                                                        <>
+                                                            {categoriasFiltradas.map((cat) => (
+                                                                <button
+                                                                    key={cat.id}
+                                                                    type="button"
+                                                                    onClick={() => {
+                                                                        setData('tipo_dispositivo', cat.nombre);
+                                                                        setSearchCategoriaTerm(cat.nombre);
+                                                                        setIsCategoriaDropdownOpen(false);
+                                                                    }}
+                                                                    className={cn(
+                                                                        'w-full px-3 py-1.5 text-left text-xs flex items-center justify-between transition-colors',
+                                                                        data.tipo_dispositivo === cat.nombre ? 'bg-purple-50 dark:bg-purple-950/50 text-purple-700 font-bold' : 'hover:bg-slate-50 dark:hover:bg-slate-800 text-slate-800 dark:text-slate-200'
+                                                                    )}
+                                                                >
+                                                                    <span>{cat.nombre}</span>
+                                                                </button>
+                                                            ))}
+                                                            {searchCategoriaTerm.trim() !== '' && !categoriasFiltradas.some(c => c.nombre.toLowerCase().trim() === searchCategoriaTerm.toLowerCase().trim()) && (
+                                                                <div className="p-2 text-[10px] text-center text-slate-400 bg-slate-50/50 dark:bg-slate-800/30">
+                                                                    <button
+                                                                        type="button"
+                                                                        onClick={() => {
+                                                                            setNewCategoriaNombre(searchCategoriaTerm);
+                                                                            setOpenNewCategoriaModal(true);
+                                                                            setIsCategoriaDropdownOpen(false);
+                                                                        }}
+                                                                        className="text-purple-600 font-bold hover:underline"
+                                                                    >
+                                                                        + Crear "{searchCategoriaTerm}"
+                                                                    </button>
+                                                                </div>
+                                                            )}
+                                                        </>
                                                     ) : (
-                                                        <div className="p-2 text-[10px] text-slate-400 text-center">{__('Sin resultados. Se usará el texto ingresado.')}</div>
+                                                        <div className="p-2 text-[10px] text-center text-slate-400">
+                                                            {searchCategoriaTerm && searchCategoriaTerm.trim() ? (
+                                                                <button
+                                                                    type="button"
+                                                                    onClick={() => {
+                                                                        setNewCategoriaNombre(searchCategoriaTerm);
+                                                                        setOpenNewCategoriaModal(true);
+                                                                        setIsCategoriaDropdownOpen(false);
+                                                                    }}
+                                                                    className="text-purple-600 font-bold hover:underline"
+                                                                >
+                                                                    + Crear "{searchCategoriaTerm}"
+                                                                </button>
+                                                            ) : (
+                                                                <span>{__('Sin resultados. Se usará el texto ingresado.')}</span>
+                                                            )}
+                                                        </div>
                                                     )}
                                                 </div>
                                             )}
@@ -1867,17 +1969,26 @@ export default function CreateReparacion({ clientes: initialClientes, marcas: in
                                         </div>
 
                                         <div>
-                                            <Label className="text-[10px] font-bold text-slate-700 dark:text-slate-300">{__('Anticipo / Adelanto')}</Label>
+                                            <div className="flex items-center justify-between">
+                                                <Label className="text-[10px] font-bold text-slate-700 dark:text-slate-300">{__('Anticipo / Adelanto')}</Label>
+                                                <span className="text-[9px] font-semibold text-purple-600 bg-purple-50 dark:bg-purple-950/50 px-1.5 py-0.5 rounded border border-purple-200 dark:border-purple-800">
+                                                    {__('Cobro en POS')}
+                                                </span>
+                                            </div>
                                             <div className="relative mt-0.5">
-                                                <span className="absolute left-2.5 top-2 text-xs font-mono font-bold text-emerald-600">{currencySymbol}</span>
+                                                <span className="absolute left-2.5 top-2 text-xs font-mono font-bold text-slate-400">{currencySymbol}</span>
                                                 <Input
                                                     type="number"
-                                                    step="0.01"
-                                                    value={data.anticipo}
-                                                    onChange={(e) => setData('anticipo', e.target.value)}
-                                                    className="text-xs h-8 pl-6 font-mono font-bold text-emerald-600"
+                                                    disabled
+                                                    value="0"
+                                                    readOnly
+                                                    className="text-xs h-8 pl-6 font-mono font-bold bg-slate-100 dark:bg-slate-800/60 text-slate-400 cursor-not-allowed border-dashed"
                                                 />
                                             </div>
+                                            <p className="text-[9px] text-muted-foreground mt-0.5 flex items-center gap-1">
+                                                <Info className="w-2.5 h-2.5 text-purple-600 shrink-0" />
+                                                {__('El anticipo se cobra directamente desde la terminal del módulo POS')}
+                                            </p>
                                         </div>
                                     </div>
 

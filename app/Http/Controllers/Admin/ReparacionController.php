@@ -473,8 +473,9 @@ class ReparacionController extends Controller
         $numeroOrden = 'REP-' . str_pad($lastOrder + 1, 6, '0', STR_PAD_LEFT);
 
         $costoEstimado = (float) $validated['costo_estimado'];
-        $anticipo = (float) ($validated['anticipo'] ?? 0);
-        $saldoRestante = max(0, $costoEstimado - $anticipo);
+        // En recepción el anticipo se desactiva; todo cobro de anticipo se gestiona desde el módulo POS
+        $anticipo = 0.00;
+        $saldoRestante = $costoEstimado;
 
         // Remover campos que se guardan en tablas secundarias antes de crear la orden
         $serviciosSeleccionados = $validated['servicios_seleccionados'] ?? [];
@@ -1127,6 +1128,39 @@ class ReparacionController extends Controller
             'costo_repuestos' => $costoRepuestos,
             'costo_estimado' => $totalEstimado,
             'saldo_restante' => $saldo,
+        ]);
+    }
+
+    public function storeCategoria(Request $request)
+    {
+        $validated = $request->validate([
+            'nombre' => 'required|string|max:255',
+        ]);
+
+        $user = auth()->user();
+        $empresaId = $user->empresa_id;
+
+        $categoria = \App\Models\Categoria::where('empresa_id', $empresaId)
+            ->whereRaw('LOWER(nombre) = ?', [strtolower(trim($validated['nombre']))])
+            ->first();
+
+        if (!$categoria) {
+            $categoria = \App\Models\Categoria::create([
+                'empresa_id' => $empresaId,
+                'sucursal_id' => $user->sucursal_id,
+                'nombre' => trim($validated['nombre']),
+                'slug' => \Illuminate\Support\Str::slug($validated['nombre']),
+                'estado' => true,
+            ]);
+        }
+
+        return response()->json([
+            'success' => true,
+            'categoria' => [
+                'id' => $categoria->id,
+                'nombre' => $categoria->nombre,
+            ],
+            'message' => "Categoría '{$categoria->nombre}' registrada exitosamente.",
         ]);
     }
 
