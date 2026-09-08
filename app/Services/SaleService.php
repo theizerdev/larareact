@@ -155,29 +155,51 @@ class SaleService
                     $reparacion = OrdenReparacion::find($item['itemable_id']);
                     if ($reparacion) {
                         $montoPago = (float) $itemSubtotal;
+                        $estadoAnterior = $reparacion->estado_orden;
 
                         if (($item['concepto_tipo'] ?? '') === 'reparacion_anticipo') {
                             $nuevoAnticipo = (float) $reparacion->anticipo + $montoPago;
-                            $nuevoSaldo = max(0, (float) $reparacion->costo_estimado - $nuevoAnticipo);
+                            $costoTotal = (float) max(
+                                $reparacion->costo_estimado ?? 0,
+                                ($reparacion->costo_mano_obra ?? 0) + ($reparacion->costo_repuestos ?? 0)
+                            );
+                            $costoTotal = $costoTotal > 0 ? $costoTotal : $nuevoAnticipo;
+                            $nuevoSaldo = max(0, $costoTotal - $nuevoAnticipo);
 
                             $reparacion->anticipo = $nuevoAnticipo;
                             $reparacion->saldo_restante = $nuevoSaldo;
+
+                            $isFinalizado = false;
+                            if ($nuevoSaldo <= 0) {
+                                $reparacion->sale_id = $sale->id;
+                                $reparacion->estado_orden = 'entregado_finalizado';
+                                if (!$reparacion->fecha_entrega) {
+                                    $reparacion->fecha_entrega = now();
+                                }
+                                $isFinalizado = true;
+                            }
                             $reparacion->save();
 
                             \App\Models\OrdenReparacionHistorial::create([
                                 'orden_id' => $reparacion->id,
                                 'user_id' => $userId,
-                                'estado_anterior' => $reparacion->estado_orden,
+                                'estado_anterior' => $estadoAnterior,
                                 'estado_nuevo' => $reparacion->estado_orden,
-                                'comentario' => "Abono / Anticipo de {$montoPago} registrado desde el Punto de Venta (Ticket: {$codigoTicket}).",
+                                'comentario' => "Abono / Anticipo de {$montoPago} registrado desde el Punto de Venta (Ticket: {$codigoTicket})." . ($isFinalizado ? " Saldo cubierto en su totalidad: orden actualizada automáticamente a ENTREGADO/FINALIZADO." : ""),
                             ]);
                         } else {
-                            // Liquidación final
+                            // Liquidación final / Cobro total de orden de reparación
+                            $costoTotal = (float) max(
+                                $reparacion->costo_estimado ?? 0,
+                                ($reparacion->costo_mano_obra ?? 0) + ($reparacion->costo_repuestos ?? 0)
+                            );
+                            $nuevoAnticipo = $costoTotal > 0 ? $costoTotal : ((float) $reparacion->anticipo + $montoPago);
+
                             $reparacion->sale_id = $sale->id;
-                            $reparacion->anticipo = (float) $reparacion->costo_estimado;
+                            $reparacion->anticipo = $nuevoAnticipo;
                             $reparacion->saldo_restante = 0.00;
-                            if ($reparacion->estado_orden === 'reparado' || $reparacion->estado_orden === 'listo_reparado') {
-                                $reparacion->estado_orden = 'entregado_finalizado';
+                            $reparacion->estado_orden = 'entregado_finalizado';
+                            if (!$reparacion->fecha_entrega) {
                                 $reparacion->fecha_entrega = now();
                             }
                             $reparacion->save();
@@ -185,9 +207,9 @@ class SaleService
                             \App\Models\OrdenReparacionHistorial::create([
                                 'orden_id' => $reparacion->id,
                                 'user_id' => $userId,
-                                'estado_anterior' => $reparacion->estado_orden,
-                                'estado_nuevo' => $reparacion->estado_orden,
-                                'comentario' => "Liquidación total de saldo ({$montoPago}) registrada desde el Punto de Venta (Ticket: {$codigoTicket}).",
+                                'estado_anterior' => $estadoAnterior,
+                                'estado_nuevo' => 'entregado_finalizado',
+                                'comentario' => "Cobro de orden ({$montoPago}) registrado desde el Punto de Venta (Ticket: {$codigoTicket}). Estado actualizado automáticamente a ENTREGADO/FINALIZADO.",
                             ]);
                         }
                     }

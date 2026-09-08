@@ -1193,33 +1193,6 @@ export default function Terminal({
                                 {__('Sin Caja Abierta')}
                             </Badge>
                         )}
-
-                        {/* MÓDULO VALOR DEL DÓLAR (CAMBIO USD) */}
-                        <Button
-                            type="button"
-                            variant="outline"
-                            size="sm"
-                            className="h-8 text-xs gap-1.5 bg-emerald-50 dark:bg-emerald-950/60 text-emerald-800 dark:text-emerald-300 border border-emerald-400 dark:border-emerald-700 font-extrabold shadow-sm hover:bg-emerald-100 dark:hover:bg-emerald-900/60 transition-all"
-                            onClick={() => setIsDolarModalOpen(true)}
-                        >
-                            <Coins className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
-                            <span>$1 USD = ${valorDolar.toFixed(2)} MXN</span>
-                            <Edit3 className="w-3 h-3 ml-0.5 opacity-70" />
-                        </Button>
-
-                        {/* MÓDULO CONFIGURACIÓN DE IMPRESORA TÉRMICA */}
-                        <Button
-                            type="button"
-                            variant="outline"
-                            size="sm"
-                            className="h-8 text-xs gap-1.5 bg-blue-50 dark:bg-blue-950/60 text-blue-800 dark:text-blue-300 border border-blue-300 dark:border-blue-700 font-extrabold shadow-sm hover:bg-blue-100 dark:hover:bg-blue-900/60 transition-all"
-                            onClick={() => setIsPrinterConfigOpen(true)}
-                            title={__('Configuración de máquina ticketera térmica')}
-                        >
-                            <Printer className="w-3.5 h-3.5 text-blue-600 dark:text-blue-400" />
-                            <span>{hasTicketPrinter ? `Impresora (${printerPaperSize})` : __('Sin Impresora')}</span>
-                            <Settings className="w-3 h-3 ml-0.5 opacity-70" />
-                        </Button>
                     </div>
 
                     {/* Botones de Atajos Rápidos */}
