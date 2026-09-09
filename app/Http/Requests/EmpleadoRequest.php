@@ -41,7 +41,11 @@ class EmpleadoRequest extends FormRequest
             'correo' => 'nullable|email|max:255',
             'genero' => 'nullable|string|in:M,F,Otro',
             'departamento_id' => 'required|exists:departamentos,id',
-            'responsable_id' => 'nullable|exists:responsables,id',
+            // Required, not nullable: the visit forms auto-fill the visit's
+            // responsable from the employee's own, and a missing one surfaces
+            // there as an unexplained "responsable id es obligatorio" at
+            // registration time, far from the alta that caused it.
+            'responsable_id' => 'required|exists:responsables,id',
             'cargo_id' => 'nullable|exists:cargos,id',
             'foto_empleado' => 'nullable', // Puede ser archivo (Subida normal) o base64 (Cámara)
             'foto_empleado_2' => 'nullable', // Puede ser archivo (Subida normal) o base64 (Cámara)

@@ -1302,7 +1302,7 @@ export default function EmpleadosIndexPage({
 
                                     {/* Responsable / Supervisor */}
                                     <div>
-                                        <Label htmlFor="responsable_id">{__('Responsible')}</Label>
+                                        <Label htmlFor="responsable_id">{__('Responsible')} <span className="text-rose-500">*</span></Label>
                                         <Select
                                             value={String(data.responsable_id || '')}
                                             onValueChange={(v) => setData('responsable_id', v)}
