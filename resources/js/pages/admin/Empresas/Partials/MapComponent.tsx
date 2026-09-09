@@ -1,98 +1,118 @@
-import React, { useState } from 'react';
+import React, { useCallback, useState } from 'react';
 import MapboxMap from '@/components/mapbox-map';
+import type {MapAddressDetails} from '@/components/mapbox-map';
+
+export interface LocationDetails {
+    direccion?: string;
+    codigo_postal?: string;
+    colonia?: string;
+    ciudad?: string;
+    estado?: string;
+    pais?: string;
+    timezone?: string;
+}
 
 interface MapComponentProps {
     center: [number, number];
     zoom: number;
     style: React.CSSProperties;
     markerPosition: [number, number] | null;
-    onLocationSelected: (lat: number, lng: number, address?: string, timezone?: string) => void;
+    onLocationSelected: (
+        lat: number,
+        lng: number,
+        address?: string,
+        timezone?: string,
+        details?: LocationDetails,
+    ) => void;
 }
 
-// Función helper para obtener la zona horaria IANA según coordenadas
+// Zona horaria IANA a partir de coordenadas. Best-effort con timeout y fallback
+// determinista para México; nunca lanza.
 export const getTimezoneFromCoords = async (lat: number, lng: number): Promise<string | null> => {
     try {
-        const res = await fetch(`https://api.bigdatacloud.net/data/reverse-geocode-client?latitude=${lat}&longitude=${lng}&localityLanguage=es`);
+        const res = await fetch(
+            `https://api.bigdatacloud.net/data/reverse-geocode-client?latitude=${lat}&longitude=${lng}&localityLanguage=es`,
+            { signal: AbortSignal.timeout(6000) },
+        );
+
         if (res.ok) {
             const data = await res.json();
+
             if (data.timeZone?.ianaTimeId) {
                 return data.timeZone.ianaTimeId;
             }
         }
-    } catch (_) {
+    } catch {
         // Fallback silencioso
     }
 
-    // Regla de detección precisa para México basada en coordenadas (latitud y longitud)
+    // Detección aproximada para México según longitud/latitud.
     if (lat >= 14 && lat <= 33 && lng >= -118 && lng <= -86) {
-        if (lng < -114) return 'America/Tijuana';             // Baja California (Noroeste UTC-8)
-        if (lng < -104 && lat > 22) return 'America/Mazatlan'; // Sinaloa, Nayarit, BCS (Pacífico UTC-7)
-        if (lng > -88 && lat < 22) return 'America/Cancun';   // Quintana Roo (Sureste UTC-5)
-        return 'America/Mexico_City';                          // Centro (UTC-6)
+        if (lng < -114) {
+return 'America/Tijuana';
+}
+
+        if (lng < -104 && lat > 22) {
+return 'America/Mazatlan';
+}
+
+        if (lng > -88 && lat < 22) {
+return 'America/Cancun';
+}
+
+        return 'America/Mexico_City';
     }
 
     return null;
 };
 
-const EmpresaMapComponent: React.FC<MapComponentProps> = ({
-    markerPosition,
-    zoom,
-    onLocationSelected
-}) => {
+const EmpresaMapComponent: React.FC<MapComponentProps> = ({ center, markerPosition, zoom, onLocationSelected }) => {
     const [isGeocodingLoading, setIsGeocodingLoading] = useState(false);
 
-    const lat = markerPosition ? markerPosition[0] : 0;
-    const lng = markerPosition ? markerPosition[1] : 0;
+    const lat = markerPosition ? Number(markerPosition[0]) : 0;
+    const lng = markerPosition ? Number(markerPosition[1]) : 0;
 
-    const handleLocationChange = async (newLat: number, newLng: number) => {
-        const tz = await getTimezoneFromCoords(newLat, newLng);
-        onLocationSelected(newLat, newLng, undefined, tz || undefined);
+    // El pin/clic dispara `onChange` dos veces: (1) coordenadas inmediatas —
+    // prevalecen por precisión — y (2) dirección estructurada ya resuelta.
+    const handleChange = useCallback(
+        (newLat: number, newLng: number, details?: MapAddressDetails) => {
+            if (!details) {
+                onLocationSelected(newLat, newLng);
+                getTimezoneFromCoords(newLat, newLng).then((tz) => {
+                    if (tz) {
+                        onLocationSelected(newLat, newLng, undefined, tz);
+                    }
+                });
 
-        try {
-            setIsGeocodingLoading(true);
-            const res = await fetch(
-                `https://nominatim.openstreetmap.org/reverse?format=json&lat=${newLat}&lon=${newLng}&accept-language=es`,
-                { headers: { 'Accept-Language': 'es' } }
-            );
-
-            if (res.ok) {
-                const data = await res.json();
-                const address = data.display_name ?? '';
-                onLocationSelected(newLat, newLng, address, tz || undefined);
+                return;
             }
-        } catch (_) {
-            // Error silencioso
-        } finally {
-            setIsGeocodingLoading(false);
-        }
-    };
+
+            onLocationSelected(newLat, newLng, details.direccion, undefined, {
+                direccion: details.direccion,
+                codigo_postal: details.codigo_postal,
+                colonia: details.colonia,
+                ciudad: details.ciudad,
+                estado: details.estado,
+                pais: details.pais,
+            });
+        },
+        [onLocationSelected],
+    );
 
     return (
-        <div className="relative w-full h-full" style={{ minHeight: '320px' }}>
+        <div className="relative h-full w-full" style={{ minHeight: '320px' }}>
             <MapboxMap
                 lat={lat}
                 lng={lng}
+                center={center}
                 zoom={zoom}
-                onChange={handleLocationChange}
+                onChange={handleChange}
+                onGeocodingChange={setIsGeocodingLoading}
                 interactive={true}
-                className="h-full w-full border-none rounded-none"
+                className="h-full w-full rounded-none border-none"
             />
             {isGeocodingLoading && (
-                <div
-                    style={{
-                        position: 'absolute',
-                        bottom: 8,
-                        left: '50%',
-                        transform: 'translateX(-50%)',
-                        zIndex: 1000,
-                        background: 'rgba(0,0,0,0.7)',
-                        color: '#fff',
-                        padding: '4px 12px',
-                        borderRadius: 20,
-                        fontSize: 12,
-                        pointerEvents: 'none',
-                    }}
-                >
+                <div className="pointer-events-none absolute bottom-2 left-1/2 z-[1000] -translate-x-1/2 rounded-full bg-black/70 px-3 py-1 text-xs text-white">
                     Obteniendo ubicación y zona horaria...
                 </div>
             )}

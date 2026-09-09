@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Http\Requests\SucursalRequest;
 use App\Models\Empresa;
 use App\Models\Pais;
 use App\Models\Sucursal;
@@ -19,7 +20,7 @@ class SucursalController extends Controller
         $empresaId = $request->input('empresa_id');
         $perPage = $request->input('perPage', 10);
 
-        $query = Sucursal::with('empresa');
+        $query = Sucursal::with(['empresa', 'pais']);
 
         if ($search) {
             $query->where(function ($q) use ($search) {
@@ -58,108 +59,56 @@ class SucursalController extends Controller
         ]);
     }
 
-    public function store(Request $request)
+    public function store(SucursalRequest $request)
     {
-        $validated = $request->validate([
-            'empresa_id' => 'required|exists:empresas,id',
-            'nombre' => 'required|string|max:255',
-            'codigo_numeral' => 'nullable|string|max:2',
-            'telefono' => 'nullable|string|max:255',
-            'pais_telefono_id' => 'nullable|exists:pais,id',
-            'direccion' => 'nullable|string',
-            'latitud' => 'nullable|numeric',
-            'longitud' => 'nullable|numeric',
-            'zona_horaria' => 'nullable|string|max:100',
-            'status' => 'boolean',
+        DB::transaction(function () use ($request) {
+            Sucursal::create($request->validated());
+        });
+
+        return back()->with('notification', [
+            'type' => 'success',
+            'message' => __('Branch created successfully.'),
         ]);
-
-        try {
-            Sucursal::create($validated);
-
-            return back()->with('notification', [
-                'type' => 'success',
-                'message' => __('Branch created successfully.'),
-            ]);
-        } catch (\Exception $e) {
-            Log::error('Error al crear sucursal: '.$e->getMessage());
-
-            return back()->with('notification', [
-                'type' => 'error',
-                'message' => __('There was an error creating the branch. Please try again.'),
-            ]);
-        }
     }
 
-    public function update(Request $request, Sucursal $sucursal)
+    public function update(SucursalRequest $request, Sucursal $sucursal)
     {
-        $validated = $request->validate([
-            'empresa_id' => 'required|exists:empresas,id',
-            'nombre' => 'required|string|max:255',
-            'codigo_numeral' => 'nullable|string|max:2',
-            'telefono' => 'nullable|string|max:255',
-            'pais_telefono_id' => 'nullable|exists:pais,id',
-            'direccion' => 'nullable|string',
-            'latitud' => 'nullable|numeric',
-            'longitud' => 'nullable|numeric',
-            'zona_horaria' => 'nullable|string|max:100',
-            'status' => 'boolean',
+        DB::transaction(function () use ($sucursal, $request) {
+            $sucursal->update($request->validated());
+        });
+
+        return back()->with('notification', [
+            'type' => 'success',
+            'message' => __('Branch updated successfully.'),
         ]);
-
-        try {
-            DB::transaction(function () use ($sucursal, $validated) {
-                $sucursal->update($validated);
-            });
-
-            return back()->with('notification', [
-                'type' => 'success',
-                'message' => __('Branch updated successfully.'),
-            ]);
-        } catch (\Exception $e) {
-            Log::error("Error al actualizar sucursal {$sucursal->id}: ".$e->getMessage());
-
-            return back()->with('notification', [
-                'type' => 'error',
-                'message' => __('There was an error updating the branch. Please try again.'),
-            ]);
-        }
     }
 
     public function destroy(Sucursal $sucursal)
     {
-        try {
+        // Borrado en cascada (departamentos, cargos, responsables, visitas...) vía
+        // FKs onDelete('cascade'). La transacción garantiza que el árbol completo
+        // se elimine de forma atómica: si algo falla, no queda estado a medias.
+        DB::transaction(function () use ($sucursal) {
             $sucursal->delete();
+        });
 
-            return back()->with('notification', [
-                'type' => 'success',
-                'message' => __('Branch deleted successfully.'),
-            ]);
-        } catch (\Exception $e) {
-            Log::error("Error al eliminar sucursal {$sucursal->id}: ".$e->getMessage());
+        Log::info("Sucursal {$sucursal->id} ({$sucursal->nombre}) eliminada por user ".auth()->id());
 
-            return back()->with('notification', [
-                'type' => 'error',
-                'message' => __('There was an error deleting the branch. Please try again.'),
-            ]);
-        }
+        return back()->with('notification', [
+            'type' => 'success',
+            'message' => __('Branch deleted successfully.'),
+        ]);
     }
 
     public function toggleStatus(Sucursal $sucursal)
     {
-        try {
-            $sucursal->status = ! $sucursal->status;
-            $sucursal->save();
+        DB::transaction(function () use ($sucursal) {
+            $sucursal->update(['status' => ! $sucursal->status]);
+        });
 
-            return back()->with('notification', [
-                'type' => 'success',
-                'message' => __('Status updated successfully.'),
-            ]);
-        } catch (\Exception $e) {
-            Log::error("Error al cambiar estado de sucursal {$sucursal->id}: ".$e->getMessage());
-
-            return back()->with('notification', [
-                'type' => 'error',
-                'message' => __('There was an error updating the status. Please try again.'),
-            ]);
-        }
+        return back()->with('notification', [
+            'type' => 'success',
+            'message' => __('Status updated successfully.'),
+        ]);
     }
 }

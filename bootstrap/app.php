@@ -2,15 +2,21 @@
 
 use App\Http\Middleware\HandleAppearance;
 use App\Http\Middleware\HandleInertiaRequests;
+use App\Http\Middleware\RegionalConfiguration;
 use App\Http\Middleware\SetLocale;
-use App\Models\WhatsAppMessage;
+use Illuminate\Auth\Access\AuthorizationException;
+use Illuminate\Auth\AuthenticationException;
 use Illuminate\Console\Scheduling\Schedule;
+use Illuminate\Database\Eloquent\ModelNotFoundException;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
+use Illuminate\Http\Exceptions\HttpResponseException;
 use Illuminate\Http\Middleware\AddLinkHeadersForPreloadedAssets;
 use Illuminate\Http\Request;
+use Illuminate\Session\TokenMismatchException;
 use Illuminate\Support\Facades\Route;
+use Illuminate\Validation\ValidationException;
 use Spatie\Permission\Middleware\PermissionMiddleware;
 use Spatie\Permission\Middleware\RoleMiddleware;
 use Spatie\Permission\Middleware\RoleOrPermissionMiddleware;
@@ -54,7 +60,7 @@ return Application::configure(basePath: dirname(__DIR__))
         $middleware->trustProxies(at: '*');
 
         $middleware->web(prepend: [
-            \App\Http\Middleware\RegionalConfiguration::class,
+            RegionalConfiguration::class,
         ]);
 
         $middleware->web(append: [
@@ -85,6 +91,18 @@ return Application::configure(basePath: dirname(__DIR__))
                 return null;
             }
 
+            // Excepciones que el framework ya traduce a la respuesta correcta
+            // (422 con bag de errores, 401, 403, redirects de CSRF, 404...).
+            // No deben caer en el manejador genérico de 500.
+            if ($e instanceof ValidationException
+                || $e instanceof AuthenticationException
+                || $e instanceof AuthorizationException
+                || $e instanceof HttpResponseException
+                || $e instanceof TokenMismatchException
+                || $e instanceof ModelNotFoundException) {
+                return null;
+            }
+
             if ($e instanceof HttpExceptionInterface) {
                 $status = $e->getStatusCode();
                 if (in_array($status, [500, 503, 404, 403, 419])) {
@@ -92,6 +110,20 @@ return Application::configure(basePath: dirname(__DIR__))
                         ->toResponse($request)
                         ->setStatusCode($status);
                 }
+
+                return null;
+            }
+
+            // Incidencia 2: cualquier OTRA excepción no controlada en una
+            // petición web/Inertia (p. ej. QueryException por un fallo de
+            // escritura). En producción se rinde una página de error limpia con
+            // HTTP 500 real, en vez del HTML crudo de Symfony que Inertia
+            // mostraría como modal. El frontend recibe un estado semántico y
+            // jamás un falso 2xx. En local se deja pasar para ver el trace.
+            if (! config('app.debug')) {
+                return inertia('Error', ['status' => 500])
+                    ->toResponse($request)
+                    ->setStatusCode(500);
             }
 
             return null;

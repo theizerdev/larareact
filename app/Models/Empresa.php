@@ -33,6 +33,10 @@ class Empresa extends Model
         'logo',
         'logo_mini',
         'direccion',
+        'codigo_postal',
+        'colonia',
+        'ciudad',
+        'estado',
         'latitud',
         'longitud',
         'representante_legal',
@@ -71,8 +75,11 @@ class Empresa extends Model
     protected function casts(): array
     {
         return [
-            'latitud' => 'decimal:8',
-            'longitud' => 'decimal:8',
+            // `float` (no `decimal:8`): el cast decimal serializa a string ("19.43260000"),
+            // lo que rompe la aritmética del mapa en el frontend. `float` mantiene el
+            // contrato numérico, igual que Proveedor/Productor.
+            'latitud' => 'float',
+            'longitud' => 'float',
             'status' => 'boolean',
             'whatsapp_active' => 'boolean',
             'whatsapp_rate_limit' => 'integer',

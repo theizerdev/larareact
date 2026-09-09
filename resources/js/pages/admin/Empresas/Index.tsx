@@ -15,7 +15,7 @@ import {
     X,
     Clock,
 } from 'lucide-react';
-import React, { useState, Suspense, lazy, useRef } from 'react';
+import React, { useState, Suspense, lazy, useRef, useCallback, useMemo, useEffect } from 'react';
 import { Breadcrumbs } from '@/components/breadcrumbs';
 import type { ColumnDef } from '@/components/data-table';
 import { DataTable } from '@/components/data-table';
@@ -40,14 +40,16 @@ import {
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Switch } from '@/components/ui/switch';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Textarea } from '@/components/ui/textarea';
+import { useGeocoding } from '@/hooks/use-geocoding';
 import { useTranslate } from '@/hooks/use-translate';
+import { isValidLatLng } from '@/lib/geocoding';
 import { cn, cleanParams } from '@/lib/utils';
 import type { Auth } from '@/types';
 import type { Paginated } from '@/types/app';
 import { notifySuccess, notifyError } from '@/utils/notifications';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Switch } from '@/components/ui/switch';
-import { Textarea } from '@/components/ui/textarea';
 import PhoneInputGroup from './Partials/PhoneInputGroup';
 
 const EmpresaMapComponent = lazy(() => {
@@ -74,6 +76,11 @@ interface Empresa {
     logo?: string | null;
     logo_mini?: string | null;
     direccion?: string | null;
+    codigo_postal?: string | null;
+    colonia?: string | null;
+    ciudad?: string | null;
+    estado?: string | null;
+    zona_horaria?: string | null;
     latitud?: number | null;
     longitud?: number | null;
     representante_legal?: string | null;
@@ -116,10 +123,16 @@ const initialForm = {
     // Ubicación
     pais_id: '' as string | number,
     direccion: '',
+    codigo_postal: '',
+    colonia: '',
+    ciudad: '',
+    estado: '',
     latitud: null as number | null,
     longitud: null as number | null,
     zona_horaria: '',
 };
+
+type CoordsSource = 'none' | 'geocode' | 'map' | 'manual';
 
 // ─── Página principal ─────────────────────────────────────────────────────────
 
@@ -175,24 +188,118 @@ export default function EmpresasIndexPage({ auth, empresas, stats, paises, filte
     }, [searchTerm, statusFilter, perPageFilter]);
 
     // ── Formulario Inertia ────────────────────────────────────────────────────
-    const { data, setData, post, put, processing, errors, reset } = useForm(initialForm);
+    const { data, setData, post, put, processing, errors, reset, transform } = useForm(initialForm);
 
-    // ── Mapa: centro calculado según pais_id seleccionado ────────────────────
-    const paisSeleccionado = paises.find((p) => p.id === Number(data.pais_id));
-    const mapCenter: [number, number] =
-        data.latitud && data.longitud
-            ? [data.latitud, data.longitud]
-            : paisSeleccionado?.latitud && paisSeleccionado?.longitud
-            ? [paisSeleccionado.latitud, paisSeleccionado.longitud]
-            : [4.6, -74.1]; // Bogotá como fallback
+    // ── Mapa / geocodificación ──────────────────────────────────────────────
+    // Precedencia de coordenadas: 'map' (pin) y 'manual' (lat/long escritas)
+    // ganan siempre; la geocodificación directa sólo autocompleta cuando el
+    // usuario aún no ha fijado un punto preciso.
+    const coordsSourceRef = useRef<CoordsSource>('none');
+    const { geocode: runGeocode, loading: geocoding } = useGeocoding({ country: 'mx' });
 
-    const mapZoom = data.latitud && data.longitud ? 14 : paisSeleccionado ? 6 : 4;
+    const latNum = data.latitud != null && data.latitud !== ('' as unknown) ? Number(data.latitud) : null;
+    const lngNum = data.longitud != null && data.longitud !== ('' as unknown) ? Number(data.longitud) : null;
+    const hasCoords = latNum !== null && lngNum !== null && isValidLatLng(latNum, lngNum);
+
+    const paisSeleccionado = useMemo(
+        () => paises.find((p) => p.id === Number(data.pais_id)),
+        [paises, data.pais_id],
+    );
+
+    const mapCenter = useMemo<[number, number]>(() => {
+        if (hasCoords) {
+            return [latNum as number, lngNum as number];
+        }
+
+        if (paisSeleccionado?.latitud && paisSeleccionado?.longitud) {
+            return [Number(paisSeleccionado.latitud), Number(paisSeleccionado.longitud)];
+        }
+
+        return [23.6345, -102.5528]; // Centro de México como fallback
+    }, [hasCoords, latNum, lngNum, paisSeleccionado]);
+
+    const mapZoom = useMemo(
+        () => (hasCoords ? 14 : paisSeleccionado ? 6 : 4),
+        [hasCoords, paisSeleccionado],
+    );
+
+    const markerPosition = useMemo<[number, number] | null>(
+        () => (hasCoords ? [latNum as number, lngNum as number] : null),
+        [hasCoords, latNum, lngNum],
+    );
+
+    const buildGeocodeQuery = useCallback(() => {
+        return [data.direccion, data.colonia, data.ciudad, data.estado, data.codigo_postal, paisSeleccionado?.nombre]
+            .map((s) => (s ?? '').toString().trim())
+            .filter(Boolean)
+            .join(', ');
+    }, [data.direccion, data.colonia, data.ciudad, data.estado, data.codigo_postal, paisSeleccionado?.nombre]);
+
+    const applyGeocode = useCallback(
+        (result: Parameters<Parameters<typeof runGeocode>[1]>[0], force: boolean) => {
+            if (!result) {
+                if (force) {
+                    notifyError(__('The address could not be located on the map.'));
+                }
+
+                return;
+            }
+
+            if (!force && (coordsSourceRef.current === 'map' || coordsSourceRef.current === 'manual')) {
+                return;
+            }
+
+            coordsSourceRef.current = force ? 'map' : 'geocode';
+            setData((prev) => ({
+                ...prev,
+                latitud: result.lat,
+                longitud: result.lng,
+                colonia: prev.colonia || result.colonia || '',
+                ciudad: prev.ciudad || result.ciudad || '',
+                estado: prev.estado || result.estado || '',
+                codigo_postal: prev.codigo_postal || result.codigo_postal || '',
+            }));
+        },
+        [setData, __],
+    );
+
+    // Geocodificación directa progresiva (con debounce dentro del hook).
+    const geocodeQuery = buildGeocodeQuery();
+    useEffect(() => {
+        if (!isModalOpen || activeTab !== 'ubicacion') {
+            return;
+        }
+
+        if (coordsSourceRef.current === 'map' || coordsSourceRef.current === 'manual') {
+            return;
+        }
+
+        if (geocodeQuery.length < 6) {
+            return;
+        }
+
+        runGeocode(geocodeQuery, (result) => applyGeocode(result, false));
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [isModalOpen, activeTab, geocodeQuery]);
+
+    const handleForceGeocode = useCallback(() => {
+        const query = buildGeocodeQuery();
+
+        if (query.length < 6) {
+            notifyError(__('Enter more address details to locate it on the map.'));
+
+            return;
+        }
+
+        runGeocode(query, (result) => applyGeocode(result, true), true);
+    }, [buildGeocodeQuery, runGeocode, applyGeocode, __]);
 
     // ── Handlers ──────────────────────────────────────────────────────────────
 
     const handleCreateClick = () => {
         setEditingEmpresa(null);
         reset();
+        coordsSourceRef.current = 'none';
         setActiveTab('general');
         setLogoFile(null);
         setLogoMiniFile(null);
@@ -203,6 +310,9 @@ export default function EmpresasIndexPage({ auth, empresas, stats, paises, filte
 
     const handleEditClick = (empresa: Empresa) => {
         setEditingEmpresa(empresa);
+        // Un registro guardado con coordenadas se trata como 'manual': la
+        // geocodificación directa no debe reubicar un punto ya confirmado.
+        coordsSourceRef.current = empresa.latitud != null && empresa.longitud != null ? 'manual' : 'none';
         setData({
             razon_social:             empresa.razon_social || '',
             nombre_comercial:         empresa.nombre_comercial || '',
@@ -215,9 +325,13 @@ export default function EmpresasIndexPage({ auth, empresas, stats, paises, filte
             email:                    empresa.email || '',
             pais_id:                  empresa.pais_id ?? '',
             direccion:                empresa.direccion || '',
+            codigo_postal:            empresa.codigo_postal || '',
+            colonia:                  empresa.colonia || '',
+            ciudad:                   empresa.ciudad || '',
+            estado:                   empresa.estado || '',
             latitud:                  empresa.latitud ?? null,
             longitud:                 empresa.longitud ?? null,
-            zona_horaria:             (empresa as any).zona_horaria || '',
+            zona_horaria:             empresa.zona_horaria || '',
         });
         setLogoFile(null);
         setLogoMiniFile(null);
@@ -285,9 +399,38 @@ formData.append('logo_mini', logoMiniFile);
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
 
+        // Validación de coordenadas en cliente: nunca enviar un par lat/long
+        // incompleto o fuera de rango (el backend también lo rechaza en 422).
+        const hasLat = data.latitud !== null && String(data.latitud) !== '';
+        const hasLng = data.longitud !== null && String(data.longitud) !== '';
+
+        if (hasLat !== hasLng) {
+            notifyError(__('Latitude and longitude must both be set, or both empty.'));
+
+            return;
+        }
+
+        if (hasLat && hasLng && !isValidLatLng(Number(data.latitud), Number(data.longitud))) {
+            notifyError(__('The coordinates are out of range.'));
+
+            return;
+        }
+
+        // Normaliza los tipos numéricos justo antes de enviar.
+        transform((current) => ({
+            ...current,
+            latitud: hasLat ? Number(current.latitud) : null,
+            longitud: hasLng ? Number(current.longitud) : null,
+        }));
+
+        const onDone = () => {
+            coordsSourceRef.current = 'none';
+        };
+
         if (editingEmpresa) {
             put(`/admin/empresas/${editingEmpresa.id}`, {
                 onSuccess: () => {
+                    onDone();
                     setIsModalOpen(false);
                     setEditingEmpresa(null);
                     reset();
@@ -300,6 +443,7 @@ formData.append('logo_mini', logoMiniFile);
         } else {
             post('/admin/empresas', {
                 onSuccess: () => {
+                    onDone();
                     setIsModalOpen(false);
                     reset();
                     notifySuccess(__('Company created successfully.'));
@@ -315,15 +459,31 @@ formData.append('logo_mini', logoMiniFile);
         router.patch(`/admin/empresas/${empresa.id}/toggle-status`, {}, { preserveScroll: true });
     };
 
-    const handleLocationSelected = (lat: number, lng: number, address?: string, timezone?: string) => {
-        setData((prev) => ({
-            ...prev,
-            latitud:  lat,
-            longitud: lng,
-            ...(address ? { direccion: address } : {}),
-            ...(timezone ? { zona_horaria: timezone } : {}),
-        }));
-    };
+    const handleLocationSelected = useCallback(
+        (
+            lat: number,
+            lng: number,
+            address?: string,
+            timezone?: string,
+            details?: { codigo_postal?: string; colonia?: string; ciudad?: string; estado?: string },
+        ) => {
+            // El pin manda: fija la fuente en 'map' para que la geocodificación
+            // directa deje de sobrescribir estas coordenadas.
+            coordsSourceRef.current = 'map';
+            setData((prev) => ({
+                ...prev,
+                latitud: lat,
+                longitud: lng,
+                ...(address ? { direccion: address } : {}),
+                ...(timezone ? { zona_horaria: timezone } : {}),
+                ...(details?.codigo_postal && !prev.codigo_postal ? { codigo_postal: details.codigo_postal } : {}),
+                ...(details?.colonia && !prev.colonia ? { colonia: details.colonia } : {}),
+                ...(details?.ciudad && !prev.ciudad ? { ciudad: details.ciudad } : {}),
+                ...(details?.estado && !prev.estado ? { estado: details.estado } : {}),
+            }));
+        },
+        [setData],
+    );
 
     // ── Columnas de la tabla ──────────────────────────────────────────────────
 
@@ -701,14 +861,10 @@ formData.append('logo_mini', logoMiniFile);
                                     <Select
                                         value={String(data.pais_id)}
                                         onValueChange={(v) => {
-                                            // Si cambia el país, limpiar coordenadas para centrar el mapa en él
-                                            setData({
-                                                ...data,
-                                                pais_id:  v,
-                                                latitud:  null,
-                                                longitud: null,
-                                                direccion: '',
-                                            });
+                                            // Cambiar el país reabre la geocodificación directa (fuente
+                                            // 'none') y recentra el mapa; no se borra lo ya escrito.
+                                            coordsSourceRef.current = 'none';
+                                            setData((prev) => ({ ...prev, pais_id: v, latitud: null, longitud: null }));
                                         }}
                                     >
                                         <SelectTrigger id="pais_id" className="w-full">
@@ -728,33 +884,49 @@ formData.append('logo_mini', logoMiniFile);
                                     )}
                                 </div>
 
-                                {/* Coordenadas manuales */}
+                                {/* Dirección estructurada */}
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                     <div>
-                                        <Label htmlFor="latitud">{__('Latitude')}</Label>
+                                        <Label htmlFor="ciudad">{__('City')}</Label>
                                         <Input
-                                            id="latitud"
-                                            type="number"
-                                            step="any"
-                                            value={data.latitud ?? ''}
-                                            onChange={(e) =>
-                                                setData('latitud', e.target.value ? parseFloat(e.target.value) : null)
-                                            }
-                                            placeholder="10.48801"
+                                            id="ciudad"
+                                            value={data.ciudad || ''}
+                                            onChange={(e) => setData('ciudad', e.target.value)}
+                                            placeholder="Ej: Zamora"
                                         />
+                                        {errors.ciudad && <p className="text-red-500 text-xs mt-1">{errors.ciudad}</p>}
                                     </div>
                                     <div>
-                                        <Label htmlFor="longitud">{__('Longitude')}</Label>
+                                        <Label htmlFor="estado">{__('State')}</Label>
                                         <Input
-                                            id="longitud"
-                                            type="number"
-                                            step="any"
-                                            value={data.longitud ?? ''}
-                                            onChange={(e) =>
-                                                setData('longitud', e.target.value ? parseFloat(e.target.value) : null)
-                                            }
-                                            placeholder="-66.87919"
+                                            id="estado"
+                                            value={data.estado || ''}
+                                            onChange={(e) => setData('estado', e.target.value)}
+                                            placeholder="Ej: Michoacán"
                                         />
+                                        {errors.estado && <p className="text-red-500 text-xs mt-1">{errors.estado}</p>}
+                                    </div>
+                                    <div>
+                                        <Label htmlFor="colonia">{__('Neighborhood')}</Label>
+                                        <Input
+                                            id="colonia"
+                                            value={data.colonia || ''}
+                                            onChange={(e) => setData('colonia', e.target.value)}
+                                            placeholder="Ej: Centro"
+                                        />
+                                        {errors.colonia && <p className="text-red-500 text-xs mt-1">{errors.colonia}</p>}
+                                    </div>
+                                    <div>
+                                        <Label htmlFor="codigo_postal">{__('Postal Code')}</Label>
+                                        <Input
+                                            id="codigo_postal"
+                                            value={data.codigo_postal || ''}
+                                            onChange={(e) => setData('codigo_postal', e.target.value)}
+                                            placeholder="Ej: 59600"
+                                        />
+                                        {errors.codigo_postal && (
+                                            <p className="text-red-500 text-xs mt-1">{errors.codigo_postal}</p>
+                                        )}
                                     </div>
                                 </div>
 
@@ -765,27 +937,82 @@ formData.append('logo_mini', logoMiniFile);
                                         id="direccion"
                                         value={data.direccion || ''}
                                         onChange={(e) => setData('direccion', e.target.value)}
-                                        placeholder={__('The address will be auto-filled when you click on the map...')}
+                                        placeholder={__('Street and number, or click on the map...')}
                                         rows={2}
                                     />
-                                </div>
-
-                                {/* Zona Horaria */}
-                                <div>
-                                    <Label htmlFor="zona_horaria">{__('Time Zone (Auto-detected from map)')}</Label>
-                                    <Input
-                                        id="zona_horaria"
-                                        value={data.zona_horaria || ''}
-                                        onChange={(e) => setData('zona_horaria', e.target.value)}
-                                        placeholder="Ej: America/Mexico_City, America/Tijuana, America/Mazatlan"
-                                        className="font-mono text-xs"
-                                    />
-                                    {errors.zona_horaria && (
-                                        <p className="text-red-500 text-xs mt-1">{errors.zona_horaria}</p>
+                                    {errors.direccion && (
+                                        <p className="text-red-500 text-xs mt-1">{errors.direccion}</p>
                                     )}
                                 </div>
 
-                                {/* Mapa Leaflet */}
+                                <div className="flex items-center gap-2">
+                                    <Button
+                                        type="button"
+                                        variant="outline"
+                                        size="sm"
+                                        onClick={handleForceGeocode}
+                                        disabled={geocoding}
+                                    >
+                                        <MapPin className="mr-2 h-4 w-4" />
+                                        {geocoding ? __('Locating...') : __('Locate address on map')}
+                                    </Button>
+                                    <span className="text-xs text-muted-foreground">
+                                        {__('Or click / drag the marker on the map for precise coordinates.')}
+                                    </span>
+                                </div>
+
+                                {/* Coordenadas (prevalecen sobre la dirección) */}
+                                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                                    <div>
+                                        <Label htmlFor="latitud">{__('Latitude')}</Label>
+                                        <Input
+                                            id="latitud"
+                                            type="number"
+                                            step="any"
+                                            value={data.latitud ?? ''}
+                                            onChange={(e) => {
+                                                coordsSourceRef.current = 'manual';
+                                                setData('latitud', e.target.value ? parseFloat(e.target.value) : null);
+                                            }}
+                                            placeholder="19.98"
+                                        />
+                                        {errors.latitud && (
+                                            <p className="text-red-500 text-xs mt-1">{errors.latitud}</p>
+                                        )}
+                                    </div>
+                                    <div>
+                                        <Label htmlFor="longitud">{__('Longitude')}</Label>
+                                        <Input
+                                            id="longitud"
+                                            type="number"
+                                            step="any"
+                                            value={data.longitud ?? ''}
+                                            onChange={(e) => {
+                                                coordsSourceRef.current = 'manual';
+                                                setData('longitud', e.target.value ? parseFloat(e.target.value) : null);
+                                            }}
+                                            placeholder="-102.28"
+                                        />
+                                        {errors.longitud && (
+                                            <p className="text-red-500 text-xs mt-1">{errors.longitud}</p>
+                                        )}
+                                    </div>
+                                    <div>
+                                        <Label htmlFor="zona_horaria">{__('Time Zone')}</Label>
+                                        <Input
+                                            id="zona_horaria"
+                                            value={data.zona_horaria || ''}
+                                            onChange={(e) => setData('zona_horaria', e.target.value)}
+                                            placeholder="America/Mexico_City"
+                                            className="font-mono text-xs"
+                                        />
+                                        {errors.zona_horaria && (
+                                            <p className="text-red-500 text-xs mt-1">{errors.zona_horaria}</p>
+                                        )}
+                                    </div>
+                                </div>
+
+                                {/* Mapa */}
                                 <div
                                     style={{ height: '380px', width: '100%' }}
                                     className="rounded-md overflow-hidden border flex items-center justify-center bg-slate-100 dark:bg-slate-800"
@@ -800,11 +1027,7 @@ formData.append('logo_mini', logoMiniFile);
                                                 center={mapCenter}
                                                 zoom={mapZoom}
                                                 style={{ height: '100%', width: '100%' }}
-                                                markerPosition={
-                                                    data.latitud && data.longitud
-                                                        ? [data.latitud, data.longitud]
-                                                        : null
-                                                }
+                                                markerPosition={markerPosition}
                                                 onLocationSelected={handleLocationSelected}
                                             />
                                         )}

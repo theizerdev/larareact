@@ -13,7 +13,7 @@ import {
     Building2,
     Clock,
 } from 'lucide-react';
-import React, { useState, Suspense, lazy } from 'react';
+import React, { useState, Suspense, lazy, useCallback, useEffect, useMemo, useRef } from 'react';
 import { Breadcrumbs } from '@/components/breadcrumbs';
 import type { ColumnDef } from '@/components/data-table';
 import { DataTable } from '@/components/data-table';
@@ -48,14 +48,16 @@ import {
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Switch } from '@/components/ui/switch';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Textarea } from '@/components/ui/textarea';
+import { useGeocoding } from '@/hooks/use-geocoding';
+import { useTranslate } from '@/hooks/use-translate';
+import { isValidLatLng } from '@/lib/geocoding';
 import { cn, cleanParams } from '@/lib/utils';
 import type { Auth } from '@/types';
 import type { Paginated } from '@/types/app';
-import { useTranslate } from '@/hooks/use-translate';
 import { notifySuccess, notifyError } from '@/utils/notifications';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Switch } from '@/components/ui/switch';
-import { Textarea } from '@/components/ui/textarea';
 import PhoneInputGroup from '../Empresas/Partials/PhoneInputGroup';
 
 const SucursalMapComponent = lazy(() => {
@@ -86,8 +88,13 @@ interface Sucursal {
     nombre: string;
     codigo_numeral?: string | null;
     pais_telefono_id?: number | string | null;
+    pais_id?: number | string | null;
     telefono?: string | null;
     direccion?: string | null;
+    codigo_postal?: string | null;
+    colonia?: string | null;
+    ciudad?: string | null;
+    estado?: string | null;
     latitud?: number | null;
     longitud?: number | null;
     zona_horaria?: string | null;
@@ -120,13 +127,20 @@ const initialForm = {
     nombre:           '',
     codigo_numeral:   '01',
     pais_telefono_id: '' as string | number,
+    pais_id:          '' as string | number,
     telefono:         '',
     direccion:        '',
+    codigo_postal:    '',
+    colonia:          '',
+    ciudad:           '',
+    estado:           '',
     latitud:          null as number | null,
     longitud:         null as number | null,
     zona_horaria:     '',
     status:           true as boolean,
 };
+
+type CoordsSource = 'none' | 'geocode' | 'map' | 'manual';
 
 // ─── Página principal ──────────────────────────────────────────────────────────
 
@@ -182,37 +196,134 @@ export default function SucursalesIndexPage({
     }, [searchTerm, statusFilter, empresaFilter, perPageFilter]);
 
     // ── Formulario Inertia ─────────────────────────────────────────────────────
-    const { data, setData, post, put, processing, errors, reset } = useForm(initialForm);
+    const { data, setData, post, put, processing, errors, reset, transform } = useForm(initialForm);
 
-    // ── Mapa ───────────────────────────────────────────────────────────────────
-    const paisSeleccionado = paises.find((p) => p.id === Number(data.pais_telefono_id));
-    const mapCenter: [number, number] =
-        data.latitud && data.longitud
-            ? [data.latitud, data.longitud]
-            : paisSeleccionado?.latitud && paisSeleccionado?.longitud
-            ? [paisSeleccionado.latitud, paisSeleccionado.longitud]
-            : [4.6, -74.1];
+    // ── Mapa / geocodificación ─────────────────────────────────────────────────
+    const coordsSourceRef = useRef<CoordsSource>('none');
+    const { geocode: runGeocode, loading: geocoding } = useGeocoding({ country: 'mx' });
 
-    const mapZoom = data.latitud && data.longitud ? 14 : paisSeleccionado ? 6 : 4;
+    const latNum = data.latitud != null && data.latitud !== ('' as unknown) ? Number(data.latitud) : null;
+    const lngNum = data.longitud != null && data.longitud !== ('' as unknown) ? Number(data.longitud) : null;
+    const hasCoords = latNum !== null && lngNum !== null && isValidLatLng(latNum, lngNum);
+
+    // País de ubicación (independiente del prefijo telefónico).
+    const paisSeleccionado = useMemo(
+        () => paises.find((p) => p.id === Number(data.pais_id)),
+        [paises, data.pais_id],
+    );
+
+    const mapCenter = useMemo<[number, number]>(() => {
+        if (hasCoords) {
+            return [latNum as number, lngNum as number];
+        }
+
+        if (paisSeleccionado?.latitud && paisSeleccionado?.longitud) {
+            return [Number(paisSeleccionado.latitud), Number(paisSeleccionado.longitud)];
+        }
+
+        return [23.6345, -102.5528];
+    }, [hasCoords, latNum, lngNum, paisSeleccionado]);
+
+    const mapZoom = useMemo(
+        () => (hasCoords ? 14 : paisSeleccionado ? 6 : 4),
+        [hasCoords, paisSeleccionado],
+    );
+
+    const markerPosition = useMemo<[number, number] | null>(
+        () => (hasCoords ? [latNum as number, lngNum as number] : null),
+        [hasCoords, latNum, lngNum],
+    );
+
+    const buildGeocodeQuery = useCallback(() => {
+        return [data.direccion, data.colonia, data.ciudad, data.estado, data.codigo_postal, paisSeleccionado?.nombre]
+            .map((s) => (s ?? '').toString().trim())
+            .filter(Boolean)
+            .join(', ');
+    }, [data.direccion, data.colonia, data.ciudad, data.estado, data.codigo_postal, paisSeleccionado?.nombre]);
+
+    const applyGeocode = useCallback(
+        (result: Parameters<Parameters<typeof runGeocode>[1]>[0], force: boolean) => {
+            if (!result) {
+                if (force) {
+                    notifyError(__('The address could not be located on the map.'));
+                }
+
+                return;
+            }
+
+            if (!force && (coordsSourceRef.current === 'map' || coordsSourceRef.current === 'manual')) {
+                return;
+            }
+
+            coordsSourceRef.current = force ? 'map' : 'geocode';
+            setData((prev) => ({
+                ...prev,
+                latitud: result.lat,
+                longitud: result.lng,
+                colonia: prev.colonia || result.colonia || '',
+                ciudad: prev.ciudad || result.ciudad || '',
+                estado: prev.estado || result.estado || '',
+                codigo_postal: prev.codigo_postal || result.codigo_postal || '',
+            }));
+        },
+        [setData, __],
+    );
+
+    const geocodeQuery = buildGeocodeQuery();
+    useEffect(() => {
+        if (!isModalOpen || activeTab !== 'ubicacion') {
+            return;
+        }
+
+        if (coordsSourceRef.current === 'map' || coordsSourceRef.current === 'manual') {
+            return;
+        }
+
+        if (geocodeQuery.length < 6) {
+            return;
+        }
+
+        runGeocode(geocodeQuery, (result) => applyGeocode(result, false));
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [isModalOpen, activeTab, geocodeQuery]);
+
+    const handleForceGeocode = useCallback(() => {
+        const query = buildGeocodeQuery();
+
+        if (query.length < 6) {
+            notifyError(__('Enter more address details to locate it on the map.'));
+
+            return;
+        }
+
+        runGeocode(query, (result) => applyGeocode(result, true), true);
+    }, [buildGeocodeQuery, runGeocode, applyGeocode, __]);
 
     // ── Handlers ───────────────────────────────────────────────────────────────
 
     const handleCreateClick = () => {
         setEditingSucursal(null);
         reset();
+        coordsSourceRef.current = 'none';
         setActiveTab('general');
         setIsModalOpen(true);
     };
 
     const handleEditClick = (sucursal: Sucursal) => {
         setEditingSucursal(sucursal);
+        coordsSourceRef.current = sucursal.latitud != null && sucursal.longitud != null ? 'manual' : 'none';
         setData({
             empresa_id:       sucursal.empresa_id,
             nombre:           sucursal.nombre || '',
             codigo_numeral:   sucursal.codigo_numeral || '01',
             pais_telefono_id: sucursal.pais_telefono_id ?? '',
+            pais_id:          sucursal.pais_id ?? '',
             telefono:         sucursal.telefono || '',
             direccion:        sucursal.direccion || '',
+            codigo_postal:    sucursal.codigo_postal || '',
+            colonia:          sucursal.colonia || '',
+            ciudad:           sucursal.ciudad || '',
+            estado:           sucursal.estado || '',
             latitud:          sucursal.latitud ?? null,
             longitud:         sucursal.longitud ?? null,
             zona_horaria:     sucursal.zona_horaria || '',
@@ -225,9 +336,31 @@ export default function SucursalesIndexPage({
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
 
+        const hasLat = data.latitud !== null && String(data.latitud) !== '';
+        const hasLng = data.longitud !== null && String(data.longitud) !== '';
+
+        if (hasLat !== hasLng) {
+            notifyError(__('Latitude and longitude must both be set, or both empty.'));
+
+            return;
+        }
+
+        if (hasLat && hasLng && !isValidLatLng(Number(data.latitud), Number(data.longitud))) {
+            notifyError(__('The coordinates are out of range.'));
+
+            return;
+        }
+
+        transform((current) => ({
+            ...current,
+            latitud: hasLat ? Number(current.latitud) : null,
+            longitud: hasLng ? Number(current.longitud) : null,
+        }));
+
         if (editingSucursal) {
             put(`/admin/sucursales/${editingSucursal.id}`, {
                 onSuccess: () => {
+                    coordsSourceRef.current = 'none';
                     setIsModalOpen(false);
                     setEditingSucursal(null);
                     reset();
@@ -238,6 +371,7 @@ export default function SucursalesIndexPage({
         } else {
             post('/admin/sucursales', {
                 onSuccess: () => {
+                    coordsSourceRef.current = 'none';
                     setIsModalOpen(false);
                     reset();
                     notifySuccess(__('Branch created successfully.'));
@@ -265,15 +399,29 @@ return;
         });
     };
 
-    const handleLocationSelected = (lat: number, lng: number, address?: string, timezone?: string) => {
-        setData((prev) => ({
-            ...prev,
-            latitud:  lat,
-            longitud: lng,
-            ...(address ? { direccion: address } : {}),
-            ...(timezone ? { zona_horaria: timezone } : {}),
-        }));
-    };
+    const handleLocationSelected = useCallback(
+        (
+            lat: number,
+            lng: number,
+            address?: string,
+            timezone?: string,
+            details?: { codigo_postal?: string; colonia?: string; ciudad?: string; estado?: string },
+        ) => {
+            coordsSourceRef.current = 'map';
+            setData((prev) => ({
+                ...prev,
+                latitud: lat,
+                longitud: lng,
+                ...(address ? { direccion: address } : {}),
+                ...(timezone ? { zona_horaria: timezone } : {}),
+                ...(details?.codigo_postal && !prev.codigo_postal ? { codigo_postal: details.codigo_postal } : {}),
+                ...(details?.colonia && !prev.colonia ? { colonia: details.colonia } : {}),
+                ...(details?.ciudad && !prev.ciudad ? { ciudad: details.ciudad } : {}),
+                ...(details?.estado && !prev.estado ? { estado: details.estado } : {}),
+            }));
+        },
+        [setData],
+    );
 
     // ── Columnas de la tabla ───────────────────────────────────────────────────
 
@@ -649,33 +797,74 @@ return;
 
                             {/* ══ Tab 2: Ubicación ══════════════════════════════════════════════════ */}
                             <TabsContent value="ubicacion" className="space-y-4">
-                                {/* Coordenadas manuales */}
+                                {/* País de ubicación */}
+                                <div>
+                                    <Label htmlFor="pais_id">{__('Country')}</Label>
+                                    <Select
+                                        value={String(data.pais_id)}
+                                        onValueChange={(v) => {
+                                            coordsSourceRef.current = 'none';
+                                            setData((prev) => ({ ...prev, pais_id: v, latitud: null, longitud: null }));
+                                        }}
+                                    >
+                                        <SelectTrigger id="pais_id" className="w-full">
+                                            <SelectValue placeholder={__('Select a country')} />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                            <SelectItem value="">{__('None')}</SelectItem>
+                                            {paises.map((pais) => (
+                                                <SelectItem key={pais.id} value={String(pais.id)}>
+                                                    {pais.nombre}
+                                                </SelectItem>
+                                            ))}
+                                        </SelectContent>
+                                    </Select>
+                                    {errors.pais_id && <p className="text-red-500 text-xs mt-1">{errors.pais_id}</p>}
+                                </div>
+
+                                {/* Dirección estructurada */}
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                     <div>
-                                        <Label htmlFor="latitud">{__('Latitude')}</Label>
+                                        <Label htmlFor="ciudad">{__('City')}</Label>
                                         <Input
-                                            id="latitud"
-                                            type="number"
-                                            step="any"
-                                            value={data.latitud ?? ''}
-                                            onChange={(e) =>
-                                                setData('latitud', e.target.value ? parseFloat(e.target.value) : null)
-                                            }
-                                            placeholder="10.48801"
+                                            id="ciudad"
+                                            value={data.ciudad || ''}
+                                            onChange={(e) => setData('ciudad', e.target.value)}
+                                            placeholder="Ej: Purépero"
                                         />
+                                        {errors.ciudad && <p className="text-red-500 text-xs mt-1">{errors.ciudad}</p>}
                                     </div>
                                     <div>
-                                        <Label htmlFor="longitud">{__('Longitude')}</Label>
+                                        <Label htmlFor="estado">{__('State')}</Label>
                                         <Input
-                                            id="longitud"
-                                            type="number"
-                                            step="any"
-                                            value={data.longitud ?? ''}
-                                            onChange={(e) =>
-                                                setData('longitud', e.target.value ? parseFloat(e.target.value) : null)
-                                            }
-                                            placeholder="-66.87919"
+                                            id="estado"
+                                            value={data.estado || ''}
+                                            onChange={(e) => setData('estado', e.target.value)}
+                                            placeholder="Ej: Michoacán"
                                         />
+                                        {errors.estado && <p className="text-red-500 text-xs mt-1">{errors.estado}</p>}
+                                    </div>
+                                    <div>
+                                        <Label htmlFor="colonia">{__('Neighborhood')}</Label>
+                                        <Input
+                                            id="colonia"
+                                            value={data.colonia || ''}
+                                            onChange={(e) => setData('colonia', e.target.value)}
+                                            placeholder="Ej: Centro"
+                                        />
+                                        {errors.colonia && <p className="text-red-500 text-xs mt-1">{errors.colonia}</p>}
+                                    </div>
+                                    <div>
+                                        <Label htmlFor="codigo_postal">{__('Postal Code')}</Label>
+                                        <Input
+                                            id="codigo_postal"
+                                            value={data.codigo_postal || ''}
+                                            onChange={(e) => setData('codigo_postal', e.target.value)}
+                                            placeholder="Ej: 58540"
+                                        />
+                                        {errors.codigo_postal && (
+                                            <p className="text-red-500 text-xs mt-1">{errors.codigo_postal}</p>
+                                        )}
                                     </div>
                                 </div>
 
@@ -686,9 +875,74 @@ return;
                                         id="direccion"
                                         value={data.direccion || ''}
                                         onChange={(e) => setData('direccion', e.target.value)}
-                                        placeholder={__('The address will be auto-filled when you click on the map...')}
+                                        placeholder={__('Street and number, or click on the map...')}
                                         rows={2}
                                     />
+                                    {errors.direccion && (
+                                        <p className="text-red-500 text-xs mt-1">{errors.direccion}</p>
+                                    )}
+                                </div>
+
+                                <div className="flex items-center gap-2">
+                                    <Button
+                                        type="button"
+                                        variant="outline"
+                                        size="sm"
+                                        onClick={handleForceGeocode}
+                                        disabled={geocoding}
+                                    >
+                                        <MapPin className="mr-2 h-4 w-4" />
+                                        {geocoding ? __('Locating...') : __('Locate address on map')}
+                                    </Button>
+                                    <span className="text-xs text-muted-foreground">
+                                        {__('Or click / drag the marker on the map for precise coordinates.')}
+                                    </span>
+                                </div>
+
+                                {/* Coordenadas (prevalecen sobre la dirección) */}
+                                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                                    <div>
+                                        <Label htmlFor="latitud">{__('Latitude')}</Label>
+                                        <Input
+                                            id="latitud"
+                                            type="number"
+                                            step="any"
+                                            value={data.latitud ?? ''}
+                                            onChange={(e) => {
+                                                coordsSourceRef.current = 'manual';
+                                                setData('latitud', e.target.value ? parseFloat(e.target.value) : null);
+                                            }}
+                                            placeholder="19.92"
+                                        />
+                                        {errors.latitud && <p className="text-red-500 text-xs mt-1">{errors.latitud}</p>}
+                                    </div>
+                                    <div>
+                                        <Label htmlFor="longitud">{__('Longitude')}</Label>
+                                        <Input
+                                            id="longitud"
+                                            type="number"
+                                            step="any"
+                                            value={data.longitud ?? ''}
+                                            onChange={(e) => {
+                                                coordsSourceRef.current = 'manual';
+                                                setData('longitud', e.target.value ? parseFloat(e.target.value) : null);
+                                            }}
+                                            placeholder="-102.01"
+                                        />
+                                        {errors.longitud && (
+                                            <p className="text-red-500 text-xs mt-1">{errors.longitud}</p>
+                                        )}
+                                    </div>
+                                    <div>
+                                        <Label htmlFor="zona_horaria">{__('Time Zone')}</Label>
+                                        <Input
+                                            id="zona_horaria"
+                                            value={data.zona_horaria || ''}
+                                            onChange={(e) => setData('zona_horaria', e.target.value)}
+                                            placeholder="America/Mexico_City"
+                                            className="font-mono text-xs"
+                                        />
+                                    </div>
                                 </div>
 
                                 {/* Mapa */}
@@ -706,11 +960,7 @@ return;
                                                 center={mapCenter}
                                                 zoom={mapZoom}
                                                 style={{ height: '100%', width: '100%' }}
-                                                markerPosition={
-                                                    data.latitud && data.longitud
-                                                        ? [data.latitud, data.longitud]
-                                                        : null
-                                                }
+                                                markerPosition={markerPosition}
                                                 onLocationSelected={handleLocationSelected}
                                             />
                                         )}

@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Http\Requests\EmpresaRequest;
 use App\Models\Empresa;
 use App\Models\Pais;
 use Illuminate\Http\Request;
@@ -54,99 +55,50 @@ class EmpresaController extends Controller
         ]);
     }
 
-    public function store(Request $request)
+    public function store(EmpresaRequest $request)
     {
-        $validated = $request->validate([
-            'razon_social' => 'required|string|max:255',
-            'nombre_comercial' => 'nullable|string|max:255',
-            'documento' => 'required|string|max:255|unique:empresas,documento',
-            'pais_id' => 'nullable|exists:pais,id',
-            'direccion' => 'nullable|string',
-            'latitud' => 'nullable|numeric',
-            'longitud' => 'nullable|numeric',
-            'zona_horaria' => 'nullable|string|max:100',
-            'telefono' => 'nullable|string|max:255',
-            'email' => 'nullable|email|max:255',
-            'representante_legal' => 'nullable|string|max:255',
-            'curp_representante_legal' => 'nullable|string|max:18',
-            'status' => 'boolean',
-        ]);
+        $data = $request->validated();
 
-        try {
-            $empresa = new Empresa($validated);
+        // No hay try/catch que "trague" la excepción: si el INSERT falla, la
+        // QueryException se propaga => 500 semántico + página Inertia de error
+        // (ver bootstrap/app.php). El frontend NUNCA verá un falso 2xx.
+        DB::transaction(function () use ($data) {
+            $empresa = new Empresa($data);
             $empresa->api_key = Str::random(32);
             $empresa->whatsapp_api_key = Str::random(32);
             $empresa->save();
+        });
 
-            return back()->with('notification', [
-                'type' => 'success',
-                'message' => __('Company created successfully.'),
-            ]);
-        } catch (\Exception $e) {
-            Log::error('Error al crear empresa: '.$e->getMessage());
-
-            return back()->with('notification', [
-                'type' => 'error',
-                'message' => __('There was an error creating the company. Please try again.'),
-            ]);
-        }
+        return back()->with('notification', [
+            'type' => 'success',
+            'message' => __('Company created successfully.'),
+        ]);
     }
 
-    public function update(Request $request, Empresa $empresa)
+    public function update(EmpresaRequest $request, Empresa $empresa)
     {
-        $validated = $request->validate([
-            'razon_social' => 'required|string|max:255',
-            'nombre_comercial' => 'nullable|string|max:255',
-            'documento' => 'required|string|max:255|unique:empresas,documento,'.$empresa->id,
-            'pais_id' => 'nullable|exists:pais,id',
-            'direccion' => 'nullable|string',
-            'latitud' => 'nullable|numeric',
-            'longitud' => 'nullable|numeric',
-            'zona_horaria' => 'nullable|string|max:100',
-            'telefono' => 'nullable|string|max:255',
-            'email' => 'nullable|email|max:255',
-            'representante_legal' => 'nullable|string|max:255',
-            'curp_representante_legal' => 'nullable|string|max:18',
-            'status' => 'boolean',
+        $data = $request->validated();
+
+        DB::transaction(function () use ($empresa, $data) {
+            $empresa->update($data);
+        });
+
+        return back()->with('notification', [
+            'type' => 'success',
+            'message' => __('Company updated successfully.'),
         ]);
-
-        try {
-            DB::transaction(function () use ($empresa, $validated) {
-                $empresa->update($validated);
-            });
-
-            return back()->with('notification', [
-                'type' => 'success',
-                'message' => __('Company updated successfully.'),
-            ]);
-        } catch (\Exception $e) {
-            Log::error("Error al actualizar empresa {$empresa->id}: ".$e->getMessage());
-
-            return back()->with('notification', [
-                'type' => 'error',
-                'message' => __('There was an error updating the company. Please try again.'),
-            ]);
-        }
     }
 
     public function toggleStatus(Empresa $empresa)
     {
-        try {
-            $empresa->status = ! $empresa->status;
-            $empresa->save();
+        DB::transaction(function () use ($empresa) {
+            $empresa->update(['status' => ! $empresa->status]);
+        });
 
-            return back()->with('notification', [
-                'type' => 'success',
-                'message' => __('Status updated successfully.'),
-            ]);
-        } catch (\Exception $e) {
-            Log::error("Error al cambiar estado de empresa {$empresa->id}: ".$e->getMessage());
-
-            return back()->with('notification', [
-                'type' => 'error',
-                'message' => __('There was an error updating the status. Please try again.'),
-            ]);
-        }
+        return back()->with('notification', [
+            'type' => 'success',
+            'message' => __('Status updated successfully.'),
+        ]);
     }
 
     public function updateLogos(Request $request, Empresa $empresa)
@@ -157,29 +109,32 @@ class EmpresaController extends Controller
         ]);
 
         try {
-            if ($request->hasFile('logo')) {
-                $path = $request->file('logo')->store('empresas/logos', 'public');
-                $empresa->logo = '/storage/'.$path;
-            }
+            DB::transaction(function () use ($request, $empresa) {
+                if ($request->hasFile('logo')) {
+                    $path = $request->file('logo')->store('empresas/logos', 'public');
+                    $empresa->logo = '/storage/'.$path;
+                }
 
-            if ($request->hasFile('logo_mini')) {
-                $path = $request->file('logo_mini')->store('empresas/logos_mini', 'public');
-                $empresa->logo_mini = '/storage/'.$path;
-            }
+                if ($request->hasFile('logo_mini')) {
+                    $path = $request->file('logo_mini')->store('empresas/logos_mini', 'public');
+                    $empresa->logo_mini = '/storage/'.$path;
+                }
 
-            $empresa->save();
-
-            return back()->with('notification', [
-                'type' => 'success',
-                'message' => __('Logos updated successfully.'),
-            ]);
-        } catch (\Exception $e) {
+                $empresa->save();
+            });
+        } catch (\Throwable $e) {
+            // Fallo de almacenamiento (disco lleno, permisos, etc.): se devuelve
+            // como error de validación => el frontend dispara onError (no onSuccess).
             Log::error("Error al actualizar logos de empresa {$empresa->id}: ".$e->getMessage());
 
-            return back()->with('notification', [
-                'type' => 'error',
-                'message' => __('There was an error updating the logos. Please try again.'),
+            return back()->withErrors([
+                'logo' => __('There was an error updating the logos. Please try again.'),
             ]);
         }
+
+        return back()->with('notification', [
+            'type' => 'success',
+            'message' => __('Logos updated successfully.'),
+        ]);
     }
 }

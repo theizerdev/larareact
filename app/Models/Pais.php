@@ -32,6 +32,8 @@ class Pais extends Model
     {
         return [
             'impuesto_predeterminado' => 'decimal:2',
+            'latitud' => 'float',
+            'longitud' => 'float',
             'activo' => 'boolean',
         ];
     }

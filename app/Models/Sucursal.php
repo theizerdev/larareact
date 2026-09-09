@@ -28,8 +28,13 @@ class Sucursal extends Model
         'nombre',
         'codigo_numeral',
         'pais_telefono_id',
+        'pais_id',
         'telefono',
         'direccion',
+        'codigo_postal',
+        'colonia',
+        'ciudad',
+        'estado',
         'latitud',
         'longitud',
         'zona_horaria',
@@ -39,8 +44,10 @@ class Sucursal extends Model
     protected function casts(): array
     {
         return [
-            'latitud' => 'decimal:8',
-            'longitud' => 'decimal:8',
+            // Ver nota en Empresa::casts(): `float` en vez de `decimal:8` para no
+            // serializar las coordenadas como string hacia el frontend.
+            'latitud' => 'float',
+            'longitud' => 'float',
             'status' => 'boolean',
         ];
     }
@@ -59,5 +66,13 @@ class Sucursal extends Model
     public function paisTelefono(): BelongsTo
     {
         return $this->belongsTo(Pais::class, 'pais_telefono_id');
+    }
+
+    /**
+     * Get the pais where this sucursal is physically located.
+     */
+    public function pais(): BelongsTo
+    {
+        return $this->belongsTo(Pais::class, 'pais_id');
     }
 }
