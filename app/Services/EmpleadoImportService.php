@@ -228,9 +228,12 @@ class EmpleadoImportService
     {
         $empresa = ($userEmpresaId ? Empresa::find($userEmpresaId) : null) ?: Empresa::first();
         if (!$empresa) {
+            // `documento` es NOT NULL UNIQUE: el fallback debe aportarlo o el
+            // INSERT revienta (sólo se alcanza en una BD sin ninguna empresa).
             $empresa = Empresa::create([
                 'razon_social' => "Driscoll's, Inc.",
                 'nombre_comercial' => "Driscoll's, Inc.",
+                'documento' => 'IMPORT-'.strtoupper(\Illuminate\Support\Str::random(10)),
                 'status' => true,
             ]);
         }

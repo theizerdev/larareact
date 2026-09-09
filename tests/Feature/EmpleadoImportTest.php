@@ -3,11 +3,14 @@
 namespace Tests\Feature;
 
 use App\Models\Empleado;
+use App\Models\Empresa;
+use App\Models\Sucursal;
 use App\Models\User;
 use App\Services\EmpleadoImportService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Hash;
+use Spatie\Permission\Models\Permission;
 use Tests\TestCase;
 
 class EmpleadoImportTest extends TestCase
@@ -16,6 +19,23 @@ class EmpleadoImportTest extends TestCase
 
     public function test_import_service_executes_successfully()
     {
+        // Fixtures: el servicio necesita empresa + sucursal reales y un usuario
+        // autenticado (para el user_id de los departamentos que crea al vuelo).
+        $empresa = Empresa::create([
+            'razon_social' => "Driscoll's, Inc.",
+            'documento' => 'IMPORT-TEST-1',
+            'status' => true,
+        ]);
+        $sucursal = Sucursal::create([
+            'nombre' => 'Cooler Purépero',
+            'empresa_id' => $empresa->id,
+            'status' => true,
+        ]);
+        $this->actingAs(User::factory()->create([
+            'empresa_id' => $empresa->id,
+            'sucursal_id' => $sucursal->id,
+        ]));
+
         $service = new EmpleadoImportService();
 
         $records = [
@@ -37,7 +57,7 @@ class EmpleadoImportTest extends TestCase
             ]
         ];
 
-        $result = $service->executeImport($records, 1, 1, 'update');
+        $result = $service->executeImport($records, $empresa->id, $sucursal->id, 'update');
 
         $this->assertTrue($result['success']);
         $this->assertEquals(1, $result['created']);
@@ -59,9 +79,12 @@ class EmpleadoImportTest extends TestCase
 
     public function test_verify_password_endpoint_requires_valid_credentials()
     {
+        // La ruta exige permission:empleados.import|empleados.create.
+        Permission::findOrCreate('empleados.import', 'web');
         $user = User::factory()->create([
             'password' => Hash::make('secret123')
         ]);
+        $user->givePermissionTo('empleados.import');
 
         $responseInvalid = $this->actingAs($user)->postJson('/admin/empleados/import-verify-password', [
             'password' => 'wrongpass'
