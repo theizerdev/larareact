@@ -148,7 +148,16 @@ class VisitaAccesoController extends Controller
             'invitaciones_pendientes'=> $visitasEsperadas->count(),
         ];
 
+        $user = $request->user();
+
+        // Responsables were listed across all branches, so a user could pick
+        // a host from another sucursal in this dropdown and then be rejected
+        // by the sucursal_id ownership check in storeInvitacion()/store()
+        // with a generic "Verifique los datos ingresados" error and no clue
+        // why. Scoping the list to the user's own branch prevents that
+        // dead-end pick (bug reported 2026-09-09).
         $responsables = Responsable::where('status', 1)
+            ->where('sucursal_id', $user->sucursal_id)
             ->with(['departamento', 'cargo'])
             ->orderBy('nombres', 'asc')
             ->get(['id', 'nombres', 'apellidos', 'departamento_id', 'cargo_id']);
@@ -160,8 +169,6 @@ class VisitaAccesoController extends Controller
         $tipoServicios = TipoServicio::where('status', 1)
             ->orderBy('nombre', 'asc')
             ->get(['id', 'nombre']);
-
-        $user     = $request->user();
         $empresa  = Empresa::find($user->empresa_id) ?: Empresa::first();
         $sucursal = Sucursal::find($user->sucursal_id);
 
@@ -187,6 +194,7 @@ class VisitaAccesoController extends Controller
     public function buscarEntidades(Request $request)
     {
         $tipo = $request->input('tipo_acceso', 'empleado');
+        $sucursalId = $request->user()->sucursal_id;
         $query = trim($request->input('query', ''));
         $cleanQuery = preg_replace('/[^a-zA-Z0-9]/', '', $query);
         $isNumeric = ctype_digit($cleanQuery);
@@ -197,6 +205,7 @@ class VisitaAccesoController extends Controller
         if ($tipo === 'empleado') {
             $empleados = Empleado::query()
                 ->where('status', 1)
+                ->where('sucursal_id', $sucursalId)
                 ->where(function ($q) use ($query, $cleanQuery, $isNumeric, $intVal, $padded8, $padded6) {
                     if (!empty($query)) {
                         $q->where('nombres', 'like', "%{$query}%")
@@ -222,6 +231,7 @@ class VisitaAccesoController extends Controller
         if ($tipo === 'proveedor') {
             $proveedores = Proveedor::query()
                 ->where('status', 'activo')
+                ->where('sucursal_id', $sucursalId)
                 ->where(function ($q) use ($query, $cleanQuery, $isNumeric, $intVal, $padded8, $padded6) {
                     if (!empty($query)) {
                         $q->where('razon_social', 'like', "%{$query}%")
@@ -257,6 +267,7 @@ class VisitaAccesoController extends Controller
         if ($tipo === 'productor') {
             $productores = Productor::query()
                 ->where('status', 'activo')
+                ->where('sucursal_id', $sucursalId)
                 ->where(function ($q) use ($query, $cleanQuery, $isNumeric, $intVal, $padded8, $padded6) {
                     if (!empty($query)) {
                         $q->where('razon_social', 'like', "%{$query}%")
