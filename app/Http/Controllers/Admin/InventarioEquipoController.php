@@ -52,7 +52,6 @@ class InventarioEquipoController extends Controller
             });
         }
 
-        $equipos = $query->latest()->paginate($perPage)->withQueryString();
         $sort = $request->input('sort', 'created_at');
         $direction = $request->input('direction', 'desc') === 'asc' ? 'asc' : 'desc';
         $allowedSorts = ['imei_1', 'precio_contado', 'precio_financiado', 'condicion', 'estado', 'created_at'];
@@ -84,7 +83,6 @@ class InventarioEquipoController extends Controller
             'marcas' => $marcas,
             'modelos' => $modelos,
             'sucursales' => $sucursales,
-            'filters' => $request->only(['search', 'estado', 'sucursal_id', 'marca_id', 'perPage']),
             'filters' => $request->only(['search', 'estado', 'sucursal_id', 'marca_id', 'perPage', 'sort', 'direction']),
         ]);
     }

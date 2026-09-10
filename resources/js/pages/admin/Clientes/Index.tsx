@@ -24,7 +24,6 @@ import { ModuleHeader } from '@/components/module-header';
 import { StatCard } from '@/components/stat-card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Card } from '@/components/ui/card';
 import {
     Dialog,
     DialogContent,
@@ -386,7 +385,7 @@ export default function ClientesIndex({ clientes, stats, filters }: Props) {
                     </div>
 
                     <Select value={estadoFilter} onValueChange={(val) => { setEstadoFilter(val); handleFilterChange({ estado_crediticio: val !== 'all' ? val : undefined }); }}>
-                        <SelectTrigger className="w-[200px] h-10">
+                        <SelectTrigger className="w-full sm:w-[220px] md:w-[260px] h-10">
                             <SelectValue placeholder="Estado crediticio" />
                         </SelectTrigger>
                         <SelectContent>
@@ -404,111 +403,6 @@ export default function ClientesIndex({ clientes, stats, filters }: Props) {
                 </div>
             </FilterBar>
 
-            {/* Tabla de Clientes */}
-            <Card className="overflow-hidden border border-slate-200 dark:border-slate-800">
-                <div className="overflow-x-auto">
-                    <table className="w-full text-sm text-left">
-                        <thead className="text-xs uppercase bg-slate-50 dark:bg-slate-900/50 text-slate-500 border-b border-slate-200 dark:border-slate-800">
-                            <tr>
-                                <th className="px-4 py-3.5">Cliente</th>
-                                <th className="px-4 py-3.5">Documento</th>
-                                <th className="px-4 py-3.5">Contacto / WhatsApp</th>
-                                <th className="px-4 py-3.5">Datos Laborales</th>
-                                <th className="px-4 py-3.5">Límite Crédito</th>
-                                <th className="px-4 py-3.5">Créditos</th>
-                                <th className="px-4 py-3.5">Estado</th>
-                                <th className="px-4 py-3.5 text-right">Acciones</th>
-                            </tr>
-                        </thead>
-                        <tbody className="divide-y divide-slate-100 dark:divide-slate-800/60">
-                            {clientes.data.length === 0 ? (
-                                <tr>
-                                    <td colSpan={8} className="px-4 py-12 text-center text-slate-500">
-                                        <Users className="size-8 mx-auto text-slate-300 mb-2" />
-                                        No se encontraron clientes registrados.
-                                    </td>
-                                </tr>
-                            ) : (
-                                clientes.data.map((c) => (
-                                    <tr key={c.id} className="hover:bg-slate-50/50 dark:hover:bg-slate-900/20 transition-colors">
-                                        <td className="px-4 py-3 font-medium">
-                                            <div className="font-semibold text-slate-900 dark:text-slate-100">
-                                                {c.nombres} {c.apellidos}
-                                            </div>
-                                            <div className="text-xs text-slate-500">
-                                                {c.email || 'Sin correo'}
-                                            </div>
-                                        </td>
-                                        <td className="px-4 py-3 font-mono text-xs font-semibold text-slate-700 dark:text-slate-300">
-                                            {c.tipo_documento}-{c.numero_documento}
-                                        </td>
-                                        <td className="px-4 py-3">
-                                            <a
-                                                href={`https://wa.me/${c.telefono_principal.replace(/[^0-9]/g, '')}`}
-                                                target="_blank"
-                                                rel="noreferrer"
-                                                className="inline-flex items-center gap-1 text-xs font-medium text-emerald-600 hover:text-emerald-700 dark:text-emerald-400"
-                                            >
-                                                <Phone className="size-3" /> {c.telefono_principal}
-                                                <ExternalLink className="size-2.5" />
-                                            </a>
-                                            {c.ciudad && <div className="text-xs text-slate-400">{c.ciudad}</div>}
-                                        </td>
-                                        <td className="px-4 py-3 text-xs">
-                                            <div className="font-medium text-slate-800 dark:text-slate-200">
-                                                {c.empresa_trabajo || 'No especificada'}
-                                            </div>
-                                            <div className="text-slate-500">{c.cargo_trabajo || 'Cliente particular'}</div>
-                                        </td>
-                                        <td className="px-4 py-3 font-bold text-slate-900 dark:text-slate-100">
-                                            {currency}{Number(c.limite_credito).toFixed(2)}
-                                        </td>
-                                        <td className="px-4 py-3">
-                                            {c.creditos_activos_count && c.creditos_activos_count > 0 ? (
-                                                <Badge variant="secondary" className="font-mono">
-                                                    {c.creditos_activos_count} activo(s)
-                                                </Badge>
-                                            ) : (
-                                                <span className="text-xs text-slate-400">Sin créditos</span>
-                                            )}
-                                        </td>
-                                        <td className="px-4 py-3">
-                                            {getEstadoBadge(c.estado_crediticio)}
-                                        </td>
-                                        <td className="px-4 py-3 text-right">
-                                            <div className="flex items-center justify-end gap-1.5">
-                                                <Link href={`/admin/clientes/${c.id}`}>
-                                                    <Button variant="ghost" size="sm" className="h-8 w-8 p-0 text-blue-600" title="Ver Expediente">
-                                                        <Eye className="size-3.5" />
-                                                    </Button>
-                                                </Link>
-                                                <Button
-                                                    variant="ghost"
-                                                    size="sm"
-                                                    onClick={() => openEditModal(c)}
-                                                    className="h-8 w-8 p-0"
-                                                    title="Editar"
-                                                >
-                                                    <Edit2 className="size-3.5" />
-                                                </Button>
-                                                <Button
-                                                    variant="ghost"
-                                                    size="sm"
-                                                    onClick={() => handleDelete(c.id)}
-                                                    className="h-8 w-8 p-0 text-rose-500 hover:text-rose-700"
-                                                    title="Eliminar"
-                                                >
-                                                    <Trash2 className="size-3.5" />
-                                                </Button>
-                                            </div>
-                                        </td>
-                                    </tr>
-                                ))
-                            )}
-                        </tbody>
-                    </table>
-                </div>
-            </Card>
             {/* DataTable Reutilizable */}
             <DataTable
                 data={clientes}
@@ -519,7 +413,7 @@ export default function ClientesIndex({ clientes, stats, filters }: Props) {
 
             {/* Modal para Crear / Editar Cliente */}
             <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
-                <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+                <DialogContent className="max-w-xl sm:max-w-xl max-h-[90vh] overflow-y-auto">
                     <DialogHeader>
                         <DialogTitle>{editingCliente ? 'Editar Cliente' : 'Registrar Nuevo Cliente'}</DialogTitle>
                         <DialogDescription>
@@ -556,7 +450,7 @@ export default function ClientesIndex({ clientes, stats, filters }: Props) {
                                     value={form.data.tipo_documento}
                                     onValueChange={(val) => form.setData('tipo_documento', val)}
                                 >
-                                    <SelectTrigger>
+                                    <SelectTrigger className="w-full h-10">
                                         <SelectValue />
                                     </SelectTrigger>
                                     <SelectContent>
@@ -670,7 +564,7 @@ export default function ClientesIndex({ clientes, stats, filters }: Props) {
                                         value={form.data.dia_pago}
                                         onValueChange={(val) => form.setData('dia_pago', val)}
                                     >
-                                        <SelectTrigger>
+                                        <SelectTrigger className="w-full h-10">
                                             <SelectValue />
                                         </SelectTrigger>
                                         <SelectContent>
@@ -700,7 +594,7 @@ export default function ClientesIndex({ clientes, stats, filters }: Props) {
                                     value={form.data.estado_crediticio}
                                     onValueChange={(val: any) => form.setData('estado_crediticio', val)}
                                 >
-                                    <SelectTrigger>
+                                    <SelectTrigger className="w-full h-10">
                                         <SelectValue />
                                     </SelectTrigger>
                                     <SelectContent>

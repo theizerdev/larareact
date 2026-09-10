@@ -279,7 +279,7 @@ export default function CreditoCreate({ clientes, equipos, planes, sucursales }:
                                 <div className="space-y-1.5">
                                     <Label>Buscar y Seleccionar Cliente *</Label>
                                     <Select value={form.data.cliente_id} onValueChange={handleClienteChange}>
-                                        <SelectTrigger className="h-11">
+                                        <SelectTrigger className="w-full h-11">
                                             <SelectValue placeholder="Selecciona un cliente registrado..." />
                                         </SelectTrigger>
                                         <SelectContent>
@@ -329,7 +329,7 @@ export default function CreditoCreate({ clientes, equipos, planes, sucursales }:
                                 <div className="space-y-1.5">
                                     <Label>Seleccionar Teléfono Disponible (Filtrado por IMEI) *</Label>
                                     <Select value={form.data.inventario_equipo_id} onValueChange={handleEquipoChange}>
-                                        <SelectTrigger className="h-11">
+                                        <SelectTrigger className="w-full h-11">
                                             <SelectValue placeholder="Selecciona un equipo por marca, modelo o IMEI..." />
                                         </SelectTrigger>
                                         <SelectContent>
@@ -390,7 +390,7 @@ export default function CreditoCreate({ clientes, equipos, planes, sucursales }:
                                     <div className="space-y-1.5">
                                         <Label>Plan de Financiamiento *</Label>
                                         <Select value={form.data.plan_financiamiento_id} onValueChange={handlePlanChange}>
-                                            <SelectTrigger>
+                                            <SelectTrigger className="w-full h-10">
                                                 <SelectValue placeholder="Seleccionar plan..." />
                                             </SelectTrigger>
                                             <SelectContent>
@@ -440,7 +440,7 @@ export default function CreditoCreate({ clientes, equipos, planes, sucursales }:
                                             value={form.data.metodo_pago_inicial}
                                             onValueChange={(val) => form.setData('metodo_pago_inicial', val)}
                                         >
-                                            <SelectTrigger>
+                                            <SelectTrigger className="w-full h-10">
                                                 <SelectValue />
                                             </SelectTrigger>
                                             <SelectContent>

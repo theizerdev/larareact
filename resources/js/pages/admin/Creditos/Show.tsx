@@ -435,7 +435,7 @@ export default function CreditoShow({ credito }: Props) {
 
             {/* Modal de Cobro de Cuota */}
             <Dialog open={isPaymentModalOpen} onOpenChange={setIsPaymentModalOpen}>
-                <DialogContent className="max-w-md">
+                <DialogContent className="max-w-xl sm:max-w-xl">
                     <DialogHeader>
                         <DialogTitle>Registrar Pago: Cuota #{payingCuota?.numero_cuota}</DialogTitle>
                         <DialogDescription>
@@ -481,7 +481,7 @@ export default function CreditoShow({ credito }: Props) {
                                         value={paymentForm.data.metodo_pago}
                                         onValueChange={(val) => paymentForm.setData('metodo_pago', val)}
                                     >
-                                        <SelectTrigger>
+                                        <SelectTrigger className="w-full h-10">
                                             <SelectValue />
                                         </SelectTrigger>
                                         <SelectContent>

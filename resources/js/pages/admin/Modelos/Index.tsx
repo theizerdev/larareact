@@ -7,8 +7,6 @@ import {
     CheckCircle2,
     Edit2,
     Trash2,
-    ToggleLeft,
-    ToggleRight,
     Smartphone,
     Layers,
 } from 'lucide-react';
@@ -21,7 +19,6 @@ import { ModuleHeader } from '@/components/module-header';
 import { StatCard } from '@/components/stat-card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Card } from '@/components/ui/card';
 import {
     Dialog,
     DialogContent,
@@ -317,7 +314,7 @@ export default function ModelosIndex({ modelos, stats, marcas, filters }: Props)
                     </div>
 
                     <Select value={marcaFilter} onValueChange={(val) => { setMarcaFilter(val); handleFilterChange({ marca_id: val !== 'all' ? val : undefined }); }}>
-                        <SelectTrigger className="w-[180px] h-10">
+                        <SelectTrigger className="w-full sm:w-[220px] md:w-[260px] h-10">
                             <SelectValue placeholder="Marca" />
                         </SelectTrigger>
                         <SelectContent>
@@ -334,100 +331,6 @@ export default function ModelosIndex({ modelos, stats, marcas, filters }: Props)
                 </div>
             </FilterBar>
 
-            {/* Tabla de Modelos */}
-            <Card className="overflow-hidden border border-slate-200 dark:border-slate-800">
-                <table className="w-full text-sm text-left">
-                    <thead className="text-xs uppercase bg-slate-50 dark:bg-slate-900/50 text-slate-500 border-b border-slate-200 dark:border-slate-800">
-                        <tr>
-                            <th className="px-4 py-3.5">Marca & Modelo</th>
-                            <th className="px-4 py-3.5">Memoria & Almacenamiento</th>
-                            <th className="px-4 py-3.5">Batería / Procesador</th>
-                            <th className="px-4 py-3.5">Stock en Tiendas</th>
-                            <th className="px-4 py-3.5">Estado</th>
-                            <th className="px-4 py-3.5 text-right">Acciones</th>
-                        </tr>
-                    </thead>
-                    <tbody className="divide-y divide-slate-100 dark:divide-slate-800/60">
-                        {modelos.data.length === 0 ? (
-                            <tr>
-                                <td colSpan={6} className="px-4 py-8 text-center text-slate-400">
-                                    No se encontraron modelos registrados.
-                                </td>
-                            </tr>
-                        ) : (
-                            modelos.data.map((m) => (
-                                <tr key={m.id} className="hover:bg-slate-50/50 dark:hover:bg-slate-900/20">
-                                    <td className="px-4 py-3 font-medium">
-                                        <Badge variant="outline" className="text-[10px] uppercase mb-1">
-                                            {m.marca?.nombre}
-                                        </Badge>
-                                        <div className="font-bold text-slate-900 dark:text-slate-100 text-base">
-                                            {m.nombre}
-                                        </div>
-                                    </td>
-                                    <td className="px-4 py-3">
-                                        <div className="font-semibold text-slate-800 dark:text-slate-200">
-                                            {m.almacenamiento || 'N/D'}
-                                        </div>
-                                        <div className="text-xs text-slate-500">
-                                            RAM: {m.ram || 'N/D'}
-                                        </div>
-                                    </td>
-                                    <td className="px-4 py-3 text-xs text-slate-600 dark:text-slate-400">
-                                        <div>{m.bateria || 'Batería N/D'}</div>
-                                        <div>{m.procesador || 'Procesador N/D'}</div>
-                                    </td>
-                                    <td className="px-4 py-3">
-                                        <div className="flex items-center gap-1.5 text-xs">
-                                            <Badge variant="secondary" className="font-mono">
-                                                {m.total_equipos || 0} total
-                                            </Badge>
-                                            <span className="text-emerald-600 font-semibold font-mono">
-                                                ({m.disponibles_equipos || 0} disp.)
-                                            </span>
-                                        </div>
-                                    </td>
-                                    <td className="px-4 py-3">
-                                        <button
-                                            onClick={() => toggleStatus(m.id)}
-                                            className="inline-flex items-center gap-1 text-xs cursor-pointer"
-                                            title="Cambiar estado"
-                                        >
-                                            {m.activo ? (
-                                                <Badge className="bg-emerald-500/15 text-emerald-700 dark:text-emerald-400 border-emerald-500/20">Activo</Badge>
-                                            ) : (
-                                                <Badge variant="outline" className="text-slate-400">Inactivo</Badge>
-                                            )}
-                                        </button>
-                                    </td>
-                                    <td className="px-4 py-3 text-right">
-                                        <div className="flex items-center justify-end gap-1">
-                                            <Button
-                                                variant="ghost"
-                                                size="sm"
-                                                onClick={() => openEditModal(m)}
-                                                className="h-8 w-8 p-0"
-                                            >
-                                                <Edit2 className="size-3.5" />
-                                            </Button>
-                                            {(!m.total_equipos || m.total_equipos === 0) && (
-                                                <Button
-                                                    variant="ghost"
-                                                    size="sm"
-                                                    onClick={() => handleDelete(m.id)}
-                                                    className="h-8 w-8 p-0 text-rose-500 hover:text-rose-700"
-                                                >
-                                                    <Trash2 className="size-3.5" />
-                                                </Button>
-                                            )}
-                                        </div>
-                                    </td>
-                                </tr>
-                            ))
-                        )}
-                    </tbody>
-                </table>
-            </Card>
             {/* DataTable Reutilizable */}
             <DataTable
                 data={modelos}
@@ -438,7 +341,7 @@ export default function ModelosIndex({ modelos, stats, marcas, filters }: Props)
 
             {/* Modal Crear / Editar Modelo */}
             <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
-                <DialogContent className="max-w-lg">
+                <DialogContent className="max-w-xl sm:max-w-xl max-h-[90vh] overflow-y-auto">
                     <DialogHeader>
                         <DialogTitle>{editingModelo ? 'Editar Modelo de Teléfono' : 'Nuevo Modelo de Teléfono'}</DialogTitle>
                         <DialogDescription>
@@ -453,7 +356,7 @@ export default function ModelosIndex({ modelos, stats, marcas, filters }: Props)
                                 value={form.data.marca_id}
                                 onValueChange={(val) => form.setData('marca_id', val)}
                             >
-                                <SelectTrigger>
+                                <SelectTrigger className="w-full h-10">
                                     <SelectValue placeholder="Selecciona fabricante" />
                                 </SelectTrigger>
                                 <SelectContent>
@@ -539,4 +442,3 @@ export default function ModelosIndex({ modelos, stats, marcas, filters }: Props)
         </div>
     );
 }
-

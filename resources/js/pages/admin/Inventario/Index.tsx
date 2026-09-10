@@ -22,7 +22,6 @@ import { ModuleHeader } from '@/components/module-header';
 import { StatCard } from '@/components/stat-card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Card } from '@/components/ui/card';
 import {
     Dialog,
     DialogContent,
@@ -413,7 +412,7 @@ export default function InventarioIndex({
                     </div>
 
                     <Select value={estadoFilter} onValueChange={(val) => { setEstadoFilter(val); handleFilterChange({ estado: val !== 'all' ? val : undefined }); }}>
-                        <SelectTrigger className="w-[180px] h-10">
+                        <SelectTrigger className="w-full sm:w-[200px] md:w-[240px] h-10">
                             <SelectValue placeholder="Estado" />
                         </SelectTrigger>
                         <SelectContent>
@@ -428,7 +427,7 @@ export default function InventarioIndex({
                     </Select>
 
                     <Select value={sucursalFilter} onValueChange={(val) => { setSucursalFilter(val); handleFilterChange({ sucursal_id: val !== 'all' ? val : undefined }); }}>
-                        <SelectTrigger className="w-[180px] h-10">
+                        <SelectTrigger className="w-full sm:w-[200px] md:w-[240px] h-10">
                             <SelectValue placeholder="Sucursal" />
                         </SelectTrigger>
                         <SelectContent>
@@ -445,104 +444,6 @@ export default function InventarioIndex({
                 </div>
             </FilterBar>
 
-            {/* Tabla de Equipos */}
-            <Card className="overflow-hidden border border-slate-200 dark:border-slate-800">
-                <div className="overflow-x-auto">
-                    <table className="w-full text-sm text-left">
-                        <thead className="text-xs uppercase bg-slate-50 dark:bg-slate-900/50 text-slate-500 border-b border-slate-200 dark:border-slate-800">
-                            <tr>
-                                <th className="px-4 py-3.5">Dispositivo</th>
-                                <th className="px-4 py-3.5">IMEI 1 / 2</th>
-                                <th className="px-4 py-3.5">Sucursal</th>
-                                <th className="px-4 py-3.5">Condición</th>
-                                <th className="px-4 py-3.5">P. Contado</th>
-                                <th className="px-4 py-3.5 font-bold text-slate-900 dark:text-slate-100">P. Financiado</th>
-                                <th className="px-4 py-3.5">Estado</th>
-                                <th className="px-4 py-3.5 text-right">Acciones</th>
-                            </tr>
-                        </thead>
-                        <tbody className="divide-y divide-slate-100 dark:divide-slate-800/60">
-                            {equipos.data.length === 0 ? (
-                                <tr>
-                                    <td colSpan={8} className="px-4 py-12 text-center text-slate-500">
-                                        <Smartphone className="size-8 mx-auto text-slate-300 mb-2" />
-                                        No se encontraron equipos registrados con los criterios seleccionados.
-                                    </td>
-                                </tr>
-                            ) : (
-                                equipos.data.map((eq) => (
-                                    <tr key={eq.id} className="hover:bg-slate-50/50 dark:hover:bg-slate-900/20 transition-colors">
-                                        <td className="px-4 py-3 font-medium">
-                                            <div className="font-semibold text-slate-900 dark:text-slate-100">
-                                                {eq.modelo?.marca?.nombre} {eq.modelo?.nombre}
-                                            </div>
-                                            <div className="text-xs text-slate-500">
-                                                {eq.modelo?.almacenamiento} • {eq.color || 'Sin color'}
-                                            </div>
-                                        </td>
-                                        <td className="px-4 py-3">
-                                            <div className="flex items-center gap-1.5 font-mono text-xs font-semibold text-slate-800 dark:text-slate-200">
-                                                <span>{eq.imei_1}</span>
-                                                <button
-                                                    onClick={() => copyToClipboard(eq.imei_1)}
-                                                    className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200"
-                                                    title="Copiar IMEI"
-                                                >
-                                                    {copiedImei === eq.imei_1 ? <Check className="size-3.5 text-emerald-600" /> : <Copy className="size-3.5" />}
-                                                </button>
-                                            </div>
-                                            {eq.imei_2 && (
-                                                <div className="text-[11px] font-mono text-slate-400">
-                                                    IMEI 2: {eq.imei_2}
-                                                </div>
-                                            )}
-                                        </td>
-                                        <td className="px-4 py-3 text-slate-600 dark:text-slate-300 text-xs">
-                                            {eq.sucursal?.nombre || 'General'}
-                                        </td>
-                                        <td className="px-4 py-3">
-                                            <span className="capitalize text-xs font-medium px-2 py-0.5 rounded bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300">
-                                                {eq.condicion}
-                                            </span>
-                                        </td>
-                                        <td className="px-4 py-3 text-slate-600 dark:text-slate-400">
-                                            {currency}{Number(eq.precio_contado).toFixed(2)}
-                                        </td>
-                                        <td className="px-4 py-3 font-bold text-emerald-600 dark:text-emerald-400">
-                                            {currency}{Number(eq.precio_financiado).toFixed(2)}
-                                        </td>
-                                        <td className="px-4 py-3">
-                                            {getEstadoBadge(eq.estado)}
-                                        </td>
-                                        <td className="px-4 py-3 text-right">
-                                            <div className="flex items-center justify-end gap-1.5">
-                                                <Button
-                                                    variant="ghost"
-                                                    size="sm"
-                                                    onClick={() => openEditModal(eq)}
-                                                    className="h-8 w-8 p-0"
-                                                >
-                                                    <Edit2 className="size-3.5" />
-                                                </Button>
-                                                {eq.estado !== 'vendido_credito' && (
-                                                    <Button
-                                                        variant="ghost"
-                                                        size="sm"
-                                                        onClick={() => handleDelete(eq.id)}
-                                                        className="h-8 w-8 p-0 text-rose-500 hover:text-rose-700"
-                                                    >
-                                                        <Trash2 className="size-3.5" />
-                                                    </Button>
-                                                )}
-                                            </div>
-                                        </td>
-                                    </tr>
-                                ))
-                            )}
-                        </tbody>
-                    </table>
-                </div>
-            </Card>
             {/* DataTable Reutilizable */}
             <DataTable
                 data={equipos}
@@ -553,7 +454,7 @@ export default function InventarioIndex({
 
             {/* Modal para Crear / Editar Equipo */}
             <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
-                <DialogContent className="max-w-2xl">
+                <DialogContent className="max-w-xl sm:max-w-xl max-h-[90vh] overflow-y-auto">
                     <DialogHeader>
                         <DialogTitle>{editingEquipo ? 'Editar Equipo Móvil' : 'Registrar Equipo por IMEI'}</DialogTitle>
                         <DialogDescription>
@@ -569,7 +470,7 @@ export default function InventarioIndex({
                                     value={form.data.sucursal_id}
                                     onValueChange={(val) => form.setData('sucursal_id', val)}
                                 >
-                                    <SelectTrigger>
+                                    <SelectTrigger className="w-full h-10">
                                         <SelectValue placeholder="Seleccionar tienda" />
                                     </SelectTrigger>
                                     <SelectContent>
@@ -586,7 +487,7 @@ export default function InventarioIndex({
                                     value={form.data.modelo_equipo_id}
                                     onValueChange={(val) => form.setData('modelo_equipo_id', val)}
                                 >
-                                    <SelectTrigger>
+                                    <SelectTrigger className="w-full h-10">
                                         <SelectValue placeholder="Seleccionar modelo" />
                                     </SelectTrigger>
                                     <SelectContent>
@@ -642,7 +543,7 @@ export default function InventarioIndex({
                                     value={form.data.condicion}
                                     onValueChange={(val: any) => form.setData('condicion', val)}
                                 >
-                                    <SelectTrigger>
+                                    <SelectTrigger className="w-full h-10">
                                         <SelectValue />
                                     </SelectTrigger>
                                     <SelectContent>
@@ -703,7 +604,7 @@ export default function InventarioIndex({
                                     value={form.data.estado}
                                     onValueChange={(val: any) => form.setData('estado', val)}
                                 >
-                                    <SelectTrigger>
+                                    <SelectTrigger className="w-full h-10">
                                         <SelectValue />
                                     </SelectTrigger>
                                     <SelectContent>

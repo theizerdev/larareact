@@ -274,7 +274,7 @@ export default function PlanesIndex({ planes, stats }: Props) {
 
             {/* Modal para Crear / Editar Plan */}
             <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
-                <DialogContent className="max-w-lg">
+                <DialogContent className="max-w-xl sm:max-w-xl max-h-[90vh] overflow-y-auto">
                     <DialogHeader>
                         <DialogTitle>{editingPlan ? 'Editar Plan de Financiamiento' : 'Nuevo Plan de Financiamiento'}</DialogTitle>
                         <DialogDescription>
@@ -310,7 +310,7 @@ export default function PlanesIndex({ planes, stats }: Props) {
                                     value={form.data.frecuencia}
                                     onValueChange={(val: any) => form.setData('frecuencia', val)}
                                 >
-                                    <SelectTrigger>
+                                    <SelectTrigger className="w-full h-10">
                                         <SelectValue />
                                     </SelectTrigger>
                                     <SelectContent>

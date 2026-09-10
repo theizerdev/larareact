@@ -199,7 +199,7 @@ export default function CreditosIndex({ creditos, stats, sucursales, filters }: 
                     </div>
 
                     <Select value={estadoFilter} onValueChange={(val) => { setEstadoFilter(val); handleFilterChange({ estado: val !== 'all' ? val : undefined }); }}>
-                        <SelectTrigger className="w-[180px] h-10">
+                        <SelectTrigger className="w-full sm:w-[200px] md:w-[240px] h-10">
                             <SelectValue placeholder="Estado de cuenta" />
                         </SelectTrigger>
                         <SelectContent>
@@ -212,7 +212,7 @@ export default function CreditosIndex({ creditos, stats, sucursales, filters }: 
                     </Select>
 
                     <Select value={sucursalFilter} onValueChange={(val) => { setSucursalFilter(val); handleFilterChange({ sucursal_id: val !== 'all' ? val : undefined }); }}>
-                        <SelectTrigger className="w-[180px] h-10">
+                        <SelectTrigger className="w-full sm:w-[200px] md:w-[240px] h-10">
                             <SelectValue placeholder="Tienda" />
                         </SelectTrigger>
                         <SelectContent>

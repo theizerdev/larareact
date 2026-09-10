@@ -34,7 +34,6 @@ class ClienteController extends Controller
             $query->where('estado_crediticio', $estado);
         }
 
-        $clientes = $query->latest()->paginate($perPage)->withQueryString();
         $sort = $request->input('sort', 'created_at');
         $direction = $request->input('direction', 'desc') === 'asc' ? 'asc' : 'desc';
         $allowedSorts = ['nombres', 'numero_documento', 'limite_credito', 'estado_crediticio', 'created_at'];
@@ -56,7 +55,6 @@ class ClienteController extends Controller
         return inertia('admin/Clientes/Index', [
             'clientes' => $clientes,
             'stats' => $stats,
-            'filters' => $request->only(['search', 'estado_crediticio', 'perPage']),
             'filters' => $request->only(['search', 'estado_crediticio', 'perPage', 'sort', 'direction']),
         ]);
     }
