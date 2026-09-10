@@ -1,4 +1,4 @@
-import { queryParams, type RouteQueryOptions, type RouteDefinition } from './../../../../../wayfinder'
+import { queryParams, type RouteQueryOptions, type RouteDefinition, type RouteFormDefinition } from './../../../../../wayfinder'
 /**
 * @see \App\Http\Controllers\Auth\ForgotPasswordOtpController::show
  * @see app/Http/Controllers/Auth/ForgotPasswordOtpController.php:19
@@ -42,6 +42,41 @@ show.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
     method: 'head',
 })
 
+    /**
+* @see \App\Http\Controllers\Auth\ForgotPasswordOtpController::show
+ * @see app/Http/Controllers/Auth/ForgotPasswordOtpController.php:19
+ * @route '/forgot-password'
+ */
+    const showForm = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
+        action: show.url(options),
+        method: 'get',
+    })
+
+            /**
+* @see \App\Http\Controllers\Auth\ForgotPasswordOtpController::show
+ * @see app/Http/Controllers/Auth/ForgotPasswordOtpController.php:19
+ * @route '/forgot-password'
+ */
+        showForm.get = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
+            action: show.url(options),
+            method: 'get',
+        })
+            /**
+* @see \App\Http\Controllers\Auth\ForgotPasswordOtpController::show
+ * @see app/Http/Controllers/Auth/ForgotPasswordOtpController.php:19
+ * @route '/forgot-password'
+ */
+        showForm.head = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
+            action: show.url({
+                        [options?.mergeQuery ? 'mergeQuery' : 'query']: {
+                            _method: 'HEAD',
+                            ...(options?.query ?? options?.mergeQuery ?? {}),
+                        }
+                    }),
+            method: 'get',
+        })
+    
+    show.form = showForm
 /**
 * @see \App\Http\Controllers\Auth\ForgotPasswordOtpController::sendOtp
  * @see app/Http/Controllers/Auth/ForgotPasswordOtpController.php:39
@@ -76,6 +111,27 @@ sendOtp.post = (options?: RouteQueryOptions): RouteDefinition<'post'> => ({
     method: 'post',
 })
 
+    /**
+* @see \App\Http\Controllers\Auth\ForgotPasswordOtpController::sendOtp
+ * @see app/Http/Controllers/Auth/ForgotPasswordOtpController.php:39
+ * @route '/forgot-password/send-otp'
+ */
+    const sendOtpForm = (options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
+        action: sendOtp.url(options),
+        method: 'post',
+    })
+
+            /**
+* @see \App\Http\Controllers\Auth\ForgotPasswordOtpController::sendOtp
+ * @see app/Http/Controllers/Auth/ForgotPasswordOtpController.php:39
+ * @route '/forgot-password/send-otp'
+ */
+        sendOtpForm.post = (options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
+            action: sendOtp.url(options),
+            method: 'post',
+        })
+    
+    sendOtp.form = sendOtpForm
 /**
 * @see \App\Http\Controllers\Auth\ForgotPasswordOtpController::verifyOtp
  * @see app/Http/Controllers/Auth/ForgotPasswordOtpController.php:102
@@ -110,6 +166,27 @@ verifyOtp.post = (options?: RouteQueryOptions): RouteDefinition<'post'> => ({
     method: 'post',
 })
 
+    /**
+* @see \App\Http\Controllers\Auth\ForgotPasswordOtpController::verifyOtp
+ * @see app/Http/Controllers/Auth/ForgotPasswordOtpController.php:102
+ * @route '/forgot-password/verify-otp'
+ */
+    const verifyOtpForm = (options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
+        action: verifyOtp.url(options),
+        method: 'post',
+    })
+
+            /**
+* @see \App\Http\Controllers\Auth\ForgotPasswordOtpController::verifyOtp
+ * @see app/Http/Controllers/Auth/ForgotPasswordOtpController.php:102
+ * @route '/forgot-password/verify-otp'
+ */
+        verifyOtpForm.post = (options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
+            action: verifyOtp.url(options),
+            method: 'post',
+        })
+    
+    verifyOtp.form = verifyOtpForm
 /**
 * @see \App\Http\Controllers\Auth\ForgotPasswordOtpController::resetPassword
  * @see app/Http/Controllers/Auth/ForgotPasswordOtpController.php:148
@@ -143,6 +220,28 @@ resetPassword.post = (options?: RouteQueryOptions): RouteDefinition<'post'> => (
     url: resetPassword.url(options),
     method: 'post',
 })
+
+    /**
+* @see \App\Http\Controllers\Auth\ForgotPasswordOtpController::resetPassword
+ * @see app/Http/Controllers/Auth/ForgotPasswordOtpController.php:148
+ * @route '/forgot-password/reset'
+ */
+    const resetPasswordForm = (options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
+        action: resetPassword.url(options),
+        method: 'post',
+    })
+
+            /**
+* @see \App\Http\Controllers\Auth\ForgotPasswordOtpController::resetPassword
+ * @see app/Http/Controllers/Auth/ForgotPasswordOtpController.php:148
+ * @route '/forgot-password/reset'
+ */
+        resetPasswordForm.post = (options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
+            action: resetPassword.url(options),
+            method: 'post',
+        })
+    
+    resetPassword.form = resetPasswordForm
 const ForgotPasswordOtpController = { show, sendOtp, verifyOtp, resetPassword }
 
 export default ForgotPasswordOtpController

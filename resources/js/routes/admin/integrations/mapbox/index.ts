@@ -1,4 +1,4 @@
-import { queryParams, type RouteQueryOptions, type RouteDefinition } from './../../../../wayfinder'
+import { queryParams, type RouteQueryOptions, type RouteDefinition, type RouteFormDefinition } from './../../../../wayfinder'
 /**
 * @see \App\Http\Controllers\Admin\IntegrationController::map
  * @see app/Http/Controllers/Admin/IntegrationController.php:55
@@ -42,6 +42,41 @@ map.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
     method: 'head',
 })
 
+    /**
+* @see \App\Http\Controllers\Admin\IntegrationController::map
+ * @see app/Http/Controllers/Admin/IntegrationController.php:55
+ * @route '/admin/integrations/map'
+ */
+    const mapForm = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
+        action: map.url(options),
+        method: 'get',
+    })
+
+            /**
+* @see \App\Http\Controllers\Admin\IntegrationController::map
+ * @see app/Http/Controllers/Admin/IntegrationController.php:55
+ * @route '/admin/integrations/map'
+ */
+        mapForm.get = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
+            action: map.url(options),
+            method: 'get',
+        })
+            /**
+* @see \App\Http\Controllers\Admin\IntegrationController::map
+ * @see app/Http/Controllers/Admin/IntegrationController.php:55
+ * @route '/admin/integrations/map'
+ */
+        mapForm.head = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
+            action: map.url({
+                        [options?.mergeQuery ? 'mergeQuery' : 'query']: {
+                            _method: 'HEAD',
+                            ...(options?.query ?? options?.mergeQuery ?? {}),
+                        }
+                    }),
+            method: 'get',
+        })
+    
+    map.form = mapForm
 /**
 * @see \App\Http\Controllers\Admin\IntegrationController::navigation
  * @see app/Http/Controllers/Admin/IntegrationController.php:77
@@ -85,6 +120,41 @@ navigation.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
     method: 'head',
 })
 
+    /**
+* @see \App\Http\Controllers\Admin\IntegrationController::navigation
+ * @see app/Http/Controllers/Admin/IntegrationController.php:77
+ * @route '/admin/integrations/map/navigation'
+ */
+    const navigationForm = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
+        action: navigation.url(options),
+        method: 'get',
+    })
+
+            /**
+* @see \App\Http\Controllers\Admin\IntegrationController::navigation
+ * @see app/Http/Controllers/Admin/IntegrationController.php:77
+ * @route '/admin/integrations/map/navigation'
+ */
+        navigationForm.get = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
+            action: navigation.url(options),
+            method: 'get',
+        })
+            /**
+* @see \App\Http\Controllers\Admin\IntegrationController::navigation
+ * @see app/Http/Controllers/Admin/IntegrationController.php:77
+ * @route '/admin/integrations/map/navigation'
+ */
+        navigationForm.head = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
+            action: navigation.url({
+                        [options?.mergeQuery ? 'mergeQuery' : 'query']: {
+                            _method: 'HEAD',
+                            ...(options?.query ?? options?.mergeQuery ?? {}),
+                        }
+                    }),
+            method: 'get',
+        })
+    
+    navigation.form = navigationForm
 /**
 * @see \App\Http\Controllers\Admin\IntegrationController::update
  * @see app/Http/Controllers/Admin/IntegrationController.php:99
@@ -118,6 +188,38 @@ update.put = (options?: RouteQueryOptions): RouteDefinition<'put'> => ({
     url: update.url(options),
     method: 'put',
 })
+
+    /**
+* @see \App\Http\Controllers\Admin\IntegrationController::update
+ * @see app/Http/Controllers/Admin/IntegrationController.php:99
+ * @route '/admin/integrations/mapbox'
+ */
+    const updateForm = (options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
+        action: update.url({
+                    [options?.mergeQuery ? 'mergeQuery' : 'query']: {
+                        _method: 'PUT',
+                        ...(options?.query ?? options?.mergeQuery ?? {}),
+                    }
+                }),
+        method: 'post',
+    })
+
+            /**
+* @see \App\Http\Controllers\Admin\IntegrationController::update
+ * @see app/Http/Controllers/Admin/IntegrationController.php:99
+ * @route '/admin/integrations/mapbox'
+ */
+        updateForm.put = (options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
+            action: update.url({
+                        [options?.mergeQuery ? 'mergeQuery' : 'query']: {
+                            _method: 'PUT',
+                            ...(options?.query ?? options?.mergeQuery ?? {}),
+                        }
+                    }),
+            method: 'post',
+        })
+    
+    update.form = updateForm
 const mapbox = {
     map: Object.assign(map, map),
 navigation: Object.assign(navigation, navigation),

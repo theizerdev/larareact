@@ -1,4 +1,4 @@
-import { queryParams, type RouteQueryOptions, type RouteDefinition } from './../../../../../wayfinder'
+import { queryParams, type RouteQueryOptions, type RouteDefinition, type RouteFormDefinition } from './../../../../../wayfinder'
 /**
 * @see \App\Http\Controllers\Admin\ServerMonitoringController::index
  * @see app/Http/Controllers/Admin/ServerMonitoringController.php:12
@@ -42,6 +42,41 @@ index.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
     method: 'head',
 })
 
+    /**
+* @see \App\Http\Controllers\Admin\ServerMonitoringController::index
+ * @see app/Http/Controllers/Admin/ServerMonitoringController.php:12
+ * @route '/admin/monitoring/server'
+ */
+    const indexForm = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
+        action: index.url(options),
+        method: 'get',
+    })
+
+            /**
+* @see \App\Http\Controllers\Admin\ServerMonitoringController::index
+ * @see app/Http/Controllers/Admin/ServerMonitoringController.php:12
+ * @route '/admin/monitoring/server'
+ */
+        indexForm.get = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
+            action: index.url(options),
+            method: 'get',
+        })
+            /**
+* @see \App\Http\Controllers\Admin\ServerMonitoringController::index
+ * @see app/Http/Controllers/Admin/ServerMonitoringController.php:12
+ * @route '/admin/monitoring/server'
+ */
+        indexForm.head = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
+            action: index.url({
+                        [options?.mergeQuery ? 'mergeQuery' : 'query']: {
+                            _method: 'HEAD',
+                            ...(options?.query ?? options?.mergeQuery ?? {}),
+                        }
+                    }),
+            method: 'get',
+        })
+    
+    index.form = indexForm
 /**
 * @see \App\Http\Controllers\Admin\ServerMonitoringController::getMetrics
  * @see app/Http/Controllers/Admin/ServerMonitoringController.php:46
@@ -84,6 +119,42 @@ getMetrics.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
     url: getMetrics.url(options),
     method: 'head',
 })
+
+    /**
+* @see \App\Http\Controllers\Admin\ServerMonitoringController::getMetrics
+ * @see app/Http/Controllers/Admin/ServerMonitoringController.php:46
+ * @route '/admin/monitoring/server/metrics'
+ */
+    const getMetricsForm = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
+        action: getMetrics.url(options),
+        method: 'get',
+    })
+
+            /**
+* @see \App\Http\Controllers\Admin\ServerMonitoringController::getMetrics
+ * @see app/Http/Controllers/Admin/ServerMonitoringController.php:46
+ * @route '/admin/monitoring/server/metrics'
+ */
+        getMetricsForm.get = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
+            action: getMetrics.url(options),
+            method: 'get',
+        })
+            /**
+* @see \App\Http\Controllers\Admin\ServerMonitoringController::getMetrics
+ * @see app/Http/Controllers/Admin/ServerMonitoringController.php:46
+ * @route '/admin/monitoring/server/metrics'
+ */
+        getMetricsForm.head = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
+            action: getMetrics.url({
+                        [options?.mergeQuery ? 'mergeQuery' : 'query']: {
+                            _method: 'HEAD',
+                            ...(options?.query ?? options?.mergeQuery ?? {}),
+                        }
+                    }),
+            method: 'get',
+        })
+    
+    getMetrics.form = getMetricsForm
 const ServerMonitoringController = { index, getMetrics }
 
 export default ServerMonitoringController

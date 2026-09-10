@@ -1,4 +1,4 @@
-import { queryParams, type RouteQueryOptions, type RouteDefinition, applyUrlDefaults } from './../../../../../wayfinder'
+import { queryParams, type RouteQueryOptions, type RouteDefinition, type RouteFormDefinition, applyUrlDefaults } from './../../../../../wayfinder'
 /**
 * @see \App\Http\Controllers\Admin\PaisController::index
  * @see app/Http/Controllers/Admin/PaisController.php:13
@@ -42,6 +42,41 @@ index.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
     method: 'head',
 })
 
+    /**
+* @see \App\Http\Controllers\Admin\PaisController::index
+ * @see app/Http/Controllers/Admin/PaisController.php:13
+ * @route '/admin/paises'
+ */
+    const indexForm = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
+        action: index.url(options),
+        method: 'get',
+    })
+
+            /**
+* @see \App\Http\Controllers\Admin\PaisController::index
+ * @see app/Http/Controllers/Admin/PaisController.php:13
+ * @route '/admin/paises'
+ */
+        indexForm.get = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
+            action: index.url(options),
+            method: 'get',
+        })
+            /**
+* @see \App\Http\Controllers\Admin\PaisController::index
+ * @see app/Http/Controllers/Admin/PaisController.php:13
+ * @route '/admin/paises'
+ */
+        indexForm.head = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
+            action: index.url({
+                        [options?.mergeQuery ? 'mergeQuery' : 'query']: {
+                            _method: 'HEAD',
+                            ...(options?.query ?? options?.mergeQuery ?? {}),
+                        }
+                    }),
+            method: 'get',
+        })
+    
+    index.form = indexForm
 /**
 * @see \App\Http\Controllers\Admin\PaisController::store
  * @see app/Http/Controllers/Admin/PaisController.php:59
@@ -76,6 +111,27 @@ store.post = (options?: RouteQueryOptions): RouteDefinition<'post'> => ({
     method: 'post',
 })
 
+    /**
+* @see \App\Http\Controllers\Admin\PaisController::store
+ * @see app/Http/Controllers/Admin/PaisController.php:59
+ * @route '/admin/paises'
+ */
+    const storeForm = (options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
+        action: store.url(options),
+        method: 'post',
+    })
+
+            /**
+* @see \App\Http\Controllers\Admin\PaisController::store
+ * @see app/Http/Controllers/Admin/PaisController.php:59
+ * @route '/admin/paises'
+ */
+        storeForm.post = (options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
+            action: store.url(options),
+            method: 'post',
+        })
+    
+    store.form = storeForm
 /**
 * @see \App\Http\Controllers\Admin\PaisController::update
  * @see app/Http/Controllers/Admin/PaisController.php:98
@@ -134,6 +190,37 @@ update.put = (args: { pais: number | { id: number } } | [pais: number | { id: nu
     method: 'put',
 })
 
+    /**
+* @see \App\Http\Controllers\Admin\PaisController::update
+ * @see app/Http/Controllers/Admin/PaisController.php:98
+ * @route '/admin/paises/{pais}'
+ */
+    const updateForm = (args: { pais: number | { id: number } } | [pais: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
+        action: update.url(args, {
+                    [options?.mergeQuery ? 'mergeQuery' : 'query']: {
+                        _method: 'PUT',
+                        ...(options?.query ?? options?.mergeQuery ?? {}),
+                    }
+                }),
+        method: 'post',
+    })
+
+            /**
+* @see \App\Http\Controllers\Admin\PaisController::update
+ * @see app/Http/Controllers/Admin/PaisController.php:98
+ * @route '/admin/paises/{pais}'
+ */
+        updateForm.put = (args: { pais: number | { id: number } } | [pais: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
+            action: update.url(args, {
+                        [options?.mergeQuery ? 'mergeQuery' : 'query']: {
+                            _method: 'PUT',
+                            ...(options?.query ?? options?.mergeQuery ?? {}),
+                        }
+                    }),
+            method: 'post',
+        })
+    
+    update.form = updateForm
 /**
 * @see \App\Http\Controllers\Admin\PaisController::bulkDestroy
  * @see app/Http/Controllers/Admin/PaisController.php:159
@@ -167,6 +254,28 @@ bulkDestroy.post = (options?: RouteQueryOptions): RouteDefinition<'post'> => ({
     url: bulkDestroy.url(options),
     method: 'post',
 })
+
+    /**
+* @see \App\Http\Controllers\Admin\PaisController::bulkDestroy
+ * @see app/Http/Controllers/Admin/PaisController.php:159
+ * @route '/admin/paises/bulk-destroy'
+ */
+    const bulkDestroyForm = (options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
+        action: bulkDestroy.url(options),
+        method: 'post',
+    })
+
+            /**
+* @see \App\Http\Controllers\Admin\PaisController::bulkDestroy
+ * @see app/Http/Controllers/Admin/PaisController.php:159
+ * @route '/admin/paises/bulk-destroy'
+ */
+        bulkDestroyForm.post = (options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
+            action: bulkDestroy.url(options),
+            method: 'post',
+        })
+    
+    bulkDestroy.form = bulkDestroyForm
 const PaisController = { index, store, update, bulkDestroy }
 
 export default PaisController

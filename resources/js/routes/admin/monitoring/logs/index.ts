@@ -1,4 +1,4 @@
-import { queryParams, type RouteQueryOptions, type RouteDefinition } from './../../../../wayfinder'
+import { queryParams, type RouteQueryOptions, type RouteDefinition, type RouteFormDefinition } from './../../../../wayfinder'
 /**
 * @see \App\Http\Controllers\Admin\LogMonitoringController::index
  * @see app/Http/Controllers/Admin/LogMonitoringController.php:15
@@ -42,6 +42,41 @@ index.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
     method: 'head',
 })
 
+    /**
+* @see \App\Http\Controllers\Admin\LogMonitoringController::index
+ * @see app/Http/Controllers/Admin/LogMonitoringController.php:15
+ * @route '/admin/monitoring/logs'
+ */
+    const indexForm = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
+        action: index.url(options),
+        method: 'get',
+    })
+
+            /**
+* @see \App\Http\Controllers\Admin\LogMonitoringController::index
+ * @see app/Http/Controllers/Admin/LogMonitoringController.php:15
+ * @route '/admin/monitoring/logs'
+ */
+        indexForm.get = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
+            action: index.url(options),
+            method: 'get',
+        })
+            /**
+* @see \App\Http\Controllers\Admin\LogMonitoringController::index
+ * @see app/Http/Controllers/Admin/LogMonitoringController.php:15
+ * @route '/admin/monitoring/logs'
+ */
+        indexForm.head = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
+            action: index.url({
+                        [options?.mergeQuery ? 'mergeQuery' : 'query']: {
+                            _method: 'HEAD',
+                            ...(options?.query ?? options?.mergeQuery ?? {}),
+                        }
+                    }),
+            method: 'get',
+        })
+    
+    index.form = indexForm
 /**
 * @see \App\Http\Controllers\Admin\LogMonitoringController::clear
  * @see app/Http/Controllers/Admin/LogMonitoringController.php:35
@@ -76,6 +111,37 @@ clear.delete = (options?: RouteQueryOptions): RouteDefinition<'delete'> => ({
     method: 'delete',
 })
 
+    /**
+* @see \App\Http\Controllers\Admin\LogMonitoringController::clear
+ * @see app/Http/Controllers/Admin/LogMonitoringController.php:35
+ * @route '/admin/monitoring/logs/clear'
+ */
+    const clearForm = (options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
+        action: clear.url({
+                    [options?.mergeQuery ? 'mergeQuery' : 'query']: {
+                        _method: 'DELETE',
+                        ...(options?.query ?? options?.mergeQuery ?? {}),
+                    }
+                }),
+        method: 'post',
+    })
+
+            /**
+* @see \App\Http\Controllers\Admin\LogMonitoringController::clear
+ * @see app/Http/Controllers/Admin/LogMonitoringController.php:35
+ * @route '/admin/monitoring/logs/clear'
+ */
+        clearForm.delete = (options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
+            action: clear.url({
+                        [options?.mergeQuery ? 'mergeQuery' : 'query']: {
+                            _method: 'DELETE',
+                            ...(options?.query ?? options?.mergeQuery ?? {}),
+                        }
+                    }),
+            method: 'post',
+        })
+    
+    clear.form = clearForm
 /**
 * @see \App\Http\Controllers\Admin\LogMonitoringController::download
  * @see app/Http/Controllers/Admin/LogMonitoringController.php:52
@@ -118,6 +184,42 @@ download.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
     url: download.url(options),
     method: 'head',
 })
+
+    /**
+* @see \App\Http\Controllers\Admin\LogMonitoringController::download
+ * @see app/Http/Controllers/Admin/LogMonitoringController.php:52
+ * @route '/admin/monitoring/logs/download'
+ */
+    const downloadForm = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
+        action: download.url(options),
+        method: 'get',
+    })
+
+            /**
+* @see \App\Http\Controllers\Admin\LogMonitoringController::download
+ * @see app/Http/Controllers/Admin/LogMonitoringController.php:52
+ * @route '/admin/monitoring/logs/download'
+ */
+        downloadForm.get = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
+            action: download.url(options),
+            method: 'get',
+        })
+            /**
+* @see \App\Http\Controllers\Admin\LogMonitoringController::download
+ * @see app/Http/Controllers/Admin/LogMonitoringController.php:52
+ * @route '/admin/monitoring/logs/download'
+ */
+        downloadForm.head = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
+            action: download.url({
+                        [options?.mergeQuery ? 'mergeQuery' : 'query']: {
+                            _method: 'HEAD',
+                            ...(options?.query ?? options?.mergeQuery ?? {}),
+                        }
+                    }),
+            method: 'get',
+        })
+    
+    download.form = downloadForm
 const logs = {
     index: Object.assign(index, index),
 clear: Object.assign(clear, clear),

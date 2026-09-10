@@ -1,4 +1,4 @@
-import { queryParams, type RouteQueryOptions, type RouteDefinition } from './../../../../../wayfinder'
+import { queryParams, type RouteQueryOptions, type RouteDefinition, type RouteFormDefinition } from './../../../../../wayfinder'
 /**
 * @see \App\Http\Controllers\Admin\TaskMonitoringController::index
  * @see app/Http/Controllers/Admin/TaskMonitoringController.php:14
@@ -42,6 +42,41 @@ index.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
     method: 'head',
 })
 
+    /**
+* @see \App\Http\Controllers\Admin\TaskMonitoringController::index
+ * @see app/Http/Controllers/Admin/TaskMonitoringController.php:14
+ * @route '/admin/monitoring/tasks'
+ */
+    const indexForm = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
+        action: index.url(options),
+        method: 'get',
+    })
+
+            /**
+* @see \App\Http\Controllers\Admin\TaskMonitoringController::index
+ * @see app/Http/Controllers/Admin/TaskMonitoringController.php:14
+ * @route '/admin/monitoring/tasks'
+ */
+        indexForm.get = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
+            action: index.url(options),
+            method: 'get',
+        })
+            /**
+* @see \App\Http\Controllers\Admin\TaskMonitoringController::index
+ * @see app/Http/Controllers/Admin/TaskMonitoringController.php:14
+ * @route '/admin/monitoring/tasks'
+ */
+        indexForm.head = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
+            action: index.url({
+                        [options?.mergeQuery ? 'mergeQuery' : 'query']: {
+                            _method: 'HEAD',
+                            ...(options?.query ?? options?.mergeQuery ?? {}),
+                        }
+                    }),
+            method: 'get',
+        })
+    
+    index.form = indexForm
 /**
 * @see \App\Http\Controllers\Admin\TaskMonitoringController::run
  * @see app/Http/Controllers/Admin/TaskMonitoringController.php:53
@@ -75,6 +110,28 @@ run.post = (options?: RouteQueryOptions): RouteDefinition<'post'> => ({
     url: run.url(options),
     method: 'post',
 })
+
+    /**
+* @see \App\Http\Controllers\Admin\TaskMonitoringController::run
+ * @see app/Http/Controllers/Admin/TaskMonitoringController.php:53
+ * @route '/admin/monitoring/tasks/run'
+ */
+    const runForm = (options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
+        action: run.url(options),
+        method: 'post',
+    })
+
+            /**
+* @see \App\Http\Controllers\Admin\TaskMonitoringController::run
+ * @see app/Http/Controllers/Admin/TaskMonitoringController.php:53
+ * @route '/admin/monitoring/tasks/run'
+ */
+        runForm.post = (options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
+            action: run.url(options),
+            method: 'post',
+        })
+    
+    run.form = runForm
 const TaskMonitoringController = { index, run }
 
 export default TaskMonitoringController

@@ -1,4 +1,4 @@
-import { queryParams, type RouteQueryOptions, type RouteDefinition, applyUrlDefaults } from './../../wayfinder'
+import { queryParams, type RouteQueryOptions, type RouteDefinition, type RouteFormDefinition, applyUrlDefaults } from './../../wayfinder'
 /**
 * @see \Laravel\Passkeys\Http\Controllers\PasskeyLoginController::loginOptions
  * @see vendor/laravel/passkeys/src/Http/Controllers/PasskeyLoginController.php:27
@@ -42,6 +42,41 @@ loginOptions.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
     method: 'head',
 })
 
+    /**
+* @see \Laravel\Passkeys\Http\Controllers\PasskeyLoginController::loginOptions
+ * @see vendor/laravel/passkeys/src/Http/Controllers/PasskeyLoginController.php:27
+ * @route '/passkeys/login/options'
+ */
+    const loginOptionsForm = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
+        action: loginOptions.url(options),
+        method: 'get',
+    })
+
+            /**
+* @see \Laravel\Passkeys\Http\Controllers\PasskeyLoginController::loginOptions
+ * @see vendor/laravel/passkeys/src/Http/Controllers/PasskeyLoginController.php:27
+ * @route '/passkeys/login/options'
+ */
+        loginOptionsForm.get = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
+            action: loginOptions.url(options),
+            method: 'get',
+        })
+            /**
+* @see \Laravel\Passkeys\Http\Controllers\PasskeyLoginController::loginOptions
+ * @see vendor/laravel/passkeys/src/Http/Controllers/PasskeyLoginController.php:27
+ * @route '/passkeys/login/options'
+ */
+        loginOptionsForm.head = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
+            action: loginOptions.url({
+                        [options?.mergeQuery ? 'mergeQuery' : 'query']: {
+                            _method: 'HEAD',
+                            ...(options?.query ?? options?.mergeQuery ?? {}),
+                        }
+                    }),
+            method: 'get',
+        })
+    
+    loginOptions.form = loginOptionsForm
 /**
 * @see \Laravel\Passkeys\Http\Controllers\PasskeyLoginController::login
  * @see vendor/laravel/passkeys/src/Http/Controllers/PasskeyLoginController.php:43
@@ -76,6 +111,27 @@ login.post = (options?: RouteQueryOptions): RouteDefinition<'post'> => ({
     method: 'post',
 })
 
+    /**
+* @see \Laravel\Passkeys\Http\Controllers\PasskeyLoginController::login
+ * @see vendor/laravel/passkeys/src/Http/Controllers/PasskeyLoginController.php:43
+ * @route '/passkeys/login'
+ */
+    const loginForm = (options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
+        action: login.url(options),
+        method: 'post',
+    })
+
+            /**
+* @see \Laravel\Passkeys\Http\Controllers\PasskeyLoginController::login
+ * @see vendor/laravel/passkeys/src/Http/Controllers/PasskeyLoginController.php:43
+ * @route '/passkeys/login'
+ */
+        loginForm.post = (options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
+            action: login.url(options),
+            method: 'post',
+        })
+    
+    login.form = loginForm
 /**
 * @see \Laravel\Passkeys\Http\Controllers\PasskeyConfirmationController::confirmOptions
  * @see vendor/laravel/passkeys/src/Http/Controllers/PasskeyConfirmationController.php:27
@@ -119,6 +175,41 @@ confirmOptions.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => 
     method: 'head',
 })
 
+    /**
+* @see \Laravel\Passkeys\Http\Controllers\PasskeyConfirmationController::confirmOptions
+ * @see vendor/laravel/passkeys/src/Http/Controllers/PasskeyConfirmationController.php:27
+ * @route '/passkeys/confirm/options'
+ */
+    const confirmOptionsForm = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
+        action: confirmOptions.url(options),
+        method: 'get',
+    })
+
+            /**
+* @see \Laravel\Passkeys\Http\Controllers\PasskeyConfirmationController::confirmOptions
+ * @see vendor/laravel/passkeys/src/Http/Controllers/PasskeyConfirmationController.php:27
+ * @route '/passkeys/confirm/options'
+ */
+        confirmOptionsForm.get = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
+            action: confirmOptions.url(options),
+            method: 'get',
+        })
+            /**
+* @see \Laravel\Passkeys\Http\Controllers\PasskeyConfirmationController::confirmOptions
+ * @see vendor/laravel/passkeys/src/Http/Controllers/PasskeyConfirmationController.php:27
+ * @route '/passkeys/confirm/options'
+ */
+        confirmOptionsForm.head = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
+            action: confirmOptions.url({
+                        [options?.mergeQuery ? 'mergeQuery' : 'query']: {
+                            _method: 'HEAD',
+                            ...(options?.query ?? options?.mergeQuery ?? {}),
+                        }
+                    }),
+            method: 'get',
+        })
+    
+    confirmOptions.form = confirmOptionsForm
 /**
 * @see \Laravel\Passkeys\Http\Controllers\PasskeyConfirmationController::confirm
  * @see vendor/laravel/passkeys/src/Http/Controllers/PasskeyConfirmationController.php:50
@@ -153,6 +244,27 @@ confirm.post = (options?: RouteQueryOptions): RouteDefinition<'post'> => ({
     method: 'post',
 })
 
+    /**
+* @see \Laravel\Passkeys\Http\Controllers\PasskeyConfirmationController::confirm
+ * @see vendor/laravel/passkeys/src/Http/Controllers/PasskeyConfirmationController.php:50
+ * @route '/passkeys/confirm'
+ */
+    const confirmForm = (options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
+        action: confirm.url(options),
+        method: 'post',
+    })
+
+            /**
+* @see \Laravel\Passkeys\Http\Controllers\PasskeyConfirmationController::confirm
+ * @see vendor/laravel/passkeys/src/Http/Controllers/PasskeyConfirmationController.php:50
+ * @route '/passkeys/confirm'
+ */
+        confirmForm.post = (options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
+            action: confirm.url(options),
+            method: 'post',
+        })
+    
+    confirm.form = confirmForm
 /**
 * @see \Laravel\Passkeys\Http\Controllers\PasskeyRegistrationController::registrationOptions
  * @see vendor/laravel/passkeys/src/Http/Controllers/PasskeyRegistrationController.php:29
@@ -196,6 +308,41 @@ registrationOptions.head = (options?: RouteQueryOptions): RouteDefinition<'head'
     method: 'head',
 })
 
+    /**
+* @see \Laravel\Passkeys\Http\Controllers\PasskeyRegistrationController::registrationOptions
+ * @see vendor/laravel/passkeys/src/Http/Controllers/PasskeyRegistrationController.php:29
+ * @route '/user/passkeys/options'
+ */
+    const registrationOptionsForm = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
+        action: registrationOptions.url(options),
+        method: 'get',
+    })
+
+            /**
+* @see \Laravel\Passkeys\Http\Controllers\PasskeyRegistrationController::registrationOptions
+ * @see vendor/laravel/passkeys/src/Http/Controllers/PasskeyRegistrationController.php:29
+ * @route '/user/passkeys/options'
+ */
+        registrationOptionsForm.get = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
+            action: registrationOptions.url(options),
+            method: 'get',
+        })
+            /**
+* @see \Laravel\Passkeys\Http\Controllers\PasskeyRegistrationController::registrationOptions
+ * @see vendor/laravel/passkeys/src/Http/Controllers/PasskeyRegistrationController.php:29
+ * @route '/user/passkeys/options'
+ */
+        registrationOptionsForm.head = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
+            action: registrationOptions.url({
+                        [options?.mergeQuery ? 'mergeQuery' : 'query']: {
+                            _method: 'HEAD',
+                            ...(options?.query ?? options?.mergeQuery ?? {}),
+                        }
+                    }),
+            method: 'get',
+        })
+    
+    registrationOptions.form = registrationOptionsForm
 /**
 * @see \Laravel\Passkeys\Http\Controllers\PasskeyRegistrationController::store
  * @see vendor/laravel/passkeys/src/Http/Controllers/PasskeyRegistrationController.php:48
@@ -230,6 +377,27 @@ store.post = (options?: RouteQueryOptions): RouteDefinition<'post'> => ({
     method: 'post',
 })
 
+    /**
+* @see \Laravel\Passkeys\Http\Controllers\PasskeyRegistrationController::store
+ * @see vendor/laravel/passkeys/src/Http/Controllers/PasskeyRegistrationController.php:48
+ * @route '/user/passkeys'
+ */
+    const storeForm = (options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
+        action: store.url(options),
+        method: 'post',
+    })
+
+            /**
+* @see \Laravel\Passkeys\Http\Controllers\PasskeyRegistrationController::store
+ * @see vendor/laravel/passkeys/src/Http/Controllers/PasskeyRegistrationController.php:48
+ * @route '/user/passkeys'
+ */
+        storeForm.post = (options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
+            action: store.url(options),
+            method: 'post',
+        })
+    
+    store.form = storeForm
 /**
 * @see \Laravel\Passkeys\Http\Controllers\PasskeyRegistrationController::destroy
  * @see vendor/laravel/passkeys/src/Http/Controllers/PasskeyRegistrationController.php:68
@@ -287,6 +455,38 @@ destroy.delete = (args: { passkey: number | { id: number } } | [passkey: number 
     url: destroy.url(args, options),
     method: 'delete',
 })
+
+    /**
+* @see \Laravel\Passkeys\Http\Controllers\PasskeyRegistrationController::destroy
+ * @see vendor/laravel/passkeys/src/Http/Controllers/PasskeyRegistrationController.php:68
+ * @route '/user/passkeys/{passkey}'
+ */
+    const destroyForm = (args: { passkey: number | { id: number } } | [passkey: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
+        action: destroy.url(args, {
+                    [options?.mergeQuery ? 'mergeQuery' : 'query']: {
+                        _method: 'DELETE',
+                        ...(options?.query ?? options?.mergeQuery ?? {}),
+                    }
+                }),
+        method: 'post',
+    })
+
+            /**
+* @see \Laravel\Passkeys\Http\Controllers\PasskeyRegistrationController::destroy
+ * @see vendor/laravel/passkeys/src/Http/Controllers/PasskeyRegistrationController.php:68
+ * @route '/user/passkeys/{passkey}'
+ */
+        destroyForm.delete = (args: { passkey: number | { id: number } } | [passkey: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
+            action: destroy.url(args, {
+                        [options?.mergeQuery ? 'mergeQuery' : 'query']: {
+                            _method: 'DELETE',
+                            ...(options?.query ?? options?.mergeQuery ?? {}),
+                        }
+                    }),
+            method: 'post',
+        })
+    
+    destroy.form = destroyForm
 const passkey = {
     loginOptions: Object.assign(loginOptions, loginOptions),
 login: Object.assign(login, login),

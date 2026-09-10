@@ -1,4 +1,4 @@
-import { queryParams, type RouteQueryOptions, type RouteDefinition, applyUrlDefaults } from './../../../../../wayfinder'
+import { queryParams, type RouteQueryOptions, type RouteDefinition, type RouteFormDefinition, applyUrlDefaults } from './../../../../../wayfinder'
 /**
 * @see \App\Http\Controllers\Admin\EmpresaController::index
  * @see app/Http/Controllers/Admin/EmpresaController.php:15
@@ -42,6 +42,41 @@ index.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
     method: 'head',
 })
 
+    /**
+* @see \App\Http\Controllers\Admin\EmpresaController::index
+ * @see app/Http/Controllers/Admin/EmpresaController.php:15
+ * @route '/admin/empresas'
+ */
+    const indexForm = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
+        action: index.url(options),
+        method: 'get',
+    })
+
+            /**
+* @see \App\Http\Controllers\Admin\EmpresaController::index
+ * @see app/Http/Controllers/Admin/EmpresaController.php:15
+ * @route '/admin/empresas'
+ */
+        indexForm.get = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
+            action: index.url(options),
+            method: 'get',
+        })
+            /**
+* @see \App\Http\Controllers\Admin\EmpresaController::index
+ * @see app/Http/Controllers/Admin/EmpresaController.php:15
+ * @route '/admin/empresas'
+ */
+        indexForm.head = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
+            action: index.url({
+                        [options?.mergeQuery ? 'mergeQuery' : 'query']: {
+                            _method: 'HEAD',
+                            ...(options?.query ?? options?.mergeQuery ?? {}),
+                        }
+                    }),
+            method: 'get',
+        })
+    
+    index.form = indexForm
 /**
 * @see \App\Http\Controllers\Admin\EmpresaController::store
  * @see app/Http/Controllers/Admin/EmpresaController.php:57
@@ -76,6 +111,27 @@ store.post = (options?: RouteQueryOptions): RouteDefinition<'post'> => ({
     method: 'post',
 })
 
+    /**
+* @see \App\Http\Controllers\Admin\EmpresaController::store
+ * @see app/Http/Controllers/Admin/EmpresaController.php:57
+ * @route '/admin/empresas'
+ */
+    const storeForm = (options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
+        action: store.url(options),
+        method: 'post',
+    })
+
+            /**
+* @see \App\Http\Controllers\Admin\EmpresaController::store
+ * @see app/Http/Controllers/Admin/EmpresaController.php:57
+ * @route '/admin/empresas'
+ */
+        storeForm.post = (options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
+            action: store.url(options),
+            method: 'post',
+        })
+    
+    store.form = storeForm
 /**
 * @see \App\Http\Controllers\Admin\EmpresaController::update
  * @see app/Http/Controllers/Admin/EmpresaController.php:95
@@ -134,6 +190,37 @@ update.put = (args: { empresa: number | { id: number } } | [empresa: number | { 
     method: 'put',
 })
 
+    /**
+* @see \App\Http\Controllers\Admin\EmpresaController::update
+ * @see app/Http/Controllers/Admin/EmpresaController.php:95
+ * @route '/admin/empresas/{empresa}'
+ */
+    const updateForm = (args: { empresa: number | { id: number } } | [empresa: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
+        action: update.url(args, {
+                    [options?.mergeQuery ? 'mergeQuery' : 'query']: {
+                        _method: 'PUT',
+                        ...(options?.query ?? options?.mergeQuery ?? {}),
+                    }
+                }),
+        method: 'post',
+    })
+
+            /**
+* @see \App\Http\Controllers\Admin\EmpresaController::update
+ * @see app/Http/Controllers/Admin/EmpresaController.php:95
+ * @route '/admin/empresas/{empresa}'
+ */
+        updateForm.put = (args: { empresa: number | { id: number } } | [empresa: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
+            action: update.url(args, {
+                        [options?.mergeQuery ? 'mergeQuery' : 'query']: {
+                            _method: 'PUT',
+                            ...(options?.query ?? options?.mergeQuery ?? {}),
+                        }
+                    }),
+            method: 'post',
+        })
+    
+    update.form = updateForm
 /**
 * @see \App\Http\Controllers\Admin\EmpresaController::toggleStatus
  * @see app/Http/Controllers/Admin/EmpresaController.php:132
@@ -192,6 +279,37 @@ toggleStatus.patch = (args: { empresa: number | { id: number } } | [empresa: num
     method: 'patch',
 })
 
+    /**
+* @see \App\Http\Controllers\Admin\EmpresaController::toggleStatus
+ * @see app/Http/Controllers/Admin/EmpresaController.php:132
+ * @route '/admin/empresas/{empresa}/toggle-status'
+ */
+    const toggleStatusForm = (args: { empresa: number | { id: number } } | [empresa: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
+        action: toggleStatus.url(args, {
+                    [options?.mergeQuery ? 'mergeQuery' : 'query']: {
+                        _method: 'PATCH',
+                        ...(options?.query ?? options?.mergeQuery ?? {}),
+                    }
+                }),
+        method: 'post',
+    })
+
+            /**
+* @see \App\Http\Controllers\Admin\EmpresaController::toggleStatus
+ * @see app/Http/Controllers/Admin/EmpresaController.php:132
+ * @route '/admin/empresas/{empresa}/toggle-status'
+ */
+        toggleStatusForm.patch = (args: { empresa: number | { id: number } } | [empresa: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
+            action: toggleStatus.url(args, {
+                        [options?.mergeQuery ? 'mergeQuery' : 'query']: {
+                            _method: 'PATCH',
+                            ...(options?.query ?? options?.mergeQuery ?? {}),
+                        }
+                    }),
+            method: 'post',
+        })
+    
+    toggleStatus.form = toggleStatusForm
 /**
 * @see \App\Http\Controllers\Admin\EmpresaController::updateLogos
  * @see app/Http/Controllers/Admin/EmpresaController.php:152
@@ -249,6 +367,28 @@ updateLogos.post = (args: { empresa: number | { id: number } } | [empresa: numbe
     url: updateLogos.url(args, options),
     method: 'post',
 })
+
+    /**
+* @see \App\Http\Controllers\Admin\EmpresaController::updateLogos
+ * @see app/Http/Controllers/Admin/EmpresaController.php:152
+ * @route '/admin/empresas/{empresa}/logos'
+ */
+    const updateLogosForm = (args: { empresa: number | { id: number } } | [empresa: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
+        action: updateLogos.url(args, options),
+        method: 'post',
+    })
+
+            /**
+* @see \App\Http\Controllers\Admin\EmpresaController::updateLogos
+ * @see app/Http/Controllers/Admin/EmpresaController.php:152
+ * @route '/admin/empresas/{empresa}/logos'
+ */
+        updateLogosForm.post = (args: { empresa: number | { id: number } } | [empresa: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
+            action: updateLogos.url(args, options),
+            method: 'post',
+        })
+    
+    updateLogos.form = updateLogosForm
 const EmpresaController = { index, store, update, toggleStatus, updateLogos }
 
 export default EmpresaController

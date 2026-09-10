@@ -1,4 +1,4 @@
-import { queryParams, type RouteQueryOptions, type RouteDefinition } from './../../wayfinder'
+import { queryParams, type RouteQueryOptions, type RouteDefinition, type RouteFormDefinition } from './../../wayfinder'
 /**
  * @see routes/larareact-settings.php:30
  * @route '/.well-known/passkey-endpoints'
@@ -37,6 +37,39 @@ passkeys.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
     url: passkeys.url(options),
     method: 'head',
 })
+
+    /**
+ * @see routes/larareact-settings.php:30
+ * @route '/.well-known/passkey-endpoints'
+ */
+    const passkeysForm = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
+        action: passkeys.url(options),
+        method: 'get',
+    })
+
+            /**
+ * @see routes/larareact-settings.php:30
+ * @route '/.well-known/passkey-endpoints'
+ */
+        passkeysForm.get = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
+            action: passkeys.url(options),
+            method: 'get',
+        })
+            /**
+ * @see routes/larareact-settings.php:30
+ * @route '/.well-known/passkey-endpoints'
+ */
+        passkeysForm.head = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
+            action: passkeys.url({
+                        [options?.mergeQuery ? 'mergeQuery' : 'query']: {
+                            _method: 'HEAD',
+                            ...(options?.query ?? options?.mergeQuery ?? {}),
+                        }
+                    }),
+            method: 'get',
+        })
+    
+    passkeys.form = passkeysForm
 const wellKnown = {
     passkeys: Object.assign(passkeys, passkeys),
 }

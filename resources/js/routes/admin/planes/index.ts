@@ -1,4 +1,4 @@
-import { queryParams, type RouteQueryOptions, type RouteDefinition, applyUrlDefaults } from './../../../wayfinder'
+import { queryParams, type RouteQueryOptions, type RouteDefinition, type RouteFormDefinition, applyUrlDefaults } from './../../../wayfinder'
 /**
 * @see \App\Http\Controllers\Admin\PlanFinanciamientoController::index
  * @see app/Http/Controllers/Admin/PlanFinanciamientoController.php:12
@@ -42,6 +42,41 @@ index.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
     method: 'head',
 })
 
+    /**
+* @see \App\Http\Controllers\Admin\PlanFinanciamientoController::index
+ * @see app/Http/Controllers/Admin/PlanFinanciamientoController.php:12
+ * @route '/admin/planes-financiamiento'
+ */
+    const indexForm = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
+        action: index.url(options),
+        method: 'get',
+    })
+
+            /**
+* @see \App\Http\Controllers\Admin\PlanFinanciamientoController::index
+ * @see app/Http/Controllers/Admin/PlanFinanciamientoController.php:12
+ * @route '/admin/planes-financiamiento'
+ */
+        indexForm.get = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
+            action: index.url(options),
+            method: 'get',
+        })
+            /**
+* @see \App\Http\Controllers\Admin\PlanFinanciamientoController::index
+ * @see app/Http/Controllers/Admin/PlanFinanciamientoController.php:12
+ * @route '/admin/planes-financiamiento'
+ */
+        indexForm.head = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
+            action: index.url({
+                        [options?.mergeQuery ? 'mergeQuery' : 'query']: {
+                            _method: 'HEAD',
+                            ...(options?.query ?? options?.mergeQuery ?? {}),
+                        }
+                    }),
+            method: 'get',
+        })
+    
+    index.form = indexForm
 /**
 * @see \App\Http\Controllers\Admin\PlanFinanciamientoController::store
  * @see app/Http/Controllers/Admin/PlanFinanciamientoController.php:43
@@ -76,6 +111,27 @@ store.post = (options?: RouteQueryOptions): RouteDefinition<'post'> => ({
     method: 'post',
 })
 
+    /**
+* @see \App\Http\Controllers\Admin\PlanFinanciamientoController::store
+ * @see app/Http/Controllers/Admin/PlanFinanciamientoController.php:43
+ * @route '/admin/planes-financiamiento'
+ */
+    const storeForm = (options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
+        action: store.url(options),
+        method: 'post',
+    })
+
+            /**
+* @see \App\Http\Controllers\Admin\PlanFinanciamientoController::store
+ * @see app/Http/Controllers/Admin/PlanFinanciamientoController.php:43
+ * @route '/admin/planes-financiamiento'
+ */
+        storeForm.post = (options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
+            action: store.url(options),
+            method: 'post',
+        })
+    
+    store.form = storeForm
 /**
 * @see \App\Http\Controllers\Admin\PlanFinanciamientoController::update
  * @see app/Http/Controllers/Admin/PlanFinanciamientoController.php:74
@@ -134,6 +190,37 @@ update.put = (args: { plan: number | { id: number } } | [plan: number | { id: nu
     method: 'put',
 })
 
+    /**
+* @see \App\Http\Controllers\Admin\PlanFinanciamientoController::update
+ * @see app/Http/Controllers/Admin/PlanFinanciamientoController.php:74
+ * @route '/admin/planes-financiamiento/{plan}'
+ */
+    const updateForm = (args: { plan: number | { id: number } } | [plan: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
+        action: update.url(args, {
+                    [options?.mergeQuery ? 'mergeQuery' : 'query']: {
+                        _method: 'PUT',
+                        ...(options?.query ?? options?.mergeQuery ?? {}),
+                    }
+                }),
+        method: 'post',
+    })
+
+            /**
+* @see \App\Http\Controllers\Admin\PlanFinanciamientoController::update
+ * @see app/Http/Controllers/Admin/PlanFinanciamientoController.php:74
+ * @route '/admin/planes-financiamiento/{plan}'
+ */
+        updateForm.put = (args: { plan: number | { id: number } } | [plan: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
+            action: update.url(args, {
+                        [options?.mergeQuery ? 'mergeQuery' : 'query']: {
+                            _method: 'PUT',
+                            ...(options?.query ?? options?.mergeQuery ?? {}),
+                        }
+                    }),
+            method: 'post',
+        })
+    
+    update.form = updateForm
 /**
 * @see \App\Http\Controllers\Admin\PlanFinanciamientoController::toggleStatus
  * @see app/Http/Controllers/Admin/PlanFinanciamientoController.php:105
@@ -192,6 +279,37 @@ toggleStatus.patch = (args: { plan: number | { id: number } } | [plan: number | 
     method: 'patch',
 })
 
+    /**
+* @see \App\Http\Controllers\Admin\PlanFinanciamientoController::toggleStatus
+ * @see app/Http/Controllers/Admin/PlanFinanciamientoController.php:105
+ * @route '/admin/planes-financiamiento/{plan}/toggle-status'
+ */
+    const toggleStatusForm = (args: { plan: number | { id: number } } | [plan: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
+        action: toggleStatus.url(args, {
+                    [options?.mergeQuery ? 'mergeQuery' : 'query']: {
+                        _method: 'PATCH',
+                        ...(options?.query ?? options?.mergeQuery ?? {}),
+                    }
+                }),
+        method: 'post',
+    })
+
+            /**
+* @see \App\Http\Controllers\Admin\PlanFinanciamientoController::toggleStatus
+ * @see app/Http/Controllers/Admin/PlanFinanciamientoController.php:105
+ * @route '/admin/planes-financiamiento/{plan}/toggle-status'
+ */
+        toggleStatusForm.patch = (args: { plan: number | { id: number } } | [plan: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
+            action: toggleStatus.url(args, {
+                        [options?.mergeQuery ? 'mergeQuery' : 'query']: {
+                            _method: 'PATCH',
+                            ...(options?.query ?? options?.mergeQuery ?? {}),
+                        }
+                    }),
+            method: 'post',
+        })
+    
+    toggleStatus.form = toggleStatusForm
 /**
 * @see \App\Http\Controllers\Admin\PlanFinanciamientoController::destroy
  * @see app/Http/Controllers/Admin/PlanFinanciamientoController.php:125
@@ -249,6 +367,38 @@ destroy.delete = (args: { plan: number | { id: number } } | [plan: number | { id
     url: destroy.url(args, options),
     method: 'delete',
 })
+
+    /**
+* @see \App\Http\Controllers\Admin\PlanFinanciamientoController::destroy
+ * @see app/Http/Controllers/Admin/PlanFinanciamientoController.php:125
+ * @route '/admin/planes-financiamiento/{plan}'
+ */
+    const destroyForm = (args: { plan: number | { id: number } } | [plan: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
+        action: destroy.url(args, {
+                    [options?.mergeQuery ? 'mergeQuery' : 'query']: {
+                        _method: 'DELETE',
+                        ...(options?.query ?? options?.mergeQuery ?? {}),
+                    }
+                }),
+        method: 'post',
+    })
+
+            /**
+* @see \App\Http\Controllers\Admin\PlanFinanciamientoController::destroy
+ * @see app/Http/Controllers/Admin/PlanFinanciamientoController.php:125
+ * @route '/admin/planes-financiamiento/{plan}'
+ */
+        destroyForm.delete = (args: { plan: number | { id: number } } | [plan: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
+            action: destroy.url(args, {
+                        [options?.mergeQuery ? 'mergeQuery' : 'query']: {
+                            _method: 'DELETE',
+                            ...(options?.query ?? options?.mergeQuery ?? {}),
+                        }
+                    }),
+            method: 'post',
+        })
+    
+    destroy.form = destroyForm
 const planes = {
     index: Object.assign(index, index),
 store: Object.assign(store, store),

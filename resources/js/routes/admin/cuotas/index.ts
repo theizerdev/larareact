@@ -1,4 +1,4 @@
-import { queryParams, type RouteQueryOptions, type RouteDefinition, applyUrlDefaults } from './../../../wayfinder'
+import { queryParams, type RouteQueryOptions, type RouteDefinition, type RouteFormDefinition, applyUrlDefaults } from './../../../wayfinder'
 /**
 * @see \App\Http\Controllers\Admin\CreditoController::pagar
  * @see app/Http/Controllers/Admin/CreditoController.php:260
@@ -56,6 +56,28 @@ pagar.post = (args: { cuota: number | { id: number } } | [cuota: number | { id: 
     url: pagar.url(args, options),
     method: 'post',
 })
+
+    /**
+* @see \App\Http\Controllers\Admin\CreditoController::pagar
+ * @see app/Http/Controllers/Admin/CreditoController.php:260
+ * @route '/admin/cuotas/{cuota}/pagar'
+ */
+    const pagarForm = (args: { cuota: number | { id: number } } | [cuota: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
+        action: pagar.url(args, options),
+        method: 'post',
+    })
+
+            /**
+* @see \App\Http\Controllers\Admin\CreditoController::pagar
+ * @see app/Http/Controllers/Admin/CreditoController.php:260
+ * @route '/admin/cuotas/{cuota}/pagar'
+ */
+        pagarForm.post = (args: { cuota: number | { id: number } } | [cuota: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
+            action: pagar.url(args, options),
+            method: 'post',
+        })
+    
+    pagar.form = pagarForm
 const cuotas = {
     pagar: Object.assign(pagar, pagar),
 }

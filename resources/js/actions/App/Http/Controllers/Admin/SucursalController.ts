@@ -1,4 +1,4 @@
-import { queryParams, type RouteQueryOptions, type RouteDefinition, applyUrlDefaults } from './../../../../../wayfinder'
+import { queryParams, type RouteQueryOptions, type RouteDefinition, type RouteFormDefinition, applyUrlDefaults } from './../../../../../wayfinder'
 /**
 * @see \App\Http\Controllers\Admin\SucursalController::index
  * @see app/Http/Controllers/Admin/SucursalController.php:15
@@ -42,6 +42,41 @@ index.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
     method: 'head',
 })
 
+    /**
+* @see \App\Http\Controllers\Admin\SucursalController::index
+ * @see app/Http/Controllers/Admin/SucursalController.php:15
+ * @route '/admin/sucursales'
+ */
+    const indexForm = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
+        action: index.url(options),
+        method: 'get',
+    })
+
+            /**
+* @see \App\Http\Controllers\Admin\SucursalController::index
+ * @see app/Http/Controllers/Admin/SucursalController.php:15
+ * @route '/admin/sucursales'
+ */
+        indexForm.get = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
+            action: index.url(options),
+            method: 'get',
+        })
+            /**
+* @see \App\Http\Controllers\Admin\SucursalController::index
+ * @see app/Http/Controllers/Admin/SucursalController.php:15
+ * @route '/admin/sucursales'
+ */
+        indexForm.head = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
+            action: index.url({
+                        [options?.mergeQuery ? 'mergeQuery' : 'query']: {
+                            _method: 'HEAD',
+                            ...(options?.query ?? options?.mergeQuery ?? {}),
+                        }
+                    }),
+            method: 'get',
+        })
+    
+    index.form = indexForm
 /**
 * @see \App\Http\Controllers\Admin\SucursalController::store
  * @see app/Http/Controllers/Admin/SucursalController.php:61
@@ -76,6 +111,27 @@ store.post = (options?: RouteQueryOptions): RouteDefinition<'post'> => ({
     method: 'post',
 })
 
+    /**
+* @see \App\Http\Controllers\Admin\SucursalController::store
+ * @see app/Http/Controllers/Admin/SucursalController.php:61
+ * @route '/admin/sucursales'
+ */
+    const storeForm = (options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
+        action: store.url(options),
+        method: 'post',
+    })
+
+            /**
+* @see \App\Http\Controllers\Admin\SucursalController::store
+ * @see app/Http/Controllers/Admin/SucursalController.php:61
+ * @route '/admin/sucursales'
+ */
+        storeForm.post = (options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
+            action: store.url(options),
+            method: 'post',
+        })
+    
+    store.form = storeForm
 /**
 * @see \App\Http\Controllers\Admin\SucursalController::update
  * @see app/Http/Controllers/Admin/SucursalController.php:92
@@ -134,6 +190,37 @@ update.put = (args: { sucursal: number | { id: number } } | [sucursal: number | 
     method: 'put',
 })
 
+    /**
+* @see \App\Http\Controllers\Admin\SucursalController::update
+ * @see app/Http/Controllers/Admin/SucursalController.php:92
+ * @route '/admin/sucursales/{sucursal}'
+ */
+    const updateForm = (args: { sucursal: number | { id: number } } | [sucursal: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
+        action: update.url(args, {
+                    [options?.mergeQuery ? 'mergeQuery' : 'query']: {
+                        _method: 'PUT',
+                        ...(options?.query ?? options?.mergeQuery ?? {}),
+                    }
+                }),
+        method: 'post',
+    })
+
+            /**
+* @see \App\Http\Controllers\Admin\SucursalController::update
+ * @see app/Http/Controllers/Admin/SucursalController.php:92
+ * @route '/admin/sucursales/{sucursal}'
+ */
+        updateForm.put = (args: { sucursal: number | { id: number } } | [sucursal: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
+            action: update.url(args, {
+                        [options?.mergeQuery ? 'mergeQuery' : 'query']: {
+                            _method: 'PUT',
+                            ...(options?.query ?? options?.mergeQuery ?? {}),
+                        }
+                    }),
+            method: 'post',
+        })
+    
+    update.form = updateForm
 /**
 * @see \App\Http\Controllers\Admin\SucursalController::destroy
  * @see app/Http/Controllers/Admin/SucursalController.php:125
@@ -192,6 +279,37 @@ destroy.delete = (args: { sucursal: number | { id: number } } | [sucursal: numbe
     method: 'delete',
 })
 
+    /**
+* @see \App\Http\Controllers\Admin\SucursalController::destroy
+ * @see app/Http/Controllers/Admin/SucursalController.php:125
+ * @route '/admin/sucursales/{sucursal}'
+ */
+    const destroyForm = (args: { sucursal: number | { id: number } } | [sucursal: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
+        action: destroy.url(args, {
+                    [options?.mergeQuery ? 'mergeQuery' : 'query']: {
+                        _method: 'DELETE',
+                        ...(options?.query ?? options?.mergeQuery ?? {}),
+                    }
+                }),
+        method: 'post',
+    })
+
+            /**
+* @see \App\Http\Controllers\Admin\SucursalController::destroy
+ * @see app/Http/Controllers/Admin/SucursalController.php:125
+ * @route '/admin/sucursales/{sucursal}'
+ */
+        destroyForm.delete = (args: { sucursal: number | { id: number } } | [sucursal: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
+            action: destroy.url(args, {
+                        [options?.mergeQuery ? 'mergeQuery' : 'query']: {
+                            _method: 'DELETE',
+                            ...(options?.query ?? options?.mergeQuery ?? {}),
+                        }
+                    }),
+            method: 'post',
+        })
+    
+    destroy.form = destroyForm
 /**
 * @see \App\Http\Controllers\Admin\SucursalController::toggleStatus
  * @see app/Http/Controllers/Admin/SucursalController.php:144
@@ -249,6 +367,38 @@ toggleStatus.patch = (args: { sucursal: number | { id: number } } | [sucursal: n
     url: toggleStatus.url(args, options),
     method: 'patch',
 })
+
+    /**
+* @see \App\Http\Controllers\Admin\SucursalController::toggleStatus
+ * @see app/Http/Controllers/Admin/SucursalController.php:144
+ * @route '/admin/sucursales/{sucursal}/toggle-status'
+ */
+    const toggleStatusForm = (args: { sucursal: number | { id: number } } | [sucursal: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
+        action: toggleStatus.url(args, {
+                    [options?.mergeQuery ? 'mergeQuery' : 'query']: {
+                        _method: 'PATCH',
+                        ...(options?.query ?? options?.mergeQuery ?? {}),
+                    }
+                }),
+        method: 'post',
+    })
+
+            /**
+* @see \App\Http\Controllers\Admin\SucursalController::toggleStatus
+ * @see app/Http/Controllers/Admin/SucursalController.php:144
+ * @route '/admin/sucursales/{sucursal}/toggle-status'
+ */
+        toggleStatusForm.patch = (args: { sucursal: number | { id: number } } | [sucursal: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
+            action: toggleStatus.url(args, {
+                        [options?.mergeQuery ? 'mergeQuery' : 'query']: {
+                            _method: 'PATCH',
+                            ...(options?.query ?? options?.mergeQuery ?? {}),
+                        }
+                    }),
+            method: 'post',
+        })
+    
+    toggleStatus.form = toggleStatusForm
 const SucursalController = { index, store, update, destroy, toggleStatus }
 
 export default SucursalController

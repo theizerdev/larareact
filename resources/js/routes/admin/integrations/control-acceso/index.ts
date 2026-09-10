@@ -1,4 +1,4 @@
-import { queryParams, type RouteQueryOptions, type RouteDefinition } from './../../../../wayfinder'
+import { queryParams, type RouteQueryOptions, type RouteDefinition, type RouteFormDefinition } from './../../../../wayfinder'
 /**
 * @see \App\Http\Controllers\Admin\IntegrationController::update
  * @see app/Http/Controllers/Admin/IntegrationController.php:159
@@ -33,6 +33,37 @@ update.put = (options?: RouteQueryOptions): RouteDefinition<'put'> => ({
     method: 'put',
 })
 
+    /**
+* @see \App\Http\Controllers\Admin\IntegrationController::update
+ * @see app/Http/Controllers/Admin/IntegrationController.php:159
+ * @route '/admin/integrations/control-acceso'
+ */
+    const updateForm = (options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
+        action: update.url({
+                    [options?.mergeQuery ? 'mergeQuery' : 'query']: {
+                        _method: 'PUT',
+                        ...(options?.query ?? options?.mergeQuery ?? {}),
+                    }
+                }),
+        method: 'post',
+    })
+
+            /**
+* @see \App\Http\Controllers\Admin\IntegrationController::update
+ * @see app/Http/Controllers/Admin/IntegrationController.php:159
+ * @route '/admin/integrations/control-acceso'
+ */
+        updateForm.put = (options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
+            action: update.url({
+                        [options?.mergeQuery ? 'mergeQuery' : 'query']: {
+                            _method: 'PUT',
+                            ...(options?.query ?? options?.mergeQuery ?? {}),
+                        }
+                    }),
+            method: 'post',
+        })
+    
+    update.form = updateForm
 /**
 * @see \App\Http\Controllers\Admin\IntegrationController::test
  * @see app/Http/Controllers/Admin/IntegrationController.php:193
@@ -66,6 +97,28 @@ test.post = (options?: RouteQueryOptions): RouteDefinition<'post'> => ({
     url: test.url(options),
     method: 'post',
 })
+
+    /**
+* @see \App\Http\Controllers\Admin\IntegrationController::test
+ * @see app/Http/Controllers/Admin/IntegrationController.php:193
+ * @route '/admin/integrations/control-acceso/test'
+ */
+    const testForm = (options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
+        action: test.url(options),
+        method: 'post',
+    })
+
+            /**
+* @see \App\Http\Controllers\Admin\IntegrationController::test
+ * @see app/Http/Controllers/Admin/IntegrationController.php:193
+ * @route '/admin/integrations/control-acceso/test'
+ */
+        testForm.post = (options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
+            action: test.url(options),
+            method: 'post',
+        })
+    
+    test.form = testForm
 const controlAcceso = {
     update: Object.assign(update, update),
 test: Object.assign(test, test),

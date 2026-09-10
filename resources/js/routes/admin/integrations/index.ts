@@ -1,4 +1,4 @@
-import { queryParams, type RouteQueryOptions, type RouteDefinition } from './../../../wayfinder'
+import { queryParams, type RouteQueryOptions, type RouteDefinition, type RouteFormDefinition } from './../../../wayfinder'
 import mapbox from './mapbox'
 import googleMaps from './google-maps'
 import controlAcceso from './control-acceso'
@@ -47,6 +47,42 @@ index.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
     url: index.url(options),
     method: 'head',
 })
+
+    /**
+* @see \App\Http\Controllers\Admin\IntegrationController::index
+ * @see app/Http/Controllers/Admin/IntegrationController.php:19
+ * @route '/admin/integrations'
+ */
+    const indexForm = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
+        action: index.url(options),
+        method: 'get',
+    })
+
+            /**
+* @see \App\Http\Controllers\Admin\IntegrationController::index
+ * @see app/Http/Controllers/Admin/IntegrationController.php:19
+ * @route '/admin/integrations'
+ */
+        indexForm.get = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
+            action: index.url(options),
+            method: 'get',
+        })
+            /**
+* @see \App\Http\Controllers\Admin\IntegrationController::index
+ * @see app/Http/Controllers/Admin/IntegrationController.php:19
+ * @route '/admin/integrations'
+ */
+        indexForm.head = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
+            action: index.url({
+                        [options?.mergeQuery ? 'mergeQuery' : 'query']: {
+                            _method: 'HEAD',
+                            ...(options?.query ?? options?.mergeQuery ?? {}),
+                        }
+                    }),
+            method: 'get',
+        })
+    
+    index.form = indexForm
 const integrations = {
     index: Object.assign(index, index),
 mapbox: Object.assign(mapbox, mapbox),

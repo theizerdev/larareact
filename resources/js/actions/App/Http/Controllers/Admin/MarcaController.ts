@@ -1,4 +1,4 @@
-import { queryParams, type RouteQueryOptions, type RouteDefinition, applyUrlDefaults } from './../../../../../wayfinder'
+import { queryParams, type RouteQueryOptions, type RouteDefinition, type RouteFormDefinition, applyUrlDefaults } from './../../../../../wayfinder'
 /**
 * @see \App\Http\Controllers\Admin\MarcaController::index
  * @see app/Http/Controllers/Admin/MarcaController.php:13
@@ -42,6 +42,41 @@ index.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
     method: 'head',
 })
 
+    /**
+* @see \App\Http\Controllers\Admin\MarcaController::index
+ * @see app/Http/Controllers/Admin/MarcaController.php:13
+ * @route '/admin/catalogo/marcas'
+ */
+    const indexForm = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
+        action: index.url(options),
+        method: 'get',
+    })
+
+            /**
+* @see \App\Http\Controllers\Admin\MarcaController::index
+ * @see app/Http/Controllers/Admin/MarcaController.php:13
+ * @route '/admin/catalogo/marcas'
+ */
+        indexForm.get = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
+            action: index.url(options),
+            method: 'get',
+        })
+            /**
+* @see \App\Http\Controllers\Admin\MarcaController::index
+ * @see app/Http/Controllers/Admin/MarcaController.php:13
+ * @route '/admin/catalogo/marcas'
+ */
+        indexForm.head = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
+            action: index.url({
+                        [options?.mergeQuery ? 'mergeQuery' : 'query']: {
+                            _method: 'HEAD',
+                            ...(options?.query ?? options?.mergeQuery ?? {}),
+                        }
+                    }),
+            method: 'get',
+        })
+    
+    index.form = indexForm
 /**
 * @see \App\Http\Controllers\Admin\MarcaController::store
  * @see app/Http/Controllers/Admin/MarcaController.php:38
@@ -76,6 +111,27 @@ store.post = (options?: RouteQueryOptions): RouteDefinition<'post'> => ({
     method: 'post',
 })
 
+    /**
+* @see \App\Http\Controllers\Admin\MarcaController::store
+ * @see app/Http/Controllers/Admin/MarcaController.php:38
+ * @route '/admin/catalogo/marcas'
+ */
+    const storeForm = (options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
+        action: store.url(options),
+        method: 'post',
+    })
+
+            /**
+* @see \App\Http\Controllers\Admin\MarcaController::store
+ * @see app/Http/Controllers/Admin/MarcaController.php:38
+ * @route '/admin/catalogo/marcas'
+ */
+        storeForm.post = (options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
+            action: store.url(options),
+            method: 'post',
+        })
+    
+    store.form = storeForm
 /**
 * @see \App\Http\Controllers\Admin\MarcaController::update
  * @see app/Http/Controllers/Admin/MarcaController.php:66
@@ -134,6 +190,37 @@ update.put = (args: { marca: number | { id: number } } | [marca: number | { id: 
     method: 'put',
 })
 
+    /**
+* @see \App\Http\Controllers\Admin\MarcaController::update
+ * @see app/Http/Controllers/Admin/MarcaController.php:66
+ * @route '/admin/catalogo/marcas/{marca}'
+ */
+    const updateForm = (args: { marca: number | { id: number } } | [marca: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
+        action: update.url(args, {
+                    [options?.mergeQuery ? 'mergeQuery' : 'query']: {
+                        _method: 'PUT',
+                        ...(options?.query ?? options?.mergeQuery ?? {}),
+                    }
+                }),
+        method: 'post',
+    })
+
+            /**
+* @see \App\Http\Controllers\Admin\MarcaController::update
+ * @see app/Http/Controllers/Admin/MarcaController.php:66
+ * @route '/admin/catalogo/marcas/{marca}'
+ */
+        updateForm.put = (args: { marca: number | { id: number } } | [marca: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
+            action: update.url(args, {
+                        [options?.mergeQuery ? 'mergeQuery' : 'query']: {
+                            _method: 'PUT',
+                            ...(options?.query ?? options?.mergeQuery ?? {}),
+                        }
+                    }),
+            method: 'post',
+        })
+    
+    update.form = updateForm
 /**
 * @see \App\Http\Controllers\Admin\MarcaController::toggleStatus
  * @see app/Http/Controllers/Admin/MarcaController.php:94
@@ -192,6 +279,37 @@ toggleStatus.patch = (args: { marca: number | { id: number } } | [marca: number 
     method: 'patch',
 })
 
+    /**
+* @see \App\Http\Controllers\Admin\MarcaController::toggleStatus
+ * @see app/Http/Controllers/Admin/MarcaController.php:94
+ * @route '/admin/catalogo/marcas/{marca}/toggle-status'
+ */
+    const toggleStatusForm = (args: { marca: number | { id: number } } | [marca: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
+        action: toggleStatus.url(args, {
+                    [options?.mergeQuery ? 'mergeQuery' : 'query']: {
+                        _method: 'PATCH',
+                        ...(options?.query ?? options?.mergeQuery ?? {}),
+                    }
+                }),
+        method: 'post',
+    })
+
+            /**
+* @see \App\Http\Controllers\Admin\MarcaController::toggleStatus
+ * @see app/Http/Controllers/Admin/MarcaController.php:94
+ * @route '/admin/catalogo/marcas/{marca}/toggle-status'
+ */
+        toggleStatusForm.patch = (args: { marca: number | { id: number } } | [marca: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
+            action: toggleStatus.url(args, {
+                        [options?.mergeQuery ? 'mergeQuery' : 'query']: {
+                            _method: 'PATCH',
+                            ...(options?.query ?? options?.mergeQuery ?? {}),
+                        }
+                    }),
+            method: 'post',
+        })
+    
+    toggleStatus.form = toggleStatusForm
 /**
 * @see \App\Http\Controllers\Admin\MarcaController::destroy
  * @see app/Http/Controllers/Admin/MarcaController.php:114
@@ -249,6 +367,38 @@ destroy.delete = (args: { marca: number | { id: number } } | [marca: number | { 
     url: destroy.url(args, options),
     method: 'delete',
 })
+
+    /**
+* @see \App\Http\Controllers\Admin\MarcaController::destroy
+ * @see app/Http/Controllers/Admin/MarcaController.php:114
+ * @route '/admin/catalogo/marcas/{marca}'
+ */
+    const destroyForm = (args: { marca: number | { id: number } } | [marca: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
+        action: destroy.url(args, {
+                    [options?.mergeQuery ? 'mergeQuery' : 'query']: {
+                        _method: 'DELETE',
+                        ...(options?.query ?? options?.mergeQuery ?? {}),
+                    }
+                }),
+        method: 'post',
+    })
+
+            /**
+* @see \App\Http\Controllers\Admin\MarcaController::destroy
+ * @see app/Http/Controllers/Admin/MarcaController.php:114
+ * @route '/admin/catalogo/marcas/{marca}'
+ */
+        destroyForm.delete = (args: { marca: number | { id: number } } | [marca: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
+            action: destroy.url(args, {
+                        [options?.mergeQuery ? 'mergeQuery' : 'query']: {
+                            _method: 'DELETE',
+                            ...(options?.query ?? options?.mergeQuery ?? {}),
+                        }
+                    }),
+            method: 'post',
+        })
+    
+    destroy.form = destroyForm
 const MarcaController = { index, store, update, toggleStatus, destroy }
 
 export default MarcaController

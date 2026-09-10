@@ -1,4 +1,4 @@
-import { queryParams, type RouteQueryOptions, type RouteDefinition, applyUrlDefaults } from './../../../../../wayfinder'
+import { queryParams, type RouteQueryOptions, type RouteDefinition, type RouteFormDefinition, applyUrlDefaults } from './../../../../../wayfinder'
 /**
 * @see \App\Http\Controllers\Admin\ModeloEquipoController::index
  * @see app/Http/Controllers/Admin/ModeloEquipoController.php:13
@@ -42,6 +42,41 @@ index.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
     method: 'head',
 })
 
+    /**
+* @see \App\Http\Controllers\Admin\ModeloEquipoController::index
+ * @see app/Http/Controllers/Admin/ModeloEquipoController.php:13
+ * @route '/admin/catalogo/modelos'
+ */
+    const indexForm = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
+        action: index.url(options),
+        method: 'get',
+    })
+
+            /**
+* @see \App\Http\Controllers\Admin\ModeloEquipoController::index
+ * @see app/Http/Controllers/Admin/ModeloEquipoController.php:13
+ * @route '/admin/catalogo/modelos'
+ */
+        indexForm.get = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
+            action: index.url(options),
+            method: 'get',
+        })
+            /**
+* @see \App\Http\Controllers\Admin\ModeloEquipoController::index
+ * @see app/Http/Controllers/Admin/ModeloEquipoController.php:13
+ * @route '/admin/catalogo/modelos'
+ */
+        indexForm.head = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
+            action: index.url({
+                        [options?.mergeQuery ? 'mergeQuery' : 'query']: {
+                            _method: 'HEAD',
+                            ...(options?.query ?? options?.mergeQuery ?? {}),
+                        }
+                    }),
+            method: 'get',
+        })
+    
+    index.form = indexForm
 /**
 * @see \App\Http\Controllers\Admin\ModeloEquipoController::store
  * @see app/Http/Controllers/Admin/ModeloEquipoController.php:56
@@ -76,6 +111,27 @@ store.post = (options?: RouteQueryOptions): RouteDefinition<'post'> => ({
     method: 'post',
 })
 
+    /**
+* @see \App\Http\Controllers\Admin\ModeloEquipoController::store
+ * @see app/Http/Controllers/Admin/ModeloEquipoController.php:56
+ * @route '/admin/catalogo/modelos'
+ */
+    const storeForm = (options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
+        action: store.url(options),
+        method: 'post',
+    })
+
+            /**
+* @see \App\Http\Controllers\Admin\ModeloEquipoController::store
+ * @see app/Http/Controllers/Admin/ModeloEquipoController.php:56
+ * @route '/admin/catalogo/modelos'
+ */
+        storeForm.post = (options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
+            action: store.url(options),
+            method: 'post',
+        })
+    
+    store.form = storeForm
 /**
 * @see \App\Http\Controllers\Admin\ModeloEquipoController::update
  * @see app/Http/Controllers/Admin/ModeloEquipoController.php:87
@@ -134,6 +190,37 @@ update.put = (args: { modelo: number | { id: number } } | [modelo: number | { id
     method: 'put',
 })
 
+    /**
+* @see \App\Http\Controllers\Admin\ModeloEquipoController::update
+ * @see app/Http/Controllers/Admin/ModeloEquipoController.php:87
+ * @route '/admin/catalogo/modelos/{modelo}'
+ */
+    const updateForm = (args: { modelo: number | { id: number } } | [modelo: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
+        action: update.url(args, {
+                    [options?.mergeQuery ? 'mergeQuery' : 'query']: {
+                        _method: 'PUT',
+                        ...(options?.query ?? options?.mergeQuery ?? {}),
+                    }
+                }),
+        method: 'post',
+    })
+
+            /**
+* @see \App\Http\Controllers\Admin\ModeloEquipoController::update
+ * @see app/Http/Controllers/Admin/ModeloEquipoController.php:87
+ * @route '/admin/catalogo/modelos/{modelo}'
+ */
+        updateForm.put = (args: { modelo: number | { id: number } } | [modelo: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
+            action: update.url(args, {
+                        [options?.mergeQuery ? 'mergeQuery' : 'query']: {
+                            _method: 'PUT',
+                            ...(options?.query ?? options?.mergeQuery ?? {}),
+                        }
+                    }),
+            method: 'post',
+        })
+    
+    update.form = updateForm
 /**
 * @see \App\Http\Controllers\Admin\ModeloEquipoController::toggleStatus
  * @see app/Http/Controllers/Admin/ModeloEquipoController.php:118
@@ -192,6 +279,37 @@ toggleStatus.patch = (args: { modelo: number | { id: number } } | [modelo: numbe
     method: 'patch',
 })
 
+    /**
+* @see \App\Http\Controllers\Admin\ModeloEquipoController::toggleStatus
+ * @see app/Http/Controllers/Admin/ModeloEquipoController.php:118
+ * @route '/admin/catalogo/modelos/{modelo}/toggle-status'
+ */
+    const toggleStatusForm = (args: { modelo: number | { id: number } } | [modelo: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
+        action: toggleStatus.url(args, {
+                    [options?.mergeQuery ? 'mergeQuery' : 'query']: {
+                        _method: 'PATCH',
+                        ...(options?.query ?? options?.mergeQuery ?? {}),
+                    }
+                }),
+        method: 'post',
+    })
+
+            /**
+* @see \App\Http\Controllers\Admin\ModeloEquipoController::toggleStatus
+ * @see app/Http/Controllers/Admin/ModeloEquipoController.php:118
+ * @route '/admin/catalogo/modelos/{modelo}/toggle-status'
+ */
+        toggleStatusForm.patch = (args: { modelo: number | { id: number } } | [modelo: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
+            action: toggleStatus.url(args, {
+                        [options?.mergeQuery ? 'mergeQuery' : 'query']: {
+                            _method: 'PATCH',
+                            ...(options?.query ?? options?.mergeQuery ?? {}),
+                        }
+                    }),
+            method: 'post',
+        })
+    
+    toggleStatus.form = toggleStatusForm
 /**
 * @see \App\Http\Controllers\Admin\ModeloEquipoController::destroy
  * @see app/Http/Controllers/Admin/ModeloEquipoController.php:138
@@ -249,6 +367,38 @@ destroy.delete = (args: { modelo: number | { id: number } } | [modelo: number | 
     url: destroy.url(args, options),
     method: 'delete',
 })
+
+    /**
+* @see \App\Http\Controllers\Admin\ModeloEquipoController::destroy
+ * @see app/Http/Controllers/Admin/ModeloEquipoController.php:138
+ * @route '/admin/catalogo/modelos/{modelo}'
+ */
+    const destroyForm = (args: { modelo: number | { id: number } } | [modelo: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
+        action: destroy.url(args, {
+                    [options?.mergeQuery ? 'mergeQuery' : 'query']: {
+                        _method: 'DELETE',
+                        ...(options?.query ?? options?.mergeQuery ?? {}),
+                    }
+                }),
+        method: 'post',
+    })
+
+            /**
+* @see \App\Http\Controllers\Admin\ModeloEquipoController::destroy
+ * @see app/Http/Controllers/Admin/ModeloEquipoController.php:138
+ * @route '/admin/catalogo/modelos/{modelo}'
+ */
+        destroyForm.delete = (args: { modelo: number | { id: number } } | [modelo: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
+            action: destroy.url(args, {
+                        [options?.mergeQuery ? 'mergeQuery' : 'query']: {
+                            _method: 'DELETE',
+                            ...(options?.query ?? options?.mergeQuery ?? {}),
+                        }
+                    }),
+            method: 'post',
+        })
+    
+    destroy.form = destroyForm
 const ModeloEquipoController = { index, store, update, toggleStatus, destroy }
 
 export default ModeloEquipoController

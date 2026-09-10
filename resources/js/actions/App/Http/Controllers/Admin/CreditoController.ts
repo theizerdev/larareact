@@ -1,4 +1,4 @@
-import { queryParams, type RouteQueryOptions, type RouteDefinition, applyUrlDefaults } from './../../../../../wayfinder'
+import { queryParams, type RouteQueryOptions, type RouteDefinition, type RouteFormDefinition, applyUrlDefaults } from './../../../../../wayfinder'
 /**
 * @see \App\Http\Controllers\Admin\CreditoController::index
  * @see app/Http/Controllers/Admin/CreditoController.php:27
@@ -42,6 +42,41 @@ index.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
     method: 'head',
 })
 
+    /**
+* @see \App\Http\Controllers\Admin\CreditoController::index
+ * @see app/Http/Controllers/Admin/CreditoController.php:27
+ * @route '/admin/creditos'
+ */
+    const indexForm = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
+        action: index.url(options),
+        method: 'get',
+    })
+
+            /**
+* @see \App\Http\Controllers\Admin\CreditoController::index
+ * @see app/Http/Controllers/Admin/CreditoController.php:27
+ * @route '/admin/creditos'
+ */
+        indexForm.get = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
+            action: index.url(options),
+            method: 'get',
+        })
+            /**
+* @see \App\Http\Controllers\Admin\CreditoController::index
+ * @see app/Http/Controllers/Admin/CreditoController.php:27
+ * @route '/admin/creditos'
+ */
+        indexForm.head = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
+            action: index.url({
+                        [options?.mergeQuery ? 'mergeQuery' : 'query']: {
+                            _method: 'HEAD',
+                            ...(options?.query ?? options?.mergeQuery ?? {}),
+                        }
+                    }),
+            method: 'get',
+        })
+    
+    index.form = indexForm
 /**
 * @see \App\Http\Controllers\Admin\CreditoController::create
  * @see app/Http/Controllers/Admin/CreditoController.php:88
@@ -85,6 +120,41 @@ create.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
     method: 'head',
 })
 
+    /**
+* @see \App\Http\Controllers\Admin\CreditoController::create
+ * @see app/Http/Controllers/Admin/CreditoController.php:88
+ * @route '/admin/creditos/nuevo'
+ */
+    const createForm = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
+        action: create.url(options),
+        method: 'get',
+    })
+
+            /**
+* @see \App\Http\Controllers\Admin\CreditoController::create
+ * @see app/Http/Controllers/Admin/CreditoController.php:88
+ * @route '/admin/creditos/nuevo'
+ */
+        createForm.get = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
+            action: create.url(options),
+            method: 'get',
+        })
+            /**
+* @see \App\Http\Controllers\Admin\CreditoController::create
+ * @see app/Http/Controllers/Admin/CreditoController.php:88
+ * @route '/admin/creditos/nuevo'
+ */
+        createForm.head = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
+            action: create.url({
+                        [options?.mergeQuery ? 'mergeQuery' : 'query']: {
+                            _method: 'HEAD',
+                            ...(options?.query ?? options?.mergeQuery ?? {}),
+                        }
+                    }),
+            method: 'get',
+        })
+    
+    create.form = createForm
 /**
 * @see \App\Http\Controllers\Admin\CreditoController::simular
  * @see app/Http/Controllers/Admin/CreditoController.php:110
@@ -119,6 +189,27 @@ simular.post = (options?: RouteQueryOptions): RouteDefinition<'post'> => ({
     method: 'post',
 })
 
+    /**
+* @see \App\Http\Controllers\Admin\CreditoController::simular
+ * @see app/Http/Controllers/Admin/CreditoController.php:110
+ * @route '/admin/creditos/simular'
+ */
+    const simularForm = (options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
+        action: simular.url(options),
+        method: 'post',
+    })
+
+            /**
+* @see \App\Http\Controllers\Admin\CreditoController::simular
+ * @see app/Http/Controllers/Admin/CreditoController.php:110
+ * @route '/admin/creditos/simular'
+ */
+        simularForm.post = (options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
+            action: simular.url(options),
+            method: 'post',
+        })
+    
+    simular.form = simularForm
 /**
 * @see \App\Http\Controllers\Admin\CreditoController::store
  * @see app/Http/Controllers/Admin/CreditoController.php:141
@@ -153,6 +244,27 @@ store.post = (options?: RouteQueryOptions): RouteDefinition<'post'> => ({
     method: 'post',
 })
 
+    /**
+* @see \App\Http\Controllers\Admin\CreditoController::store
+ * @see app/Http/Controllers/Admin/CreditoController.php:141
+ * @route '/admin/creditos'
+ */
+    const storeForm = (options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
+        action: store.url(options),
+        method: 'post',
+    })
+
+            /**
+* @see \App\Http\Controllers\Admin\CreditoController::store
+ * @see app/Http/Controllers/Admin/CreditoController.php:141
+ * @route '/admin/creditos'
+ */
+        storeForm.post = (options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
+            action: store.url(options),
+            method: 'post',
+        })
+    
+    store.form = storeForm
 /**
 * @see \App\Http\Controllers\Admin\CreditoController::show
  * @see app/Http/Controllers/Admin/CreditoController.php:242
@@ -220,6 +332,41 @@ show.head = (args: { credito: number | { id: number } } | [credito: number | { i
     method: 'head',
 })
 
+    /**
+* @see \App\Http\Controllers\Admin\CreditoController::show
+ * @see app/Http/Controllers/Admin/CreditoController.php:242
+ * @route '/admin/creditos/{credito}'
+ */
+    const showForm = (args: { credito: number | { id: number } } | [credito: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
+        action: show.url(args, options),
+        method: 'get',
+    })
+
+            /**
+* @see \App\Http\Controllers\Admin\CreditoController::show
+ * @see app/Http/Controllers/Admin/CreditoController.php:242
+ * @route '/admin/creditos/{credito}'
+ */
+        showForm.get = (args: { credito: number | { id: number } } | [credito: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
+            action: show.url(args, options),
+            method: 'get',
+        })
+            /**
+* @see \App\Http\Controllers\Admin\CreditoController::show
+ * @see app/Http/Controllers/Admin/CreditoController.php:242
+ * @route '/admin/creditos/{credito}'
+ */
+        showForm.head = (args: { credito: number | { id: number } } | [credito: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
+            action: show.url(args, {
+                        [options?.mergeQuery ? 'mergeQuery' : 'query']: {
+                            _method: 'HEAD',
+                            ...(options?.query ?? options?.mergeQuery ?? {}),
+                        }
+                    }),
+            method: 'get',
+        })
+    
+    show.form = showForm
 /**
 * @see \App\Http\Controllers\Admin\CreditoController::pagarCuota
  * @see app/Http/Controllers/Admin/CreditoController.php:260
@@ -277,6 +424,28 @@ pagarCuota.post = (args: { cuota: number | { id: number } } | [cuota: number | {
     url: pagarCuota.url(args, options),
     method: 'post',
 })
+
+    /**
+* @see \App\Http\Controllers\Admin\CreditoController::pagarCuota
+ * @see app/Http/Controllers/Admin/CreditoController.php:260
+ * @route '/admin/cuotas/{cuota}/pagar'
+ */
+    const pagarCuotaForm = (args: { cuota: number | { id: number } } | [cuota: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
+        action: pagarCuota.url(args, options),
+        method: 'post',
+    })
+
+            /**
+* @see \App\Http\Controllers\Admin\CreditoController::pagarCuota
+ * @see app/Http/Controllers/Admin/CreditoController.php:260
+ * @route '/admin/cuotas/{cuota}/pagar'
+ */
+        pagarCuotaForm.post = (args: { cuota: number | { id: number } } | [cuota: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
+            action: pagarCuota.url(args, options),
+            method: 'post',
+        })
+    
+    pagarCuota.form = pagarCuotaForm
 const CreditoController = { index, create, simular, store, show, pagarCuota }
 
 export default CreditoController

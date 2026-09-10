@@ -1,4 +1,4 @@
-import { queryParams, type RouteQueryOptions, type RouteDefinition, applyUrlDefaults } from './../../../../wayfinder'
+import { queryParams, type RouteQueryOptions, type RouteDefinition, type RouteFormDefinition, applyUrlDefaults } from './../../../../wayfinder'
 /**
 * @see \App\Http\Controllers\Admin\InventarioEquipoController::index
  * @see app/Http/Controllers/Admin/InventarioEquipoController.php:16
@@ -42,9 +42,44 @@ index.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
     method: 'head',
 })
 
+    /**
+* @see \App\Http\Controllers\Admin\InventarioEquipoController::index
+ * @see app/Http/Controllers/Admin/InventarioEquipoController.php:16
+ * @route '/admin/inventario/equipos'
+ */
+    const indexForm = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
+        action: index.url(options),
+        method: 'get',
+    })
+
+            /**
+* @see \App\Http\Controllers\Admin\InventarioEquipoController::index
+ * @see app/Http/Controllers/Admin/InventarioEquipoController.php:16
+ * @route '/admin/inventario/equipos'
+ */
+        indexForm.get = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
+            action: index.url(options),
+            method: 'get',
+        })
+            /**
+* @see \App\Http\Controllers\Admin\InventarioEquipoController::index
+ * @see app/Http/Controllers/Admin/InventarioEquipoController.php:16
+ * @route '/admin/inventario/equipos'
+ */
+        indexForm.head = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
+            action: index.url({
+                        [options?.mergeQuery ? 'mergeQuery' : 'query']: {
+                            _method: 'HEAD',
+                            ...(options?.query ?? options?.mergeQuery ?? {}),
+                        }
+                    }),
+            method: 'get',
+        })
+    
+    index.form = indexForm
 /**
 * @see \App\Http\Controllers\Admin\InventarioEquipoController::store
- * @see app/Http/Controllers/Admin/InventarioEquipoController.php:81
+ * @see app/Http/Controllers/Admin/InventarioEquipoController.php:90
  * @route '/admin/inventario/equipos'
  */
 export const store = (options?: RouteQueryOptions): RouteDefinition<'post'> => ({
@@ -59,7 +94,7 @@ store.definition = {
 
 /**
 * @see \App\Http\Controllers\Admin\InventarioEquipoController::store
- * @see app/Http/Controllers/Admin/InventarioEquipoController.php:81
+ * @see app/Http/Controllers/Admin/InventarioEquipoController.php:90
  * @route '/admin/inventario/equipos'
  */
 store.url = (options?: RouteQueryOptions) => {
@@ -68,7 +103,7 @@ store.url = (options?: RouteQueryOptions) => {
 
 /**
 * @see \App\Http\Controllers\Admin\InventarioEquipoController::store
- * @see app/Http/Controllers/Admin/InventarioEquipoController.php:81
+ * @see app/Http/Controllers/Admin/InventarioEquipoController.php:90
  * @route '/admin/inventario/equipos'
  */
 store.post = (options?: RouteQueryOptions): RouteDefinition<'post'> => ({
@@ -76,9 +111,30 @@ store.post = (options?: RouteQueryOptions): RouteDefinition<'post'> => ({
     method: 'post',
 })
 
+    /**
+* @see \App\Http\Controllers\Admin\InventarioEquipoController::store
+ * @see app/Http/Controllers/Admin/InventarioEquipoController.php:90
+ * @route '/admin/inventario/equipos'
+ */
+    const storeForm = (options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
+        action: store.url(options),
+        method: 'post',
+    })
+
+            /**
+* @see \App\Http\Controllers\Admin\InventarioEquipoController::store
+ * @see app/Http/Controllers/Admin/InventarioEquipoController.php:90
+ * @route '/admin/inventario/equipos'
+ */
+        storeForm.post = (options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
+            action: store.url(options),
+            method: 'post',
+        })
+    
+    store.form = storeForm
 /**
 * @see \App\Http\Controllers\Admin\InventarioEquipoController::update
- * @see app/Http/Controllers/Admin/InventarioEquipoController.php:114
+ * @see app/Http/Controllers/Admin/InventarioEquipoController.php:123
  * @route '/admin/inventario/equipos/{equipo}'
  */
 export const update = (args: { equipo: number | { id: number } } | [equipo: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteDefinition<'put'> => ({
@@ -93,7 +149,7 @@ update.definition = {
 
 /**
 * @see \App\Http\Controllers\Admin\InventarioEquipoController::update
- * @see app/Http/Controllers/Admin/InventarioEquipoController.php:114
+ * @see app/Http/Controllers/Admin/InventarioEquipoController.php:123
  * @route '/admin/inventario/equipos/{equipo}'
  */
 update.url = (args: { equipo: number | { id: number } } | [equipo: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions) => {
@@ -126,7 +182,7 @@ update.url = (args: { equipo: number | { id: number } } | [equipo: number | { id
 
 /**
 * @see \App\Http\Controllers\Admin\InventarioEquipoController::update
- * @see app/Http/Controllers/Admin/InventarioEquipoController.php:114
+ * @see app/Http/Controllers/Admin/InventarioEquipoController.php:123
  * @route '/admin/inventario/equipos/{equipo}'
  */
 update.put = (args: { equipo: number | { id: number } } | [equipo: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteDefinition<'put'> => ({
@@ -134,9 +190,40 @@ update.put = (args: { equipo: number | { id: number } } | [equipo: number | { id
     method: 'put',
 })
 
+    /**
+* @see \App\Http\Controllers\Admin\InventarioEquipoController::update
+ * @see app/Http/Controllers/Admin/InventarioEquipoController.php:123
+ * @route '/admin/inventario/equipos/{equipo}'
+ */
+    const updateForm = (args: { equipo: number | { id: number } } | [equipo: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
+        action: update.url(args, {
+                    [options?.mergeQuery ? 'mergeQuery' : 'query']: {
+                        _method: 'PUT',
+                        ...(options?.query ?? options?.mergeQuery ?? {}),
+                    }
+                }),
+        method: 'post',
+    })
+
+            /**
+* @see \App\Http\Controllers\Admin\InventarioEquipoController::update
+ * @see app/Http/Controllers/Admin/InventarioEquipoController.php:123
+ * @route '/admin/inventario/equipos/{equipo}'
+ */
+        updateForm.put = (args: { equipo: number | { id: number } } | [equipo: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
+            action: update.url(args, {
+                        [options?.mergeQuery ? 'mergeQuery' : 'query']: {
+                            _method: 'PUT',
+                            ...(options?.query ?? options?.mergeQuery ?? {}),
+                        }
+                    }),
+            method: 'post',
+        })
+    
+    update.form = updateForm
 /**
 * @see \App\Http\Controllers\Admin\InventarioEquipoController::destroy
- * @see app/Http/Controllers/Admin/InventarioEquipoController.php:148
+ * @see app/Http/Controllers/Admin/InventarioEquipoController.php:157
  * @route '/admin/inventario/equipos/{equipo}'
  */
 export const destroy = (args: { equipo: number | { id: number } } | [equipo: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteDefinition<'delete'> => ({
@@ -151,7 +238,7 @@ destroy.definition = {
 
 /**
 * @see \App\Http\Controllers\Admin\InventarioEquipoController::destroy
- * @see app/Http/Controllers/Admin/InventarioEquipoController.php:148
+ * @see app/Http/Controllers/Admin/InventarioEquipoController.php:157
  * @route '/admin/inventario/equipos/{equipo}'
  */
 destroy.url = (args: { equipo: number | { id: number } } | [equipo: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions) => {
@@ -184,13 +271,45 @@ destroy.url = (args: { equipo: number | { id: number } } | [equipo: number | { i
 
 /**
 * @see \App\Http\Controllers\Admin\InventarioEquipoController::destroy
- * @see app/Http/Controllers/Admin/InventarioEquipoController.php:148
+ * @see app/Http/Controllers/Admin/InventarioEquipoController.php:157
  * @route '/admin/inventario/equipos/{equipo}'
  */
 destroy.delete = (args: { equipo: number | { id: number } } | [equipo: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteDefinition<'delete'> => ({
     url: destroy.url(args, options),
     method: 'delete',
 })
+
+    /**
+* @see \App\Http\Controllers\Admin\InventarioEquipoController::destroy
+ * @see app/Http/Controllers/Admin/InventarioEquipoController.php:157
+ * @route '/admin/inventario/equipos/{equipo}'
+ */
+    const destroyForm = (args: { equipo: number | { id: number } } | [equipo: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
+        action: destroy.url(args, {
+                    [options?.mergeQuery ? 'mergeQuery' : 'query']: {
+                        _method: 'DELETE',
+                        ...(options?.query ?? options?.mergeQuery ?? {}),
+                    }
+                }),
+        method: 'post',
+    })
+
+            /**
+* @see \App\Http\Controllers\Admin\InventarioEquipoController::destroy
+ * @see app/Http/Controllers/Admin/InventarioEquipoController.php:157
+ * @route '/admin/inventario/equipos/{equipo}'
+ */
+        destroyForm.delete = (args: { equipo: number | { id: number } } | [equipo: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
+            action: destroy.url(args, {
+                        [options?.mergeQuery ? 'mergeQuery' : 'query']: {
+                            _method: 'DELETE',
+                            ...(options?.query ?? options?.mergeQuery ?? {}),
+                        }
+                    }),
+            method: 'post',
+        })
+    
+    destroy.form = destroyForm
 const equipos = {
     index: Object.assign(index, index),
 store: Object.assign(store, store),
