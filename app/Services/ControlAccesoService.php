@@ -210,6 +210,14 @@ class ControlAccesoService
     }
 
     /**
+     * Obtiene la foto de referencia (rostro enrolado) de un empleado.
+     */
+    public function getEmployeePhoto(string $employeeNo): array
+    {
+        return $this->getBinary('/employees/'.rawurlencode($employeeNo).'/photo');
+    }
+
+    /**
      * Obtiene la foto capturada de un evento de acceso peatonal.
      */
     public function getAccessEventPhoto(int $eventId): array

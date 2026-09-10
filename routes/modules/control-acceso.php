@@ -9,6 +9,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('/control-acceso/tarjetas', [ControlAccesoController::class, 'tarjetas'])->name('control-acceso.tarjetas')->can('control_acceso.view');
     Route::get('/control-acceso/eventos-peatonales', [ControlAccesoController::class, 'eventosPeatonales'])->name('control-acceso.eventos-peatonales')->can('control_acceso.view');
     Route::get('/control-acceso/eventos-vehiculares', [ControlAccesoController::class, 'eventosVehiculares'])->name('control-acceso.eventos-vehiculares')->can('control_acceso.view');
+    Route::get('/control-acceso/empleados/{employeeNo}/foto', [ControlAccesoController::class, 'empleadoFoto'])->where('employeeNo', '[A-Za-z0-9._-]+')->name('control-acceso.empleados.foto')->can('control_acceso.view');
     Route::get('/control-acceso/eventos-peatonales/{eventId}/foto', [ControlAccesoController::class, 'eventoPeatonalFoto'])->name('control-acceso.eventos-peatonales.foto')->can('control_acceso.view');
     Route::get('/control-acceso/eventos-vehiculares/{eventId}/foto/{index}', [ControlAccesoController::class, 'eventoVehicularFoto'])->name('control-acceso.eventos-vehiculares.foto')->can('control_acceso.view');
 });

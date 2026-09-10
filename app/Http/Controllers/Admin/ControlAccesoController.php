@@ -347,23 +347,47 @@ class ControlAccesoController extends Controller
     }
 
     /**
+     * Respuesta común de los proxys de fotos: la imagen del middleware, o un 404
+     * sin cuerpo si no hay servicio configurado o la foto no está disponible.
+     *
+     * Se responde vacío en vez de con `abort(404)` porque a estas rutas las consume
+     * un <img>: la página de error de Inertia son ~180 KB de HTML por foto faltante,
+     * y la lista de empleados pide una miniatura por fila.
+     *
+     * Se cachean en el navegador porque no cambian: las capturas de un evento son
+     * de un instante concreto, y la foto del empleado solo cambia si se vuelve a
+     * enrolar el rostro.
+     */
+    private function photoResponse(?array $photo): Response
+    {
+        if ($photo === null || ! $photo['success']) {
+            return response('', 404);
+        }
+
+        return response($photo['body'], 200)
+            ->header('Content-Type', $photo['content_type'])
+            ->header('Cache-Control', 'private, max-age=3600');
+    }
+
+    /**
+     * Proxy de la foto de referencia de un empleado (evita exponer credenciales al
+     * navegador y la IP interna del terminal, que es lo único que da `face_photo_url`).
+     */
+    public function empleadoFoto(Request $request, string $employeeNo): Response
+    {
+        return $this->photoResponse(
+            $this->resolveService($request)?->getEmployeePhoto($employeeNo)
+        );
+    }
+
+    /**
      * Proxy de la foto de un evento de acceso peatonal (evita exponer credenciales al navegador).
      */
     public function eventoPeatonalFoto(Request $request, int $eventId): Response
     {
-        $service = $this->resolveService($request);
-
-        if (! $service) {
-            abort(404);
-        }
-
-        $photo = $service->getAccessEventPhoto($eventId);
-
-        if (! $photo['success']) {
-            abort(404);
-        }
-
-        return response($photo['body'], 200)->header('Content-Type', $photo['content_type']);
+        return $this->photoResponse(
+            $this->resolveService($request)?->getAccessEventPhoto($eventId)
+        );
     }
 
     /**
@@ -371,18 +395,8 @@ class ControlAccesoController extends Controller
      */
     public function eventoVehicularFoto(Request $request, int $eventId, int $index): Response
     {
-        $service = $this->resolveService($request);
-
-        if (! $service) {
-            abort(404);
-        }
-
-        $photo = $service->getPlateEventPhoto($eventId, $index);
-
-        if (! $photo['success']) {
-            abort(404);
-        }
-
-        return response($photo['body'], 200)->header('Content-Type', $photo['content_type']);
+        return $this->photoResponse(
+            $this->resolveService($request)?->getPlateEventPhoto($eventId, $index)
+        );
     }
 }

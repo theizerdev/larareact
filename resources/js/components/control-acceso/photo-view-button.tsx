@@ -1,6 +1,6 @@
 import * as DialogPrimitive from '@radix-ui/react-dialog';
 import { Eye, ImageOff, X } from 'lucide-react';
-import { useState } from 'react';
+import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { useTranslate } from '@/hooks/use-translate';
 import { cn } from '@/lib/utils';
@@ -13,6 +13,8 @@ interface PhotoViewButtonProps {
     /** Cantidad total de fotos disponibles (por defecto 1). */
     count?: number;
     label?: string;
+    /** Reemplaza el botón "Ver Foto" por otro disparador (por ej. una miniatura). */
+    trigger?: React.ReactNode;
 }
 
 /**
@@ -22,7 +24,7 @@ interface PhotoViewButtonProps {
  * Usa los primitivos de Radix directamente (no el Dialog compartido de ui/) para
  * que este estilo de panel grande y traslúcido no afecte a los demás diálogos de la app.
  */
-export function PhotoViewButton({ src, photoIndexUrl, count = 1, label }: PhotoViewButtonProps) {
+export function PhotoViewButton({ src, photoIndexUrl, count = 1, label, trigger }: PhotoViewButtonProps) {
     const [open, setOpen] = useState(false);
     const [failedIndices, setFailedIndices] = useState<Set<number>>(new Set());
     const { __ } = useTranslate();
@@ -48,11 +50,22 @@ export function PhotoViewButton({ src, photoIndexUrl, count = 1, label }: PhotoV
 
     return (
         <>
-            <Button variant="outline" size="sm" className="gap-1.5" onClick={() => setOpen(true)}>
-                <Eye className="h-3.5 w-3.5" />
-                {__('View Photo')}
-                {total > 1 && <span className="text-xs text-muted-foreground">({total})</span>}
-            </Button>
+            {trigger ? (
+                <button
+                    type="button"
+                    aria-label={label || __('View Photo')}
+                    className="cursor-pointer rounded-full transition hover:opacity-80 focus-visible:outline-2 focus-visible:outline-ring focus-visible:outline-offset-2"
+                    onClick={() => setOpen(true)}
+                >
+                    {trigger}
+                </button>
+            ) : (
+                <Button variant="outline" size="sm" className="gap-1.5" onClick={() => setOpen(true)}>
+                    <Eye className="h-3.5 w-3.5" />
+                    {__('View Photo')}
+                    {total > 1 && <span className="text-xs text-muted-foreground">({total})</span>}
+                </Button>
+            )}
             <DialogPrimitive.Root open={open} onOpenChange={handleOpenChange}>
                 <DialogPrimitive.Portal>
                     <DialogPrimitive.Overlay className="fixed inset-0 z-50 bg-black/70 backdrop-blur-sm data-[state=closed]:animate-out data-[state=open]:animate-in data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0" />

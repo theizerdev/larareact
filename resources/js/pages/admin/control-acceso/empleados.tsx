@@ -2,6 +2,7 @@ import { Head, router } from '@inertiajs/react';
 import { Fingerprint } from 'lucide-react';
 import React from 'react';
 import { Breadcrumbs } from '@/components/breadcrumbs';
+import { EmployeePhoto } from '@/components/control-acceso/employee-photo';
 import { ControlAccesoErrorBanner } from '@/components/control-acceso/error-banner';
 import type { ColumnDef } from '@/components/data-table';
 import { DataTable } from '@/components/data-table';
@@ -25,6 +26,9 @@ interface IvmsEmployee {
     valid_enabled: boolean | null;
     num_cards: number;
     num_faces: number;
+    /** URL del rostro enrolado en el terminal (LAN, no alcanzable desde el navegador);
+     *  acá solo sirve como indicador de si el empleado tiene foto. */
+    face_photo_url: string | null;
     is_system_account: boolean;
     created_at: string | null;
 }
@@ -85,6 +89,18 @@ export default function ControlAccesoEmpleados({ items, filters, error }: PagePr
     ];
 
     const columns: ColumnDef<IvmsEmployee>[] = [
+        {
+            header: 'Photo',
+            className: 'w-16',
+            stopRowClick: true,
+            cell: (row) => (
+                <EmployeePhoto
+                    employeeNo={row.employee_no}
+                    name={row.full_name}
+                    hasPhoto={Boolean(row.face_photo_url)}
+                />
+            ),
+        },
         { header: 'Employee No.', accessorKey: 'employee_no', className: 'font-mono text-xs' },
         { header: 'Full Name', accessorKey: 'full_name', className: 'font-medium' },
         { header: 'Email', accessorKey: 'email', hideOn: 'mobile' },
