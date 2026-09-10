@@ -1,6 +1,6 @@
-import { queryParams, type RouteQueryOptions, type RouteDefinition, type RouteFormDefinition } from './../../wayfinder'
+import { queryParams, type RouteQueryOptions, type RouteDefinition } from './../../wayfinder'
 /**
- * @see routes/web.php:23
+ * @see routes/web.php:24
  * @route '/locale'
  */
 export const update = (options?: RouteQueryOptions): RouteDefinition<'post'> => ({
@@ -14,7 +14,7 @@ update.definition = {
 } satisfies RouteDefinition<["post"]>
 
 /**
- * @see routes/web.php:23
+ * @see routes/web.php:24
  * @route '/locale'
  */
 update.url = (options?: RouteQueryOptions) => {
@@ -22,33 +22,13 @@ update.url = (options?: RouteQueryOptions) => {
 }
 
 /**
- * @see routes/web.php:23
+ * @see routes/web.php:24
  * @route '/locale'
  */
 update.post = (options?: RouteQueryOptions): RouteDefinition<'post'> => ({
     url: update.url(options),
     method: 'post',
 })
-
-    /**
- * @see routes/web.php:23
- * @route '/locale'
- */
-    const updateForm = (options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
-        action: update.url(options),
-        method: 'post',
-    })
-
-            /**
- * @see routes/web.php:23
- * @route '/locale'
- */
-        updateForm.post = (options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
-            action: update.url(options),
-            method: 'post',
-        })
-    
-    update.form = updateForm
 const locale = {
     update: Object.assign(update, update),
 }

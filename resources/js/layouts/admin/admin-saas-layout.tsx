@@ -20,8 +20,16 @@ import {
     X,
     Activity,
     Link2,
+    Building2,
+    GitBranch,
+    Briefcase,
+    Calendar,
+    Fingerprint,
+    CreditCard,
+    Smartphone,
+    Users,
+    CalendarDays,
 } from 'lucide-react';
-import { Building2, GitBranch, Briefcase, Calendar, Fingerprint } from 'lucide-react';
 import * as React from 'react';
 import LanguageToggle from '@/components/language-toggle';
 import TemplateCustomizer from '@/components/template-customizer';
@@ -387,6 +395,69 @@ export default function AdminSaasLayout({
                                 />
                             ))
                         }
+
+                        {/* Financiamiento & Créditos Group */}
+                        {(() => {
+                            const creditoItems = [
+                                {
+                                    title: 'Ventas a Crédito',
+                                    href: '/admin/creditos',
+                                    permission: 'creditos.view',
+                                },
+                                {
+                                    title: 'Nueva Venta',
+                                    href: '/admin/creditos/nuevo',
+                                    permission: 'creditos.create',
+                                },
+                                {
+                                    title: 'Planes de Pago',
+                                    href: '/admin/planes-financiamiento',
+                                    permission: 'planes.view',
+                                },
+                            ].filter(item => hasPermission(item.permission));
+
+                            if (creditoItems.length === 0) return null;
+
+                            return (
+                                <div className="pt-2">
+                                    <CollapsibleNavItem
+                                        title="Financiamiento"
+                                        icon={CreditCard}
+                                        collapsed={collapsed}
+                                        items={creditoItems}
+                                    />
+                                </div>
+                            );
+                        })()}
+
+                        {/* Inventario & Clientes Group */}
+                        {(() => {
+                            const invItems = [
+                                {
+                                    title: 'Equipos (IMEI)',
+                                    href: '/admin/inventario/equipos',
+                                    permission: 'equipos.view',
+                                },
+                                {
+                                    title: 'Clientes',
+                                    href: '/admin/clientes',
+                                    permission: 'clientes.view',
+                                },
+                            ].filter(item => hasPermission(item.permission));
+
+                            if (invItems.length === 0) return null;
+
+                            return (
+                                <div className="pt-2">
+                                    <CollapsibleNavItem
+                                        title="Equipos & Clientes"
+                                        icon={Smartphone}
+                                        collapsed={collapsed}
+                                        items={invItems}
+                                    />
+                                </div>
+                            );
+                        })()}
 
                         {/* Organization Group */}
                         {(() => {
