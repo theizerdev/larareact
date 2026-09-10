@@ -32,6 +32,7 @@ import {
 } from '@/components/ui/select';
 import { cleanParams, formatDate } from '@/lib/utils';
 import type { Paginated } from '@/types/app';
+import { useTranslate } from '@/hooks/use-translate';
 
 interface Credito {
     id: number;
@@ -97,6 +98,7 @@ interface Props {
 }
 
 export default function CreditosIndex({ creditos, stats, sucursales, filters }: Props) {
+    const { __, currentLocale } = useTranslate();
     const { regional_config } = usePage().props as any;
     const currency = regional_config?.currency_symbol || '$';
 
@@ -117,15 +119,15 @@ export default function CreditosIndex({ creditos, stats, sucursales, filters }: 
     const getEstadoBadge = (estado: string) => {
         switch (estado) {
             case 'activo':
-                return <Badge className="bg-emerald-500/15 text-emerald-700 dark:text-emerald-400 border-emerald-500/20">Al Día / Activo</Badge>;
+                return <Badge className="bg-emerald-500/15 text-emerald-700 dark:text-emerald-400 border-emerald-500/20">{__('Al Día / Activo')}</Badge>;
             case 'liquidado':
-                return <Badge className="bg-blue-500/15 text-blue-700 dark:text-blue-400 border-blue-500/20">Liquidado / Pagado</Badge>;
+                return <Badge className="bg-blue-500/15 text-blue-700 dark:text-blue-400 border-blue-500/20">{__('Liquidado / Pagado')}</Badge>;
             case 'en_mora':
-                return <Badge className="bg-rose-500/15 text-rose-700 dark:text-rose-400 border-rose-500/20 font-bold">En Mora</Badge>;
+                return <Badge className="bg-rose-500/15 text-rose-700 dark:text-rose-400 border-rose-500/20 font-bold">{__('En Mora')}</Badge>;
             case 'pendiente_aprobacion':
-                return <Badge className="bg-amber-500/15 text-amber-700 dark:text-amber-400 border-amber-500/20">Por Aprobar</Badge>;
+                return <Badge className="bg-amber-500/15 text-amber-700 dark:text-amber-400 border-amber-500/20">{__('Por Aprobar')}</Badge>;
             case 'cancelado':
-                return <Badge variant="outline" className="text-slate-400">Cancelado</Badge>;
+                return <Badge variant="outline" className="text-slate-400">{__('Cancelado')}</Badge>;
             default:
                 return <Badge variant="outline">{estado}</Badge>;
         }
@@ -133,25 +135,25 @@ export default function CreditosIndex({ creditos, stats, sucursales, filters }: 
 
     return (
         <div className="space-y-6">
-            <Head title="Ventas a Crédito & Cartera" />
+            <Head title={__('Ventas a Crédito & Cartera')} />
 
             <Breadcrumbs
                 breadcrumbs={[
-                    { title: 'Dashboard', href: '/admin/dashboard' },
-                    { title: 'Ventas a Crédito', href: '/admin/creditos' },
+                    { title: __('Dashboard'), href: '/admin/dashboard' },
+                    { title: __('Ventas a Crédito'), href: '/admin/creditos' },
                 ]}
             />
 
             {/* Header */}
             <ModuleHeader
                 icon={<CreditCard className="size-6 sm:size-7" />}
-                title="Ventas de Teléfonos a Crédito"
-                description="Control de contratos de financiamiento, seguimiento de cartera activa, amortizaciones y cobranza de cuotas."
+                title={__('Ventas de Teléfonos a Crédito')}
+                description={__('Control de contratos de financiamiento, seguimiento de cartera activa, amortizaciones y cobranza de cuotas.')}
                 colorClassName="bg-emerald-600 dark:bg-emerald-700"
             >
                 <Link href="/admin/creditos/nuevo">
                     <Button className="bg-white text-emerald-700 hover:bg-slate-100 font-bold">
-                        <Plus className="size-4 mr-1.5" /> Nueva Venta a Crédito
+                        <Plus className="size-4 mr-1.5" /> {__('Nueva Venta a Crédito')}
                     </Button>
                 </Link>
             </ModuleHeader>
@@ -160,25 +162,25 @@ export default function CreditosIndex({ creditos, stats, sucursales, filters }: 
             <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
                 <StatCard
                     icon={<DollarSign className="size-5 text-emerald-600" />}
-                    title="Cartera Activa por Cobrar"
+                    title={__('Cartera Activa por Cobrar')}
                     value={`${currency}${stats.cartera_activa_monto.toLocaleString(undefined, { minimumFractionDigits: 2 })}`}
                     colorClassName="bg-emerald-50 dark:bg-emerald-950/40"
                 />
                 <StatCard
                     icon={<CreditCard className="size-5 text-blue-600" />}
-                    title="Créditos Activos"
+                    title={__('Créditos Activos')}
                     value={stats.activos}
                     colorClassName="bg-blue-50 dark:bg-blue-950/40"
                 />
                 <StatCard
                     icon={<ShieldAlert className="size-5 text-rose-600" />}
-                    title="En Mora"
+                    title={__('En Mora')}
                     value={stats.en_mora}
                     colorClassName="bg-rose-50 dark:bg-rose-950/40"
                 />
                 <StatCard
                     icon={<CheckCircle2 className="size-5 text-indigo-600" />}
-                    title="Liquidados / Pagados"
+                    title={__('Liquidados / Pagados')}
                     value={stats.liquidados}
                     colorClassName="bg-indigo-50 dark:bg-indigo-950/40"
                 />
@@ -190,7 +192,7 @@ export default function CreditosIndex({ creditos, stats, sucursales, filters }: 
                     <div className="relative min-w-[240px] flex-1">
                         <Search className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-slate-400" />
                         <Input
-                            placeholder="Buscar por folio, cliente, teléfono o IMEI..."
+                            placeholder={__('Buscar por folio, cliente, teléfono o IMEI...')}
                             value={search}
                             onChange={(e) => setSearch(e.target.value)}
                             onKeyDown={(e) => e.key === 'Enter' && handleFilterChange()}
@@ -200,23 +202,23 @@ export default function CreditosIndex({ creditos, stats, sucursales, filters }: 
 
                     <Select value={estadoFilter} onValueChange={(val) => { setEstadoFilter(val); handleFilterChange({ estado: val !== 'all' ? val : undefined }); }}>
                         <SelectTrigger className="w-full sm:w-[200px] md:w-[240px] h-10">
-                            <SelectValue placeholder="Estado de cuenta" />
+                            <SelectValue placeholder={__('Estado de cuenta')} />
                         </SelectTrigger>
                         <SelectContent>
-                            <SelectItem value="all">Todos los estados</SelectItem>
-                            <SelectItem value="activo">Al Día / Activo</SelectItem>
-                            <SelectItem value="en_mora">En Mora</SelectItem>
-                            <SelectItem value="liquidado">Liquidado</SelectItem>
-                            <SelectItem value="pendiente_aprobacion">Por Aprobar</SelectItem>
+                            <SelectItem value="all">{__('Todos los estados')}</SelectItem>
+                            <SelectItem value="activo">{__('Al Día / Activo')}</SelectItem>
+                            <SelectItem value="en_mora">{__('En Mora')}</SelectItem>
+                            <SelectItem value="liquidado">{__('Liquidado')}</SelectItem>
+                            <SelectItem value="pendiente_aprobacion">{__('Por Aprobar')}</SelectItem>
                         </SelectContent>
                     </Select>
 
                     <Select value={sucursalFilter} onValueChange={(val) => { setSucursalFilter(val); handleFilterChange({ sucursal_id: val !== 'all' ? val : undefined }); }}>
                         <SelectTrigger className="w-full sm:w-[200px] md:w-[240px] h-10">
-                            <SelectValue placeholder="Tienda" />
+                            <SelectValue placeholder={__('Tienda')} />
                         </SelectTrigger>
                         <SelectContent>
-                            <SelectItem value="all">Todas las tiendas</SelectItem>
+                            <SelectItem value="all">{__('Todas las tiendas')}</SelectItem>
                             {sucursales.map((s) => (
                                 <SelectItem key={s.id} value={s.id.toString()}>{s.nombre}</SelectItem>
                             ))}
@@ -224,7 +226,7 @@ export default function CreditosIndex({ creditos, stats, sucursales, filters }: 
                     </Select>
 
                     <Button variant="secondary" onClick={() => handleFilterChange()} className="h-10">
-                        <Filter className="size-4 mr-1.5" /> Filtrar
+                        <Filter className="size-4 mr-1.5" /> {__('Filtrar')}
                     </Button>
                 </div>
             </FilterBar>
@@ -235,15 +237,15 @@ export default function CreditosIndex({ creditos, stats, sucursales, filters }: 
                     <table className="w-full text-sm text-left">
                         <thead className="text-xs uppercase bg-slate-50 dark:bg-slate-900/50 text-slate-500 border-b border-slate-200 dark:border-slate-800">
                             <tr>
-                                <th className="px-4 py-3.5">Folio / Fecha</th>
-                                <th className="px-4 py-3.5">Cliente</th>
-                                <th className="px-4 py-3.5">Dispositivo / IMEI</th>
-                                <th className="px-4 py-3.5">Plan</th>
-                                <th className="px-4 py-3.5">Total Crédito</th>
-                                <th className="px-4 py-3.5">Inicial Cobrada</th>
-                                <th className="px-4 py-3.5 font-bold text-rose-600 dark:text-rose-400">Saldo Pendiente</th>
-                                <th className="px-4 py-3.5">Estado</th>
-                                <th className="px-4 py-3.5 text-right">Acción</th>
+                                <th className="px-4 py-3.5">{__('Folio / Fecha')}</th>
+                                <th className="px-4 py-3.5">{__('Cliente')}</th>
+                                <th className="px-4 py-3.5">{__('Dispositivo / IMEI')}</th>
+                                <th className="px-4 py-3.5">{__('Plan')}</th>
+                                <th className="px-4 py-3.5">{__('Total Crédito')}</th>
+                                <th className="px-4 py-3.5">{__('Inicial Cobrada')}</th>
+                                <th className="px-4 py-3.5 font-bold text-rose-600 dark:text-rose-400">{__('Saldo Pendiente')}</th>
+                                <th className="px-4 py-3.5">{__('Estado')}</th>
+                                <th className="px-4 py-3.5 text-right">{__('Acción')}</th>
                             </tr>
                         </thead>
                         <tbody className="divide-y divide-slate-100 dark:divide-slate-800/60">
@@ -251,7 +253,7 @@ export default function CreditosIndex({ creditos, stats, sucursales, filters }: 
                                 <tr>
                                     <td colSpan={9} className="px-4 py-12 text-center text-slate-500">
                                         <CreditCard className="size-8 mx-auto text-slate-300 mb-2" />
-                                        No hay créditos registrados con los filtros aplicados.
+                                        {__('No hay créditos registrados con los filtros aplicados.')}
                                     </td>
                                 </tr>
                             ) : (
@@ -261,7 +263,7 @@ export default function CreditosIndex({ creditos, stats, sucursales, filters }: 
                                             <div className="font-mono font-bold text-slate-900 dark:text-slate-100">
                                                 {c.codigo_credito}
                                             </div>
-                                            <div className="text-xs text-slate-400">{formatDate(c.fecha_inicio, 'short')}</div>
+                                            <div className="text-xs text-slate-400">{formatDate(c.fecha_inicio, 'short', currentLocale)}</div>
                                         </td>
                                         <td className="px-4 py-3">
                                             <div className="font-semibold text-slate-900 dark:text-slate-100">
@@ -283,7 +285,7 @@ export default function CreditosIndex({ creditos, stats, sucursales, filters }: 
                                             <div className="font-medium text-slate-700 dark:text-slate-300">
                                                 {c.plan?.nombre}
                                             </div>
-                                            <div className="text-slate-400">{c.plan?.numero_cuotas} cuotas {c.plan?.frecuencia}s</div>
+                                            <div className="text-slate-400">{c.plan?.numero_cuotas} {__('cuotas')} {c.plan?.frecuencia ? __(c.plan.frecuencia) : ''}</div>
                                         </td>
                                         <td className="px-4 py-3 font-semibold text-slate-900 dark:text-slate-100">
                                             {currency}{Number(c.total_credito).toFixed(2)}
@@ -300,7 +302,7 @@ export default function CreditosIndex({ creditos, stats, sucursales, filters }: 
                                         <td className="px-4 py-3 text-right">
                                             <Link href={`/admin/creditos/${c.id}`}>
                                                 <Button variant="outline" size="sm" className="h-8 gap-1.5 text-xs">
-                                                    <Eye className="size-3.5" /> Ver Expediente
+                                                    <Eye className="size-3.5" /> {__('Ver Expediente')}
                                                 </Button>
                                             </Link>
                                         </td>

@@ -37,6 +37,7 @@ import {
 } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
 import type { Paginated } from '@/types/app';
+import { useTranslate } from '@/hooks/use-translate';
 
 interface Plan {
     id: number;
@@ -66,6 +67,7 @@ interface Props {
 }
 
 export default function PlanesIndex({ planes, stats }: Props) {
+    const { __ } = useTranslate();
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [editingPlan, setEditingPlan] = useState<Plan | null>(null);
 
@@ -132,31 +134,31 @@ export default function PlanesIndex({ planes, stats }: Props) {
     };
 
     const handleDelete = (id: number) => {
-        if (confirm('¿Estás seguro de eliminar este plan?')) {
+        if (confirm(__('¿Estás seguro de eliminar este plan?'))) {
             router.delete(`/admin/planes-financiamiento/${id}`);
         }
     };
 
     return (
         <div className="space-y-6">
-            <Head title="Planes de Financiamiento" />
+            <Head title={__('Planes de Financiamiento')} />
 
             <Breadcrumbs
                 breadcrumbs={[
-                    { title: 'Dashboard', href: '/admin/dashboard' },
-                    { title: 'Planes de Financiamiento', href: '/admin/planes-financiamiento' },
+                    { title: __('Dashboard'), href: '/admin/dashboard' },
+                    { title: __('Planes de Financiamiento'), href: '/admin/planes-financiamiento' },
                 ]}
             />
 
             {/* Header */}
             <ModuleHeader
                 icon={<CalendarDays className="size-6 sm:size-7" />}
-                title="Planes de Financiamiento & Cuotas"
-                description="Configuración de políticas de financiamiento, periodicidad, porcentaje de enganche inicial e intereses aplicables."
+                title={__('Planes de Financiamiento & Cuotas')}
+                description={__('Configuración de políticas de financiamiento, periodicidad, porcentaje de enganche inicial e intereses aplicables.')}
                 colorClassName="bg-purple-700 dark:bg-purple-800"
             >
                 <Button onClick={openCreateModal} className="bg-white text-purple-700 hover:bg-slate-100 font-semibold">
-                    <Plus className="size-4 mr-1.5" /> Nuevo Plan
+                    <Plus className="size-4 mr-1.5" /> {__('Nuevo Plan')}
                 </Button>
             </ModuleHeader>
 
@@ -164,13 +166,13 @@ export default function PlanesIndex({ planes, stats }: Props) {
             <div className="grid grid-cols-2 gap-4">
                 <StatCard
                     icon={<Sliders className="size-5 text-purple-600" />}
-                    title="Total de Planes"
+                    title={__('Total de Planes')}
                     value={stats.total}
                     colorClassName="bg-purple-50 dark:bg-purple-950/40"
                 />
                 <StatCard
                     icon={<CheckCircle2 className="size-5 text-emerald-600" />}
-                    title="Planes Activos"
+                    title={__('Planes Activos')}
                     value={stats.activos}
                     colorClassName="bg-emerald-50 dark:bg-emerald-950/40"
                 />
@@ -184,7 +186,7 @@ export default function PlanesIndex({ planes, stats }: Props) {
                             <CardHeader className="pb-3 flex flex-row items-start justify-between space-y-0">
                                 <div>
                                     <Badge variant="outline" className="capitalize text-xs mb-2">
-                                        Cobro {p.frecuencia}
+                                        {__('Cobro :frecuencia', { frecuencia: __(p.frecuencia) })}
                                     </Badge>
                                     <CardTitle className="text-lg font-bold text-slate-900 dark:text-slate-100">
                                         {p.nombre}
@@ -195,7 +197,7 @@ export default function PlanesIndex({ planes, stats }: Props) {
                                     size="sm"
                                     onClick={() => toggleStatus(p.id)}
                                     className="h-8 w-8 p-0"
-                                    title={p.activo ? 'Desactivar plan' : 'Activar plan'}
+                                    title={p.activo ? __('Desactivar plan') : __('Activar plan')}
                                 >
                                     {p.activo ? (
                                         <ToggleRight className="size-6 text-emerald-600" />
@@ -207,38 +209,38 @@ export default function PlanesIndex({ planes, stats }: Props) {
 
                             <CardContent className="space-y-3 text-sm">
                                 <p className="text-xs text-slate-500 min-h-[32px]">
-                                    {p.descripcion || 'Sin descripción.'}
+                                    {p.descripcion || __('Sin descripción.')}
                                 </p>
 
                                 <div className="p-3 bg-slate-50 dark:bg-slate-900/60 rounded-xl space-y-2 border border-slate-100 dark:border-slate-800">
                                     <div className="flex justify-between text-xs">
-                                        <span className="text-slate-500">Cantidad de Cuotas:</span>
+                                        <span className="text-slate-500">{__('Cantidad de Cuotas:')}</span>
                                         <span className="font-bold text-slate-900 dark:text-slate-100">
-                                            {p.numero_cuotas} cuotas
+                                            {__(':count cuotas', { count: p.numero_cuotas.toString() })}
                                         </span>
                                     </div>
                                     <div className="flex justify-between text-xs">
-                                        <span className="text-slate-500">Inicial Mínima:</span>
+                                        <span className="text-slate-500">{__('Inicial Mínima:')}</span>
                                         <span className="font-bold text-blue-600 dark:text-blue-400">
                                             {p.porcentaje_inicial_minimo}%
                                         </span>
                                     </div>
                                     <div className="flex justify-between text-xs">
-                                        <span className="text-slate-500">Recargo / Interés:</span>
+                                        <span className="text-slate-500">{__('Recargo / Interés:')}</span>
                                         <span className="font-bold text-emerald-600 dark:text-emerald-400">
                                             +{p.porcentaje_interes_total}%
                                         </span>
                                     </div>
                                     <div className="flex justify-between text-xs">
-                                        <span className="text-slate-500">Días de Gracia:</span>
+                                        <span className="text-slate-500">{__('Días de Gracia:')}</span>
                                         <span className="font-medium text-slate-700 dark:text-slate-300">
-                                            {p.dias_gracia} días
+                                            {__(':dias días', { dias: p.dias_gracia.toString() })}
                                         </span>
                                     </div>
                                     <div className="flex justify-between text-xs">
-                                        <span className="text-slate-500">Mora Diaria:</span>
+                                        <span className="text-slate-500">{__('Mora Diaria:')}</span>
                                         <span className="font-medium text-rose-600">
-                                            {p.mora_diaria_porcentaje}% / día
+                                            {p.mora_diaria_porcentaje}% / {__('día')}
                                         </span>
                                     </div>
                                 </div>
@@ -246,7 +248,7 @@ export default function PlanesIndex({ planes, stats }: Props) {
                         </div>
 
                         <div className="p-4 border-t border-slate-100 dark:border-slate-800 flex items-center justify-between text-xs text-slate-500">
-                            <span>{p.creditos_count || 0} créditos generados</span>
+                            <span>{__(':count créditos generados', { count: (p.creditos_count || 0).toString() })}</span>
                             <div className="flex items-center gap-1">
                                 <Button
                                     variant="ghost"
@@ -254,7 +256,7 @@ export default function PlanesIndex({ planes, stats }: Props) {
                                     onClick={() => openEditModal(p)}
                                     className="h-7 px-2 text-xs"
                                 >
-                                    <Edit2 className="size-3 mr-1" /> Editar
+                                    <Edit2 className="size-3 mr-1" /> {__('Editar')}
                                 </Button>
                                 {(!p.creditos_count || p.creditos_count === 0) && (
                                     <Button
@@ -263,7 +265,7 @@ export default function PlanesIndex({ planes, stats }: Props) {
                                         onClick={() => handleDelete(p.id)}
                                         className="h-7 px-2 text-xs text-rose-500 hover:text-rose-700"
                                     >
-                                        <Trash2 className="size-3 mr-1" /> Eliminar
+                                        <Trash2 className="size-3 mr-1" /> {__('Eliminar')}
                                     </Button>
                                 )}
                             </div>
@@ -276,27 +278,27 @@ export default function PlanesIndex({ planes, stats }: Props) {
             <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
                 <DialogContent className="max-w-xl sm:max-w-xl max-h-[90vh] overflow-y-auto">
                     <DialogHeader>
-                        <DialogTitle>{editingPlan ? 'Editar Plan de Financiamiento' : 'Nuevo Plan de Financiamiento'}</DialogTitle>
+                        <DialogTitle>{editingPlan ? __('Editar Plan de Financiamiento') : __('Nuevo Plan de Financiamiento')}</DialogTitle>
                         <DialogDescription>
-                            Define las cuotas, porcentaje de enganche y reglas de interés de este esquema comercial.
+                            {__('Define las cuotas, porcentaje de enganche y reglas de interés de este esquema comercial.')}
                         </DialogDescription>
                     </DialogHeader>
 
                     <form onSubmit={handleSubmit} className="space-y-4">
                         <div className="space-y-1.5">
-                            <Label>Nombre del Plan *</Label>
+                            <Label>{__('Nombre del Plan')} *</Label>
                             <Input
                                 required
-                                placeholder="Ej. Plan 4 Quincenas - 30% Inicial"
+                                placeholder={__('Ej. Plan 4 Quincenas - 30% Inicial')}
                                 value={form.data.nombre}
                                 onChange={(e) => form.setData('nombre', e.target.value)}
                             />
                         </div>
 
                         <div className="space-y-1.5">
-                            <Label>Descripción Breve</Label>
+                            <Label>{__('Descripción Breve')}</Label>
                             <Textarea
-                                placeholder="Condiciones comerciales o detalles para el cliente..."
+                                placeholder={__('Condiciones comerciales o detalles para el cliente...')}
                                 value={form.data.descripcion}
                                 onChange={(e) => form.setData('descripcion', e.target.value)}
                                 rows={2}
@@ -306,7 +308,7 @@ export default function PlanesIndex({ planes, stats }: Props) {
                         <div className="grid grid-cols-2 gap-4">
                             {/* Frecuencia de pago */}
                             <div className="space-y-1.5">
-                                <Label>Frecuencia de Pago *</Label>
+                                <Label>{__('Frecuencia de Pago')} *</Label>
                                 <Select
                                     value={form.data.frecuencia}
                                     onValueChange={(val: any) => form.setData('frecuencia', val)}
@@ -315,15 +317,15 @@ export default function PlanesIndex({ planes, stats }: Props) {
                                         <SelectValue />
                                     </SelectTrigger>
                                     <SelectContent>
-                                        <SelectItem value="semanal">Semanal</SelectItem>
-                                        <SelectItem value="quincenal">Quincenal</SelectItem>
-                                        <SelectItem value="mensual">Mensual</SelectItem>
+                                        <SelectItem value="semanal">{__('Semanal')}</SelectItem>
+                                        <SelectItem value="quincenal">{__('Quincenal')}</SelectItem>
+                                        <SelectItem value="mensual">{__('Mensual')}</SelectItem>
                                     </SelectContent>
                                 </Select>
                             </div>
 
                             <div className="space-y-1.5">
-                                <Label>Número de Cuotas *</Label>
+                                <Label>{__('Número de Cuotas')} *</Label>
                                 <Input
                                     type="number"
                                     min="1"
@@ -337,7 +339,7 @@ export default function PlanesIndex({ planes, stats }: Props) {
 
                         <div className="grid grid-cols-2 gap-4 p-4 rounded-xl bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800">
                             <div className="space-y-1.5">
-                                <Label className="text-blue-700 dark:text-blue-400 font-bold">% Inicial Mínima *</Label>
+                                <Label className="text-blue-700 dark:text-blue-400 font-bold">{__('% Inicial Mínima')} *</Label>
                                 <div className="relative">
                                     <Input
                                         type="number"
@@ -354,7 +356,7 @@ export default function PlanesIndex({ planes, stats }: Props) {
                             </div>
 
                             <div className="space-y-1.5">
-                                <Label className="text-emerald-700 dark:text-emerald-400 font-bold">% Interés Financiero *</Label>
+                                <Label className="text-emerald-700 dark:text-emerald-400 font-bold">{__('% Interés Financiero')} *</Label>
                                 <div className="relative">
                                     <Input
                                         type="number"
@@ -373,7 +375,7 @@ export default function PlanesIndex({ planes, stats }: Props) {
 
                         <div className="grid grid-cols-2 gap-4">
                             <div className="space-y-1.5">
-                                <Label>Días de Gracia</Label>
+                                <Label>{__('Días de Gracia')}</Label>
                                 <Input
                                     type="number"
                                     min="0"
@@ -382,11 +384,11 @@ export default function PlanesIndex({ planes, stats }: Props) {
                                     value={form.data.dias_gracia}
                                     onChange={(e) => form.setData('dias_gracia', e.target.value)}
                                 />
-                                <p className="text-[11px] text-slate-400">Días sin cobrar mora tras el vencimiento.</p>
+                                <p className="text-[11px] text-slate-400">{__('Días sin cobrar mora tras el vencimiento.')}</p>
                             </div>
 
                             <div className="space-y-1.5">
-                                <Label>% Mora Diaria</Label>
+                                <Label>{__('% Mora Diaria')}</Label>
                                 <Input
                                     type="number"
                                     step="0.01"
@@ -396,16 +398,16 @@ export default function PlanesIndex({ planes, stats }: Props) {
                                     value={form.data.mora_diaria_porcentaje}
                                     onChange={(e) => form.setData('mora_diaria_porcentaje', e.target.value)}
                                 />
-                                <p className="text-[11px] text-slate-400">Porcentaje diario sobre la cuota vencida.</p>
+                                <p className="text-[11px] text-slate-400">{__('Porcentaje diario sobre la cuota vencida.')}</p>
                             </div>
                         </div>
 
                         <DialogFooter className="pt-3 border-t">
                             <Button type="button" variant="outline" onClick={() => setIsModalOpen(false)}>
-                                Cancelar
+                                {__('Cancelar')}
                             </Button>
                             <Button type="submit" disabled={form.processing} className="bg-purple-700 hover:bg-purple-800 text-white">
-                                {form.processing ? 'Guardando...' : 'Guardar Plan'}
+                                {form.processing ? __('Guardando...') : __('Guardar Plan')}
                             </Button>
                         </DialogFooter>
                     </form>

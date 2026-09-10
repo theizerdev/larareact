@@ -40,6 +40,7 @@ import {
 } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
 import { formatDate } from '@/lib/utils';
+import { useTranslate } from '@/hooks/use-translate';
 
 interface Cuota {
     id: number;
@@ -121,6 +122,7 @@ interface Props {
 }
 
 export default function CreditoShow({ credito }: Props) {
+    const { __, currentLocale } = useTranslate();
     const { regional_config } = usePage().props as any;
     const currency = regional_config?.currency_symbol || '$';
 
@@ -165,25 +167,25 @@ export default function CreditoShow({ credito }: Props) {
         const vencida = estado !== 'pagada' && new Date(dateOnly + 'T23:59:59') < new Date();
 
         if (estado === 'pagada') {
-            return <Badge className="bg-emerald-500/15 text-emerald-700 dark:text-emerald-400 border-emerald-500/20">Pagada</Badge>;
+            return <Badge className="bg-emerald-500/15 text-emerald-700 dark:text-emerald-400 border-emerald-500/20">{__('Pagada')}</Badge>;
         }
         if (vencida || estado === 'vencida') {
-            return <Badge className="bg-rose-500/15 text-rose-700 dark:text-rose-400 border-rose-500/20 font-bold">Vencida</Badge>;
+            return <Badge className="bg-rose-500/15 text-rose-700 dark:text-rose-400 border-rose-500/20 font-bold">{__('Vencida')}</Badge>;
         }
         if (estado === 'parcial') {
-            return <Badge className="bg-amber-500/15 text-amber-700 dark:text-amber-400 border-amber-500/20">Abono Parcial</Badge>;
+            return <Badge className="bg-amber-500/15 text-amber-700 dark:text-amber-400 border-amber-500/20">{__('Abono Parcial')}</Badge>;
         }
-        return <Badge className="bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300">Pendiente</Badge>;
+        return <Badge className="bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300">{__('Pendiente')}</Badge>;
     };
 
     const getEstadoCreditoBadge = (estado: string) => {
         switch (estado) {
             case 'activo':
-                return <Badge className="bg-emerald-500/15 text-emerald-700 dark:text-emerald-400 border-emerald-500/20 font-bold text-sm px-3 py-1">Crédito Activo</Badge>;
+                return <Badge className="bg-emerald-500/15 text-emerald-700 dark:text-emerald-400 border-emerald-500/20 font-bold text-sm px-3 py-1">{__('Crédito Activo')}</Badge>;
             case 'liquidado':
-                return <Badge className="bg-blue-500/15 text-blue-700 dark:text-blue-400 border-blue-500/20 font-bold text-sm px-3 py-1">Liquidado / Pagado</Badge>;
+                return <Badge className="bg-blue-500/15 text-blue-700 dark:text-blue-400 border-blue-500/20 font-bold text-sm px-3 py-1">{__('Liquidado / Pagado')}</Badge>;
             case 'en_mora':
-                return <Badge className="bg-rose-500/15 text-rose-700 dark:text-rose-400 border-rose-500/20 font-bold text-sm px-3 py-1">En Mora</Badge>;
+                return <Badge className="bg-rose-500/15 text-rose-700 dark:text-rose-400 border-rose-500/20 font-bold text-sm px-3 py-1">{__('En Mora')}</Badge>;
             default:
                 return <Badge variant="outline" className="text-sm px-3 py-1">{estado}</Badge>;
         }
@@ -191,12 +193,12 @@ export default function CreditoShow({ credito }: Props) {
 
     return (
         <div className="space-y-6">
-            <Head title={`Expediente de Crédito: ${credito.codigo_credito}`} />
+            <Head title={__('Expediente de Crédito: :codigo', { codigo: credito.codigo_credito })} />
 
             <Breadcrumbs
                 breadcrumbs={[
-                    { title: 'Dashboard', href: '/admin/dashboard' },
-                    { title: 'Ventas a Crédito', href: '/admin/creditos' },
+                    { title: __('Dashboard'), href: '/admin/dashboard' },
+                    { title: __('Ventas a Crédito'), href: '/admin/creditos' },
                     { title: credito.codigo_credito, href: `/admin/creditos/${credito.id}` },
                 ]}
             />
@@ -211,14 +213,18 @@ export default function CreditoShow({ credito }: Props) {
                         {getEstadoCreditoBadge(credito.estado)}
                     </div>
                     <p className="text-xs sm:text-sm text-slate-500 mt-1">
-                        Originado el {formatDate(credito.fecha_inicio, 'medium')} • Sucursal: {credito.sucursal?.nombre || 'Principal'} • Vendedor: {credito.vendedor?.name || 'Sistema'}
+                        {__('Originado el :fecha • Sucursal: :sucursal • Vendedor: :vendedor', {
+                            fecha: formatDate(credito.fecha_inicio, 'medium', currentLocale),
+                            sucursal: credito.sucursal?.nombre || __('Principal'),
+                            vendedor: credito.vendedor?.name || __('Sistema'),
+                        })}
                     </p>
                 </div>
 
                 <div className="flex items-center gap-2">
                     <Link href="/admin/creditos">
                         <Button variant="outline" size="sm">
-                            <ArrowLeft className="size-4 mr-1" /> Volver al Listado
+                            <ArrowLeft className="size-4 mr-1" /> {__('Volver al Listado')}
                         </Button>
                     </Link>
                     <Button
@@ -227,7 +233,7 @@ export default function CreditoShow({ credito }: Props) {
                         onClick={() => window.print()}
                         className="h-9 gap-1.5"
                     >
-                        <Printer className="size-4" /> Imprimir Contrato
+                        <Printer className="size-4" /> {__('Imprimir Contrato')}
                     </Button>
                 </div>
             </div>
@@ -235,35 +241,35 @@ export default function CreditoShow({ credito }: Props) {
             {/* Tarjetas de Métricas del Crédito */}
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
                 <Card className="p-4 border-slate-200 dark:border-slate-800">
-                    <span className="text-xs font-semibold text-slate-500 uppercase">Total Financiado</span>
+                    <span className="text-xs font-semibold text-slate-500 uppercase">{__('Total Financiado')}</span>
                     <div className="text-2xl font-black text-slate-900 dark:text-slate-100 mt-1">
                         {currency}{Number(credito.total_credito).toFixed(2)}
                     </div>
-                    <span className="text-xs text-slate-400 mt-1 block">Monto total en cuotas</span>
+                    <span className="text-xs text-slate-400 mt-1 block">{__('Monto total en cuotas')}</span>
                 </Card>
 
                 <Card className="p-4 border-slate-200 dark:border-slate-800">
-                    <span className="text-xs font-semibold text-slate-500 uppercase">Inicial Cobrada</span>
+                    <span className="text-xs font-semibold text-slate-500 uppercase">{__('Inicial Cobrada')}</span>
                     <div className="text-2xl font-black text-emerald-600 dark:text-emerald-400 mt-1">
                         {currency}{Number(credito.monto_inicial).toFixed(2)}
                     </div>
-                    <span className="text-xs text-slate-400 mt-1 block">Pagado al retirar el equipo</span>
+                    <span className="text-xs text-slate-400 mt-1 block">{__('Pagado al retirar el equipo')}</span>
                 </Card>
 
                 <Card className="p-4 border-slate-200 dark:border-slate-800">
-                    <span className="text-xs font-semibold text-slate-500 uppercase">Cobrado a la Fecha</span>
+                    <span className="text-xs font-semibold text-slate-500 uppercase">{__('Cobrado a la Fecha')}</span>
                     <div className="text-2xl font-black text-blue-600 dark:text-blue-400 mt-1">
                         {currency}{totalRecaudado.toFixed(2)}
                     </div>
-                    <span className="text-xs text-slate-400 mt-1 block">Inicial + cuotas canceladas</span>
+                    <span className="text-xs text-slate-400 mt-1 block">{__('Inicial + cuotas canceladas')}</span>
                 </Card>
 
                 <Card className="p-4 border-slate-200 dark:border-slate-800">
-                    <span className="text-xs font-semibold text-slate-500 uppercase">Saldo Pendiente</span>
+                    <span className="text-xs font-semibold text-slate-500 uppercase">{__('Saldo Pendiente')}</span>
                     <div className="text-2xl font-black text-rose-600 dark:text-rose-400 mt-1">
                         {currency}{Number(credito.saldo_pendiente).toFixed(2)}
                     </div>
-                    <span className="text-xs text-slate-400 mt-1 block">Por cobrar para liquidar</span>
+                    <span className="text-xs text-slate-400 mt-1 block">{__('Por cobrar para liquidar')}</span>
                 </Card>
             </div>
 
@@ -272,27 +278,27 @@ export default function CreditoShow({ credito }: Props) {
                 <Card className="border-slate-200 dark:border-slate-800">
                     <CardHeader className="pb-3 flex flex-row items-center justify-between">
                         <CardTitle className="text-base font-bold flex items-center gap-2">
-                            <User className="size-4 text-blue-600" /> Titular del Crédito
+                            <User className="size-4 text-blue-600" /> {__('Titular del Crédito')}
                         </CardTitle>
                         <Link href={`/admin/clientes/${credito.cliente?.id}`} className="text-xs text-blue-600 hover:underline">
-                            Ver Perfil Completo
+                            {__('Ver Perfil Completo')}
                         </Link>
                     </CardHeader>
                     <CardContent className="space-y-3 text-sm">
                         <div className="flex justify-between py-1.5 border-b border-slate-100 dark:border-slate-800">
-                            <span className="text-slate-500">Nombre Completo:</span>
+                            <span className="text-slate-500">{__('Nombre Completo:')}</span>
                             <span className="font-bold text-slate-900 dark:text-slate-100">
                                 {credito.cliente?.nombres} {credito.cliente?.apellidos}
                             </span>
                         </div>
                         <div className="flex justify-between py-1.5 border-b border-slate-100 dark:border-slate-800">
-                            <span className="text-slate-500">Documento de Identidad:</span>
+                            <span className="text-slate-500">{__('Documento de Identidad:')}</span>
                             <span className="font-mono font-semibold text-slate-800 dark:text-slate-200">
                                 {credito.cliente?.tipo_documento}-{credito.cliente?.numero_documento}
                             </span>
                         </div>
                         <div className="flex justify-between py-1.5 border-b border-slate-100 dark:border-slate-800">
-                            <span className="text-slate-500">WhatsApp / Contacto:</span>
+                            <span className="text-slate-500">{__('WhatsApp / Contacto:')}</span>
                             <a
                                 href={`https://wa.me/${credito.cliente?.telefono_principal.replace(/[^0-9]/g, '')}`}
                                 target="_blank"
@@ -303,9 +309,9 @@ export default function CreditoShow({ credito }: Props) {
                             </a>
                         </div>
                         <div className="py-1.5">
-                            <span className="text-slate-500 block mb-1">Dirección:</span>
+                            <span className="text-slate-500 block mb-1">{__('Dirección:')}</span>
                             <span className="font-medium text-slate-700 dark:text-slate-300 text-xs">
-                                {credito.cliente?.direccion || 'No especificada'}
+                                {credito.cliente?.direccion || __('No especificada')}
                             </span>
                         </div>
                     </CardContent>
@@ -314,40 +320,40 @@ export default function CreditoShow({ credito }: Props) {
                 <Card className="border-slate-200 dark:border-slate-800">
                     <CardHeader className="pb-3">
                         <CardTitle className="text-base font-bold flex items-center gap-2">
-                            <Smartphone className="size-4 text-emerald-600" /> Dispositivo Adquirido
+                            <Smartphone className="size-4 text-emerald-600" /> {__('Dispositivo Adquirido')}
                         </CardTitle>
                     </CardHeader>
                     <CardContent className="space-y-3 text-sm">
                         <div className="flex justify-between py-1.5 border-b border-slate-100 dark:border-slate-800">
-                            <span className="text-slate-500">Modelo:</span>
+                            <span className="text-slate-500">{__('Modelo:')}</span>
                             <span className="font-bold text-slate-900 dark:text-slate-100">
                                 {credito.equipo?.modelo?.marca?.nombre} {credito.equipo?.modelo?.nombre}
                             </span>
                         </div>
                         <div className="flex justify-between py-1.5 border-b border-slate-100 dark:border-slate-800">
-                            <span className="text-slate-500">Especificaciones:</span>
+                            <span className="text-slate-500">{__('Especificaciones:')}</span>
                             <span className="font-medium text-slate-700 dark:text-slate-300">
-                                {credito.equipo?.modelo?.almacenamiento} • Color: {credito.equipo?.color || 'N/D'}
+                                {credito.equipo?.modelo?.almacenamiento} • {__('Color:')} {credito.equipo?.color || __('N/D')}
                             </span>
                         </div>
                         <div className="flex justify-between py-1.5 border-b border-slate-100 dark:border-slate-800">
-                            <span className="text-slate-500">IMEI 1 (Principal):</span>
+                            <span className="text-slate-500">{__('IMEI 1 (Principal):')}</span>
                             <span className="font-mono font-bold text-slate-900 dark:text-slate-100">
                                 {credito.equipo?.imei_1}
                             </span>
                         </div>
                         {credito.equipo?.imei_2 && (
                             <div className="flex justify-between py-1.5 border-b border-slate-100 dark:border-slate-800">
-                                <span className="text-slate-500">IMEI 2 (Secundario):</span>
+                                <span className="text-slate-500">{__('IMEI 2 (Secundario):')}</span>
                                 <span className="font-mono text-slate-600 dark:text-slate-400">
                                     {credito.equipo?.imei_2}
                                 </span>
                             </div>
                         )}
                         <div className="flex justify-between py-1.5">
-                            <span className="text-slate-500">Plan Asignado:</span>
+                            <span className="text-slate-500">{__('Plan Asignado:')}</span>
                             <span className="font-bold text-purple-600 dark:text-purple-400">
-                                {credito.plan?.nombre} ({credito.plan?.numero_cuotas} cuotas)
+                                {credito.plan?.nombre} ({__(':count cuotas', { count: credito.plan?.numero_cuotas })})
                             </span>
                         </div>
                     </CardContent>
@@ -359,10 +365,10 @@ export default function CreditoShow({ credito }: Props) {
                 <CardHeader className="flex flex-row items-center justify-between">
                     <div>
                         <CardTitle className="text-base font-bold flex items-center gap-2">
-                            <Receipt className="size-4 text-purple-600" /> Tabla de Amortización y Cronograma de Pagos
+                            <Receipt className="size-4 text-purple-600" /> {__('Tabla de Amortización y Cronograma de Pagos')}
                         </CardTitle>
                         <p className="text-xs text-slate-500 mt-1">
-                            Monitoreo de vencimientos y recepción de pagos de cada cuota del crédito.
+                            {__('Monitoreo de vencimientos y recepción de pagos de cada cuota del crédito.')}
                         </p>
                     </div>
                 </CardHeader>
@@ -371,24 +377,24 @@ export default function CreditoShow({ credito }: Props) {
                         <table className="w-full text-sm text-left">
                             <thead className="text-xs uppercase bg-slate-50 dark:bg-slate-900/50 text-slate-500 border-b border-slate-200 dark:border-slate-800">
                                 <tr>
-                                    <th className="px-4 py-3.5"># Cuota</th>
-                                    <th className="px-4 py-3.5">Fecha Vencimiento</th>
-                                    <th className="px-4 py-3.5">Monto Cuota</th>
-                                    <th className="px-4 py-3.5">Monto Pagado</th>
-                                    <th className="px-4 py-3.5 font-bold text-rose-600 dark:text-rose-400">Saldo Pendiente</th>
-                                    <th className="px-4 py-3.5">Estado</th>
-                                    <th className="px-4 py-3.5">Fecha Pago / Ref</th>
-                                    <th className="px-4 py-3.5 text-right">Acción</th>
+                                    <th className="px-4 py-3.5">{__('# Cuota')}</th>
+                                    <th className="px-4 py-3.5">{__('Fecha Vencimiento')}</th>
+                                    <th className="px-4 py-3.5">{__('Monto Cuota')}</th>
+                                    <th className="px-4 py-3.5">{__('Monto Pagado')}</th>
+                                    <th className="px-4 py-3.5 font-bold text-rose-600 dark:text-rose-400">{__('Saldo Pendiente')}</th>
+                                    <th className="px-4 py-3.5">{__('Estado')}</th>
+                                    <th className="px-4 py-3.5">{__('Fecha Pago / Ref')}</th>
+                                    <th className="px-4 py-3.5 text-right">{__('Acción')}</th>
                                 </tr>
                             </thead>
                             <tbody className="divide-y divide-slate-100 dark:divide-slate-800/60">
                                 {cuotas.map((c) => (
                                     <tr key={c.id} className="hover:bg-slate-50/50 dark:hover:bg-slate-900/20 transition-colors">
                                         <td className="px-4 py-3 font-mono font-bold text-slate-900 dark:text-slate-100">
-                                            Cuota #{c.numero_cuota}
+                                            {__('Cuota #:numero', { numero: c.numero_cuota })}
                                         </td>
                                         <td className="px-4 py-3 text-xs font-semibold text-slate-800 dark:text-slate-200">
-                                            {formatDate(c.fecha_vencimiento, 'short')}
+                                            {formatDate(c.fecha_vencimiento, 'short', currentLocale)}
                                         </td>
                                         <td className="px-4 py-3 font-bold text-slate-900 dark:text-slate-100">
                                             {currency}{Number(c.monto_cuota).toFixed(2)}
@@ -405,7 +411,7 @@ export default function CreditoShow({ credito }: Props) {
                                         <td className="px-4 py-3 text-xs text-slate-500">
                                             {c.fecha_pago ? (
                                                 <div>
-                                                    <span className="font-semibold text-slate-700 dark:text-slate-300">{formatDate(c.fecha_pago, 'short')}</span>
+                                                    <span className="font-semibold text-slate-700 dark:text-slate-300">{formatDate(c.fecha_pago, 'short', currentLocale)}</span>
                                                     <span className="text-[11px] block text-slate-400 uppercase">{c.metodo_pago} {c.referencia_pago && `• Ref: ${c.referencia_pago}`}</span>
                                                 </div>
                                             ) : (
@@ -419,11 +425,11 @@ export default function CreditoShow({ credito }: Props) {
                                                     onClick={() => openPaymentModal(c)}
                                                     className="bg-emerald-600 hover:bg-emerald-700 text-white font-semibold h-8 text-xs gap-1"
                                                 >
-                                                    <DollarSign className="size-3.5" /> Cobrar Cuota
+                                                    <DollarSign className="size-3.5" /> {__('Cobrar Cuota')}
                                                 </Button>
                                             ) : (
                                                 <span className="inline-flex items-center gap-1 text-xs text-emerald-600 font-semibold">
-                                                    <Check className="size-3.5" /> Liquidada
+                                                    <Check className="size-3.5" /> {__('Liquidada')}
                                                 </span>
                                             )}
                                         </td>
@@ -439,9 +445,13 @@ export default function CreditoShow({ credito }: Props) {
             <Dialog open={isPaymentModalOpen} onOpenChange={setIsPaymentModalOpen}>
                 <DialogContent className="max-w-xl sm:max-w-xl">
                     <DialogHeader>
-                        <DialogTitle>Registrar Pago: Cuota #{payingCuota?.numero_cuota}</DialogTitle>
+                        <DialogTitle>
+                            {__('Registrar Pago: Cuota #:numero', { numero: payingCuota?.numero_cuota })}
+                        </DialogTitle>
                         <DialogDescription>
-                            Registra el abono o cancelación total de la cuota correspondiente a {credito.codigo_credito}.
+                            {__('Registra el abono o cancelación total de la cuota correspondiente a :codigo.', {
+                                codigo: credito.codigo_credito,
+                            })}
                         </DialogDescription>
                     </DialogHeader>
 
@@ -449,21 +459,21 @@ export default function CreditoShow({ credito }: Props) {
                         <form onSubmit={handlePaymentSubmit} className="space-y-4">
                             <div className="p-3 bg-slate-50 dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 space-y-1 text-xs">
                                 <div className="flex justify-between">
-                                    <span className="text-slate-500">Monto total de la cuota:</span>
+                                    <span className="text-slate-500">{__('Monto total de la cuota:')}</span>
                                     <span className="font-bold">{currency}{Number(payingCuota.monto_cuota).toFixed(2)}</span>
                                 </div>
                                 <div className="flex justify-between">
-                                    <span className="text-slate-500">Saldo pendiente actual:</span>
+                                    <span className="text-slate-500">{__('Saldo pendiente actual:')}</span>
                                     <span className="font-extrabold text-rose-600">{currency}{Number(payingCuota.saldo_cuota).toFixed(2)}</span>
                                 </div>
                                 <div className="flex justify-between">
-                                    <span className="text-slate-500">Fecha límite de vencimiento:</span>
-                                    <span className="font-semibold">{formatDate(payingCuota.fecha_vencimiento, 'medium')}</span>
+                                    <span className="text-slate-500">{__('Fecha límite de vencimiento:')}</span>
+                                    <span className="font-semibold">{formatDate(payingCuota.fecha_vencimiento, 'medium', currentLocale)}</span>
                                 </div>
                             </div>
 
                             <div className="space-y-1.5">
-                                <Label>Monto a Cobrar ({currency}) *</Label>
+                                <Label>{__('Monto a Cobrar (:currency) *', { currency })}</Label>
                                 <Input
                                     type="number"
                                     step="0.01"
@@ -478,7 +488,7 @@ export default function CreditoShow({ credito }: Props) {
 
                             <div className="grid grid-cols-2 gap-4">
                                 <div className="space-y-1.5">
-                                    <Label>Método de Pago *</Label>
+                                    <Label>{__('Método de Pago *')}</Label>
                                     <Select
                                         value={paymentForm.data.metodo_pago}
                                         onValueChange={(val) => paymentForm.setData('metodo_pago', val)}
@@ -487,17 +497,17 @@ export default function CreditoShow({ credito }: Props) {
                                             <SelectValue />
                                         </SelectTrigger>
                                         <SelectContent>
-                                            <SelectItem value="efectivo">Efectivo</SelectItem>
-                                            <SelectItem value="pago_movil">Pago Móvil</SelectItem>
-                                            <SelectItem value="transferencia">Transferencia</SelectItem>
-                                            <SelectItem value="tarjeta">Tarjeta / Punto</SelectItem>
-                                            <SelectItem value="zelle">Zelle</SelectItem>
+                                            <SelectItem value="efectivo">{__('Efectivo')}</SelectItem>
+                                            <SelectItem value="pago_movil">{__('Pago Móvil')}</SelectItem>
+                                            <SelectItem value="transferencia">{__('Transferencia')}</SelectItem>
+                                            <SelectItem value="tarjeta">{__('Tarjeta / Punto')}</SelectItem>
+                                            <SelectItem value="zelle">{__('Zelle')}</SelectItem>
                                         </SelectContent>
                                     </Select>
                                 </div>
 
                                 <div className="space-y-1.5">
-                                    <Label>Fecha del Pago *</Label>
+                                    <Label>{__('Fecha del Pago *')}</Label>
                                     <Input
                                         type="date"
                                         required
@@ -508,18 +518,18 @@ export default function CreditoShow({ credito }: Props) {
                             </div>
 
                             <div className="space-y-1.5">
-                                <Label>N° de Referencia / Comprobante</Label>
+                                <Label>{__('N° de Referencia / Comprobante')}</Label>
                                 <Input
-                                    placeholder="Ej. 12345678"
+                                    placeholder={__('Ej. 12345678')}
                                     value={paymentForm.data.referencia_pago}
                                     onChange={(e) => paymentForm.setData('referencia_pago', e.target.value)}
                                 />
                             </div>
 
                             <div className="space-y-1.5">
-                                <Label>Notas del Pago</Label>
+                                <Label>{__('Notas del Pago')}</Label>
                                 <Textarea
-                                    placeholder="Observaciones sobre el pago recibido..."
+                                    placeholder={__('Observaciones sobre el pago recibido...')}
                                     value={paymentForm.data.notas}
                                     onChange={(e) => paymentForm.setData('notas', e.target.value)}
                                     rows={2}
@@ -528,14 +538,14 @@ export default function CreditoShow({ credito }: Props) {
 
                             <DialogFooter className="pt-3 border-t">
                                 <Button type="button" variant="outline" onClick={() => setIsPaymentModalOpen(false)}>
-                                    Cancelar
+                                    {__('Cancelar')}
                                 </Button>
                                 <Button
                                     type="submit"
                                     disabled={paymentForm.processing}
                                     className="bg-emerald-600 hover:bg-emerald-700 text-white font-bold"
                                 >
-                                    {paymentForm.processing ? 'Registrando...' : 'Confirmar Cobro'}
+                                    {paymentForm.processing ? __('Registrando...') : __('Confirmar Cobro')}
                                 </Button>
                             </DialogFooter>
                         </form>

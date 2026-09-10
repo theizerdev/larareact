@@ -1702,5 +1702,12 @@
   "Confirmar Cobro": "Confirm Collection",
   "Cuota": "Installment",
   "Vence": "Due",
-  "Ref": "Ref"
+  "Ref": "Ref",
+  "No especificada": "Not specified",
+  "Color:": "Color:",
+  "N/D": "N/A",
+  "Ej. 12345678": "E.g. 12345678",
+  "Transferencia": "Transfer",
+  "Tarjeta / Punto": "Card / POS",
+  "Zelle": "Zelle"
 }

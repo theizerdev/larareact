@@ -28,6 +28,7 @@ import {
 } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
 import { formatDate } from '@/lib/utils';
+import { useTranslate } from '@/hooks/use-translate';
 
 interface Cliente {
     id: number;
@@ -83,6 +84,7 @@ interface Props {
 }
 
 export default function CreditoCreate({ clientes, equipos, planes, sucursales }: Props) {
+    const { __, currentLocale } = useTranslate();
     const { regional_config } = usePage().props as any;
     const currency = regional_config?.currency_symbol || '$';
 
@@ -178,7 +180,9 @@ export default function CreditoCreate({ clientes, equipos, planes, sucursales }:
         if (inicial < minInicial || inicial >= precio) {
             return {
                 valido: false,
-                mensaje: `La inicial debe ser al menos de ${currency}${minInicial.toFixed(2)} (${selectedPlan.porcentaje_inicial_minimo}%) y menor al precio del equipo.`,
+                mensaje: __('La inicial debe ser al menos de :min y menor al precio del equipo.', {
+                    min: `${currency}${minInicial.toFixed(2)} (${selectedPlan.porcentaje_inicial_minimo}%)`
+                }),
                 minInicial,
             };
         }
@@ -238,13 +242,13 @@ export default function CreditoCreate({ clientes, equipos, planes, sucursales }:
 
     return (
         <div className="space-y-6">
-            <Head title="Nueva Venta a Crédito" />
+            <Head title={__('Nueva Venta a Crédito')} />
 
             <Breadcrumbs
                 breadcrumbs={[
-                    { title: 'Dashboard', href: '/admin/dashboard' },
-                    { title: 'Ventas a Crédito', href: '/admin/creditos' },
-                    { title: 'Nuevo Financiamiento', href: '/admin/creditos/nuevo' },
+                    { title: __('Dashboard'), href: '/admin/dashboard' },
+                    { title: __('Ventas a Crédito'), href: '/admin/creditos' },
+                    { title: __('Nuevo Financiamiento'), href: '/admin/creditos/nuevo' },
                 ]}
             />
 
@@ -252,15 +256,15 @@ export default function CreditoCreate({ clientes, equipos, planes, sucursales }:
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white dark:bg-slate-900 p-6 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm">
                 <div>
                     <h1 className="text-xl sm:text-2xl font-black text-slate-900 dark:text-slate-100 flex items-center gap-2">
-                        <CreditCard className="size-6 text-emerald-600" /> Originación de Venta a Crédito
+                        <CreditCard className="size-6 text-emerald-600" /> {__('Originación de Venta a Crédito')}
                     </h1>
                     <p className="text-xs sm:text-sm text-slate-500 mt-1">
-                        Selecciona el cliente, el dispositivo por IMEI y el plan de amortización deseado.
+                        {__('Selecciona el cliente, el dispositivo por IMEI y el plan de amortización deseado.')}
                     </p>
                 </div>
                 <Link href="/admin/creditos">
                     <Button variant="outline" size="sm">
-                        <ArrowLeft className="size-4 mr-1" /> Volver al Listado
+                        <ArrowLeft className="size-4 mr-1" /> {__('Volver al Listado')}
                     </Button>
                 </Link>
             </div>
@@ -273,15 +277,15 @@ export default function CreditoCreate({ clientes, equipos, planes, sucursales }:
                         <Card className="border-slate-200 dark:border-slate-800">
                             <CardHeader className="pb-3">
                                 <CardTitle className="text-base font-bold flex items-center gap-2">
-                                    <User className="size-4 text-blue-600" /> 1. Cliente Titular del Crédito
+                                    <User className="size-4 text-blue-600" /> {__('1. Cliente Titular del Crédito')}
                                 </CardTitle>
                             </CardHeader>
                             <CardContent className="space-y-4">
                                 <div className="space-y-1.5">
-                                    <Label>Buscar y Seleccionar Cliente *</Label>
+                                    <Label>{__('Buscar y Seleccionar Cliente *')}</Label>
                                     <Select value={form.data.cliente_id} onValueChange={handleClienteChange}>
                                         <SelectTrigger className="w-full h-11">
-                                            <SelectValue placeholder="Selecciona un cliente registrado..." />
+                                            <SelectValue placeholder={__('Selecciona un cliente registrado...')} />
                                         </SelectTrigger>
                                         <SelectContent>
                                             {clientes.map((c) => (
@@ -297,7 +301,7 @@ export default function CreditoCreate({ clientes, equipos, planes, sucursales }:
                                 {selectedCliente && (
                                     <div className="p-3.5 bg-blue-50/50 dark:bg-blue-950/30 rounded-xl border border-blue-200/50 dark:border-blue-900/50 flex flex-wrap justify-between items-center gap-3 text-xs">
                                         <div>
-                                            <span className="text-slate-500 block">Límite de Crédito:</span>
+                                            <span className="text-slate-500 block">{__('Límite de Crédito:')}</span>
                                             <span className="font-bold text-slate-900 dark:text-slate-100 text-sm">
                                                 {currency}{Number(selectedCliente.limite_credito).toFixed(2)}
                                             </span>
@@ -309,9 +313,9 @@ export default function CreditoCreate({ clientes, equipos, planes, sucursales }:
                                             </span>
                                         </div>
                                         <div>
-                                            <span className="text-slate-500 block">Estado Crediticio:</span>
+                                            <span className="text-slate-500 block">{__('Estado Crediticio:')}</span>
                                             <Badge className="bg-emerald-500/15 text-emerald-700 capitalize">
-                                                {selectedCliente.estado_crediticio}
+                                                {selectedCliente.estado_crediticio ? __(selectedCliente.estado_crediticio) : ''}
                                             </Badge>
                                         </div>
                                     </div>
@@ -323,19 +327,19 @@ export default function CreditoCreate({ clientes, equipos, planes, sucursales }:
                         <Card className="border-slate-200 dark:border-slate-800">
                             <CardHeader className="pb-3">
                                 <CardTitle className="text-base font-bold flex items-center gap-2">
-                                    <Smartphone className="size-4 text-emerald-600" /> 2. Teléfono a Financiar (Inventario Disponible)
+                                    <Smartphone className="size-4 text-emerald-600" /> {__('2. Teléfono a Financiar (Inventario Disponible)')}
                                 </CardTitle>
                             </CardHeader>
                             <CardContent className="space-y-4">
                                 <div className="space-y-1.5">
-                                    <Label>Seleccionar Teléfono Disponible (Filtrado por IMEI) *</Label>
+                                    <Label>{__('Seleccionar Teléfono Disponible (Filtrado por IMEI) *')}</Label>
                                     <Select value={form.data.inventario_equipo_id} onValueChange={handleEquipoChange}>
                                         <SelectTrigger className="w-full h-11">
-                                            <SelectValue placeholder="Selecciona un equipo por marca, modelo o IMEI..." />
+                                            <SelectValue placeholder={__('Selecciona un equipo por marca, modelo o IMEI...')} />
                                         </SelectTrigger>
                                         <SelectContent>
                                             {equipos.length === 0 ? (
-                                                <SelectItem value="none" disabled>No hay equipos disponibles en inventario</SelectItem>
+                                                <SelectItem value="none" disabled>{__('No hay equipos disponibles en inventario')}</SelectItem>
                                             ) : (
                                                 equipos.map((eq) => (
                                                     <SelectItem key={eq.id} value={eq.id.toString()}>
@@ -351,7 +355,7 @@ export default function CreditoCreate({ clientes, equipos, planes, sucursales }:
                                 {selectedEquipo && (
                                     <div className="p-4 bg-emerald-50/50 dark:bg-emerald-950/30 rounded-xl border border-emerald-200/50 dark:border-emerald-900/50 grid grid-cols-2 sm:grid-cols-4 gap-3 text-xs">
                                         <div>
-                                            <span className="text-slate-500 block">Modelo:</span>
+                                            <span className="text-slate-500 block">{__('Modelo:')}</span>
                                             <span className="font-bold text-slate-900 dark:text-slate-100">
                                                 {selectedEquipo.modelo?.marca?.nombre} {selectedEquipo.modelo?.nombre}
                                             </span>
@@ -363,13 +367,13 @@ export default function CreditoCreate({ clientes, equipos, planes, sucursales }:
                                             </span>
                                         </div>
                                         <div>
-                                            <span className="text-slate-500 block">Precio Contado:</span>
+                                            <span className="text-slate-500 block">{__('Precio Contado:')}</span>
                                             <span className="text-slate-600 dark:text-slate-400 font-semibold">
                                                 {currency}{Number(selectedEquipo.precio_contado).toFixed(2)}
                                             </span>
                                         </div>
                                         <div>
-                                            <span className="text-slate-500 block">Precio Financiado:</span>
+                                            <span className="text-slate-500 block">{__('Precio Financiado:')}</span>
                                             <span className="font-extrabold text-emerald-600 dark:text-emerald-400 text-sm">
                                                 {currency}{Number(selectedEquipo.precio_financiado).toFixed(2)}
                                             </span>
@@ -383,21 +387,21 @@ export default function CreditoCreate({ clientes, equipos, planes, sucursales }:
                         <Card className="border-slate-200 dark:border-slate-800">
                             <CardHeader className="pb-3">
                                 <CardTitle className="text-base font-bold flex items-center gap-2">
-                                    <Calculator className="size-4 text-purple-600" /> 3. Plan & Condiciones de Pago
+                                    <Calculator className="size-4 text-purple-600" /> {__('3. Plan & Condiciones de Pago')}
                                 </CardTitle>
                             </CardHeader>
                             <CardContent className="space-y-4">
                                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                                     <div className="space-y-1.5">
-                                        <Label>Plan de Financiamiento *</Label>
+                                        <Label>{__('Plan de Financiamiento *')}</Label>
                                         <Select value={form.data.plan_financiamiento_id} onValueChange={handlePlanChange}>
                                             <SelectTrigger className="w-full h-10">
-                                                <SelectValue placeholder="Seleccionar plan..." />
+                                                <SelectValue placeholder={__('Seleccionar plan...')} />
                                             </SelectTrigger>
                                             <SelectContent>
                                                 {planes.map((p) => (
                                                     <SelectItem key={p.id} value={p.id.toString()}>
-                                                        {p.nombre} ({p.numero_cuotas} cuotas {p.frecuencia}s)
+                                                        {p.nombre} ({p.numero_cuotas} {__('cuotas')} {p.frecuencia ? __(p.frecuencia) : ''})
                                                     </SelectItem>
                                                 ))}
                                             </SelectContent>
@@ -406,7 +410,7 @@ export default function CreditoCreate({ clientes, equipos, planes, sucursales }:
                                     </div>
 
                                     <div className="space-y-1.5">
-                                        <Label>Fecha de Inicio del Contrato *</Label>
+                                        <Label>{__('Fecha de Inicio del Contrato *')}</Label>
                                         <Input
                                             type="date"
                                             required
@@ -419,7 +423,7 @@ export default function CreditoCreate({ clientes, equipos, planes, sucursales }:
                                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 p-4 rounded-xl bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800">
                                     <div className="space-y-1.5 sm:col-span-1">
                                         <Label className="font-bold text-emerald-700 dark:text-emerald-400">
-                                            Monto Inicial Cobrado ({currency}) *
+                                            {__('Monto Inicial Cobrado (:currency) *', { currency })}
                                         </Label>
                                         <Input
                                             type="number"
@@ -436,7 +440,7 @@ export default function CreditoCreate({ clientes, equipos, planes, sucursales }:
                                     </div>
 
                                     <div className="space-y-1.5">
-                                        <Label>Método de Pago de la Inicial</Label>
+                                        <Label>{__('Método de Pago de la Inicial')}</Label>
                                         <Select
                                             value={form.data.metodo_pago_inicial}
                                             onValueChange={(val) => form.setData('metodo_pago_inicial', val)}
@@ -445,19 +449,19 @@ export default function CreditoCreate({ clientes, equipos, planes, sucursales }:
                                                 <SelectValue />
                                             </SelectTrigger>
                                             <SelectContent>
-                                                <SelectItem value="efectivo">Efectivo ($ / Bs / Local)</SelectItem>
-                                                <SelectItem value="pago_movil">Pago Móvil</SelectItem>
-                                                <SelectItem value="transferencia">Transferencia Bancaria</SelectItem>
-                                                <SelectItem value="tarjeta">Punto de Venta / Tarjeta</SelectItem>
-                                                <SelectItem value="zelle">Zelle / Dólares Digitales</SelectItem>
+                                                <SelectItem value="efectivo">{__('Efectivo ($ / Bs / Local)')}</SelectItem>
+                                                <SelectItem value="pago_movil">{__('Pago Móvil')}</SelectItem>
+                                                <SelectItem value="transferencia">{__('Transferencia Bancaria')}</SelectItem>
+                                                <SelectItem value="tarjeta">{__('Punto de Venta / Tarjeta')}</SelectItem>
+                                                <SelectItem value="zelle">{__('Zelle / Dólares Digitales')}</SelectItem>
                                             </SelectContent>
                                         </Select>
                                     </div>
 
                                     <div className="space-y-1.5">
-                                        <Label>Referencia de Pago</Label>
+                                        <Label>{__('Referencia de Pago')}</Label>
                                         <Input
-                                            placeholder="N° de comprobante / lote"
+                                            placeholder={__('N° de comprobante / lote')}
                                             value={form.data.referencia_pago_inicial}
                                             onChange={(e) => form.setData('referencia_pago_inicial', e.target.value)}
                                         />
@@ -465,9 +469,9 @@ export default function CreditoCreate({ clientes, equipos, planes, sucursales }:
                                 </div>
 
                                 <div className="space-y-1.5">
-                                    <Label>Notas del Contrato (Opcional)</Label>
+                                    <Label>{__('Notas del Contrato (Opcional)')}</Label>
                                     <Textarea
-                                        placeholder="Observaciones de entrega, referencias adicionales o convenios especiales..."
+                                        placeholder={__('Observaciones de entrega, referencias adicionales o convenios especiales...')}
                                         value={form.data.notas}
                                         onChange={(e) => form.setData('notas', e.target.value)}
                                         rows={2}
@@ -482,7 +486,7 @@ export default function CreditoCreate({ clientes, equipos, planes, sucursales }:
                         <Card className="border-slate-200 dark:border-slate-800 shadow-md sticky top-6">
                             <CardHeader className="bg-slate-900 text-white rounded-t-xl py-4">
                                 <CardTitle className="text-base font-bold flex items-center gap-2">
-                                    <Receipt className="size-4 text-emerald-400" /> Resumen de Liquidación
+                                    <Receipt className="size-4 text-emerald-400" /> {__('Resumen de Liquidación')}
                                 </CardTitle>
                             </CardHeader>
                             <CardContent className="p-5 space-y-4">
@@ -490,32 +494,32 @@ export default function CreditoCreate({ clientes, equipos, planes, sucursales }:
                                     <>
                                         <div className="space-y-2 text-sm">
                                             <div className="flex justify-between text-slate-500">
-                                                <span>Precio del Equipo:</span>
+                                                <span>{__('Precio del Equipo:')}</span>
                                                 <span className="font-semibold text-slate-800 dark:text-slate-200">
                                                     {currency}{proyeccion.precio.toFixed(2)}
                                                 </span>
                                             </div>
                                             <div className="flex justify-between text-slate-500">
-                                                <span>Inicial Pagada:</span>
+                                                <span>{__('Inicial Pagada:')}</span>
                                                 <span className="font-semibold text-emerald-600">
                                                     - {currency}{proyeccion.inicial.toFixed(2)}
                                                 </span>
                                             </div>
                                             <div className="flex justify-between text-slate-500">
-                                                <span>Monto a Financiar (Base):</span>
+                                                <span>{__('Monto a Financiar (Base):')}</span>
                                                 <span className="font-semibold text-slate-800 dark:text-slate-200">
                                                     {currency}{proyeccion.montoFinanciado.toFixed(2)}
                                                 </span>
                                             </div>
                                             <div className="flex justify-between text-slate-500">
-                                                <span>Interés Financiero ({selectedPlan?.porcentaje_interes_total}%):</span>
+                                                <span>{__('Interés Financiero (:porcentaje%):', { porcentaje: selectedPlan?.porcentaje_interes_total?.toString() || '0' })}</span>
                                                 <span className="font-semibold text-slate-800 dark:text-slate-200">
                                                     + {currency}{proyeccion.interesTotal.toFixed(2)}
                                                 </span>
                                             </div>
                                             <div className="pt-2 border-t border-slate-200 dark:border-slate-800 flex justify-between items-center">
                                                 <span className="font-extrabold text-slate-900 dark:text-slate-100">
-                                                    Total a Pagar en Cuotas:
+                                                    {__('Total a Pagar en Cuotas:')}
                                                 </span>
                                                 <span className="text-lg font-black text-slate-900 dark:text-slate-100">
                                                     {currency}{proyeccion.totalCredito.toFixed(2)}
@@ -526,8 +530,8 @@ export default function CreditoCreate({ clientes, equipos, planes, sucursales }:
                                         {/* Calendario de Cuotas Preliminar */}
                                         <div className="pt-3 border-t border-slate-100 dark:border-slate-800">
                                             <div className="text-xs font-bold uppercase tracking-wider text-slate-500 mb-2.5 flex items-center justify-between">
-                                                <span>Calendario de {proyeccion.cuotas.length} Cuotas:</span>
-                                                <span className="text-purple-600 capitalize font-medium">{selectedPlan?.frecuencia}</span>
+                                                <span>{__('Calendario de :count Cuotas:', { count: proyeccion.cuotas.length.toString() })}</span>
+                                                <span className="text-purple-600 capitalize font-medium">{selectedPlan?.frecuencia ? __(selectedPlan.frecuencia) : ''}</span>
                                             </div>
                                             <div className="space-y-1.5 max-h-56 overflow-y-auto pr-1 text-xs">
                                                 {proyeccion.cuotas.map((c) => (
@@ -536,8 +540,12 @@ export default function CreditoCreate({ clientes, equipos, planes, sucursales }:
                                                         className="flex items-center justify-between p-2 rounded bg-slate-50 dark:bg-slate-900 border border-slate-100 dark:border-slate-800 font-mono"
                                                     >
                                                         <div>
-                                                            <span className="font-bold text-slate-700 dark:text-slate-300">Cuota #{c.numero}</span>
-                                                            <span className="text-[11px] text-slate-400 block font-sans">Vence: {formatDate(c.fecha, 'medium')}</span>
+                                                            <span className="font-bold text-slate-700 dark:text-slate-300">
+                                                                {__('Cuota #:numero', { numero: c.numero.toString() })}
+                                                            </span>
+                                                            <span className="text-[11px] text-slate-400 block font-sans">
+                                                                {__('Vence:')} {formatDate(c.fecha, 'medium', currentLocale)}
+                                                            </span>
                                                         </div>
                                                         <span className="font-extrabold text-emerald-600 dark:text-emerald-400 text-sm font-sans">
                                                             {currency}{c.monto.toFixed(2)}
@@ -552,14 +560,14 @@ export default function CreditoCreate({ clientes, equipos, planes, sucursales }:
                                             disabled={form.processing}
                                             className="w-full py-6 text-base font-bold bg-emerald-600 hover:bg-emerald-700 text-white shadow-lg"
                                         >
-                                            {form.processing ? 'Generando Venta...' : 'Completar Venta y Generar Contrato'}
+                                            {form.processing ? __('Generando Venta...') : __('Completar Venta y Generar Contrato')}
                                         </Button>
                                     </>
                                 ) : (
                                     <div className="py-8 text-center text-slate-400 space-y-2">
                                         <AlertCircle className="size-8 mx-auto text-slate-300" />
                                         <p className="text-xs">
-                                            Completa la selección del cliente, teléfono y plan de cuotas para previsualizar la amortización.
+                                            {__('Completa la selección del cliente, teléfono y plan de cuotas para previsualizar la amortización.')}
                                         </p>
                                     </div>
                                 )}

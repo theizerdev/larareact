@@ -87,6 +87,7 @@ interface Props {
 }
 
 export default function ClienteShow({ cliente }: Props) {
+    const { __, currentLocale } = useTranslate();
     const { regional_config } = usePage().props as any;
     const currency = regional_config?.currency_symbol || '$';
 
@@ -98,11 +99,11 @@ export default function ClienteShow({ cliente }: Props) {
     const getEstadoBadge = (estado: string) => {
         switch (estado) {
             case 'activo':
-                return <Badge className="bg-emerald-500/15 text-emerald-700 dark:text-emerald-400 border-emerald-500/20">Activo</Badge>;
+                return <Badge className="bg-emerald-500/15 text-emerald-700 dark:text-emerald-400 border-emerald-500/20">{__('Activo')}</Badge>;
             case 'liquidado':
-                return <Badge className="bg-blue-500/15 text-blue-700 dark:text-blue-400 border-blue-500/20">Liquidado / Pagado</Badge>;
+                return <Badge className="bg-blue-500/15 text-blue-700 dark:text-blue-400 border-blue-500/20">{__('Liquidado / Pagado')}</Badge>;
             case 'en_mora':
-                return <Badge className="bg-rose-500/15 text-rose-700 dark:text-rose-400 border-rose-500/20">En Mora</Badge>;
+                return <Badge className="bg-rose-500/15 text-rose-700 dark:text-rose-400 border-rose-500/20">{__('En Mora')}</Badge>;
             default:
                 return <Badge variant="outline">{estado}</Badge>;
         }
@@ -110,12 +111,12 @@ export default function ClienteShow({ cliente }: Props) {
 
     return (
         <div className="space-y-6">
-            <Head title={`Expediente: ${cliente.nombres} ${cliente.apellidos}`} />
+            <Head title={`${__('Expediente')}: ${cliente.nombres} ${cliente.apellidos}`} />
 
             <Breadcrumbs
                 breadcrumbs={[
-                    { title: 'Dashboard', href: '/admin/dashboard' },
-                    { title: 'Clientes', href: '/admin/clientes' },
+                    { title: __('Dashboard'), href: '/admin/dashboard' },
+                    { title: __('Clientes'), href: '/admin/clientes' },
                     { title: `${cliente.nombres} ${cliente.apellidos}`, href: `/admin/clientes/${cliente.id}` },
                 ]}
             />
@@ -136,7 +137,7 @@ export default function ClienteShow({ cliente }: Props) {
                             </Badge>
                         </div>
                         <p className="text-xs text-slate-500 mt-0.5">
-                            Cliente desde el {new Date(cliente.created_at).toLocaleDateString()}
+                            {__('Cliente desde el :fecha', { fecha: formatDate(cliente.created_at, 'medium', currentLocale) })}
                         </p>
                     </div>
                 </div>
@@ -144,12 +145,12 @@ export default function ClienteShow({ cliente }: Props) {
                 <div className="flex items-center gap-3">
                     <Link href="/admin/clientes">
                         <Button variant="outline" size="sm">
-                            <ArrowLeft className="size-4 mr-1" /> Volver a Clientes
+                            <ArrowLeft className="size-4 mr-1" /> {__('Volver a Clientes')}
                         </Button>
                     </Link>
                     <Link href="/admin/creditos/nuevo">
                         <Button size="sm" className="bg-emerald-600 hover:bg-emerald-700 text-white font-semibold">
-                            <CreditCard className="size-4 mr-1" /> Nueva Venta a Crédito
+                            <CreditCard className="size-4 mr-1" /> {__('Nueva Venta a Crédito')}
                         </Button>
                     </Link>
                 </div>
@@ -158,35 +159,35 @@ export default function ClienteShow({ cliente }: Props) {
             {/* Tarjetas de Resumen Financiero del Cliente */}
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
                 <Card className="p-4 border-slate-200 dark:border-slate-800">
-                    <div className="text-xs font-semibold text-slate-500 uppercase">Límite de Crédito</div>
+                    <div className="text-xs font-semibold text-slate-500 uppercase">{__('Límite de Crédito')}</div>
                     <div className="text-2xl font-black text-slate-900 dark:text-slate-100 mt-1">
                         {currency}{Number(cliente.limite_credito).toFixed(2)}
                     </div>
-                    <div className="text-xs text-slate-400 mt-1">Monto máximo financiable</div>
+                    <div className="text-xs text-slate-400 mt-1">{__('Monto máximo financiable')}</div>
                 </Card>
 
                 <Card className="p-4 border-slate-200 dark:border-slate-800">
-                    <div className="text-xs font-semibold text-slate-500 uppercase">Deuda Actual Pendiente</div>
+                    <div className="text-xs font-semibold text-slate-500 uppercase">{__('Deuda Actual Pendiente')}</div>
                     <div className="text-2xl font-black text-rose-600 dark:text-rose-400 mt-1">
                         {currency}{saldoPendienteTotal.toFixed(2)}
                     </div>
-                    <div className="text-xs text-slate-400 mt-1">En cuotas activas por cobrar</div>
+                    <div className="text-xs text-slate-400 mt-1">{__('En cuotas activas por cobrar')}</div>
                 </Card>
 
                 <Card className="p-4 border-slate-200 dark:border-slate-800">
-                    <div className="text-xs font-semibold text-slate-500 uppercase">Crédito Disponible</div>
+                    <div className="text-xs font-semibold text-slate-500 uppercase">{__('Crédito Disponible')}</div>
                     <div className="text-2xl font-black text-emerald-600 dark:text-emerald-400 mt-1">
                         {currency}{limiteDisponible.toFixed(2)}
                     </div>
-                    <div className="text-xs text-slate-400 mt-1">Capacidad para nuevos equipos</div>
+                    <div className="text-xs text-slate-400 mt-1">{__('Capacidad para nuevos equipos')}</div>
                 </Card>
 
                 <Card className="p-4 border-slate-200 dark:border-slate-800">
-                    <div className="text-xs font-semibold text-slate-500 uppercase">Historial de Créditos</div>
+                    <div className="text-xs font-semibold text-slate-500 uppercase">{__('Historial de Créditos')}</div>
                     <div className="text-2xl font-black text-blue-600 dark:text-blue-400 mt-1">
                         {creditos.length}
                     </div>
-                    <div className="text-xs text-slate-400 mt-1">Contratos totales registrados</div>
+                    <div className="text-xs text-slate-400 mt-1">{__('Contratos totales registrados')}</div>
                 </Card>
             </div>
 
@@ -195,12 +196,12 @@ export default function ClienteShow({ cliente }: Props) {
                 <Card className="border-slate-200 dark:border-slate-800">
                     <CardHeader className="pb-3">
                         <CardTitle className="text-base font-bold flex items-center gap-2">
-                            <Phone className="size-4 text-blue-600" /> Datos de Contacto y Ubicación
+                            <Phone className="size-4 text-blue-600" /> {__('Datos de Contacto y Ubicación')}
                         </CardTitle>
                     </CardHeader>
                     <CardContent className="space-y-3 text-sm">
                         <div className="flex justify-between py-1.5 border-b border-slate-100 dark:border-slate-800">
-                            <span className="text-slate-500">Teléfono Principal:</span>
+                            <span className="text-slate-500">{__('Teléfono Principal:')}</span>
                             <a
                                 href={`https://wa.me/${cliente.telefono_principal.replace(/[^0-9]/g, '')}`}
                                 target="_blank"
@@ -212,22 +213,22 @@ export default function ClienteShow({ cliente }: Props) {
                         </div>
                         {cliente.telefono_secundario && (
                             <div className="flex justify-between py-1.5 border-b border-slate-100 dark:border-slate-800">
-                                <span className="text-slate-500">Teléfono Secundario:</span>
+                                <span className="text-slate-500">{__('Teléfono Secundario:')}</span>
                                 <span className="font-medium text-slate-800 dark:text-slate-200">{cliente.telefono_secundario}</span>
                             </div>
                         )}
                         <div className="flex justify-between py-1.5 border-b border-slate-100 dark:border-slate-800">
-                            <span className="text-slate-500">Correo Electrónico:</span>
-                            <span className="font-medium text-slate-800 dark:text-slate-200">{cliente.email || 'No registrado'}</span>
+                            <span className="text-slate-500">{__('Correo Electrónico:')}</span>
+                            <span className="font-medium text-slate-800 dark:text-slate-200">{cliente.email || __('No registrado')}</span>
                         </div>
                         <div className="flex justify-between py-1.5 border-b border-slate-100 dark:border-slate-800">
-                            <span className="text-slate-500">Ciudad / Residencia:</span>
-                            <span className="font-medium text-slate-800 dark:text-slate-200">{cliente.ciudad || 'No especificada'}</span>
+                            <span className="text-slate-500">{__('Ciudad / Residencia:')}</span>
+                            <span className="font-medium text-slate-800 dark:text-slate-200">{cliente.ciudad || __('No especificada')}</span>
                         </div>
                         <div className="py-1.5">
-                            <span className="text-slate-500 block mb-1">Dirección:</span>
+                            <span className="text-slate-500 block mb-1">{__('Dirección:')}</span>
                             <span className="font-medium text-slate-800 dark:text-slate-200 bg-slate-50 dark:bg-slate-900 p-2 rounded block text-xs">
-                                {cliente.direccion || 'Sin dirección registrada'}
+                                {cliente.direccion || __('Sin dirección registrada')}
                             </span>
                         </div>
                     </CardContent>
@@ -236,32 +237,32 @@ export default function ClienteShow({ cliente }: Props) {
                 <Card className="border-slate-200 dark:border-slate-800">
                     <CardHeader className="pb-3">
                         <CardTitle className="text-base font-bold flex items-center gap-2">
-                            <Briefcase className="size-4 text-indigo-600" /> Información Laboral & Scoring
+                            <Briefcase className="size-4 text-indigo-600" /> {__('Información Laboral & Scoring')}
                         </CardTitle>
                     </CardHeader>
                     <CardContent className="space-y-3 text-sm">
                         <div className="flex justify-between py-1.5 border-b border-slate-100 dark:border-slate-800">
-                            <span className="text-slate-500">Empresa / Empleador:</span>
-                            <span className="font-semibold text-slate-800 dark:text-slate-200">{cliente.empresa_trabajo || 'Particular'}</span>
+                            <span className="text-slate-500">{__('Empresa / Empleador:')}</span>
+                            <span className="font-semibold text-slate-800 dark:text-slate-200">{cliente.empresa_trabajo || __('Particular')}</span>
                         </div>
                         <div className="flex justify-between py-1.5 border-b border-slate-100 dark:border-slate-800">
-                            <span className="text-slate-500">Cargo / Ocupación:</span>
-                            <span className="font-medium text-slate-800 dark:text-slate-200">{cliente.cargo_trabajo || 'No especificado'}</span>
+                            <span className="text-slate-500">{__('Cargo / Ocupación:')}</span>
+                            <span className="font-medium text-slate-800 dark:text-slate-200">{cliente.cargo_trabajo || __('No especificado')}</span>
                         </div>
                         <div className="flex justify-between py-1.5 border-b border-slate-100 dark:border-slate-800">
-                            <span className="text-slate-500">Ingreso Mensual Aprox:</span>
+                            <span className="text-slate-500">{__('Ingreso Mensual Aprox:')}</span>
                             <span className="font-bold text-slate-900 dark:text-slate-100">
-                                {cliente.ingreso_mensual ? `${currency}${Number(cliente.ingreso_mensual).toFixed(2)}` : 'No verificado'}
+                                {cliente.ingreso_mensual ? `${currency}${Number(cliente.ingreso_mensual).toFixed(2)}` : __('No verificado')}
                             </span>
                         </div>
                         <div className="flex justify-between py-1.5 border-b border-slate-100 dark:border-slate-800">
-                            <span className="text-slate-500">Día / Frecuencia de Cobro:</span>
-                            <span className="font-medium capitalize text-slate-800 dark:text-slate-200">{cliente.dia_pago || 'Quincenal'}</span>
+                            <span className="text-slate-500">{__('Día / Frecuencia de Cobro:')}</span>
+                            <span className="font-medium capitalize text-slate-800 dark:text-slate-200">{cliente.dia_pago ? __(cliente.dia_pago) : __('Quincenal')}</span>
                         </div>
                         <div className="py-1.5">
-                            <span className="text-slate-500 block mb-1">Observaciones Crediticias:</span>
+                            <span className="text-slate-500 block mb-1">{__('Observaciones Crediticias:')}</span>
                             <p className="text-xs text-slate-600 dark:text-slate-400 bg-slate-50 dark:bg-slate-900 p-2 rounded">
-                                {cliente.observaciones || 'Sin notas adicionales.'}
+                                {cliente.observaciones || __('Sin notas adicionales.')}
                             </p>
                         </div>
                     </CardContent>
@@ -272,7 +273,7 @@ export default function ClienteShow({ cliente }: Props) {
             <Card className="border-slate-200 dark:border-slate-800">
                 <CardHeader>
                     <CardTitle className="text-base font-bold flex items-center gap-2">
-                        <CreditCard className="size-4 text-emerald-600" /> Contratos y Créditos Adquiridos
+                        <CreditCard className="size-4 text-emerald-600" /> {__('Contratos y Créditos Adquiridos')}
                     </CardTitle>
                 </CardHeader>
                 <CardContent className="p-0">
@@ -280,21 +281,21 @@ export default function ClienteShow({ cliente }: Props) {
                         <table className="w-full text-sm text-left">
                             <thead className="text-xs uppercase bg-slate-50 dark:bg-slate-900/50 text-slate-500 border-b border-slate-200 dark:border-slate-800">
                                 <tr>
-                                    <th className="px-4 py-3">Código</th>
-                                    <th className="px-4 py-3">Dispositivo / IMEI</th>
-                                    <th className="px-4 py-3">Fecha Venta</th>
-                                    <th className="px-4 py-3">Plan</th>
-                                    <th className="px-4 py-3">Total Crédito</th>
-                                    <th className="px-4 py-3">Saldo Pendiente</th>
-                                    <th className="px-4 py-3">Estado</th>
-                                    <th className="px-4 py-3 text-right">Detalle</th>
+                                    <th className="px-4 py-3">{__('Código')}</th>
+                                    <th className="px-4 py-3">{__('Dispositivo / IMEI')}</th>
+                                    <th className="px-4 py-3">{__('Fecha Venta')}</th>
+                                    <th className="px-4 py-3">{__('Plan')}</th>
+                                    <th className="px-4 py-3">{__('Total Crédito')}</th>
+                                    <th className="px-4 py-3">{__('Saldo Pendiente')}</th>
+                                    <th className="px-4 py-3">{__('Estado')}</th>
+                                    <th className="px-4 py-3 text-right">{__('Detalle')}</th>
                                 </tr>
                             </thead>
                             <tbody className="divide-y divide-slate-100 dark:divide-slate-800/60">
                                 {creditos.length === 0 ? (
                                     <tr>
                                         <td colSpan={8} className="px-4 py-8 text-center text-slate-400 text-xs">
-                                            Este cliente aún no tiene ventas a crédito registradas.
+                                            {__('Este cliente aún no tiene ventas a crédito registradas.')}
                                         </td>
                                     </tr>
                                 ) : (
@@ -312,7 +313,7 @@ export default function ClienteShow({ cliente }: Props) {
                                                 </div>
                                             </td>
                                             <td className="px-4 py-3 text-xs text-slate-600 dark:text-slate-400">
-                                                {formatDate(c.fecha_inicio, 'short')}
+                                                {formatDate(c.fecha_inicio, 'short', currentLocale)}
                                             </td>
                                             <td className="px-4 py-3 text-xs">
                                                 <span className="font-medium text-slate-700 dark:text-slate-300">
@@ -331,7 +332,7 @@ export default function ClienteShow({ cliente }: Props) {
                                             <td className="px-4 py-3 text-right">
                                                 <Link href={`/admin/creditos/${c.id}`}>
                                                     <Button variant="outline" size="sm" className="h-7 text-xs">
-                                                        Ver Contrato
+                                                        {__('Ver Contrato')}
                                                     </Button>
                                                 </Link>
                                             </td>
