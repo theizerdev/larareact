@@ -304,6 +304,7 @@ export default function PlanesIndex({ planes, stats }: Props) {
                         </div>
 
                         <div className="grid grid-cols-2 gap-4">
+                            {/* Frecuencia de pago */}
                             <div className="space-y-1.5">
                                 <Label>Frecuencia de Pago *</Label>
                                 <Select

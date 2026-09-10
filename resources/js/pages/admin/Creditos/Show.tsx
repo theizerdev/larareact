@@ -39,6 +39,7 @@ import {
     SelectValue,
 } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
+import { formatDate } from '@/lib/utils';
 
 interface Cuota {
     id: number;
@@ -160,7 +161,8 @@ export default function CreditoShow({ credito }: Props) {
     const totalRecaudado = Number(credito.monto_inicial) + totalCobradoCuotas;
 
     const getCuotaBadge = (estado: string, fechaVencimiento: string) => {
-        const vencida = estado !== 'pagada' && new Date(fechaVencimiento + 'T23:59:59') < new Date();
+        const dateOnly = fechaVencimiento ? fechaVencimiento.split('T')[0] : '';
+        const vencida = estado !== 'pagada' && new Date(dateOnly + 'T23:59:59') < new Date();
 
         if (estado === 'pagada') {
             return <Badge className="bg-emerald-500/15 text-emerald-700 dark:text-emerald-400 border-emerald-500/20">Pagada</Badge>;
@@ -209,7 +211,7 @@ export default function CreditoShow({ credito }: Props) {
                         {getEstadoCreditoBadge(credito.estado)}
                     </div>
                     <p className="text-xs sm:text-sm text-slate-500 mt-1">
-                        Originado el {credito.fecha_inicio} • Sucursal: {credito.sucursal?.nombre || 'Principal'} • Vendedor: {credito.vendedor?.name || 'Sistema'}
+                        Originado el {formatDate(credito.fecha_inicio, 'medium')} • Sucursal: {credito.sucursal?.nombre || 'Principal'} • Vendedor: {credito.vendedor?.name || 'Sistema'}
                     </p>
                 </div>
 
@@ -386,7 +388,7 @@ export default function CreditoShow({ credito }: Props) {
                                             Cuota #{c.numero_cuota}
                                         </td>
                                         <td className="px-4 py-3 text-xs font-semibold text-slate-800 dark:text-slate-200">
-                                            {c.fecha_vencimiento}
+                                            {formatDate(c.fecha_vencimiento, 'short')}
                                         </td>
                                         <td className="px-4 py-3 font-bold text-slate-900 dark:text-slate-100">
                                             {currency}{Number(c.monto_cuota).toFixed(2)}
@@ -403,7 +405,7 @@ export default function CreditoShow({ credito }: Props) {
                                         <td className="px-4 py-3 text-xs text-slate-500">
                                             {c.fecha_pago ? (
                                                 <div>
-                                                    <span className="font-semibold text-slate-700 dark:text-slate-300">{c.fecha_pago}</span>
+                                                    <span className="font-semibold text-slate-700 dark:text-slate-300">{formatDate(c.fecha_pago, 'short')}</span>
                                                     <span className="text-[11px] block text-slate-400 uppercase">{c.metodo_pago} {c.referencia_pago && `• Ref: ${c.referencia_pago}`}</span>
                                                 </div>
                                             ) : (
@@ -456,7 +458,7 @@ export default function CreditoShow({ credito }: Props) {
                                 </div>
                                 <div className="flex justify-between">
                                     <span className="text-slate-500">Fecha límite de vencimiento:</span>
-                                    <span className="font-semibold">{payingCuota.fecha_vencimiento}</span>
+                                    <span className="font-semibold">{formatDate(payingCuota.fecha_vencimiento, 'medium')}</span>
                                 </div>
                             </div>
 

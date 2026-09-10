@@ -19,6 +19,7 @@ import { Breadcrumbs } from '@/components/breadcrumbs';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { formatDate } from '@/lib/utils';
 
 interface Cuota {
     id: number;
@@ -310,7 +311,7 @@ export default function ClienteShow({ cliente }: Props) {
                                                 </div>
                                             </td>
                                             <td className="px-4 py-3 text-xs text-slate-600 dark:text-slate-400">
-                                                {c.fecha_inicio}
+                                                {formatDate(c.fecha_inicio, 'short')}
                                             </td>
                                             <td className="px-4 py-3 text-xs">
                                                 <span className="font-medium text-slate-700 dark:text-slate-300">

@@ -30,7 +30,7 @@ import {
     SelectTrigger,
     SelectValue,
 } from '@/components/ui/select';
-import { cleanParams } from '@/lib/utils';
+import { cleanParams, formatDate } from '@/lib/utils';
 import type { Paginated } from '@/types/app';
 
 interface Credito {
@@ -261,7 +261,7 @@ export default function CreditosIndex({ creditos, stats, sucursales, filters }: 
                                             <div className="font-mono font-bold text-slate-900 dark:text-slate-100">
                                                 {c.codigo_credito}
                                             </div>
-                                            <div className="text-xs text-slate-400">{c.fecha_inicio}</div>
+                                            <div className="text-xs text-slate-400">{formatDate(c.fecha_inicio, 'short')}</div>
                                         </td>
                                         <td className="px-4 py-3">
                                             <div className="font-semibold text-slate-900 dark:text-slate-100">

@@ -36,8 +36,8 @@ class Cuota extends Model
     {
         return [
             'numero_cuota' => 'integer',
-            'fecha_vencimiento' => 'date',
-            'fecha_pago' => 'date',
+            'fecha_vencimiento' => 'date:Y-m-d',
+            'fecha_pago' => 'date:Y-m-d',
             'monto_capital' => 'decimal:2',
             'monto_interes' => 'decimal:2',
             'monto_cuota' => 'decimal:2',

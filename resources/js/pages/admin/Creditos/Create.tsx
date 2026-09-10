@@ -27,6 +27,7 @@ import {
     SelectValue,
 } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
+import { formatDate } from '@/lib/utils';
 
 interface Cliente {
     id: number;
@@ -536,7 +537,7 @@ export default function CreditoCreate({ clientes, equipos, planes, sucursales }:
                                                     >
                                                         <div>
                                                             <span className="font-bold text-slate-700 dark:text-slate-300">Cuota #{c.numero}</span>
-                                                            <span className="text-[11px] text-slate-400 block font-sans">Vence: {c.fecha}</span>
+                                                            <span className="text-[11px] text-slate-400 block font-sans">Vence: {formatDate(c.fecha, 'medium')}</span>
                                                         </div>
                                                         <span className="font-extrabold text-emerald-600 dark:text-emerald-400 text-sm font-sans">
                                                             {currency}{c.monto.toFixed(2)}

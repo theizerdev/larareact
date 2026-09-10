@@ -42,7 +42,7 @@ class Credito extends Model
     protected function casts(): array
     {
         return [
-            'fecha_inicio' => 'date',
+            'fecha_inicio' => 'date:Y-m-d',
             'precio_equipo' => 'decimal:2',
             'monto_inicial' => 'decimal:2',
             'monto_financiado' => 'decimal:2',
