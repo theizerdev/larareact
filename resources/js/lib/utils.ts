@@ -43,7 +43,8 @@ export function cleanParams(params: Record<string, any>): Record<string, any> {
  */
 export function formatDate(
     dateStr: string | Date | null | undefined,
-    format: 'short' | 'medium' | 'long' = 'short'
+    format: 'short' | 'medium' | 'long' = 'short',
+    locale: string = 'es'
 ): string {
     if (!dateStr) return '—';
 
@@ -54,27 +55,30 @@ export function formatDate(
     }
 
     const [, year, month, day] = match;
+    const isEn = locale === 'en';
 
     if (format === 'short') {
-        return `${day}/${month}/${year}`;
+        return isEn ? `${month}/${day}/${year}` : `${day}/${month}/${year}`;
     }
 
-    const monthNamesShort = [
-        'Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun',
-        'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic',
-    ];
+    const monthNamesShort = isEn
+        ? ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
+        : ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'];
+
     const monthIndex = parseInt(month, 10) - 1;
     const monthName = monthNamesShort[monthIndex] || month;
 
     if (format === 'medium') {
-        return `${day} ${monthName} ${year}`;
+        return isEn ? `${monthName} ${parseInt(day, 10)}, ${year}` : `${day} ${monthName} ${year}`;
     }
 
-    const monthNamesLong = [
-        'enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio',
-        'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre',
-    ];
+    const monthNamesLong = isEn
+        ? ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December']
+        : ['enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio', 'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre'];
+
     const monthNameLong = monthNamesLong[monthIndex] || month;
 
-    return `${parseInt(day, 10)} de ${monthNameLong} de ${year}`;
+    return isEn
+        ? `${monthNameLong} ${parseInt(day, 10)}, ${year}`
+        : `${parseInt(day, 10)} de ${monthNameLong} de ${year}`;
 }

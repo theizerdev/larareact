@@ -16,5 +16,5 @@ export function useTranslate() {
         return translation;
     };
 
-    return { __ };
+    return { __, locale, currentLocale: locale };
 }

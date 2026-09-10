@@ -40,6 +40,7 @@ import {
     SelectValue,
 } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
+import { useTranslate } from '@/hooks/use-translate';
 import { cleanParams, cn } from '@/lib/utils';
 import type { Paginated } from '@/types/app';
 
@@ -108,6 +109,7 @@ export default function InventarioIndex({
     sucursales,
     filters,
 }: Props) {
+    const { __ } = useTranslate();
     const { regional_config } = usePage().props as any;
     const currency = regional_config?.currency_symbol || '$';
 
@@ -201,7 +203,7 @@ export default function InventarioIndex({
     };
 
     const handleDelete = (id: number) => {
-        if (confirm('¿Estás seguro de eliminar este equipo del inventario?')) {
+        if (confirm(__('¿Estás seguro de eliminar este equipo del inventario?'))) {
             router.delete(`/admin/inventario/equipos/${id}`);
         }
     };
@@ -215,17 +217,17 @@ export default function InventarioIndex({
     const getEstadoBadge = (estado: string) => {
         switch (estado) {
             case 'disponible':
-                return <Badge className="bg-emerald-500/15 text-emerald-700 dark:text-emerald-400 border-emerald-500/20">Disponible</Badge>;
+                return <Badge className="bg-emerald-500/15 text-emerald-700 dark:text-emerald-400 border-emerald-500/20">{__('Disponible')}</Badge>;
             case 'vendido_credito':
-                return <Badge className="bg-blue-500/15 text-blue-700 dark:text-blue-400 border-blue-500/20">Vendido a Crédito</Badge>;
+                return <Badge className="bg-blue-500/15 text-blue-700 dark:text-blue-400 border-blue-500/20">{__('Vendido a Crédito')}</Badge>;
             case 'vendido_contado':
-                return <Badge className="bg-indigo-500/15 text-indigo-700 dark:text-indigo-400 border-indigo-500/20">Vendido de Contado</Badge>;
+                return <Badge className="bg-indigo-500/15 text-indigo-700 dark:text-indigo-400 border-indigo-500/20">{__('Vendido de Contado')}</Badge>;
             case 'reservado':
-                return <Badge className="bg-amber-500/15 text-amber-700 dark:text-amber-400 border-amber-500/20">Reservado</Badge>;
+                return <Badge className="bg-amber-500/15 text-amber-700 dark:text-amber-400 border-amber-500/20">{__('Reservado')}</Badge>;
             case 'bloqueado':
-                return <Badge className="bg-rose-500/15 text-rose-700 dark:text-rose-400 border-rose-500/20">Bloqueado (Mora)</Badge>;
+                return <Badge className="bg-rose-500/15 text-rose-700 dark:text-rose-400 border-rose-500/20">{__('Bloqueado (Mora)')}</Badge>;
             case 'garantia':
-                return <Badge className="bg-purple-500/15 text-purple-700 dark:text-purple-400 border-purple-500/20">En Garantía</Badge>;
+                return <Badge className="bg-purple-500/15 text-purple-700 dark:text-purple-400 border-purple-500/20">{__('En Garantía')}</Badge>;
             default:
                 return <Badge variant="outline">{estado}</Badge>;
         }
@@ -233,20 +235,20 @@ export default function InventarioIndex({
 
     const columns: ColumnDef<Equipo>[] = [
         {
-            header: 'Dispositivo',
+            header: __('Dispositivo'),
             cell: (eq) => (
                 <div className="font-medium">
                     <div className="font-semibold text-slate-900 dark:text-slate-100">
                         {eq.modelo?.marca?.nombre} {eq.modelo?.nombre}
                     </div>
                     <div className="text-xs text-slate-500">
-                        {eq.modelo?.almacenamiento} • {eq.color || 'Sin color'}
+                        {eq.modelo?.almacenamiento} • {eq.color || __('Sin color')}
                     </div>
                 </div>
             ),
         },
         {
-            header: 'IMEI 1 / 2',
+            header: __('IMEI 1 / 2'),
             accessorKey: 'imei_1',
             sortable: true,
             cell: (eq) => (
@@ -256,7 +258,7 @@ export default function InventarioIndex({
                         <button
                             onClick={() => copyToClipboard(eq.imei_1)}
                             className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200"
-                            title="Copiar IMEI"
+                            title={__('Copiar IMEI')}
                         >
                             {copiedImei === eq.imei_1 ? <Check className="size-3.5 text-emerald-600" /> : <Copy className="size-3.5" />}
                         </button>
@@ -270,27 +272,27 @@ export default function InventarioIndex({
             ),
         },
         {
-            header: 'Sucursal',
+            header: __('Sucursal'),
             hideOn: 'mobile',
             cell: (eq) => (
                 <span className="text-slate-600 dark:text-slate-300 text-xs">
-                    {eq.sucursal?.nombre || 'General'}
+                    {eq.sucursal?.nombre || __('General')}
                 </span>
             ),
         },
         {
-            header: 'Condición',
+            header: __('Condición'),
             accessorKey: 'condicion',
             sortable: true,
             hideOn: 'tablet',
             cell: (eq) => (
                 <span className="capitalize text-xs font-medium px-2 py-0.5 rounded bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300">
-                    {eq.condicion}
+                    {eq.condicion === 'nuevo' ? __('Nuevo') : eq.condicion === 'usado' ? __('Usado') : __('Reacondicionado')}
                 </span>
             ),
         },
         {
-            header: 'P. Contado',
+            header: __('P. Contado'),
             accessorKey: 'precio_contado',
             sortable: true,
             hideOn: 'tablet',
@@ -301,7 +303,7 @@ export default function InventarioIndex({
             ),
         },
         {
-            header: 'P. Financiado',
+            header: __('P. Financiado'),
             accessorKey: 'precio_financiado',
             sortable: true,
             cell: (eq) => (
@@ -311,13 +313,13 @@ export default function InventarioIndex({
             ),
         },
         {
-            header: 'Estado',
+            header: __('Estado'),
             accessorKey: 'estado',
             sortable: true,
             cell: (eq) => getEstadoBadge(eq.estado),
         },
         {
-            header: 'Acciones',
+            header: __('Acciones'),
             className: 'text-right',
             stopRowClick: true,
             hideable: false,
@@ -348,24 +350,24 @@ export default function InventarioIndex({
 
     return (
         <div className="space-y-6">
-            <Head title="Inventario de Teléfonos (IMEI)" />
+            <Head title={__('Inventario de Teléfonos (IMEI)')} />
 
             <Breadcrumbs
                 breadcrumbs={[
-                    { title: 'Dashboard', href: '/admin/dashboard' },
-                    { title: 'Inventario de Equipos', href: '/admin/inventario/equipos' },
+                    { title: __('Dashboard'), href: '/admin/dashboard' },
+                    { title: __('Inventario de Equipos'), href: '/admin/inventario/equipos' },
                 ]}
             />
 
             {/* Header */}
             <ModuleHeader
                 icon={<Smartphone className="size-6 sm:size-7" />}
-                title="Inventario de Teléfonos por IMEI"
-                description="Control individualizado de dispositivos móviles, trazabilidad por IMEI 1/2 y asignación a ventas financiadas."
+                title={__('Inventario de Teléfonos por IMEI')}
+                description={__('Control individualizado de dispositivos móviles, trazabilidad por IMEI 1/2 y asignación a ventas financiadas.')}
                 colorClassName="bg-slate-900 dark:bg-slate-800"
             >
                 <Button onClick={openCreateModal} className="bg-emerald-600 hover:bg-emerald-700 text-white font-semibold">
-                    <Plus className="size-4 mr-1.5" /> Registrar Equipo
+                    <Plus className="size-4 mr-1.5" /> {__('Registrar Equipo')}
                 </Button>
             </ModuleHeader>
 
@@ -373,25 +375,25 @@ export default function InventarioIndex({
             <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
                 <StatCard
                     icon={<Smartphone className="size-5 text-blue-600" />}
-                    title="Total Equipos"
+                    title={__('Total Equipos')}
                     value={stats.total}
                     colorClassName="bg-blue-50 dark:bg-blue-950/40"
                 />
                 <StatCard
                     icon={<CheckCircle2 className="size-5 text-emerald-600" />}
-                    title="Disponibles"
+                    title={__('Disponibles')}
                     value={stats.disponibles}
                     colorClassName="bg-emerald-50 dark:bg-emerald-950/40"
                 />
                 <StatCard
                     icon={<Clock className="size-5 text-indigo-600" />}
-                    title="En Financiamiento"
+                    title={__('En Financiamiento')}
                     value={stats.vendidos_credito}
                     colorClassName="bg-indigo-50 dark:bg-indigo-950/40"
                 />
                 <StatCard
                     icon={<ShieldAlert className="size-5 text-amber-600" />}
-                    title="En Garantía / Otros"
+                    title={__('En Garantía / Otros')}
                     value={stats.en_garantia}
                     colorClassName="bg-amber-50 dark:bg-amber-950/40"
                 />
@@ -403,7 +405,7 @@ export default function InventarioIndex({
                     <div className="relative min-w-[240px] flex-1">
                         <Search className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-slate-400" />
                         <Input
-                            placeholder="Buscar por IMEI, serial o modelo..."
+                            placeholder={__('Buscar por IMEI, serial o modelo...')}
                             value={search}
                             onChange={(e) => setSearch(e.target.value)}
                             onKeyDown={(e) => e.key === 'Enter' && handleFilterChange()}
@@ -413,25 +415,25 @@ export default function InventarioIndex({
 
                     <Select value={estadoFilter} onValueChange={(val) => { setEstadoFilter(val); handleFilterChange({ estado: val !== 'all' ? val : undefined }); }}>
                         <SelectTrigger className="w-full sm:w-[200px] md:w-[240px] h-10">
-                            <SelectValue placeholder="Estado" />
+                            <SelectValue placeholder={__('Estado')} />
                         </SelectTrigger>
                         <SelectContent>
-                            <SelectItem value="all">Todos los estados</SelectItem>
-                            <SelectItem value="disponible">Disponible</SelectItem>
-                            <SelectItem value="vendido_credito">Vendido a Crédito</SelectItem>
-                            <SelectItem value="vendido_contado">Vendido Contado</SelectItem>
-                            <SelectItem value="reservado">Reservado</SelectItem>
-                            <SelectItem value="bloqueado">Bloqueado</SelectItem>
-                            <SelectItem value="garantia">Garantía</SelectItem>
+                            <SelectItem value="all">{__('Todos los estados')}</SelectItem>
+                            <SelectItem value="disponible">{__('Disponible')}</SelectItem>
+                            <SelectItem value="vendido_credito">{__('Vendido a Crédito')}</SelectItem>
+                            <SelectItem value="vendido_contado">{__('Vendido Contado')}</SelectItem>
+                            <SelectItem value="reservado">{__('Reservado')}</SelectItem>
+                            <SelectItem value="bloqueado">{__('Bloqueado')}</SelectItem>
+                            <SelectItem value="garantia">{__('Garantía')}</SelectItem>
                         </SelectContent>
                     </Select>
 
                     <Select value={sucursalFilter} onValueChange={(val) => { setSucursalFilter(val); handleFilterChange({ sucursal_id: val !== 'all' ? val : undefined }); }}>
                         <SelectTrigger className="w-full sm:w-[200px] md:w-[240px] h-10">
-                            <SelectValue placeholder="Sucursal" />
+                            <SelectValue placeholder={__('Sucursal')} />
                         </SelectTrigger>
                         <SelectContent>
-                            <SelectItem value="all">Todas las tiendas</SelectItem>
+                            <SelectItem value="all">{__('Todas las tiendas')}</SelectItem>
                             {sucursales.map((s) => (
                                 <SelectItem key={s.id} value={s.id.toString()}>{s.nombre}</SelectItem>
                             ))}
@@ -439,7 +441,7 @@ export default function InventarioIndex({
                     </Select>
 
                     <Button variant="secondary" onClick={() => handleFilterChange()} className="h-10">
-                        <Filter className="size-4 mr-1.5" /> Filtrar
+                        <Filter className="size-4 mr-1.5" /> {__('Filtrar')}
                     </Button>
                 </div>
             </FilterBar>
@@ -449,29 +451,29 @@ export default function InventarioIndex({
                 data={equipos}
                 columns={columns}
                 filters={filters as any}
-                emptyMessage="No se encontraron equipos registrados con los criterios seleccionados."
+                emptyMessage={__('No se encontraron equipos registrados con los criterios seleccionados.')}
             />
 
             {/* Modal para Crear / Editar Equipo */}
             <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
                 <DialogContent className="max-w-xl sm:max-w-xl max-h-[90vh] overflow-y-auto">
                     <DialogHeader>
-                        <DialogTitle>{editingEquipo ? 'Editar Equipo Móvil' : 'Registrar Equipo por IMEI'}</DialogTitle>
+                        <DialogTitle>{editingEquipo ? __('Editar Equipo Móvil') : __('Registrar Equipo por IMEI')}</DialogTitle>
                         <DialogDescription>
-                            Ingresa los números de identificación física del teléfono y sus parámetros comerciales.
+                            {__('Ingresa los números de identificación física del teléfono y sus parámetros comerciales.')}
                         </DialogDescription>
                     </DialogHeader>
 
                     <form onSubmit={handleSubmit} className="space-y-4">
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                             <div className="space-y-1.5">
-                                <Label>Sucursal / Tienda *</Label>
+                                <Label>{__('Sucursal / Tienda *')}</Label>
                                 <Select
                                     value={form.data.sucursal_id}
                                     onValueChange={(val) => form.setData('sucursal_id', val)}
                                 >
                                     <SelectTrigger className="w-full h-10">
-                                        <SelectValue placeholder="Seleccionar tienda" />
+                                        <SelectValue placeholder={__('Seleccionar tienda')} />
                                     </SelectTrigger>
                                     <SelectContent>
                                         {sucursales.map((s) => (
@@ -482,13 +484,13 @@ export default function InventarioIndex({
                             </div>
 
                             <div className="space-y-1.5">
-                                <Label>Modelo del Teléfono *</Label>
+                                <Label>{__('Modelo del Teléfono *')}</Label>
                                 <Select
                                     value={form.data.modelo_equipo_id}
                                     onValueChange={(val) => form.setData('modelo_equipo_id', val)}
                                 >
                                     <SelectTrigger className="w-full h-10">
-                                        <SelectValue placeholder="Seleccionar modelo" />
+                                        <SelectValue placeholder={__('Seleccionar modelo')} />
                                     </SelectTrigger>
                                     <SelectContent>
                                         {modelos.map((m) => (
@@ -503,7 +505,7 @@ export default function InventarioIndex({
 
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                             <div className="space-y-1.5">
-                                <Label>IMEI 1 (Principal) *</Label>
+                                <Label>{__('IMEI 1 (Principal) *')}</Label>
                                 <Input
                                     required
                                     placeholder="Ej. 864234051234567"
@@ -516,9 +518,9 @@ export default function InventarioIndex({
                             </div>
 
                             <div className="space-y-1.5">
-                                <Label>IMEI 2 (Secundario / Dual SIM)</Label>
+                                <Label>{__('IMEI 2 (Secundario / Dual SIM)')}</Label>
                                 <Input
-                                    placeholder="Opcional"
+                                    placeholder={__('Opcional')}
                                     value={form.data.imei_2}
                                     onChange={(e) => form.setData('imei_2', e.target.value)}
                                     maxLength={18}
@@ -529,16 +531,16 @@ export default function InventarioIndex({
 
                         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                             <div className="space-y-1.5">
-                                <Label>Color</Label>
+                                <Label>{__('Color')}</Label>
                                 <Input
-                                    placeholder="Ej. Negro, Azul"
+                                    placeholder={__('Ej. Negro, Azul')}
                                     value={form.data.color}
                                     onChange={(e) => form.setData('color', e.target.value)}
                                 />
                             </div>
 
                             <div className="space-y-1.5">
-                                <Label>Condición</Label>
+                                <Label>{__('Condición')}</Label>
                                 <Select
                                     value={form.data.condicion}
                                     onValueChange={(val: any) => form.setData('condicion', val)}
@@ -547,15 +549,15 @@ export default function InventarioIndex({
                                         <SelectValue />
                                     </SelectTrigger>
                                     <SelectContent>
-                                        <SelectItem value="nuevo">Nuevo</SelectItem>
-                                        <SelectItem value="usado">Usado</SelectItem>
-                                        <SelectItem value="reacondicionado">Reacondicionado</SelectItem>
+                                        <SelectItem value="nuevo">{__('Nuevo')}</SelectItem>
+                                        <SelectItem value="usado">{__('Usado')}</SelectItem>
+                                        <SelectItem value="reacondicionado">{__('Reacondicionado')}</SelectItem>
                                     </SelectContent>
                                 </Select>
                             </div>
 
                             <div className="space-y-1.5">
-                                <Label>Costo de Compra ({currency})</Label>
+                                <Label>{__('Costo de Compra')} ({currency})</Label>
                                 <Input
                                     type="number"
                                     step="0.01"
@@ -569,7 +571,7 @@ export default function InventarioIndex({
 
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 p-4 rounded-xl bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800">
                             <div className="space-y-1.5">
-                                <Label>Precio de Contado ({currency}) *</Label>
+                                <Label>{__('Precio de Contado')} ({currency}) *</Label>
                                 <Input
                                     type="number"
                                     step="0.01"
@@ -582,7 +584,7 @@ export default function InventarioIndex({
 
                             <div className="space-y-1.5">
                                 <Label className="font-bold text-emerald-700 dark:text-emerald-400">
-                                    Precio Financiado ({currency}) *
+                                    {__('Precio Financiado')} ({currency}) *
                                 </Label>
                                 <Input
                                     type="number"
@@ -593,13 +595,13 @@ export default function InventarioIndex({
                                     onChange={(e) => form.setData('precio_financiado', e.target.value)}
                                     className="font-bold text-emerald-700 dark:text-emerald-400"
                                 />
-                                <p className="text-[11px] text-slate-500">Monto base sobre el que se calculan las cuotas a crédito.</p>
+                                <p className="text-[11px] text-slate-500">{__('Monto base sobre el que se calculan las cuotas a crédito.')}</p>
                             </div>
                         </div>
 
                         {editingEquipo && (
                             <div className="space-y-1.5">
-                                <Label>Estado del Equipo</Label>
+                                <Label>{__('Estado del Equipo')}</Label>
                                 <Select
                                     value={form.data.estado}
                                     onValueChange={(val: any) => form.setData('estado', val)}
@@ -608,21 +610,21 @@ export default function InventarioIndex({
                                         <SelectValue />
                                     </SelectTrigger>
                                     <SelectContent>
-                                        <SelectItem value="disponible">Disponible</SelectItem>
-                                        <SelectItem value="reservado">Reservado</SelectItem>
-                                        <SelectItem value="vendido_credito">Vendido a Crédito</SelectItem>
-                                        <SelectItem value="vendido_contado">Vendido de Contado</SelectItem>
-                                        <SelectItem value="bloqueado">Bloqueado</SelectItem>
-                                        <SelectItem value="garantia">Garantía</SelectItem>
+                                        <SelectItem value="disponible">{__('Disponible')}</SelectItem>
+                                        <SelectItem value="reservado">{__('Reservado')}</SelectItem>
+                                        <SelectItem value="vendido_credito">{__('Vendido a Crédito')}</SelectItem>
+                                        <SelectItem value="vendido_contado">{__('Vendido de Contado')}</SelectItem>
+                                        <SelectItem value="bloqueado">{__('Bloqueado')}</SelectItem>
+                                        <SelectItem value="garantia">{__('Garantía')}</SelectItem>
                                     </SelectContent>
                                 </Select>
                             </div>
                         )}
 
                         <div className="space-y-1.5">
-                            <Label>Observaciones / Detalles</Label>
+                            <Label>{__('Observaciones / Detalles')}</Label>
                             <Textarea
-                                placeholder="Notas internas, número de factura de compra, etc."
+                                placeholder={__('Notas internas, número de factura de compra, etc.')}
                                 value={form.data.observaciones}
                                 onChange={(e) => form.setData('observaciones', e.target.value)}
                                 rows={2}
@@ -631,10 +633,10 @@ export default function InventarioIndex({
 
                         <DialogFooter className="pt-3 border-t">
                             <Button type="button" variant="outline" onClick={() => setIsModalOpen(false)}>
-                                Cancelar
+                                {__('Cancelar')}
                             </Button>
                             <Button type="submit" disabled={form.processing} className="bg-emerald-600 hover:bg-emerald-700 text-white">
-                                {form.processing ? 'Guardando...' : 'Guardar Equipo'}
+                                {form.processing ? __('Guardando...') : __('Guardar Equipo')}
                             </Button>
                         </DialogFooter>
                     </form>

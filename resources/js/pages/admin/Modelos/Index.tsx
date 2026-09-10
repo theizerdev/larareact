@@ -37,6 +37,7 @@ import {
     SelectValue,
 } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
+import { useTranslate } from '@/hooks/use-translate';
 import { cleanParams } from '@/lib/utils';
 import type { Paginated } from '@/types/app';
 
@@ -76,6 +77,7 @@ interface Props {
 }
 
 export default function ModelosIndex({ modelos, stats, marcas, filters }: Props) {
+    const { __ } = useTranslate();
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [editingModelo, setEditingModelo] = useState<Modelo | null>(null);
 
@@ -154,14 +156,14 @@ export default function ModelosIndex({ modelos, stats, marcas, filters }: Props)
     };
 
     const handleDelete = (id: number) => {
-        if (confirm('¿Estás seguro de eliminar este modelo?')) {
+        if (confirm(__('¿Estás seguro de eliminar este modelo?'))) {
             router.delete(`/admin/catalogo/modelos/${id}`);
         }
     };
 
     const columns: ColumnDef<Modelo>[] = [
         {
-            header: 'Marca & Modelo',
+            header: __('Marca & Modelo'),
             accessorKey: 'nombre',
             sortable: true,
             cell: (m) => (
@@ -176,7 +178,7 @@ export default function ModelosIndex({ modelos, stats, marcas, filters }: Props)
             ),
         },
         {
-            header: 'Memoria & Almacenamiento',
+            header: __('Memoria & Almacenamiento'),
             cell: (m) => (
                 <div>
                     <div className="font-semibold text-slate-800 dark:text-slate-200">
@@ -189,50 +191,50 @@ export default function ModelosIndex({ modelos, stats, marcas, filters }: Props)
             ),
         },
         {
-            header: 'Batería / Procesador',
+            header: __('Batería / Procesador'),
             hideOn: 'mobile',
             cell: (m) => (
                 <div className="text-xs text-slate-600 dark:text-slate-400">
-                    <div>{m.bateria || 'Batería N/D'}</div>
-                    <div>{m.procesador || 'Procesador N/D'}</div>
+                    <div>{m.bateria || __('Batería N/D')}</div>
+                    <div>{m.procesador || __('Procesador N/D')}</div>
                 </div>
             ),
         },
         {
-            header: 'Stock en Tiendas',
+            header: __('Stock en Tiendas'),
             cell: (m) => (
                 <div className="flex items-center gap-1.5 text-xs">
                     <Badge variant="secondary" className="font-mono">
-                        {m.total_equipos || 0} total
+                        {m.total_equipos || 0} {__('total')}
                     </Badge>
                     <span className="text-emerald-600 font-semibold font-mono">
-                        ({m.disponibles_equipos || 0} disp.)
+                        ({m.disponibles_equipos || 0} {__('disp.')})
                     </span>
                 </div>
             ),
         },
         {
-            header: 'Estado',
+            header: __('Estado'),
             cell: (m) => (
                 <button
                     onClick={() => toggleStatus(m.id)}
                     className="inline-flex items-center gap-1 text-xs cursor-pointer"
-                    title="Cambiar estado"
+                    title={__('Cambiar estado')}
                 >
                     {m.activo ? (
                         <Badge className="bg-emerald-500/15 text-emerald-700 dark:text-emerald-400 border-emerald-500/20">
-                            Activo
+                            {__('Activo')}
                         </Badge>
                     ) : (
                         <Badge variant="outline" className="text-slate-400">
-                            Inactivo
+                            {__('Inactivo')}
                         </Badge>
                     )}
                 </button>
             ),
         },
         {
-            header: 'Acciones',
+            header: __('Acciones'),
             className: 'text-right',
             stopRowClick: true,
             cell: (m) => (
@@ -262,24 +264,24 @@ export default function ModelosIndex({ modelos, stats, marcas, filters }: Props)
 
     return (
         <div className="space-y-6">
-            <Head title="Modelos de Teléfonos" />
+            <Head title={__('Modelos de Teléfonos')} />
 
             <Breadcrumbs
                 breadcrumbs={[
-                    { title: 'Dashboard', href: '/admin/dashboard' },
-                    { title: 'Modelos de Teléfonos', href: '/admin/catalogo/modelos' },
+                    { title: __('Dashboard'), href: '/admin/dashboard' },
+                    { title: __('Modelos de Teléfonos'), href: '/admin/catalogo/modelos' },
                 ]}
             />
 
             {/* Header */}
             <ModuleHeader
                 icon={<Smartphone className="size-6 sm:size-7" />}
-                title="Modelos de Teléfonos Móviles"
-                description="Definición de especificaciones técnicas (capacidad, memoria RAM, procesador) de los equipos a comercializar."
+                title={__('Modelos de Teléfonos Móviles')}
+                description={__('Definición de especificaciones técnicas (capacidad, memoria RAM, procesador) de los equipos a comercializar.')}
                 colorClassName="bg-indigo-700 dark:bg-indigo-800"
             >
                 <Button onClick={openCreateModal} className="bg-white text-indigo-700 hover:bg-slate-100 font-semibold">
-                    <Plus className="size-4 mr-1.5" /> Nuevo Modelo
+                    <Plus className="size-4 mr-1.5" /> {__('Nuevo Modelo')}
                 </Button>
             </ModuleHeader>
 
@@ -287,13 +289,13 @@ export default function ModelosIndex({ modelos, stats, marcas, filters }: Props)
             <div className="grid grid-cols-2 gap-4">
                 <StatCard
                     icon={<Layers className="size-5 text-indigo-600" />}
-                    title="Total Modelos"
+                    title={__('Total Modelos')}
                     value={stats.total}
                     colorClassName="bg-indigo-50 dark:bg-indigo-950/40"
                 />
                 <StatCard
                     icon={<CheckCircle2 className="size-5 text-emerald-600" />}
-                    title="Modelos Activos"
+                    title={__('Modelos Activos')}
                     value={stats.activos}
                     colorClassName="bg-emerald-50 dark:bg-emerald-950/40"
                 />
@@ -305,7 +307,7 @@ export default function ModelosIndex({ modelos, stats, marcas, filters }: Props)
                     <div className="relative min-w-[240px] flex-1 max-w-md">
                         <Search className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-slate-400" />
                         <Input
-                            placeholder="Buscar modelo o especificación..."
+                            placeholder={__('Buscar modelo o especificación...')}
                             value={search}
                             onChange={(e) => setSearch(e.target.value)}
                             onKeyDown={(e) => e.key === 'Enter' && handleFilterChange()}
@@ -315,10 +317,10 @@ export default function ModelosIndex({ modelos, stats, marcas, filters }: Props)
 
                     <Select value={marcaFilter} onValueChange={(val) => { setMarcaFilter(val); handleFilterChange({ marca_id: val !== 'all' ? val : undefined }); }}>
                         <SelectTrigger className="w-full sm:w-[220px] md:w-[260px] h-10">
-                            <SelectValue placeholder="Marca" />
+                            <SelectValue placeholder={__('Marca')} />
                         </SelectTrigger>
                         <SelectContent>
-                            <SelectItem value="all">Todas las marcas</SelectItem>
+                            <SelectItem value="all">{__('Todas las marcas')}</SelectItem>
                             {marcas.map((m) => (
                                 <SelectItem key={m.id} value={m.id.toString()}>{m.nombre}</SelectItem>
                             ))}
@@ -326,7 +328,7 @@ export default function ModelosIndex({ modelos, stats, marcas, filters }: Props)
                     </Select>
 
                     <Button variant="secondary" onClick={() => handleFilterChange()} className="h-10">
-                        <Filter className="size-4 mr-1.5" /> Filtrar
+                        <Filter className="size-4 mr-1.5" /> {__('Filtrar')}
                     </Button>
                 </div>
             </FilterBar>
@@ -336,28 +338,28 @@ export default function ModelosIndex({ modelos, stats, marcas, filters }: Props)
                 data={modelos}
                 columns={columns}
                 filters={filters as any}
-                emptyMessage="No se encontraron modelos registrados."
+                emptyMessage={__('No se encontraron modelos registrados.')}
             />
 
             {/* Modal Crear / Editar Modelo */}
             <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
                 <DialogContent className="max-w-xl sm:max-w-xl max-h-[90vh] overflow-y-auto">
                     <DialogHeader>
-                        <DialogTitle>{editingModelo ? 'Editar Modelo de Teléfono' : 'Nuevo Modelo de Teléfono'}</DialogTitle>
+                        <DialogTitle>{editingModelo ? __('Editar Modelo de Teléfono') : __('Nuevo Modelo de Teléfono')}</DialogTitle>
                         <DialogDescription>
-                            Registra las características técnicas del modelo para asociarlo a los IMEIs en inventario.
+                            {__('Registra las características técnicas del modelo para asociarlo a los IMEIs en inventario.')}
                         </DialogDescription>
                     </DialogHeader>
 
                     <form onSubmit={handleSubmit} className="space-y-4">
                         <div className="space-y-1.5">
-                            <Label>Marca del Teléfono *</Label>
+                            <Label>{__('Marca del Teléfono')} *</Label>
                             <Select
                                 value={form.data.marca_id}
                                 onValueChange={(val) => form.setData('marca_id', val)}
                             >
                                 <SelectTrigger className="w-full h-10">
-                                    <SelectValue placeholder="Selecciona fabricante" />
+                                    <SelectValue placeholder={__('Selecciona fabricante')} />
                                 </SelectTrigger>
                                 <SelectContent>
                                     {marcas.map((m) => (
@@ -368,7 +370,7 @@ export default function ModelosIndex({ modelos, stats, marcas, filters }: Props)
                         </div>
 
                         <div className="space-y-1.5">
-                            <Label>Nombre del Modelo *</Label>
+                            <Label>{__('Nombre del Modelo')} *</Label>
                             <Input
                                 required
                                 placeholder="Ej. Galaxy A55 5G, Redmi Note 13, iPhone 15"
@@ -380,7 +382,7 @@ export default function ModelosIndex({ modelos, stats, marcas, filters }: Props)
 
                         <div className="grid grid-cols-2 gap-4">
                             <div className="space-y-1.5">
-                                <Label>Almacenamiento (ROM)</Label>
+                                <Label>{__('Almacenamiento (ROM)')}</Label>
                                 <Input
                                     placeholder="Ej. 128GB, 256GB, 512GB"
                                     value={form.data.almacenamiento}
@@ -389,7 +391,7 @@ export default function ModelosIndex({ modelos, stats, marcas, filters }: Props)
                             </div>
 
                             <div className="space-y-1.5">
-                                <Label>Memoria RAM</Label>
+                                <Label>{__('Memoria RAM')}</Label>
                                 <Input
                                     placeholder="Ej. 6GB, 8GB, 12GB"
                                     value={form.data.ram}
@@ -400,7 +402,7 @@ export default function ModelosIndex({ modelos, stats, marcas, filters }: Props)
 
                         <div className="grid grid-cols-2 gap-4">
                             <div className="space-y-1.5">
-                                <Label>Batería</Label>
+                                <Label>{__('Batería')}</Label>
                                 <Input
                                     placeholder="Ej. 5000 mAh"
                                     value={form.data.bateria}
@@ -409,7 +411,7 @@ export default function ModelosIndex({ modelos, stats, marcas, filters }: Props)
                             </div>
 
                             <div className="space-y-1.5">
-                                <Label>Procesador</Label>
+                                <Label>{__('Procesador')}</Label>
                                 <Input
                                     placeholder="Ej. Snapdragon 7s Gen 2"
                                     value={form.data.procesador}
@@ -419,7 +421,7 @@ export default function ModelosIndex({ modelos, stats, marcas, filters }: Props)
                         </div>
 
                         <div className="space-y-1.5">
-                            <Label>Descripción / Notas</Label>
+                            <Label>{__('Descripción / Notas')}</Label>
                             <Textarea
                                 placeholder="Detalles de pantalla, cámaras o argumentos de venta..."
                                 value={form.data.descripcion}
@@ -430,10 +432,10 @@ export default function ModelosIndex({ modelos, stats, marcas, filters }: Props)
 
                         <DialogFooter className="pt-3 border-t">
                             <Button type="button" variant="outline" onClick={() => setIsModalOpen(false)}>
-                                Cancelar
+                                {__('Cancelar')}
                             </Button>
                             <Button type="submit" disabled={form.processing} className="bg-indigo-700 hover:bg-indigo-800 text-white">
-                                {form.processing ? 'Guardando...' : 'Guardar Modelo'}
+                                {form.processing ? __('Guardando...') : __('Guardar Modelo')}
                             </Button>
                         </DialogFooter>
                     </form>

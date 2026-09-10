@@ -44,6 +44,7 @@ import {
 import { Textarea } from '@/components/ui/textarea';
 import { cleanParams } from '@/lib/utils';
 import type { Paginated } from '@/types/app';
+import { useTranslate } from '@/hooks/use-translate';
 
 interface Cliente {
     id: number;
@@ -82,6 +83,7 @@ interface Props {
 }
 
 export default function ClientesIndex({ clientes, stats, filters }: Props) {
+    const { __ } = useTranslate();
     const { regional_config } = usePage().props as any;
     const currency = regional_config?.currency_symbol || '$';
 
@@ -180,7 +182,7 @@ export default function ClientesIndex({ clientes, stats, filters }: Props) {
     };
 
     const handleDelete = (id: number) => {
-        if (confirm('¿Estás seguro de eliminar este cliente?')) {
+        if (confirm(__('¿Estás seguro de eliminar este cliente?'))) {
             router.delete(`/admin/clientes/${id}`);
         }
     };
@@ -188,13 +190,13 @@ export default function ClientesIndex({ clientes, stats, filters }: Props) {
     const getEstadoBadge = (estado: string) => {
         switch (estado) {
             case 'activo':
-                return <Badge className="bg-emerald-500/15 text-emerald-700 dark:text-emerald-400 border-emerald-500/20">Aprobado / Activo</Badge>;
+                return <Badge className="bg-emerald-500/15 text-emerald-700 dark:text-emerald-400 border-emerald-500/20">{__('Aprobado / Activo')}</Badge>;
             case 'en_evaluacion':
-                return <Badge className="bg-amber-500/15 text-amber-700 dark:text-amber-400 border-amber-500/20">En Evaluación</Badge>;
+                return <Badge className="bg-amber-500/15 text-amber-700 dark:text-amber-400 border-amber-500/20">{__('En Evaluación')}</Badge>;
             case 'moroso':
-                return <Badge className="bg-orange-500/15 text-orange-700 dark:text-orange-400 border-orange-500/20">En Mora</Badge>;
+                return <Badge className="bg-orange-500/15 text-orange-700 dark:text-orange-400 border-orange-500/20">{__('En Mora')}</Badge>;
             case 'bloqueado':
-                return <Badge className="bg-rose-500/15 text-rose-700 dark:text-rose-400 border-rose-500/20">Bloqueado</Badge>;
+                return <Badge className="bg-rose-500/15 text-rose-700 dark:text-rose-400 border-rose-500/20">{__('Bloqueado')}</Badge>;
             default:
                 return <Badge variant="outline">{estado}</Badge>;
         }
@@ -202,7 +204,7 @@ export default function ClientesIndex({ clientes, stats, filters }: Props) {
 
     const columns: ColumnDef<Cliente>[] = [
         {
-            header: 'Cliente',
+            header: __('Cliente'),
             accessorKey: 'nombres',
             sortable: true,
             cell: (c) => (
@@ -211,13 +213,13 @@ export default function ClientesIndex({ clientes, stats, filters }: Props) {
                         {c.nombres} {c.apellidos}
                     </div>
                     <div className="text-xs text-slate-500">
-                        {c.email || 'Sin correo'}
+                        {c.email || __('Sin correo')}
                     </div>
                 </div>
             ),
         },
         {
-            header: 'Documento',
+            header: __('Documento'),
             accessorKey: 'numero_documento',
             sortable: true,
             cell: (c) => (
@@ -227,7 +229,7 @@ export default function ClientesIndex({ clientes, stats, filters }: Props) {
             ),
         },
         {
-            header: 'Contacto / WhatsApp',
+            header: __('Contacto / WhatsApp'),
             hideOn: 'mobile',
             cell: (c) => (
                 <div>
@@ -245,19 +247,19 @@ export default function ClientesIndex({ clientes, stats, filters }: Props) {
             ),
         },
         {
-            header: 'Datos Laborales',
+            header: __('Datos Laborales'),
             hideOn: 'tablet',
             cell: (c) => (
                 <div className="text-xs">
                     <div className="font-medium text-slate-800 dark:text-slate-200">
-                        {c.empresa_trabajo || 'No especificada'}
+                        {c.empresa_trabajo || __('No especificada')}
                     </div>
-                    <div className="text-slate-500">{c.cargo_trabajo || 'Cliente particular'}</div>
+                    <div className="text-slate-500">{c.cargo_trabajo || __('Cliente particular')}</div>
                 </div>
             ),
         },
         {
-            header: 'Límite Crédito',
+            header: __('Límite Crédito'),
             accessorKey: 'limite_credito',
             sortable: true,
             cell: (c) => (
@@ -267,32 +269,32 @@ export default function ClientesIndex({ clientes, stats, filters }: Props) {
             ),
         },
         {
-            header: 'Créditos',
+            header: __('Créditos'),
             cell: (c) => (
                 c.creditos_activos_count && c.creditos_activos_count > 0 ? (
                     <Badge variant="secondary" className="font-mono">
-                        {c.creditos_activos_count} activo(s)
+                        {c.creditos_activos_count} {__('activo(s)')}
                     </Badge>
                 ) : (
-                    <span className="text-xs text-slate-400">Sin créditos</span>
+                    <span className="text-xs text-slate-400">{__('Sin créditos')}</span>
                 )
             ),
         },
         {
-            header: 'Estado',
+            header: __('Estado'),
             accessorKey: 'estado_crediticio',
             sortable: true,
             cell: (c) => getEstadoBadge(c.estado_crediticio),
         },
         {
-            header: 'Acciones',
+            header: __('Acciones'),
             className: 'text-right',
             stopRowClick: true,
             hideable: false,
             cell: (c) => (
                 <div className="flex items-center justify-end gap-1.5">
                     <Link href={`/admin/clientes/${c.id}`}>
-                        <Button variant="ghost" size="sm" className="h-8 w-8 p-0 text-blue-600" title="Ver Expediente">
+                        <Button variant="ghost" size="sm" className="h-8 w-8 p-0 text-blue-600" title={__('Ver Expediente')}>
                             <Eye className="size-3.5" />
                         </Button>
                     </Link>
@@ -301,7 +303,7 @@ export default function ClientesIndex({ clientes, stats, filters }: Props) {
                         size="sm"
                         onClick={() => openEditModal(c)}
                         className="h-8 w-8 p-0"
-                        title="Editar"
+                        title={__('Editar')}
                     >
                         <Edit2 className="size-3.5" />
                     </Button>
@@ -310,7 +312,7 @@ export default function ClientesIndex({ clientes, stats, filters }: Props) {
                         size="sm"
                         onClick={() => handleDelete(c.id)}
                         className="h-8 w-8 p-0 text-rose-500 hover:text-rose-700"
-                        title="Eliminar"
+                        title={__('Eliminar')}
                     >
                         <Trash2 className="size-3.5" />
                     </Button>
@@ -321,24 +323,24 @@ export default function ClientesIndex({ clientes, stats, filters }: Props) {
 
     return (
         <div className="space-y-6">
-            <Head title="Directorio de Clientes" />
+            <Head title={__('Directorio de Clientes')} />
 
             <Breadcrumbs
                 breadcrumbs={[
-                    { title: 'Dashboard', href: '/admin/dashboard' },
-                    { title: 'Clientes', href: '/admin/clientes' },
+                    { title: __('Dashboard'), href: '/admin/dashboard' },
+                    { title: __('Clientes'), href: '/admin/clientes' },
                 ]}
             />
 
             {/* Header */}
             <ModuleHeader
                 icon={<Users className="size-6 sm:size-7" />}
-                title="Clientes & Evaluación Crediticia"
-                description="Gestión del expediente de clientes, verificación de ingresos laborales, límite de crédito y scoring de riesgo."
+                title={__('Clientes & Evaluación Crediticia')}
+                description={__('Gestión del expediente de clientes, verificación de ingresos laborales, límite de crédito y scoring de riesgo.')}
                 colorClassName="bg-blue-600 dark:bg-blue-700"
             >
                 <Button onClick={openCreateModal} className="bg-white text-blue-700 hover:bg-slate-100 font-semibold">
-                    <UserPlus className="size-4 mr-1.5" /> Registrar Cliente
+                    <UserPlus className="size-4 mr-1.5" /> {__('Registrar Cliente')}
                 </Button>
             </ModuleHeader>
 
@@ -346,25 +348,25 @@ export default function ClientesIndex({ clientes, stats, filters }: Props) {
             <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
                 <StatCard
                     icon={<Users className="size-5 text-blue-600" />}
-                    title="Total Clientes"
+                    title={__('Total Clientes')}
                     value={stats.total}
                     colorClassName="bg-blue-50 dark:bg-blue-950/40"
                 />
                 <StatCard
                     icon={<CheckCircle2 className="size-5 text-emerald-600" />}
-                    title="Aprobados / Activos"
+                    title={__('Aprobados / Activos')}
                     value={stats.activos}
                     colorClassName="bg-emerald-50 dark:bg-emerald-950/40"
                 />
                 <StatCard
                     icon={<Clock className="size-5 text-amber-600" />}
-                    title="En Evaluación"
+                    title={__('En Evaluación')}
                     value={stats.en_evaluacion}
                     colorClassName="bg-amber-50 dark:bg-amber-950/40"
                 />
                 <StatCard
                     icon={<ShieldAlert className="size-5 text-rose-600" />}
-                    title="Con Morosidad"
+                    title={__('Con Morosidad')}
                     value={stats.morosos}
                     colorClassName="bg-rose-50 dark:bg-rose-950/40"
                 />
@@ -376,7 +378,7 @@ export default function ClientesIndex({ clientes, stats, filters }: Props) {
                     <div className="relative min-w-[240px] flex-1">
                         <Search className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-slate-400" />
                         <Input
-                            placeholder="Buscar por nombre, documento o teléfono..."
+                            placeholder={__('Buscar por nombre, documento o teléfono...')}
                             value={search}
                             onChange={(e) => setSearch(e.target.value)}
                             onKeyDown={(e) => e.key === 'Enter' && handleFilterChange()}
@@ -386,19 +388,19 @@ export default function ClientesIndex({ clientes, stats, filters }: Props) {
 
                     <Select value={estadoFilter} onValueChange={(val) => { setEstadoFilter(val); handleFilterChange({ estado_crediticio: val !== 'all' ? val : undefined }); }}>
                         <SelectTrigger className="w-full sm:w-[220px] md:w-[260px] h-10">
-                            <SelectValue placeholder="Estado crediticio" />
+                            <SelectValue placeholder={__('Estado crediticio')} />
                         </SelectTrigger>
                         <SelectContent>
-                            <SelectItem value="all">Todos los estados</SelectItem>
-                            <SelectItem value="activo">Aprobado / Activo</SelectItem>
-                            <SelectItem value="en_evaluacion">En Evaluación</SelectItem>
-                            <SelectItem value="moroso">En Mora</SelectItem>
-                            <SelectItem value="bloqueado">Bloqueado</SelectItem>
+                            <SelectItem value="all">{__('Todos los estados')}</SelectItem>
+                            <SelectItem value="activo">{__('Aprobado / Activo')}</SelectItem>
+                            <SelectItem value="en_evaluacion">{__('En Evaluación')}</SelectItem>
+                            <SelectItem value="moroso">{__('En Mora')}</SelectItem>
+                            <SelectItem value="bloqueado">{__('Bloqueado')}</SelectItem>
                         </SelectContent>
                     </Select>
 
                     <Button variant="secondary" onClick={() => handleFilterChange()} className="h-10">
-                        <Filter className="size-4 mr-1.5" /> Filtrar
+                        <Filter className="size-4 mr-1.5" /> {__('Filtrar')}
                     </Button>
                 </div>
             </FilterBar>
@@ -408,35 +410,35 @@ export default function ClientesIndex({ clientes, stats, filters }: Props) {
                 data={clientes}
                 columns={columns}
                 filters={filters as any}
-                emptyMessage="No se encontraron clientes registrados con los filtros aplicados."
+                emptyMessage={__('No se encontraron clientes registrados con los filtros aplicados.')}
             />
 
             {/* Modal para Crear / Editar Cliente */}
             <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
                 <DialogContent className="max-w-xl sm:max-w-xl max-h-[90vh] overflow-y-auto">
                     <DialogHeader>
-                        <DialogTitle>{editingCliente ? 'Editar Cliente' : 'Registrar Nuevo Cliente'}</DialogTitle>
+                        <DialogTitle>{editingCliente ? __('Editar Cliente') : __('Registrar Nuevo Cliente')}</DialogTitle>
                         <DialogDescription>
-                            Completa los datos personales, de contacto y laborales para el expediente crediticio.
+                            {__('Completa los datos personales, de contacto y laborales para el expediente crediticio.')}
                         </DialogDescription>
                     </DialogHeader>
 
                     <form onSubmit={handleSubmit} className="space-y-4">
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                             <div className="space-y-1.5">
-                                <Label>Nombres *</Label>
+                                <Label>{__('Nombres')} *</Label>
                                 <Input
                                     required
-                                    placeholder="Ej. Roberto Carlos"
+                                    placeholder={__('Ej. Roberto Carlos')}
                                     value={form.data.nombres}
                                     onChange={(e) => form.setData('nombres', e.target.value)}
                                 />
                             </div>
                             <div className="space-y-1.5">
-                                <Label>Apellidos *</Label>
+                                <Label>{__('Apellidos')} *</Label>
                                 <Input
                                     required
-                                    placeholder="Ej. Pérez Gómez"
+                                    placeholder={__('Ej. Pérez Gómez')}
                                     value={form.data.apellidos}
                                     onChange={(e) => form.setData('apellidos', e.target.value)}
                                 />
@@ -445,7 +447,7 @@ export default function ClientesIndex({ clientes, stats, filters }: Props) {
 
                         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                             <div className="space-y-1.5">
-                                <Label>Tipo Doc. *</Label>
+                                <Label>{__('Tipo Doc.')} *</Label>
                                 <Select
                                     value={form.data.tipo_documento}
                                     onValueChange={(val) => form.setData('tipo_documento', val)}
@@ -454,16 +456,16 @@ export default function ClientesIndex({ clientes, stats, filters }: Props) {
                                         <SelectValue />
                                     </SelectTrigger>
                                     <SelectContent>
-                                        <SelectItem value="V">V (Venezolano)</SelectItem>
-                                        <SelectItem value="E">E (Extranjero)</SelectItem>
-                                        <SelectItem value="J">J (Jurídico)</SelectItem>
+                                        <SelectItem value="V">V ({__('Venezolano')})</SelectItem>
+                                        <SelectItem value="E">E ({__('Extranjero')})</SelectItem>
+                                        <SelectItem value="J">J ({__('Jurídico')})</SelectItem>
                                         <SelectItem value="DNI">DNI / INE</SelectItem>
-                                        <SelectItem value="PAS">Pasaporte</SelectItem>
+                                        <SelectItem value="PAS">{__('Pasaporte')}</SelectItem>
                                     </SelectContent>
                                 </Select>
                             </div>
                             <div className="space-y-1.5 sm:col-span-2">
-                                <Label>Número de Documento *</Label>
+                                <Label>{__('Número de Documento')} *</Label>
                                 <Input
                                     required
                                     placeholder="Ej. 25123456"
@@ -476,7 +478,7 @@ export default function ClientesIndex({ clientes, stats, filters }: Props) {
 
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                             <div className="space-y-1.5">
-                                <Label>Teléfono Principal (WhatsApp) *</Label>
+                                <Label>{__('Teléfono Principal (WhatsApp)')} *</Label>
                                 <Input
                                     required
                                     placeholder="Ej. +58 412 1234567"
@@ -485,9 +487,9 @@ export default function ClientesIndex({ clientes, stats, filters }: Props) {
                                 />
                             </div>
                             <div className="space-y-1.5">
-                                <Label>Teléfono Secundario / Casa</Label>
+                                <Label>{__('Teléfono Secundario / Casa')}</Label>
                                 <Input
-                                    placeholder="Opcional"
+                                    placeholder={__('Opcional')}
                                     value={form.data.telefono_secundario}
                                     onChange={(e) => form.setData('telefono_secundario', e.target.value)}
                                 />
@@ -496,7 +498,7 @@ export default function ClientesIndex({ clientes, stats, filters }: Props) {
 
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                             <div className="space-y-1.5">
-                                <Label>Correo Electrónico</Label>
+                                <Label>{__('Correo Electrónico')}</Label>
                                 <Input
                                     type="email"
                                     placeholder="correo@ejemplo.com"
@@ -505,9 +507,9 @@ export default function ClientesIndex({ clientes, stats, filters }: Props) {
                                 />
                             </div>
                             <div className="space-y-1.5">
-                                <Label>Ciudad / Municipio</Label>
+                                <Label>{__('Ciudad / Municipio')}</Label>
                                 <Input
-                                    placeholder="Ej. Caracas, Valencia, etc."
+                                    placeholder={__('Ej. Caracas, Valencia, etc.')}
                                     value={form.data.ciudad}
                                     onChange={(e) => form.setData('ciudad', e.target.value)}
                                 />
@@ -515,9 +517,9 @@ export default function ClientesIndex({ clientes, stats, filters }: Props) {
                         </div>
 
                         <div className="space-y-1.5">
-                            <Label>Dirección Residencial</Label>
+                            <Label>{__('Dirección Residencial')}</Label>
                             <Textarea
-                                placeholder="Calle, edificio, casa, punto de referencia..."
+                                placeholder={__('Calle, edificio, casa, punto de referencia...')}
                                 value={form.data.direccion}
                                 onChange={(e) => form.setData('direccion', e.target.value)}
                                 rows={2}
@@ -527,21 +529,21 @@ export default function ClientesIndex({ clientes, stats, filters }: Props) {
                         {/* Datos Laborales */}
                         <div className="p-4 rounded-xl bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 space-y-3">
                             <div className="text-xs font-bold uppercase tracking-wider text-slate-500 flex items-center gap-1.5">
-                                <Briefcase className="size-3.5" /> Información Laboral e Ingresos
+                                <Briefcase className="size-3.5" /> {__('Información Laboral e Ingresos')}
                             </div>
                             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                                 <div className="space-y-1.5">
-                                    <Label>Empresa / Empleador</Label>
+                                    <Label>{__('Empresa / Empleador')}</Label>
                                     <Input
-                                        placeholder="Nombre de la empresa"
+                                        placeholder={__('Nombre de la empresa')}
                                         value={form.data.empresa_trabajo}
                                         onChange={(e) => form.setData('empresa_trabajo', e.target.value)}
                                     />
                                 </div>
                                 <div className="space-y-1.5">
-                                    <Label>Cargo / Ocupación</Label>
+                                    <Label>{__('Cargo / Ocupación')}</Label>
                                     <Input
-                                        placeholder="Ej. Asistente administrativo"
+                                        placeholder={__('Ej. Asistente administrativo')}
                                         value={form.data.cargo_trabajo}
                                         onChange={(e) => form.setData('cargo_trabajo', e.target.value)}
                                     />
@@ -549,7 +551,7 @@ export default function ClientesIndex({ clientes, stats, filters }: Props) {
                             </div>
                             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                                 <div className="space-y-1.5">
-                                    <Label>Ingreso Mensual ({currency})</Label>
+                                    <Label>{__('Ingreso Mensual')} ({currency})</Label>
                                     <Input
                                         type="number"
                                         step="0.01"
@@ -559,7 +561,7 @@ export default function ClientesIndex({ clientes, stats, filters }: Props) {
                                     />
                                 </div>
                                 <div className="space-y-1.5">
-                                    <Label>Frecuencia de Cobro</Label>
+                                    <Label>{__('Frecuencia de Cobro')}</Label>
                                     <Select
                                         value={form.data.dia_pago}
                                         onValueChange={(val) => form.setData('dia_pago', val)}
@@ -568,14 +570,14 @@ export default function ClientesIndex({ clientes, stats, filters }: Props) {
                                             <SelectValue />
                                         </SelectTrigger>
                                         <SelectContent>
-                                            <SelectItem value="semanal">Semanal</SelectItem>
-                                            <SelectItem value="quincenal">Quincenal</SelectItem>
-                                            <SelectItem value="mensual">Mensual</SelectItem>
+                                            <SelectItem value="semanal">{__('Semanal')}</SelectItem>
+                                            <SelectItem value="quincenal">{__('Quincenal')}</SelectItem>
+                                            <SelectItem value="mensual">{__('Mensual')}</SelectItem>
                                         </SelectContent>
                                     </Select>
                                 </div>
                                 <div className="space-y-1.5">
-                                    <Label>Límite de Crédito ({currency}) *</Label>
+                                    <Label>{__('Límite de Crédito')} ({currency}) *</Label>
                                     <Input
                                         type="number"
                                         step="0.01"
@@ -589,7 +591,7 @@ export default function ClientesIndex({ clientes, stats, filters }: Props) {
 
                         {editingCliente && (
                             <div className="space-y-1.5">
-                                <Label>Estado Crediticio</Label>
+                                <Label>{__('Estado Crediticio')}</Label>
                                 <Select
                                     value={form.data.estado_crediticio}
                                     onValueChange={(val: any) => form.setData('estado_crediticio', val)}
@@ -598,19 +600,19 @@ export default function ClientesIndex({ clientes, stats, filters }: Props) {
                                         <SelectValue />
                                     </SelectTrigger>
                                     <SelectContent>
-                                        <SelectItem value="activo">Aprobado / Activo</SelectItem>
-                                        <SelectItem value="en_evaluacion">En Evaluación</SelectItem>
-                                        <SelectItem value="moroso">En Mora</SelectItem>
-                                        <SelectItem value="bloqueado">Bloqueado</SelectItem>
+                                        <SelectItem value="activo">{__('Aprobado / Activo')}</SelectItem>
+                                        <SelectItem value="en_evaluacion">{__('En Evaluación')}</SelectItem>
+                                        <SelectItem value="moroso">{__('En Mora')}</SelectItem>
+                                        <SelectItem value="bloqueado">{__('Bloqueado')}</SelectItem>
                                     </SelectContent>
                                 </Select>
                             </div>
                         )}
 
                         <div className="space-y-1.5">
-                            <Label>Observaciones Crediticias / Referencias</Label>
+                            <Label>{__('Observaciones Crediticias / Referencias')}</Label>
                             <Textarea
-                                placeholder="Notas internas sobre capacidad de pago, historial, avales..."
+                                placeholder={__('Notas internas sobre capacidad de pago, historial, avales...')}
                                 value={form.data.observaciones}
                                 onChange={(e) => form.setData('observaciones', e.target.value)}
                                 rows={2}
@@ -619,10 +621,10 @@ export default function ClientesIndex({ clientes, stats, filters }: Props) {
 
                         <DialogFooter className="pt-3 border-t">
                             <Button type="button" variant="outline" onClick={() => setIsModalOpen(false)}>
-                                Cancelar
+                                {__('Cancelar')}
                             </Button>
                             <Button type="submit" disabled={form.processing} className="bg-blue-600 hover:bg-blue-700 text-white">
-                                {form.processing ? 'Guardando...' : 'Guardar Cliente'}
+                                {form.processing ? __('Guardando...') : __('Guardar Cliente')}
                             </Button>
                         </DialogFooter>
                     </form>

@@ -27,6 +27,7 @@ import {
 } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { useTranslate } from '@/hooks/use-translate';
 import { cleanParams } from '@/lib/utils';
 import type { Paginated } from '@/types/app';
 
@@ -52,6 +53,7 @@ interface Props {
 }
 
 export default function MarcasIndex({ marcas, stats, filters }: Props) {
+    const { __ } = useTranslate();
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [editingMarca, setEditingMarca] = useState<Marca | null>(null);
     const [search, setSearch] = useState(filters.search || '');
@@ -102,14 +104,14 @@ export default function MarcasIndex({ marcas, stats, filters }: Props) {
     };
 
     const handleDelete = (id: number) => {
-        if (confirm('¿Estás seguro de eliminar esta marca?')) {
+        if (confirm(__('¿Estás seguro de eliminar esta marca?'))) {
             router.delete(`/admin/catalogo/marcas/${id}`);
         }
     };
 
     const columns: ColumnDef<Marca>[] = [
         {
-            header: 'Nombre de la Marca',
+            header: __('Nombre de la Marca'),
             accessorKey: 'nombre',
             sortable: true,
             cell: (m) => (
@@ -119,7 +121,7 @@ export default function MarcasIndex({ marcas, stats, filters }: Props) {
             ),
         },
         {
-            header: 'Slug / Código',
+            header: __('Slug / Código'),
             accessorKey: 'slug',
             sortable: true,
             cell: (m) => (
@@ -129,35 +131,35 @@ export default function MarcasIndex({ marcas, stats, filters }: Props) {
             ),
         },
         {
-            header: 'Modelos Registrados',
+            header: __('Modelos Registrados'),
             cell: (m) => (
                 <Badge variant="outline" className="font-mono gap-1">
-                    <Smartphone className="size-3" /> {m.modelos_count || 0} modelos
+                    <Smartphone className="size-3" /> {m.modelos_count || 0} {__('modelos')}
                 </Badge>
             ),
         },
         {
-            header: 'Estado',
+            header: __('Estado'),
             cell: (m) => (
                 <button
                     onClick={() => toggleStatus(m.id)}
                     className="inline-flex items-center gap-1 text-xs cursor-pointer"
-                    title="Cambiar estado"
+                    title={__('Cambiar estado')}
                 >
                     {m.activo ? (
                         <Badge className="bg-emerald-500/15 text-emerald-700 dark:text-emerald-400 border-emerald-500/20">
-                            Activa
+                            {__('Activa')}
                         </Badge>
                     ) : (
                         <Badge variant="outline" className="text-slate-400">
-                            Inactiva
+                            {__('Inactiva')}
                         </Badge>
                     )}
                 </button>
             ),
         },
         {
-            header: 'Acciones',
+            header: __('Acciones'),
             className: 'text-right',
             stopRowClick: true,
             cell: (m) => (
@@ -187,24 +189,24 @@ export default function MarcasIndex({ marcas, stats, filters }: Props) {
 
     return (
         <div className="space-y-6">
-            <Head title="Catálogo de Marcas" />
+            <Head title={__('Catálogo de Marcas')} />
 
             <Breadcrumbs
                 breadcrumbs={[
-                    { title: 'Dashboard', href: '/admin/dashboard' },
-                    { title: 'Marcas de Teléfonos', href: '/admin/catalogo/marcas' },
+                    { title: __('Dashboard'), href: '/admin/dashboard' },
+                    { title: __('Marcas de Teléfonos'), href: '/admin/catalogo/marcas' },
                 ]}
             />
 
             {/* Header */}
             <ModuleHeader
                 icon={<Tag className="size-6 sm:size-7" />}
-                title="Marcas de Dispositivos Móviles"
-                description="Catálogo de fabricantes autorizados y marcas de teléfonos para control de modelos e inventario."
+                title={__('Marcas de Dispositivos Móviles')}
+                description={__('Catálogo de fabricantes autorizados y marcas de teléfonos para control de modelos e inventario.')}
                 colorClassName="bg-slate-800 dark:bg-slate-900"
             >
                 <Button onClick={openCreateModal} className="bg-white text-slate-900 hover:bg-slate-100 font-semibold">
-                    <Plus className="size-4 mr-1.5" /> Nueva Marca
+                    <Plus className="size-4 mr-1.5" /> {__('Nueva Marca')}
                 </Button>
             </ModuleHeader>
 
@@ -212,13 +214,13 @@ export default function MarcasIndex({ marcas, stats, filters }: Props) {
             <div className="grid grid-cols-2 gap-4">
                 <StatCard
                     icon={<Tag className="size-5 text-blue-600" />}
-                    title="Total Marcas"
+                    title={__('Total Marcas')}
                     value={stats.total}
                     colorClassName="bg-blue-50 dark:bg-blue-950/40"
                 />
                 <StatCard
                     icon={<CheckCircle2 className="size-5 text-emerald-600" />}
-                    title="Marcas Activas"
+                    title={__('Marcas Activas')}
                     value={stats.activas}
                     colorClassName="bg-emerald-50 dark:bg-emerald-950/40"
                 />
@@ -230,7 +232,7 @@ export default function MarcasIndex({ marcas, stats, filters }: Props) {
                     <div className="relative min-w-[240px] flex-1 max-w-md">
                         <Search className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-slate-400" />
                         <Input
-                            placeholder="Buscar marca por nombre..."
+                            placeholder={__('Buscar marca por nombre...')}
                             value={search}
                             onChange={(e) => setSearch(e.target.value)}
                             onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
@@ -238,7 +240,7 @@ export default function MarcasIndex({ marcas, stats, filters }: Props) {
                         />
                     </div>
                     <Button variant="secondary" onClick={handleSearch} className="h-10">
-                        Buscar
+                        {__('Buscar')}
                     </Button>
                 </div>
             </FilterBar>
@@ -248,25 +250,25 @@ export default function MarcasIndex({ marcas, stats, filters }: Props) {
                 data={marcas}
                 columns={columns}
                 filters={filters as any}
-                emptyMessage="No se encontraron marcas registradas."
+                emptyMessage={__('No se encontraron marcas registradas.')}
             />
 
             {/* Modal Crear / Editar Marca */}
             <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
                 <DialogContent className="max-w-xl sm:max-w-xl">
                     <DialogHeader>
-                        <DialogTitle>{editingMarca ? 'Editar Marca' : 'Nueva Marca de Teléfono'}</DialogTitle>
+                        <DialogTitle>{editingMarca ? __('Editar Marca') : __('Nueva Marca de Teléfono')}</DialogTitle>
                         <DialogDescription>
-                            Ingresa el nombre comercial del fabricante para agrupar modelos.
+                            {__('Ingresa el nombre comercial del fabricante para agrupar modelos.')}
                         </DialogDescription>
                     </DialogHeader>
 
                     <form onSubmit={handleSubmit} className="space-y-4">
                         <div className="space-y-1.5">
-                            <Label>Nombre de la Marca *</Label>
+                            <Label>{__('Nombre de la Marca')} *</Label>
                             <Input
                                 required
-                                placeholder="Ej. Samsung, Apple, Xiaomi, Motorola"
+                                placeholder={__('Ej. Samsung, Apple, Xiaomi, Motorola')}
                                 value={form.data.nombre}
                                 onChange={(e) => form.setData('nombre', e.target.value)}
                             />
@@ -275,10 +277,10 @@ export default function MarcasIndex({ marcas, stats, filters }: Props) {
 
                         <DialogFooter className="pt-3 border-t">
                             <Button type="button" variant="outline" onClick={() => setIsModalOpen(false)}>
-                                Cancelar
+                                {__('Cancelar')}
                             </Button>
                             <Button type="submit" disabled={form.processing}>
-                                {form.processing ? 'Guardando...' : 'Guardar Marca'}
+                                {form.processing ? __('Guardando...') : __('Guardar Marca')}
                             </Button>
                         </DialogFooter>
                     </form>
