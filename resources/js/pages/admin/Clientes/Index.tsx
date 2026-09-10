@@ -17,6 +17,8 @@ import {
 } from 'lucide-react';
 import React, { useState } from 'react';
 import { Breadcrumbs } from '@/components/breadcrumbs';
+import type { ColumnDef } from '@/components/data-table';
+import { DataTable } from '@/components/data-table';
 import { FilterBar } from '@/components/filter-bar';
 import { ModuleHeader } from '@/components/module-header';
 import { StatCard } from '@/components/stat-card';
@@ -198,6 +200,125 @@ export default function ClientesIndex({ clientes, stats, filters }: Props) {
                 return <Badge variant="outline">{estado}</Badge>;
         }
     };
+
+    const columns: ColumnDef<Cliente>[] = [
+        {
+            header: 'Cliente',
+            accessorKey: 'nombres',
+            sortable: true,
+            cell: (c) => (
+                <div className="font-medium">
+                    <div className="font-semibold text-slate-900 dark:text-slate-100">
+                        {c.nombres} {c.apellidos}
+                    </div>
+                    <div className="text-xs text-slate-500">
+                        {c.email || 'Sin correo'}
+                    </div>
+                </div>
+            ),
+        },
+        {
+            header: 'Documento',
+            accessorKey: 'numero_documento',
+            sortable: true,
+            cell: (c) => (
+                <span className="font-mono text-xs font-semibold text-slate-700 dark:text-slate-300">
+                    {c.tipo_documento}-{c.numero_documento}
+                </span>
+            ),
+        },
+        {
+            header: 'Contacto / WhatsApp',
+            hideOn: 'mobile',
+            cell: (c) => (
+                <div>
+                    <a
+                        href={`https://wa.me/${c.telefono_principal.replace(/[^0-9]/g, '')}`}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="inline-flex items-center gap-1 text-xs font-medium text-emerald-600 hover:text-emerald-700 dark:text-emerald-400"
+                    >
+                        <Phone className="size-3" /> {c.telefono_principal}
+                        <ExternalLink className="size-2.5" />
+                    </a>
+                    {c.ciudad && <div className="text-xs text-slate-400">{c.ciudad}</div>}
+                </div>
+            ),
+        },
+        {
+            header: 'Datos Laborales',
+            hideOn: 'tablet',
+            cell: (c) => (
+                <div className="text-xs">
+                    <div className="font-medium text-slate-800 dark:text-slate-200">
+                        {c.empresa_trabajo || 'No especificada'}
+                    </div>
+                    <div className="text-slate-500">{c.cargo_trabajo || 'Cliente particular'}</div>
+                </div>
+            ),
+        },
+        {
+            header: 'Límite Crédito',
+            accessorKey: 'limite_credito',
+            sortable: true,
+            cell: (c) => (
+                <span className="font-bold text-slate-900 dark:text-slate-100">
+                    {currency}{Number(c.limite_credito).toFixed(2)}
+                </span>
+            ),
+        },
+        {
+            header: 'Créditos',
+            cell: (c) => (
+                c.creditos_activos_count && c.creditos_activos_count > 0 ? (
+                    <Badge variant="secondary" className="font-mono">
+                        {c.creditos_activos_count} activo(s)
+                    </Badge>
+                ) : (
+                    <span className="text-xs text-slate-400">Sin créditos</span>
+                )
+            ),
+        },
+        {
+            header: 'Estado',
+            accessorKey: 'estado_crediticio',
+            sortable: true,
+            cell: (c) => getEstadoBadge(c.estado_crediticio),
+        },
+        {
+            header: 'Acciones',
+            className: 'text-right',
+            stopRowClick: true,
+            hideable: false,
+            cell: (c) => (
+                <div className="flex items-center justify-end gap-1.5">
+                    <Link href={`/admin/clientes/${c.id}`}>
+                        <Button variant="ghost" size="sm" className="h-8 w-8 p-0 text-blue-600" title="Ver Expediente">
+                            <Eye className="size-3.5" />
+                        </Button>
+                    </Link>
+                    <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => openEditModal(c)}
+                        className="h-8 w-8 p-0"
+                        title="Editar"
+                    >
+                        <Edit2 className="size-3.5" />
+                    </Button>
+                    <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => handleDelete(c.id)}
+                        className="h-8 w-8 p-0 text-rose-500 hover:text-rose-700"
+                        title="Eliminar"
+                    >
+                        <Trash2 className="size-3.5" />
+                    </Button>
+                </div>
+            ),
+        },
+    ];
 
     return (
         <div className="space-y-6">
@@ -388,6 +509,13 @@ export default function ClientesIndex({ clientes, stats, filters }: Props) {
                     </table>
                 </div>
             </Card>
+            {/* DataTable Reutilizable */}
+            <DataTable
+                data={clientes}
+                columns={columns}
+                filters={filters as any}
+                emptyMessage="No se encontraron clientes registrados con los filtros aplicados."
+            />
 
             {/* Modal para Crear / Editar Cliente */}
             <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>

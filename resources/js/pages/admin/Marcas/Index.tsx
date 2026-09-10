@@ -6,6 +6,8 @@ import {
     CheckCircle2,
     Edit2,
     Trash2,
+    ToggleLeft,
+    ToggleRight,
     Smartphone,
 } from 'lucide-react';
 import React, { useState } from 'react';
@@ -17,6 +19,7 @@ import { ModuleHeader } from '@/components/module-header';
 import { StatCard } from '@/components/stat-card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { Card } from '@/components/ui/card';
 import {
     Dialog,
     DialogContent,
@@ -243,6 +246,80 @@ export default function MarcasIndex({ marcas, stats, filters }: Props) {
                 </div>
             </FilterBar>
 
+            {/* Tabla de Marcas */}
+            <Card className="overflow-hidden border border-slate-200 dark:border-slate-800">
+                <table className="w-full text-sm text-left">
+                    <thead className="text-xs uppercase bg-slate-50 dark:bg-slate-900/50 text-slate-500 border-b border-slate-200 dark:border-slate-800">
+                        <tr>
+                            <th className="px-4 py-3.5">Nombre de la Marca</th>
+                            <th className="px-4 py-3.5">Slug / Código</th>
+                            <th className="px-4 py-3.5">Modelos Registrados</th>
+                            <th className="px-4 py-3.5">Estado</th>
+                            <th className="px-4 py-3.5 text-right">Acciones</th>
+                        </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-100 dark:divide-slate-800/60">
+                        {marcas.data.length === 0 ? (
+                            <tr>
+                                <td colSpan={5} className="px-4 py-8 text-center text-slate-400">
+                                    No se encontraron marcas registradas.
+                                </td>
+                            </tr>
+                        ) : (
+                            marcas.data.map((m) => (
+                                <tr key={m.id} className="hover:bg-slate-50/50 dark:hover:bg-slate-900/20">
+                                    <td className="px-4 py-3 font-bold text-slate-900 dark:text-slate-100 text-base">
+                                        {m.nombre}
+                                    </td>
+                                    <td className="px-4 py-3 font-mono text-xs text-slate-500">
+                                        {m.slug}
+                                    </td>
+                                    <td className="px-4 py-3">
+                                        <Badge variant="outline" className="font-mono gap-1">
+                                            <Smartphone className="size-3" /> {m.modelos_count || 0} modelos
+                                        </Badge>
+                                    </td>
+                                    <td className="px-4 py-3">
+                                        <button
+                                            onClick={() => toggleStatus(m.id)}
+                                            className="inline-flex items-center gap-1 text-xs cursor-pointer"
+                                            title="Cambiar estado"
+                                        >
+                                            {m.activo ? (
+                                                <Badge className="bg-emerald-500/15 text-emerald-700 dark:text-emerald-400 border-emerald-500/20">Activa</Badge>
+                                            ) : (
+                                                <Badge variant="outline" className="text-slate-400">Inactiva</Badge>
+                                            )}
+                                        </button>
+                                    </td>
+                                    <td className="px-4 py-3 text-right">
+                                        <div className="flex items-center justify-end gap-1">
+                                            <Button
+                                                variant="ghost"
+                                                size="sm"
+                                                onClick={() => openEditModal(m)}
+                                                className="h-8 w-8 p-0"
+                                            >
+                                                <Edit2 className="size-3.5" />
+                                            </Button>
+                                            {(!m.modelos_count || m.modelos_count === 0) && (
+                                                <Button
+                                                    variant="ghost"
+                                                    size="sm"
+                                                    onClick={() => handleDelete(m.id)}
+                                                    className="h-8 w-8 p-0 text-rose-500 hover:text-rose-700"
+                                                >
+                                                    <Trash2 className="size-3.5" />
+                                                </Button>
+                                            )}
+                                        </div>
+                                    </td>
+                                </tr>
+                            ))
+                        )}
+                    </tbody>
+                </table>
+            </Card>
             {/* DataTable Reutilizable */}
             <DataTable
                 data={marcas}
@@ -287,3 +364,4 @@ export default function MarcasIndex({ marcas, stats, filters }: Props) {
         </div>
     );
 }
+

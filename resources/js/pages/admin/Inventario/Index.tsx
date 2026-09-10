@@ -15,6 +15,8 @@ import {
 } from 'lucide-react';
 import React, { useState } from 'react';
 import { Breadcrumbs } from '@/components/breadcrumbs';
+import type { ColumnDef } from '@/components/data-table';
+import { DataTable } from '@/components/data-table';
 import { FilterBar } from '@/components/filter-bar';
 import { ModuleHeader } from '@/components/module-header';
 import { StatCard } from '@/components/stat-card';
@@ -230,6 +232,121 @@ export default function InventarioIndex({
         }
     };
 
+    const columns: ColumnDef<Equipo>[] = [
+        {
+            header: 'Dispositivo',
+            cell: (eq) => (
+                <div className="font-medium">
+                    <div className="font-semibold text-slate-900 dark:text-slate-100">
+                        {eq.modelo?.marca?.nombre} {eq.modelo?.nombre}
+                    </div>
+                    <div className="text-xs text-slate-500">
+                        {eq.modelo?.almacenamiento} • {eq.color || 'Sin color'}
+                    </div>
+                </div>
+            ),
+        },
+        {
+            header: 'IMEI 1 / 2',
+            accessorKey: 'imei_1',
+            sortable: true,
+            cell: (eq) => (
+                <div>
+                    <div className="flex items-center gap-1.5 font-mono text-xs font-semibold text-slate-800 dark:text-slate-200">
+                        <span>{eq.imei_1}</span>
+                        <button
+                            onClick={() => copyToClipboard(eq.imei_1)}
+                            className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200"
+                            title="Copiar IMEI"
+                        >
+                            {copiedImei === eq.imei_1 ? <Check className="size-3.5 text-emerald-600" /> : <Copy className="size-3.5" />}
+                        </button>
+                    </div>
+                    {eq.imei_2 && (
+                        <div className="text-[11px] font-mono text-slate-400">
+                            IMEI 2: {eq.imei_2}
+                        </div>
+                    )}
+                </div>
+            ),
+        },
+        {
+            header: 'Sucursal',
+            hideOn: 'mobile',
+            cell: (eq) => (
+                <span className="text-slate-600 dark:text-slate-300 text-xs">
+                    {eq.sucursal?.nombre || 'General'}
+                </span>
+            ),
+        },
+        {
+            header: 'Condición',
+            accessorKey: 'condicion',
+            sortable: true,
+            hideOn: 'tablet',
+            cell: (eq) => (
+                <span className="capitalize text-xs font-medium px-2 py-0.5 rounded bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300">
+                    {eq.condicion}
+                </span>
+            ),
+        },
+        {
+            header: 'P. Contado',
+            accessorKey: 'precio_contado',
+            sortable: true,
+            hideOn: 'tablet',
+            cell: (eq) => (
+                <span className="text-slate-600 dark:text-slate-400">
+                    {currency}{Number(eq.precio_contado).toFixed(2)}
+                </span>
+            ),
+        },
+        {
+            header: 'P. Financiado',
+            accessorKey: 'precio_financiado',
+            sortable: true,
+            cell: (eq) => (
+                <span className="font-bold text-emerald-600 dark:text-emerald-400">
+                    {currency}{Number(eq.precio_financiado).toFixed(2)}
+                </span>
+            ),
+        },
+        {
+            header: 'Estado',
+            accessorKey: 'estado',
+            sortable: true,
+            cell: (eq) => getEstadoBadge(eq.estado),
+        },
+        {
+            header: 'Acciones',
+            className: 'text-right',
+            stopRowClick: true,
+            hideable: false,
+            cell: (eq) => (
+                <div className="flex items-center justify-end gap-1.5">
+                    <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => openEditModal(eq)}
+                        className="h-8 w-8 p-0"
+                    >
+                        <Edit2 className="size-3.5" />
+                    </Button>
+                    {eq.estado !== 'vendido_credito' && (
+                        <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => handleDelete(eq.id)}
+                            className="h-8 w-8 p-0 text-rose-500 hover:text-rose-700"
+                        >
+                            <Trash2 className="size-3.5" />
+                        </Button>
+                    )}
+                </div>
+            ),
+        },
+    ];
+
     return (
         <div className="space-y-6">
             <Head title="Inventario de Teléfonos (IMEI)" />
@@ -426,6 +543,13 @@ export default function InventarioIndex({
                     </table>
                 </div>
             </Card>
+            {/* DataTable Reutilizable */}
+            <DataTable
+                data={equipos}
+                columns={columns}
+                filters={filters as any}
+                emptyMessage="No se encontraron equipos registrados con los criterios seleccionados."
+            />
 
             {/* Modal para Crear / Editar Equipo */}
             <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>

@@ -14,6 +14,8 @@ import {
 } from 'lucide-react';
 import React, { useState } from 'react';
 import { Breadcrumbs } from '@/components/breadcrumbs';
+import type { ColumnDef } from '@/components/data-table';
+import { DataTable } from '@/components/data-table';
 import { FilterBar } from '@/components/filter-bar';
 import { ModuleHeader } from '@/components/module-header';
 import { StatCard } from '@/components/stat-card';
@@ -159,6 +161,107 @@ export default function ModelosIndex({ modelos, stats, marcas, filters }: Props)
             router.delete(`/admin/catalogo/modelos/${id}`);
         }
     };
+
+    const columns: ColumnDef<Modelo>[] = [
+        {
+            header: 'Marca & Modelo',
+            accessorKey: 'nombre',
+            sortable: true,
+            cell: (m) => (
+                <div className="font-medium">
+                    <Badge variant="outline" className="text-[10px] uppercase mb-1">
+                        {m.marca?.nombre}
+                    </Badge>
+                    <div className="font-bold text-slate-900 dark:text-slate-100 text-base">
+                        {m.nombre}
+                    </div>
+                </div>
+            ),
+        },
+        {
+            header: 'Memoria & Almacenamiento',
+            cell: (m) => (
+                <div>
+                    <div className="font-semibold text-slate-800 dark:text-slate-200">
+                        {m.almacenamiento || 'N/D'}
+                    </div>
+                    <div className="text-xs text-slate-500">
+                        RAM: {m.ram || 'N/D'}
+                    </div>
+                </div>
+            ),
+        },
+        {
+            header: 'Batería / Procesador',
+            hideOn: 'mobile',
+            cell: (m) => (
+                <div className="text-xs text-slate-600 dark:text-slate-400">
+                    <div>{m.bateria || 'Batería N/D'}</div>
+                    <div>{m.procesador || 'Procesador N/D'}</div>
+                </div>
+            ),
+        },
+        {
+            header: 'Stock en Tiendas',
+            cell: (m) => (
+                <div className="flex items-center gap-1.5 text-xs">
+                    <Badge variant="secondary" className="font-mono">
+                        {m.total_equipos || 0} total
+                    </Badge>
+                    <span className="text-emerald-600 font-semibold font-mono">
+                        ({m.disponibles_equipos || 0} disp.)
+                    </span>
+                </div>
+            ),
+        },
+        {
+            header: 'Estado',
+            cell: (m) => (
+                <button
+                    onClick={() => toggleStatus(m.id)}
+                    className="inline-flex items-center gap-1 text-xs cursor-pointer"
+                    title="Cambiar estado"
+                >
+                    {m.activo ? (
+                        <Badge className="bg-emerald-500/15 text-emerald-700 dark:text-emerald-400 border-emerald-500/20">
+                            Activo
+                        </Badge>
+                    ) : (
+                        <Badge variant="outline" className="text-slate-400">
+                            Inactivo
+                        </Badge>
+                    )}
+                </button>
+            ),
+        },
+        {
+            header: 'Acciones',
+            className: 'text-right',
+            stopRowClick: true,
+            cell: (m) => (
+                <div className="flex items-center justify-end gap-1">
+                    <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => openEditModal(m)}
+                        className="h-8 w-8 p-0"
+                    >
+                        <Edit2 className="size-3.5" />
+                    </Button>
+                    {(!m.total_equipos || m.total_equipos === 0) && (
+                        <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => handleDelete(m.id)}
+                            className="h-8 w-8 p-0 text-rose-500 hover:text-rose-700"
+                        >
+                            <Trash2 className="size-3.5" />
+                        </Button>
+                    )}
+                </div>
+            ),
+        },
+    ];
 
     return (
         <div className="space-y-6">
@@ -325,6 +428,13 @@ export default function ModelosIndex({ modelos, stats, marcas, filters }: Props)
                     </tbody>
                 </table>
             </Card>
+            {/* DataTable Reutilizable */}
+            <DataTable
+                data={modelos}
+                columns={columns}
+                filters={filters as any}
+                emptyMessage="No se encontraron modelos registrados."
+            />
 
             {/* Modal Crear / Editar Modelo */}
             <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>

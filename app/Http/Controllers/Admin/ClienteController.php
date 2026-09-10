@@ -35,6 +35,16 @@ class ClienteController extends Controller
         }
 
         $clientes = $query->latest()->paginate($perPage)->withQueryString();
+        $sort = $request->input('sort', 'created_at');
+        $direction = $request->input('direction', 'desc') === 'asc' ? 'asc' : 'desc';
+        $allowedSorts = ['nombres', 'numero_documento', 'limite_credito', 'estado_crediticio', 'created_at'];
+        if (in_array($sort, $allowedSorts)) {
+            $query->orderBy($sort, $direction);
+        } else {
+            $query->latest();
+        }
+
+        $clientes = $query->paginate($perPage)->withQueryString();
 
         $stats = [
             'total' => Cliente::count(),
@@ -47,6 +57,7 @@ class ClienteController extends Controller
             'clientes' => $clientes,
             'stats' => $stats,
             'filters' => $request->only(['search', 'estado_crediticio', 'perPage']),
+            'filters' => $request->only(['search', 'estado_crediticio', 'perPage', 'sort', 'direction']),
         ]);
     }
 
