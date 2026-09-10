@@ -1,4 +1,6 @@
 import DashboardController from './DashboardController'
+import MarcaController from './MarcaController'
+import ModeloEquipoController from './ModeloEquipoController'
 import ClienteController from './ClienteController'
 import CreditoController from './CreditoController'
 import DbMonitoringController from './DbMonitoringController'
@@ -17,6 +19,8 @@ import TaskMonitoringController from './TaskMonitoringController'
 import UserController from './UserController'
 const Admin = {
     DashboardController: Object.assign(DashboardController, DashboardController),
+MarcaController: Object.assign(MarcaController, MarcaController),
+ModeloEquipoController: Object.assign(ModeloEquipoController, ModeloEquipoController),
 ClienteController: Object.assign(ClienteController, ClienteController),
 CreditoController: Object.assign(CreditoController, CreditoController),
 DbMonitoringController: Object.assign(DbMonitoringController, DbMonitoringController),

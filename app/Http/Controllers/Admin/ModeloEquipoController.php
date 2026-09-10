@@ -161,3 +161,4 @@ class ModeloEquipoController extends Controller
         }
     }
 }
+

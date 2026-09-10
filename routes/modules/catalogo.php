@@ -19,3 +19,4 @@ Route::middleware(['verified'])->group(function () {
     Route::patch('/catalogo/modelos/{modelo}/toggle-status', [ModeloEquipoController::class, 'toggleStatus'])->name('catalogo.modelos.toggle-status');
     Route::delete('/catalogo/modelos/{modelo}', [ModeloEquipoController::class, 'destroy'])->name('catalogo.modelos.destroy');
 });
+

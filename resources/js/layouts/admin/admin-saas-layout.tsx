@@ -439,6 +439,16 @@ export default function AdminSaasLayout({
                                     permission: 'equipos.view',
                                 },
                                 {
+                                    title: 'Modelos de Teléfonos',
+                                    href: '/admin/catalogo/modelos',
+                                    permission: 'modelos.view',
+                                },
+                                {
+                                    title: 'Marcas de Teléfonos',
+                                    href: '/admin/catalogo/marcas',
+                                    permission: 'marcas.view',
+                                },
+                                {
                                     title: 'Clientes',
                                     href: '/admin/clientes',
                                     permission: 'clientes.view',

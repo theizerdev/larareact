@@ -1,3 +1,4 @@
+import catalogo from './catalogo'
 import clientes from './clientes'
 import creditos from './creditos'
 import cuotas from './cuotas'
@@ -11,7 +12,8 @@ import roles from './roles'
 import sucursales from './sucursales'
 import usuarios from './usuarios'
 const admin = {
-    clientes: Object.assign(clientes, clientes),
+    catalogo: Object.assign(catalogo, catalogo),
+clientes: Object.assign(clientes, clientes),
 creditos: Object.assign(creditos, creditos),
 cuotas: Object.assign(cuotas, cuotas),
 monitoring: Object.assign(monitoring, monitoring),
