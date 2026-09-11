@@ -107,6 +107,7 @@ class WhatsAppService
     }
 
     /**
+     * Resuelve la sucursal y configura su instancia con fallback a empresa
      * Resuelve la sucursal y configura su instancia aislada (estricto por sucursal, sin fallback a empresa)
      */
     public function resolveSucursal($sucursal = null): void
@@ -130,6 +131,17 @@ class WhatsAppService
                 $this->baseUrl = rtrim($empresa->whatsapp_api_url, '/');
             }
 
+            // Si la sucursal tiene instancia configurada o activa, usar la de la sucursal
+            if (! empty($sucursalModel->whatsapp_instance)) {
+                $this->instanceName = $sucursalModel->whatsapp_instance;
+            } elseif ($sucursalModel->whatsapp_active) {
+                $this->instanceName = 'sucursal_'.$sucursalModel->id;
+            } elseif ($empresa && ! empty($empresa->whatsapp_instance)) {
+                // Fallback a la instancia de la empresa si la sucursal no tiene una propia
+                $this->instanceName = $empresa->whatsapp_instance;
+            } else {
+                $this->instanceName = 'sucursal_'.$sucursalModel->id;
+            }
             // Cada sucursal maneja su propia instancia dedicada (sucursal_{id})
             $this->instanceName = ! empty($sucursalModel->whatsapp_instance)
                 ? $sucursalModel->whatsapp_instance
@@ -141,6 +153,8 @@ class WhatsAppService
             return;
         }
 
+        // Fallback a empresa si no se especificó sucursal
+        $this->resolveCompany($sucursal);
         // Si no se proporcionó sucursal específica, buscar la primera sucursal de la empresa activa
         if (auth()->check() && auth()->user()->empresa_id) {
             $firstSucursal = \App\Models\Sucursal::where('empresa_id', auth()->user()->empresa_id)->first();

@@ -808,8 +808,10 @@ export default function WhatsAppIntegration({
     };
 
     const handleBranchChange = (value: string) => {
+        const sucursalId = value === 'all' || value === 'company' ? '' : value;
         router.get(
             '/admin/integrations/whatsapp',
+            sucursalId ? { sucursal_id: sucursalId } : {},
             { sucursal_id: value },
             {
                 preserveScroll: true,
@@ -1259,10 +1261,12 @@ export default function WhatsAppIntegration({
                                     <h3 className="text-sm font-bold flex items-center gap-2 text-foreground">
                                         {__('Conexión WhatsApp por Sucursal')}
                                         <Badge variant="secondary" className="text-[10px] font-normal uppercase">
+                                            {target_type === 'sucursal' ? `${__('Sucursal')}: ${target_name}` : __('Empresa Principal')}
                                             {`${__('Sucursal')}: ${target_name}`}
                                         </Badge>
                                     </h3>
                                     <p className="text-xs text-muted-foreground">
+                                        {__('Selecciona la sucursal para gestionar su línea de WhatsApp independiente o usa la empresa principal.')}
                                         {__('Cada sucursal opera con su propia línea de WhatsApp de forma 100% aislada e independiente.')}
                                     </p>
                                 </div>
@@ -1270,9 +1274,11 @@ export default function WhatsAppIntegration({
 
                             <div className="flex items-center gap-2 w-full sm:w-auto">
                                 <Label className="text-xs font-semibold shrink-0 text-muted-foreground hidden md:inline">
+                                    {__('Sucursal Activa')}:
                                     {__('Sucursal')}:
                                 </Label>
                                 <Select
+                                    value={active_sucursal_id ? String(active_sucursal_id) : 'company'}
                                     value={String(active_sucursal_id || sucursales[0]?.id || '')}
                                     onValueChange={handleBranchChange}
                                 >
@@ -1280,7 +1286,11 @@ export default function WhatsAppIntegration({
                                         <SelectValue placeholder={__('Selecciona sucursal')} />
                                     </SelectTrigger>
                                     <SelectContent>
+                                        <SelectItem value="company" className="text-xs font-medium">
+                                            🏢 {empresa_nombre} ({__('Principal')})
+                                        </SelectItem>
                                         {sucursales.map((suc) => (
+                                            <SelectItem key={suc.id} value={String(suc.id)} className="text-xs">
                                             <SelectItem key={suc.id} value={String(suc.id)} className="text-xs font-medium">
                                                 🏬 {suc.nombre} {suc.whatsapp_phone ? `(${suc.whatsapp_phone})` : ''} {suc.whatsapp_status === 'connected' ? '🟢' : '⚪'}
                                             </SelectItem>
