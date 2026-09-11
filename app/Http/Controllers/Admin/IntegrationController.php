@@ -937,18 +937,11 @@ class IntegrationController extends Controller
     }
 
     /**
-     * Sincroniza el estado local de la empresa con la respuesta del servicio de WhatsApp.
+     * Sincroniza el estado local de la sucursal con la respuesta del servicio de WhatsApp.
      */
-    private function syncLocalWhatsAppStatus(Empresa $empresa, $status)
     private function syncLocalWhatsAppStatus(\Illuminate\Database\Eloquent\Model $target, $status)
     {
         $updateData = [];
-
-        $token = $status['token'] ?? $status['raw']['token'] ?? null;
-        if ($token && $empresa->whatsapp_api_key !== $token) {
-        if ($token && $target instanceof Empresa && $target->whatsapp_api_key !== $token) {
-            $updateData['whatsapp_api_key'] = $token;
-        }
 
         if ($status && isset($status['isConnected']) && $status['isConnected']) {
             $livePhone = null;
@@ -959,7 +952,6 @@ class IntegrationController extends Controller
             }
 
             $updateData['whatsapp_status'] = 'connected';
-            $updateData['whatsapp_phone'] = $livePhone ?? $empresa->whatsapp_phone;
             $updateData['whatsapp_phone'] = $livePhone ?? $target->whatsapp_phone;
             $updateData['whatsapp_last_connected'] = now();
         } elseif ($status && isset($status['connectionState']) && $status['connectionState'] === 'connecting') {
@@ -971,7 +963,6 @@ class IntegrationController extends Controller
         }
 
         if (! empty($updateData)) {
-            $empresa->update($updateData);
             $target->update($updateData);
         }
     }
@@ -981,13 +972,11 @@ class IntegrationController extends Controller
      */
     public function whatsappDiagnostic(Request $request)
     {
-        $empresa = $request->user()->empresa;
         [$target, $whatsappService, $empresa] = $this->resolveWhatsAppTarget($request);
         if (! $empresa) {
             return response()->json(['success' => false, 'error' => 'No active company found.'], 404);
         }
 
-        $whatsappService = new WhatsAppService($empresa);
         $startTime = microtime(true);
         $status = $whatsappService->getStatus();
         $latencyMs = round((microtime(true) - $startTime) * 1000, 2);
@@ -1008,10 +997,8 @@ class IntegrationController extends Controller
             'latencyMs' => $latencyMs,
             'status' => $status,
             'health' => $healthData,
-            'empresa_status' => $empresa->whatsapp_status,
-            'last_connected' => $empresa->whatsapp_last_connected?->toIso8601String(),
-            'target_type' => $target instanceof \App\Models\Sucursal ? 'sucursal' : 'empresa',
-            'target_name' => $target instanceof \App\Models\Sucursal ? $target->nombre : ($empresa->razon_social ?? 'Empresa'),
+            'target_type' => 'sucursal',
+            'target_name' => $target->nombre,
             'empresa_status' => $target->whatsapp_status,
             'last_connected' => $target->whatsapp_last_connected?->toIso8601String(),
         ]);
