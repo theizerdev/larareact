@@ -20,6 +20,10 @@ class AppServiceProvider extends ServiceProvider
     public function register(): void
     {
         //
+        $this->commands([
+            \App\Console\Commands\ConsolidateTenantsToCentralCommand::class,
+            \App\Console\Commands\PruneExpiredTenantsCommand::class,
+        ]);
     }
 
     /**

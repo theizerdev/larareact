@@ -8,6 +8,13 @@ Artisan::command('inspire', function () {
     $this->comment(Inspiring::quote());
 })->purpose('Display an inspiring quote');
 
+Artisan::starting(function ($artisan) {
+    $artisan->resolveCommands([
+        \App\Console\Commands\ConsolidateTenantsToCentralCommand::class,
+        \App\Console\Commands\PruneExpiredTenantsCommand::class,
+    ]);
+});
+
 /*
 |--------------------------------------------------------------------------
 | Tareas Programadas (Scheduled Tasks)
