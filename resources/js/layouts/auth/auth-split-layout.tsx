@@ -16,7 +16,8 @@ export default function AuthSplitLayout({
             <div className="relative hidden flex-col justify-between overflow-hidden p-12 text-white lg:flex">
                 {/* Background Image with smooth zoom micro-animation */}
                 <div
-                    className="absolute inset-0 bg-cover bg-center transition-transform duration-[10000ms] ease-out hover:scale-110"
+                    className="absolute inset-0 bg-cover bg-center transition-transform duration-[10000ms] ease-out hover:scale-150"
+                    className="absolute inset-0 bg-cover bg-center transition-transform duration-[10000ms] ease-out hover:scale-130"
                     style={{ backgroundImage: 'url("/image/login_corporate_bg.png")' }}
                 />
                 {/* Subtle vignette overlay to keep logo and footer readable while showcasing the image */}
@@ -46,6 +47,7 @@ export default function AuthSplitLayout({
                             src="/image/logo/Innovacion Movil Logo Transparente Grande.webp"
                             alt="Logo"
                             className="h-12 w-auto object-contain"
+                            className="h-16 sm:h-20 w-auto max-w-full object-contain drop-shadow-sm"
                         />
                     </Link>
 
@@ -62,18 +64,7 @@ export default function AuthSplitLayout({
 
                     {children}
 
-                    {/* Certificaciones y Normativas Internacionales */}
-                    <div className="mt-6 pt-5 border-t border-slate-200 dark:border-slate-800 text-center space-y-3">
-                        <p className="text-[11px] sm:text-xs font-bold text-slate-800 dark:text-slate-200 tracking-tight whitespace-nowrap overflow-hidden text-ellipsis">
-                            Con apego y alineación a políticas y normativas internacionales
-                        </p>
-                        <div className="flex items-center justify-between gap-1.5 pt-1">
-                            <img src="/image/logo/certifications/iso20000.svg" alt="ISO 20000" className="h-11 sm:h-12 w-auto object-contain hover:scale-105 transition-transform shrink-0" />
-                            <img src="/image/logo/certifications/ctpat.svg" alt="CTPAT" className="h-8 sm:h-9 w-auto object-contain hover:scale-105 transition-transform shrink-0" />
-                            <img src="/image/logo/certifications/oea_mexico.svg" alt="OEA México" className="h-8 sm:h-9 w-auto object-contain hover:scale-105 transition-transform shrink-0" />
-                            <img src="/image/logo/certifications/iso27001.svg" alt="ISO 27001" className="h-11 sm:h-12 w-auto object-contain hover:scale-105 transition-transform shrink-0" />
-                        </div>
-                    </div>
+                   
                 </div>
             </div>
         </div>

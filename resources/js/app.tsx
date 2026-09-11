@@ -74,11 +74,6 @@ initializeTheme();
 
 // Register PWA service worker in production (Kiosko offline support)
 if ('serviceWorker' in navigator && import.meta.env.PROD) {
-    window.addEventListener('load', () => {
-        navigator.serviceWorker
-            .register('/sw.js', { scope: '/' })
-            .then((r) => console.info('[PWA] Service Worker registrado:', r.scope))
-            .catch((e) => console.warn('[PWA] Error registrando SW:', e));
     window.addEventListener('load', async () => {
         try {
             const registration = await navigator.serviceWorker.register('/sw.js', { scope: '/' });
