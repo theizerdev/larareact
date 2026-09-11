@@ -48,17 +48,7 @@ class Empresa extends Model
         'api_key',
         'whatsapp_api_key',
         'whatsapp_api_url',
-        'whatsapp_instance',
-        'whatsapp_rate_limit',
-        'whatsapp_warmup_mode',
-        'whatsapp_working_hours_enabled',
-        'whatsapp_working_hours_start',
-        'whatsapp_working_hours_end',
         'whatsapp_proxy_url',
-        'whatsapp_active',
-        'whatsapp_phone',
-        'whatsapp_status',
-        'whatsapp_last_connected',
         'mapbox_api_key',
         'mapbox_active',
         'google_maps_api_key',
@@ -90,21 +80,12 @@ class Empresa extends Model
         'max_sucursales',
     ];
 
-    protected $casts = [
-        'whatsapp_warmup_mode' => 'boolean',
-        'whatsapp_working_hours_enabled' => 'boolean',
-        'whatsapp_active' => 'boolean',
-    ];
-
-      protected function casts(): array
+    protected function casts(): array
     {
         return [
             'latitud' => 'decimal:8',
             'longitud' => 'decimal:8',
             'status' => 'boolean',
-            'whatsapp_active' => 'boolean',
-            'whatsapp_rate_limit' => 'integer',
-            'whatsapp_last_connected' => 'datetime',
             'mapbox_active' => 'boolean',
             'google_maps_active' => 'boolean',
             'paypal_active' => 'boolean',

@@ -107,10 +107,12 @@ class HandleInertiaRequests extends Middleware
                     ->whereColumn('stock', '<=', 'stock_minimo')
                     ->count()
                 : 0,
-            'cash_register_alert' => fn () => $this->getCashRegisterAlert($request),
-            'whatsapp_needs_scan' => fn () => $empresa
-                && (bool) $empresa->whatsapp_active
-                && $empresa->whatsapp_status !== 'connected',
+            'whatsapp_needs_scan' => fn () => (function () use ($request, $empresa) {
+                $sucursal = $request->user()?->sucursal ?? $empresa?->sucursales()->first();
+                return $sucursal
+                    && (bool) $sucursal->whatsapp_active
+                    && $sucursal->whatsapp_status !== 'connected';
+            })(),
 
             'subscription' => $empresa ? (function () use ($empresa) {
                 $sub = $empresa->getLatestSubscriptionRecord();

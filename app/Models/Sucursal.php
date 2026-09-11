@@ -79,7 +79,16 @@ class Sucursal extends Model
      */
     public function getWhatsAppInstanceName(): string
     {
-        return ! empty($this->whatsapp_instance) ? $this->whatsapp_instance : ('sucursal_' . $this->id);
+        if (! empty($this->whatsapp_instance)) {
+            return $this->whatsapp_instance;
+        }
+
+        $empresa = $this->empresa;
+        $companyName = $empresa?->nombre_comercial ?: ($empresa?->razon_social ?: '');
+        $cleanSlug = preg_replace('/[^a-zA-Z0-9_-]/', '', str_replace(['/', ' '], '_', strtolower($companyName)));
+        $cleanSlug = trim($cleanSlug, '_');
+
+        return (! empty($cleanSlug) ? $cleanSlug . '_' : '') . 'sucursal_' . $this->id;
     }
 
     /**

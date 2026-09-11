@@ -66,61 +66,72 @@ class CreateWhatsAppInstanceCommand extends Command
                 $empresa->whatsapp_api_key = $token;
             }
 
-            // 3. Asegurar nombre de instancia único y legible
-            $instanceName = $empresa->whatsapp_instance;
-            if (empty($instanceName) || $force) {
-                $baseName = $empresa->nombre_comercial ?: $empresa->razon_social;
-                $cleanSlug = preg_replace('/[^a-zA-Z0-9_-]/', '', str_replace(['/', ' '], '', strtolower($baseName)));
-                $instanceName = !empty($cleanSlug) ? ($cleanSlug . '_' . $empresa->id) : ('empresa_' . $empresa->id);
-                $updateData['whatsapp_instance'] = $instanceName;
-                $empresa->whatsapp_instance = $instanceName;
-            }
-
             if (!empty($updateData)) {
                 $empresa->update($updateData);
             }
 
-            // 4. Crear o inicializar en el microservicio de WhatsApp
-            $statusLabel = 'Error';
-            $details = '';
-
-            try {
-                $service = WhatsAppService::forCompany($empresa)->setTimeout(10);
-                $createResult = $service->createInstance($instanceName, $empresa->whatsapp_api_key);
-
-                $liveStatus = $service->getStatus($instanceName);
-                $statusStr = $liveStatus['status'] ?? 'unknown';
-                $isConnected = (bool) ($liveStatus['isConnected'] ?? false);
-
-                if ($isConnected) {
-                    $statusLabel = '🟢 Conectado (open)';
-                } elseif ($statusStr === 'qr' || ($liveStatus['qrDataUrl'] ?? null)) {
-                    $statusLabel = '🟡 QR Listo (qr)';
-                } elseif ($statusStr === 'connecting') {
-                    $statusLabel = '🔵 Conectando (connecting)';
-                } elseif ($statusStr === 'close') {
-                    $statusLabel = '⚪ Desconectado (close)';
-                } else {
-                    $statusLabel = "🟣 {$statusStr}";
-                }
-
-                $details = $createResult['message'] ?? 'Instancia activa en motor';
-            } catch (\Throwable $e) {
-                $statusLabel = '🔴 Excepción';
-                $details = $e->getMessage();
+            // 3. Iterar sobre las sucursales de la empresa
+            $sucursales = $empresa->sucursales;
+            if ($sucursales->isEmpty()) {
+                $sucursales = collect([
+                    \App\Models\Sucursal::create([
+                        'empresa_id' => $empresa->id,
+                        'nombre' => 'Principal',
+                        'status' => true,
+                    ])
+                ]);
             }
 
-            $rows[] = [
-                $empresa->id,
-                Str::limit($empresa->razon_social, 24),
-                $instanceName,
-                $statusLabel,
-                Str::limit($details, 35),
-            ];
+            foreach ($sucursales as $sucursal) {
+                $instanceName = $sucursal->whatsapp_instance;
+                if (empty($instanceName) || $force) {
+                    $instanceName = 'sucursal_'.$sucursal->id;
+                    $instanceName = $sucursal->getWhatsAppInstanceName();
+                    $sucursal->update(['whatsapp_instance' => $instanceName]);
+                }
+
+                $statusLabel = 'Error';
+                $details = '';
+
+                try {
+                    $service = WhatsAppService::forBranch($sucursal)->setTimeout(10);
+                    $createResult = $service->createInstance($instanceName, $empresa->whatsapp_api_key);
+
+                    $liveStatus = $service->getStatus($instanceName);
+                    $statusStr = $liveStatus['status'] ?? 'unknown';
+                    $isConnected = (bool) ($liveStatus['isConnected'] ?? false);
+
+                    if ($isConnected) {
+                        $statusLabel = '🟢 Conectado (open)';
+                    } elseif ($statusStr === 'qr' || ($liveStatus['qrDataUrl'] ?? null)) {
+                        $statusLabel = '🟡 QR Listo (qr)';
+                    } elseif ($statusStr === 'connecting') {
+                        $statusLabel = '🔵 Conectando (connecting)';
+                    } elseif ($statusStr === 'close') {
+                        $statusLabel = '⚪ Desconectado (close)';
+                    } else {
+                        $statusLabel = "🟣 {$statusStr}";
+                    }
+
+                    $details = $createResult['message'] ?? 'Instancia activa en motor';
+                } catch (\Throwable $e) {
+                    $statusLabel = '🔴 Excepción';
+                    $details = $e->getMessage();
+                }
+
+                $rows[] = [
+                    $empresa->id,
+                    Str::limit($empresa->razon_social, 18),
+                    $sucursal->id . ' - ' . Str::limit($sucursal->nombre, 18),
+                    $instanceName,
+                    $statusLabel,
+                    Str::limit($details, 30),
+                ];
+            }
         }
 
         $this->table(
-            ['ID', 'Empresa', 'Instancia WhatsApp', 'Estado Motor', 'Detalle'],
+            ['Empresa ID', 'Empresa', 'Sucursal', 'Instancia WhatsApp', 'Estado Motor', 'Detalle'],
             $rows
         );
 

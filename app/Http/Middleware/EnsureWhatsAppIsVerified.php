@@ -63,15 +63,15 @@ class EnsureWhatsAppIsVerified
                 ->exists();
 
         if ($isAdmin) {
-            $empresa = $user->empresa ?? ($user->empresa_id ? \App\Models\Empresa::find($user->empresa_id) : null);
-            if ($empresa && (bool) $empresa->whatsapp_active && $empresa->whatsapp_status !== 'connected') {
+            $sucursal = $user->sucursal ?? ($user->empresa?->sucursales()->first());
+            if ($sucursal && (bool) $sucursal->whatsapp_active && $sucursal->whatsapp_status !== 'connected') {
                 if (! $request->is('admin/integrations/whatsapp*')) {
                     session()->flash('notification', [
                         'type' => 'info',
-                        'message' => __('Atención: Debe vincular su cuenta de WhatsApp para comenzar a utilizar la plataforma.'),
+                        'message' => __('Atención: Debe vincular la cuenta de WhatsApp de su sucursal para comenzar a utilizar la plataforma.'),
                     ]);
 
-                    return redirect()->route('admin.integrations.whatsapp.index');
+                    return redirect()->route('admin.integrations.whatsapp.index', ['sucursal_id' => $sucursal->id]);
                 }
             }
         }
