@@ -40,13 +40,16 @@ class ProvisionTenantDatabaseJob implements ShouldQueue
         Log::info("Iniciando aprovisionamiento de base de datos para Empresa ID: {$this->empresaId}...");
 
         try {
-            // 1. Crear BD, correr migraciones tenant y sembrar sucursal/roles/cuentas
-            TenantManager::provisionTenant($this->empresaId, $this->empresaData);
-
-            Log::info("Base de datos provisionada exitosamente para Empresa ID: {$this->empresaId}");
+            // 1. Aprovisionamiento opcional de BD tenant física
+            try {
+                TenantManager::provisionTenant($this->empresaId, $this->empresaData);
+                Log::info("Base de datos provisionada para Empresa ID: {$this->empresaId}");
+            } catch (\Throwable $tEx) {
+                Log::warning("Aviso aprovisionamiento tenant físico para Empresa ID {$this->empresaId}: " . $tEx->getMessage());
+            }
 
             // 2. Inicializar instancia de WhatsApp si está configurada
-            $empresa = Empresa::on('landlord')->find($this->empresaId);
+            $empresa = Empresa::find($this->empresaId);
 
             if ($empresa) {
                 try {

@@ -27,9 +27,10 @@ Schedule::command('subscriptions:send-reminders')
     ->timezone('America/Caracas')
     ->description('Envío de recordatorios de vencimiento de suscripción por WhatsApp');
 
-// Purga automática diaria de bases de datos de pruebas vencidas
-Schedule::command('tenants:prune-expired')
+// Purga automática diaria de empresas con pruebas o suscripciones vencidas (al menos 10 días de gracia)
+Schedule::command('tenants:prune-expired --days=10')
     ->dailyAt('03:00')
-    ->description('Respaldo y eliminación de bases de datos de pruebas (trials) expiradas');
+    ->description('Respaldo y eliminación definitiva de empresas con más de 10 días vencidas (prueba o suscripción)');
+
 
 

@@ -84,8 +84,7 @@ class PublicReparacionTrackingController extends Controller
                 ])
                 ->first();
             };
-
-            $orden = $targetEmpresa ? TenantManager::executeInTenant($targetEmpresa, $findOrden) : $findOrden();
+            $orden = $findOrden();
 
             if ($orden) {
                 // Actualizar empresa objetivo si venía de fallback
@@ -235,55 +234,51 @@ class PublicReparacionTrackingController extends Controller
             $targetEmpresaId = is_numeric($empresaParam) ? (int)$empresaParam : Empresa::where('id', $empresaParam)->orWhere('slug', $empresaParam)->value('id');
         }
 
-        $processDecision = function () use ($numeroOrden, $targetEmpresaId, $validated) {
-            $query = OrdenReparacion::where('numero_orden', strtoupper(trim($numeroOrden)));
+        $query = OrdenReparacion::where('numero_orden', strtoupper(trim($numeroOrden)));
 
-            if ($targetEmpresaId) {
-                $query->where('empresa_id', $targetEmpresaId);
-            }
+        if ($targetEmpresaId) {
+            $query->where('empresa_id', $targetEmpresaId);
+        }
 
-            $orden = $query->firstOrFail();
+        $orden = $query->firstOrFail();
 
-            if ($validated['decision'] === 'aprobar') {
-                $orden->update([
-                    'estado_orden' => 'en_reparacion',
-                ]);
-
-                OrdenReparacionHistorial::create([
-                    'orden_id' => $orden->id,
-                    'user_id' => null,
-                    'estado_anterior' => $orden->getOriginal('estado_orden') ?: 'confirmacion_presupuesto',
-                    'estado_nuevo' => 'en_reparacion',
-                    'comentario' => __('Presupuesto APROBADO por el cliente a través del portal de seguimiento web.'),
-                ]);
-
-                return back()->with('notification', [
-                    'type' => 'success',
-                    'message' => __('¡Excelente! Has aprobado el presupuesto. Nuestro equipo técnico continuará con la reparación.'),
-                ]);
-            }
-
-            // Rechazar
+        if ($validated['decision'] === 'aprobar') {
             $orden->update([
-                'estado_orden' => 'listo_sin_solucion',
+                'estado_orden' => 'en_reparacion',
             ]);
-
-            $motivoTexto = !empty($validated['motivo']) ? " Motivo: " . $validated['motivo'] : '';
 
             OrdenReparacionHistorial::create([
                 'orden_id' => $orden->id,
                 'user_id' => null,
                 'estado_anterior' => $orden->getOriginal('estado_orden') ?: 'confirmacion_presupuesto',
-                'estado_nuevo' => 'listo_sin_solucion',
-                'comentario' => __('Presupuesto RECHAZADO por el cliente desde el portal web.') . $motivoTexto,
+                'estado_nuevo' => 'en_reparacion',
+                'comentario' => __('Presupuesto APROBADO por el cliente a través del portal de seguimiento web.'),
             ]);
 
             return back()->with('notification', [
-                'type' => 'warning',
-                'message' => __('Has rechazado el presupuesto. Tu equipo se encuentra listo para retiro o revisión adicional en taller.'),
+                'type' => 'success',
+                'message' => __('¡Excelente! Has aprobado el presupuesto. Nuestro equipo técnico continuará con la reparación.'),
             ]);
-        };
+        }
 
-        return $targetEmpresaId ? TenantManager::executeInTenant($targetEmpresaId, $processDecision) : $processDecision();
+        // Rechazar
+        $orden->update([
+            'estado_orden' => 'listo_sin_solucion',
+        ]);
+
+        $motivoTexto = !empty($validated['motivo']) ? " Motivo: " . $validated['motivo'] : '';
+
+        OrdenReparacionHistorial::create([
+            'orden_id' => $orden->id,
+            'user_id' => null,
+            'estado_anterior' => $orden->getOriginal('estado_orden') ?: 'confirmacion_presupuesto',
+            'estado_nuevo' => 'listo_sin_solucion',
+            'comentario' => __('Presupuesto RECHAZADO por el cliente desde el portal web.') . $motivoTexto,
+        ]);
+
+        return back()->with('notification', [
+            'type' => 'warning',
+            'message' => __('Has rechazado el presupuesto. Tu equipo se encuentra listo para retiro o revisión adicional en taller.'),
+        ]);
     }
 }

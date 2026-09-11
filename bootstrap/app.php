@@ -29,17 +29,12 @@ return Application::configure(basePath: dirname(__DIR__))
     ->withMiddleware(function (Middleware $middleware): void {
         $middleware->prependToPriorityList(
             \Illuminate\Routing\Middleware\SubstituteBindings::class,
-            \App\Http\Middleware\TenantSwitchMiddleware::class,
-        );
-        $middleware->prependToPriorityList(
-            \Illuminate\Routing\Middleware\SubstituteBindings::class,
             \App\Http\Middleware\SetPermissionsTeam::class,
         );
 
         $middleware->web(append: [
             SetLocale::class,
             HandleAppearance::class,
-            \App\Http\Middleware\TenantSwitchMiddleware::class,
             \App\Http\Middleware\SetPermissionsTeam::class,
             HandleInertiaRequests::class,
             \App\Http\Middleware\CheckSubscriptionStatus::class,
