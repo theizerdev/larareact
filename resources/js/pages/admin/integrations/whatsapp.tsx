@@ -319,7 +319,8 @@ export default function WhatsAppIntegration({
             intervalId = setInterval(async () => {
                 try {
                     const queryParams = active_sucursal_id ? `?sucursal_id=${active_sucursal_id}` : '';
-                    const response = await fetch(`/admin/integrations/whatsapp/status${queryParams}`);
+                    const headers = { 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest' };
+                    const response = await fetch(`/admin/integrations/whatsapp/status${queryParams}`, { headers });
                     if (response.ok) {
                         const data = await response.json();
                         if (data.success) {
@@ -340,7 +341,7 @@ export default function WhatsAppIntegration({
                         }
                     }
 
-                    const queueRes = await fetch(`/admin/integrations/whatsapp/queue-stats${queryParams}`);
+                    const queueRes = await fetch(`/admin/integrations/whatsapp/queue-stats${queryParams}`, { headers });
                     if (queueRes.ok) {
                         const queueData = await queueRes.json();
                         if (queueData.success && queueData.stats) {

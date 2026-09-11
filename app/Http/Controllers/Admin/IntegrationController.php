@@ -394,6 +394,10 @@ class IntegrationController extends Controller
      */
     public function whatsappStatus(Request $request)
     {
+        if ($request->header('X-Inertia')) {
+            return redirect()->route('integrations.whatsapp');
+        }
+
         [$target, $whatsappService, $empresa] = $this->resolveWhatsAppTarget($request);
 
         if (! $empresa) {
@@ -634,6 +638,10 @@ class IntegrationController extends Controller
      */
     public function whatsappQueueStats(Request $request)
     {
+        if ($request->header('X-Inertia')) {
+            return redirect()->route('integrations.whatsapp');
+        }
+
         [$target, $whatsappService, $empresa] = $this->resolveWhatsAppTarget($request);
 
         if (! $empresa) {
