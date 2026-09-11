@@ -16,8 +16,7 @@ export default function AuthSplitLayout({
             <div className="relative hidden flex-col justify-between overflow-hidden p-12 text-white lg:flex">
                 {/* Background Image with smooth zoom micro-animation */}
                 <div
-                    className="absolute inset-0 bg-cover bg-center transition-transform duration-[10000ms] ease-out hover:scale-150"
-                    className="absolute inset-0 bg-cover bg-center transition-transform duration-[10000ms] ease-out hover:scale-130"
+                    className="absolute inset-0 bg-cover bg-center transition-transform duration-[10000ms] ease-out hover:scale-120"
                     style={{ backgroundImage: 'url("/image/login_corporate_bg.png")' }}
                 />
                 {/* Subtle vignette overlay to keep logo and footer readable while showcasing the image */}
@@ -46,7 +45,6 @@ export default function AuthSplitLayout({
                         <img
                             src="/image/logo/Innovacion Movil Logo Transparente Grande.webp"
                             alt="Logo"
-                            className="h-12 w-auto object-contain"
                             className="h-16 sm:h-20 w-auto max-w-full object-contain drop-shadow-sm"
                         />
                     </Link>
