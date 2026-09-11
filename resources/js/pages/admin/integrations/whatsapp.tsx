@@ -7,7 +7,7 @@ import {
     Zap, Globe, Terminal, Layers, FileText, Plus, Trash2, Edit3, Search,
     Eye, CheckCheck, AlertCircle, HeartHandshake, Wifi, WifiOff, Heart,
     BarChart3, Inbox, RotateCw, Play, Filter, ArrowUpRight, Users, Megaphone,
-    CheckSquare, Square, Volume2
+    CheckSquare, Square, Volume2, Store, Building2
 } from 'lucide-react';
 import React, { useState, useEffect, useMemo } from 'react';
 import Swal from 'sweetalert2';
@@ -122,9 +122,23 @@ interface BroadcastRecipient {
     codigo?: string;
 }
 
+interface SucursalItem {
+    id: number;
+    nombre: string;
+    telefono?: string;
+    whatsapp_instance?: string;
+    whatsapp_phone?: string | null;
+    whatsapp_status?: string | null;
+    whatsapp_active?: boolean;
+}
+
 interface PageProps {
     empresa_id: number;
     empresa_nombre: string;
+    sucursales?: SucursalItem[];
+    active_sucursal_id?: number | null;
+    target_type?: 'sucursal' | 'empresa';
+    target_name?: string;
     whatsapp_api_key: string | null;
     whatsapp_api_url: string;
     whatsapp_instance?: string;
@@ -141,11 +155,20 @@ interface PageProps {
     queue_stats?: QueueStats | null;
     templates?: WhatsAppTemplateItem[];
     paises: PaisPhoneOption[];
+    is_superadmin?: boolean;
+    subscription_status?: string;
+    trial_ends_at?: string | null;
+    dias_restantes?: number;
+    is_on_trial?: boolean;
 }
 
 export default function WhatsAppIntegration({
     empresa_id,
     empresa_nombre,
+    sucursales = [],
+    active_sucursal_id = null,
+    target_type = 'empresa',
+    target_name = '',
     whatsapp_api_key,
     whatsapp_api_url,
     whatsapp_instance = '',
@@ -235,8 +258,9 @@ export default function WhatsAppIntegration({
 
     // Formulario de configuración principal
     const configForm = useForm({
+        sucursal_id: active_sucursal_id || '',
         whatsapp_api_url: whatsapp_api_url,
-        whatsapp_instance: whatsapp_instance || `empresa_${empresa_id}`,
+        whatsapp_instance: whatsapp_instance || (active_sucursal_id ? `sucursal_${active_sucursal_id}` : `empresa_${empresa_id}`),
         whatsapp_api_key: whatsapp_api_key || '',
         whatsapp_active: whatsapp_active,
         whatsapp_rate_limit: whatsapp_rate_limit,
@@ -244,6 +268,7 @@ export default function WhatsAppIntegration({
 
     // Formulario de parámetros Anti-Baneo
     const antiBanForm = useForm({
+        sucursal_id: active_sucursal_id || '',
         dailyLimit: queueStatsState?.dailyLimit ?? whatsapp_rate_limit ?? 300,
         warmupMode: queueStatsState?.warmupMode ?? whatsapp_warmup_mode ?? true,
         workingHoursEnabled: queueStatsState?.workingHoursEnabled ?? whatsapp_working_hours_enabled ?? true,
@@ -293,7 +318,8 @@ export default function WhatsAppIntegration({
             setIsPolling(true);
             intervalId = setInterval(async () => {
                 try {
-                    const response = await fetch('/admin/integrations/whatsapp/status');
+                    const queryParams = active_sucursal_id ? `?sucursal_id=${active_sucursal_id}` : '';
+                    const response = await fetch(`/admin/integrations/whatsapp/status${queryParams}`);
                     if (response.ok) {
                         const data = await response.json();
                         if (data.success) {
@@ -314,7 +340,7 @@ export default function WhatsAppIntegration({
                         }
                     }
 
-                    const queueRes = await fetch('/admin/integrations/whatsapp/queue-stats');
+                    const queueRes = await fetch(`/admin/integrations/whatsapp/queue-stats${queryParams}`);
                     if (queueRes.ok) {
                         const queueData = await queueRes.json();
                         if (queueData.success && queueData.stats) {
@@ -332,7 +358,7 @@ export default function WhatsAppIntegration({
         return () => {
             if (intervalId) clearInterval(intervalId);
         };
-    }, [whatsapp_active, liveStatusState?.isConnected]);
+    }, [whatsapp_active, liveStatusState?.isConnected, active_sucursal_id]);
 
     // Cargar historial de mensajes al entrar a la pestaña o al filtrar
     const fetchMessages = async (page = 1, search = historySearch, status = historyStatus) => {
@@ -527,7 +553,8 @@ export default function WhatsAppIntegration({
         setDiagnosticOpen(true);
         setDiagnosticLoading(true);
         try {
-            const res = await fetch('/admin/integrations/whatsapp/diagnostic');
+            const queryParams = active_sucursal_id ? `?sucursal_id=${active_sucursal_id}` : '';
+            const res = await fetch(`/admin/integrations/whatsapp/diagnostic${queryParams}`);
             if (res.ok) {
                 const data = await res.json();
                 setDiagnosticData(data);
@@ -780,6 +807,35 @@ export default function WhatsAppIntegration({
         });
     };
 
+    const handleBranchChange = (value: string) => {
+        router.get(
+            '/admin/integrations/whatsapp',
+            { sucursal_id: value },
+            {
+                preserveScroll: true,
+                preserveState: false,
+            }
+        );
+    };
+
+    const handleConnect = () => {
+        router.post('/admin/integrations/whatsapp/connect', {
+            sucursal_id: active_sucursal_id || '',
+        }, {
+            preserveScroll: true,
+            preserveState: true,
+            onSuccess: () => {
+                Swal.fire({
+                    title: __('Iniciando...'),
+                    text: __('Solicitando código QR al servidor de WhatsApp...'),
+                    icon: 'info',
+                    timer: 2000,
+                    showConfirmButton: false,
+                });
+            }
+        });
+    };
+
     const handleDisconnect = () => {
         Swal.fire({
             title: __('Disconnect WhatsApp Session?'),
@@ -791,7 +847,9 @@ export default function WhatsAppIntegration({
             confirmButtonColor: '#e11d48',
         }).then((result) => {
             if (result.isConfirmed) {
-                router.post('/admin/integrations/whatsapp/disconnect', {}, {
+                router.post('/admin/integrations/whatsapp/disconnect', {
+                    sucursal_id: active_sucursal_id || '',
+                }, {
                     preserveScroll: true,
                     preserveState: true,
                     onSuccess: () => {
@@ -810,7 +868,9 @@ export default function WhatsAppIntegration({
     };
 
     const handleReconnect = () => {
-        router.post('/admin/integrations/whatsapp/reconnect', {}, {
+        router.post('/admin/integrations/whatsapp/reconnect', {
+            sucursal_id: active_sucursal_id || '',
+        }, {
             preserveScroll: true,
             preserveState: true,
             onSuccess: () => {
@@ -871,7 +931,10 @@ export default function WhatsAppIntegration({
                     'Content-Type': 'application/json',
                     'X-CSRF-TOKEN': (document.querySelector('meta[name="csrf-token"]') as HTMLMetaElement)?.content || '',
                 },
-                body: JSON.stringify({ phone: fullPhone }),
+                body: JSON.stringify({
+                    phone: fullPhone,
+                    sucursal_id: active_sucursal_id || '',
+                }),
             });
 
             const data = await response.json();
@@ -932,6 +995,7 @@ export default function WhatsAppIntegration({
                 body: JSON.stringify({
                     text: testMessage.message,
                     count: 4,
+                    sucursal_id: active_sucursal_id || '',
                     variables: {
                         nombre: 'Pastor David Morales',
                         empresa: empresa_nombre,
@@ -973,11 +1037,13 @@ export default function WhatsAppIntegration({
                     'X-CSRF-TOKEN': (document.querySelector('meta[name="csrf-token"]') as HTMLMetaElement)?.content || '',
                 },
                 body: JSON.stringify({
+                    to: fullPhone,
                     phone: fullPhone,
                     message: testMessage.message,
                     sync: testMessage.useSync,
+                    sucursal_id: active_sucursal_id || '',
                     variables: {
-                        nombre: 'Pastor David Morales',
+                        nombre: 'Cliente',
                         empresa: empresa_nombre,
                         random: String(Math.floor(1000 + Math.random() * 9000)),
                     },
@@ -1176,6 +1242,51 @@ export default function WhatsAppIntegration({
                                 <p className="text-sm text-rose-700 dark:text-rose-400/90 mt-1">
                                     {__('The WhatsApp API service at')} <code className="font-mono text-xs font-semibold px-1 py-0.5 bg-rose-100 dark:bg-rose-900/50 rounded">{whatsapp_api_url}</code> {__('is currently unreachable. Please make sure the Node.js service is running.')}
                                 </p>
+                            </div>
+                        </CardContent>
+                    </Card>
+                )}
+
+                {/* Branch (Sucursal) Selector Banner */}
+                {sucursales && sucursales.length > 0 && (
+                    <Card className="border-emerald-500/30 bg-gradient-to-r from-emerald-500/5 via-card to-card shadow-sm">
+                        <CardContent className="p-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+                            <div className="flex items-center gap-3">
+                                <div className="p-2.5 bg-emerald-500/10 text-emerald-600 rounded-xl">
+                                    <Store className="h-5 w-5" />
+                                </div>
+                                <div>
+                                    <h3 className="text-sm font-bold flex items-center gap-2 text-foreground">
+                                        {__('Conexión WhatsApp por Sucursal')}
+                                        <Badge variant="secondary" className="text-[10px] font-normal uppercase">
+                                            {`${__('Sucursal')}: ${target_name}`}
+                                        </Badge>
+                                    </h3>
+                                    <p className="text-xs text-muted-foreground">
+                                        {__('Cada sucursal opera con su propia línea de WhatsApp de forma 100% aislada e independiente.')}
+                                    </p>
+                                </div>
+                            </div>
+
+                            <div className="flex items-center gap-2 w-full sm:w-auto">
+                                <Label className="text-xs font-semibold shrink-0 text-muted-foreground hidden md:inline">
+                                    {__('Sucursal')}:
+                                </Label>
+                                <Select
+                                    value={String(active_sucursal_id || sucursales[0]?.id || '')}
+                                    onValueChange={handleBranchChange}
+                                >
+                                    <SelectTrigger className="w-full sm:w-[270px] h-9 text-xs font-medium">
+                                        <SelectValue placeholder={__('Selecciona sucursal')} />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        {sucursales.map((suc) => (
+                                            <SelectItem key={suc.id} value={String(suc.id)} className="text-xs font-medium">
+                                                🏬 {suc.nombre} {suc.whatsapp_phone ? `(${suc.whatsapp_phone})` : ''} {suc.whatsapp_status === 'connected' ? '🟢' : '⚪'}
+                                            </SelectItem>
+                                        ))}
+                                    </SelectContent>
+                                </Select>
                             </div>
                         </CardContent>
                     </Card>
@@ -1392,12 +1503,20 @@ export default function WhatsAppIntegration({
                                                 </div>
                                             </div>
                                         ) : (
-                                            <div className="space-y-3">
-                                                <div className="h-16 w-16 bg-slate-100 dark:bg-slate-800 text-slate-400 rounded-full flex items-center justify-center mx-auto animate-pulse">
+                                            <div className="space-y-4 max-w-sm">
+                                                <div className="h-16 w-16 bg-slate-100 dark:bg-slate-800 text-slate-400 rounded-full flex items-center justify-center mx-auto">
                                                     <QrCode className="h-8 w-8" />
                                                 </div>
-                                                <h3 className="font-semibold text-slate-800 dark:text-slate-200">{__('Initializing Session...')}</h3>
-                                                <p className="text-xs text-muted-foreground">{__('Requesting QR code from Baileys engine...')}</p>
+                                                <div>
+                                                    <h3 className="font-semibold text-slate-800 dark:text-slate-200">{__('Sesión no vinculada')}</h3>
+                                                    <p className="text-xs text-muted-foreground mt-1">
+                                                        {__('Haz clic abajo para iniciar la sesión Baileys y solicitar el código QR en vivo.')}
+                                                    </p>
+                                                </div>
+                                                <Button size="sm" onClick={handleConnect} className="gap-2 bg-emerald-600 hover:bg-emerald-700 text-white shadow-sm">
+                                                    <QrCode className="h-4 w-4" />
+                                                    {__('Generar / Escanear QR')}
+                                                </Button>
                                             </div>
                                         )}
                                     </CardContent>

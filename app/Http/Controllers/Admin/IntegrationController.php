@@ -262,11 +262,49 @@ class IntegrationController extends Controller
     }
 
     /**
+     * Resuelve el objetivo de WhatsApp (Estrictamente por Sucursal)
+     */
+    private function resolveWhatsAppTarget(Request $request): array
+    {
+        $user = $request->user();
+        $empresa = $user->empresa;
+        $sucursales = $empresa ? $empresa->sucursales()->orderBy('id', 'asc')->get() : collect();
+
+        // Si la empresa no tiene ninguna sucursal registrada, crear una sucursal Principal por defecto
+        if ($empresa && $sucursales->isEmpty()) {
+            $defaultSucursal = \App\Models\Sucursal::create([
+                'empresa_id' => $empresa->id,
+                'nombre' => 'Principal',
+                'telefono' => $empresa->telefono ?? null,
+                'direccion' => $empresa->direccion ?? 'Sede Principal',
+                'activo' => true,
+            ]);
+            $sucursales = collect([$defaultSucursal]);
+        }
+
+        $selectedSucursalId = $request->input('sucursal_id')
+            ?? session('active_whatsapp_sucursal_id')
+            ?? $user->sucursal_id
+            ?? $sucursales->first()?->id;
+
+        $targetSucursal = $selectedSucursalId ? $sucursales->firstWhere('id', (int) $selectedSucursalId) : $sucursales->first();
+
+        if (! $targetSucursal) {
+            $targetSucursal = $sucursales->first();
+        }
+
+        session(['active_whatsapp_sucursal_id' => $targetSucursal->id]);
+        $whatsappService = WhatsAppService::forSucursal($targetSucursal);
+
+        return [$targetSucursal, $whatsappService, $empresa, $sucursales, $targetSucursal->id];
+    }
+
+    /**
      * Muestra la interfaz de configuración y estado de WhatsApp.
      */
     public function whatsappIndex(Request $request)
     {
-        $empresa = $request->user()->empresa;
+        [$target, $whatsappService, $empresa, $sucursales, $activeSucursalId] = $this->resolveWhatsAppTarget($request);
 
         if (! $empresa) {
             return redirect()->route('dashboard')->with('notification', [
@@ -275,11 +313,10 @@ class IntegrationController extends Controller
             ]);
         }
 
-        $whatsappService = new WhatsAppService($empresa);
         $status = $whatsappService->getStatus();
 
-        // Sincronizar estado local en DB con estado en vivo
-        $this->syncLocalWhatsAppStatus($empresa, $status);
+        // Sincronizar estado local en DB de la sucursal con el estado en vivo
+        $this->syncLocalWhatsAppStatus($target, $status);
 
         $queueStats = $whatsappService->getQueueStats();
 
@@ -304,22 +341,35 @@ class IntegrationController extends Controller
             'templates' => $templates,
             'empresa_id' => $empresa->id,
             'empresa_nombre' => $empresa->razon_social ?? $empresa->name ?? 'Empresa',
+            'sucursales' => $sucursales->map(fn ($s) => [
+                'id' => $s->id,
+                'nombre' => $s->nombre,
+                'telefono' => $s->telefono,
+                'whatsapp_instance' => $s->whatsapp_instance ?? ('sucursal_'.$s->id),
+                'whatsapp_phone' => $s->whatsapp_phone,
+                'whatsapp_status' => $s->whatsapp_status ?? 'disconnected',
+                'whatsapp_active' => (bool) $s->whatsapp_active,
+            ]),
+            'active_sucursal_id' => $activeSucursalId,
+            'target_type' => 'sucursal',
+            'target_name' => $target->nombre,
             'whatsapp_api_key' => $empresa->whatsapp_api_key,
             'whatsapp_api_url' => $empresa->whatsapp_api_url ?? config('whatsapp.api_url', 'http://localhost:3000'),
-            'whatsapp_instance' => $empresa->whatsapp_instance ?? ('empresa_'.$empresa->id),
-            'whatsapp_rate_limit' => (int) ($empresa->whatsapp_rate_limit ?? 300),
-            'whatsapp_warmup_mode' => (bool) ($empresa->whatsapp_warmup_mode ?? true),
-            'whatsapp_working_hours_enabled' => (bool) ($empresa->whatsapp_working_hours_enabled ?? true),
-            'whatsapp_working_hours_start' => $empresa->whatsapp_working_hours_start ?? '08:00',
-            'whatsapp_working_hours_end' => $empresa->whatsapp_working_hours_end ?? '20:00',
+            'whatsapp_instance' => $target->whatsapp_instance ?? ('sucursal_'.$target->id),
+            'whatsapp_rate_limit' => (int) ($target->whatsapp_rate_limit ?? 300),
+            'whatsapp_warmup_mode' => (bool) ($target->whatsapp_warmup_mode ?? true),
+            'whatsapp_working_hours_enabled' => (bool) ($target->whatsapp_working_hours_enabled ?? true),
+            'whatsapp_working_hours_start' => $target->whatsapp_working_hours_start ?? '08:00',
+            'whatsapp_working_hours_end' => $target->whatsapp_working_hours_end ?? '20:00',
             'whatsapp_proxy_url' => $empresa->whatsapp_proxy_url ?? '',
-            'whatsapp_active' => (bool) $empresa->whatsapp_active,
-            'whatsapp_phone' => $empresa->whatsapp_phone,
-            'whatsapp_status' => $empresa->whatsapp_status,
+            'whatsapp_active' => (bool) $target->whatsapp_active,
+            'whatsapp_phone' => $target->whatsapp_phone,
+            'whatsapp_status' => $target->whatsapp_status ?? 'disconnected',
             'live_status' => $status,
             'queue_stats' => $queueStats,
             'locale' => $currentLocale,
-            'translations' => $translations,'is_superadmin' => $request->user()->isSuperAdmin(),
+            'translations' => $translations,
+            'is_superadmin' => $request->user()->isSuperAdmin(),
             // Datos de suscripción / prueba
             'subscription_status' => $empresa->subscription_status,
             'trial_ends_at' => $empresa->trial_ends_at?->toIso8601String(),
@@ -334,6 +384,7 @@ class IntegrationController extends Controller
     public function whatsappStatus(Request $request)
     {
         $empresa = $request->user()->empresa;
+        [$target, $whatsappService, $empresa] = $this->resolveWhatsAppTarget($request);
 
         if (! $empresa) {
             return response()->json(['success' => false, 'error' => 'No active company found.'], 404);
@@ -344,6 +395,7 @@ class IntegrationController extends Controller
 
         // Sincronizar estado local en DB con estado en vivo
         $this->syncLocalWhatsAppStatus($empresa, $status);
+        $this->syncLocalWhatsAppStatus($target, $status);
         $queueStats = $whatsappService->getQueueStats();
 
         return response()->json([
@@ -351,16 +403,19 @@ class IntegrationController extends Controller
             'status' => $status,
             'whatsapp_status' => $empresa->whatsapp_status,
             'whatsapp_phone' => $empresa->whatsapp_phone,
+            'whatsapp_status' => $target->whatsapp_status ?? 'disconnected',
+            'whatsapp_phone' => $target->whatsapp_phone,
             'queue_stats' => $queueStats,
         ]);
     }
 
     /**
      * Actualiza la configuración local de la empresa para WhatsApp.
+     * Actualiza la configuración local de la empresa/sucursal para WhatsApp.
      */
     public function whatsappUpdate(Request $request)
     {
-        $empresa = $request->user()->empresa;
+        [$target, $whatsappService, $empresa] = $this->resolveWhatsAppTarget($request);
 
         if (! $empresa) {
             return back()->with('notification', [
@@ -370,28 +425,40 @@ class IntegrationController extends Controller
         }
 
         $validated = $request->validate([
+            'sucursal_id' => 'nullable|integer',
             'whatsapp_api_url' => 'nullable|url|max:255',
             'whatsapp_instance' => 'nullable|string|max:100',
             'whatsapp_api_key' => 'nullable|string|max:255',
             'whatsapp_active' => 'required|boolean',
             'whatsapp_rate_limit' => 'required|integer|min:1|max:1000',
+            'whatsapp_warmup_mode' => 'nullable|boolean',
+            'whatsapp_working_hours_enabled' => 'nullable|boolean',
+            'whatsapp_working_hours_start' => 'nullable|string',
+            'whatsapp_working_hours_end' => 'nullable|string',
         ]);
 
-        $empresa->update([
-            'whatsapp_api_url' => $validated['whatsapp_api_url'],
-            'whatsapp_instance' => $validated['whatsapp_instance'],
-            'whatsapp_api_key' => $validated['whatsapp_api_key'],
+        if (! empty($validated['whatsapp_api_url']) && $empresa->whatsapp_api_url !== $validated['whatsapp_api_url']) {
+            $empresa->update(['whatsapp_api_url' => $validated['whatsapp_api_url']]);
+        }
+
+        $updateData = [
+            'whatsapp_instance' => $validated['whatsapp_instance'] ?: ('sucursal_'.$target->id),
             'whatsapp_active' => $validated['whatsapp_active'],
             'whatsapp_rate_limit' => $validated['whatsapp_rate_limit'],
-        ]);
+            'whatsapp_warmup_mode' => (bool) ($validated['whatsapp_warmup_mode'] ?? false),
+            'whatsapp_working_hours_enabled' => (bool) ($validated['whatsapp_working_hours_enabled'] ?? false),
+            'whatsapp_working_hours_start' => $validated['whatsapp_working_hours_start'] ?? '08:00',
+            'whatsapp_working_hours_end' => $validated['whatsapp_working_hours_end'] ?? '20:00',
+        ];
+
+        $target->update($updateData);
 
         // Si la integración está activa, conectamos la instancia para crearla en el servidor y obtener su token UUID
         if ($validated['whatsapp_active']) {
-            $whatsappService = new WhatsAppService($empresa);
             $result = $whatsappService->connect();
             if ($result) {
                 $token = $result['instance']['token'] ?? $result['token'] ?? null;
-                if ($token) {
+                if ($token && empty($empresa->whatsapp_api_key)) {
                     $empresa->update(['whatsapp_api_key' => $token]);
                 }
             }
@@ -399,7 +466,7 @@ class IntegrationController extends Controller
 
         return back()->with('notification', [
             'type' => 'success',
-            'message' => __('WhatsApp settings updated and instance synced successfully.'),
+            'message' => __('WhatsApp branch settings updated and instance synced successfully.'),
         ]);
     }
 
@@ -470,10 +537,12 @@ class IntegrationController extends Controller
 
     /**
      * Inicia conexión en la API de WhatsApp.
+    /**
+     * Inicia conexión en la API de WhatsApp para la sucursal seleccionada.
      */
     public function whatsappConnect(Request $request)
     {
-        $empresa = $request->user()->empresa;
+        [$target, $whatsappService, $empresa] = $this->resolveWhatsAppTarget($request);
 
         if (! $empresa) {
             return back()->with('notification', [
@@ -482,12 +551,11 @@ class IntegrationController extends Controller
             ]);
         }
 
-        $whatsappService = new WhatsAppService($empresa);
         $result = $whatsappService->connect();
 
         if ($result && (isset($result['instance']) || isset($result['message']) || (isset($result['success']) && $result['success']))) {
             $token = $result['instance']['token'] ?? $result['token'] ?? null;
-            if ($token) {
+            if ($token && empty($empresa->whatsapp_api_key)) {
                 $empresa->update([
                     'whatsapp_api_key' => $token,
                 ]);
@@ -495,7 +563,7 @@ class IntegrationController extends Controller
 
             return back()->with('notification', [
                 'type' => 'success',
-                'message' => __('Connection process started. Token assigned: ').($token ? substr($token, 0, 8).'...' : 'ok'),
+                'message' => __('Connection process started for ').($whatsappService->getInstanceName()),
             ]);
         }
 
@@ -510,7 +578,7 @@ class IntegrationController extends Controller
      */
     public function whatsappDisconnect(Request $request)
     {
-        $empresa = $request->user()->empresa;
+        [$target, $whatsappService, $empresa] = $this->resolveWhatsAppTarget($request);
 
         if (! $empresa) {
             return back()->with('notification', [
@@ -519,18 +587,17 @@ class IntegrationController extends Controller
             ]);
         }
 
-        $whatsappService = new WhatsAppService($empresa);
         $whatsappService->disconnect();
 
-        // Limpiar estado en la base de datos de empresa local
-        $empresa->update([
+        // Limpiar estado en la base de datos local de la sucursal
+        $target->update([
             'whatsapp_status' => 'disconnected',
             'whatsapp_phone' => null,
         ]);
 
         return back()->with('notification', [
             'type' => 'success',
-            'message' => __('Disconnected from WhatsApp.'),
+            'message' => __('Disconnected from WhatsApp (').$whatsappService->getInstanceName().').',
         ]);
     }
 
@@ -539,7 +606,7 @@ class IntegrationController extends Controller
      */
     public function whatsappReconnect(Request $request)
     {
-        $empresa = $request->user()->empresa;
+        [$target, $whatsappService, $empresa] = $this->resolveWhatsAppTarget($request);
 
         if (! $empresa) {
             return back()->with('notification', [
@@ -548,12 +615,11 @@ class IntegrationController extends Controller
             ]);
         }
 
-        $whatsappService = new WhatsAppService($empresa);
         $whatsappService->reconnect();
 
         return back()->with('notification', [
             'type' => 'success',
-            'message' => __('Reconnection forced successfully.'),
+            'message' => __('Reconnection forced successfully for ').$whatsappService->getInstanceName(),
         ]);
     }
 
@@ -562,13 +628,12 @@ class IntegrationController extends Controller
      */
     public function whatsappQueueStats(Request $request)
     {
-        $empresa = $request->user()->empresa;
+        [$target, $whatsappService, $empresa] = $this->resolveWhatsAppTarget($request);
 
         if (! $empresa) {
             return response()->json(['success' => false, 'error' => 'No active company found.'], 404);
         }
 
-        $whatsappService = new WhatsAppService($empresa);
         $stats = $whatsappService->getQueueStats();
 
         return response()->json([
@@ -583,6 +648,7 @@ class IntegrationController extends Controller
     public function whatsappCheckNumber(Request $request)
     {
         $empresa = $request->user()->empresa;
+        [$target, $whatsappService, $empresa] = $this->resolveWhatsAppTarget($request);
 
         if (! $empresa) {
             return response()->json(['success' => false, 'error' => 'No active company found.'], 404);
@@ -607,6 +673,7 @@ class IntegrationController extends Controller
     public function whatsappPreviewSpintax(Request $request)
     {
         $empresa = $request->user()->empresa;
+        [$target, $whatsappService, $empresa] = $this->resolveWhatsAppTarget($request);
 
         if (! $empresa) {
             return response()->json(['success' => false, 'error' => 'No active company found.'], 404);
@@ -636,7 +703,7 @@ class IntegrationController extends Controller
      */
     public function whatsappUpdateAntiBan(Request $request)
     {
-        $empresa = $request->user()->empresa;
+        [$target, $whatsappService, $empresa] = $this->resolveWhatsAppTarget($request);
 
         if (! $empresa) {
             return back()->with('notification', [
@@ -670,22 +737,22 @@ class IntegrationController extends Controller
         if (isset($validated['workingHoursEnd'])) {
             $updateData['whatsapp_working_hours_end'] = $validated['workingHoursEnd'];
         }
-        if (array_key_exists('proxyUrl', $validated)) {
-            $updateData['whatsapp_proxy_url'] = $validated['proxyUrl'];
-        }
 
         if (! empty($updateData)) {
-            $empresa->update($updateData);
+            $target->update($updateData);
         }
 
-        $whatsappService = new WhatsAppService($empresa);
+        if (array_key_exists('proxyUrl', $validated) && $empresa->whatsapp_proxy_url !== $validated['proxyUrl']) {
+            $empresa->update(['whatsapp_proxy_url' => $validated['proxyUrl']]);
+        }
+
         $whatsappService->updateAntiBan([
-            'dailyLimit' => $validated['dailyLimit'] ?? $empresa->whatsapp_rate_limit,
-            'warmupMode' => $validated['warmupMode'] ?? $empresa->whatsapp_warmup_mode,
-            'workingHoursEnabled' => $validated['workingHoursEnabled'] ?? $empresa->whatsapp_working_hours_enabled,
-            'workingHoursStart' => $validated['workingHoursStart'] ?? $empresa->whatsapp_working_hours_start,
-            'workingHoursEnd' => $validated['workingHoursEnd'] ?? $empresa->whatsapp_working_hours_end,
-            'proxyUrl' => $validated['proxyUrl'] ?? $empresa->whatsapp_proxy_url,
+            'dailyLimit' => $validated['dailyLimit'] ?? $target->whatsapp_rate_limit,
+            'warmupMode' => $validated['warmupMode'] ?? $target->whatsapp_warmup_mode,
+            'workingHoursEnabled' => $validated['workingHoursEnabled'] ?? $target->whatsapp_working_hours_enabled,
+            'workingHoursStart' => $validated['workingHoursStart'] ?? $target->whatsapp_working_hours_start,
+            'workingHoursEnd' => $validated['workingHoursEnd'] ?? $target->whatsapp_working_hours_end,
+            'proxyUrl' => $validated['proxyUrl'] ?? ($empresa->whatsapp_proxy_url ?? null),
         ]);
 
         return back()->with('notification', [
@@ -699,7 +766,7 @@ class IntegrationController extends Controller
      */
     public function whatsappAddToBlacklist(Request $request)
     {
-        $empresa = $request->user()->empresa;
+        [$target, $whatsappService, $empresa] = $this->resolveWhatsAppTarget($request);
 
         if (! $empresa) {
             return back()->with('notification', [
@@ -713,7 +780,6 @@ class IntegrationController extends Controller
             'reason' => 'nullable|string|max:100',
         ]);
 
-        $whatsappService = new WhatsAppService($empresa);
         $result = $whatsappService->addToBlacklist($validated['phone'], $validated['reason'] ?? 'MANUAL_BLOCK');
 
         return back()->with('notification', [
@@ -727,7 +793,7 @@ class IntegrationController extends Controller
      */
     public function whatsappRemoveFromBlacklist(Request $request, string $phone)
     {
-        $empresa = $request->user()->empresa;
+        [$target, $whatsappService, $empresa] = $this->resolveWhatsAppTarget($request);
 
         if (! $empresa) {
             return back()->with('notification', [
@@ -736,7 +802,6 @@ class IntegrationController extends Controller
             ]);
         }
 
-        $whatsappService = new WhatsAppService($empresa);
         $whatsappService->removeFromBlacklist($phone);
 
         return back()->with('notification', [
@@ -750,7 +815,7 @@ class IntegrationController extends Controller
      */
     public function whatsappSendMessage(Request $request)
     {
-        $empresa = $request->user()->empresa;
+        [$target, $whatsappService, $empresa] = $this->resolveWhatsAppTarget($request);
 
         if (! $empresa) {
             return back()->with('notification', [
@@ -765,8 +830,6 @@ class IntegrationController extends Controller
             'variables' => 'nullable|array',
             'sync' => 'nullable|boolean',
         ]);
-
-        $whatsappService = new WhatsAppService($empresa);
 
         // Envío seguro con Spintax y variables
         $result = $whatsappService->sendText(
@@ -877,11 +940,13 @@ class IntegrationController extends Controller
      * Sincroniza el estado local de la empresa con la respuesta del servicio de WhatsApp.
      */
     private function syncLocalWhatsAppStatus(Empresa $empresa, $status)
+    private function syncLocalWhatsAppStatus(\Illuminate\Database\Eloquent\Model $target, $status)
     {
         $updateData = [];
 
         $token = $status['token'] ?? $status['raw']['token'] ?? null;
         if ($token && $empresa->whatsapp_api_key !== $token) {
+        if ($token && $target instanceof Empresa && $target->whatsapp_api_key !== $token) {
             $updateData['whatsapp_api_key'] = $token;
         }
 
@@ -895,6 +960,7 @@ class IntegrationController extends Controller
 
             $updateData['whatsapp_status'] = 'connected';
             $updateData['whatsapp_phone'] = $livePhone ?? $empresa->whatsapp_phone;
+            $updateData['whatsapp_phone'] = $livePhone ?? $target->whatsapp_phone;
             $updateData['whatsapp_last_connected'] = now();
         } elseif ($status && isset($status['connectionState']) && $status['connectionState'] === 'connecting') {
             $updateData['whatsapp_status'] = 'connecting';
@@ -906,6 +972,7 @@ class IntegrationController extends Controller
 
         if (! empty($updateData)) {
             $empresa->update($updateData);
+            $target->update($updateData);
         }
     }
 
@@ -915,6 +982,7 @@ class IntegrationController extends Controller
     public function whatsappDiagnostic(Request $request)
     {
         $empresa = $request->user()->empresa;
+        [$target, $whatsappService, $empresa] = $this->resolveWhatsAppTarget($request);
         if (! $empresa) {
             return response()->json(['success' => false, 'error' => 'No active company found.'], 404);
         }
@@ -942,6 +1010,10 @@ class IntegrationController extends Controller
             'health' => $healthData,
             'empresa_status' => $empresa->whatsapp_status,
             'last_connected' => $empresa->whatsapp_last_connected?->toIso8601String(),
+            'target_type' => $target instanceof \App\Models\Sucursal ? 'sucursal' : 'empresa',
+            'target_name' => $target instanceof \App\Models\Sucursal ? $target->nombre : ($empresa->razon_social ?? 'Empresa'),
+            'empresa_status' => $target->whatsapp_status,
+            'last_connected' => $target->whatsapp_last_connected?->toIso8601String(),
         ]);
     }
 

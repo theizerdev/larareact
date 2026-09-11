@@ -15,6 +15,8 @@ class WhatsAppService
 
     private ?string $apiKey = null;
 
+    private ?int $sucursalId = null;
+
     private int $companyId = 1;
 
     private string $instanceName = 'empresa_1';
@@ -33,17 +35,19 @@ class WhatsAppService
     /**
      * Constructor del servicio WhatsApp
      *
-     * @param  Empresa|int|array|null  $empresa  - Empresa, ID de empresa, array de credenciales, o null para usar la del usuario actual
+     * @param  \App\Models\Sucursal|Empresa|int|array|null  $target  - Sucursal, Empresa, ID, array de credenciales, o null para usar la del usuario actual
      */
-    public function __construct($empresa = null)
+    public function __construct($target = null)
     {
         $this->baseUrl = rtrim(config('whatsapp.api_url', 'http://localhost:3000'), '/');
         $this->timeout = (int) config('whatsapp.timeout', 30);
 
-        if (is_array($empresa)) {
-            $this->resolveCredentials($empresa);
+        if (is_array($target)) {
+            $this->resolveCredentials($target);
+        } elseif ($target instanceof \App\Models\Sucursal) {
+            $this->resolveSucursal($target);
         } else {
-            $this->resolveCompany($empresa);
+            $this->resolveCompany($target);
         }
     }
 
@@ -57,6 +61,14 @@ class WhatsAppService
         return new self($empresa);
     }
 
+    public static function forSucursal($sucursal): self
+    {
+        $service = new self();
+        $service->resolveSucursal($sucursal);
+
+        return $service;
+    }
+
     /**
      * Resuelve las credenciales provistas directamente como array
      */
@@ -68,6 +80,7 @@ class WhatsAppService
 
         $this->timeout = $credentials['timeout'] ?? $this->timeout;
         $this->companyId = (int) ($credentials['empresa_id'] ?? $credentials['company_id'] ?? 1);
+        $this->sucursalId = isset($credentials['sucursal_id']) ? (int) $credentials['sucursal_id'] : null;
         $this->apiKey = $credentials['api_key'] ?? $credentials['apiKey'] ?? null;
         $this->instanceName = $credentials['instance'] ?? $credentials['whatsapp_instance'] ?? '';
 
@@ -89,8 +102,56 @@ class WhatsAppService
         }
 
         if (! $this->instanceName) {
-            $this->instanceName = 'empresa_'.$this->companyId;
+            $this->instanceName = $this->sucursalId ? ('sucursal_'.$this->sucursalId) : ('empresa_'.$this->companyId);
         }
+    }
+
+    /**
+     * Resuelve la sucursal y configura su instancia aislada (estricto por sucursal, sin fallback a empresa)
+     */
+    public function resolveSucursal($sucursal = null): void
+    {
+        $sucursalModel = null;
+        if ($sucursal instanceof \App\Models\Sucursal) {
+            $sucursalModel = $sucursal;
+        } elseif (is_numeric($sucursal)) {
+            $sucursalModel = \App\Models\Sucursal::with(['empresa.pais', 'paisTelefono'])->find($sucursal);
+        } elseif (auth()->check() && auth()->user()->sucursal_id) {
+            $sucursalModel = \App\Models\Sucursal::with(['empresa.pais', 'paisTelefono'])->find(auth()->user()->sucursal_id);
+        }
+
+        if ($sucursalModel) {
+            $this->sucursalId = (int) $sucursalModel->id;
+            $this->companyId = (int) $sucursalModel->empresa_id;
+            $empresa = $sucursalModel->empresa ?? Empresa::with('pais')->find($sucursalModel->empresa_id);
+
+            $this->apiKey = $empresa?->whatsapp_api_key ?? config('whatsapp.api_key', 'my_secret_key_123');
+            if (! empty($empresa?->whatsapp_api_url)) {
+                $this->baseUrl = rtrim($empresa->whatsapp_api_url, '/');
+            }
+
+            // Cada sucursal maneja su propia instancia dedicada (sucursal_{id})
+            $this->instanceName = ! empty($sucursalModel->whatsapp_instance)
+                ? $sucursalModel->whatsapp_instance
+                : 'sucursal_'.$sucursalModel->id;
+
+            $pais = $sucursalModel->paisTelefono ?? $empresa?->pais;
+            $this->countryCode = $pais?->codigo_telefonico ?? '+58';
+
+            return;
+        }
+
+        // Si no se proporcionó sucursal específica, buscar la primera sucursal de la empresa activa
+        if (auth()->check() && auth()->user()->empresa_id) {
+            $firstSucursal = \App\Models\Sucursal::where('empresa_id', auth()->user()->empresa_id)->first();
+            if ($firstSucursal) {
+                $this->resolveSucursal($firstSucursal);
+                return;
+            }
+        }
+
+        $this->instanceName = 'sucursal_1';
+        $this->countryCode = '+58';
     }
 
     /**

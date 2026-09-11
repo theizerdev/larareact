@@ -1064,7 +1064,7 @@ class ReparacionController extends Controller
         }
 
         try {
-            $whatsappService = new \App\Services\WhatsAppService($empresa ?? $empresaId);
+            $whatsappService = \App\Services\WhatsAppService::forSucursal($reparacion->sucursal_id ?? $reparacion->sucursal ?? $empresaId);
 
             $result = $whatsappService->sendText(
                 $targetPhone,
@@ -1349,7 +1349,7 @@ class ReparacionController extends Controller
         try {
             $user = auth()->user();
             $empresaId = $orden->empresa_id ?? ($user ? $user->empresa_id : 1);
-            $whatsappService = (new \App\Services\WhatsAppService($empresaId))->setTimeout(3);
+            $whatsappService = (\App\Services\WhatsAppService::forSucursal($orden->sucursal_id ?? $orden->sucursal ?? $empresaId))->setTimeout(3);
             $currencySymbol = $this->getCurrencySymbol();
 
             $orden->loadMissing(['cliente', 'marca', 'modelo', 'tecnico']);
@@ -1400,7 +1400,7 @@ class ReparacionController extends Controller
         try {
             $user = auth()->user();
             $empresaId = $orden->empresa_id ?? ($user ? $user->empresa_id : 1);
-            $whatsappService = (new \App\Services\WhatsAppService($empresaId))->setTimeout(3);
+            $whatsappService = (\App\Services\WhatsAppService::forSucursal($orden->sucursal_id ?? $orden->sucursal ?? $empresaId))->setTimeout(3);
             $currencySymbol = $this->getCurrencySymbol();
 
             $waUrlCliente = null;
