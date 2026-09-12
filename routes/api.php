@@ -1,10 +1,10 @@
 <?php
 
-use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\Api\AuthController;
 use App\Http\Controllers\Api\KioskoApiController;
 use App\Http\Controllers\Api\MovilDataController;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Route;
 
 /*
 |--------------------------------------------------------------------------
@@ -14,6 +14,12 @@ use App\Http\Controllers\Api\MovilDataController;
 
 // Rutas públicas de API
 Route::post('/login', [AuthController::class, 'login']);
+
+// Acceso de trabajadores con sólo el número de empleado (sin contraseña).
+// El throttle es la única barrera contra enumerar números ajenos, porque el
+// endpoint no pide ningún secreto: 10 intentos por minuto y por IP.
+Route::post('/login-empleado', [AuthController::class, 'loginEmpleado'])
+    ->middleware('throttle:10,1');
 
 // Rutas protegidas por Sanctum
 Route::middleware('auth:sanctum')->group(function () {
@@ -27,7 +33,7 @@ Route::middleware('auth:sanctum')->group(function () {
             'permissions' => $user->getAllPermissions()->pluck('name')->values(),
         ]);
     });
-    
+
     // Cerrar sesión
     Route::post('/logout', [AuthController::class, 'logout']);
 

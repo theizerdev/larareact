@@ -24,7 +24,7 @@ import {
     Activity,
     Link2,
 } from 'lucide-react';
-import { Building2, GitBranch, Briefcase, Calendar, Fingerprint } from 'lucide-react';
+import { Building2, GitBranch, Briefcase, Calendar, Fingerprint, Receipt } from 'lucide-react';
 import * as React from 'react';
 import LanguageToggle from '@/components/language-toggle';
 import TemplateCustomizer from '@/components/template-customizer';
@@ -76,6 +76,14 @@ type AdminSaasLayoutProps = {
     children: React.ReactNode;
     breadcrumbs?: BreadcrumbItem[];
 };
+
+/**
+ * Nómina viaja en el repo pero todavía no se anuncia en el menú: el módulo
+ * está completo y probado, falta la decisión de negocio para lanzarlo. Poner
+ * esto en true es lo único que hace falta para publicarlo; la visibilidad fina
+ * por sector la sigue mandando isMenuVisible('nomina'), como en el resto.
+ */
+const MOSTRAR_NOMINA = false;
 
 const mainNavItems: NavItem[] = [
     {
@@ -702,6 +710,46 @@ export default function AdminSaasLayout({
                                         icon={Activity}
                                         collapsed={collapsed}
                                         items={relojChecadorItems}
+                                    />
+                                </div>
+                            );
+                        })()}
+
+                        {/* Nómina Group — captura de incidencias y salida a CONTPAQi.
+                            Va aparte de Reloj Checador a propósito: el reloj produce
+                            marcajes, esto produce la prenómina que se entrega a
+                            contabilidad, y son responsabilidades de gente distinta. */}
+                        {MOSTRAR_NOMINA && isMenuVisible('nomina') && (() => {
+                            const nominaItems = [
+                                {
+                                    title: 'Incidencias',
+                                    href: '/admin/nomina/incidencias',
+                                    permission: 'incidencias.view',
+                                    key: 'nomina.incidencias',
+                                },
+                                {
+                                    title: 'Prenómina CONTPAQi',
+                                    href: '/admin/nomina/contpaqi',
+                                    permission: 'contpaqi.view',
+                                    key: 'nomina.contpaqi',
+                                },
+                                {
+                                    title: 'Mapeo de códigos',
+                                    href: '/admin/nomina/contpaqi/mapeos',
+                                    permission: 'contpaqi.catalogo',
+                                    key: 'nomina.mapeos',
+                                },
+                            ].filter(item => hasPermission(item.permission) && isMenuVisible(item.key));
+
+                            if (nominaItems.length === 0) return null;
+
+                            return (
+                                <div className="pt-2">
+                                    <CollapsibleNavItem
+                                        title="Nómina"
+                                        icon={Receipt}
+                                        collapsed={collapsed}
+                                        items={nominaItems}
                                     />
                                 </div>
                             );
