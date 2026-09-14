@@ -196,6 +196,34 @@ const defaultJornada = [
     { dia: 'Domingo', activo: false, hora_ingreso: '08:00', hora_salida: '17:00' }
 ];
 
+// Mapa de campos del formulario -> pestaña donde viven, para poder saltar
+// automáticamente a la pestaña con errores cuando el backend rechaza el guardado.
+const TAB_FIELDS: Record<string, string[]> = {
+    general: ['nombres', 'apellidos', 'codigo_acceso', 'documento_identidad', 'curp', 'pais_telefono_id', 'telefono', 'correo', 'genero', 'status'],
+    laboral: ['empresa_id', 'sucursal_id', 'departamento_id', 'cargo_id', 'responsable_id', 'jornada_laboral'],
+    fotos: ['foto_empleado', 'foto_empleado_2', 'foto_documento', 'foto_documento_reverso'],
+    vehiculos: ['vehiculos'],
+};
+const TAB_ORDER = ['general', 'laboral', 'fotos', 'vehiculos'];
+
+function firstTabWithError(errors: Record<string, any>): string | null {
+    const errorKeys = Object.keys(errors);
+
+    if (errorKeys.length === 0) {
+        return null;
+    }
+
+    for (const tab of TAB_ORDER) {
+        const fields = TAB_FIELDS[tab];
+
+        if (errorKeys.some((key) => fields.some((f) => key === f || key.startsWith(`${f}.`)))) {
+            return tab;
+        }
+    }
+
+    return null;
+}
+
 // ─── Formulario inicial vacío ─────────────────────────────────────────────────
 
 const initialForm = {
@@ -587,7 +615,15 @@ export default function EmpleadosIndexPage({
                     reset();
                     notifySuccess(__('Employee updated successfully.'));
                 },
-                onError: () => notifyError(__('Please review the highlighted fields.')),
+                onError: (formErrors) => {
+                    const tab = firstTabWithError(formErrors);
+
+                    if (tab) {
+                        setActiveTab(tab);
+                    }
+
+                    notifyError(__('Please review the highlighted fields.'));
+                },
             });
         } else {
             post('/admin/empleados', {
@@ -596,7 +632,15 @@ export default function EmpleadosIndexPage({
                     reset();
                     notifySuccess(__('Employee created successfully.'));
                 },
-                onError: () => notifyError(__('Please review the highlighted fields.')),
+                onError: (formErrors) => {
+                    const tab = firstTabWithError(formErrors);
+
+                    if (tab) {
+                        setActiveTab(tab);
+                    }
+
+                    notifyError(__('Please review the highlighted fields.'));
+                },
             });
         }
     };
@@ -970,18 +1014,30 @@ export default function EmpleadosIndexPage({
                                 <TabsTrigger value="general" className="flex items-center gap-2">
                                     <UserIcon className="h-4 w-4" />
                                     {__('General')}
+                                    {TAB_FIELDS.general.some((f) => errors[f as keyof typeof errors]) && (
+                                        <span className="h-1.5 w-1.5 rounded-full bg-red-500" />
+                                    )}
                                 </TabsTrigger>
                                 <TabsTrigger value="laboral" className="flex items-center gap-2">
                                     <Briefcase className="h-4 w-4" />
                                     {__('Job Position')}
+                                    {TAB_FIELDS.laboral.some((f) => errors[f as keyof typeof errors]) && (
+                                        <span className="h-1.5 w-1.5 rounded-full bg-red-500" />
+                                    )}
                                 </TabsTrigger>
                                 <TabsTrigger value="fotos" className="flex items-center gap-2">
                                     <Camera className="h-4 w-4" />
                                     {__('Photographs')}
+                                    {TAB_FIELDS.fotos.some((f) => errors[f as keyof typeof errors]) && (
+                                        <span className="h-1.5 w-1.5 rounded-full bg-red-500" />
+                                    )}
                                 </TabsTrigger>
                                 <TabsTrigger value="vehiculos" className="flex items-center gap-2">
                                     <Car className="h-4 w-4" />
                                     {__('Vehicles')}
+                                    {TAB_FIELDS.vehiculos.some((f) => errors[f as keyof typeof errors]) && (
+                                        <span className="h-1.5 w-1.5 rounded-full bg-red-500" />
+                                    )}
                                 </TabsTrigger>
                             </TabsList>
 
