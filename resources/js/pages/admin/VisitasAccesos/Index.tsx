@@ -397,9 +397,12 @@ export default function Index({
             onSuccess: () => {
                 setIsCreateInvitacionOpen(false);
                 resetInvModal();
-                notifySuccess(__('Pre-Registro  de visita registrado correctamente.'));
+                notifySuccess(__('Pre-Registro de visita registrado correctamente.'));
             },
-            onError: () => notifyError(__('Verifique los datos ingresados e intente nuevamente.')),
+            onError: (errors: any) => {
+                const messages = errors ? Object.values(errors).flat() : [];
+                notifyError(messages.length > 0 ? (messages as string[]).join(' · ') : __('Verifique los datos ingresados e intente nuevamente.'));
+            },
         });
     };
 
@@ -3048,6 +3051,8 @@ export default function Index({
                                         )}
                                     </div>
                                 )}
+                                {invForm.errors.anfitrion_id && <p className="text-xs text-rose-500 font-medium mt-1">{invForm.errors.anfitrion_id}</p>}
+                                {invForm.errors.sucursal_id && <p className="text-xs text-rose-500 font-medium mt-1">{invForm.errors.sucursal_id}</p>}
                             </div>
 
                             <div className="border-t border-dashed pt-4 space-y-4">
@@ -3066,6 +3071,7 @@ export default function Index({
                                                     className="h-10 w-full bg-white dark:bg-slate-900 text-xs"
                                                     required
                                                 />
+                                                {invForm.errors.visitante_nombres && <p className="text-xs text-rose-500 font-medium mt-1">{invForm.errors.visitante_nombres}</p>}
                                             </div>
                                             <div className="space-y-1.5">
                                                 <Label className="text-xs font-bold text-slate-600 dark:text-slate-400">{__('Apellidos')} <span className="text-rose-500">*</span></Label>
@@ -3076,6 +3082,7 @@ export default function Index({
                                                     className="h-10 w-full bg-white dark:bg-slate-900 text-xs"
                                                     required
                                                 />
+                                                {invForm.errors.visitante_apellidos && <p className="text-xs text-rose-500 font-medium mt-1">{invForm.errors.visitante_apellidos}</p>}
                                             </div>
                                         </div>
 
@@ -3106,6 +3113,9 @@ export default function Index({
                                                     required
                                                 />
                                             </div>
+                                            {(invForm.errors.visitante_telefono || invForm.errors.pais_telefono_id) && (
+                                                <p className="text-xs text-rose-500 font-medium mt-1">{invForm.errors.visitante_telefono || invForm.errors.pais_telefono_id}</p>
+                                            )}
                                         </div>
 
                                         {/* Fecha y Hora */}
@@ -3113,10 +3123,12 @@ export default function Index({
                                             <div className="space-y-1.5">
                                                 <Label className="text-xs font-bold text-slate-600 dark:text-slate-400">{__('Fecha Estimada')} <span className="text-rose-500">*</span></Label>
                                                 <Input type="date" value={invForm.data.fecha_estimada} onChange={(e) => invForm.setData('fecha_estimada', e.target.value)} className="h-10 w-full bg-white dark:bg-slate-900 text-xs" required />
+                                                {invForm.errors.fecha_estimada && <p className="text-xs text-rose-500 font-medium mt-1">{invForm.errors.fecha_estimada}</p>}
                                             </div>
                                             <div className="space-y-1.5">
                                                 <Label className="text-xs font-bold text-slate-600 dark:text-slate-400">{__('Hora Estimada')}</Label>
                                                 <Input type="time" value={invForm.data.hora_estimada} onChange={(e) => invForm.setData('hora_estimada', e.target.value)} className="h-10 w-full bg-white dark:bg-slate-900 text-xs" />
+                                                {invForm.errors.hora_estimada && <p className="text-xs text-rose-500 font-medium mt-1">{invForm.errors.hora_estimada}</p>}
                                             </div>
                                         </div>
 
@@ -3124,6 +3136,7 @@ export default function Index({
                                         <div className="space-y-1.5">
                                             <Label className="text-xs font-bold text-slate-600 dark:text-slate-400">{__('Motivo de Visita')} <span className="text-rose-500">*</span></Label>
                                             <Textarea placeholder="Ej: Reunión comercial en sala de juntas..." value={invForm.data.motivo_visita} onChange={(e) => invForm.setData('motivo_visita', e.target.value)} className="min-h-[80px] w-full bg-white dark:bg-slate-900 text-xs" required />
+                                            {invForm.errors.motivo_visita && <p className="text-xs text-rose-500 font-medium mt-1">{invForm.errors.motivo_visita}</p>}
                                         </div>
                                     </>
                                 )}
