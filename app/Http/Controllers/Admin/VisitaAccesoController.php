@@ -148,7 +148,16 @@ class VisitaAccesoController extends Controller
             'invitaciones_pendientes'=> $visitasEsperadas->count(),
         ];
 
+        $user = $request->user();
+
+        // Responsables were listed across all branches, so a user could pick
+        // a host from another sucursal in this dropdown and then be rejected
+        // by the sucursal_id ownership check in storeInvitacion()/store()
+        // with a generic "Verifique los datos ingresados" error and no clue
+        // why. Scoping the list to the user's own branch prevents that
+        // dead-end pick (bug reported 2026-09-09).
         $responsables = Responsable::where('status', 1)
+            ->where('sucursal_id', $user->sucursal_id)
             ->with(['departamento', 'cargo'])
             ->orderBy('nombres', 'asc')
             ->get(['id', 'nombres', 'apellidos', 'departamento_id', 'cargo_id']);
@@ -160,8 +169,6 @@ class VisitaAccesoController extends Controller
         $tipoServicios = TipoServicio::where('status', 1)
             ->orderBy('nombre', 'asc')
             ->get(['id', 'nombre']);
-
-        $user     = $request->user();
         $empresa  = Empresa::find($user->empresa_id) ?: Empresa::first();
         $sucursal = Sucursal::find($user->sucursal_id);
 
@@ -187,6 +194,7 @@ class VisitaAccesoController extends Controller
     public function buscarEntidades(Request $request)
     {
         $tipo = $request->input('tipo_acceso', 'empleado');
+        $sucursalId = $request->user()->sucursal_id;
         $query = trim($request->input('query', ''));
         $cleanQuery = preg_replace('/[^a-zA-Z0-9]/', '', $query);
         $isNumeric = ctype_digit($cleanQuery);
@@ -197,6 +205,7 @@ class VisitaAccesoController extends Controller
         if ($tipo === 'empleado') {
             $empleados = Empleado::query()
                 ->where('status', 1)
+                ->where('sucursal_id', $sucursalId)
                 ->where(function ($q) use ($query, $cleanQuery, $isNumeric, $intVal, $padded8, $padded6) {
                     if (!empty($query)) {
                         $q->where('nombres', 'like', "%{$query}%")
@@ -222,6 +231,7 @@ class VisitaAccesoController extends Controller
         if ($tipo === 'proveedor') {
             $proveedores = Proveedor::query()
                 ->where('status', 'activo')
+                ->where('sucursal_id', $sucursalId)
                 ->where(function ($q) use ($query, $cleanQuery, $isNumeric, $intVal, $padded8, $padded6) {
                     if (!empty($query)) {
                         $q->where('razon_social', 'like', "%{$query}%")
@@ -257,6 +267,7 @@ class VisitaAccesoController extends Controller
         if ($tipo === 'productor') {
             $productores = Productor::query()
                 ->where('status', 'activo')
+                ->where('sucursal_id', $sucursalId)
                 ->where(function ($q) use ($query, $cleanQuery, $isNumeric, $intVal, $padded8, $padded6) {
                     if (!empty($query)) {
                         $q->where('razon_social', 'like', "%{$query}%")
@@ -635,6 +646,21 @@ class VisitaAccesoController extends Controller
 
     public function storeInvitacion(Request $request)
     {
+        // Normalizar strings vacíos a null para campos de relación y opcionales
+        $input = $request->all();
+        foreach (['proveedor_id', 'productor_id', 'tipo_servicio_id', 'pais_telefono_id', 'visitante_telefono', 'visitante_nombres', 'visitante_apellidos', 'motivo_visita', 'hora_estimada'] as $field) {
+            if (isset($input[$field]) && trim((string)$input[$field]) === '') {
+                $input[$field] = null;
+            }
+        }
+        // Si es visitante, limpiar explícitamente relaciones exclusivas de proveedor/productor
+        if (($input['tipo_acceso'] ?? '') === 'visitante') {
+            $input['proveedor_id'] = null;
+            $input['productor_id'] = null;
+            $input['tipo_servicio_id'] = null;
+        }
+        $request->replace($input);
+
         $validated = $request->validate([
             'tipo_acceso'         => 'required|in:visitante,proveedor,productor',
             'anfitrion_id'        => 'required|exists:responsables,id',
@@ -652,41 +678,62 @@ class VisitaAccesoController extends Controller
         ]);
 
         $user = $request->user();
+        $isSuperAdmin = method_exists($user, 'isSuperAdmin') ? $user->isSuperAdmin() : false;
 
-        // Same class of bug fixed above in store(): defaulting to company/
-        // branch "1" instead of rejecting misattributes the invitation to
-        // the wrong tenant when the acting user lacks one.
-        if (! $user->empresa_id || ! $user->sucursal_id) {
+        // Buscar el anfitrión (sin scope tenant en caso de que sea superadmin)
+        $anfitrion = Responsable::withoutTenant()->find($validated['anfitrion_id']);
+        if (! $anfitrion) {
             throw \Illuminate\Validation\ValidationException::withMessages([
-                'sucursal_id' => __('Your account is not assigned to a specific branch, so you cannot register visits. Contact your administrator.'),
+                'anfitrion_id' => __('The selected host does not exist.'),
             ]);
+        }
+
+        // Resolver empresa_id y sucursal_id base
+        $empresaId = $user->empresa_id ?: ($anfitrion->empresa_id ?: Empresa::first()?->id);
+        $sucursalId = $user->sucursal_id ?: ($anfitrion->sucursal_id ?: Sucursal::where('empresa_id', $empresaId)->first()?->id ?: 1);
+
+        // Si el usuario NO es superadmin, aplicar aislamiento estricto de sucursal
+        if (! $isSuperAdmin) {
+            if (! $user->empresa_id || ! $user->sucursal_id) {
+                throw \Illuminate\Validation\ValidationException::withMessages([
+                    'sucursal_id' => __('Your account is not assigned to a specific branch, so you cannot register visits. Contact your administrator.'),
+                ]);
+            }
+
+            // Validar que el anfitrión pertenezca a la sucursal del usuario
+            if ($anfitrion->sucursal_id && (int) $anfitrion->sucursal_id !== (int) $user->sucursal_id) {
+                throw \Illuminate\Validation\ValidationException::withMessages([
+                    'anfitrion_id' => __('The selected host does not belong to your branch.'),
+                ]);
+            }
+
+            if (! empty($validated['proveedor_id'])
+                && ! Proveedor::where('id', $validated['proveedor_id'])->where('sucursal_id', $user->sucursal_id)->exists()) {
+                throw \Illuminate\Validation\ValidationException::withMessages([
+                    'proveedor_id' => __('The selected supplier does not belong to your branch.'),
+                ]);
+            }
+            if (! empty($validated['productor_id'])
+                && ! Productor::where('id', $validated['productor_id'])->where('sucursal_id', $user->sucursal_id)->exists()) {
+                throw \Illuminate\Validation\ValidationException::withMessages([
+                    'productor_id' => __('The selected producer does not belong to your branch.'),
+                ]);
+            }
+        } else {
+            // Para Super Administrador, adoptar la empresa y sucursal del anfitrión seleccionado
+            if ($anfitrion->empresa_id) {
+                $empresaId = $anfitrion->empresa_id;
+            }
+            if ($anfitrion->sucursal_id) {
+                $sucursalId = $anfitrion->sucursal_id;
+            }
         }
 
         $validated['anfitrion_user_id'] = $user->id;
-        $validated['empresa_id']        = $user->empresa_id;
-        $validated['sucursal_id']       = $user->sucursal_id;
+        $validated['empresa_id']        = $empresaId;
+        $validated['sucursal_id']       = $sucursalId;
         $validated['status']            = 'pendiente';
         $validated['medio_acceso']      = 'peatonal';
-
-        // anfitrion_id/proveedor_id/productor_id were only exists:*, same
-        // cross-branch gap fixed above.
-        if (! Responsable::where('id', $validated['anfitrion_id'])->where('sucursal_id', $validated['sucursal_id'])->exists()) {
-            throw \Illuminate\Validation\ValidationException::withMessages([
-                'anfitrion_id' => __('The selected host does not belong to your branch.'),
-            ]);
-        }
-        if (! empty($validated['proveedor_id'])
-            && ! Proveedor::where('id', $validated['proveedor_id'])->where('sucursal_id', $validated['sucursal_id'])->exists()) {
-            throw \Illuminate\Validation\ValidationException::withMessages([
-                'proveedor_id' => __('The selected supplier does not belong to your branch.'),
-            ]);
-        }
-        if (! empty($validated['productor_id'])
-            && ! Productor::where('id', $validated['productor_id'])->where('sucursal_id', $validated['sucursal_id'])->exists()) {
-            throw \Illuminate\Validation\ValidationException::withMessages([
-                'productor_id' => __('The selected producer does not belong to your branch.'),
-            ]);
-        }
 
         if ($request->tipo_acceso === 'visitante') {
             $nombres = trim($request->input('visitante_nombres', ''));
