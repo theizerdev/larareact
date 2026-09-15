@@ -15,6 +15,18 @@ class EmpleadoRequest extends FormRequest
     }
 
     /**
+     * El formulario de edición no expone un selector de "usuario propietario",
+     * así que para registros antiguos que se crearon sin user_id (import/pre-registro)
+     * lo autocompletamos con el usuario autenticado en vez de bloquear el guardado.
+     */
+    protected function prepareForValidation(): void
+    {
+        if (empty($this->input('user_id')) && auth()->check()) {
+            $this->merge(['user_id' => auth()->id()]);
+        }
+    }
+
+    /**
      * Get the validation rules that apply to the request.
      */
     public function rules(): array
