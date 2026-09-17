@@ -2305,16 +2305,17 @@ export default function Terminal({
                 </Dialog>
 
                 {/* MODAL COBRAR (F11/F12) CON CONVERSIÓN A DÓLARES */}
-                <Dialog
-                    open={isPaymentModalOpen && activeTicket.cart.length > 0 && !completedSale}
-                    onOpenChange={(open) => {
-                        setIsPaymentModalOpen(open);
-                        if (!open) {
-                            isProcessingSaleRef.current = false;
-                            setIsProcessingSale(false);
-                        }
-                    }}
-                >
+                {isPaymentModalOpen && !completedSale && (
+                    <Dialog
+                        open={isPaymentModalOpen && !completedSale}
+                        onOpenChange={(open) => {
+                            setIsPaymentModalOpen(open);
+                            if (!open) {
+                                isProcessingSaleRef.current = false;
+                                setIsProcessingSale(false);
+                            }
+                        }}
+                    >
                     <DialogContent className="sm:max-w-2xl md:max-w-3xl w-full max-h-[92vh] overflow-y-auto p-6">
                         <DialogHeader className="pb-2 border-b border-slate-100 dark:border-slate-800">
                             <DialogTitle className="flex items-center gap-2.5 text-xl font-bold text-emerald-600 dark:text-emerald-400">
@@ -2648,6 +2649,7 @@ export default function Terminal({
                         </form>
                     </DialogContent>
                 </Dialog>
+            )}
 
                 {/* MODAL VERIFICADOR DE PRECIOS (F9) */}
                 <Dialog open={isVerifierOpen} onOpenChange={setIsVerifierOpen}>
@@ -2919,7 +2921,15 @@ export default function Terminal({
 
                 {/* MODAL TICKET EXITOSO / COMPLETED SALE CON VISTA PREVIA DEL TICKET */}
                 {completedSale && (
-                    <Dialog open={!!completedSale} onOpenChange={() => setCompletedSale(null)}>
+                    <Dialog
+                        open={!!completedSale}
+                        onOpenChange={(open) => {
+                            if (!open) {
+                                setCompletedSale(null);
+                                setIsPaymentModalOpen(false);
+                            }
+                        }}
+                    >
                         <DialogContent className="sm:max-w-md max-h-[90vh] overflow-y-auto">
                             <DialogHeader>
                                 <DialogTitle className="text-center flex flex-col items-center gap-1.5">
@@ -3111,7 +3121,13 @@ export default function Terminal({
                                     <Printer className="w-4 h-4 text-blue-600" />
                                     {hasTicketPrinter ? `${__('Imprimir Ticket')} (${printerPaperSize})` : __('Imprimir / Guardar PDF')}
                                 </Button>
-                                <Button className="w-full font-bold bg-emerald-600 hover:bg-emerald-700 text-white" onClick={() => setCompletedSale(null)}>
+                                <Button
+                                    className="w-full font-bold bg-emerald-600 hover:bg-emerald-700 text-white"
+                                    onClick={() => {
+                                        setCompletedSale(null);
+                                        setIsPaymentModalOpen(false);
+                                    }}
+                                >
                                     {__('Nueva Venta')}
                                 </Button>
                             </DialogFooter>
