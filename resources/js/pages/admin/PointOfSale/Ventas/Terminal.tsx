@@ -1503,26 +1503,6 @@ export default function Terminal({
                                 <span className="font-bold">[F5]</span> {__('En Espera')}
                             </Button>
                         )}
-
-                        <Button
-                            type="button"
-                            size="lg"
-                            className="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-bold h-12 text-sm shadow-md gap-2"
-                            onClick={handleOpenPayment}
-                            disabled={activeTicket.cart.length === 0 || !activeRegister || isProcessingSale}
-                        >
-                            {isProcessingSale ? (
-                                <>
-                                    <Loader2 className="w-4 h-4 animate-spin" />
-                                    {__('Procesando...')}
-                                </>
-                            ) : (
-                                <>
-                                    <DollarSign className="w-4 h-4" />
-                                    <span className="font-extrabold">[F11]</span> {__('Emitir Ticket y Cobrar')}
-                                </>
-                            )}
-                        </Button>
                     </div>
                 </div>
 

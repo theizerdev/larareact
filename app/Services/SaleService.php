@@ -31,10 +31,42 @@ class SaleService
 
             $cashRegister = CashRegister::getActiveRegister($user);
 
-            // Generate unique ticket code
-            $lastSale = Sale::orderBy('id', 'desc')->first();
-            $nextNum = ($lastSale ? $lastSale->id : 0) + 1;
-            $codigoTicket = 'VTA-' . str_pad($nextNum, 6, '0', STR_PAD_LEFT);
+            // Identificar empresa y sucursal de la venta
+            $empresaId = $user?->empresa_id ?? auth()->user()?->empresa_id;
+            $sucursalId = $user?->sucursal_id ?? auth()->user()?->sucursal_id ?? $cashRegister?->sucursal_id;
+            if (!$sucursalId && $empresaId) {
+                $sucursalId = \App\Models\Sucursal::where('empresa_id', $empresaId)->value('id');
+            }
+            $sucursalId = $sucursalId ?? 1;
+
+            // Generar código de ticket consecutivo e independiente por empresa y por sucursal
+            $lastSale = Sale::withoutGlobalScopes()
+                ->where('empresa_id', $empresaId)
+                ->where('sucursal_id', $sucursalId)
+                ->whereNotNull('codigo_ticket')
+                ->orderByDesc('id')
+                ->first();
+
+            $nextNum = 1;
+            $prefix = 'VTA-';
+            if ($lastSale && !empty($lastSale->codigo_ticket)) {
+                if (preg_match('/^(.*?)(\d+)$/', $lastSale->codigo_ticket, $matches)) {
+                    $prefix = $matches[1] !== '' ? $matches[1] : 'VTA-';
+                    $nextNum = ((int) $matches[2]) + 1;
+                }
+            }
+
+            $codigoTicket = $prefix . str_pad($nextNum, 6, '0', STR_PAD_LEFT);
+
+            // Garantizar que no colisione con ningún ticket ya registrado en esta misma sucursal
+            while (Sale::withoutGlobalScopes()
+                ->where('empresa_id', $empresaId)
+                ->where('sucursal_id', $sucursalId)
+                ->where('codigo_ticket', $codigoTicket)
+                ->exists()) {
+                $nextNum++;
+                $codigoTicket = $prefix . str_pad($nextNum, 6, '0', STR_PAD_LEFT);
+            }
 
             // Compute totals
             $subtotal = 0;
@@ -42,7 +74,7 @@ class SaleService
                 $subtotal += $item['precio_unitario'] * $item['cantidad'];
             }
             // Obtener país y tasa predeterminada de la empresa
-            $empresa = Empresa::with('pais')->find(\Auth::user()->empresa_id);
+            $empresa = Empresa::with('pais')->find($empresaId);
             $tasaPais = (float) ($empresa?->pais?->impuesto_predeterminado ?? 16.00);
 
             $descuento = (float) ($data['descuento'] ?? 0);
@@ -100,8 +132,8 @@ class SaleService
 
             // Create Sale record
             $sale = Sale::create([
-                'empresa_id' => $user?->empresa_id,
-                'sucursal_id' => $user?->sucursal_id,
+                'empresa_id' => $empresaId,
+                'sucursal_id' => $sucursalId,
                 'cash_register_id' => $cashRegister?->id,
                 'user_id' => $userId,
                 'cliente_id' => $data['cliente_id'] ?? null,
