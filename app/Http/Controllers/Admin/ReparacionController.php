@@ -46,6 +46,8 @@ class ReparacionController extends Controller
         $search = $request->input('search');
         $status = $request->input('status');
         $tecnicoId = $request->input('tecnico_id');
+        $year = $request->input('year');
+        $month = $request->input('month');
         $marcaId = $request->input('marca_id');
         $modeloId = $request->input('modelo_id');
         $categoriaId = $request->input('categoria_id');
@@ -70,7 +72,31 @@ class ReparacionController extends Controller
         if ($isTecnicoOnly && !$isAdmin) {
             $query->where('tecnico_id', $user->id);
         } elseif ($tecnicoId && $tecnicoId !== 'all') {
-            $query->where('tecnico_id', $tecnicoId);
+            if ($tecnicoId === 'unassigned') {
+                $query->whereNull('tecnico_id');
+            } else {
+                $query->where('tecnico_id', $tecnicoId);
+            }
+        }
+
+        if ($year && $year !== 'all') {
+            $query->where(function ($q) use ($year) {
+                $q->whereYear('fecha_recepcion', $year)
+                  ->orWhere(function ($sub) use ($year) {
+                      $sub->whereNull('fecha_recepcion')
+                          ->whereYear('created_at', $year);
+                  });
+            });
+        }
+
+        if ($month && $month !== 'all') {
+            $query->where(function ($q) use ($month) {
+                $q->whereMonth('fecha_recepcion', $month)
+                  ->orWhere(function ($sub) use ($month) {
+                      $sub->whereNull('fecha_recepcion')
+                          ->whereMonth('created_at', $month);
+                  });
+            });
         }
 
         if ($search) {
@@ -127,7 +153,7 @@ class ReparacionController extends Controller
             ->pluck('total', 'estado_orden')
             ->toArray();
 
-        $tecnicos = User::where('empresa_id', $empresaId)->get(['id', 'name']);
+        $tecnicos = User::where('empresa_id', $empresaId)->orderBy('name')->get(['id', 'name']);
         $clientes = Cliente::withoutGlobalScope('multitenancy')->where('empresa_id', $empresaId)->orderBy('nombre')->get(['id', 'nombre', 'telefono', 'email']);
         $marcas = Marca::with('modelos')->where('empresa_id', $empresaId)->orderBy('nombre')->get();
         $modelos = Modelo::withoutGlobalScope('multitenancy')
@@ -158,6 +184,20 @@ class ReparacionController extends Controller
             ->orderBy('nombre')
             ->get(['id', 'codigo', 'nombre', 'precio', 'categoria_id', 'marca_id', 'modelo_id']);
 
+        $availableYears = OrdenReparacion::where('empresa_id', $empresaId)
+            ->selectRaw('DISTINCT YEAR(COALESCE(fecha_recepcion, created_at)) as year')
+            ->orderByDesc('year')
+            ->pluck('year')
+            ->filter()
+            ->map(fn($y) => (string) $y)
+            ->values()
+            ->toArray();
+
+        $currentYear = (string) date('Y');
+        if (!in_array($currentYear, $availableYears)) {
+            array_unshift($availableYears, $currentYear);
+        }
+
         return Inertia::render('admin/Reparaciones/Index', [
             'ordenes' => $ordenes,
             'counts' => $counts,
@@ -169,7 +209,8 @@ class ReparacionController extends Controller
             'servicios' => $servicios,
             'empresa' => $empresa,
             'currencySymbol' => $this->getCurrencySymbol(),
-            'filters' => array_merge($request->only(['search', 'status', 'tecnico_id', 'marca_id', 'modelo_id', 'categoria_id']), ['perPage' => (string) $perPage]),
+            'availableYears' => $availableYears,
+            'filters' => array_merge($request->only(['search', 'status', 'tecnico_id', 'year', 'month']), ['perPage' => (string) $perPage]),
             'isTecnicoOnly' => $isTecnicoOnly && !$isAdmin,
         ]);
     }

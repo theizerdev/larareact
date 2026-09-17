@@ -3,7 +3,8 @@ import {
     ShoppingCart, Search, Plus, Minus, Trash2, CheckCircle2, CreditCard, DollarSign,
     Package, Wrench, User, AlertCircle, Building2, Smartphone, Receipt, Pause,
     Play, X, Wallet, Tag, Barcode, HelpCircle, Layers, FileText, ArrowRight, Eye, RefreshCw,
-    Calculator, ArrowUpRight, ArrowDownLeft, Scale, Settings, Printer, Lock, Coins, Edit3, Landmark, Boxes, History
+    Calculator, ArrowUpRight, ArrowDownLeft, Scale, Settings, Printer, Lock, Coins, Edit3, Landmark, Boxes, History,
+    Loader2, ShoppingBag, ChevronDown, ChevronUp
 } from 'lucide-react';
 import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { Breadcrumbs } from '@/components/breadcrumbs';
@@ -287,6 +288,22 @@ export default function Terminal({
     const [isLoadingRecentSales, setIsLoadingRecentSales] = useState(false);
     const [salesScope, setSalesScope] = useState<'shift' | 'today' | 'all'>('shift');
     const [salesSummary, setSalesSummary] = useState<{ total_amount: number; total_count: number; total_anuladas: number } | null>(null);
+    const [expandedSaleId, setExpandedSaleId] = useState<number | null>(null);
+    const [historySearchQuery, setHistorySearchQuery] = useState<string>('');
+
+    const filteredRecentSales = useMemo(() => {
+        if (!historySearchQuery.trim()) return recentSales;
+        const q = historySearchQuery.toLowerCase().trim();
+        return recentSales.filter((sale) => {
+            const ticketMatch = sale.codigo_ticket?.toLowerCase().includes(q);
+            const clientMatch = sale.cliente_nombre?.toLowerCase().includes(q);
+            const itemMatch = sale.items?.some((it: any) =>
+                it.nombre?.toLowerCase().includes(q) ||
+                it.concepto_tipo?.toLowerCase().includes(q)
+            );
+            return ticketMatch || clientMatch || itemMatch;
+        });
+    }, [recentSales, historySearchQuery]);
 
     // Modal de confirmación para anular venta
     const [saleToDelete, setSaleToDelete] = useState<any | null>(null);
@@ -434,13 +451,43 @@ export default function Terminal({
 
     // Payment modal (F12)
     const [isPaymentModalOpen, setIsPaymentModalOpen] = useState(false);
+    const [isProcessingSale, setIsProcessingSale] = useState(false);
+    const isProcessingSaleRef = useRef(false);
     const [paymentLines, setPaymentLines] = useState<PaymentLine[]>([{ metodo_pago: 'efectivo', monto: '' }]);
+    const [pagaCon, setPagaCon] = useState('');
     const montoRef = useRef<HTMLInputElement>(null);
+    const pagaConRef = useRef<HTMLInputElement>(null);
+
+    useEffect(() => {
+        isProcessingSaleRef.current = isProcessingSale;
+    }, [isProcessingSale]);
+
+    useEffect(() => {
+        if (isPaymentModalOpen) {
+            const timer = setTimeout(() => {
+                if (pagaConRef.current) {
+                    pagaConRef.current.focus();
+                    pagaConRef.current.select();
+                }
+            }, 120);
+            return () => clearTimeout(timer);
+        } else {
+            isProcessingSaleRef.current = false;
+            setIsProcessingSale(false);
+        }
+    }, [isPaymentModalOpen]);
 
     // Price Verifier Modal (F9)
     const [isVerifierOpen, setIsVerifierOpen] = useState(false);
     const [verifierQuery, setVerifierQuery] = useState('');
     const [verifierItem, setVerifierItem] = useState<CatalogItem | null>(null);
+
+    useEffect(() => {
+        if (!isVerifierOpen) {
+            setVerifierItem(null);
+            setVerifierQuery('');
+        }
+    }, [isVerifierOpen]);
 
     // Corte de Caja Modal (F8)
     const [isCorteOpen, setIsCorteOpen] = useState(false);
@@ -467,6 +514,19 @@ export default function Terminal({
     // Misc / Generic Article Modal (INS)
     const [isMiscModalOpen, setIsMiscModalOpen] = useState(false);
     const [miscForm, setMiscForm] = useState({ nombre: 'Artículo Varios', precio: '', cantidad: '1' });
+    const miscNombreRef = useRef<HTMLInputElement>(null);
+
+    useEffect(() => {
+        if (isMiscModalOpen) {
+            const timer = setTimeout(() => {
+                if (miscNombreRef.current) {
+                    miscNombreRef.current.focus();
+                    miscNombreRef.current.select();
+                }
+            }, 80);
+            return () => clearTimeout(timer);
+        }
+    }, [isMiscModalOpen]);
 
     // Hold sale dialog (F5)
     const [isHoldOpen, setIsHoldOpen] = useState(false);
@@ -989,12 +1049,29 @@ export default function Terminal({
                         newMonto = currVal > 0 && valorDolar > 0 ? (currVal * valorDolar).toFixed(2) : total.toFixed(2);
                     }
 
+                    if (idx === 0) setPagaCon(newMonto);
                     return { ...pl, metodo_pago: newMethod, monto: newMonto };
+                }
+
+                if (idx === 0 && field === 'monto') {
+                    setPagaCon(value);
                 }
 
                 return { ...pl, [field]: value };
             })
         );
+    };
+
+    const handlePagaConChange = (val: string) => {
+        setPagaCon(val);
+        setPaymentLines((prev) => {
+            if (prev.length === 0) {
+                return [{ metodo_pago: 'efectivo', monto: val }];
+            }
+            const copy = [...prev];
+            copy[0] = { ...copy[0], monto: val };
+            return copy;
+        });
     };
 
     // Open Payment Modal
@@ -1007,13 +1084,17 @@ export default function Terminal({
             notifyError(__('El carrito de compras está vacío.'));
             return;
         }
-        setPaymentLines([{ metodo_pago: 'efectivo', monto: total.toFixed(2) }]);
+        const exactMonto = (isVenezuela ? total * valorDolar : total).toFixed(2);
+        setPagaCon(exactMonto);
+        setPaymentLines([{ metodo_pago: 'efectivo', monto: exactMonto }]);
         setIsPaymentModalOpen(true);
-    }, [activeRegister, activeTicket.cart, total]);
+    }, [activeRegister, activeTicket.cart, total, isVenezuela, valorDolar]);
 
     // Handle Complete Sale
     const handleCompleteSale = (e: React.FormEvent) => {
         e.preventDefault();
+        if (isProcessingSale || isProcessingSaleRef.current) return;
+
         const payments = paymentLines
             .filter((pl) => parseFloat(pl.monto) > 0)
             .map((pl) => {
@@ -1025,9 +1106,14 @@ export default function Terminal({
             });
 
         if (!activeTicket.esCredito && remaining > 0.01) {
+            isProcessingSaleRef.current = false;
+            setIsProcessingSale(false);
             notifyError(__('El monto pagado no cubre el total de la venta.'));
             return;
         }
+
+        isProcessingSaleRef.current = true;
+        setIsProcessingSale(true);
 
         const payload = {
             cliente_nombre: activeTicket.clienteNombre || 'Cliente General',
@@ -1047,10 +1133,16 @@ export default function Terminal({
         };
 
         router.post('/admin/ventas', payload, {
+            preserveState: true,
+            preserveScroll: true,
             onSuccess: (page) => {
+                isProcessingSaleRef.current = false;
+                setIsProcessingSale(false);
                 setIsPaymentModalOpen(false);
+                setPagaCon('');
+                setPaymentLines([{ metodo_pago: 'efectivo', monto: '' }]);
                 notifySuccess(__('Venta completada exitosamente.'));
-                const flashSale = (page.props as any).flash?.notification?.sale;
+                const flashSale = (page.props as any).notification?.sale || (page.props as any).flash?.notification?.sale;
                 const completedSaleData = flashSale || {
                     codigo_ticket: `VTA-${String(Math.floor(Math.random() * 900000) + 100000)}`,
                     cliente_nombre: payload.cliente_nombre,
@@ -1078,7 +1170,15 @@ export default function Terminal({
                     }, 300);
                 }
             },
-            onError: () => notifyError(__('Ocurrió un error al procesar la venta.')),
+            onError: () => {
+                isProcessingSaleRef.current = false;
+                setIsProcessingSale(false);
+                notifyError(__('Ocurrió un error al procesar la venta.'));
+            },
+            onFinish: () => {
+                isProcessingSaleRef.current = false;
+                setIsProcessingSale(false);
+            },
         });
     };
 
@@ -1145,9 +1245,10 @@ export default function Terminal({
         const handleKeyDown = (e: KeyboardEvent) => {
             if (e.key === 'F11' || e.key === 'F12') {
                 e.preventDefault();
-                if (isPaymentModalOpen) {
+                if (isProcessingSaleRef.current || isProcessingSale) return;
+                if (isPaymentModalOpen && activeTicket.cart.length > 0 && !completedSale) {
                     paymentFormRef.current?.requestSubmit();
-                } else if (activeTicket.cart.length > 0 && activeRegister) {
+                } else if (activeTicket.cart.length > 0 && activeRegister && !completedSale) {
                     handleOpenPayment();
                 }
             } else if (e.key === 'F10') {
@@ -1181,7 +1282,7 @@ export default function Terminal({
         };
         window.addEventListener('keydown', handleKeyDown);
         return () => window.removeEventListener('keydown', handleKeyDown);
-    }, [activeTicket.cart, activeRegister, handleOpenPayment, isPaymentModalOpen, handleOpenRecentSales]);
+    }, [activeTicket.cart, activeRegister, handleOpenPayment, isPaymentModalOpen, handleOpenRecentSales, completedSale, isProcessingSale]);
 
     // Client selection
     const handleSelectCliente = (clienteIdStr: string) => {
@@ -1216,6 +1317,14 @@ export default function Terminal({
         const q = verifierQuery.trim().toLowerCase();
         const found = localCatalog.find((c) => (c.codigo || '').toLowerCase() === q || (c.nombre || '').toLowerCase().includes(q));
         setVerifierItem(found || null);
+    };
+
+    const handleAddVerifierItemToCart = () => {
+        if (!verifierItem) return;
+        addToCart(verifierItem);
+        setIsVerifierOpen(false);
+        setVerifierItem(null);
+        setVerifierQuery('');
     };
 
     // New client registration
@@ -1397,12 +1506,22 @@ export default function Terminal({
 
                         <Button
                             type="button"
-                            className="h-8 bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs gap-1.5 px-3"
-                            disabled={activeTicket.cart.length === 0 || !activeRegister}
+                            size="lg"
+                            className="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-bold h-12 text-sm shadow-md gap-2"
                             onClick={handleOpenPayment}
+                            disabled={activeTicket.cart.length === 0 || !activeRegister || isProcessingSale}
                         >
-                            <DollarSign className="w-4 h-4" />
-                            <span className="font-extrabold">[F11]</span> {__('Emitir Ticket y Cobrar')}
+                            {isProcessingSale ? (
+                                <>
+                                    <Loader2 className="w-4 h-4 animate-spin" />
+                                    {__('Procesando...')}
+                                </>
+                            ) : (
+                                <>
+                                    <DollarSign className="w-4 h-4" />
+                                    <span className="font-extrabold">[F11]</span> {__('Emitir Ticket y Cobrar')}
+                                </>
+                            )}
                         </Button>
                     </div>
                 </div>
@@ -1713,11 +1832,20 @@ export default function Terminal({
                             <Button
                                 type="button"
                                 className="h-10 px-6 bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-sm shadow-md gap-2"
-                                disabled={activeTicket.cart.length === 0 || !activeRegister}
+                                disabled={activeTicket.cart.length === 0 || !activeRegister || isProcessingSale}
                                 onClick={handleOpenPayment}
                             >
-                                <DollarSign className="w-4.5 h-4.5" />
-                                [F11] {__('Emitir Ticket y Cobrar')}
+                                {isProcessingSale ? (
+                                    <>
+                                        <Loader2 className="w-4 h-4 animate-spin" />
+                                        {__('Procesando...')}
+                                    </>
+                                ) : (
+                                    <>
+                                        <DollarSign className="w-4.5 h-4.5" />
+                                        [F11] {__('Emitir Ticket y Cobrar')}
+                                    </>
+                                )}
                             </Button>
                         </div>
                     </div>
@@ -2176,135 +2304,227 @@ export default function Terminal({
                     </DialogContent>
                 </Dialog>
 
-                {/* MODAL COBRAR (F12) CON CONVERSIÓN A DÓLARES */}
-                <Dialog open={isPaymentModalOpen} onOpenChange={setIsPaymentModalOpen}>
-                    <DialogContent className="sm:max-w-md">
-                        <DialogHeader>
-                            <DialogTitle className="flex items-center gap-2 text-emerald-600">
-                                <CreditCard className="w-5 h-5" />
-                                {__('Completar Venta y Cobro')}
+                {/* MODAL COBRAR (F11/F12) CON CONVERSIÓN A DÓLARES */}
+                <Dialog
+                    open={isPaymentModalOpen && activeTicket.cart.length > 0 && !completedSale}
+                    onOpenChange={(open) => {
+                        setIsPaymentModalOpen(open);
+                        if (!open) {
+                            isProcessingSaleRef.current = false;
+                            setIsProcessingSale(false);
+                        }
+                    }}
+                >
+                    <DialogContent className="sm:max-w-2xl md:max-w-3xl w-full max-h-[92vh] overflow-y-auto p-6">
+                        <DialogHeader className="pb-2 border-b border-slate-100 dark:border-slate-800">
+                            <DialogTitle className="flex items-center gap-2.5 text-xl font-bold text-emerald-600 dark:text-emerald-400">
+                                <div className="p-2 rounded-lg bg-emerald-100 dark:bg-emerald-950/60 text-emerald-600 dark:text-emerald-400">
+                                    <CreditCard className="w-5 h-5" />
+                                </div>
+                                <span>{__('Completar Venta y Cobro')}</span>
                             </DialogTitle>
-                            <DialogDescription>
+                            <DialogDescription className="text-sm text-muted-foreground">
                                 {__('Seleccione o combine métodos de pago para liquidar el ticket.')}
                             </DialogDescription>
                         </DialogHeader>
 
-                        <form ref={paymentFormRef} onSubmit={handleCompleteSale} className="space-y-4 py-2">
-                            <div className="rounded-xl bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-900 p-4 text-center">
-                                <span className="text-xs font-semibold uppercase text-emerald-700 dark:text-emerald-400">
+                        <form ref={paymentFormRef} onSubmit={handleCompleteSale} className="space-y-4 pt-2">
+                            {/* TOTAL A COBRAR HERO CARD */}
+                            <div className="rounded-2xl bg-gradient-to-br from-emerald-500/10 via-emerald-500/5 to-teal-500/10 dark:from-emerald-950/50 dark:via-emerald-900/30 dark:to-teal-950/50 border border-emerald-200 dark:border-emerald-800/80 p-5 text-center shadow-xs">
+                                <span className="text-xs font-bold uppercase tracking-wider text-emerald-700 dark:text-emerald-300">
                                     {isVenezuela ? __('TOTAL A PAGAR EN BOLÍVARES (BS.)') : __('TOTAL A COBRAR')}
                                 </span>
-                                <p className="text-3xl font-extrabold font-mono text-emerald-600 dark:text-emerald-300">
+                                <p className="text-4xl sm:text-5xl font-extrabold font-mono text-emerald-600 dark:text-emerald-400 my-1 tracking-tight">
                                     {isVenezuela
                                         ? `Bs. ${(total * valorDolar).toLocaleString('es-VE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
                                         : `${currencySymbol}${total.toFixed(2)}`}
                                 </p>
-                                <p className="text-xs font-bold text-emerald-700 dark:text-emerald-400 mt-1 font-mono">
+                                <p className="text-xs sm:text-sm font-bold text-emerald-700 dark:text-emerald-300 font-mono">
                                     {isVenezuela
                                         ? `💵 $${total.toFixed(2)} USD × Tasa ${valorDolar.toFixed(2)} Bs./USD`
                                         : `≈ $${totalUSD.toFixed(2)} USD (${__('Tasa:')} $${valorDolar.toFixed(2)} MXN)`}
                                 </p>
                             </div>
 
-                            {/* Selector de Cliente */}
-                            <div className="space-y-2">
-                                <Label className="font-semibold">{__('Asignar Cliente')}</Label>
-                                <Select value={String(activeTicket.clienteId || '0')} onValueChange={handleSelectCliente}>
-                                    <SelectTrigger>
-                                        <SelectValue placeholder={__('Cliente General')} />
-                                    </SelectTrigger>
-                                    <SelectContent>
-                                        <SelectItem value="0">{__('Cliente General')}</SelectItem>
-                                        {clientes.map((c) => (
-                                            <SelectItem key={c.id} value={String(c.id)}>
-                                                {c.nombre} {c.saldo_pendiente > 0 ? `· Deuda: ${currencySymbol}${c.saldo_pendiente.toFixed(2)}` : ''}
-                                            </SelectItem>
-                                        ))}
-                                    </SelectContent>
-                                </Select>
-                            </div>
-
-                            {/* Venta a Crédito Toggle */}
-                            <div className={cn(
-                                "flex items-center justify-between rounded-lg border p-3 transition-colors",
-                                activeTicket.esCredito ? "bg-amber-50 border-amber-300 dark:bg-amber-950/20" : "bg-slate-50 dark:bg-slate-900"
-                            )}>
-                                <div>
-                                    <p className="text-sm font-semibold flex items-center gap-1.5">
-                                        <Wallet className="w-4 h-4 text-amber-600" />
-                                        {__('Venta a Crédito (Fiado)')}
-                                    </p>
+                            {/* SELECTOR DE CLIENTE Y VENTA A CRÉDITO EN DOS COLUMNAS */}
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                                {/* Selector de Cliente */}
+                                <div className="space-y-1.5">
+                                    <Label className="text-xs font-bold text-slate-700 dark:text-slate-300">{__('Asignar Cliente')}</Label>
+                                    <Select value={String(activeTicket.clienteId || '0')} onValueChange={handleSelectCliente}>
+                                        <SelectTrigger className="h-11 text-sm bg-white dark:bg-slate-900">
+                                            <SelectValue placeholder={__('Cliente General')} />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                            <SelectItem value="0">{__('Cliente General')}</SelectItem>
+                                            {clientes.map((c) => (
+                                                <SelectItem key={c.id} value={String(c.id)}>
+                                                    {c.nombre} {c.saldo_pendiente > 0 ? `· Deuda: ${currencySymbol}${c.saldo_pendiente.toFixed(2)}` : ''}
+                                                </SelectItem>
+                                            ))}
+                                        </SelectContent>
+                                    </Select>
                                 </div>
-                                <label className={cn("relative inline-flex items-center cursor-pointer", !activeTicket.clienteId && "opacity-40 cursor-not-allowed")}>
-                                    <input
-                                        type="checkbox"
-                                        className="sr-only peer"
-                                        checked={activeTicket.esCredito}
-                                        disabled={!activeTicket.clienteId}
-                                        onChange={(e) => updateActiveTicket((t) => ({ ...t, esCredito: e.target.checked }))}
-                                    />
-                                    <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer dark:bg-gray-700 peer-checked:after:translate-x-full after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-amber-500"></div>
-                                </label>
-                            </div>
 
-                            {/* Botones de Pago Rápido Predefinidos */}
-                            <div className="space-y-1">
-                                <Label className="text-xs text-muted-foreground font-semibold">{__('Atajos de Cobro Rápido')}:</Label>
-                                <div className="flex flex-wrap gap-1.5">
-                                    <Button
-                                        type="button"
-                                        variant="outline"
-                                        size="sm"
-                                        className="h-7 text-xs font-mono font-bold bg-slate-50 dark:bg-slate-800"
-                                        onClick={() => setPaymentLines([{ metodo_pago: 'efectivo', monto: (isVenezuela ? total * valorDolar : total).toFixed(2) }])}
-                                    >
-                                        {isVenezuela ? `Exacto Bs. (${(total * valorDolar).toFixed(2)})` : `Exacto ${currencyCode} ($${total.toFixed(2)})`}
-                                    </Button>
-                                    <Button
-                                        type="button"
-                                        variant="outline"
-                                        size="sm"
-                                        className="h-7 text-xs font-mono font-bold bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 border-emerald-200"
-                                        onClick={() => setPaymentLines([{ metodo_pago: 'dolar', monto: total.toFixed(2) }])}
-                                    >
-                                        💵 Exacto USD (${total.toFixed(2)})
-                                    </Button>
-                                    <Button
-                                        type="button"
-                                        variant="outline"
-                                        size="sm"
-                                        className="h-7 text-xs font-mono font-bold"
-                                        onClick={() => setPaymentLines([{ metodo_pago: 'dolar', monto: '20' }])}
-                                    >
-                                        $20 USD
-                                    </Button>
-                                    <Button
-                                        type="button"
-                                        variant="outline"
-                                        size="sm"
-                                        className="h-7 text-xs font-mono font-bold"
-                                        onClick={() => setPaymentLines([{ metodo_pago: 'dolar', monto: '50' }])}
-                                    >
-                                        $50 USD
-                                    </Button>
-                                    <Button
-                                        type="button"
-                                        variant="outline"
-                                        size="sm"
-                                        className="h-7 text-xs font-mono font-bold"
-                                        onClick={() => setPaymentLines([{ metodo_pago: 'dolar', monto: '100' }])}
-                                    >
-                                        $100 USD
-                                    </Button>
+                                {/* Venta a Crédito Toggle */}
+                                <div className="space-y-1.5">
+                                    <Label className="text-xs font-bold text-slate-700 dark:text-slate-300">{__('Modalidad de Venta')}</Label>
+                                    <div className={cn(
+                                        "flex items-center justify-between rounded-lg border h-11 px-3 transition-colors",
+                                        activeTicket.esCredito ? "bg-amber-50 border-amber-300 dark:bg-amber-950/20" : "bg-slate-50 dark:bg-slate-900 border-slate-200 dark:border-slate-800"
+                                    )}>
+                                        <div className="flex items-center gap-2">
+                                            <Wallet className="w-4 h-4 text-amber-600" />
+                                            <span className="text-xs font-bold">{__('Venta a Crédito (Fiado)')}</span>
+                                        </div>
+                                        <label className={cn("relative inline-flex items-center cursor-pointer", !activeTicket.clienteId && "opacity-40 cursor-not-allowed")}>
+                                            <input
+                                                type="checkbox"
+                                                className="sr-only peer"
+                                                checked={activeTicket.esCredito}
+                                                disabled={!activeTicket.clienteId}
+                                                onChange={(e) => updateActiveTicket((t) => ({ ...t, esCredito: e.target.checked }))}
+                                            />
+                                            <div className="w-10 h-5 bg-gray-200 peer-focus:outline-none rounded-full peer dark:bg-gray-700 peer-checked:after:translate-x-full after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-amber-500"></div>
+                                        </label>
+                                    </div>
                                 </div>
                             </div>
 
-                            {/* Líneas de Pago */}
-                            <div className="space-y-2">
+                            {/* SECCIÓN CALCULADORA DE CAMBIO Y ATAJOS */}
+                            <div className="space-y-3 bg-slate-50 dark:bg-slate-900/60 p-4 rounded-xl border border-slate-200 dark:border-slate-800">
+                                <div className="space-y-1.5">
+                                    <Label className="text-xs text-muted-foreground font-bold tracking-wide uppercase">{__('Atajos de Cobro Rápido')}:</Label>
+                                    <div className="flex flex-wrap gap-2">
+                                        <Button
+                                            type="button"
+                                            variant="outline"
+                                            size="sm"
+                                            className="h-8 px-3 text-xs font-mono font-bold bg-white dark:bg-slate-800 shadow-2xs hover:bg-slate-100"
+                                            onClick={() => {
+                                                const m = (isVenezuela ? total * valorDolar : total).toFixed(2);
+                                                setPagaCon(m);
+                                                setPaymentLines([{ metodo_pago: 'efectivo', monto: m }]);
+                                            }}
+                                        >
+                                            {isVenezuela ? `Exacto Bs. (${(total * valorDolar).toFixed(2)})` : `Exacto ${currencyCode} ($${total.toFixed(2)})`}
+                                        </Button>
+                                        <Button
+                                            type="button"
+                                            variant="outline"
+                                            size="sm"
+                                            className="h-8 px-3 text-xs font-mono font-bold bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 border-emerald-300 shadow-2xs hover:bg-emerald-100"
+                                            onClick={() => {
+                                                const m = total.toFixed(2);
+                                                setPagaCon(m);
+                                                setPaymentLines([{ metodo_pago: 'dolar', monto: m }]);
+                                            }}
+                                        >
+                                            💵 Exacto USD (${total.toFixed(2)})
+                                        </Button>
+                                        <Button
+                                            type="button"
+                                            variant="outline"
+                                            size="sm"
+                                            className="h-8 px-3 text-xs font-mono font-bold bg-white dark:bg-slate-800 shadow-2xs hover:bg-slate-100"
+                                            onClick={() => {
+                                                setPagaCon('20');
+                                                setPaymentLines([{ metodo_pago: 'dolar', monto: '20' }]);
+                                            }}
+                                        >
+                                            $20 USD
+                                        </Button>
+                                        <Button
+                                            type="button"
+                                            variant="outline"
+                                            size="sm"
+                                            className="h-8 px-3 text-xs font-mono font-bold bg-white dark:bg-slate-800 shadow-2xs hover:bg-slate-100"
+                                            onClick={() => {
+                                                setPagaCon('50');
+                                                setPaymentLines([{ metodo_pago: 'dolar', monto: '50' }]);
+                                            }}
+                                        >
+                                            $50 USD
+                                        </Button>
+                                        <Button
+                                            type="button"
+                                            variant="outline"
+                                            size="sm"
+                                            className="h-8 px-3 text-xs font-mono font-bold bg-white dark:bg-slate-800 shadow-2xs hover:bg-slate-100"
+                                            onClick={() => {
+                                                setPagaCon('100');
+                                                setPaymentLines([{ metodo_pago: 'dolar', monto: '100' }]);
+                                            }}
+                                        >
+                                            $100 USD
+                                        </Button>
+                                    </div>
+                                </div>
+
+                                {/* Campo "¿Con cuánto paga el cliente?" y Badge de Cambio a Entregar */}
+                                <div className="pt-2 border-t border-slate-200 dark:border-slate-800 space-y-2">
+                                    <div className="flex items-center justify-between">
+                                        <Label htmlFor="pagaConInput" className="text-sm font-bold text-slate-800 dark:text-slate-200 flex items-center gap-1.5">
+                                            <Coins className="w-4 h-4 text-amber-600" />
+                                            {__('¿Con cuánto paga el cliente?')}:
+                                        </Label>
+                                        {cambio > 0 && (
+                                            <span className="text-xs font-mono font-black text-emerald-700 dark:text-emerald-300 bg-emerald-100 dark:bg-emerald-950/80 px-2.5 py-0.5 rounded-full border border-emerald-300 dark:border-emerald-700">
+                                                {__('Cambio:')} {currencySymbol}{cambio.toFixed(2)} {isVenezuela ? 'Bs.' : 'MXN'}
+                                            </span>
+                                        )}
+                                    </div>
+
+                                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 items-center">
+                                        <div className="relative">
+                                            <Input
+                                                id="pagaConInput"
+                                                ref={pagaConRef}
+                                                type="number"
+                                                step="0.01"
+                                                min="0"
+                                                placeholder={(isVenezuela ? total * valorDolar : total).toFixed(2)}
+                                                value={pagaCon}
+                                                onChange={(e) => handlePagaConChange(e.target.value)}
+                                                onFocus={(e) => e.target.select()}
+                                                onClick={(e) => (e.target as HTMLInputElement).select()}
+                                                className="font-mono text-2xl font-black bg-white dark:bg-slate-950 h-13 border-slate-300 dark:border-slate-700 pl-3 pr-16 focus:border-emerald-500 focus:ring-emerald-500 shadow-2xs"
+                                            />
+                                            <span className="absolute right-3 top-3.5 text-xs font-bold text-muted-foreground font-mono bg-slate-100 dark:bg-slate-800 px-1.5 py-0.5 rounded">
+                                                {isVenezuela ? 'Bs.' : currencyCode}
+                                            </span>
+                                        </div>
+
+                                        {/* Indicador visual del Cambio / Faltante */}
+                                        <div className={cn(
+                                            "h-13 rounded-lg px-4 flex flex-col justify-center border font-mono transition-all shadow-2xs",
+                                            cambio > 0
+                                                ? "bg-emerald-600 text-white border-emerald-700 shadow-md"
+                                                : remaining > 0.01 && !activeTicket.esCredito
+                                                ? "bg-rose-50 dark:bg-rose-950/40 text-rose-700 dark:text-rose-400 border-rose-300 dark:border-rose-800"
+                                                : "bg-white dark:bg-slate-950 text-slate-800 dark:text-slate-200 border-slate-200 dark:border-slate-800"
+                                        )}>
+                                            <div className="flex items-center justify-between text-[11px] uppercase font-bold tracking-wider opacity-90">
+                                                <span>{cambio > 0 ? __('CAMBIO A ENTREGAR') : (remaining > 0.01 && !activeTicket.esCredito) ? __('FALTA POR COBRAR') : __('PAGO EXACTO')}</span>
+                                            </div>
+                                            <div className="text-xl sm:text-2xl font-black leading-tight">
+                                                {cambio > 0
+                                                    ? `${currencySymbol}${cambio.toFixed(2)} ${isVenezuela ? 'Bs.' : 'MXN'}`
+                                                    : (remaining > 0.01 && !activeTicket.esCredito)
+                                                    ? `-${currencySymbol}${remaining.toFixed(2)}`
+                                                    : `${currencySymbol}0.00`}
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* FORMAS DE PAGO */}
+                            <div className="space-y-2.5">
                                 <div className="flex items-center justify-between">
-                                    <Label className="font-semibold">{__('Formas de Pago')}</Label>
-                                    <Button type="button" variant="outline" size="sm" onClick={addPaymentLine}>
-                                        <Plus className="w-3 h-3 mr-1" />
+                                    <Label className="text-sm font-bold text-slate-800 dark:text-slate-200">{__('Formas de Pago')}</Label>
+                                    <Button type="button" variant="outline" size="sm" onClick={addPaymentLine} className="h-8 text-xs font-semibold">
+                                        <Plus className="w-3.5 h-3.5 mr-1" />
                                         {__('Agregar')}
                                     </Button>
                                 </div>
@@ -2317,7 +2537,7 @@ export default function Terminal({
                                         <div key={idx} className="space-y-1">
                                             <div className="flex items-center gap-2">
                                                 <Select value={pl.metodo_pago} onValueChange={(v) => updatePaymentLine(idx, 'metodo_pago', v)}>
-                                                    <SelectTrigger className="w-[160px]">
+                                                    <SelectTrigger className="w-[180px] h-11 text-sm bg-white dark:bg-slate-900">
                                                         <SelectValue />
                                                     </SelectTrigger>
                                                     <SelectContent>
@@ -2334,24 +2554,24 @@ export default function Terminal({
                                                         step="0.01"
                                                         min="0"
                                                         placeholder={pl.metodo_pago === 'dolar' ? "0.00 USD" : "0.00 MXN"}
-                                                        className="font-mono text-lg font-bold pr-12"
+                                                        className="font-mono text-xl font-bold h-11 pr-14 bg-white dark:bg-slate-950"
                                                         value={pl.monto}
                                                         onChange={(e) => updatePaymentLine(idx, 'monto', e.target.value)}
                                                     />
-                                                    <span className="absolute right-3 top-2.5 text-xs font-bold text-muted-foreground font-mono">
+                                                    <span className="absolute right-3 top-3 text-xs font-bold text-muted-foreground font-mono">
                                                         {pl.metodo_pago === 'dolar' ? 'USD' : 'MXN'}
                                                     </span>
                                                 </div>
                                                 {paymentLines.length > 1 && (
-                                                    <Button type="button" variant="ghost" size="icon" className="h-8 w-8 text-rose-500" onClick={() => removePaymentLine(idx)}>
-                                                        <X className="h-4 w-4" />
+                                                    <Button type="button" variant="ghost" size="icon" className="h-10 w-10 text-rose-500 hover:text-rose-700 hover:bg-rose-50 dark:hover:bg-rose-950/50" onClick={() => removePaymentLine(idx)}>
+                                                        <X className="w-4 h-4" />
                                                     </Button>
                                                 )}
                                             </div>
 
                                             {/* Helper de Conversión en Tiempo Real */}
                                             {numVal > 0 && (
-                                                <div className="text-[11px] text-right font-mono font-semibold text-muted-foreground pr-1">
+                                                <div className="text-xs text-right font-mono font-semibold text-muted-foreground pr-2">
                                                     {pl.metodo_pago === 'dolar' ? (
                                                         <span className="text-emerald-600 font-bold">
                                                             USD ${numVal.toFixed(2)} = ${convMXN.toFixed(2)} MXN
@@ -2368,35 +2588,61 @@ export default function Terminal({
                                 })}
                             </div>
 
-                            {/* Resumen Cambio / Faltante */}
-                            <div className="rounded-lg border p-3 space-y-1 text-sm bg-slate-50 dark:bg-slate-900">
-                                <div className="flex justify-between">
-                                    <span className="text-muted-foreground">{__('Total Abonado (en MXN)')}:</span>
-                                    <span className="font-mono font-bold">{currencySymbol}{totalPaid.toFixed(2)}</span>
+                            {/* RESUMEN DE TOTAL Y CAMBIO */}
+                            <div className="rounded-xl border p-3.5 space-y-1.5 text-sm bg-slate-50 dark:bg-slate-900/60 border-slate-200 dark:border-slate-800">
+                                <div className="flex justify-between items-center">
+                                    <span className="text-muted-foreground font-medium">{__('Total Abonado (en MXN)')}:</span>
+                                    <span className="font-mono font-bold text-base">{currencySymbol}{totalPaid.toFixed(2)}</span>
                                 </div>
                                 {remaining > 0.01 && !activeTicket.esCredito && (
-                                    <div className="flex justify-between text-rose-600 font-bold border-t pt-1">
+                                    <div className="flex justify-between items-center text-rose-600 font-bold border-t border-slate-200 dark:border-slate-800 pt-1.5">
                                         <span>{__('Falta por Cobrar')}:</span>
-                                        <span className="font-mono">{currencySymbol}{remaining.toFixed(2)}</span>
+                                        <span className="font-mono text-base">{currencySymbol}{remaining.toFixed(2)}</span>
                                     </div>
                                 )}
                                 {cambio > 0 && (
-                                    <div className="flex items-center justify-between text-emerald-600 font-bold border-t pt-1">
+                                    <div className="flex items-center justify-between text-emerald-600 font-bold border-t border-slate-200 dark:border-slate-800 pt-1.5">
                                         <span>{__('Cambio / Vuelto a Entregar')}:</span>
                                         <div className="text-right">
-                                            <span className="font-mono block text-base">{currencySymbol}{cambio.toFixed(2)} MXN</span>
-                                            <span className="font-mono text-xs text-emerald-700 block">≈ ${cambioUSD.toFixed(2)} USD</span>
+                                            <span className="font-mono block text-lg font-black">{currencySymbol}{cambio.toFixed(2)} MXN</span>
+                                            <span className="font-mono text-xs text-emerald-700 dark:text-emerald-400 block font-semibold">≈ ${cambioUSD.toFixed(2)} USD</span>
                                         </div>
                                     </div>
                                 )}
                             </div>
 
-                            <DialogFooter className="pt-2">
-                                <Button type="button" variant="outline" onClick={() => setIsPaymentModalOpen(false)}>
+                            <DialogFooter className="pt-3 gap-3 sm:gap-3 flex items-center justify-end">
+                                <Button
+                                    type="button"
+                                    variant="outline"
+                                    size="lg"
+                                    className="h-12 px-6 font-semibold"
+                                    disabled={isProcessingSale}
+                                    onClick={() => {
+                                        setIsPaymentModalOpen(false);
+                                        isProcessingSaleRef.current = false;
+                                        setIsProcessingSale(false);
+                                    }}
+                                >
                                     {__('Cancelar')}
                                 </Button>
-                                <Button type="submit" className="bg-emerald-600 hover:bg-emerald-700 font-bold">
-                                    {__('Emitir Ticket y Cobrar')}
+                                <Button
+                                    type="submit"
+                                    size="lg"
+                                    disabled={isProcessingSale}
+                                    className="h-12 px-8 bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold text-base min-w-[220px] gap-2 shadow-md hover:shadow-lg transition-all"
+                                >
+                                    {isProcessingSale ? (
+                                        <>
+                                            <Loader2 className="w-5 h-5 animate-spin" />
+                                            {__('Procesando Venta...')}
+                                        </>
+                                    ) : (
+                                        <>
+                                            <span className="font-black bg-emerald-800/50 px-2 py-0.5 rounded text-xs">[F11]</span>
+                                            <span>{__('Emitir Ticket y Cobrar')}</span>
+                                        </>
+                                    )}
                                 </Button>
                             </DialogFooter>
                         </form>
@@ -2432,7 +2678,7 @@ export default function Terminal({
                             </Button>
 
                             {verifierItem && (
-                                <div className="rounded-xl bg-blue-50 dark:bg-blue-950/40 border border-blue-200 dark:border-blue-900 p-4 text-center space-y-2">
+                                <div className="rounded-xl bg-blue-50 dark:bg-blue-950/40 border border-blue-200 dark:border-blue-900 p-4 text-center space-y-2.5">
                                     <h4 className="font-bold text-base text-slate-900 dark:text-slate-100">{verifierItem.nombre}</h4>
                                     <p className="text-xs text-muted-foreground font-mono">SKU / Código: {verifierItem.codigo}</p>
                                     <p className="text-3xl font-extrabold font-mono text-emerald-600 dark:text-emerald-400">
@@ -2442,10 +2688,21 @@ export default function Terminal({
                                         ≈ ${(verifierItem.precio / (valorDolar || 1)).toFixed(2)} USD
                                     </p>
                                     {verifierItem.stock !== null && (
-                                        <Badge variant="outline" className="bg-white dark:bg-slate-800 font-bold">
-                                            {__('Stock Disponible')}: {verifierItem.stock}
-                                        </Badge>
+                                        <div>
+                                            <Badge variant="outline" className="bg-white dark:bg-slate-800 font-bold">
+                                                {__('Stock Disponible')}: {verifierItem.stock}
+                                            </Badge>
+                                        </div>
                                     )}
+
+                                    <Button
+                                        type="button"
+                                        onClick={handleAddVerifierItemToCart}
+                                        className="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-bold gap-2 py-2.5 shadow-sm text-sm mt-1"
+                                    >
+                                        <ShoppingCart className="w-4 h-4" />
+                                        {__('Mandar al Ticket / Agregar a la Venta')}
+                                    </Button>
                                 </div>
                             )}
 
@@ -2475,8 +2732,11 @@ export default function Terminal({
                             <div className="space-y-2">
                                 <Label>{__('Descripción / Concepto')}</Label>
                                 <Input
+                                    ref={miscNombreRef}
                                     value={miscForm.nombre}
                                     onChange={(e) => setMiscForm({ ...miscForm, nombre: e.target.value })}
+                                    onFocus={(e) => e.target.select()}
+                                    onClick={(e) => (e.target as HTMLInputElement).select()}
                                     required
                                     autoFocus
                                 />
@@ -2491,6 +2751,8 @@ export default function Terminal({
                                         min="0.01"
                                         value={miscForm.precio}
                                         onChange={(e) => setMiscForm({ ...miscForm, precio: e.target.value })}
+                                        onFocus={(e) => e.target.select()}
+                                        onClick={(e) => (e.target as HTMLInputElement).select()}
                                         placeholder="0.00"
                                         className="font-mono text-lg font-bold"
                                         required
@@ -2504,6 +2766,8 @@ export default function Terminal({
                                         min="1"
                                         value={miscForm.cantidad}
                                         onChange={(e) => setMiscForm({ ...miscForm, cantidad: e.target.value })}
+                                        onFocus={(e) => e.target.select()}
+                                        onClick={(e) => (e.target as HTMLInputElement).select()}
                                         className="font-mono text-lg font-bold"
                                         required
                                     />
@@ -2855,9 +3119,9 @@ export default function Terminal({
                     </Dialog>
                 )}
 
-                {/* MODAL ÚLTIMAS VENTAS (F4) CON FILTROS POR TURNO Y DÍA */}
+                {/* MODAL ÚLTIMAS VENTAS (F4) CON FILTROS POR TURNO, DÍA Y DETALLE RÁPIDO DE LO VENDIDO */}
                 <Dialog open={isRecentSalesOpen} onOpenChange={setIsRecentSalesOpen}>
-                    <DialogContent className="sm:max-w-4xl max-h-[90vh] flex flex-col w-[96vw]">
+                    <DialogContent className="sm:max-w-5xl lg:max-w-6xl max-h-[92vh] flex flex-col w-[98vw]">
                         <DialogHeader>
                             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
                                 <DialogTitle className="flex items-center gap-2 text-blue-600 text-lg">
@@ -2877,11 +3141,11 @@ export default function Terminal({
                                 </Button>
                             </div>
                             <DialogDescription>
-                                {__('Consulte las ventas procesadas por turno en curso, ventas del día o histórico para reimprimir tickets o anular transacciones.')}
+                                {__('Consulte las ventas procesadas por turno en curso, ventas del día o histórico para ver lo cobrado, reimprimir tickets o anular transacciones.')}
                             </DialogDescription>
                         </DialogHeader>
 
-                        {/* SELECTOR DE FILTROS: TURNO EN CURSO / VENTAS DE HOY / TODAS */}
+                        {/* SELECTOR DE FILTROS: TURNO EN CURSO / VENTAS DE HOY / TODAS Y BÚSQUEDA */}
                         <div className="flex flex-wrap items-center justify-between gap-2.5 pt-1 pb-2 border-b">
                             <div className="flex flex-wrap items-center gap-1.5">
                                 {activeRegister && (
@@ -2929,41 +3193,64 @@ export default function Terminal({
                                 </Button>
                             </div>
 
-                            {/* RESUMEN RÁPIDO DE MONTOS Y CANTIDAD */}
-                            {salesSummary && (
-                                <div className="flex items-center gap-2 text-xs font-semibold bg-slate-50 dark:bg-slate-800/80 px-3 py-1.5 rounded-lg border">
-                                    <span className="text-muted-foreground">{__('Total Cobrado')}:</span>
-                                    <span className="font-mono font-black text-emerald-600 dark:text-emerald-400">
-                                        {currencySymbol}{salesSummary.total_amount.toFixed(2)}
-                                    </span>
-                                    <span className="text-slate-300 dark:text-slate-700">|</span>
-                                    <span className="text-muted-foreground">{salesSummary.total_count} {__('tickets')}</span>
-                                    {salesSummary.total_anuladas > 0 && (
-                                        <>
-                                            <span className="text-slate-300 dark:text-slate-700">|</span>
-                                            <Badge variant="destructive" className="px-1.5 py-0 text-[10px] font-bold">
-                                                {salesSummary.total_anuladas} {__('anuladas')}
-                                            </Badge>
-                                        </>
+                            <div className="flex flex-wrap items-center gap-2 flex-1 justify-end">
+                                {/* Búsqueda Rápida en Vivo */}
+                                <div className="relative min-w-[200px] max-w-xs w-full sm:w-auto">
+                                    <Search className="w-3.5 h-3.5 absolute left-2.5 top-2.5 text-muted-foreground" />
+                                    <Input
+                                        placeholder={__('Buscar producto, cliente o ticket...')}
+                                        value={historySearchQuery}
+                                        onChange={(e) => setHistorySearchQuery(e.target.value)}
+                                        className="h-8 text-xs pl-8 pr-7 bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800"
+                                    />
+                                    {historySearchQuery && (
+                                        <button
+                                            type="button"
+                                            onClick={() => setHistorySearchQuery('')}
+                                            className="absolute right-2 top-2 text-muted-foreground hover:text-foreground"
+                                        >
+                                            <X className="w-3.5 h-3.5" />
+                                        </button>
                                     )}
                                 </div>
-                            )}
+
+                                {/* RESUMEN RÁPIDO DE MONTOS Y CANTIDAD */}
+                                {salesSummary && (
+                                    <div className="flex items-center gap-2 text-xs font-semibold bg-slate-50 dark:bg-slate-800/80 px-3 py-1.5 rounded-lg border">
+                                        <span className="text-muted-foreground">{__('Total Cobrado')}:</span>
+                                        <span className="font-mono font-black text-emerald-600 dark:text-emerald-400">
+                                            {currencySymbol}{salesSummary.total_amount.toFixed(2)}
+                                        </span>
+                                        <span className="text-slate-300 dark:text-slate-700">|</span>
+                                        <span className="text-muted-foreground">{salesSummary.total_count} {__('tickets')}</span>
+                                        {salesSummary.total_anuladas > 0 && (
+                                            <>
+                                                <span className="text-slate-300 dark:text-slate-700">|</span>
+                                                <Badge variant="destructive" className="px-1.5 py-0 text-[10px] font-bold">
+                                                    {salesSummary.total_anuladas} {__('anuladas')}
+                                                </Badge>
+                                            </>
+                                        )}
+                                    </div>
+                                )}
+                            </div>
                         </div>
 
-                        {/* TABLA DE VENTAS ORDENADAS DESCENDENTEMENTE */}
-                        <div className="flex-1 overflow-y-auto border rounded-xl divide-y my-2 min-h-[300px] max-h-[55vh]">
+                        {/* TABLA DE VENTAS ORDENADAS DESCENDENTEMENTE CON VISUALIZACIÓN RÁPIDA DE ARTÍCULOS */}
+                        <div className="flex-1 overflow-y-auto border rounded-xl divide-y my-2 min-h-[300px] max-h-[58vh]">
                             {isLoadingRecentSales ? (
                                 <div className="p-12 text-center text-xs text-muted-foreground">
                                     <RefreshCw className="w-7 h-7 animate-spin mx-auto mb-2 text-blue-600" />
                                     {__('Cargando ventas del historial...')}
                                 </div>
-                            ) : recentSales.length > 0 ? (
+                            ) : filteredRecentSales.length > 0 ? (
                                 <table className="w-full text-left text-xs">
                                     <thead className="bg-slate-100/90 dark:bg-slate-800/90 text-[11px] uppercase font-bold text-slate-600 dark:text-slate-300 sticky top-0 z-10 backdrop-blur-xs">
                                         <tr>
                                             <th className="p-2.5 px-3">Ticket</th>
                                             <th className="p-2.5 px-3">Fecha y Hora</th>
                                             <th className="p-2.5 px-3">Cliente</th>
+                                            <th className="p-2.5 px-3 min-w-[240px]">Artículos Vendidos (Detalle)</th>
                                             <th className="p-2.5 px-3 text-center">Método</th>
                                             <th className="p-2.5 px-3 text-center">Estado</th>
                                             <th className="p-2.5 px-3 text-right">Total</th>
@@ -2971,108 +3258,275 @@ export default function Terminal({
                                         </tr>
                                     </thead>
                                     <tbody className="divide-y font-mono">
-                                        {recentSales.map((sale) => {
+                                        {filteredRecentSales.map((sale) => {
                                             const isAnulada = sale.estado === 'anulada';
                                             const dateObj = new Date(sale.created_at || Date.now());
                                             const isToday = new Date().toDateString() === dateObj.toDateString();
                                             const dateFormatted = isToday ? __('Hoy') : dateObj.toLocaleDateString();
                                             const timeFormatted = dateObj.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+                                            const items = sale.items || [];
+                                            const isExpanded = expandedSaleId === sale.id;
 
                                             return (
-                                                <tr key={sale.id} className={cn(
-                                                    "transition-colors",
-                                                    isAnulada
-                                                        ? "bg-rose-50/40 dark:bg-rose-950/20 opacity-75"
-                                                        : "hover:bg-slate-50 dark:hover:bg-slate-800/60"
-                                                )}>
-                                                    <td className="p-2.5 px-3">
-                                                        <span className={cn(
-                                                            "font-bold block",
-                                                            isAnulada ? "text-slate-400 line-through" : "text-blue-600 dark:text-blue-400"
-                                                        )}>
-                                                            {sale.codigo_ticket}
-                                                        </span>
-                                                        {sale.cash_register_id && (
-                                                            <span className="text-[10px] text-muted-foreground font-sans">
-                                                                Caja #{sale.cash_register_id}
+                                                <React.Fragment key={sale.id}>
+                                                    <tr className={cn(
+                                                        "transition-colors",
+                                                        isAnulada
+                                                            ? "bg-rose-50/40 dark:bg-rose-950/20 opacity-75"
+                                                            : isExpanded
+                                                            ? "bg-blue-50/50 dark:bg-blue-950/30"
+                                                            : "hover:bg-slate-50 dark:hover:bg-slate-800/60"
+                                                    )}>
+                                                        <td className="p-2.5 px-3">
+                                                            <span className={cn(
+                                                                "font-bold block",
+                                                                isAnulada ? "text-slate-400 line-through" : "text-blue-600 dark:text-blue-400"
+                                                            )}>
+                                                                {sale.codigo_ticket}
                                                             </span>
-                                                        )}
-                                                    </td>
-                                                    <td className="p-2.5 px-3 font-sans">
-                                                        <span className="font-semibold block text-slate-800 dark:text-slate-200">
-                                                            {dateFormatted}
-                                                        </span>
-                                                        <span className="text-[10px] text-muted-foreground font-mono">
-                                                            {timeFormatted}
-                                                        </span>
-                                                    </td>
-                                                    <td className="p-2.5 px-3 font-sans font-medium text-slate-800 dark:text-slate-200">
-                                                        {sale.cliente_nombre || 'Cliente General'}
-                                                    </td>
-                                                    <td className="p-2.5 px-3 text-center font-sans">
-                                                        <Badge variant="outline" className="text-[10px] uppercase font-bold px-1.5 py-0 bg-slate-50 dark:bg-slate-800">
-                                                            {sale.metodo_pago === 'efectivo' ? __('Efectivo') :
-                                                             sale.metodo_pago === 'dolar' ? '💵 USD' :
-                                                             sale.metodo_pago === 'tarjeta' ? __('Tarjeta') :
-                                                             sale.metodo_pago === 'transferencia' ? __('Transf.') :
-                                                             sale.metodo_pago || 'POS'}
-                                                        </Badge>
-                                                    </td>
-                                                    <td className="p-2.5 px-3 text-center font-sans">
-                                                        {isAnulada ? (
-                                                            <Badge variant="destructive" className="text-[10px] font-bold uppercase px-1.5 py-0">
-                                                                {__('Anulada')}
-                                                            </Badge>
-                                                        ) : (
-                                                            <Badge className="bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border-emerald-300 text-[10px] font-bold uppercase px-1.5 py-0">
-                                                                {__('Completada')}
-                                                            </Badge>
-                                                        )}
-                                                    </td>
-                                                    <td className="p-2.5 px-3 text-right">
-                                                        <span className={cn(
-                                                            "font-bold font-mono text-sm block",
-                                                            isAnulada ? "line-through text-slate-400" : "text-emerald-600 dark:text-emerald-400"
-                                                        )}>
-                                                            {currencySymbol}{Number(sale.total).toFixed(2)}
-                                                        </span>
-                                                        {valorDolar > 0 && !isAnulada && (
-                                                            <span className="text-[10px] text-muted-foreground block font-mono">
-                                                                ≈ ${(Number(sale.total) / valorDolar).toFixed(2)} USD
+                                                            {sale.cash_register_id && (
+                                                                <span className="text-[10px] text-muted-foreground font-sans">
+                                                                    Caja #{sale.cash_register_id}
+                                                                </span>
+                                                            )}
+                                                        </td>
+                                                        <td className="p-2.5 px-3 font-sans">
+                                                            <span className="font-semibold block text-slate-800 dark:text-slate-200">
+                                                                {dateFormatted}
                                                             </span>
-                                                        )}
-                                                    </td>
-                                                    <td className="p-2.5 px-3 text-center font-sans">
-                                                        <div className="flex items-center justify-center gap-1.5">
-                                                            <Button
-                                                                type="button"
-                                                                variant="outline"
-                                                                size="sm"
-                                                                className="h-7 text-xs font-bold gap-1 text-blue-600 border-blue-200 hover:bg-blue-50 dark:border-blue-900/50 dark:hover:bg-blue-950/40"
-                                                                onClick={() => {
-                                                                    setCompletedSale(sale);
-                                                                    setIsRecentSalesOpen(false);
-                                                                }}
-                                                            >
-                                                                <Printer className="w-3.5 h-3.5" />
-                                                                <span>{__('Ticket')}</span>
-                                                            </Button>
+                                                            <span className="text-[10px] text-muted-foreground font-mono">
+                                                                {timeFormatted}
+                                                            </span>
+                                                        </td>
+                                                        <td className="p-2.5 px-3 font-sans font-medium text-slate-800 dark:text-slate-200">
+                                                            {sale.cliente_nombre || 'Cliente General'}
+                                                        </td>
 
-                                                            {canDeleteSale && !isAnulada && (
+                                                        {/* COLUMNA VISUALIZACIÓN RÁPIDA DE LO QUE SE COBRÓ */}
+                                                        <td className="p-2.5 px-3 font-sans">
+                                                            {items.length > 0 ? (
+                                                                <div className="space-y-1 max-w-[280px]">
+                                                                    {items.slice(0, 2).map((it: any, itIdx: number) => (
+                                                                        <div key={itIdx} className="flex items-center gap-1.5 text-xs text-slate-700 dark:text-slate-300 leading-tight">
+                                                                            <span className="font-mono font-black text-emerald-700 dark:text-emerald-300 shrink-0 bg-emerald-100 dark:bg-emerald-950/80 px-1.5 py-0.5 rounded text-[10px] border border-emerald-300 dark:border-emerald-700">
+                                                                                {it.cantidad}x
+                                                                            </span>
+                                                                            <span className="truncate font-semibold text-slate-800 dark:text-slate-200" title={it.nombre}>
+                                                                                {it.nombre}
+                                                                            </span>
+                                                                            <span className="font-mono text-muted-foreground text-[10px] shrink-0">
+                                                                                ({currencySymbol}{Number(it.subtotal || (it.precio_unitario * it.cantidad) || 0).toFixed(2)})
+                                                                            </span>
+                                                                        </div>
+                                                                    ))}
+                                                                    {items.length > 2 && (
+                                                                        <button
+                                                                            type="button"
+                                                                            onClick={() => setExpandedSaleId(isExpanded ? null : sale.id)}
+                                                                            className="text-[10px] font-bold text-blue-600 dark:text-blue-400 hover:underline flex items-center gap-0.5 pt-0.5"
+                                                                        >
+                                                                            <span>+{items.length - 2} {__('artículos más')}</span>
+                                                                            <ChevronDown className={cn("w-3 h-3 transition-transform", isExpanded && "rotate-180")} />
+                                                                        </button>
+                                                                    )}
+                                                                </div>
+                                                            ) : (
+                                                                <span className="text-xs text-muted-foreground italic font-mono">
+                                                                    {__('Sin detalle')}
+                                                                </span>
+                                                            )}
+                                                        </td>
+
+                                                        <td className="p-2.5 px-3 text-center font-sans">
+                                                            <Badge variant="outline" className="text-[10px] uppercase font-bold px-1.5 py-0 bg-slate-50 dark:bg-slate-800">
+                                                                {sale.metodo_pago === 'efectivo' ? __('Efectivo') :
+                                                                 sale.metodo_pago === 'dolar' ? '💵 USD' :
+                                                                 sale.metodo_pago === 'tarjeta' ? __('Tarjeta') :
+                                                                 sale.metodo_pago === 'transferencia' ? __('Transf.') :
+                                                                 sale.metodo_pago || 'POS'}
+                                                            </Badge>
+                                                        </td>
+                                                        <td className="p-2.5 px-3 text-center font-sans">
+                                                            {isAnulada ? (
+                                                                <Badge variant="destructive" className="text-[10px] font-bold uppercase px-1.5 py-0">
+                                                                    {__('Anulada')}
+                                                                </Badge>
+                                                            ) : (
+                                                                <Badge className="bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border-emerald-300 text-[10px] font-bold uppercase px-1.5 py-0">
+                                                                    {__('Completada')}
+                                                                </Badge>
+                                                            )}
+                                                        </td>
+                                                        <td className="p-2.5 px-3 text-right">
+                                                            <span className={cn(
+                                                                "font-bold font-mono text-sm block",
+                                                                isAnulada ? "line-through text-slate-400" : "text-emerald-600 dark:text-emerald-400"
+                                                            )}>
+                                                                {currencySymbol}{Number(sale.total).toFixed(2)}
+                                                            </span>
+                                                            {valorDolar > 0 && !isAnulada && (
+                                                                <span className="text-[10px] text-muted-foreground block font-mono">
+                                                                    ≈ ${(Number(sale.total) / valorDolar).toFixed(2)} USD
+                                                                </span>
+                                                            )}
+                                                        </td>
+                                                        <td className="p-2.5 px-3 text-center font-sans">
+                                                            <div className="flex items-center justify-center gap-1.5">
                                                                 <Button
                                                                     type="button"
                                                                     variant="outline"
                                                                     size="sm"
-                                                                    className="h-7 text-xs font-bold gap-1 text-rose-600 border-rose-200 hover:bg-rose-50 dark:border-rose-900/60 dark:hover:bg-rose-950/50"
-                                                                    onClick={() => handleConfirmDeleteSale(sale)}
+                                                                    className={cn(
+                                                                        "h-7 text-xs font-bold gap-1 transition-colors",
+                                                                        isExpanded
+                                                                            ? "bg-blue-600 text-white border-blue-600 hover:bg-blue-700 hover:text-white"
+                                                                            : "text-slate-700 dark:text-slate-200 border-slate-200 hover:bg-slate-100 dark:border-slate-700 dark:hover:bg-slate-800"
+                                                                    )}
+                                                                    onClick={() => setExpandedSaleId(isExpanded ? null : sale.id)}
+                                                                    title={__('Ver desglose rápido de lo cobrado')}
                                                                 >
-                                                                    <Trash2 className="w-3.5 h-3.5" />
-                                                                    <span>{__('Anular')}</span>
+                                                                    <Eye className="w-3.5 h-3.5" />
+                                                                    <span>{isExpanded ? __('Cerrar') : __('Ver')}</span>
                                                                 </Button>
-                                                            )}
-                                                        </div>
-                                                    </td>
-                                                </tr>
+
+                                                                <Button
+                                                                    type="button"
+                                                                    variant="outline"
+                                                                    size="sm"
+                                                                    className="h-7 text-xs font-bold gap-1 text-blue-600 border-blue-200 hover:bg-blue-50 dark:border-blue-900/50 dark:hover:bg-blue-950/40"
+                                                                    onClick={() => {
+                                                                        setCompletedSale(sale);
+                                                                        setIsRecentSalesOpen(false);
+                                                                    }}
+                                                                >
+                                                                    <Printer className="w-3.5 h-3.5" />
+                                                                    <span>{__('Ticket')}</span>
+                                                                </Button>
+
+                                                                {canDeleteSale && !isAnulada && (
+                                                                    <Button
+                                                                        type="button"
+                                                                        variant="outline"
+                                                                        size="sm"
+                                                                        className="h-7 text-xs font-bold gap-1 text-rose-600 border-rose-200 hover:bg-rose-50 dark:border-rose-900/60 dark:hover:bg-rose-950/50"
+                                                                        onClick={() => handleConfirmDeleteSale(sale)}
+                                                                    >
+                                                                        <Trash2 className="w-3.5 h-3.5" />
+                                                                        <span>{__('Anular')}</span>
+                                                                    </Button>
+                                                                )}
+                                                            </div>
+                                                        </td>
+                                                    </tr>
+
+                                                    {/* DESGLOSE RÁPIDO EXPANDIBLE DE LO QUE SE COBRÓ */}
+                                                    {isExpanded && (
+                                                        <tr className="bg-blue-50/40 dark:bg-blue-950/20 border-b border-blue-200/60 dark:border-blue-900/60">
+                                                            <td colSpan={8} className="p-3 px-4">
+                                                                <div className="rounded-xl bg-white dark:bg-slate-900 border border-blue-200 dark:border-blue-800 p-4 shadow-sm space-y-3 font-sans">
+                                                                    <div className="flex flex-wrap items-center justify-between gap-2 pb-2 border-b border-slate-100 dark:border-slate-800">
+                                                                        <div className="flex items-center gap-2.5">
+                                                                            <div className="p-2 rounded-lg bg-blue-100 dark:bg-blue-950 text-blue-600 dark:text-blue-400">
+                                                                                <ShoppingBag className="w-4 h-4" />
+                                                                            </div>
+                                                                            <div>
+                                                                                <span className="font-bold text-sm text-slate-800 dark:text-slate-100 block">
+                                                                                    {__('Artículos Cobrados en')} <span className="font-mono text-blue-600">{sale.codigo_ticket}</span>
+                                                                                </span>
+                                                                                <span className="text-xs text-muted-foreground">
+                                                                                    {__('Cliente:')} {sale.cliente_nombre || 'Cliente General'} · {items.length} {__('artículos en total')}
+                                                                                </span>
+                                                                            </div>
+                                                                        </div>
+                                                                        <div className="flex items-center gap-2">
+                                                                            <Button
+                                                                                type="button"
+                                                                                size="sm"
+                                                                                variant="outline"
+                                                                                className="h-7 text-xs font-bold text-blue-600 border-blue-200 hover:bg-blue-50 dark:border-blue-900 dark:hover:bg-blue-950/40"
+                                                                                onClick={() => {
+                                                                                    setCompletedSale(sale);
+                                                                                    setIsRecentSalesOpen(false);
+                                                                                }}
+                                                                            >
+                                                                                <Printer className="w-3.5 h-3.5 mr-1" />
+                                                                                {__('Imprimir Comprobante')}
+                                                                            </Button>
+                                                                            <Button
+                                                                                type="button"
+                                                                                size="sm"
+                                                                                variant="ghost"
+                                                                                className="h-7 text-xs text-slate-500 hover:text-slate-800 dark:hover:text-slate-200"
+                                                                                onClick={() => setExpandedSaleId(null)}
+                                                                            >
+                                                                                ✕ {__('Cerrar')}
+                                                                            </Button>
+                                                                        </div>
+                                                                    </div>
+
+                                                                    {/* Lista de productos cobrados */}
+                                                                    <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2.5">
+                                                                        {items.map((it: any, itIdx: number) => (
+                                                                            <div
+                                                                                key={itIdx}
+                                                                                className="flex items-center justify-between p-2.5 rounded-lg bg-slate-50 dark:bg-slate-800/70 border border-slate-200/80 dark:border-slate-700/80"
+                                                                            >
+                                                                                <div className="flex items-center gap-2.5 min-w-0 pr-2">
+                                                                                    <span className="h-7 w-7 rounded-md bg-emerald-100 dark:bg-emerald-950 text-emerald-700 dark:text-emerald-300 font-extrabold font-mono text-xs flex items-center justify-center shrink-0 border border-emerald-200 dark:border-emerald-800">
+                                                                                        {it.cantidad}x
+                                                                                    </span>
+                                                                                    <div className="min-w-0">
+                                                                                        <p className="font-bold text-xs text-slate-800 dark:text-slate-100 truncate" title={it.nombre}>
+                                                                                            {it.nombre}
+                                                                                        </p>
+                                                                                        <p className="text-[11px] text-muted-foreground font-mono">
+                                                                                            {currencySymbol}{Number(it.precio_unitario || 0).toFixed(2)} c/u {it.concepto_tipo ? `· ${it.concepto_tipo}` : ''}
+                                                                                        </p>
+                                                                                    </div>
+                                                                                </div>
+                                                                                <div className="text-right shrink-0">
+                                                                                    <span className="font-mono font-black text-emerald-600 dark:text-emerald-400 text-xs block">
+                                                                                        {currencySymbol}{Number(it.subtotal || (it.precio_unitario * it.cantidad) || 0).toFixed(2)}
+                                                                                    </span>
+                                                                                </div>
+                                                                            </div>
+                                                                        ))}
+                                                                    </div>
+
+                                                                    {/* Resumen de totales */}
+                                                                    <div className="flex flex-wrap items-center justify-between text-xs pt-2 border-t border-slate-100 dark:border-slate-800 font-mono">
+                                                                        <div className="flex items-center gap-3 text-muted-foreground font-sans">
+                                                                            <span>
+                                                                                {__('Método:')} <strong className="text-slate-800 dark:text-slate-200 uppercase">{sale.metodo_pago || 'efectivo'}</strong>
+                                                                            </span>
+                                                                            {Number(sale.descuento) > 0 && (
+                                                                                <span>
+                                                                                    {__('Descuento:')} <strong className="text-rose-600">-{currencySymbol}{Number(sale.descuento).toFixed(2)}</strong>
+                                                                                </span>
+                                                                            )}
+                                                                            {Number(sale.monto_recibido) > 0 && (
+                                                                                <span>
+                                                                                    {__('Recibido:')} <strong>{currencySymbol}{Number(sale.monto_recibido).toFixed(2)}</strong>
+                                                                                </span>
+                                                                            )}
+                                                                            {Number(sale.cambio) > 0 && (
+                                                                                <span>
+                                                                                    {__('Cambio:')} <strong className="text-emerald-600">{currencySymbol}{Number(sale.cambio).toFixed(2)}</strong>
+                                                                                </span>
+                                                                            )}
+                                                                        </div>
+                                                                        <div className="text-right">
+                                                                            <span className="text-muted-foreground mr-2 font-sans">{__('Total Cobrado:')}</span>
+                                                                            <span className="font-extrabold text-sm text-emerald-600 dark:text-emerald-400 font-mono">
+                                                                                {currencySymbol}{Number(sale.total).toFixed(2)}
+                                                                            </span>
+                                                                        </div>
+                                                                    </div>
+                                                                </div>
+                                                            </td>
+                                                        </tr>
+                                                    )}
+                                                </React.Fragment>
                                             );
                                         })}
                                     </tbody>
@@ -3081,14 +3535,18 @@ export default function Terminal({
                                 <div className="p-12 text-center text-xs text-muted-foreground">
                                     <Receipt className="w-9 h-9 mx-auto mb-2 opacity-30 text-slate-400" />
                                     <p className="font-bold text-sm text-slate-700 dark:text-slate-300 mb-1">
-                                        {__('No se encontraron ventas para este filtro.')}
+                                        {historySearchQuery
+                                            ? `${__('No se encontraron ventas para:')} "${historySearchQuery}"`
+                                            : __('No se encontraron ventas para este filtro.')}
                                     </p>
                                     <p className="text-slate-500">
-                                        {salesScope === 'shift'
-                                            ? __('No existen ventas registradas en el turno de caja actual.')
-                                            : salesScope === 'today'
-                                                ? __('No se han procesado ventas en el día de hoy.')
-                                                : __('No hay ventas registradas en el sistema.')}
+                                        {historySearchQuery
+                                            ? __('Intente buscando con otro término, producto, cliente o ticket.')
+                                            : salesScope === 'shift'
+                                                ? __('No existen ventas registradas en el turno de caja actual.')
+                                                : salesScope === 'today'
+                                                    ? __('No se han procesado ventas en el día de hoy.')
+                                                    : __('No hay ventas registradas en el sistema.')}
                                     </p>
                                 </div>
                             )}
@@ -3106,7 +3564,7 @@ export default function Terminal({
                                     </span>
                                 )}
                             </span>
-                            <Button type="button" variant="outline" onClick={() => setIsRecentSalesOpen(false)}>
+                            <Button type="button" variant="outline" size="sm" onClick={() => setIsRecentSalesOpen(false)}>
                                 {__('Cerrar')}
                             </Button>
                         </DialogFooter>

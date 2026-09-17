@@ -89,24 +89,50 @@ class GoalController extends Controller
             $targetAmount = round($actualSalesTotal * (1 + $incrementPercentage / 100), 2);
         }
 
-        $dailyAverageTarget = $daysInMonth > 0 ? round($targetAmount / $daysInMonth, 2) : 0;
+        // Calcular días laborables del mes (Lunes a Sábado, excluyendo Domingos)
+        $workingDaysInMonth = 0;
+        for ($d = 1; $d <= $daysInMonth; $d++) {
+            $dateObj = Carbon::createFromDate($year, $month, $d);
+            if ($dateObj->dayOfWeek !== Carbon::SUNDAY) {
+                $workingDaysInMonth++;
+            }
+        }
 
-        // Bloques de semanas estilo plantilla (1-5, 6-12, 13-19, 20-26, 27-Fin)
-        $weekRanges = [
-            ['semana' => 1, 'inicio' => 1, 'fin' => 5],
-            ['semana' => 2, 'inicio' => 6, 'fin' => 12],
-            ['semana' => 3, 'inicio' => 13, 'fin' => 19],
-            ['semana' => 4, 'inicio' => 20, 'fin' => 26],
-            ['semana' => 5, 'inicio' => 27, 'fin' => $daysInMonth],
-        ];
+        $dailyAverageTarget = $workingDaysInMonth > 0 ? round($targetAmount / $workingDaysInMonth, 2) : 0;
+
+        // Generar rangos dinámicos de semanas (Lunes a Domingo)
+        // Semana 1: del día 1 hasta el primer domingo del mes.
+        // Semanas intermedias: de lunes a domingo.
+        // Última semana: del último lunes hasta el fin de mes.
+        $weekRanges = [];
+        $currentStart = 1;
+        $semanaIndex = 1;
+
+        while ($currentStart <= $daysInMonth) {
+            $dateObj = Carbon::createFromDate($year, $month, $currentStart);
+            if ($dateObj->dayOfWeek === Carbon::SUNDAY) {
+                $endDay = $currentStart;
+            } else {
+                $sundayDate = $dateObj->copy()->endOfWeek(Carbon::SUNDAY);
+                $endDay = ($sundayDate->month == $month) ? min($sundayDate->day, $daysInMonth) : $daysInMonth;
+            }
+
+            $weekRanges[] = [
+                'semana' => $semanaIndex,
+                'inicio' => $currentStart,
+                'fin' => $endDay,
+            ];
+
+            $currentStart = $endDay + 1;
+            $semanaIndex++;
+        }
 
         $weeksBreakdown = [];
 
         foreach ($weekRanges as $range) {
             $semNum = $range['semana'];
             $startDay = $range['inicio'];
-            $endDay = min($range['fin'], $daysInMonth);
-            $countDays = max(0, $endDay - $startDay + 1);
+            $endDay = $range['fin'];
 
             $dailySalesMap = [
                 'lunes' => 0.0,
@@ -119,6 +145,7 @@ class GoalController extends Controller
             ];
 
             $totalSemana = 0.0;
+            $countWorkingDays = 0;
 
             for ($d = $startDay; $d <= $endDay; $d++) {
                 $dateObj = Carbon::createFromDate($year, $month, $d);
@@ -133,16 +160,21 @@ class GoalController extends Controller
                 if (isset($dailySalesMap[$dayOfWeekKey])) {
                     $dailySalesMap[$dayOfWeekKey] += $montoDia;
                 }
+
+                // Contar días laborables (Lunes a Sábado, se trabaja de lunes a sábado)
+                if ($dateObj->dayOfWeek !== Carbon::SUNDAY) {
+                    $countWorkingDays++;
+                }
             }
 
-            $metaSemanal = round($dailyAverageTarget * $countDays, 2);
+            $metaSemanal = round($dailyAverageTarget * $countWorkingDays, 2);
             $porcentajeAvance = $metaSemanal > 0 ? round(($totalSemana / $metaSemanal) * 100, 1) : 0;
 
             $weeksBreakdown[] = [
                 'semana' => "Semana {$semNum}",
                 'inicio_dia' => $startDay,
                 'fin_dia' => $endDay,
-                'dias' => $countDays,
+                'dias' => $countWorkingDays,
                 'dias_map' => $dailySalesMap,
                 'total_ventas' => $totalSemana,
                 'meta_semanal' => $metaSemanal,
@@ -188,7 +220,7 @@ class GoalController extends Controller
             'year' => 'required|integer',
             'month' => 'required|integer|between:1,12',
             'sucursal_id' => 'nullable|integer',
-            'increment_percentage' => 'required|numeric|min:0',
+            'increment_percentage' => 'nullable|numeric|min:0',
             'target_amount' => 'required|numeric|min:0',
             'notes' => 'nullable|string',
         ]);
@@ -213,7 +245,7 @@ class GoalController extends Controller
             ],
             [
                 'base_sales' => $baseSales,
-                'increment_percentage' => $validated['increment_percentage'],
+                'increment_percentage' => $validated['increment_percentage'] ?? 0,
                 'target_amount' => $validated['target_amount'],
                 'notes' => $validated['notes'] ?? null,
             ]

@@ -428,11 +428,6 @@ export default function AdminSaasLayout({
                                             permission: 'ventas.terminal',
                                         },
                                         {
-                                            title: 'Metas de Ventas',
-                                            href: '/admin/pos/metas',
-                                            permission: 'metas.view',
-                                        },
-                                        {
                                             title: 'Historial de Ventas',
                                             href: '/admin/ventas',
                                             permission: 'ventas.view',
@@ -446,11 +441,6 @@ export default function AdminSaasLayout({
                                             title: 'Clientes',
                                             href: '/admin/clientes',
                                             permission: 'clientes.view',
-                                        },
-                                        {
-                                            title: 'Alertas de Stock',
-                                            href: '/admin/stock-alerts',
-                                            permission: 'ventas.view',
                                         },
                                     ].filter(item => hasPermission(item.permission));
 
@@ -477,6 +467,11 @@ export default function AdminSaasLayout({
                                             permission: 'productos.view',
                                         },
                                         {
+                                            title: 'Alertas de Stock',
+                                            href: '/admin/stock-alerts',
+                                            permission: 'productos.view',
+                                        },
+                                        {
                                             title: 'Ajustes de Stock',
                                             href: '/admin/inventario/ajustes',
                                             permission: 'inventario.view',
@@ -486,7 +481,7 @@ export default function AdminSaasLayout({
                                             href: '/admin/inventario/kardex',
                                             permission: 'inventario.view',
                                         },
-                                    ].filter(item => hasPermission(item.permission));
+                                    ].filter(item => hasPermission(item.permission) || (item.title === 'Alertas de Stock' && (hasPermission('ventas.view') || hasPermission('inventario.view'))));
 
                                     if (productosItems.length === 0) return null;
 
@@ -589,6 +584,11 @@ export default function AdminSaasLayout({
                                 {/* Administración Group */}
                                 {(() => {
                                     const adminItems = [
+                                        {
+                                            title: 'Metas de Ventas',
+                                            href: '/admin/pos/metas',
+                                            permission: 'metas.view',
+                                        },
                                         {
                                             title: 'Fondo de Mes',
                                             href: '/admin/fondo-mensual',

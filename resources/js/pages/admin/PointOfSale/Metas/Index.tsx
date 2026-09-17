@@ -91,7 +91,7 @@ export default function MetasIndexPage({
 
     const breadcrumbs = [
         { title: __('Dashboard'), href: '/admin/dashboard' },
-        { title: __('Point of Sale'), href: '/admin/ventas/terminal' },
+        { title: __('Administración'), href: '/admin/pos/metas' },
         { title: __('Metas de Ventas'), href: '/admin/pos/metas' },
     ];
 
@@ -112,19 +112,21 @@ export default function MetasIndexPage({
         notes: goal?.notes || '',
     });
 
-    // Actualizar formulario al cambiar filtros desde props
+    // Actualizar formulario al cambiar filtros desde props o recibir nueva meta
     useEffect(() => {
         setData((prev) => ({
             ...prev,
             year: Number(selectedYear),
             month: Number(selectedMonth),
             sucursal_id: selectedSucursal ? Number(selectedSucursal) : '',
+            target_amount: initialTargetAmount,
+            increment_percentage: initialIncrementPercentage,
         }));
-    }, [selectedYear, selectedMonth, selectedSucursal]);
+    }, [selectedYear, selectedMonth, selectedSucursal, initialTargetAmount, initialIncrementPercentage]);
 
     // Recalcular meta al modificar el % de incremento
     const handleIncrementChange = (value: string) => {
-        const pct = parseFloat(value) || 0;
+        const pct = value === '' ? 0 : parseFloat(value) || 0;
         const newTarget = actualSalesTotal > 0
             ? Math.round(actualSalesTotal * (1 + pct / 100) * 100) / 100
             : data.target_amount;
@@ -138,7 +140,7 @@ export default function MetasIndexPage({
 
     // Recalcular % al modificar manualmente el monto de meta
     const handleTargetAmountChange = (value: string) => {
-        const target = parseFloat(value) || 0;
+        const target = value === '' ? 0 : parseFloat(value) || 0;
         const pct = actualSalesTotal > 0
             ? Math.round(((target - actualSalesTotal) / actualSalesTotal) * 100 * 10) / 10
             : 0;
@@ -146,7 +148,7 @@ export default function MetasIndexPage({
         setData((prev) => ({
             ...prev,
             target_amount: target,
-            increment_percentage: pct >= 0 ? pct : 0,
+            increment_percentage: pct > 0 ? pct : 0,
         }));
     };
 
@@ -189,6 +191,11 @@ export default function MetasIndexPage({
         })}`;
     };
 
+    // Avance actual calculado dinámicamente según la meta manual o calculada
+    const currentProgress = data.target_amount > 0
+        ? Math.round((actualSalesTotal / data.target_amount) * 100 * 10) / 10
+        : 0;
+
     // Totales globales para el pie de tabla
     const totalLun = weeksBreakdown.reduce((acc, w) => acc + w.dias_map.lunes, 0);
     const totalMar = weeksBreakdown.reduce((acc, w) => acc + w.dias_map.martes, 0);
@@ -225,9 +232,9 @@ export default function MetasIndexPage({
                     </div>
                 </ModuleHeader>
 
-                {/* Filtros de Control y Configuración de Incremento */}
+                {/* Filtros de Control y Configuración de Incremento / Meta Manual */}
                 <div className="rounded-xl border bg-card p-4 shadow-sm">
-                    <form onSubmit={handleSubmit} className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-5 items-end">
+                    <form onSubmit={handleSubmit} className="grid grid-cols-1 gap-4 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-6 items-end">
                         {/* Selector Año */}
                         <div className="space-y-1.5">
                             <Label className="text-xs font-semibold text-muted-foreground flex items-center gap-1.5">
@@ -309,18 +316,38 @@ export default function MetasIndexPage({
                             </div>
                         )}
 
+                        {/* Input Meta Manual ($) */}
+                        <div className="space-y-1.5">
+                            <Label className="text-xs font-bold text-emerald-700 dark:text-emerald-400 flex items-center gap-1.5">
+                                <Target className="h-3.5 w-3.5 text-emerald-600" />
+                                {__('Meta Manual')} ({currencySymbol})
+                            </Label>
+                            <div className="relative">
+                                <span className="absolute left-3 top-2.5 text-xs font-bold text-muted-foreground">{currencySymbol}</span>
+                                <Input
+                                    type="number"
+                                    step="0.01"
+                                    min="0"
+                                    value={data.target_amount === 0 ? '' : data.target_amount}
+                                    onChange={(e) => handleTargetAmountChange(e.target.value)}
+                                    placeholder="0.00"
+                                    className="pl-7 font-bold text-slate-800 dark:text-slate-100 border-emerald-500/60 focus-visible:ring-emerald-500"
+                                />
+                            </div>
+                        </div>
+
                         {/* Input % Incremento */}
                         <div className="space-y-1.5">
                             <Label className="text-xs font-semibold text-muted-foreground flex items-center gap-1.5">
                                 <Percent className="h-3.5 w-3.5" />
-                                {__('% Porcentaje de Incremento')}
+                                {__('% Incremento (Opcional)')}
                             </Label>
                             <div className="relative">
                                 <Input
                                     type="number"
                                     step="0.1"
                                     min="0"
-                                    value={data.increment_percentage}
+                                    value={data.increment_percentage === 0 ? '' : data.increment_percentage}
                                     onChange={(e) => handleIncrementChange(e.target.value)}
                                     placeholder="0.0"
                                     className="pr-8"
@@ -331,7 +358,7 @@ export default function MetasIndexPage({
 
                         {/* Botón Guardar Meta */}
                         <div>
-                            <Button type="submit" disabled={processing} className="w-full bg-emerald-600 hover:bg-emerald-700 text-white">
+                            <Button type="submit" disabled={processing} className="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-bold h-10 shadow-sm">
                                 <Save className="mr-2 h-4 w-4" />
                                 {__('Guardar Meta')}
                             </Button>
@@ -368,16 +395,18 @@ export default function MetasIndexPage({
                     <StatCard
                         icon={<TrendingUp className="h-6 w-6" />}
                         title={__('% DE AVANCE GLOBAL')}
-                        value={`${overallProgress}%`}
+                        value={`${currentProgress}%`}
                         description={
-                            overallProgress >= 100
+                            currentProgress >= 100
                                 ? __('¡Meta mensual alcanzada!')
-                                : `${formatMoney(Math.max(0, data.target_amount - actualSalesTotal))} ${__('restantes')}`
+                                : data.target_amount > actualSalesTotal
+                                ? `${formatMoney(Math.max(0, data.target_amount - actualSalesTotal))} ${__('restantes')}`
+                                : __('Defina una meta para medir el avance')
                         }
                         colorClassName={cn(
-                            overallProgress >= 100
+                            currentProgress >= 100
                                 ? 'bg-emerald-100 text-emerald-600 dark:bg-emerald-950/40 dark:text-emerald-400'
-                                : overallProgress >= 80
+                                : currentProgress >= 80
                                 ? 'bg-amber-100 text-amber-600 dark:bg-amber-950/40 dark:text-amber-400'
                                 : 'bg-rose-100 text-rose-600 dark:bg-rose-950/40 dark:text-rose-400'
                         )}
@@ -391,19 +420,19 @@ export default function MetasIndexPage({
                             <Target className="h-4 w-4 text-emerald-600" />
                             {__('Progreso Mensual del Objetivo de Facturación')}
                         </span>
-                        <span className="font-bold text-emerald-600">{overallProgress}%</span>
+                        <span className="font-bold text-emerald-600">{currentProgress}%</span>
                     </div>
                     <div className="w-full bg-slate-100 dark:bg-slate-800 rounded-full h-3.5 overflow-hidden">
                         <div
                             className={cn(
                                 'h-full transition-all duration-500 rounded-full',
-                                overallProgress >= 100
+                                currentProgress >= 100
                                     ? 'bg-emerald-500'
-                                    : overallProgress >= 80
+                                    : currentProgress >= 80
                                     ? 'bg-amber-500'
                                     : 'bg-emerald-600'
                             )}
-                            style={{ width: `${Math.min(100, overallProgress)}%` }}
+                            style={{ width: `${Math.min(100, currentProgress)}%` }}
                         />
                     </div>
                 </div>
@@ -611,7 +640,7 @@ export default function MetasIndexPage({
                                         {formatMoney(data.target_amount)}
                                     </td>
                                     <td className="p-2.5 border-r border-slate-300 dark:border-slate-700 text-center">
-                                        {overallProgress}%
+                                        {currentProgress}%
                                     </td>
                                     <td className="p-2.5 border-r border-slate-300 dark:border-slate-700 text-center">
                                         {totalDiasMes}

@@ -130,13 +130,13 @@ interface Props {
     modelos?: Array<{ id: number; marca_id?: number; categoria_id?: number; nombre_comercial: string; codigo_modelo?: string }>;
     categorias?: Array<{ id: number; nombre: string }>;
     currencySymbol: string;
+    availableYears?: string[];
     filters: {
         search?: string;
         status?: string;
         tecnico_id?: string;
-        marca_id?: string;
-        modelo_id?: string;
-        categoria_id?: string;
+        year?: string;
+        month?: string;
         perPage?: string;
     };
     isTecnicoOnly?: boolean;
@@ -151,6 +151,7 @@ export default function IndexReparaciones({
     modelos = [],
     categorias = [],
     currencySymbol,
+    availableYears = [],
     filters,
     isTecnicoOnly,
     empresa,
@@ -162,33 +163,13 @@ export default function IndexReparaciones({
 
     const [search, setSearch] = useState(filters.search || '');
     const [status, setStatus] = useState(filters.status || 'all');
-    const [marcaId, setMarcaId] = useState(filters.marca_id || 'all');
-    const [modeloId, setModeloId] = useState(filters.modelo_id || 'all');
-    const [categoriaId, setCategoriaId] = useState(filters.categoria_id || 'all');
+    const [year, setYear] = useState(filters.year || 'all');
+    const [month, setMonth] = useState(filters.month || 'all');
+    const [tecnicoId, setTecnicoId] = useState(filters.tecnico_id || 'all');
     const [perPage, setPerPage] = useState(filters.perPage ? String(filters.perPage) : '10');
 
     // Quick Print Ticket State
     const [printOrden, setPrintOrden] = useState<Orden | null>(null);
-
-    // Filter available models dynamically based on selected Marca and Categoria
-    const availableModelos = useMemo(() => {
-        let list: any[] = modelos || [];
-        if (!list.length && marcas?.length) {
-            list = marcas.flatMap((m) =>
-                (m.modelos || []).map((mod: any) => ({
-                    ...mod,
-                    marca_id: mod.marca_id || m.id,
-                }))
-            );
-        }
-        if (marcaId && marcaId !== 'all') {
-            list = list.filter((m) => String(m.marca_id) === String(marcaId));
-        }
-        if (categoriaId && categoriaId !== 'all') {
-            list = list.filter((m) => String(m.categoria_id) === String(categoriaId));
-        }
-        return list;
-    }, [modelos, marcas, marcaId, categoriaId]);
 
     // Select2 Options (memoized)
     const statusOptions = useMemo(() => [
@@ -204,24 +185,39 @@ export default function IndexReparaciones({
         { value: 'reincidencia_garantia', label: '8-REINCIDENCIA/GARANTIA' },
     ], [__]);
 
-    const categoriaOptions = useMemo(() => [
-        { value: 'all', label: __('Todas las categorías') },
-        ...(categorias || []).map((c) => ({ value: String(c.id), label: c.nombre })),
-    ], [categorias, __]);
+    const yearOptions = useMemo(() => {
+        const currentY = String(new Date().getFullYear());
+        const list = availableYears && availableYears.length > 0 ? availableYears : [currentY];
+        return [
+            { value: 'all', label: __('Todos los años') },
+            ...list.map((y) => ({ value: String(y), label: String(y) })),
+        ];
+    }, [availableYears, __]);
 
-    const marcaOptions = useMemo(() => [
-        { value: 'all', label: __('Todas las marcas') },
-        ...(marcas || []).map((m) => ({ value: String(m.id), label: m.nombre })),
-    ], [marcas, __]);
+    const monthOptions = useMemo(() => [
+        { value: 'all', label: __('Todos los meses') },
+        { value: '1', label: __('Enero') },
+        { value: '2', label: __('Febrero') },
+        { value: '3', label: __('Marzo') },
+        { value: '4', label: __('Abril') },
+        { value: '5', label: __('Mayo') },
+        { value: '6', label: __('Junio') },
+        { value: '7', label: __('Julio') },
+        { value: '8', label: __('Agosto') },
+        { value: '9', label: __('Septiembre') },
+        { value: '10', label: __('Octubre') },
+        { value: '11', label: __('Noviembre') },
+        { value: '12', label: __('Diciembre') },
+    ], [__]);
 
-    const modeloOptions = useMemo(() => [
-        { value: 'all', label: __('Todos los modelos') },
-        ...availableModelos.map((m: any) => ({
-            value: String(m.id),
-            label: m.nombre_comercial || m.nombre || 'Modelo',
-            description: m.codigo_modelo || undefined,
+    const tecnicoOptions = useMemo(() => [
+        { value: 'all', label: __('Todos los técnicos') },
+        { value: 'unassigned', label: __('Sin técnico asignado') },
+        ...(tecnicos || []).map((t) => ({
+            value: String(t.id),
+            label: t.name,
         })),
-    ], [availableModelos, __]);
+    ], [tecnicos, __]);
 
     const perPageOptions = [
         { value: '10', label: '10' },
@@ -286,9 +282,9 @@ export default function IndexReparaciones({
                 cleanParams({
                     search: search || undefined,
                     status: status === 'all' ? undefined : status,
-                    marca_id: marcaId === 'all' ? undefined : marcaId,
-                    modelo_id: modeloId === 'all' ? undefined : modeloId,
-                    categoria_id: categoriaId === 'all' ? undefined : categoriaId,
+                    year: year === 'all' ? undefined : year,
+                    month: month === 'all' ? undefined : month,
+                    tecnico_id: tecnicoId === 'all' ? undefined : tecnicoId,
                     perPage: perPage === '10' ? undefined : perPage,
                 }),
                 { preserveState: true, preserveScroll: true }
@@ -296,7 +292,7 @@ export default function IndexReparaciones({
         }, 300);
 
         return () => clearTimeout(timer);
-    }, [search, status, marcaId, modeloId, categoriaId, perPage]);
+    }, [search, status, year, month, tecnicoId, perPage]);
 
     // QR Code Camera Scanner States
     const [isScanModalOpen, setIsScanModalOpen] = useState(false);
@@ -506,9 +502,9 @@ export default function IndexReparaciones({
     const handleResetFilters = () => {
         setSearch('');
         setStatus('all');
-        setMarcaId('all');
-        setModeloId('all');
-        setCategoriaId('all');
+        setYear('all');
+        setMonth('all');
+        setTecnicoId('all');
         setPerPage('10');
         router.get('/admin/reparaciones', {}, { preserveState: true, preserveScroll: true });
     };
@@ -881,42 +877,37 @@ export default function IndexReparaciones({
                             />
                         </FilterField>
 
-                        {/* CATEGORÍA */}
-                        <FilterField label={__('Categoría')}>
+                        {/* AÑO */}
+                        <FilterField label={__('Año')}>
                             <SearchableSelect
-                                options={categoriaOptions}
-                                value={categoriaId}
-                                onChange={(val) => {
-                                    setCategoriaId(val);
-                                    setModeloId('all');
-                                }}
-                                placeholder={__('Todas las categorías')}
-                                searchPlaceholder={__('Buscar categoría...')}
+                                options={yearOptions}
+                                value={year}
+                                onChange={setYear}
+                                placeholder={__('Todos los años')}
+                                searchPlaceholder={__('Buscar año...')}
                             />
                         </FilterField>
 
-                        {/* MARCA */}
-                        <FilterField label={__('Marca')}>
+                        {/* MES */}
+                        <FilterField label={__('Mes')}>
                             <SearchableSelect
-                                options={marcaOptions}
-                                value={marcaId}
-                                onChange={(val) => {
-                                    setMarcaId(val);
-                                    setModeloId('all');
-                                }}
-                                placeholder={__('Todas las marcas')}
-                                searchPlaceholder={__('Buscar marca...')}
+                                options={monthOptions}
+                                value={month}
+                                onChange={setMonth}
+                                placeholder={__('Todos los meses')}
+                                searchPlaceholder={__('Buscar mes...')}
                             />
                         </FilterField>
 
-                        {/* MODELO */}
-                        <FilterField label={__('Modelo')}>
+                        {/* TÉCNICO ASIGNADO */}
+                        <FilterField label={__('Técnico Asignado')}>
                             <SearchableSelect
-                                options={modeloOptions}
-                                value={modeloId}
-                                onChange={setModeloId}
-                                placeholder={__('Todos los modelos')}
-                                searchPlaceholder={__('Buscar modelo...')}
+                                options={tecnicoOptions}
+                                value={tecnicoId}
+                                onChange={setTecnicoId}
+                                placeholder={__('Todos los técnicos')}
+                                searchPlaceholder={__('Buscar técnico...')}
+                                disabled={isTecnicoOnly}
                             />
                         </FilterField>
 
@@ -932,7 +923,7 @@ export default function IndexReparaciones({
                         </FilterField>
                     </div>
 
-                    {(search || status !== 'all' || categoriaId !== 'all' || marcaId !== 'all' || modeloId !== 'all' || perPage !== '10') && (
+                    {(search || status !== 'all' || year !== 'all' || month !== 'all' || tecnicoId !== 'all' || perPage !== '10') && (
                         <div className="flex justify-end mt-2.5">
                             <Button
                                 variant="ghost"
