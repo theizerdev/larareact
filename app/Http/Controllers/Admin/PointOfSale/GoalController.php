@@ -37,10 +37,14 @@ class GoalController extends Controller
     {
         $user = auth()->user();
         $empresaId = $user->empresa_id;
+        $empresa = $user?->empresa ?? ($empresaId ? Empresa::find($empresaId) : null);
+        $timezone = $empresa?->getTimezone() ?? $user?->getTimezone() ?? 'America/Mexico_City';
+        $nowInTz = Carbon::now($timezone);
+        $offset = $nowInTz->format('P'); // Ej: -06:00 o -04:00
 
-        // Parametros de filtrado
-        $currentYear = (int) date('Y');
-        $currentMonth = (int) date('n');
+        // Parametros de filtrado basados en la zona horaria local de la empresa
+        $currentYear = (int) $nowInTz->format('Y');
+        $currentMonth = (int) $nowInTz->format('n');
 
         $year = (int) $request->input('year', $currentYear);
         $month = (int) $request->input('month', $currentMonth);
@@ -58,9 +62,12 @@ class GoalController extends Controller
             ->when($sucursalId, fn($q) => $q->where('sucursal_id', $sucursalId))
             ->first();
 
-        // Consulta de ventas del mes/año seleccionado
-        $salesQuery = Sale::whereYear('created_at', $year)
-            ->whereMonth('created_at', $month)
+        // Rango UTC exacto del mes en la zona horaria local de la empresa
+        $startOfMonthUtc = Carbon::createFromDate($year, $month, 1, $timezone)->startOfMonth()->setTimezone('UTC');
+        $endOfMonthUtc = Carbon::createFromDate($year, $month, 1, $timezone)->endOfMonth()->setTimezone('UTC');
+
+        // Consulta de ventas del mes/año seleccionado en la zona horaria local
+        $salesQuery = Sale::whereBetween('created_at', [$startOfMonthUtc, $endOfMonthUtc])
             ->when($empresaId, fn($q) => $q->where('empresa_id', $empresaId))
             ->when($sucursalId, fn($q) => $q->where('sucursal_id', $sucursalId))
             ->whereNotIn('estado', ['anulada', 'cancelada']);
@@ -68,10 +75,11 @@ class GoalController extends Controller
         $actualSalesTotal = (float) $salesQuery->sum('total');
 
         // Calcular datos del mes
-        $daysInMonth = Carbon::createFromDate($year, $month, 1)->daysInMonth;
+        $daysInMonth = Carbon::createFromDate($year, $month, 1, $timezone)->daysInMonth;
 
-        // Calcular ventas por día
-        $salesByDayRaw = $salesQuery->selectRaw('DAY(created_at) as day_num, SUM(total) as daily_total')
+        // Calcular ventas por día convirtiendo created_at a la zona horaria local de la empresa
+        $salesByDayRaw = (clone $salesQuery)
+            ->selectRaw("DAY(CONVERT_TZ(created_at, '+00:00', '{$offset}')) as day_num, SUM(total) as daily_total")
             ->groupBy('day_num')
             ->pluck('daily_total', 'day_num')
             ->toArray();
@@ -92,7 +100,7 @@ class GoalController extends Controller
         // Calcular días laborables del mes (Lunes a Sábado, excluyendo Domingos)
         $workingDaysInMonth = 0;
         for ($d = 1; $d <= $daysInMonth; $d++) {
-            $dateObj = Carbon::createFromDate($year, $month, $d);
+            $dateObj = Carbon::createFromDate($year, $month, $d, $timezone);
             if ($dateObj->dayOfWeek !== Carbon::SUNDAY) {
                 $workingDaysInMonth++;
             }
@@ -109,7 +117,7 @@ class GoalController extends Controller
         $semanaIndex = 1;
 
         while ($currentStart <= $daysInMonth) {
-            $dateObj = Carbon::createFromDate($year, $month, $currentStart);
+            $dateObj = Carbon::createFromDate($year, $month, $currentStart, $timezone);
             if ($dateObj->dayOfWeek === Carbon::SUNDAY) {
                 $endDay = $currentStart;
             } else {
@@ -148,7 +156,7 @@ class GoalController extends Controller
             $countWorkingDays = 0;
 
             for ($d = $startDay; $d <= $endDay; $d++) {
-                $dateObj = Carbon::createFromDate($year, $month, $d);
+                $dateObj = Carbon::createFromDate($year, $month, $d, $timezone);
                 $dayOfWeek = strtolower($dateObj->locale('es')->dayName); // lunes, martes...
                 
                 // Normalizar tildes si las hay (miércoles -> miercoles, sábado -> sabado)
@@ -227,10 +235,14 @@ class GoalController extends Controller
 
         $empresaId = $user->empresa_id;
         $sucursalId = $validated['sucursal_id'] ?? $user->sucursal_id;
+        $empresa = $user?->empresa ?? ($empresaId ? Empresa::find($empresaId) : null);
+        $timezone = $empresa?->getTimezone() ?? $user?->getTimezone() ?? 'America/Mexico_City';
 
-        // Calcular ventas base para guardar snapshot
-        $baseSales = (float) Sale::whereYear('created_at', $validated['year'])
-            ->whereMonth('created_at', $validated['month'])
+        $startOfMonthUtc = Carbon::createFromDate($validated['year'], $validated['month'], 1, $timezone)->startOfMonth()->setTimezone('UTC');
+        $endOfMonthUtc = Carbon::createFromDate($validated['year'], $validated['month'], 1, $timezone)->endOfMonth()->setTimezone('UTC');
+
+        // Calcular ventas base para guardar snapshot en la zona horaria local
+        $baseSales = (float) Sale::whereBetween('created_at', [$startOfMonthUtc, $endOfMonthUtc])
             ->when($empresaId, fn($q) => $q->where('empresa_id', $empresaId))
             ->when($sucursalId, fn($q) => $q->where('sucursal_id', $sucursalId))
             ->whereNotIn('estado', ['anulada', 'cancelada'])

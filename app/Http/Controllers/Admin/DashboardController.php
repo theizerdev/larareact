@@ -70,19 +70,18 @@ class DashboardController extends Controller
 
         $registerSummary = null;
         if ($activeRegister) {
-            $inflows = (float) $activeRegister->movements()->where('type', 'inflow')->sum('amount');
-            $outflows = (float) $activeRegister->movements()->where('type', 'outflow')->sum('amount');
-            $openingAmount = (float) $activeRegister->opening_amount;
-            $expectedBalance = $openingAmount + $inflows - $outflows;
-
+            $financial = $cashService->getRegisterFinancialSummary($activeRegister);
             $registerSummary = [
                 'id' => $activeRegister->id,
                 'opened_at' => $activeRegister->opened_at,
-                'opening_amount' => $openingAmount,
-                'inflows' => $inflows,
-                'outflows' => $outflows,
-                'expected_balance' => $expectedBalance,
-                'expected_usd' => $valorDolar > 0 ? $expectedBalance / $valorDolar : 0,
+                'opening_amount' => (float) $activeRegister->opening_amount,
+                'inflows' => (float) $financial['inflows'],
+                'gross_inflows' => (float) $financial['gross_inflows'],
+                'total_anuladas' => (float) $financial['total_anuladas'],
+                'outflows' => (float) $financial['outflows'],
+                'expected_balance' => (float) $financial['expected_balance'],
+                'expected_cash_balance' => (float) $financial['expected_cash_balance'],
+                'expected_usd' => $valorDolar > 0 ? (float) $financial['expected_balance'] / $valorDolar : 0,
                 'by_payment_method' => $cashService->getPaymentMethodBreakdown($activeRegister),
             ];
         }

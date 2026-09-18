@@ -10,6 +10,7 @@ use App\Models\Compra;
 use App\Models\Empresa;
 use App\Models\Pais;
 use App\Models\Sucursal;
+use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 
@@ -40,17 +41,23 @@ class MonthlyFundController extends Controller
     public function index(Request $request)
     {
         $user = auth()->user();
-        $selectedYear = (int) ($request->year ?? date('Y'));
-        $selectedMonth = (int) ($request->month ?? date('n'));
+        $empresa = $user?->empresa ?? ($user?->empresa_id ? Empresa::find($user->empresa_id) : null);
+        $timezone = $empresa?->getTimezone() ?? $user?->getTimezone() ?? 'America/Mexico_City';
+        $nowInTz = Carbon::now($timezone);
+
+        $selectedYear = (int) ($request->year ?? $nowInTz->format('Y'));
+        $selectedMonth = (int) ($request->month ?? $nowInTz->format('n'));
         $selectedSucursal = $request->sucursal_id ?? 'all';
 
         // Obtener sucursales activas de la empresa (Multitenantable las filtra automáticamente)
         $sucursales = Sucursal::where('status', true)->select('id', 'nombre')->get();
 
-        // 1. Cajas Cerradas en el mes actual filtrado
+        // 1. Cajas Cerradas en el mes actual filtrado (en zona horaria local de la empresa)
+        $startOfMonthUtc = Carbon::createFromDate($selectedYear, $selectedMonth, 1, $timezone)->startOfMonth()->setTimezone('UTC');
+        $endOfMonthUtc = Carbon::createFromDate($selectedYear, $selectedMonth, 1, $timezone)->endOfMonth()->setTimezone('UTC');
+
         $cajasCerradasQuery = CashRegister::where('status', 'closed')
-            ->whereYear('closed_at', $selectedYear)
-            ->whereMonth('closed_at', $selectedMonth);
+            ->whereBetween('closed_at', [$startOfMonthUtc, $endOfMonthUtc]);
 
         if ($selectedSucursal !== 'all') {
             $cajasCerradasQuery->where('sucursal_id', $selectedSucursal);
@@ -110,9 +117,11 @@ class MonthlyFundController extends Controller
         $annualNet = [];
 
         for ($m = 1; $m <= 12; $m++) {
+            $startM = Carbon::createFromDate($selectedYear, $m, 1, $timezone)->startOfMonth()->setTimezone('UTC');
+            $endM = Carbon::createFromDate($selectedYear, $m, 1, $timezone)->endOfMonth()->setTimezone('UTC');
+
             $mCajasQuery = CashRegister::where('status', 'closed')
-                ->whereYear('closed_at', $selectedYear)
-                ->whereMonth('closed_at', $m);
+                ->whereBetween('closed_at', [$startM, $endM]);
 
             if ($selectedSucursal !== 'all') {
                 $mCajasQuery->where('sucursal_id', $selectedSucursal);
@@ -151,13 +160,16 @@ class MonthlyFundController extends Controller
             $paymentSeries[] = max(0, round((float) $row->total, 2));
         }
 
-        // 5. Comparativa con Mes Anterior
-        $prevMonth = $selectedMonth === 1 ? 12 : $selectedMonth - 1;
-        $prevYear = $selectedMonth === 1 ? $selectedYear - 1 : $selectedYear;
+        // 5. Comparativa con Mes Anterior (en zona horaria local)
+        $prevDate = Carbon::createFromDate($selectedYear, $selectedMonth, 1, $timezone)->subMonth();
+        $prevMonth = (int) $prevDate->format('n');
+        $prevYear = (int) $prevDate->format('Y');
+
+        $startOfPrevMonthUtc = $prevDate->copy()->startOfMonth()->setTimezone('UTC');
+        $endOfPrevMonthUtc = $prevDate->copy()->endOfMonth()->setTimezone('UTC');
 
         $prevCajasQuery = CashRegister::where('status', 'closed')
-            ->whereYear('closed_at', $prevYear)
-            ->whereMonth('closed_at', $prevMonth);
+            ->whereBetween('closed_at', [$startOfPrevMonthUtc, $endOfPrevMonthUtc]);
 
         if ($selectedSucursal !== 'all') {
             $prevCajasQuery->where('sucursal_id', $selectedSucursal);
@@ -248,12 +260,16 @@ class MonthlyFundController extends Controller
         ]);
 
         $user = auth()->user();
+        $empresa = $user?->empresa ?? ($user?->empresa_id ? Empresa::find($user->empresa_id) : null);
+        $timezone = $empresa?->getTimezone() ?? $user?->getTimezone() ?? 'America/Mexico_City';
         $sucursalId = ($validated['sucursal_id'] && $validated['sucursal_id'] !== 'all') ? (int) $validated['sucursal_id'] : null;
 
-        // Calcular totales exactos de cajas cerradas netos de anulaciones
+        $startOfMonthUtc = Carbon::createFromDate($validated['year'], $validated['month'], 1, $timezone)->startOfMonth()->setTimezone('UTC');
+        $endOfMonthUtc = Carbon::createFromDate($validated['year'], $validated['month'], 1, $timezone)->endOfMonth()->setTimezone('UTC');
+
+        // Calcular totales exactos de cajas cerradas netos de anulaciones en la zona horaria local
         $cajasQuery = CashRegister::where('status', 'closed')
-            ->whereYear('closed_at', $validated['year'])
-            ->whereMonth('closed_at', $validated['month']);
+            ->whereBetween('closed_at', [$startOfMonthUtc, $endOfMonthUtc]);
 
         if ($sucursalId) {
             $cajasQuery->where('sucursal_id', $sucursalId);
