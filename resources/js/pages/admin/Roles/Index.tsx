@@ -1,5 +1,5 @@
 import { Head, useForm, router } from '@inertiajs/react';
-import { Shield, Plus, Key, MoreVertical, Pencil, Trash2, Search, CheckSquare, Square, AlertCircle, Layers, CheckCircle2 } from 'lucide-react';
+import { Shield, Plus, Key, MoreVertical, Pencil, Trash2, Search, CheckSquare, AlertCircle, Layers, CheckCircle2 } from 'lucide-react';
 import React, { useState } from 'react';
 import { Breadcrumbs } from '@/components/breadcrumbs';
 import { FilterBar, FilterField } from '@/components/filter-bar';
@@ -16,7 +16,6 @@ import {
     AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
 import { Button } from '@/components/ui/button';
-import { Checkbox } from '@/components/ui/checkbox';
 import {
     Dialog,
     DialogContent,
@@ -33,7 +32,6 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
 import { useTranslate } from '@/hooks/use-translate';
 import type { Auth } from '@/types';
@@ -135,6 +133,15 @@ export default function RolesIndexPage({ auth, roles, stats, groupedPermissions,
     const [searchTerm, setSearchTerm] = useState(filters.search || '');
     const [modalPermissionFilter, setModalPermissionFilter] = useState('');
 
+    const sectors = React.useMemo(() => Object.keys(groupedPermissions || {}), [groupedPermissions]);
+    const [activeSector, setActiveSector] = useState<string>(sectors[0] || '');
+
+    React.useEffect(() => {
+        if (!activeSector && sectors.length > 0) {
+            setActiveSector(sectors[0]);
+        }
+    }, [sectors, activeSector]);
+
     // Formulario Inertia
     const { data, setData, post, put, processing, errors, reset } = useForm({
         name: '',
@@ -157,6 +164,10 @@ export default function RolesIndexPage({ auth, roles, stats, groupedPermissions,
     const handleCreateClick = () => {
         setEditingRole(null);
         reset();
+        setModalPermissionFilter('');
+        if (sectors.length > 0) {
+            setActiveSector(sectors[0]);
+        }
         setIsModalOpen(true);
     };
 
@@ -166,6 +177,10 @@ export default function RolesIndexPage({ auth, roles, stats, groupedPermissions,
             name: role.name,
             permissions: role.all_permissions.map(p => p.name),
         });
+        setModalPermissionFilter('');
+        if (sectors.length > 0) {
+            setActiveSector(sectors[0]);
+        }
         setIsModalOpen(true);
     };
 
@@ -507,20 +522,27 @@ return false;
                                 </div>
                             </div>
 
-                            {/* Tabs por Sector */}
-                            <Tabs defaultValue={Object.keys(groupedPermissions)[0]} className="w-full">
+                            {/* Selector de Sectores (Tabs estilo pill) */}
+                            <div className="w-full space-y-4">
                                 <div className="overflow-x-auto pb-1 custom-scrollbar">
-                                    <TabsList className="inline-flex w-auto min-w-full justify-start gap-1.5 bg-muted/50 p-1.5 rounded-xl border border-border/60">
+                                    <div className="inline-flex w-auto min-w-full justify-start gap-1.5 bg-muted/50 p-1.5 rounded-xl border border-border/60">
                                         {Object.entries(groupedPermissions).map(([sector, modules]) => {
                                             const allSectorPerms: Permission[] = [];
                                             Object.values(modules).forEach(perms => allSectorPerms.push(...perms));
                                             const selectedInSector = allSectorPerms.filter(p => data.permissions.includes(p.name)).length;
+                                            const isActive = activeSector === sector;
 
                                             return (
-                                                <TabsTrigger
+                                                <button
                                                     key={sector}
-                                                    value={sector}
-                                                    className="px-3.5 py-1.5 text-xs font-semibold rounded-lg data-[state=active]:bg-background data-[state=active]:text-primary data-[state=active]:shadow-xs transition-all shrink-0 flex items-center gap-1.5"
+                                                    type="button"
+                                                    onClick={() => setActiveSector(sector)}
+                                                    className={cn(
+                                                        "px-3.5 py-1.5 text-xs font-semibold rounded-lg transition-all shrink-0 flex items-center gap-1.5 cursor-pointer",
+                                                        isActive
+                                                            ? "bg-background text-primary shadow-xs border border-border/40"
+                                                            : "text-muted-foreground hover:text-foreground hover:bg-background/40"
+                                                    )}
                                                 >
                                                     <span>{formatSectorName(sector)}</span>
                                                     <span className={cn(
@@ -531,15 +553,27 @@ return false;
                                                     )}>
                                                         {selectedInSector}/{allSectorPerms.length}
                                                     </span>
-                                                </TabsTrigger>
+                                                </button>
                                             );
                                         })}
-                                    </TabsList>
+                                    </div>
                                 </div>
 
+                                {/* Contenido del Sector Activo (o todos si hay búsqueda) */}
                                 {Object.entries(groupedPermissions).map(([sector, modules]) => {
+                                    const isCurrentSector = sector === activeSector;
                                     const allSectorPerms: Permission[] = [];
                                     Object.values(modules).forEach(perms => allSectorPerms.push(...perms));
+
+                                    // Si se está buscando, verificar si este sector tiene algún permiso coincidente
+                                    const hasMatchingPerms = !modalPermissionFilter || allSectorPerms.some(p =>
+                                        p.name.toLowerCase().includes(modalPermissionFilter.toLowerCase()) ||
+                                        p.slug.toLowerCase().includes(modalPermissionFilter.toLowerCase())
+                                    );
+
+                                    if (!modalPermissionFilter && !isCurrentSector) return null;
+                                    if (modalPermissionFilter && !hasMatchingPerms) return null;
+
                                     const isAllSectorSelected = allSectorPerms.length > 0 && allSectorPerms.every(p => data.permissions.includes(p.name));
 
                                     const handleSectorSelectAll = (checked: boolean) => {
@@ -553,25 +587,30 @@ return false;
                                     };
 
                                     return (
-                                        <TabsContent key={sector} value={sector} className="mt-3 focus-visible:outline-none">
+                                        <div key={sector} className="space-y-3 animate-in fade-in duration-150">
                                             {/* Sector header toggle */}
-                                            <div className="flex items-center justify-between px-3 py-2 mb-3 rounded-lg bg-indigo-50/50 dark:bg-indigo-950/20 border border-indigo-100 dark:border-indigo-900/40">
+                                            <div className="flex items-center justify-between px-3.5 py-2 rounded-lg bg-indigo-50/50 dark:bg-indigo-950/20 border border-indigo-100 dark:border-indigo-900/40">
                                                 <div className="flex items-center gap-2">
                                                     <CheckCircle2 className="size-4 text-indigo-600 dark:text-indigo-400" />
                                                     <span className="text-xs font-bold text-foreground">
                                                         Sector: {formatSectorName(sector)}
                                                     </span>
                                                 </div>
-                                                <div className="flex items-center gap-1.5">
-                                                    <Checkbox
-                                                        id={`sector-toggle-${sector}`}
-                                                        checked={isAllSectorSelected}
-                                                        onCheckedChange={(checked) => handleSectorSelectAll(!!checked)}
-                                                    />
-                                                    <Label htmlFor={`sector-toggle-${sector}`} className="text-xs font-semibold text-muted-foreground cursor-pointer select-none">
-                                                        {__('Seleccionar todo en este sector')}
-                                                    </Label>
-                                                </div>
+                                                <button
+                                                    type="button"
+                                                    onClick={() => handleSectorSelectAll(!isAllSectorSelected)}
+                                                    className="flex items-center gap-2 cursor-pointer select-none text-xs font-semibold text-muted-foreground hover:text-foreground"
+                                                >
+                                                    <div className={cn(
+                                                        "size-4 shrink-0 rounded-[4px] border flex items-center justify-center transition-colors",
+                                                        isAllSectorSelected
+                                                            ? "bg-indigo-600 border-indigo-600 text-white"
+                                                            : "border-input bg-background"
+                                                    )}>
+                                                        {isAllSectorSelected && <CheckSquare className="size-3.5" />}
+                                                    </div>
+                                                    <span>{__('Seleccionar todo en este sector')}</span>
+                                                </button>
                                             </div>
 
                                             {/* Cards Grid de Módulos */}
@@ -597,7 +636,6 @@ return false;
                                                                 selectedCount > 0 && "border-indigo-200/90 dark:border-indigo-900/70 bg-indigo-50/10"
                                                             )}
                                                         >
-                                                            {/* Cabecera del Módulo con Checkbox maestro */}
                                                             <div>
                                                                 <div className="flex items-center justify-between border-b pb-2 mb-2.5">
                                                                     <div className="flex items-center gap-1.5">
@@ -608,16 +646,21 @@ return false;
                                                                             {selectedCount}/{permissions.length}
                                                                         </span>
                                                                     </div>
-                                                                    <div className="flex items-center space-x-1.5">
-                                                                        <Checkbox
-                                                                            id={`module-${sector}-${module}`}
-                                                                            checked={isAllSelected}
-                                                                            onCheckedChange={(checked) => handleModuleToggle(permissions, !!checked)}
-                                                                        />
-                                                                        <Label htmlFor={`module-${sector}-${module}`} className="text-[11px] font-semibold text-muted-foreground cursor-pointer select-none">
-                                                                            {__('Todos')}
-                                                                        </Label>
-                                                                    </div>
+                                                                    <button
+                                                                        type="button"
+                                                                        onClick={() => handleModuleToggle(permissions, !isAllSelected)}
+                                                                        className="flex items-center space-x-1.5 cursor-pointer text-[11px] font-semibold text-muted-foreground hover:text-foreground"
+                                                                    >
+                                                                        <div className={cn(
+                                                                            "size-3.5 shrink-0 rounded-[3px] border flex items-center justify-center transition-colors",
+                                                                            isAllSelected
+                                                                                ? "bg-indigo-600 border-indigo-600 text-white"
+                                                                                : "border-input bg-background"
+                                                                        )}>
+                                                                            {isAllSelected && <CheckSquare className="size-3" />}
+                                                                        </div>
+                                                                        <span>{__('Todos')}</span>
+                                                                    </button>
                                                                 </div>
 
                                                                 {/* Lista de Permisos del Módulo */}
@@ -634,20 +677,20 @@ return false;
                                                                                     isChecked && "bg-indigo-50/60 dark:bg-indigo-950/30"
                                                                                 )}
                                                                             >
-                                                                                <Checkbox
-                                                                                    id={`perm-${p.id}`}
-                                                                                    checked={isChecked}
-                                                                                    onCheckedChange={(checked) => handlePermissionToggle(p.name, !!checked)}
-                                                                                    onClick={(e) => e.stopPropagation()}
-                                                                                    className="mt-0.5"
-                                                                                />
-                                                                                <Label
-                                                                                    htmlFor={`perm-${p.id}`}
-                                                                                    className="text-xs font-medium leading-tight cursor-pointer select-none text-foreground/90"
+                                                                                <div className={cn(
+                                                                                    "size-4 shrink-0 rounded-[4px] border flex items-center justify-center transition-colors mt-0.5",
+                                                                                    isChecked
+                                                                                        ? "bg-indigo-600 border-indigo-600 text-white"
+                                                                                        : "border-input bg-background"
+                                                                                )}>
+                                                                                    {isChecked && <CheckSquare className="size-3.5" />}
+                                                                                </div>
+                                                                                <span
+                                                                                    className="text-xs font-medium leading-tight select-none text-foreground/90"
                                                                                     title={p.name}
                                                                                 >
                                                                                     {p.slug}
-                                                                                </Label>
+                                                                                </span>
                                                                             </div>
                                                                         );
                                                                     })}
@@ -657,10 +700,10 @@ return false;
                                                     );
                                                 })}
                                             </div>
-                                        </TabsContent>
+                                        </div>
                                     );
                                 })}
-                            </Tabs>
+                            </div>
                         </div>
 
                         {/* Footer */}
