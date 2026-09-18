@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use App\Traits\HasSpanishActivityLog;
+use App\Traits\Multitenantable;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -10,7 +11,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class OrdenReparacion extends Model
 {
-    use HasFactory, HasSpanishActivityLog;
+    use HasFactory, Multitenantable, HasSpanishActivityLog;
 
     public const ESTADO_RECIBIDO = 'recibido';
     public const ESTADO_EN_DIAGNOSTICO_PRESUPUESTO = 'en_diagnostico_presupuesto';
