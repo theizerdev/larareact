@@ -1943,7 +1943,10 @@ export default function Terminal({
                         {activeRegisterSummary ? (
                             <form onSubmit={handleCorteSubmit} className="space-y-4 py-2">
                                 {/* Resumen Superior de Dinero */}
-                                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                                <div className={cn(
+                                    "grid gap-3",
+                                    (activeRegisterSummary.total_anuladas ?? 0) > 0 ? "grid-cols-1 sm:grid-cols-4" : "grid-cols-1 sm:grid-cols-3"
+                                )}>
                                     <div className="p-3 bg-slate-50 dark:bg-slate-800 border rounded-lg">
                                         <span className="text-xs text-muted-foreground font-semibold block">{__('Fondo Inicial (Efectivo)')}</span>
                                         <span className="text-lg font-bold font-mono text-slate-800 dark:text-slate-200">
@@ -1952,11 +1955,20 @@ export default function Terminal({
                                     </div>
 
                                     <div className="p-3 bg-emerald-50 dark:bg-emerald-950/30 border border-emerald-200 dark:border-emerald-900 rounded-lg">
-                                        <span className="text-xs text-emerald-700 dark:text-emerald-400 font-semibold block">{__('Ventas Totales del Turno (+)')}</span>
+                                        <span className="text-xs text-emerald-700 dark:text-emerald-400 font-semibold block">{__('Ventas Netas del Turno (+)')}</span>
                                         <span className="text-lg font-bold font-mono text-emerald-600 dark:text-emerald-400">
                                             +{currencySymbol}{activeRegisterSummary.inflows.toFixed(2)}
                                         </span>
                                     </div>
+
+                                    {(activeRegisterSummary.total_anuladas ?? 0) > 0 && (
+                                        <div className="p-3 bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-900 rounded-lg">
+                                            <span className="text-xs text-amber-700 dark:text-amber-400 font-semibold block">{__('Ventas Anuladas Deducidas')}</span>
+                                            <span className="text-lg font-bold font-mono text-amber-600 dark:text-amber-400">
+                                                -{currencySymbol}{Number(activeRegisterSummary.total_anuladas).toFixed(2)}
+                                            </span>
+                                        </div>
+                                    )}
 
                                     <div className="p-3 bg-rose-50 dark:bg-rose-950/30 border border-rose-200 dark:border-rose-900 rounded-lg">
                                         <span className="text-xs text-rose-700 dark:text-rose-400 font-semibold block">{__('Total Salidas / Egresos (-)')}</span>
@@ -1978,7 +1990,7 @@ export default function Terminal({
                                                 {currencySymbol}{expectedCashBal.toFixed(2)}
                                             </span>
                                             <span className="text-[11px] text-indigo-700/80 dark:text-indigo-300/80 font-mono block">
-                                                {__('Fondo Inicial')} ({currencySymbol}{activeRegisterSummary.opening_amount.toFixed(2)}) + {__('Efectivo')} (+{currencySymbol}{(activeRegisterSummary.cash_inflows ?? (activeRegisterSummary.by_payment_method?.efectivo?.net ?? 0)).toFixed(2)}) - {__('Salidas')} (-{currencySymbol}{activeRegisterSummary.outflows.toFixed(2)})
+                                                {__('Fondo Inicial')} ({currencySymbol}{activeRegisterSummary.opening_amount.toFixed(2)}) + {__('Efectivo Neto')} (+{currencySymbol}{(Number(activeRegisterSummary.cash_inflows || 0) - Number(activeRegisterSummary.cash_anulaciones || 0)).toFixed(2)}) - {__('Gastos')} (-{currencySymbol}{Number(activeRegisterSummary.cash_expenses || 0).toFixed(2)})
                                             </span>
                                             {(activeRegisterSummary.electronic_inflows ?? 0) > 0 && (
                                                 <div className="mt-2 pt-2 border-t border-indigo-200 dark:border-indigo-900 text-xs text-slate-600 dark:text-slate-300 flex items-center justify-center gap-1.5">
@@ -3010,7 +3022,7 @@ export default function Terminal({
                                                 <span className="col-span-5 font-medium truncate text-slate-800">{it.nombre}</span>
                                                 <span className="col-span-2 text-center font-mono text-slate-600">{it.cantidad} {it.cantidad > 1 ? 'pcs' : 'pc'}</span>
                                                 <span className="col-span-2 text-right font-mono text-slate-600">${Number(it.precio_unitario).toFixed(2)}</span>
-                                                <span className="col-span-2 text-right font-mono font-bold text-slate-900">${Number(it.subtotal ?? (it.cantidad * it.precio_unitario) ?? 0).toFixed(2)}</span>
+                                                <span className="col-span-2 text-right font-mono font-bold text-slate-900">${Number(it.subtotal ?? (it.cantidad * it.precio_unitario)).toFixed(2)}</span>
                                             </div>
                                         ))}
                                     </div>
@@ -3977,7 +3989,7 @@ export default function Terminal({
                                 <span className="col-span-5 truncate">{it.nombre}</span>
                                 <span className="col-span-2 text-center">{it.cantidad}</span>
                                 <span className="col-span-2 text-right">${Number(it.precio_unitario).toFixed(2)}</span>
-                                <span className="col-span-2 text-right font-bold">${Number(it.subtotal ?? (it.cantidad * it.precio_unitario) ?? 0).toFixed(2)}</span>
+                                <span className="col-span-2 text-right font-bold">${Number(it.subtotal ?? (it.cantidad * it.precio_unitario)).toFixed(2)}</span>
                             </div>
                         ))}
 
@@ -4150,15 +4162,21 @@ export default function Terminal({
                                 <span>{currencySymbol}{(activeRegisterSummary.opening_amount ?? activeRegister?.opening_amount ?? 0).toFixed(2)}</span>
                             </div>
                             <div className="flex justify-between">
-                                <span>Total Ingresos (+):</span>
+                                <span>Ventas Netas (+):</span>
                                 <span>+{currencySymbol}{(activeRegisterSummary.inflows ?? 0).toFixed(2)}</span>
                             </div>
+                            {(activeRegisterSummary.total_anuladas ?? 0) > 0 && (
+                                <div className="flex justify-between text-[11px] font-normal">
+                                    <span>(Ventas Anuladas):</span>
+                                    <span>-{currencySymbol}{Number(activeRegisterSummary.total_anuladas).toFixed(2)}</span>
+                                </div>
+                            )}
                             <div className="flex justify-between">
-                                <span>Total Salidas (-):</span>
+                                <span>Total Salidas / Gastos (-):</span>
                                 <span>-{currencySymbol}{(activeRegisterSummary.outflows ?? 0).toFixed(2)}</span>
                             </div>
                             <div className="flex justify-between font-black text-sm border-t-2 border-dashed border-black pt-1 mt-1">
-                                <span>Dinero Esperado:</span>
+                                <span>Dinero Esperado en Cajón:</span>
                                 <span>{currencySymbol}{expectedCashBal.toFixed(2)}</span>
                             </div>
                         </div>

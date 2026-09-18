@@ -374,7 +374,8 @@ class ContabilidadController extends Controller
 
         // Libro de Ventas Fiscales (CFDI / Tickets POS)
         $ventasQuery = \App\Models\Sale::with(['cliente', 'user'])
-            ->whereBetween('created_at', [$fromDate . ' 00:00:00', $toDate . ' 23:59:59']);
+            ->whereBetween('created_at', [$fromDate . ' 00:00:00', $toDate . ' 23:59:59'])
+            ->whereNotIn('estado', ['anulada', 'cancelada']);
 
         if ($empresaId) {
             $ventasQuery->where('empresa_id', $empresaId);

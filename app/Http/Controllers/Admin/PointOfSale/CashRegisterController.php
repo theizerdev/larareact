@@ -125,27 +125,7 @@ class CashRegisterController extends Controller
             }
         ]);
 
-        $inflows = (float) $caja->movements()->where('type', 'inflow')->sum('amount');
-        $outflows = (float) $caja->movements()->where('type', 'outflow')->sum('amount');
-        $openingAmount = (float) $caja->opening_amount;
-        $currentBalance = $openingAmount + $inflows - $outflows;
-
-        $cashInflows = (float) $caja->movements()
-            ->where('type', 'inflow')
-            ->whereIn('metodo_pago', ['efectivo', 'dolar'])
-            ->sum('amount');
-        $cashOutflows = (float) $caja->movements()
-            ->where('type', 'outflow')
-            ->whereIn('metodo_pago', ['efectivo', 'dolar'])
-            ->sum('amount');
-        $expectedCashBalance = $openingAmount + $cashInflows - $cashOutflows;
-
-        $electronicInflows = (float) $caja->movements()
-            ->where('type', 'inflow')
-            ->whereNotIn('metodo_pago', ['efectivo', 'dolar'])
-            ->sum('amount');
-
-        $byPaymentMethod = $service->getPaymentMethodBreakdown($caja);
+        $finSummary = $service->getRegisterFinancialSummary($caja);
 
         // Group by Concept
         $byConceptRaw = $caja->movements()
@@ -171,19 +151,11 @@ class CashRegisterController extends Controller
         return inertia('admin/PointOfSale/CashRegisters/Show', [
             'caja' => $caja,
             'valorDolar' => $valorDolar,
-            'summary' => [
-                'inflows' => $inflows,
-                'outflows' => $outflows,
-                'cash_inflows' => $cashInflows,
-                'cash_outflows' => $cashOutflows,
-                'electronic_inflows' => $electronicInflows,
-                'expected_cash_balance' => $expectedCashBalance,
-                'current_balance' => $currentBalance,
+            'summary' => array_merge($finSummary, [
                 'currency_symbol' => $this->getCurrencySymbol(),
                 'valor_dolar' => $valorDolar,
-                'by_payment_method' => $byPaymentMethod,
                 'by_concept' => $byConcept,
-            ],
+            ]),
         ]);
     }
 

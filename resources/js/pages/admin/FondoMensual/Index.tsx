@@ -105,6 +105,8 @@ interface Props {
         percentage_change: number;
         is_closed: boolean;
         snapshot?: CierreSnapshot;
+        total_anuladas?: number;
+        gross_inflows?: number;
     };
     annualChartData: {
         categories: string[];
@@ -472,9 +474,16 @@ export default function Index({
                                 <div className="text-2xl font-extrabold text-emerald-400 mt-2">
                                     {currencySymbol} {currentMonthStats.inflows.toLocaleString('es-ES', { minimumFractionDigits: 2 })}
                                 </div>
-                                <p className="text-xs text-slate-400 mt-2">
-                                    {__('En ventas y cobros del mes')}
-                                </p>
+                                {(currentMonthStats.total_anuladas ?? 0) > 0 ? (
+                                    <div className="mt-2 text-[11px] text-amber-400 flex items-center justify-between border-t border-slate-700/50 pt-1.5">
+                                        <span>{__('Ventas anuladas deducidas:')}</span>
+                                        <span className="font-mono font-medium">-{currencySymbol} {(currentMonthStats.total_anuladas ?? 0).toLocaleString('es-ES', { minimumFractionDigits: 2 })}</span>
+                                    </div>
+                                ) : (
+                                    <p className="text-xs text-slate-400 mt-2">
+                                        {__('En ventas y cobros netos del mes')}
+                                    </p>
+                                )}
                             </div>
 
                             {/* Egresos Totales */}
@@ -845,6 +854,12 @@ export default function Index({
                                         {currencySymbol} {currentMonthStats.saldo_neto.toLocaleString('es-ES', { minimumFractionDigits: 2 })}
                                     </span>
                                 </div>
+                                {(currentMonthStats.total_anuladas ?? 0) > 0 && (
+                                    <div className="flex justify-between text-xs text-amber-300 border-t border-indigo-800/40 pt-1.5">
+                                        <span>{__('Ventas Anuladas Deducidas')}:</span>
+                                        <span className="font-mono font-medium">-{currencySymbol} {(currentMonthStats.total_anuladas ?? 0).toLocaleString('es-ES', { minimumFractionDigits: 2 })}</span>
+                                    </div>
+                                )}
                                 <div className="flex justify-between text-xs text-slate-400 border-t border-indigo-800/40 pt-2">
                                     <span>{__('Cajas registradoras cerradas')}:</span>
                                     <span className="font-semibold text-white">{currentMonthStats.cajas_cerradas_cant}</span>

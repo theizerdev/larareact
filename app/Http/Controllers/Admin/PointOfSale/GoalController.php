@@ -63,7 +63,7 @@ class GoalController extends Controller
             ->whereMonth('created_at', $month)
             ->when($empresaId, fn($q) => $q->where('empresa_id', $empresaId))
             ->when($sucursalId, fn($q) => $q->where('sucursal_id', $sucursalId))
-            ->where('estado', '!=', 'cancelada');
+            ->whereNotIn('estado', ['anulada', 'cancelada']);
 
         $actualSalesTotal = (float) $salesQuery->sum('total');
 
@@ -233,7 +233,7 @@ class GoalController extends Controller
             ->whereMonth('created_at', $validated['month'])
             ->when($empresaId, fn($q) => $q->where('empresa_id', $empresaId))
             ->when($sucursalId, fn($q) => $q->where('sucursal_id', $sucursalId))
-            ->where('estado', '!=', 'cancelada')
+            ->whereNotIn('estado', ['anulada', 'cancelada'])
             ->sum('total');
 
         SalesGoal::updateOrCreate(

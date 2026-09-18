@@ -59,13 +59,20 @@ class MonthlyFundController extends Controller
         $cajasCerradas = $cajasCerradasQuery->with(['user', 'sucursal'])->get();
         $cajaIds = $cajasCerradas->pluck('id');
 
-        // Acumulado de movimientos de las cajas cerradas del mes
-        $inflows = (float) CashMovement::whereIn('cash_register_id', $cajaIds)
+        // Acumulado de movimientos de las cajas cerradas del mes (neto de anulaciones)
+        $grossInflows = (float) CashMovement::whereIn('cash_register_id', $cajaIds)
             ->where('type', 'inflow')
             ->sum('amount');
 
+        $anulacionesTotal = (float) CashMovement::whereIn('cash_register_id', $cajaIds)
+            ->where('concepto', 'anulacion_venta')
+            ->sum('amount');
+
+        $inflows = max(0, $grossInflows - $anulacionesTotal);
+
         $outflows = (float) CashMovement::whereIn('cash_register_id', $cajaIds)
             ->where('type', 'outflow')
+            ->where('concepto', '!=', 'anulacion_venta')
             ->sum('amount');
 
         $fondosAperturaSum = (float) $cajasCerradas->sum('opening_amount');
@@ -113,8 +120,10 @@ class MonthlyFundController extends Controller
 
             $mCajaIds = $mCajasQuery->pluck('id');
 
-            $mIn = (float) CashMovement::whereIn('cash_register_id', $mCajaIds)->where('type', 'inflow')->sum('amount');
-            $mOut = (float) CashMovement::whereIn('cash_register_id', $mCajaIds)->where('type', 'outflow')->sum('amount');
+            $mGrossIn = (float) CashMovement::whereIn('cash_register_id', $mCajaIds)->where('type', 'inflow')->sum('amount');
+            $mAnul = (float) CashMovement::whereIn('cash_register_id', $mCajaIds)->where('concepto', 'anulacion_venta')->sum('amount');
+            $mIn = max(0, $mGrossIn - $mAnul);
+            $mOut = (float) CashMovement::whereIn('cash_register_id', $mCajaIds)->where('type', 'outflow')->where('concepto', '!=', 'anulacion_venta')->sum('amount');
             $mNet = $mIn - $mOut;
 
             $annualInflows[] = round($mIn, 2);
@@ -155,8 +164,10 @@ class MonthlyFundController extends Controller
         }
 
         $prevCajaIds = $prevCajasQuery->pluck('id');
-        $prevIn = (float) CashMovement::whereIn('cash_register_id', $prevCajaIds)->where('type', 'inflow')->sum('amount');
-        $prevOut = (float) CashMovement::whereIn('cash_register_id', $prevCajaIds)->where('type', 'outflow')->sum('amount');
+        $prevGrossIn = (float) CashMovement::whereIn('cash_register_id', $prevCajaIds)->where('type', 'inflow')->sum('amount');
+        $prevAnul = (float) CashMovement::whereIn('cash_register_id', $prevCajaIds)->where('concepto', 'anulacion_venta')->sum('amount');
+        $prevIn = max(0, $prevGrossIn - $prevAnul);
+        $prevOut = (float) CashMovement::whereIn('cash_register_id', $prevCajaIds)->where('type', 'outflow')->where('concepto', '!=', 'anulacion_venta')->sum('amount');
         $prevNet = $prevIn - $prevOut;
 
         $percentageChange = $prevNet > 0 ? (($saldoNetoMes - $prevNet) / $prevNet) * 100 : 0;
@@ -195,6 +206,8 @@ class MonthlyFundController extends Controller
 
             'currentMonthStats' => [
                 'cajas_cerradas_cant' => $cajasCerradas->count(),
+                'gross_inflows'       => $grossInflows,
+                'total_anuladas'      => $anulacionesTotal,
                 'inflows'             => $inflows,
                 'outflows'            => $outflows,
                 'saldo_neto'          => $saldoNetoMes,
@@ -237,7 +250,7 @@ class MonthlyFundController extends Controller
         $user = auth()->user();
         $sucursalId = ($validated['sucursal_id'] && $validated['sucursal_id'] !== 'all') ? (int) $validated['sucursal_id'] : null;
 
-        // Calcular totales exactos de cajas cerradas
+        // Calcular totales exactos de cajas cerradas netos de anulaciones
         $cajasQuery = CashRegister::where('status', 'closed')
             ->whereYear('closed_at', $validated['year'])
             ->whereMonth('closed_at', $validated['month']);
@@ -248,8 +261,10 @@ class MonthlyFundController extends Controller
 
         $cajaIds = $cajasQuery->pluck('id');
 
-        $inflows = (float) CashMovement::whereIn('cash_register_id', $cajaIds)->where('type', 'inflow')->sum('amount');
-        $outflows = (float) CashMovement::whereIn('cash_register_id', $cajaIds)->where('type', 'outflow')->sum('amount');
+        $grossInflows = (float) CashMovement::whereIn('cash_register_id', $cajaIds)->where('type', 'inflow')->sum('amount');
+        $anulacionesTotal = (float) CashMovement::whereIn('cash_register_id', $cajaIds)->where('concepto', 'anulacion_venta')->sum('amount');
+        $inflows = max(0, $grossInflows - $anulacionesTotal);
+        $outflows = (float) CashMovement::whereIn('cash_register_id', $cajaIds)->where('type', 'outflow')->where('concepto', '!=', 'anulacion_venta')->sum('amount');
         $saldoNeto = $inflows - $outflows;
 
         $cierre = CierreMensual::updateOrCreate(

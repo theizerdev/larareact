@@ -1,5 +1,5 @@
 import { Head, useForm, router, usePage } from '@inertiajs/react';
-import { Wallet, Plus, CheckCircle, XCircle, MoreVertical, Eye, Lock, RefreshCw, Landmark } from 'lucide-react';
+import { Wallet, Plus, CheckCircle, XCircle, MoreVertical, Eye, Lock, RefreshCw, Landmark, Info } from 'lucide-react';
 import React, { useState } from 'react';
 import { Breadcrumbs } from '@/components/breadcrumbs';
 import type { ColumnDef } from '@/components/data-table';
@@ -67,6 +67,10 @@ export default function Index({ cajas, activeRegister, currencySymbol = '$', fil
 
     const [isCreateOpen, setIsCreateOpen] = useState(false);
     const [isSyncingBcv, setIsSyncingBcv] = useState(false);
+    const [cajaToClose, setCajaToClose] = useState<CashRegister | null>(null);
+    const [isCloseOpen, setIsCloseOpen] = useState(false);
+    const [countedAmount, setCountedAmount] = useState<string>('');
+    const [closingProcess, setClosingProcess] = useState(false);
 
     // Filtros
     const [searchTerm, setSearchTerm] = useState(filters.search || '');
@@ -135,19 +139,37 @@ export default function Index({ cajas, activeRegister, currencySymbol = '$', fil
         });
     };
 
-    const handleCloseRegister = (caja: CashRegister) => {
-        if (confirm(__('¿Está seguro de cerrar esta caja? Se calculará el saldo final.'))) {
-            router.post(`/admin/cajas/${caja.id}/close`, {}, {
-                onSuccess: () => notifySuccess(__('Caja cerrada exitosamente.')),
-                onError: () => notifyError(__('Ocurrió un error al cerrar la caja.')),
-            });
-        }
+    const handleOpenCloseModal = (caja: CashRegister) => {
+        setCajaToClose(caja);
+        setCountedAmount('');
+        setIsCloseOpen(true);
+    };
+
+    const handleConfirmClose = (e: React.FormEvent) => {
+        e.preventDefault();
+        if (!cajaToClose) return;
+        setClosingProcess(true);
+        router.post(`/admin/cajas/${cajaToClose.id}/close`,
+            { counted_amount: countedAmount !== '' ? parseFloat(countedAmount) : null },
+            {
+                onSuccess: () => {
+                    setIsCloseOpen(false);
+                    setCajaToClose(null);
+                    setClosingProcess(false);
+                    notifySuccess(__('Caja cerrada exitosamente.'));
+                },
+                onError: () => {
+                    setClosingProcess(false);
+                    notifyError(__('Ocurrió un error al cerrar la caja.'));
+                },
+            }
+        );
     };
 
     const columns: ColumnDef<CashRegister>[] = [
         {
             header: __('Cajero / Usuario'),
-            accessorKey: 'user.name',
+            accessorKey: 'user.name' as any,
             className: 'font-medium',
             cell: (caja) => (
                 <div className="flex items-center gap-3">
@@ -245,7 +267,7 @@ export default function Index({ cajas, activeRegister, currencySymbol = '$', fil
                             {caja.status === 'open' && (
                                 canClose ? (
                                     <DropdownMenuItem
-                                        onClick={() => handleCloseRegister(caja)}
+                                        onClick={() => handleOpenCloseModal(caja)}
                                         className="text-rose-500 hover:text-rose-700 font-medium"
                                     >
                                         <Lock className="mr-2 h-4 w-4" />
@@ -458,6 +480,82 @@ export default function Index({ cajas, activeRegister, currencySymbol = '$', fil
                                 </Button>
                             </DialogFooter>
                         </form>
+                    </DialogContent>
+                </Dialog>
+
+                {/* Modal de Cierre de Caja */}
+                <Dialog open={isCloseOpen} onOpenChange={setIsCloseOpen}>
+                    <DialogContent className="sm:max-w-md">
+                        <DialogHeader>
+                            <DialogTitle className="flex items-center gap-2 text-rose-600 dark:text-rose-400">
+                                <Lock className="w-5 h-5" />
+                                {__('Cerrar Caja')} #{cajaToClose?.id}
+                            </DialogTitle>
+                            <DialogDescription>
+                                {__('El sistema calculará automáticamente el arqueo neto deduciendo cualquier venta anulada.')}
+                            </DialogDescription>
+                        </DialogHeader>
+
+                        {cajaToClose && (
+                            <form onSubmit={handleConfirmClose} className="space-y-4 py-2">
+                                <div className="p-3 bg-slate-50 dark:bg-slate-900 rounded-lg border border-slate-200 dark:border-slate-800 space-y-1.5 text-xs">
+                                    <div className="flex justify-between">
+                                        <span className="text-muted-foreground">{__('Cajero')}:</span>
+                                        <span className="font-semibold">{cajaToClose.user?.name || `Usuario #${cajaToClose.user_id}`}</span>
+                                    </div>
+                                    <div className="flex justify-between">
+                                        <span className="text-muted-foreground">{__('Apertura Inicial')}:</span>
+                                        <span className="font-mono font-bold text-blue-600 dark:text-blue-400">
+                                            {currencySymbol}{Number(cajaToClose.opening_amount || 0).toFixed(2)}
+                                        </span>
+                                    </div>
+                                </div>
+
+                                <div className="space-y-2">
+                                    <Label htmlFor="counted_amount" className="font-semibold text-sm">
+                                        {__('Efectivo Contado en Caja')} ({currencySymbol})
+                                    </Label>
+                                    <Input
+                                        id="counted_amount"
+                                        type="number"
+                                        step="0.01"
+                                        min="0"
+                                        value={countedAmount}
+                                        onChange={(e) => setCountedAmount(e.target.value)}
+                                        placeholder={__('Opcional: Si lo deja vacío se usará el saldo esperado')}
+                                        className="font-mono"
+                                    />
+                                    <p className="text-[11px] text-muted-foreground">
+                                        {__('Si no ingresa un monto físico, el sistema cerrará la caja con el saldo neto calculado.')}
+                                    </p>
+                                </div>
+
+                                <div className="p-2.5 bg-blue-50 dark:bg-blue-950/30 border border-blue-200 dark:border-blue-900/50 rounded-lg flex items-start gap-2 text-xs text-blue-700 dark:text-blue-300">
+                                    <Info className="w-4 h-4 shrink-0 mt-0.5" />
+                                    <span>
+                                        {__('Las ventas anuladas han sido deducidas de los ingresos y del saldo en efectivo de la caja.')}
+                                    </span>
+                                </div>
+
+                                <DialogFooter>
+                                    <Button
+                                        type="button"
+                                        variant="outline"
+                                        onClick={() => setIsCloseOpen(false)}
+                                        disabled={closingProcess}
+                                    >
+                                        {__('Cancelar')}
+                                    </Button>
+                                    <Button
+                                        type="submit"
+                                        variant="destructive"
+                                        disabled={closingProcess}
+                                    >
+                                        {closingProcess ? __('Cerrando...') : __('Confirmar Cierre')}
+                                    </Button>
+                                </DialogFooter>
+                            </form>
+                        )}
                     </DialogContent>
                 </Dialog>
             </div>

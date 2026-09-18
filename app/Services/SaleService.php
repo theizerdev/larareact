@@ -392,13 +392,36 @@ class SaleService
             }
 
             // 2. Revertir ingresos en caja registradora registrando salidas compensatorias
+            $targetRegister = null;
             if ($sale->cash_register_id) {
-                $cashRegister = CashRegister::find($sale->cash_register_id);
-                if ($cashRegister) {
-                    foreach ($sale->payments as $payment) {
+                $targetRegister = CashRegister::find($sale->cash_register_id);
+            }
+
+            // Si la caja original no existe o ya está cerrada, y hay una caja activa del usuario/empresa, registrar la salida en la caja activa
+            if ((!$targetRegister || $targetRegister->status === 'closed')) {
+                $activeRegister = CashRegister::getActiveRegister();
+                if ($activeRegister) {
+                    $targetRegister = $activeRegister;
+                }
+            }
+
+            if ($targetRegister) {
+                $payments = $sale->payments;
+                if ($payments->isEmpty()) {
+                    $this->cashRegisterService->addMovement(
+                        $targetRegister,
+                        'outflow',
+                        'anulacion_venta',
+                        $sale->metodo_pago ?? 'efectivo',
+                        (float) $sale->total,
+                        "Anulación Venta {$sale->codigo_ticket} - Reversión pago {$sale->cliente_nombre}",
+                        $userId
+                    );
+                } else {
+                    foreach ($payments as $payment) {
                         if ((float) $payment->monto > 0) {
                             $this->cashRegisterService->addMovement(
-                                $cashRegister,
+                                $targetRegister,
                                 'outflow',
                                 'anulacion_venta',
                                 $payment->metodo_pago,

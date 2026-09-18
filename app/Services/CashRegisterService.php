@@ -55,25 +55,125 @@ class CashRegisterService
         return $movement;
     }
 
-    public function closeRegister(CashRegister $register, ?float $countedAmount = null): CashRegister
+    /**
+     * Get complete financial summary of a register, factoring in annulled sales,
+     * net inflows, real outflows and cash expected amount.
+     */
+    public function getRegisterFinancialSummary(CashRegister $register): array
     {
-        $inflows = (float) $register->movements()->where('type', 'inflow')->sum('amount');
-        $outflows = (float) $register->movements()->where('type', 'outflow')->sum('amount');
         $openingAmount = (float) $register->opening_amount;
 
-        // Cash physical drawer expected amount (efectivo y dólares)
+        // Auto-reconcile any annulled sales in this register that might not have a movement yet
+        $anuladasSinMovimiento = \App\Models\Sale::where('cash_register_id', $register->id)
+            ->where('estado', 'anulada')
+            ->get();
+
+        foreach ($anuladasSinMovimiento as $saleAnulada) {
+            $hasMov = $register->movements()
+                ->where('concepto', 'anulacion_venta')
+                ->where('amount', $saleAnulada->total)
+                ->exists();
+            if (!$hasMov) {
+                $this->addMovement(
+                    $register,
+                    'outflow',
+                    'anulacion_venta',
+                    $saleAnulada->metodo_pago ?? 'efectivo',
+                    (float) $saleAnulada->total,
+                    "Anulación Venta {$saleAnulada->codigo_ticket} - Ajuste de conciliación",
+                    $register->user_id
+                );
+            }
+        }
+
+        $grossInflows = (float) $register->movements()->where('type', 'inflow')->sum('amount');
+
+        $anulacionesTotal = (float) $register->movements()
+            ->where('concepto', 'anulacion_venta')
+            ->sum('amount');
+
+        $salesAnuladasDirect = (float) \App\Models\Sale::where('cash_register_id', $register->id)
+            ->where('estado', 'anulada')
+            ->sum('total');
+        $anulacionesTotal = max($anulacionesTotal, $salesAnuladasDirect);
+
+        $netInflows = max(0, $grossInflows - $anulacionesTotal);
+
+        // Real operational expenses/withdrawals (excluding sale cancellations)
+        $realOutflows = (float) $register->movements()
+            ->where('type', 'outflow')
+            ->where('concepto', '!=', 'anulacion_venta')
+            ->sum('amount');
+
+        $totalOutflowsAll = (float) $register->movements()->where('type', 'outflow')->sum('amount');
+
+        // Physical Cash movements (efectivo y dolar)
         $cashInflows = (float) $register->movements()
             ->where('type', 'inflow')
             ->whereIn('metodo_pago', ['efectivo', 'dolar'])
             ->sum('amount');
-        $cashOutflows = (float) $register->movements()
-            ->where('type', 'outflow')
+
+        $cashAnulaciones = (float) $register->movements()
+            ->where('concepto', 'anulacion_venta')
             ->whereIn('metodo_pago', ['efectivo', 'dolar'])
             ->sum('amount');
+
+        $cashExpenses = (float) $register->movements()
+            ->where('type', 'outflow')
+            ->where('concepto', '!=', 'anulacion_venta')
+            ->whereIn('metodo_pago', ['efectivo', 'dolar'])
+            ->sum('amount');
+
+        $cashOutflows = $cashAnulaciones + $cashExpenses;
         $expectedCashAmount = $openingAmount + $cashInflows - $cashOutflows;
 
+        // Electronic inflows net of cancellations
+        $electronicInflowsGross = (float) $register->movements()
+            ->where('type', 'inflow')
+            ->whereNotIn('metodo_pago', ['efectivo', 'dolar'])
+            ->sum('amount');
+
+        $electronicAnulaciones = (float) $register->movements()
+            ->where('concepto', 'anulacion_venta')
+            ->whereNotIn('metodo_pago', ['efectivo', 'dolar'])
+            ->sum('amount');
+
+        $electronicInflowsNet = max(0, $electronicInflowsGross - $electronicAnulaciones);
+
+        $paymentBreakdown = $this->getPaymentMethodBreakdown($register);
+
+        $totalShiftBalance = $openingAmount + $netInflows - $realOutflows;
+
+        return [
+            'id' => $register->id,
+            'opened_at' => $register->opened_at,
+            'opening_amount' => $openingAmount,
+            'gross_inflows' => $grossInflows,
+            'total_anuladas' => $anulacionesTotal,
+            'inflows' => $netInflows,
+            'outflows' => $realOutflows,
+            'total_outflows_all' => $totalOutflowsAll,
+            'cash_inflows' => $cashInflows,
+            'cash_anulaciones' => $cashAnulaciones,
+            'cash_expenses' => $cashExpenses,
+            'cash_outflows' => $cashOutflows,
+            'electronic_inflows' => $electronicInflowsNet,
+            'expected_cash_balance' => $expectedCashAmount,
+            'expected_balance' => $expectedCashAmount,
+            'total_turn_sales' => $netInflows,
+            'total_turn_balance' => $totalShiftBalance,
+            'current_balance' => $totalShiftBalance,
+            'by_payment_method' => $paymentBreakdown,
+        ];
+    }
+
+    public function closeRegister(CashRegister $register, ?float $countedAmount = null): CashRegister
+    {
+        $financialSummary = $this->getRegisterFinancialSummary($register);
+        $expectedCashAmount = (float) $financialSummary['expected_cash_balance'];
+
         $data = [
-            'closing_amount' => $expectedCashAmount,
+            'closing_amount' => $countedAmount !== null ? $countedAmount : $expectedCashAmount,
             'expected_amount' => $expectedCashAmount,
             'closed_at' => Carbon::now(),
             'status' => 'closed',

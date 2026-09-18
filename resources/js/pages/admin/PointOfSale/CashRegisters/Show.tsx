@@ -92,8 +92,13 @@ interface GroupedAmount {
 interface Summary {
     inflows: number;
     outflows: number;
+    gross_inflows?: number;
+    total_anuladas?: number;
+    electronic_inflows?: number;
+    expected_cash_balance?: number;
     current_balance: number;
     currency_symbol?: string;
+    valor_dolar?: number;
     by_payment_method?: Record<string, GroupedAmount>;
     by_concept?: Record<string, GroupedAmount>;
 }
@@ -272,7 +277,7 @@ export default function Show({ caja, summary }: Props) {
         },
         {
             header: __('Registrado Por'),
-            accessorKey: 'creator.name',
+            accessorKey: 'creator.name' as any,
             cell: (movement) => (
                 <span className="text-sm font-medium">
                     {movement.creator?.name || `Usuario #${movement.created_by}`}
@@ -496,6 +501,21 @@ export default function Show({ caja, summary }: Props) {
                                 )}
                             </div>
                         </div>
+                    </div>
+                )}
+
+                {/* Banner Informativo si hay ventas anuladas en la caja */}
+                {(summary.total_anuladas ?? 0) > 0 && (
+                    <div className="bg-amber-500/10 border border-amber-500/20 rounded-xl p-3.5 flex items-center justify-between text-amber-800 dark:text-amber-300 text-sm shadow-xs">
+                        <div className="flex items-center gap-2">
+                            <AlertTriangle className="w-4 h-4 text-amber-600 shrink-0" />
+                            <span>
+                                <strong>{__('Control de Ventas Anuladas:')}</strong> {__('Esta caja cuenta con')} <strong className="font-mono">{currencySymbol}{Number(summary.total_anuladas).toFixed(2)}</strong> {__('en ventas anuladas que han sido deducidas de los ingresos brutos.')}
+                            </span>
+                        </div>
+                        <span className="font-mono text-xs px-2 py-0.5 rounded bg-amber-100 dark:bg-amber-900/40 text-amber-700 dark:text-amber-300 font-bold border border-amber-300 dark:border-amber-800">
+                            {__('Conciliado')}
+                        </span>
                     </div>
                 )}
 
@@ -835,11 +855,17 @@ export default function Show({ caja, summary }: Props) {
                                     <span className="font-mono font-semibold">{currencySymbol}{(caja.opening_amount ?? 0).toFixed(2)}</span>
                                 </div>
                                 <div className="flex justify-between items-center text-emerald-600">
-                                    <span>{__('Ventas Totales del Turno')}:</span>
+                                    <span>{__('Ventas Netas del Turno')}:</span>
                                     <span className="font-mono font-semibold">+{currencySymbol}{(summary.inflows ?? 0).toFixed(2)}</span>
                                 </div>
+                                {(summary.total_anuladas ?? 0) > 0 && (
+                                    <div className="flex justify-between items-center text-amber-600 font-medium">
+                                        <span>{__('Ventas Anuladas (Deducidas)')}:</span>
+                                        <span className="font-mono font-semibold">-{currencySymbol}{Number(summary.total_anuladas).toFixed(2)}</span>
+                                    </div>
+                                )}
                                 <div className="flex justify-between items-center text-rose-600">
-                                    <span>{__('Total Egresos / Salidas')}:</span>
+                                    <span>{__('Total Egresos / Gastos')}:</span>
                                     <span className="font-mono font-semibold">-{currencySymbol}{(summary.outflows ?? 0).toFixed(2)}</span>
                                 </div>
                                 <div className="pt-2 border-t flex justify-between items-center font-bold">
@@ -1042,15 +1068,21 @@ export default function Show({ caja, summary }: Props) {
                         <span>{currencySymbol}{(caja.opening_amount ?? 0).toFixed(2)}</span>
                     </div>
                     <div className="flex justify-between">
-                        <span>Total Ingresos (+):</span>
+                        <span>Ventas Netas (+):</span>
                         <span>+{currencySymbol}{(summary.inflows ?? 0).toFixed(2)}</span>
                     </div>
+                    {(summary.total_anuladas ?? 0) > 0 && (
+                        <div className="flex justify-between text-[11px] font-normal">
+                            <span>(Ventas Anuladas):</span>
+                            <span>-{currencySymbol}{Number(summary.total_anuladas).toFixed(2)}</span>
+                        </div>
+                    )}
                     <div className="flex justify-between">
-                        <span>Total Salidas (-):</span>
+                        <span>Total Egresos / Gastos (-):</span>
                         <span>-{currencySymbol}{(summary.outflows ?? 0).toFixed(2)}</span>
                     </div>
                     <div className="flex justify-between font-black text-sm border-t-2 border-dashed border-black pt-1 mt-1">
-                        <span>Dinero Esperado:</span>
+                        <span>Dinero Esperado en Cajón:</span>
                         <span>{currencySymbol}{(expectedAmount ?? 0).toFixed(2)}</span>
                     </div>
                 </div>
