@@ -184,6 +184,12 @@ export default function RolesIndexPage({ auth, roles, stats, groupedPermissions,
         setIsModalOpen(true);
     };
 
+    React.useEffect(() => {
+        if (!isModalOpen && !deletingRole) {
+            document.body.style.pointerEvents = '';
+        }
+    }, [isModalOpen, deletingRole]);
+
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
 
@@ -193,6 +199,7 @@ export default function RolesIndexPage({ auth, roles, stats, groupedPermissions,
                     setIsModalOpen(false);
                     setEditingRole(null);
                     reset();
+                    document.body.style.pointerEvents = '';
                     notifySuccess(__('Role updated successfully.'));
                 },
                 onError: () => notifyError(__('Please review the highlighted fields.')),
@@ -202,6 +209,7 @@ export default function RolesIndexPage({ auth, roles, stats, groupedPermissions,
                 onSuccess: () => {
                     setIsModalOpen(false);
                     reset();
+                    document.body.style.pointerEvents = '';
                     notifySuccess(__('Role created successfully.'));
                 },
                 onError: () => notifyError(__('Please review the highlighted fields.')),
@@ -217,6 +225,7 @@ return;
         router.delete(`/admin/roles/${deletingRole.id}`, {
             onSuccess: () => {
                 setDeletingRole(null);
+                document.body.style.pointerEvents = '';
                 notifySuccess(__('Role deleted successfully.'));
             },
             onError: (err) => {
@@ -345,19 +354,25 @@ return false;
                                         </p>
                                     </div>
                                     {!role.is_super_admin && (
-                                        <DropdownMenu>
+                                        <DropdownMenu modal={false}>
                                             <DropdownMenuTrigger asChild>
                                                 <Button variant="ghost" size="icon">
                                                     <MoreVertical className="h-4 w-4" />
                                                 </Button>
                                             </DropdownMenuTrigger>
                                             <DropdownMenuContent align="end">
-                                                <DropdownMenuItem onClick={() => handleEditClick(role)}>
+                                                <DropdownMenuItem onClick={() => {
+                                                    document.body.style.pointerEvents = '';
+                                                    setTimeout(() => handleEditClick(role), 0);
+                                                }}>
                                                     <Pencil className="mr-2 h-4 w-4" />
                                                     {__('Edit')}
                                                 </DropdownMenuItem>
                                                 <DropdownMenuItem
-                                                    onClick={() => setDeletingRole(role)}
+                                                    onClick={() => {
+                                                        document.body.style.pointerEvents = '';
+                                                        setTimeout(() => setDeletingRole(role), 0);
+                                                    }}
                                                     className="text-red-600 focus:text-red-600 dark:text-red-400"
                                                 >
                                                     <Trash2 className="mr-2 h-4 w-4" />
@@ -423,7 +438,14 @@ return false;
             </div>
 
             {/* Modal de Creación / Edición */}
-            <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
+            <Dialog open={isModalOpen} onOpenChange={(open) => {
+                setIsModalOpen(open);
+                if (!open) {
+                    setEditingRole(null);
+                    reset();
+                    document.body.style.pointerEvents = '';
+                }
+            }}>
                 <DialogContent className="sm:max-w-5xl w-[96vw] max-h-[92vh] h-[820px] flex flex-col p-0 overflow-hidden shadow-2xl rounded-2xl border-border/80 bg-card">
                     <form onSubmit={handleSubmit} className="flex flex-col h-full overflow-hidden">
                         {/* Header */}
@@ -735,7 +757,12 @@ return false;
             </Dialog>
 
             {/* AlertDialog de Confirmación para eliminar */}
-            <AlertDialog open={!!deletingRole} onOpenChange={(open) => !open && setDeletingRole(null)}>
+            <AlertDialog open={!!deletingRole} onOpenChange={(open) => {
+                if (!open) {
+                    setDeletingRole(null);
+                    document.body.style.pointerEvents = '';
+                }
+            }}>
                 <AlertDialogContent>
                     <AlertDialogHeader>
                         <AlertDialogTitle>{__('Delete Role')}</AlertDialogTitle>
