@@ -131,7 +131,9 @@ class Empresa extends Model
             return $this->zona_horaria;
         }
 
-        $pais = $this->pais ?? $this->paisTelefono;
+        $pais = $this->pais ?? ($this->pais_id ? Pais::find($this->pais_id) : null)
+             ?? $this->paisTelefono ?? ($this->pais_telefono_id ? Pais::find($this->pais_telefono_id) : null);
+
         if ($pais && ! empty($pais->zona_horaria)) {
             return $pais->zona_horaria;
         }

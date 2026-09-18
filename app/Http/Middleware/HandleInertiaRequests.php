@@ -73,6 +73,7 @@ class HandleInertiaRequests extends Middleware
             'currencyCode' => $currencyCode,
             'countryCode' => $countryCode,
             'isVenezuela' => $isVenezuela,
+            'timezone' => $user?->getTimezone() ?? config('app.timezone', 'America/Mexico_City'),
             'auth' => [
                 'user' => $user ? array_merge($user->toArray(), [
                     'empresa' => $user->empresa ? [

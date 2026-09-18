@@ -146,12 +146,25 @@ class User extends Authenticatable implements PasskeyUser
         return $this->belongsTo(Pais::class, 'pais_telefono_id');
     }
 
-    /**
-     * Obtiene la zona horaria del usuario según su empresa y país.
-     */
     public function getTimezone(): string
     {
-        return $this->empresa?->getTimezone() ?? config('app.timezone', 'America/Mexico_City');
+        if ($this->empresa) {
+            return $this->empresa->getTimezone();
+        }
+
+        if ($this->empresa_id) {
+            $empresa = Empresa::find($this->empresa_id);
+            if ($empresa) {
+                return $empresa->getTimezone();
+            }
+        }
+
+        $pais = $this->paisTelefono ?? ($this->pais_telefono_id ? Pais::find($this->pais_telefono_id) : null);
+        if ($pais && ! empty($pais->zona_horaria)) {
+            return $pais->zona_horaria;
+        }
+
+        return config('app.timezone', 'America/Mexico_City');
     }
 
     public function roles(): \Illuminate\Database\Eloquent\Relations\MorphToMany
