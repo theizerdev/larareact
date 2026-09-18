@@ -28,7 +28,10 @@ import {
     Download,
     FileSpreadsheet,
     LayoutDashboard,
-    ExternalLink
+    ExternalLink,
+    Scale,
+    ShieldAlert,
+    Bell
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -67,6 +70,19 @@ interface MarcajeIndividual {
     sucursal?: { nombre: string; zona_horaria?: string };
 }
 
+interface SemanaLftInfo {
+    periodo: { inicio: string; fin: string; ano_reforma: number };
+    limites: { normales: number; tex_doble: number; tex_triple: number; total: number };
+    horas: { normales: number; tex_doble: number; tex_triple: number; extra_brutas: number; totales: number };
+    semaforos: {
+        normal: { horas: number; limite: number; estado: 'normal' | 'verde' | 'amarillo' | 'rojo'; label: string; notificar_a?: string | null };
+        tex_doble: { horas: number; limite: number; estado: 'normal' | 'verde' | 'amarillo' | 'rojo'; label: string };
+        tex_triple: { horas: number; limite: number; estado: 'normal' | 'verde' | 'amarillo' | 'rojo'; label: string };
+        alerta_global: 'normal' | 'verde' | 'amarillo' | 'rojo';
+        destinatarios: string[];
+    };
+}
+
 interface EmpleadoBitacora {
     id: number;
     nombres: string;
@@ -86,6 +102,7 @@ interface EmpleadoBitacora {
         descansos: number;
         salidas: number;
     };
+    semana_lft?: SemanaLftInfo | null;
 }
 
 /** Componente de Contador en Tiempo Real (Reloj en vivo segundo a segundo) */
@@ -537,6 +554,7 @@ export default function AsistenciaBitacoraIndex({ marcajes, stats, sucursales = 
                                         <th className="px-4 py-3.5">Empleado</th>
                                         <th className="px-4 py-3.5">Último Evento</th>
                                         <th className="px-4 py-3.5">Estado / Tiempo Restante</th>
+                                        <th className="px-4 py-3.5">Semáforo LFT (Semana)</th>
                                         <th className="px-4 py-3.5">Eventos en Período</th>
                                         <th className="px-4 py-3.5">Origen & Sucursal</th>
                                         <th className="px-4 py-3.5 text-right">Acción</th>
@@ -545,7 +563,7 @@ export default function AsistenciaBitacoraIndex({ marcajes, stats, sucursales = 
                                 <tbody className="divide-y">
                                     {marcajes.data.length === 0 ? (
                                         <tr>
-                                            <td colSpan={6} className="px-4 py-12 text-center text-muted-foreground">
+                                            <td colSpan={7} className="px-4 py-12 text-center text-muted-foreground">
                                                 <Clock className="w-8 h-8 mx-auto mb-2 opacity-40" />
                                                 <p className="font-medium">No se encontraron empleados con marcajes en el período.</p>
                                             </td>
@@ -602,6 +620,59 @@ export default function AsistenciaBitacoraIndex({ marcajes, stats, sucursales = 
                                                                 <LiveBreakTimer fechaHora={ultimo.fecha_hora} fechaHoraIso={ultimo.fecha_hora_iso} limiteMinutos={infoTiempo.limite_minutos ?? 15} subtexto={infoTiempo.subtexto} />
                                                             )
                                                         ) : <span className="text-xs text-muted-foreground">-</span>}
+                                                    </td>
+                                                    <td className="px-4 py-3.5">
+                                                        {emp.semana_lft ? (() => {
+                                                            const sem = emp.semana_lft;
+                                                            const norm = sem.semaforos.normal;
+                                                            const dbl = sem.semaforos.tex_doble;
+                                                            const trp = sem.semaforos.tex_triple;
+
+                                                            let badgeStyle = "bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300 border-slate-300 dark:border-slate-700";
+                                                            let dotColor = "bg-slate-400";
+                                                            let alertText = `${norm.horas}h / ${norm.limite}h`;
+
+                                                            if (norm.estado === 'rojo') {
+                                                                badgeStyle = "bg-rose-500/15 text-rose-700 dark:text-rose-300 border-rose-500/40 font-bold";
+                                                                dotColor = "bg-rose-500 animate-pulse";
+                                                                alertText = `${norm.horas}h (🔴 DG)`;
+                                                            } else if (norm.estado === 'amarillo') {
+                                                                badgeStyle = "bg-amber-500/15 text-amber-800 dark:text-amber-300 border-amber-500/40 font-bold";
+                                                                dotColor = "bg-amber-500 animate-pulse";
+                                                                alertText = `${norm.horas}h (🟡 Resp)`;
+                                                            } else if (norm.estado === 'verde') {
+                                                                badgeStyle = "bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border-emerald-500/40 font-bold";
+                                                                dotColor = "bg-emerald-500";
+                                                                alertText = `${norm.horas}h (🟢 RH)`;
+                                                            }
+
+                                                            return (
+                                                                <div className="space-y-1">
+                                                                    <div className="flex items-center gap-1.5">
+                                                                        <Badge variant="outline" className={`text-xs gap-1.5 py-0.5 px-2 font-mono ${badgeStyle}`} title={norm.label}>
+                                                                            <span className={`w-2 h-2 rounded-full ${dotColor}`} />
+                                                                            <span>{alertText}</span>
+                                                                        </Badge>
+                                                                    </div>
+                                                                    <div className="flex flex-wrap items-center gap-1 text-[10px]">
+                                                                        {dbl.horas > 0 && (
+                                                                            <Badge variant="outline" className={`py-0 px-1 font-mono font-semibold ${
+                                                                                dbl.estado === 'rojo' ? 'bg-rose-500/20 text-rose-700 dark:text-rose-300 border-rose-500/30 font-bold' :
+                                                                                dbl.estado === 'amarillo' ? 'bg-amber-500/20 text-amber-800 dark:text-amber-300 border-amber-500/30 font-bold' :
+                                                                                'bg-blue-500/10 text-blue-700 dark:text-blue-300 border-blue-500/20'
+                                                                            }`} title={`TEX Doble: ${dbl.horas}h`}>
+                                                                                TEX 2x: {dbl.horas}h
+                                                                            </Badge>
+                                                                        )}
+                                                                        {trp.horas > 0 && (
+                                                                            <Badge variant="outline" className="py-0 px-1 font-mono font-bold bg-rose-600/20 text-rose-700 dark:text-rose-300 border-rose-600/40 animate-pulse" title={`TEX Triple: ${trp.horas}h`}>
+                                                                                TEX 3x: {trp.horas}h
+                                                                            </Badge>
+                                                                        )}
+                                                                    </div>
+                                                                </div>
+                                                            );
+                                                        })() : <span className="text-xs text-muted-foreground">—</span>}
                                                     </td>
                                                     <td className="px-4 py-3.5">
                                                         <Badge variant="outline" className="text-xs font-mono">{emp.conteo_eventos.total} eventos</Badge>
@@ -687,6 +758,141 @@ export default function AsistenciaBitacoraIndex({ marcajes, stats, sucursales = 
                                     </Badge>
                                 </div>
                             </div>
+
+                            {/* Card de Reforma Laboral & Semáforos LFT */}
+                            {selectedEmpleado.semana_lft && (
+                                <div className="rounded-xl border border-indigo-200 dark:border-indigo-900/60 bg-gradient-to-br from-indigo-50/40 via-white to-purple-50/20 dark:from-slate-900 dark:via-slate-900 dark:to-indigo-950/20 p-4 space-y-3">
+                                    <div className="flex flex-wrap items-center justify-between gap-2 border-b pb-2.5">
+                                        <div className="flex items-center gap-2">
+                                            <Scale className="w-4 h-4 text-indigo-600" />
+                                            <h4 className="text-xs font-bold uppercase tracking-wider text-slate-900 dark:text-slate-100">
+                                                Jornada Semanal & Semáforos LFT ({selectedEmpleado.semana_lft.periodo.inicio} al {selectedEmpleado.semana_lft.periodo.fin})
+                                            </h4>
+                                        </div>
+                                        <div className="flex items-center gap-2">
+                                            <Badge variant="outline" className="text-[11px] font-mono bg-indigo-50 dark:bg-indigo-950/50 text-indigo-700 dark:text-indigo-300 border-indigo-200">
+                                                Reforma {selectedEmpleado.semana_lft.periodo.ano_reforma}: {selectedEmpleado.semana_lft.limites.normales}h máx
+                                            </Badge>
+                                            <Badge variant="outline" className="text-[11px] font-mono">
+                                                Total Semana: <strong className="ml-1 font-black">{selectedEmpleado.semana_lft.horas.totales}h</strong> / {selectedEmpleado.semana_lft.limites.total}h
+                                            </Badge>
+                                        </div>
+                                    </div>
+
+                                    {/* 3 Semáforos */}
+                                    <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                                        {/* Semáforo Normal */}
+                                        <div className="p-2.5 rounded-lg border bg-card space-y-1.5">
+                                            <div className="flex items-center justify-between">
+                                                <span className="text-[10px] uppercase font-bold text-muted-foreground">Jornada Ordinaria</span>
+                                                <Badge variant="outline" className={`text-[10px] font-bold ${
+                                                    selectedEmpleado.semana_lft.semaforos.normal.estado === 'rojo' ? 'bg-rose-500/20 text-rose-700 dark:text-rose-300 border-rose-500/30 font-bold' :
+                                                    selectedEmpleado.semana_lft.semaforos.normal.estado === 'amarillo' ? 'bg-amber-500/20 text-amber-700 dark:text-amber-300 border-amber-500/30 font-bold' :
+                                                    selectedEmpleado.semana_lft.semaforos.normal.estado === 'verde' ? 'bg-emerald-500/20 text-emerald-700 dark:text-emerald-300 border-emerald-500/30 font-bold' :
+                                                    'bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300'
+                                                }`}>
+                                                    {selectedEmpleado.semana_lft.semaforos.normal.estado === 'normal' ? 'OK' : selectedEmpleado.semana_lft.semaforos.normal.estado.toUpperCase()}
+                                                </Badge>
+                                            </div>
+                                            <div className="text-lg font-black font-mono text-slate-800 dark:text-slate-200">
+                                                {selectedEmpleado.semana_lft.horas.normales} <span className="text-xs font-normal text-muted-foreground">/ {selectedEmpleado.semana_lft.limites.normales}h</span>
+                                            </div>
+                                            <div className="w-full bg-slate-100 dark:bg-slate-800 rounded-full h-1.5 overflow-hidden">
+                                                <div 
+                                                    className={`h-full ${
+                                                        selectedEmpleado.semana_lft.semaforos.normal.estado === 'rojo' ? 'bg-rose-600' :
+                                                        selectedEmpleado.semana_lft.semaforos.normal.estado === 'amarillo' ? 'bg-amber-500' :
+                                                        selectedEmpleado.semana_lft.semaforos.normal.estado === 'verde' ? 'bg-emerald-500' :
+                                                        'bg-indigo-600'
+                                                    }`}
+                                                    style={{ width: `${Math.min(100, (selectedEmpleado.semana_lft.horas.normales / selectedEmpleado.semana_lft.limites.normales) * 100)}%` }}
+                                                />
+                                            </div>
+                                            <p className="text-[10px] text-muted-foreground">
+                                                Alertas: 42h (RH) • 44h (Resp) • 46h (DG)
+                                            </p>
+                                        </div>
+
+                                        {/* TEX Doble */}
+                                        <div className="p-2.5 rounded-lg border bg-card space-y-1.5">
+                                            <div className="flex items-center justify-between">
+                                                <span className="text-[10px] uppercase font-bold text-muted-foreground">TEX Doble (200%)</span>
+                                                <Badge variant="outline" className={`text-[10px] font-bold ${
+                                                    selectedEmpleado.semana_lft.semaforos.tex_doble.estado === 'rojo' ? 'bg-rose-500/20 text-rose-700 dark:text-rose-300 border-rose-500/30' :
+                                                    selectedEmpleado.semana_lft.semaforos.tex_doble.estado === 'amarillo' ? 'bg-amber-500/20 text-amber-700 dark:text-amber-300 border-amber-500/30' :
+                                                    selectedEmpleado.semana_lft.semaforos.tex_doble.estado === 'verde' ? 'bg-emerald-500/20 text-emerald-700 dark:text-emerald-300 border-emerald-500/30' :
+                                                    'bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300'
+                                                }`}>
+                                                    {selectedEmpleado.semana_lft.semaforos.tex_doble.estado.toUpperCase()}
+                                                </Badge>
+                                            </div>
+                                            <div className="text-lg font-black font-mono text-slate-800 dark:text-slate-200">
+                                                {selectedEmpleado.semana_lft.horas.tex_doble} <span className="text-xs font-normal text-muted-foreground">/ {selectedEmpleado.semana_lft.limites.tex_doble}h</span>
+                                            </div>
+                                            <div className="w-full bg-slate-100 dark:bg-slate-800 rounded-full h-1.5 overflow-hidden">
+                                                <div 
+                                                    className={`h-full ${
+                                                        selectedEmpleado.semana_lft.semaforos.tex_doble.estado === 'rojo' ? 'bg-rose-600' :
+                                                        selectedEmpleado.semana_lft.semaforos.tex_doble.estado === 'amarillo' ? 'bg-amber-500' :
+                                                        'bg-blue-500'
+                                                    }`}
+                                                    style={{ width: `${Math.min(100, (selectedEmpleado.semana_lft.horas.tex_doble / selectedEmpleado.semana_lft.limites.tex_doble) * 100)}%` }}
+                                                />
+                                            </div>
+                                            <p className="text-[10px] text-muted-foreground">
+                                                Umbrales: 7h (Verde) • 8h (Amarillo) • 9h (Rojo)
+                                            </p>
+                                        </div>
+
+                                        {/* TEX Triple */}
+                                        <div className="p-2.5 rounded-lg border bg-card space-y-1.5">
+                                            <div className="flex items-center justify-between">
+                                                <span className="text-[10px] uppercase font-bold text-muted-foreground">TEX Triple (300%)</span>
+                                                <Badge variant="outline" className={`text-[10px] font-bold ${
+                                                    selectedEmpleado.semana_lft.semaforos.tex_triple.estado === 'rojo' ? 'bg-rose-600 text-white border-rose-600 font-bold' :
+                                                    selectedEmpleado.semana_lft.semaforos.tex_triple.estado === 'amarillo' ? 'bg-amber-500/20 text-amber-700 dark:text-amber-300 border-amber-500/30 font-bold' :
+                                                    selectedEmpleado.semana_lft.semaforos.tex_triple.estado === 'verde' ? 'bg-emerald-500/20 text-emerald-700 dark:text-emerald-300 border-emerald-500/30' :
+                                                    'bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300'
+                                                }`}>
+                                                    {selectedEmpleado.semana_lft.semaforos.tex_triple.estado.toUpperCase()}
+                                                </Badge>
+                                            </div>
+                                            <div className="text-lg font-black font-mono text-slate-800 dark:text-slate-200">
+                                                {selectedEmpleado.semana_lft.horas.tex_triple} <span className="text-xs font-normal text-muted-foreground">/ {selectedEmpleado.semana_lft.limites.tex_triple}h</span>
+                                            </div>
+                                            <div className="w-full bg-slate-100 dark:bg-slate-800 rounded-full h-1.5 overflow-hidden">
+                                                <div 
+                                                    className={`h-full ${
+                                                        selectedEmpleado.semana_lft.semaforos.tex_triple.estado === 'rojo' ? 'bg-rose-700' :
+                                                        selectedEmpleado.semana_lft.semaforos.tex_triple.estado === 'amarillo' ? 'bg-amber-600' :
+                                                        'bg-blue-500'
+                                                    }`}
+                                                    style={{ width: `${Math.min(100, (selectedEmpleado.semana_lft.horas.tex_triple / selectedEmpleado.semana_lft.limites.tex_triple) * 100)}%` }}
+                                                />
+                                            </div>
+                                            <p className="text-[10px] text-muted-foreground">
+                                                Umbrales: 2h (Verde) • 3h (Amarillo) • 4h (Rojo)
+                                            </p>
+                                        </div>
+                                    </div>
+
+                                    {selectedEmpleado.semana_lft.semaforos.destinatarios.length > 0 && (
+                                        <div className="p-2 rounded-lg bg-rose-500/10 border border-rose-500/30 flex items-center justify-between text-[11px]">
+                                            <div className="flex items-center gap-1.5 text-rose-700 dark:text-rose-300 font-semibold">
+                                                <Bell className="w-3.5 h-3.5" />
+                                                <span>Notificaciones escalonadas activas:</span>
+                                            </div>
+                                            <div className="flex items-center gap-1">
+                                                {selectedEmpleado.semana_lft.semaforos.destinatarios.map((dest) => (
+                                                    <Badge key={dest} className="bg-rose-600 text-white font-bold text-[10px]">
+                                                        {dest === 'RH' ? 'Recursos Humanos (RH)' : dest === 'Responsable' ? 'Supervisor de Sede' : 'Dirección General (DG)'}
+                                                    </Badge>
+                                                ))}
+                                            </div>
+                                        </div>
+                                    )}
+                                </div>
+                            )}
 
                             {/* Timeline de Marcajes Auditados */}
                             <div className="space-y-3">

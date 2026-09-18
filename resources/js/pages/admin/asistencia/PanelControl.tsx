@@ -38,7 +38,11 @@ import {
     ExternalLink,
     FileSpreadsheet,
     FileText,
-    Camera
+    Camera,
+    Scale,
+    ShieldAlert,
+    Bell,
+    Check
 } from 'lucide-react';
 import type { Paginated } from '@/types/app';
 import { cleanParams } from '@/lib/utils';
@@ -68,6 +72,19 @@ interface EventoHoy {
     geolocalizacion?: string | null;
     fotografia_path?: string | null;
     observaciones?: string | null;
+}
+
+interface SemanaLftInfo {
+    periodo: { inicio: string; fin: string; ano_reforma: number };
+    limites: { normales: number; tex_doble: number; tex_triple: number; total: number };
+    horas: { normales: number; tex_doble: number; tex_triple: number; extra_brutas: number; totales: number };
+    semaforos: {
+        normal: { horas: number; limite: number; estado: 'normal' | 'verde' | 'amarillo' | 'rojo'; label: string; notificar_a?: string | null; umbrales: { verde: number; amarillo: number; rojo: number } };
+        tex_doble: { horas: number; limite: number; estado: 'normal' | 'verde' | 'amarillo' | 'rojo'; label: string; umbrales: { verde: number; amarillo: number; rojo: number } };
+        tex_triple: { horas: number; limite: number; estado: 'normal' | 'verde' | 'amarillo' | 'rojo'; label: string; umbrales: { verde: number; amarillo: number; rojo: number } };
+        alerta_global: 'normal' | 'verde' | 'amarillo' | 'rojo';
+        destinatarios: string[];
+    };
 }
 
 interface ColaboradorStatus {
@@ -100,6 +117,10 @@ interface ColaboradorStatus {
     } | null;
     eventos_hoy?: EventoHoy[];
     total_marcajes_hoy: number;
+    // Semáforo LFT y acumulado semanal
+    semana_lft?: SemanaLftInfo;
+    alerta_semaforo?: 'normal' | 'verde' | 'amarillo' | 'rojo';
+    destinatarios_notif?: string[];
 }
 
 interface KPIs {
@@ -111,6 +132,12 @@ interface KPIs {
     retardos: number;
     ausentes: number;
     tasa_asistencia: number;
+    // Semáforos LFT
+    alertas_semaforo?: number;
+    alerta_rh?: number;
+    alerta_responsable?: number;
+    alerta_dg?: number;
+    total_horas_semanales?: number;
 }
 
 interface Props {
@@ -124,6 +151,7 @@ interface Props {
         fecha?: string;
         search?: string;
         status_asistencia?: string;
+        filtro_semaforo?: string;
         perPage?: number;
     };
 }
@@ -141,6 +169,7 @@ export default function PanelControlAsistencia({
     const [fecha, setFecha] = useState<string>(filters.fecha || new Date().toISOString().split('T')[0]);
     const [search, setSearch] = useState<string>(filters.search || '');
     const [statusFilter, setStatusFilter] = useState<string>(filters.status_asistencia || 'todos');
+    const [filtroSemaforo, setFiltroSemaforo] = useState<string>(filters.filtro_semaforo || 'todos');
     const [perPage, setPerPage] = useState<string>(filters.perPage ? String(filters.perPage) : '15');
 
     // Estado del colaborador seleccionado para inspección en Dialog
@@ -154,9 +183,10 @@ export default function PanelControlAsistencia({
     }, [sucursalId, sucursales]);
 
     // Función para disparar la búsqueda/filtros
-    const applyFilters = (newStatus?: string, newPerPage?: string) => {
+    const applyFilters = (newStatus?: string, newPerPage?: string, newFiltroSemaforo?: string) => {
         const activeStatus = newStatus !== undefined ? newStatus : statusFilter;
         const activePerPage = newPerPage !== undefined ? newPerPage : perPage;
+        const activeSemaforo = newFiltroSemaforo !== undefined ? newFiltroSemaforo : filtroSemaforo;
 
         const params = cleanParams({
             sucursal_id: sucursalId !== 'todas' ? sucursalId : undefined,
@@ -164,6 +194,7 @@ export default function PanelControlAsistencia({
             fecha: fecha || undefined,
             search: search.trim() || undefined,
             status_asistencia: activeStatus !== 'todos' ? activeStatus : undefined,
+            filtro_semaforo: activeSemaforo !== 'todos' ? activeSemaforo : undefined,
             perPage: activePerPage !== '15' ? activePerPage : undefined,
         });
 
@@ -179,6 +210,7 @@ export default function PanelControlAsistencia({
         setFecha(new Date().toISOString().split('T')[0]);
         setSearch('');
         setStatusFilter('todos');
+        setFiltroSemaforo('todos');
         setPerPage('15');
         router.get('/admin/asistencia/panel-control', {}, { preserveState: true });
     };
@@ -191,6 +223,12 @@ export default function PanelControlAsistencia({
     const handleCardClick = (statusKey: string) => {
         setStatusFilter(statusKey);
         applyFilters(statusKey);
+    };
+
+    const handleSemaforoFilterClick = (semaforoKey: string) => {
+        const next = filtroSemaforo === semaforoKey ? 'todos' : semaforoKey;
+        setFiltroSemaforo(next);
+        applyFilters(undefined, undefined, next);
     };
 
     // Apertura del modal de detalle
@@ -335,6 +373,65 @@ export default function PanelControlAsistencia({
                         <span className={`w-2 h-2 rounded-full ${config.dotClass}`} />
                         <span>{config.label}</span>
                     </Badge>
+                );
+            }
+        },
+        {
+            header: 'Semáforo LFT (Semana)',
+            dropdownLabel: 'Semáforo LFT',
+            accessorKey: 'alerta_semaforo',
+            sortable: true,
+            cell: (row) => {
+                const semData = row.semana_lft;
+                if (!semData) return <span className="text-xs text-muted-foreground">—</span>;
+
+                const norm = semData.semaforos.normal;
+                const dbl = semData.semaforos.tex_doble;
+                const trp = semData.semaforos.tex_triple;
+
+                let badgeStyle = "bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300 border-slate-300 dark:border-slate-700";
+                let dotColor = "bg-slate-400";
+                let alertText = `${norm.horas}h / ${norm.limite}h`;
+
+                if (norm.estado === 'rojo') {
+                    badgeStyle = "bg-rose-500/15 text-rose-700 dark:text-rose-300 border-rose-500/40 font-bold";
+                    dotColor = "bg-rose-500 animate-pulse";
+                    alertText = `${norm.horas}h (🔴 DG)`;
+                } else if (norm.estado === 'amarillo') {
+                    badgeStyle = "bg-amber-500/15 text-amber-800 dark:text-amber-300 border-amber-500/40 font-bold";
+                    dotColor = "bg-amber-500 animate-pulse";
+                    alertText = `${norm.horas}h (🟡 Resp)`;
+                } else if (norm.estado === 'verde') {
+                    badgeStyle = "bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border-emerald-500/40 font-bold";
+                    dotColor = "bg-emerald-500";
+                    alertText = `${norm.horas}h (🟢 RH)`;
+                }
+
+                return (
+                    <div className="space-y-1">
+                        <div className="flex items-center gap-1.5">
+                            <Badge variant="outline" className={`text-xs gap-1.5 py-0.5 px-2 font-mono ${badgeStyle}`} title={norm.label}>
+                                <span className={`w-2 h-2 rounded-full ${dotColor}`} />
+                                <span>{alertText}</span>
+                            </Badge>
+                        </div>
+                        <div className="flex flex-wrap items-center gap-1 text-[10px]">
+                            {dbl.horas > 0 && (
+                                <Badge variant="outline" className={`py-0 px-1 font-mono font-semibold ${
+                                    dbl.estado === 'rojo' ? 'bg-rose-500/20 text-rose-700 dark:text-rose-300 border-rose-500/30 font-bold' :
+                                    dbl.estado === 'amarillo' ? 'bg-amber-500/20 text-amber-800 dark:text-amber-300 border-amber-500/30 font-bold' :
+                                    'bg-blue-500/10 text-blue-700 dark:text-blue-300 border-blue-500/20'
+                                }`} title={`TEX Doble: ${dbl.horas}h (Umbrales: 7h / 8h / 9h)`}>
+                                    TEX 2x: {dbl.horas}h
+                                </Badge>
+                            )}
+                            {trp.horas > 0 && (
+                                <Badge variant="outline" className="py-0 px-1 font-mono font-bold bg-rose-600/20 text-rose-700 dark:text-rose-300 border-rose-600/40 animate-pulse" title={`TEX Triple: ${trp.horas}h (Umbrales: 2h / 3h / 4h)`}>
+                                    TEX 3x: {trp.horas}h
+                                </Badge>
+                            )}
+                        </div>
+                    </div>
                 );
             }
         },
@@ -553,9 +650,97 @@ export default function PanelControlAsistencia({
                     </div>
                 </div>
 
+                {/* 3.1. Barra de Control de Semáforos LFT y Notificaciones Escalonadas */}
+                <div className="p-3.5 rounded-xl border border-slate-200 dark:border-slate-800 bg-card shadow-xs flex flex-col md:flex-row md:items-center justify-between gap-3">
+                    <div className="flex items-center gap-2.5">
+                        <div className="p-2 rounded-lg bg-emerald-500/10 text-emerald-600 dark:text-emerald-400">
+                            <Scale className="w-4 h-4" />
+                        </div>
+                        <div>
+                            <span className="font-bold text-xs text-slate-800 dark:text-slate-200 block">
+                                Semáforos de Jornada y Horas Extras (Reforma LFT)
+                            </span>
+                            <span className="text-[11px] text-muted-foreground">
+                                Monitoreo acumulado de la semana con notificaciones escalonadas: RH (42h), Responsable (44h), DG (46h).
+                            </span>
+                        </div>
+                    </div>
+
+                    <div className="flex flex-wrap items-center gap-2">
+                        <Button
+                            type="button"
+                            variant="outline"
+                            size="sm"
+                            onClick={() => handleSemaforoFilterClick('alerta_critica')}
+                            className={`h-7 text-xs gap-1.5 font-bold ${
+                                filtroSemaforo === 'alerta_critica' 
+                                    ? 'bg-rose-600 text-white border-rose-600' 
+                                    : 'border-rose-300 dark:border-rose-900 text-rose-700 dark:text-rose-300 bg-rose-50/50 dark:bg-rose-950/30 hover:bg-rose-100'
+                            }`}
+                        >
+                            <ShieldAlert className="w-3.5 h-3.5" />
+                            <span>Alertas (🟡/🔴): {kpis.alertas_semaforo ?? 0}</span>
+                        </Button>
+
+                        <Button
+                            type="button"
+                            variant="outline"
+                            size="sm"
+                            onClick={() => handleSemaforoFilterClick('alerta_rh')}
+                            className={`h-7 text-xs gap-1.5 font-semibold ${
+                                filtroSemaforo === 'alerta_rh' 
+                                    ? 'bg-emerald-600 text-white border-emerald-600' 
+                                    : 'border-emerald-300 dark:border-emerald-900 text-emerald-700 dark:text-emerald-300 bg-emerald-50/50 dark:bg-emerald-950/30'
+                            }`}
+                        >
+                            <span>🟢 RH (42h): {kpis.alerta_rh ?? 0}</span>
+                        </Button>
+
+                        <Button
+                            type="button"
+                            variant="outline"
+                            size="sm"
+                            onClick={() => handleSemaforoFilterClick('alerta_responsable')}
+                            className={`h-7 text-xs gap-1.5 font-semibold ${
+                                filtroSemaforo === 'alerta_responsable' 
+                                    ? 'bg-amber-600 text-white border-amber-600' 
+                                    : 'border-amber-300 dark:border-amber-900 text-amber-800 dark:text-amber-300 bg-amber-50/50 dark:bg-amber-950/30'
+                            }`}
+                        >
+                            <span>🟡 Responsable (44h): {kpis.alerta_responsable ?? 0}</span>
+                        </Button>
+
+                        <Button
+                            type="button"
+                            variant="outline"
+                            size="sm"
+                            onClick={() => handleSemaforoFilterClick('alerta_dg')}
+                            className={`h-7 text-xs gap-1.5 font-semibold ${
+                                filtroSemaforo === 'alerta_dg' 
+                                    ? 'bg-rose-700 text-white border-rose-700' 
+                                    : 'border-rose-300 dark:border-rose-900 text-rose-700 dark:text-rose-300 bg-rose-50/50 dark:bg-rose-950/30'
+                            }`}
+                        >
+                            <span>🔴 DG (46h): {kpis.alerta_dg ?? 0}</span>
+                        </Button>
+
+                        {filtroSemaforo !== 'todos' && (
+                            <Button
+                                type="button"
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => handleSemaforoFilterClick('todos')}
+                                className="h-7 text-xs text-muted-foreground hover:text-slate-900"
+                            >
+                                Limpiar Filtro Semáforo
+                            </Button>
+                        )}
+                    </div>
+                </div>
+
                 {/* 4. Barra de Filtros con FilterBar y FilterField Reutilizables */}
                 <FilterBar>
-                    <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-3 w-full">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-3 w-full">
                         <FilterField label="Sede / Sucursal">
                             <Select value={sucursalId} onValueChange={setSucursalId}>
                                 <SelectTrigger className="text-xs">
@@ -595,6 +780,29 @@ export default function PanelControlAsistencia({
                                 onChange={(e) => setFecha(e.target.value)}
                                 className="text-xs"
                             />
+                        </FilterField>
+
+                        <FilterField label="Semáforo LFT">
+                            <Select 
+                                value={filtroSemaforo} 
+                                onValueChange={(val) => {
+                                    setFiltroSemaforo(val);
+                                    applyFilters(undefined, undefined, val);
+                                }}
+                            >
+                                <SelectTrigger className="text-xs">
+                                    <SelectValue placeholder="Todos los semáforos" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    <SelectItem value="todos">Todos los semáforos</SelectItem>
+                                    <SelectItem value="alerta_critica">⚠️ En Alerta (Amarillo / Rojo)</SelectItem>
+                                    <SelectItem value="alerta_rh">🟢 Notif. RH (42h+)</SelectItem>
+                                    <SelectItem value="alerta_responsable">🟡 Notif. Responsable (44h+)</SelectItem>
+                                    <SelectItem value="alerta_dg">🔴 Notif. Dirección General (46h+)</SelectItem>
+                                    <SelectItem value="tex_alerta">⚠️ Horas Extras (TEX)</SelectItem>
+                                    <SelectItem value="sin_alerta">✅ Sin Alerta (Normal)</SelectItem>
+                                </SelectContent>
+                            </Select>
                         </FilterField>
 
                         <FilterField label="Buscar Colaborador">
@@ -781,6 +989,135 @@ export default function PanelControlAsistencia({
                                         )}
                                     </div>
                                 </div>
+
+                                {/* Sección Semáforo LFT y Horas Semanales */}
+                                {selectedColaborador.semana_lft && (
+                                    <div className="p-3.5 rounded-xl border border-emerald-500/30 bg-emerald-50/20 dark:bg-emerald-950/10 space-y-3">
+                                        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-emerald-500/20 pb-2">
+                                            <div className="flex items-center gap-2">
+                                                <Scale className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
+                                                <span className="font-bold text-xs text-slate-900 dark:text-slate-100">
+                                                    Control Semanal de Jornada LFT (Semana del {selectedColaborador.semana_lft.periodo.inicio} al {selectedColaborador.semana_lft.periodo.fin})
+                                                </span>
+                                            </div>
+                                            <Badge className="bg-emerald-600 text-white text-[11px] font-mono font-bold">
+                                                Régimen {selectedColaborador.semana_lft.periodo.ano_reforma} ({selectedColaborador.semana_lft.limites.normales}h)
+                                            </Badge>
+                                        </div>
+
+                                        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                                            {/* Horas Normales */}
+                                            <div className="p-2.5 rounded-lg border bg-card space-y-1.5">
+                                                <div className="flex items-center justify-between">
+                                                    <span className="text-[10px] uppercase font-bold text-muted-foreground">Horas Normales</span>
+                                                    <Badge variant="outline" className={`text-[10px] font-bold ${
+                                                        selectedColaborador.semana_lft.semaforos.normal.estado === 'rojo' ? 'bg-rose-500/20 text-rose-700 dark:text-rose-300 border-rose-500/30 font-bold' :
+                                                        selectedColaborador.semana_lft.semaforos.normal.estado === 'amarillo' ? 'bg-amber-500/20 text-amber-700 dark:text-amber-300 border-amber-500/30 font-bold' :
+                                                        selectedColaborador.semana_lft.semaforos.normal.estado === 'verde' ? 'bg-emerald-500/20 text-emerald-700 dark:text-emerald-300 border-emerald-500/30 font-bold' :
+                                                        'bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300'
+                                                    }`}>
+                                                        {selectedColaborador.semana_lft.semaforos.normal.estado.toUpperCase()}
+                                                    </Badge>
+                                                </div>
+                                                <div className="text-lg font-black font-mono text-slate-800 dark:text-slate-200">
+                                                    {selectedColaborador.semana_lft.horas.normales} <span className="text-xs font-normal text-muted-foreground">/ {selectedColaborador.semana_lft.limites.normales}h</span>
+                                                </div>
+                                                <div className="w-full bg-slate-100 dark:bg-slate-800 rounded-full h-1.5 overflow-hidden">
+                                                    <div 
+                                                        className={`h-full ${
+                                                            selectedColaborador.semana_lft.semaforos.normal.estado === 'rojo' ? 'bg-rose-600' :
+                                                            selectedColaborador.semana_lft.semaforos.normal.estado === 'amarillo' ? 'bg-amber-500' :
+                                                            selectedColaborador.semana_lft.semaforos.normal.estado === 'verde' ? 'bg-emerald-500' :
+                                                            'bg-blue-500'
+                                                        }`}
+                                                        style={{ width: `${Math.min(100, (selectedColaborador.semana_lft.horas.normales / selectedColaborador.semana_lft.limites.normales) * 100)}%` }}
+                                                    />
+                                                </div>
+                                                <p className="text-[10px] text-muted-foreground">
+                                                    {selectedColaborador.semana_lft.semaforos.normal.label}
+                                                </p>
+                                            </div>
+
+                                            {/* TEX Doble */}
+                                            <div className="p-2.5 rounded-lg border bg-card space-y-1.5">
+                                                <div className="flex items-center justify-between">
+                                                    <span className="text-[10px] uppercase font-bold text-muted-foreground">TEX Doble (200%)</span>
+                                                    <Badge variant="outline" className={`text-[10px] font-bold ${
+                                                        selectedColaborador.semana_lft.semaforos.tex_doble.estado === 'rojo' ? 'bg-rose-500/20 text-rose-700 dark:text-rose-300 border-rose-500/30' :
+                                                        selectedColaborador.semana_lft.semaforos.tex_doble.estado === 'amarillo' ? 'bg-amber-500/20 text-amber-700 dark:text-amber-300 border-amber-500/30' :
+                                                        selectedColaborador.semana_lft.semaforos.tex_doble.estado === 'verde' ? 'bg-emerald-500/20 text-emerald-700 dark:text-emerald-300 border-emerald-500/30' :
+                                                        'bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300'
+                                                    }`}>
+                                                        {selectedColaborador.semana_lft.semaforos.tex_doble.estado.toUpperCase()}
+                                                    </Badge>
+                                                </div>
+                                                <div className="text-lg font-black font-mono text-slate-800 dark:text-slate-200">
+                                                    {selectedColaborador.semana_lft.horas.tex_doble} <span className="text-xs font-normal text-muted-foreground">/ {selectedColaborador.semana_lft.limites.tex_doble}h</span>
+                                                </div>
+                                                <div className="w-full bg-slate-100 dark:bg-slate-800 rounded-full h-1.5 overflow-hidden">
+                                                    <div 
+                                                        className={`h-full ${
+                                                            selectedColaborador.semana_lft.semaforos.tex_doble.estado === 'rojo' ? 'bg-rose-600' :
+                                                            selectedColaborador.semana_lft.semaforos.tex_doble.estado === 'amarillo' ? 'bg-amber-500' :
+                                                            'bg-blue-500'
+                                                        }`}
+                                                        style={{ width: `${Math.min(100, (selectedColaborador.semana_lft.horas.tex_doble / selectedColaborador.semana_lft.limites.tex_doble) * 100)}%` }}
+                                                    />
+                                                </div>
+                                                <p className="text-[10px] text-muted-foreground">
+                                                    Umbrales: 7h (Verde) • 8h (Amarillo) • 9h (Rojo)
+                                                </p>
+                                            </div>
+
+                                            {/* TEX Triple */}
+                                            <div className="p-2.5 rounded-lg border bg-card space-y-1.5">
+                                                <div className="flex items-center justify-between">
+                                                    <span className="text-[10px] uppercase font-bold text-muted-foreground">TEX Triple (300%)</span>
+                                                    <Badge variant="outline" className={`text-[10px] font-bold ${
+                                                        selectedColaborador.semana_lft.semaforos.tex_triple.estado === 'rojo' ? 'bg-rose-600 text-white border-rose-600 font-bold' :
+                                                        selectedColaborador.semana_lft.semaforos.tex_triple.estado === 'amarillo' ? 'bg-amber-500/20 text-amber-700 dark:text-amber-300 border-amber-500/30 font-bold' :
+                                                        selectedColaborador.semana_lft.semaforos.tex_triple.estado === 'verde' ? 'bg-emerald-500/20 text-emerald-700 dark:text-emerald-300 border-emerald-500/30' :
+                                                        'bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300'
+                                                    }`}>
+                                                        {selectedColaborador.semana_lft.semaforos.tex_triple.estado.toUpperCase()}
+                                                    </Badge>
+                                                </div>
+                                                <div className="text-lg font-black font-mono text-slate-800 dark:text-slate-200">
+                                                    {selectedColaborador.semana_lft.horas.tex_triple} <span className="text-xs font-normal text-muted-foreground">/ {selectedColaborador.semana_lft.limites.tex_triple}h</span>
+                                                </div>
+                                                <div className="w-full bg-slate-100 dark:bg-slate-800 rounded-full h-1.5 overflow-hidden">
+                                                    <div 
+                                                        className={`h-full ${
+                                                            selectedColaborador.semana_lft.semaforos.tex_triple.estado === 'rojo' ? 'bg-rose-700' :
+                                                            selectedColaborador.semana_lft.semaforos.tex_triple.estado === 'amarillo' ? 'bg-amber-600' :
+                                                            'bg-blue-500'
+                                                        }`}
+                                                        style={{ width: `${Math.min(100, (selectedColaborador.semana_lft.horas.tex_triple / selectedColaborador.semana_lft.limites.tex_triple) * 100)}%` }}
+                                                    />
+                                                </div>
+                                                <p className="text-[10px] text-muted-foreground">
+                                                    Umbrales: 2h (Verde) • 3h (Amarillo) • 4h (Rojo)
+                                                </p>
+                                            </div>
+                                        </div>
+
+                                        {selectedColaborador.semana_lft.semaforos.destinatarios.length > 0 && (
+                                            <div className="p-2 rounded-lg bg-rose-500/10 border border-rose-500/30 flex items-center justify-between text-[11px]">
+                                                <div className="flex items-center gap-1.5 text-rose-700 dark:text-rose-300 font-semibold">
+                                                    <Bell className="w-3.5 h-3.5" />
+                                                    <span>Notificaciones escalonadas activas:</span>
+                                                </div>
+                                                <div className="flex items-center gap-1">
+                                                    {selectedColaborador.semana_lft.semaforos.destinatarios.map((dest) => (
+                                                        <Badge key={dest} className="bg-rose-600 text-white font-bold text-[10px]">
+                                                            {dest === 'RH' ? 'Recursos Humanos (RH)' : dest === 'Responsable' ? 'Supervisor de Sede' : 'Dirección General (DG)'}
+                                                        </Badge>
+                                                    ))}
+                                                </div>
+                                            </div>
+                                        )}
+                                    </div>
+                                )}
 
                                 {/* Timeline de eventos del día */}
                                 <div className="space-y-2">
