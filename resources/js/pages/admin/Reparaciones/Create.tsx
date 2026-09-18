@@ -109,6 +109,8 @@ interface Props {
     categorias?: CategoriaItem[];
     servicios?: ServicioItem[];
     currencySymbol: string;
+    sucursales?: Array<{ id: number; nombre: string }>;
+    sucursalId?: number | string | null;
 }
 
 const FOTO_SLOTS = [
@@ -305,7 +307,16 @@ function PatternLockCanvas({
     );
 }
 
-export default function CreateReparacion({ clientes: initialClientes, marcas: initialMarcas, tecnicos, categorias = [], servicios: initialServicios = [], currencySymbol }: Props) {
+export default function CreateReparacion({
+    clientes: initialClientes,
+    marcas: initialMarcas,
+    tecnicos,
+    categorias = [],
+    servicios: initialServicios = [],
+    currencySymbol,
+    sucursales = [],
+    sucursalId,
+}: Props) {
     const { __ } = useTranslate();
 
     const [clientesList, setClientesList] = useState<Cliente[]>(initialClientes || []);
@@ -626,6 +637,7 @@ export default function CreateReparacion({ clientes: initialClientes, marcas: in
         descripcion_falla: '',
         observaciones_fisicas: '',
         tecnico_id: '',
+        sucursal_id: sucursalId ? String(sucursalId) : '',
         costo_estimado: '0',
         anticipo: '0',
         garantia_dias: '30',
@@ -1991,6 +2003,24 @@ export default function CreateReparacion({ clientes: initialClientes, marcas: in
                                             </p>
                                         </div>
                                     </div>
+
+                                    {sucursales && sucursales.length > 1 && (
+                                        <div className="mb-2">
+                                            <Label className="text-[10px] font-bold text-slate-700 dark:text-slate-300">{__('Sucursal')}</Label>
+                                            <Select value={String(data.sucursal_id || '')} onValueChange={(val) => setData('sucursal_id', val)}>
+                                                <SelectTrigger className="text-xs h-8 mt-0.5">
+                                                    <SelectValue placeholder={__('Seleccionar sucursal...')} />
+                                                </SelectTrigger>
+                                                <SelectContent>
+                                                    {sucursales.map((s) => (
+                                                        <SelectItem key={s.id} value={String(s.id)} className="text-xs font-medium">
+                                                            {s.nombre}
+                                                        </SelectItem>
+                                                    ))}
+                                                </SelectContent>
+                                            </Select>
+                                        </div>
+                                    )}
 
                                     <div className="grid grid-cols-2 gap-2">
                                         <div>

@@ -41,7 +41,11 @@ class ReparacionController extends Controller
     public function index(Request $request)
     {
         $user = auth()->user();
-        $empresaId = $user->empresa_id;
+        $isSuperAdmin = $user && $user->isSuperAdmin();
+        $isAdmin = $user && ($isSuperAdmin || $user->hasRole('Administrador') || $user->hasRole('Super Administrador') || $user->hasRole('super-admin') || $user->hasRole('Admin'));
+        $isTecnicoOnly = $user && ($user->hasRole('Técnico') || $user->hasRole('tecnico') || $user->hasRole('Tecnico') || $user->hasRole('Técnico de Reparaciones'));
+
+        $empresaId = ($isSuperAdmin && $request->filled('empresa_id')) ? (int)$request->input('empresa_id') : ($user->empresa_id ?: 1);
 
         $search = $request->input('search');
         $status = $request->input('status');
@@ -52,12 +56,29 @@ class ReparacionController extends Controller
         $modeloId = $request->input('modelo_id');
         $categoriaId = $request->input('categoria_id');
 
-        $isTecnicoOnly = $user && ($user->hasRole('Técnico') || $user->hasRole('tecnico') || $user->hasRole('Tecnico') || $user->hasRole('Técnico de Reparaciones'));
-        $isAdmin = $user && ($user->hasRole('Administrador') || $user->hasRole('Super Administrador') || $user->hasRole('super-admin') || $user->hasRole('Admin'));
-
         $empresa = $user->empresa ?? \App\Models\Empresa::find($empresaId);
 
-        $query = OrdenReparacion::with([
+        $sucursales = \App\Models\Sucursal::withoutGlobalScope('multitenancy')
+            ->where('empresa_id', $empresaId)
+            ->where('status', true)
+            ->orderBy('nombre')
+            ->get(['id', 'nombre']);
+
+        // Determinar sucursal activa o seleccionada
+        $requestedSucursal = $request->input('sucursal_id');
+        $sucursalId = null;
+        if ($requestedSucursal === 'all') {
+            $sucursalId = $isAdmin ? 'all' : ($user->sucursal_id ? (int)$user->sucursal_id : null);
+        } elseif (is_numeric($requestedSucursal)) {
+            $sucursalId = (int)$requestedSucursal;
+            if (!$isAdmin && $user->sucursal_id && $user->sucursal_id != $sucursalId) {
+                $sucursalId = (int)$user->sucursal_id;
+            }
+        } else {
+            $sucursalId = $user->sucursal_id ? (int)$user->sucursal_id : ($isAdmin ? 'all' : ($sucursales->first()?->id ?? null));
+        }
+
+        $query = OrdenReparacion::withoutGlobalScope('multitenancy')->with([
             'cliente',
             'marca',
             'modelo',
@@ -67,6 +88,10 @@ class ReparacionController extends Controller
             'items.producto',
             'items.servicio',
         ])->where('empresa_id', $empresaId);
+
+        if ($sucursalId && $sucursalId !== 'all') {
+            $query->where('sucursal_id', $sucursalId);
+        }
 
         // Si es exclusivamente rol Técnico (sin permisos de Administrador), mostrar ÚNICAMENTE sus órdenes asignadas
         if ($isTecnicoOnly && !$isAdmin) {
@@ -143,7 +168,10 @@ class ReparacionController extends Controller
         $ordenes = $query->latest('id')->paginate($perPage)->withQueryString();
 
         // Conteo por Estados para Tablero / Filtros
-        $countsQuery = OrdenReparacion::where('empresa_id', $empresaId);
+        $countsQuery = OrdenReparacion::withoutGlobalScope('multitenancy')->where('empresa_id', $empresaId);
+        if ($sucursalId && $sucursalId !== 'all') {
+            $countsQuery->where('sucursal_id', $sucursalId);
+        }
         if ($isTecnicoOnly && !$isAdmin) {
             $countsQuery->where('tecnico_id', $user->id);
         }
@@ -153,8 +181,24 @@ class ReparacionController extends Controller
             ->pluck('total', 'estado_orden')
             ->toArray();
 
-        $tecnicos = User::where('empresa_id', $empresaId)->orderBy('name')->get(['id', 'name']);
-        $clientes = Cliente::withoutGlobalScope('multitenancy')->where('empresa_id', $empresaId)->orderBy('nombre')->get(['id', 'nombre', 'telefono', 'email']);
+        $tecnicosQuery = User::where('empresa_id', $empresaId);
+        if ($sucursalId && $sucursalId !== 'all') {
+            $tecnicosQuery->where(function ($q) use ($sucursalId) {
+                $q->where('sucursal_id', $sucursalId)
+                  ->orWhereNull('sucursal_id');
+            });
+        }
+        $tecnicos = $tecnicosQuery->orderBy('name')->get(['id', 'name']);
+
+        $clientesQuery = Cliente::withoutGlobalScope('multitenancy')->where('empresa_id', $empresaId);
+        if ($sucursalId && $sucursalId !== 'all') {
+            $clientesQuery->where(function ($q) use ($sucursalId) {
+                $q->where('sucursal_id', $sucursalId)
+                  ->orWhereNull('sucursal_id');
+            });
+        }
+        $clientes = $clientesQuery->orderBy('nombre')->get(['id', 'nombre', 'telefono', 'email']);
+
         $marcas = Marca::with('modelos')->where('empresa_id', $empresaId)->orderBy('nombre')->get();
         $modelos = Modelo::withoutGlobalScope('multitenancy')
             ->where(function ($q) use ($empresaId) {
@@ -184,7 +228,8 @@ class ReparacionController extends Controller
             ->orderBy('nombre')
             ->get(['id', 'codigo', 'nombre', 'precio', 'categoria_id', 'marca_id', 'modelo_id']);
 
-        $availableYears = OrdenReparacion::where('empresa_id', $empresaId)
+        $availableYears = OrdenReparacion::withoutGlobalScope('multitenancy')->where('empresa_id', $empresaId)
+            ->when($sucursalId && $sucursalId !== 'all', fn($q) => $q->where('sucursal_id', $sucursalId))
             ->selectRaw('DISTINCT YEAR(COALESCE(fecha_recepcion, created_at)) as year')
             ->orderByDesc('year')
             ->pluck('year')
@@ -208,23 +253,57 @@ class ReparacionController extends Controller
             'categorias' => $categorias,
             'servicios' => $servicios,
             'empresa' => $empresa,
+            'sucursales' => $sucursales,
+            'currentSucursalId' => $sucursalId,
             'currencySymbol' => $this->getCurrencySymbol(),
             'availableYears' => $availableYears,
-            'filters' => array_merge($request->only(['search', 'status', 'tecnico_id', 'year', 'month']), ['perPage' => (string) $perPage]),
+            'filters' => array_merge(
+                $request->only(['search', 'status', 'tecnico_id', 'year', 'month', 'marca_id', 'modelo_id', 'categoria_id']),
+                [
+                    'perPage' => (string) $perPage,
+                    'sucursal_id' => $sucursalId !== null ? (string)$sucursalId : '',
+                ]
+            ),
             'isTecnicoOnly' => $isTecnicoOnly && !$isAdmin,
         ]);
     }
 
-    public function create()
+    public function create(Request $request)
     {
         $user = auth()->user();
-        $empresaId = $user->empresa_id;
+        $isSuperAdmin = $user && $user->isSuperAdmin();
+        $empresaId = ($isSuperAdmin && $request->filled('empresa_id')) ? (int)$request->input('empresa_id') : ($user->empresa_id ?: 1);
 
-        $clientes = Cliente::withoutGlobalScope('multitenancy')->where('empresa_id', $empresaId)->orderBy('nombre')->get(['id', 'nombre', 'telefono', 'email']);
+        $sucursales = \App\Models\Sucursal::withoutGlobalScope('multitenancy')
+            ->where('empresa_id', $empresaId)
+            ->where('status', true)
+            ->orderBy('nombre')
+            ->get(['id', 'nombre']);
+
+        $sucursalId = $request->input('sucursal_id') ?? $user->sucursal_id ?? ($sucursales->first()?->id ?? null);
+        if ($sucursalId && is_numeric($sucursalId)) {
+            $sucursalId = (int)$sucursalId;
+        }
+
+        $clientesQuery = Cliente::withoutGlobalScope('multitenancy')->where('empresa_id', $empresaId);
+        if ($sucursalId) {
+            $clientesQuery->where(function ($q) use ($sucursalId) {
+                $q->where('sucursal_id', $sucursalId)
+                  ->orWhereNull('sucursal_id');
+            });
+        }
+        $clientes = $clientesQuery->orderBy('nombre')->get(['id', 'nombre', 'telefono', 'email']);
+
         $marcas = Marca::with('modelos')->where('empresa_id', $empresaId)->orderBy('nombre')->get();
-        $tecnicos = User::where('empresa_id', $empresaId)
-            ->orderBy('name')
-            ->get(['id', 'name']);
+
+        $tecnicosQuery = User::where('empresa_id', $empresaId);
+        if ($sucursalId) {
+            $tecnicosQuery->where(function ($q) use ($sucursalId) {
+                $q->where('sucursal_id', $sucursalId)
+                  ->orWhereNull('sucursal_id');
+            });
+        }
+        $tecnicos = $tecnicosQuery->orderBy('name')->get(['id', 'name']);
 
         $categorias = \App\Models\Categoria::withoutGlobalScope('multitenancy')
             ->where(function ($q) use ($empresaId) {
@@ -252,6 +331,8 @@ class ReparacionController extends Controller
             'categorias' => $categorias,
             'servicios' => $servicios,
             'currencySymbol' => $this->getCurrencySymbol(),
+            'sucursales' => $sucursales,
+            'sucursalId' => $sucursalId,
         ]);
     }
 
@@ -265,9 +346,12 @@ class ReparacionController extends Controller
         ]);
 
         $user = auth()->user();
+        $empresaId = $user->empresa_id;
+        $sucursalId = $request->input('sucursal_id') ?? $user->sucursal_id;
+
         $cliente = Cliente::create(array_merge($validated, [
-            'empresa_id' => $user->empresa_id,
-            'sucursal_id' => $user->sucursal_id,
+            'empresa_id' => $empresaId,
+            'sucursal_id' => $sucursalId,
         ]));
 
         return response()->json([
@@ -292,9 +376,12 @@ class ReparacionController extends Controller
         $validated['precio'] = $validated['precio'] ?? 0.00;
 
         $user = auth()->user();
+        $empresaId = $user->empresa_id;
+        $sucursalId = $request->input('sucursal_id') ?? $user->sucursal_id;
+
         $servicio = \App\Models\Servicio::create(array_merge($validated, [
-            'empresa_id' => $user->empresa_id,
-            'sucursal_id' => $user->sucursal_id,
+            'empresa_id' => $empresaId,
+            'sucursal_id' => $sucursalId,
             'estado' => true,
         ]));
 
@@ -333,10 +420,17 @@ class ReparacionController extends Controller
 
         $user = auth()->user();
         $empresaId = $user->empresa_id;
+        $sucursalId = $request->input('sucursal_id') ?? $user->sucursal_id;
 
-        $ordenesPrevias = OrdenReparacion::where('empresa_id', $empresaId)
-            ->where('imei_serie', $imei)
-            ->orderBy('created_at', 'desc')
+        $query = OrdenReparacion::withoutGlobalScope('multitenancy')
+            ->where('empresa_id', $empresaId)
+            ->where('imei_serie', $imei);
+
+        if ($sucursalId && $sucursalId !== 'all') {
+            $query->where('sucursal_id', $sucursalId);
+        }
+
+        $ordenesPrevias = $query->orderBy('created_at', 'desc')
             ->get(['id', 'numero_orden', 'cliente_nombre', 'marca_id', 'marca_nombre', 'modelo_id', 'modelo_nombre', 'tipo_dispositivo', 'estado_orden', 'descripcion_falla', 'fecha_recepcion']);
 
         // Consulta de TAC por Internet / GSMA internacional
@@ -504,14 +598,40 @@ class ReparacionController extends Controller
             'fecha_prometida' => 'nullable|date',
             'evidencias_fotos' => 'nullable|array',
             'servicios_seleccionados' => 'nullable|array',
+            'sucursal_id' => 'nullable|exists:sucursales,id',
         ]);
 
         $user = auth()->user();
         $empresaId = $user->empresa_id;
+        $sucursalId = !empty($validated['sucursal_id']) ? (int) $validated['sucursal_id'] : $user->sucursal_id;
 
-        // Generar Correlativo Folio
-        $lastOrder = OrdenReparacion::where('empresa_id', $empresaId)->max('id') ?? 0;
-        $numeroOrden = 'REP-' . str_pad($lastOrder + 1, 6, '0', STR_PAD_LEFT);
+        if (!empty($validated['sucursal_id'])) {
+            $targetSucursal = \App\Models\Sucursal::withoutGlobalScopes()->find($validated['sucursal_id']);
+            if ($targetSucursal) {
+                $sucursalId = $targetSucursal->id;
+                if (!$empresaId) {
+                    $empresaId = $targetSucursal->empresa_id;
+                }
+            }
+        }
+
+        // Generar Correlativo Folio por Empresa y Sucursal
+        $lastOrder = OrdenReparacion::withoutGlobalScopes()
+            ->where('empresa_id', $empresaId)
+            ->when($sucursalId, fn($q) => $q->where('sucursal_id', $sucursalId))
+            ->orderByDesc('id')
+            ->first();
+
+        $nextNum = 1;
+        if ($lastOrder && preg_match('/(\d+)$/', $lastOrder->numero_orden, $matches)) {
+            $nextNum = ((int) $matches[1]) + 1;
+        }
+
+        while (OrdenReparacion::withoutGlobalScopes()->where('empresa_id', $empresaId)->where('numero_orden', 'REP-' . str_pad($nextNum, 6, '0', STR_PAD_LEFT))->exists()) {
+            $nextNum++;
+        }
+
+        $numeroOrden = 'REP-' . str_pad($nextNum, 6, '0', STR_PAD_LEFT);
 
         $costoEstimado = (float) $validated['costo_estimado'];
         // En recepción el anticipo se desactiva; todo cobro de anticipo se gestiona desde el módulo POS
@@ -526,7 +646,7 @@ class ReparacionController extends Controller
 
         $ordenData = array_merge($validated, [
             'empresa_id' => $empresaId,
-            'sucursal_id' => $user->sucursal_id,
+            'sucursal_id' => $sucursalId,
             'numero_orden' => $numeroOrden,
             'estado_orden' => 'recibido',
             'comision_tecnico_pct' => (float) ($validated['comision_tecnico_pct'] ?? 0),
@@ -652,18 +772,37 @@ class ReparacionController extends Controller
         return $redirect;
     }
 
+    private function findAuthorizedOrder($reparacion): OrdenReparacion
+    {
+        $user = auth()->user();
+        if ($reparacion instanceof OrdenReparacion) {
+            $orden = $reparacion;
+        } else {
+            $orden = OrdenReparacion::findOrFail($reparacion);
+        }
+
+        if ($user && $user->empresa_id && $orden->empresa_id && (int) $orden->empresa_id !== (int) $user->empresa_id) {
+            abort(403, 'No autorizado para acceder a esta orden de reparación.');
+        }
+
+        if ($user && $user->sucursal_id && $orden->sucursal_id && (int) $orden->sucursal_id !== (int) $user->sucursal_id && !$user->isSuperAdmin()) {
+            abort(403, 'No autorizado para acceder a reparaciones de otra sucursal.');
+        }
+
+        return $orden;
+    }
+
     public function show($id)
     {
-        $reparacion = OrdenReparacion::findOrFail($id);
+        $reparacion = $this->findAuthorizedOrder($id);
         $relations = ['empresa', 'sucursal', 'cliente', 'marca', 'modelo', 'tecnico', 'items.producto', 'items.servicio', 'historial.user', 'sale'];
         if (\Illuminate\Support\Facades\Schema::hasTable('orden_reparacion_fotos')) {
             $relations[] = 'fotos';
         }
         $reparacion->load($relations);
 
-
         $user = auth()->user();
-        $empresaId = $user->empresa_id;
+        $empresaId = $reparacion->empresa_id ?? $user->empresa_id;
 
         $empresa = \App\Models\Empresa::find($empresaId)
             ?? $reparacion->empresa
@@ -726,6 +865,7 @@ class ReparacionController extends Controller
 
     public function reportePdf(OrdenReparacion $reparacion)
     {
+        $reparacion = $this->findAuthorizedOrder($reparacion);
         $relations = ['empresa', 'sucursal', 'cliente', 'marca', 'modelo', 'tecnico', 'items.producto', 'items.servicio'];
         if (\Illuminate\Support\Facades\Schema::hasTable('orden_reparacion_fotos')) {
             $relations[] = 'fotos';
@@ -761,6 +901,7 @@ class ReparacionController extends Controller
 
     public function updateDatos(Request $request, OrdenReparacion $reparacion)
     {
+        $reparacion = $this->findAuthorizedOrder($reparacion);
         $validated = $request->validate([
             'cliente_id' => 'nullable|exists:clientes,id',
             'cliente_nombre' => 'required|string|max:255',
@@ -815,6 +956,7 @@ class ReparacionController extends Controller
 
     public function uploadFotoProceso(Request $request, OrdenReparacion $reparacion)
     {
+        $reparacion = $this->findAuthorizedOrder($reparacion);
         $request->validate([
             'foto' => 'required|string',
             'descripcion' => 'nullable|string|max:255',
@@ -863,6 +1005,7 @@ class ReparacionController extends Controller
 
     public function deleteFoto(Request $request, OrdenReparacion $reparacion, OrdenReparacionFoto $foto)
     {
+        $reparacion = $this->findAuthorizedOrder($reparacion);
         if ($foto->orden_id === $reparacion->id) {
             $foto->delete();
             return back()->with('notification', [
@@ -880,7 +1023,7 @@ class ReparacionController extends Controller
 
     public function savePreservicio(Request $request, $reparacion)
     {
-        $reparacion = $reparacion instanceof OrdenReparacion ? $reparacion : OrdenReparacion::findOrFail($reparacion);
+        $reparacion = $this->findAuthorizedOrder($reparacion);
         if (!\Illuminate\Support\Facades\Schema::hasColumn('ordenes_reparacion', 'contrasena_patron')) {
             \Illuminate\Support\Facades\Schema::table('ordenes_reparacion', function (\Illuminate\Database\Schema\Blueprint $table) {
                 $table->string('contrasena_patron')->nullable()->after('observaciones_fisicas');
@@ -993,6 +1136,7 @@ class ReparacionController extends Controller
 
     public function addItem(Request $request, OrdenReparacion $reparacion)
     {
+        $reparacion = $this->findAuthorizedOrder($reparacion);
         $validated = $request->validate([
             'producto_id' => 'required|exists:productos,id',
             'cantidad' => 'required|integer|min:1',
@@ -1036,6 +1180,7 @@ class ReparacionController extends Controller
 
     public function removeItem(OrdenReparacion $reparacion, OrdenReparacionItem $item)
     {
+        $reparacion = $this->findAuthorizedOrder($reparacion);
         if ($item->producto_id) {
             $producto = Producto::find($item->producto_id);
             if ($producto) {
@@ -1055,6 +1200,7 @@ class ReparacionController extends Controller
 
     public function updateCostos(Request $request, OrdenReparacion $reparacion)
     {
+        $reparacion = $this->findAuthorizedOrder($reparacion);
         $request->merge([
             'costo_mano_obra' => str_replace(',', '.', (string) $request->input('costo_mano_obra', '0')),
             'anticipo' => str_replace(',', '.', (string) $request->input('anticipo', '0')),
@@ -1082,7 +1228,7 @@ class ReparacionController extends Controller
 
     public function notificarWhatsApp(Request $request, $reparacion)
     {
-        $reparacion = $reparacion instanceof OrdenReparacion ? $reparacion : OrdenReparacion::findOrFail($reparacion);
+        $reparacion = $this->findAuthorizedOrder($reparacion);
 
         $validated = $request->validate([
             'mensaje' => 'required|string|max:4000',
@@ -1290,6 +1436,7 @@ class ReparacionController extends Controller
 
     public function postServicioForm(OrdenReparacion $reparacion)
     {
+        $reparacion = $this->findAuthorizedOrder($reparacion);
         $relations = ['cliente', 'marca', 'modelo', 'tecnico'];
         if (\Illuminate\Support\Facades\Schema::hasTable('orden_reparacion_fotos')) {
             $relations[] = 'fotos';
@@ -1323,6 +1470,7 @@ class ReparacionController extends Controller
 
     public function savePostServicio(Request $request, OrdenReparacion $reparacion)
     {
+        $reparacion = $this->findAuthorizedOrder($reparacion);
         if (!\Illuminate\Support\Facades\Schema::hasColumn('ordenes_reparacion', 'post_servicio_json')) {
             \Illuminate\Support\Facades\Schema::table('ordenes_reparacion', function (\Illuminate\Database\Schema\Blueprint $table) {
                 $table->json('post_servicio_json')->nullable()->after('inspeccion_json');
@@ -1567,6 +1715,7 @@ class ReparacionController extends Controller
 
         $user = auth()->user();
         $empresaId = $user ? $user->empresa_id : null;
+        $sucursalId = $user ? $user->sucursal_id : null;
 
         // 1. Extraer ID directo de cualquier formato (ej: REP-000006, reparaciones/6, o 6)
         $extractedId = null;
@@ -1586,6 +1735,9 @@ class ReparacionController extends Controller
         if ($empresaId) {
             $queryBuilder->where('empresa_id', $empresaId);
         }
+        if ($sucursalId && (!$user || !$user->isSuperAdmin())) {
+            $queryBuilder->where('sucursal_id', $sucursalId);
+        }
 
         $reparacion = $queryBuilder->where(function ($q) use ($rawQuery, $extractedId) {
             $q->where('numero_orden', $rawQuery)
@@ -1602,6 +1754,9 @@ class ReparacionController extends Controller
             if ($empresaId) {
                 $qFallback->where('empresa_id', $empresaId);
             }
+            if ($sucursalId && (!$user || !$user->isSuperAdmin())) {
+                $qFallback->where('sucursal_id', $sucursalId);
+            }
             $reparacion = $qFallback->find($extractedId);
         }
 
@@ -1613,9 +1768,13 @@ class ReparacionController extends Controller
                 if ($empresaId) {
                     $qClean->where('empresa_id', $empresaId);
                 }
-                $reparacion = $qClean->where('id', (int)$cleanCode)
-                    ->orWhere('numero_orden', 'like', "%{$cleanCode}%")
-                    ->first();
+                if ($sucursalId && (!$user || !$user->isSuperAdmin())) {
+                    $qClean->where('sucursal_id', $sucursalId);
+                }
+                $reparacion = $qClean->where(function ($w) use ($cleanCode) {
+                    $w->where('id', (int)$cleanCode)
+                      ->orWhere('numero_orden', 'like', "%{$cleanCode}%");
+                })->first();
             }
         }
 

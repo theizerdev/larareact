@@ -44,19 +44,38 @@ class UserController extends Controller
         $search = $request->input('search');
         $status = $request->input('status');
         $roleName = $request->input('role');
-        $empresaId = $request->input('empresa_id');
-        $sucursalId = $request->input('sucursal_id');
         $perPage = $request->input('perPage', 10);
-
-        $query = User::with(['empresa', 'sucursal', 'roles', 'paisTelefono']);
 
         $currentUser = auth()->user();
         $isSuperAdmin = $this->isSuperAdmin($currentUser);
 
-        if (! $isSuperAdmin) {
-            if ($currentUser?->empresa_id) {
-                $query->where('empresa_id', $currentUser->empresa_id);
+        // Scope strictly by empresa_id (superadmin can filter or defaults to active user's empresa)
+        $targetEmpresaId = ($isSuperAdmin && $request->filled('empresa_id'))
+            ? (int) $request->input('empresa_id')
+            : ($currentUser?->empresa_id ?: 1);
+
+        $query = User::with(['empresa', 'sucursal', 'roles', 'paisTelefono'])
+            ->where('empresa_id', $targetEmpresaId);
+
+        $statsQuery = User::where('empresa_id', $targetEmpresaId);
+
+        // Scope by sucursal_id
+        $targetSucursalId = null;
+        if (! $isSuperAdmin && $currentUser?->sucursal_id) {
+            $targetSucursalId = $currentUser->sucursal_id;
+        } else {
+            if ($request->filled('sucursal_id') && $request->input('sucursal_id') !== 'all') {
+                $targetSucursalId = (int) $request->input('sucursal_id');
+            } elseif ($request->has('sucursal_id') && $request->input('sucursal_id') === 'all') {
+                $targetSucursalId = null;
+            } else {
+                $targetSucursalId = $currentUser?->sucursal_id;
             }
+        }
+
+        if ($targetSucursalId) {
+            $query->where('sucursal_id', $targetSucursalId);
+            $statsQuery->where('sucursal_id', $targetSucursalId);
         }
 
         if ($search) {
@@ -72,26 +91,11 @@ class UserController extends Controller
             $query->where('status', $status);
         }
 
-        if ($empresaId && $isSuperAdmin) {
-            $query->where('empresa_id', $empresaId);
-        }
-
-        if ($sucursalId) {
-            $query->where('sucursal_id', $sucursalId);
-        }
-
         if ($roleName) {
             $query->role($roleName);
         }
 
         $users = $query->latest()->paginate($perPage)->withQueryString();
-
-        $statsQuery = User::query();
-        if (! $isSuperAdmin) {
-            if ($currentUser?->empresa_id) {
-                $statsQuery->where('empresa_id', $currentUser->empresa_id);
-            }
-        }
 
         $stats = [
             'total' => (clone $statsQuery)->count(),
@@ -107,24 +111,20 @@ class UserController extends Controller
             ->whereNotIn('name', ['Super Administrador', 'super-admin', 'Super Admin'])
             ->orderBy('name');
 
-        if (! $isSuperAdmin && $currentUser?->empresa_id) {
-            $rolesQuery->where(function ($sq) use ($currentUser) {
-                $sq->where('empresa_id', $currentUser->empresa_id)
+        if ($targetEmpresaId) {
+            $rolesQuery->where(function ($sq) use ($targetEmpresaId) {
+                $sq->where('empresa_id', $targetEmpresaId)
                    ->orWhereNull('empresa_id');
             });
         }
 
         $roles = $rolesQuery->get(['id', 'name', 'empresa_id']);
 
-        $sucursalesQuery = DB::connection('landlord')->table('sucursales')
+        $sucursales = DB::connection('landlord')->table('sucursales')
             ->where('status', true)
-            ->orderBy('nombre');
-
-        if (! $isSuperAdmin && $currentUser?->empresa_id) {
-            $sucursalesQuery->where('empresa_id', $currentUser->empresa_id);
-        }
-
-        $sucursales = $sucursalesQuery->get(['id', 'nombre', 'empresa_id']);
+            ->where('empresa_id', $targetEmpresaId)
+            ->orderBy('nombre')
+            ->get(['id', 'nombre', 'empresa_id']);
 
         return inertia('admin/Usuarios/Index', [
             'users' => UserResource::collection($users),
@@ -135,7 +135,14 @@ class UserController extends Controller
             'paises' => Pais::where('activo', true)
                 ->orderBy('nombre')
                 ->get(['id', 'nombre', 'codigo_iso2', 'codigo_telefonico']),
-            'filters' => $request->only(['search', 'status', 'role', 'empresa_id', 'sucursal_id', 'perPage']),
+            'filters' => [
+                'search' => $search,
+                'status' => $status,
+                'role' => $roleName,
+                'empresa_id' => (string) $targetEmpresaId,
+                'sucursal_id' => $targetSucursalId ? (string) $targetSucursalId : ($request->input('sucursal_id') === 'all' ? 'all' : ''),
+                'perPage' => (string) $perPage,
+            ],
         ]);
     }
 
@@ -150,11 +157,23 @@ class UserController extends Controller
             $isSuperAdmin = $this->isSuperAdmin($currentUser);
 
             if (! $isSuperAdmin) {
-                if (empty($validated['empresa_id'])) {
-                    $validated['empresa_id'] = $currentUser?->empresa_id;
+                $validated['empresa_id'] = $currentUser?->empresa_id;
+                if ($currentUser?->sucursal_id) {
+                    $validated['sucursal_id'] = $currentUser->sucursal_id;
                 }
-                if (empty($validated['sucursal_id'])) {
-                    $validated['sucursal_id'] = $currentUser?->sucursal_id;
+            } else {
+                if (empty($validated['empresa_id'])) {
+                    $validated['empresa_id'] = $currentUser?->empresa_id ?: 1;
+                }
+            }
+
+            if (!empty($validated['sucursal_id']) && !empty($validated['empresa_id'])) {
+                $branchValid = DB::connection('landlord')->table('sucursales')
+                    ->where('id', $validated['sucursal_id'])
+                    ->where('empresa_id', $validated['empresa_id'])
+                    ->exists();
+                if (! $branchValid) {
+                    return back()->withErrors(['sucursal_id' => __('La sucursal seleccionada no pertenece a la empresa.')]);
                 }
             }
 
@@ -237,6 +256,27 @@ class UserController extends Controller
         $validated = $request->validated();
 
         try {
+            $currentUser = auth()->user();
+            $isSuperAdmin = $this->isSuperAdmin($currentUser);
+
+            if (! $isSuperAdmin) {
+                unset($validated['empresa_id']);
+                if ($currentUser?->sucursal_id) {
+                    $validated['sucursal_id'] = $currentUser->sucursal_id;
+                }
+            }
+
+            $targetEmpresa = $validated['empresa_id'] ?? $user->empresa_id ?? $currentUser?->empresa_id;
+            if (!empty($validated['sucursal_id']) && !empty($targetEmpresa)) {
+                $branchValid = DB::connection('landlord')->table('sucursales')
+                    ->where('id', $validated['sucursal_id'])
+                    ->where('empresa_id', $targetEmpresa)
+                    ->exists();
+                if (! $branchValid) {
+                    return back()->withErrors(['sucursal_id' => __('La sucursal seleccionada no pertenece a la empresa.')]);
+                }
+            }
+
             if (! empty($validated['password'])) {
                 $validated['password'] = Hash::make($validated['password']);
             } else {

@@ -131,6 +131,8 @@ interface Props {
     categorias?: Array<{ id: number; nombre: string }>;
     currencySymbol: string;
     availableYears?: string[];
+    sucursales?: Array<{ id: number; nombre: string }>;
+    currentSucursalId?: string | number | null;
     filters: {
         search?: string;
         status?: string;
@@ -138,6 +140,7 @@ interface Props {
         year?: string;
         month?: string;
         perPage?: string;
+        sucursal_id?: string;
     };
     isTecnicoOnly?: boolean;
     empresa?: any;
@@ -155,6 +158,8 @@ export default function IndexReparaciones({
     filters,
     isTecnicoOnly,
     empresa,
+    sucursales = [],
+    currentSucursalId,
 }: Props) {
     const { __ } = useTranslate();
     const pageUser = usePage<any>().props.auth?.user;
@@ -166,6 +171,9 @@ export default function IndexReparaciones({
     const [year, setYear] = useState(filters.year || 'all');
     const [month, setMonth] = useState(filters.month || 'all');
     const [tecnicoId, setTecnicoId] = useState(filters.tecnico_id || 'all');
+    const [sucursalId, setSucursalId] = useState(
+        filters.sucursal_id ? String(filters.sucursal_id) : (currentSucursalId ? String(currentSucursalId) : 'all')
+    );
     const [perPage, setPerPage] = useState(filters.perPage ? String(filters.perPage) : '10');
 
     // Quick Print Ticket State
@@ -218,6 +226,14 @@ export default function IndexReparaciones({
             label: t.name,
         })),
     ], [tecnicos, __]);
+
+    const sucursalOptions = useMemo(() => [
+        { value: 'all', label: __('Todas las sucursales') },
+        ...(sucursales || []).map((s) => ({
+            value: String(s.id),
+            label: s.nombre,
+        })),
+    ], [sucursales, __]);
 
     const perPageOptions = [
         { value: '10', label: '10' },
@@ -285,6 +301,7 @@ export default function IndexReparaciones({
                     year: year === 'all' ? undefined : year,
                     month: month === 'all' ? undefined : month,
                     tecnico_id: tecnicoId === 'all' ? undefined : tecnicoId,
+                    sucursal_id: sucursalId === 'all' ? undefined : sucursalId,
                     perPage: perPage === '10' ? undefined : perPage,
                 }),
                 { preserveState: true, preserveScroll: true }
@@ -292,7 +309,7 @@ export default function IndexReparaciones({
         }, 300);
 
         return () => clearTimeout(timer);
-    }, [search, status, year, month, tecnicoId, perPage]);
+    }, [search, status, year, month, tecnicoId, sucursalId, perPage]);
 
     // QR Code Camera Scanner States
     const [isScanModalOpen, setIsScanModalOpen] = useState(false);
@@ -505,6 +522,7 @@ export default function IndexReparaciones({
         setYear('all');
         setMonth('all');
         setTecnicoId('all');
+        setSucursalId('all');
         setPerPage('10');
         router.get('/admin/reparaciones', {}, { preserveState: true, preserveScroll: true });
     };
@@ -851,7 +869,7 @@ export default function IndexReparaciones({
 
                 {/* BARRA DE FILTROS ESTÁNDAR CON SELECT2 (SHADCN/UI) */}
                 <FilterBar>
-                    <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3 items-end w-full">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-7 gap-3 items-end w-full">
                         {/* BUSCAR */}
                         <FilterField label={__('Buscar')}>
                             <Input
@@ -865,6 +883,19 @@ export default function IndexReparaciones({
                                 className="h-9 text-xs"
                             />
                         </FilterField>
+
+                        {/* SUCURSAL */}
+                        {sucursales && sucursales.length > 0 && (
+                            <FilterField label={__('Sucursal')}>
+                                <SearchableSelect
+                                    options={sucursalOptions}
+                                    value={sucursalId}
+                                    onChange={setSucursalId}
+                                    placeholder={__('Todas las sucursales')}
+                                    searchPlaceholder={__('Buscar sucursal...')}
+                                />
+                            </FilterField>
+                        )}
 
                         {/* ESTADO */}
                         <FilterField label={__('Estado')}>
@@ -923,7 +954,7 @@ export default function IndexReparaciones({
                         </FilterField>
                     </div>
 
-                    {(search || status !== 'all' || year !== 'all' || month !== 'all' || tecnicoId !== 'all' || perPage !== '10') && (
+                    {(search || status !== 'all' || year !== 'all' || month !== 'all' || tecnicoId !== 'all' || sucursalId !== 'all' || perPage !== '10') && (
                         <div className="flex justify-end mt-2.5">
                             <Button
                                 variant="ghost"

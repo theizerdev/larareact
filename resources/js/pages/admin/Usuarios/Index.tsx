@@ -225,6 +225,11 @@ export default function UsersIndexPage({
     const handleCreateClick = () => {
         setEditingUser(null);
         reset();
+        setData({
+            ...initialForm,
+            empresa_id: auth.user.empresa_id || '',
+            sucursal_id: auth.user.sucursal_id || '',
+        });
         setIsModalOpen(true);
     };
 
@@ -551,36 +556,40 @@ return;
                                 </SelectContent>
                             </Select>
                         </FilterField>
-                        <FilterField label={__('Company')}>
-                            <Select value={empresaFilter} onValueChange={setEmpresaFilter}>
-                                <SelectTrigger className="w-full md:w-56">
-                                    <SelectValue placeholder={__('All companies')} />
-                                </SelectTrigger>
-                                <SelectContent>
-                                    <SelectItem value="">{__('All companies')}</SelectItem>
-                                    {empresas.map((emp) => (
-                                        <SelectItem key={emp.id} value={String(emp.id)}>
-                                            {emp.razon_social}
-                                        </SelectItem>
-                                    ))}
-                                </SelectContent>
-                            </Select>
-                        </FilterField>
-                        <FilterField label={__('Branch')}>
-                            <Select value={sucursalFilter} onValueChange={setSucursalFilter}>
-                                <SelectTrigger className="w-full md:w-48">
-                                    <SelectValue placeholder={__('All branches')} />
-                                </SelectTrigger>
-                                <SelectContent>
-                                    <SelectItem value="">{__('All branches')}</SelectItem>
-                                    {sucursales.map((suc) => (
-                                        <SelectItem key={suc.id} value={String(suc.id)}>
-                                            {suc.nombre}
-                                        </SelectItem>
-                                    ))}
-                                </SelectContent>
-                            </Select>
-                        </FilterField>
+                        {auth.user.is_super_admin && (
+                            <FilterField label={__('Company')}>
+                                <Select value={empresaFilter} onValueChange={setEmpresaFilter}>
+                                    <SelectTrigger className="w-full md:w-56">
+                                        <SelectValue placeholder={__('All companies')} />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        <SelectItem value="">{__('All companies')}</SelectItem>
+                                        {empresas.map((emp) => (
+                                            <SelectItem key={emp.id} value={String(emp.id)}>
+                                                {emp.razon_social}
+                                            </SelectItem>
+                                        ))}
+                                    </SelectContent>
+                                </Select>
+                            </FilterField>
+                        )}
+                        {(!auth.user.sucursal_id || auth.user.is_super_admin) && (
+                            <FilterField label={__('Branch')}>
+                                <Select value={sucursalFilter} onValueChange={setSucursalFilter}>
+                                    <SelectTrigger className="w-full md:w-48">
+                                        <SelectValue placeholder={__('All branches')} />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        <SelectItem value="">{__('All branches')}</SelectItem>
+                                        {sucursales.map((suc) => (
+                                            <SelectItem key={suc.id} value={String(suc.id)}>
+                                                {suc.nombre}
+                                            </SelectItem>
+                                        ))}
+                                    </SelectContent>
+                                </Select>
+                            </FilterField>
+                        )}
                         <FilterField label={__('Status')}>
                             <Select value={statusFilter} onValueChange={setStatusFilter}>
                                 <SelectTrigger className="w-full md:w-40">
@@ -747,49 +756,51 @@ return;
                             )}
 
                             {/* Empresa */}
-                            <div>
-                                <Label htmlFor="empresa_id">{__('Company')}</Label>
-                                <Select
-                                    value={String(data.empresa_id)}
-                                    onValueChange={(v) => {
-                                        setData((prev) => {
-                                            const empId = v ? Number(v) : null;
-                                            const newRoles = empId
-                                                ? roles.filter((r) => r.empresa_id === empId)
-                                                : roles.filter((r) => !r.empresa_id || r.empresa_id === 1);
-                                            const currentRoleValid = newRoles.some((r) => prev.roles.includes(r.name));
+                            {auth.user.is_super_admin ? (
+                                <div>
+                                    <Label htmlFor="empresa_id">{__('Company')}</Label>
+                                    <Select
+                                        value={String(data.empresa_id)}
+                                        onValueChange={(v) => {
+                                            setData((prev) => {
+                                                const empId = v ? Number(v) : null;
+                                                const newRoles = empId
+                                                    ? roles.filter((r) => r.empresa_id === empId)
+                                                    : roles.filter((r) => !r.empresa_id || r.empresa_id === 1);
+                                                const currentRoleValid = newRoles.some((r) => prev.roles.includes(r.name));
 
-                                            return {
-                                                ...prev,
-                                                empresa_id: v,
-                                                sucursal_id: '', // Reset sucursal if company changes
-                                                roles: currentRoleValid ? prev.roles : (newRoles.length > 0 ? [newRoles[0].name] : []),
-                                            };
-                                        });
-                                    }}
-                                >
-                                    <SelectTrigger id="empresa_id" className="w-full">
-                                        <SelectValue placeholder={__('None')} />
-                                    </SelectTrigger>
-                                    <SelectContent>
-                                        <SelectItem value="">{__('None')}</SelectItem>
-                                        {empresas.map((e) => (
-                                            <SelectItem key={e.id} value={String(e.id)}>
-                                                {e.razon_social}
-                                            </SelectItem>
-                                        ))}
-                                    </SelectContent>
-                                </Select>
-                                {errors.empresa_id && <p className="text-red-500 text-xs mt-1">{errors.empresa_id}</p>}
-                            </div>
+                                                return {
+                                                    ...prev,
+                                                    empresa_id: v,
+                                                    sucursal_id: '', // Reset sucursal if company changes
+                                                    roles: currentRoleValid ? prev.roles : (newRoles.length > 0 ? [newRoles[0].name] : []),
+                                                };
+                                            });
+                                        }}
+                                    >
+                                        <SelectTrigger id="empresa_id" className="w-full">
+                                            <SelectValue placeholder={__('None')} />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                            <SelectItem value="">{__('None')}</SelectItem>
+                                            {empresas.map((e) => (
+                                                <SelectItem key={e.id} value={String(e.id)}>
+                                                    {e.razon_social}
+                                                </SelectItem>
+                                            ))}
+                                        </SelectContent>
+                                    </Select>
+                                    {errors.empresa_id && <p className="text-red-500 text-xs mt-1">{errors.empresa_id}</p>}
+                                </div>
+                            ) : null}
 
                             {/* Sucursal */}
-                            <div>
+                            <div className={!auth.user.is_super_admin ? 'md:col-span-2' : ''}>
                                 <Label htmlFor="sucursal_id">{__('Branch')}</Label>
                                 <Select
                                     value={String(data.sucursal_id)}
                                     onValueChange={(v) => setData('sucursal_id', v)}
-                                    disabled={!data.empresa_id}
+                                    disabled={Boolean(!data.empresa_id || (!auth.user.is_super_admin && auth.user.sucursal_id))}
                                 >
                                     <SelectTrigger id="sucursal_id" className="w-full">
                                         <SelectValue placeholder={data.empresa_id ? __('None') : __('Select a company first')} />
