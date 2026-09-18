@@ -92,8 +92,17 @@ class AsistenciaReporteController extends Controller
         $minutosLeySilla = $configAsistencia?->ley_silla_descanso_minutos ?? 15;
         $intervaloHorasLeySilla = (float) ($configAsistencia?->ley_silla_intervalo_horas ?? 2.00);
         $intervaloMinutosLeySilla = (int) round($intervaloHorasLeySilla * 60);
+        $lftService = app(CalculoAsistenciaLftService::class);
 
-        $empleadosPaginados->getCollection()->transform(function ($emp) use ($now, $minutosLeySilla, $intervaloHorasLeySilla, $intervaloMinutosLeySilla, $request, $empresaId) {
+        $startOfWeek = (clone $now)->startOfWeek()->startOfDay();
+        $endOfWeek = (clone $now)->endOfWeek()->endOfDay();
+        $marcajesDeLaSemana = AsistenciaMarcaje::whereIn('empleado_id', $empleadosPaginados->pluck('id'))
+            ->whereBetween('fecha_hora', [$startOfWeek, $endOfWeek])
+            ->orderBy('fecha_hora', 'asc')
+            ->get()
+            ->groupBy('empleado_id');
+
+        $empleadosPaginados->getCollection()->transform(function ($emp) use ($now, $minutosLeySilla, $intervaloHorasLeySilla, $intervaloMinutosLeySilla, $request, $empresaId, $lftService, $configAsistencia, $marcajesDeLaSemana) {
             // Cargar historial de marcajes de este empleado ordenados cronológicamente
             $historialMarcajes = AsistenciaMarcaje::with('sucursal')
                 ->where('empleado_id', $emp->id)
@@ -222,6 +231,10 @@ class AsistenciaReporteController extends Controller
                 'descansos' => $historialMarcajes->whereIn('tipo_marcaje', ['salida_comida', 'entrada_comida', 'descanso_inicio', 'descanso_fin'])->count(),
                 'salidas' => $historialMarcajes->where('tipo_marcaje', 'salida')->count(),
             ];
+
+            // Semáforo LFT y acumulado de horas de la semana
+            $marcajesSemanaEmp = $marcajesDeLaSemana->get($emp->id, collect());
+            $emp->semana_lft = $lftService->calcularSemaforosSemanales($emp, $now->toDateString(), $configAsistencia, $marcajesSemanaEmp);
 
             return $emp;
         });
@@ -380,6 +393,11 @@ class AsistenciaReporteController extends Controller
             'M1' => 'Longitud',
             'N1' => 'Google Maps',
             'O1' => 'Observaciones / Causa',
+            'P1' => 'Horas Semanales Normales',
+            'Q1' => 'TEX Doble Semanal',
+            'R1' => 'TEX Triple Semanal',
+            'S1' => 'Semáforo LFT',
+            'T1' => 'Notificación Escalonada',
         ];
 
         foreach ($headers as $cell => $val) {
@@ -401,11 +419,14 @@ class AsistenciaReporteController extends Controller
                 'vertical' => Alignment::VERTICAL_CENTER,
             ],
         ];
-        $sheet->getStyle('A1:O1')->applyFromArray($headerStyle);
+        $sheet->getStyle('A1:T1')->applyFromArray($headerStyle);
         $sheet->getRowDimension(1)->setRowHeight(28);
 
         $row = 2;
         $marcajes = $query->limit(10000)->get();
+        $lftService = app(CalculoAsistenciaLftService::class);
+        $configAsistencia = ConfiguracionAsistencia::where('empresa_id', $empresaId)->first();
+        $cacheSemaforos = [];
 
         foreach ($marcajes as $m) {
             $tz = $m->sucursal?->zona_horaria ?? 'America/Mexico_City';
@@ -414,6 +435,17 @@ class AsistenciaReporteController extends Controller
             $responsableNombre = $m->empleado?->responsable 
                 ? "{$m->empleado->responsable->nombres} {$m->empleado->responsable->apellidos}" 
                 : 'Sin asignar';
+
+            // Cachear semáforo del empleado para la semana de este marcaje
+            $empKey = $m->empleado_id . '_' . Carbon::parse($m->fecha_hora)->startOfWeek()->toDateString();
+            if (!isset($cacheSemaforos[$empKey]) && $m->empleado) {
+                $cacheSemaforos[$empKey] = $lftService->calcularSemaforosSemanales(
+                    $m->empleado,
+                    Carbon::parse($m->fecha_hora)->toDateString(),
+                    $configAsistencia
+                );
+            }
+            $semData = $cacheSemaforos[$empKey] ?? null;
 
             $sheet->setCellValue("A{$row}", $m->id);
             $sheet->setCellValue("B{$row}", $fechaLocal);
@@ -439,18 +471,23 @@ class AsistenciaReporteController extends Controller
             }
 
             $sheet->setCellValue("O{$row}", $m->observaciones ?? $m->incidente_causa ?? '');
+            $sheet->setCellValue("P{$row}", $semData ? $semData['horas']['normales'] . ' hrs' : 'N/A');
+            $sheet->setCellValue("Q{$row}", $semData ? $semData['horas']['tex_doble'] . ' hrs' : 'N/A');
+            $sheet->setCellValue("R{$row}", $semData ? $semData['horas']['tex_triple'] . ' hrs' : 'N/A');
+            $sheet->setCellValue("S{$row}", $semData ? strtoupper($semData['semaforos']['alerta_global']) : 'NORMAL');
+            $sheet->setCellValue("T{$row}", $semData && !empty($semData['semaforos']['destinatarios']) ? implode(', ', $semData['semaforos']['destinatarios']) : 'Ninguna');
 
             if ($row % 2 === 0) {
-                $sheet->getStyle("A{$row}:O{$row}")->getFill()->setFillType(Fill::FILL_SOLID)->getStartColor()->setRGB('F8FAFC');
+                $sheet->getStyle("A{$row}:T{$row}")->getFill()->setFillType(Fill::FILL_SOLID)->getStartColor()->setRGB('F8FAFC');
             }
 
             $row++;
         }
 
         $lastRow = max($row - 1, 1);
-        $sheet->getStyle("A1:O{$lastRow}")->getBorders()->getAllBorders()->setBorderStyle(Border::BORDER_THIN)->getColor()->setRGB('E2E8F0');
+        $sheet->getStyle("A1:T{$lastRow}")->getBorders()->getAllBorders()->setBorderStyle(Border::BORDER_THIN)->getColor()->setRGB('E2E8F0');
 
-        foreach (range('A', 'O') as $col) {
+        foreach (range('A', 'T') as $col) {
             $sheet->getColumnDimension($col)->setAutoSize(true);
         }
 
@@ -522,7 +559,19 @@ class AsistenciaReporteController extends Controller
             ->get()
             ->groupBy('empleado_id');
 
-        $plantillaStatus = $empleados->map(function ($emp) use ($marcajesDelDia, $fecha, $toleranciaGlobal) {
+        // Precarga de marcajes de la semana completa (Lunes a Domingo) para cálculo de semáforo LFT
+        $carbonFecha = Carbon::parse($fecha);
+        $inicioSemana = (clone $carbonFecha)->startOfWeek()->startOfDay();
+        $finSemana = (clone $carbonFecha)->endOfWeek()->endOfDay();
+        $lftService = app(CalculoAsistenciaLftService::class);
+
+        $marcajesDeLaSemana = AsistenciaMarcaje::whereIn('empleado_id', $empleadosIds)
+            ->whereBetween('fecha_hora', [$inicioSemana, $finSemana])
+            ->orderBy('fecha_hora', 'asc')
+            ->get()
+            ->groupBy('empleado_id');
+
+        $plantillaStatus = $empleados->map(function ($emp) use ($marcajesDelDia, $fecha, $toleranciaGlobal, $marcajesDeLaSemana, $lftService, $configAsistencia) {
             $marcajes = $marcajesDelDia->get($emp->id, collect());
             $tz = $emp->sucursal?->zona_horaria ?? 'America/Mexico_City';
 
@@ -586,6 +635,10 @@ class AsistenciaReporteController extends Controller
                 $turnoHorario = substr($emp->turnoLaboral->hora_entrada, 0, 5) . ' - ' . substr($emp->turnoLaboral->hora_salida, 0, 5);
             }
 
+            // Cálculo semanal de la Reforma Laboral y los 3 Semáforos LFT
+            $marcajesSemanaEmp = $marcajesDeLaSemana->get($emp->id, collect());
+            $semanaLft = $lftService->calcularSemaforosSemanales($emp, $fecha, $configAsistencia, $marcajesSemanaEmp);
+
             return [
                 'id' => $emp->id,
                 'nombres' => $emp->nombres,
@@ -616,6 +669,10 @@ class AsistenciaReporteController extends Controller
                 ] : null,
                 'eventos_hoy' => $eventosHoy,
                 'total_marcajes_hoy' => $marcajes->count(),
+                // Datos de Semáforo LFT y Jornada Semanal
+                'semana_lft' => $semanaLft,
+                'alerta_semaforo' => $semanaLft['semaforos']['alerta_global'],
+                'destinatarios_notif' => $semanaLft['semaforos']['destinatarios'],
             ];
         });
 
@@ -639,6 +696,12 @@ class AsistenciaReporteController extends Controller
             'retardos' => $retardos,
             'ausentes' => $ausentes,
             'tasa_asistencia' => $tasaAsistencia,
+            // KPIs de Semáforos LFT y Notificaciones Escalonadas
+            'alertas_semaforo' => $plantillaStatus->whereIn('alerta_semaforo', ['amarillo', 'rojo'])->count(),
+            'alerta_rh' => $plantillaStatus->filter(fn ($i) => in_array('RH', $i['destinatarios_notif']))->count(),
+            'alerta_responsable' => $plantillaStatus->filter(fn ($i) => in_array('Responsable', $i['destinatarios_notif']))->count(),
+            'alerta_dg' => $plantillaStatus->filter(fn ($i) => in_array('DG', $i['destinatarios_notif']))->count(),
+            'total_horas_semanales' => round($plantillaStatus->sum(fn ($i) => $i['semana_lft']['horas']['totales']), 1),
         ];
 
         // Filtro por estatus operativo
@@ -652,6 +715,23 @@ class AsistenciaReporteController extends Controller
                     'retardo', 'retardos' => $item['es_retardo'] === true,
                     'salida', 'salidas' => $item['status_asistencia'] === 'salida',
                     'ausente', 'ausentes' => $item['status_asistencia'] === 'ausente',
+                    default => true,
+                };
+            })->values();
+        }
+
+        // Filtro por Alerta Semáforo LFT
+        $filtroSemaforo = $request->input('filtro_semaforo', 'todos');
+        if ($filtroSemaforo && $filtroSemaforo !== 'todos') {
+            $filteredStatus = $filteredStatus->filter(function ($item) use ($filtroSemaforo) {
+                return match ($filtroSemaforo) {
+                    'alerta_rh' => in_array('RH', $item['destinatarios_notif']),
+                    'alerta_responsable' => in_array('Responsable', $item['destinatarios_notif']),
+                    'alerta_dg' => in_array('DG', $item['destinatarios_notif']),
+                    'alerta_critica' => in_array($item['alerta_semaforo'], ['amarillo', 'rojo']),
+                    'tex_alerta' => in_array($item['semana_lft']['semaforos']['tex_doble']['estado'], ['amarillo', 'rojo']) 
+                                 || in_array($item['semana_lft']['semaforos']['tex_triple']['estado'], ['amarillo', 'rojo']),
+                    'sin_alerta' => $item['alerta_semaforo'] === 'normal',
                     default => true,
                 };
             })->values();
@@ -684,6 +764,7 @@ class AsistenciaReporteController extends Controller
                 'fecha' => $fecha,
                 'search' => $request->search ?? '',
                 'status_asistencia' => $statusAsistencia,
+                'filtro_semaforo' => $filtroSemaforo,
                 'perPage' => $perPage,
             ],
         ]);

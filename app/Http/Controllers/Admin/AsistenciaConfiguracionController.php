@@ -48,6 +48,7 @@ class AsistenciaConfiguracionController extends Controller
             'configuracion' => $configuracion,
             'turnos' => $turnos,
             'diasFestivos' => $diasFestivos,
+            'cronogramaReforma' => ConfiguracionAsistencia::CRONOGRAMA_REFORMA,
         ]);
     }
 
@@ -70,6 +71,27 @@ class AsistenciaConfiguracionController extends Controller
             'ley_silla_descanso_minutos' => 'nullable|integer|min:1|max:60',
             'whatsapp_recordatorio_descanso' => 'nullable|boolean',
             'whatsapp_recordatorio_horas_post_entrada' => 'nullable|numeric|min:0|max:12',
+            // Reforma Laboral 48h -> 40h
+            'reforma_laboral_ano' => 'nullable|integer|in:2026,2027,2028,2029,2030',
+            'limite_horas_normales_semanal' => 'nullable|numeric|min:20|max:60',
+            'limite_tex_doble_semanal' => 'nullable|numeric|min:0|max:30',
+            'limite_tex_triple_semanal' => 'nullable|numeric|min:0|max:20',
+            // Umbrales Semáforos LFT
+            'semaforo_normal_verde' => 'nullable|numeric|min:0|max:60',
+            'semaforo_normal_amarillo' => 'nullable|numeric|min:0|max:60',
+            'semaforo_normal_rojo' => 'nullable|numeric|min:0|max:60',
+            'semaforo_tex_doble_verde' => 'nullable|numeric|min:0|max:30',
+            'semaforo_tex_doble_amarillo' => 'nullable|numeric|min:0|max:30',
+            'semaforo_tex_doble_rojo' => 'nullable|numeric|min:0|max:30',
+            'semaforo_tex_triple_verde' => 'nullable|numeric|min:0|max:20',
+            'semaforo_tex_triple_amarillo' => 'nullable|numeric|min:0|max:20',
+            'semaforo_tex_triple_rojo' => 'nullable|numeric|min:0|max:20',
+            // Notificaciones
+            'notif_rh_email' => 'nullable|email|max:150',
+            'notif_rh_enabled' => 'nullable|boolean',
+            'notif_responsable_enabled' => 'nullable|boolean',
+            'notif_dg_email' => 'nullable|email|max:150',
+            'notif_dg_enabled' => 'nullable|boolean',
         ]);
 
         $configuracion = ConfiguracionAsistencia::firstOrCreate(['empresa_id' => $user->empresa_id]);
@@ -77,7 +99,7 @@ class AsistenciaConfiguracionController extends Controller
 
         return back()->with('notification', [
             'type' => 'success',
-            'message' => 'Configuración de asistencia actualizada con éxito.',
+            'message' => 'Configuración de asistencia y Reforma Laboral actualizada con éxito.',
         ]);
     }
 
