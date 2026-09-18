@@ -18,7 +18,9 @@ import {
     Globe,
     FileText,
     Check,
-    Camera as CameraIcon
+    Camera as CameraIcon,
+    Shield,
+    Truck
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -74,12 +76,45 @@ interface EmpleadoForm {
 
 interface VehiculoForm {
     tipo_vehiculo: string;
+    categoria_vehiculo?: string;
+    subtipo_carroceria?: string;
     marca: string;
     modelo: string;
     year: string;
     placa: string;
+    numero_serie_vin?: string;
+    numero_ejes?: number | string;
+    tarjeta_circulacion?: string;
+    aseguradora?: string;
+    poliza_seguro?: string;
+    vigencia_seguro?: string;
     foto_frontal: string;
     foto_trasera: string;
+
+    // Caja / Semirremolque (NOM-035-SCT)
+    tiene_remolque?: boolean;
+    remolque_fabricante?: string;
+    remolque_serie_fabricante?: string;
+    remolque_vin?: string;
+    remolque_placa?: string;
+    remolque_tipo?: string;
+    remolque_modelo?: string;
+    remolque_year?: string;
+    remolque_peso_bruto_vehicular?: string;
+    remolque_peso_vehicular?: string;
+    remolque_capacidad_carga?: string;
+    remolque_largo?: string;
+    remolque_ancho?: string;
+    remolque_alto?: string;
+    remolque_ejes?: number | string;
+    remolque_capacidad_ejes?: string;
+    remolque_tipo_suspension?: string;
+    remolque_capacidad_patines?: string;
+    remolque_cantidad_llantas?: number | string;
+    remolque_medida_llantas?: string;
+    remolque_presion_llantas?: string;
+    remolque_foto_placa?: string;
+    remolque_foto_lateral?: string;
 }
 
 export default function Wizard({ preRegistro, paises, mapbox_api_key, mapbox_active }: PreRegistroProps) {
@@ -128,13 +163,44 @@ export default function Wizard({ preRegistro, paises, mapbox_api_key, mapbox_act
     const [vehicles, setVehicles] = useState<VehiculoForm[]>([]);
     const [showVehicleForm, setShowVehicleForm] = useState(false);
     const [newVehicle, setNewVehicle] = useState<VehiculoForm>({
-        tipo_vehiculo: '',
+        tipo_vehiculo: 'Tractocamión',
+        categoria_vehiculo: 'carga',
+        subtipo_carroceria: 'Caja Seca',
         marca: '',
         modelo: '',
-        year: '',
+        year: String(new Date().getFullYear()),
         placa: '',
+        numero_serie_vin: '',
+        numero_ejes: '3',
+        tarjeta_circulacion: '',
+        aseguradora: '',
+        poliza_seguro: '',
+        vigencia_seguro: '',
         foto_frontal: '',
         foto_trasera: '',
+        tiene_remolque: true,
+        remolque_fabricante: '',
+        remolque_serie_fabricante: '',
+        remolque_vin: '',
+        remolque_placa: '',
+        remolque_tipo: 'Caja Seca',
+        remolque_modelo: '',
+        remolque_year: String(new Date().getFullYear()),
+        remolque_peso_bruto_vehicular: '',
+        remolque_peso_vehicular: '',
+        remolque_capacidad_carga: '',
+        remolque_largo: "53'",
+        remolque_ancho: '2.60 m',
+        remolque_alto: '4.15 m',
+        remolque_ejes: '2',
+        remolque_capacidad_ejes: '',
+        remolque_tipo_suspension: 'Neumática',
+        remolque_capacidad_patines: '',
+        remolque_cantidad_llantas: '8',
+        remolque_medida_llantas: '295/75R22.5',
+        remolque_presion_llantas: '100 PSI',
+        remolque_foto_placa: '',
+        remolque_foto_lateral: '',
     });
 
     // Coordinates setup for the Map
@@ -360,19 +426,50 @@ export default function Wizard({ preRegistro, paises, mapbox_api_key, mapbox_act
     // Add vehicle to array
     const handleAddVehicle = () => {
         if (!newVehicle.tipo_vehiculo.trim() || !newVehicle.marca.trim() || !newVehicle.modelo.trim() || !newVehicle.year || !newVehicle.placa.trim()) {
-            alert(__('All vehicle fields are required.'));
+            alert(__('Por favor complete los campos obligatorios del vehículo (Tipo, Marca, Modelo, Año y Placa).'));
             return;
         }
 
         setVehicles(prev => [...prev, newVehicle]);
         setNewVehicle({
-            tipo_vehiculo: '',
+            tipo_vehiculo: 'Tractocamión',
+            categoria_vehiculo: 'carga',
+            subtipo_carroceria: 'Caja Seca',
             marca: '',
             modelo: '',
-            year: '',
+            year: String(new Date().getFullYear()),
             placa: '',
+            numero_serie_vin: '',
+            numero_ejes: '3',
+            tarjeta_circulacion: '',
+            aseguradora: '',
+            poliza_seguro: '',
+            vigencia_seguro: '',
             foto_frontal: '',
             foto_trasera: '',
+            tiene_remolque: false,
+            remolque_fabricante: '',
+            remolque_serie_fabricante: '',
+            remolque_vin: '',
+            remolque_placa: '',
+            remolque_tipo: 'Caja Seca',
+            remolque_modelo: '',
+            remolque_year: String(new Date().getFullYear()),
+            remolque_peso_bruto_vehicular: '',
+            remolque_peso_vehicular: '',
+            remolque_capacidad_carga: '',
+            remolque_largo: "53'",
+            remolque_ancho: '2.60 m',
+            remolque_alto: '4.15 m',
+            remolque_ejes: '2',
+            remolque_capacidad_ejes: '',
+            remolque_tipo_suspension: 'Neumática',
+            remolque_capacidad_patines: '',
+            remolque_cantidad_llantas: '8',
+            remolque_medida_llantas: '295/75R22.5',
+            remolque_presion_llantas: '100 PSI',
+            remolque_foto_placa: '',
+            remolque_foto_lateral: '',
         });
         setShowVehicleForm(false);
     };
@@ -793,161 +890,441 @@ export default function Wizard({ preRegistro, paises, mapbox_api_key, mapbox_act
 
                                 {showVehicleForm && (
                                     <div className="p-5 border bg-slate-50/50 rounded-2xl space-y-4">
+                                        
+                                        {/* Clasificación Federal (Art. 24) */}
+                                        <div className="bg-emerald-50/60 dark:bg-emerald-950/30 border border-emerald-100 p-3 rounded-xl flex items-center gap-2 text-xs text-emerald-800 dark:text-emerald-300">
+                                            <Shield className="w-4 h-4 text-emerald-600 shrink-0" />
+                                            <span>{__('Clasificación Oficial según Reglamento de Tránsito en Carreteras Federales (Art. 24)')}</span>
+                                        </div>
+
                                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                                             <div className="space-y-1.5">
-                                                <Label>{__('Vehicle Type *')}</Label>
+                                                <Label className="text-xs font-semibold">{__('Categoría Federal *')}</Label>
                                                 <Select
-                                                    value={newVehicle.tipo_vehiculo}
-                                                    onValueChange={(val) => setNewVehicle(prev => ({ ...prev, tipo_vehiculo: val }))}
+                                                    value={newVehicle.categoria_vehiculo || 'carga'}
+                                                    onValueChange={(val) => setNewVehicle(prev => ({ 
+                                                        ...prev, 
+                                                        categoria_vehiculo: val,
+                                                        tipo_vehiculo: val === 'carga' ? 'Tractocamión' : val === 'personas' ? 'Automóvil' : 'Tractor Agrícola',
+                                                        tiene_remolque: val === 'carga'
+                                                    }))}
                                                 >
-                                                    <SelectTrigger className="w-full">
-                                                        <SelectValue placeholder={__('Select')} />
+                                                    <SelectTrigger className="w-full h-9 text-xs">
+                                                        <SelectValue placeholder={__('Categoría')} />
                                                     </SelectTrigger>
                                                     <SelectContent>
-                                                        <SelectItem value="Automóvil">{__('Car')}</SelectItem>
-                                                        <SelectItem value="Camioneta">{__('Pickup')}</SelectItem>
-                                                        <SelectItem value="Camión">{__('Truck')}</SelectItem>
-                                                        <SelectItem value="Motocicleta">{__('Motorcycle')}</SelectItem>
-                                                        <SelectItem value="Otro">{__('Other')}</SelectItem>
+                                                        <SelectItem value="carga">{__('Transporte de Carga')}</SelectItem>
+                                                        <SelectItem value="personas">{__('Transporte de Personas')}</SelectItem>
+                                                        <SelectItem value="excepcional">{__('Tránsito Excepcional / Especial')}</SelectItem>
                                                     </SelectContent>
                                                 </Select>
                                             </div>
+
                                             <div className="space-y-1.5">
-                                                <Label>{__('Make *')}</Label>
+                                                <Label className="text-xs font-semibold">{__('Tipo de Vehículo *')}</Label>
+                                                <Select
+                                                    value={newVehicle.tipo_vehiculo}
+                                                    onValueChange={(val) => {
+                                                        const isArticulated = ['Tractocamión', 'Camión Remolque'].includes(val);
+                                                        setNewVehicle(prev => ({ 
+                                                            ...prev, 
+                                                            tipo_vehiculo: val,
+                                                            tiene_remolque: isArticulated ? true : prev.tiene_remolque
+                                                        }));
+                                                    }}
+                                                >
+                                                    <SelectTrigger className="w-full h-9 text-xs">
+                                                        <SelectValue placeholder={__('Tipo de Vehículo')} />
+                                                    </SelectTrigger>
+                                                    <SelectContent>
+                                                        {newVehicle.categoria_vehiculo === 'carga' ? (
+                                                            <>
+                                                                <SelectItem value="Tractocamión">{__('Tractocamión (Quinta Rueda)')}</SelectItem>
+                                                                <SelectItem value="Camión Remolque">{__('Camión Remolque')}</SelectItem>
+                                                                <SelectItem value="Camión Unitario Pesado">{__('Camión Unitario Pesado (C3+)')}</SelectItem>
+                                                                <SelectItem value="Camión Unitario Ligero">{__('Camión Unitario Ligero (C2)')}</SelectItem>
+                                                                <SelectItem value="Semirremolque">{__('Semirremolque')}</SelectItem>
+                                                                <SelectItem value="Remolque">{__('Remolque')}</SelectItem>
+                                                                <SelectItem value="Vehículo Tipo Grúa">{__('Vehículo Tipo Grúa')}</SelectItem>
+                                                            </>
+                                                        ) : newVehicle.categoria_vehiculo === 'personas' ? (
+                                                            <>
+                                                                <SelectItem value="Automóvil">{__('Automóvil (Sedán/Hatchback)')}</SelectItem>
+                                                                <SelectItem value="Camioneta">{__('Camioneta / SUV')}</SelectItem>
+                                                                <SelectItem value="Pick-up">{__('Pick-up')}</SelectItem>
+                                                                <SelectItem value="Vagoneta">{__('Vagoneta / Van')}</SelectItem>
+                                                                <SelectItem value="Autobús">{__('Autobús')}</SelectItem>
+                                                                <SelectItem value="Midibús">{__('Midibús')}</SelectItem>
+                                                                <SelectItem value="Motocicleta">{__('Motocicleta')}</SelectItem>
+                                                            </>
+                                                        ) : (
+                                                            <>
+                                                                <SelectItem value="Tractor Agrícola">{__('Tractor Agrícola')}</SelectItem>
+                                                                <SelectItem value="Maquinaria Construcción">{__('Maquinaria / Autopropulsado')}</SelectItem>
+                                                                <SelectItem value="Especial Indivisible">{__('Diseño Especial (Gran Peso/Volumen)')}</SelectItem>
+                                                            </>
+                                                        )}
+                                                    </SelectContent>
+                                                </Select>
+                                            </div>
+
+                                            <div className="space-y-1.5">
+                                                <Label className="text-xs font-semibold">{__('Subtipo de Carrocería')} (Art. 24)</Label>
+                                                <Select
+                                                    value={newVehicle.subtipo_carroceria || 'Caja Seca'}
+                                                    onValueChange={(val) => setNewVehicle(prev => ({ ...prev, subtipo_carroceria: val }))}
+                                                >
+                                                    <SelectTrigger className="w-full h-9 text-xs">
+                                                        <SelectValue placeholder={__('Carrocería')} />
+                                                    </SelectTrigger>
+                                                    <SelectContent>
+                                                        <SelectItem value="Caja Seca">{__('Caja Seca / Cerrada')}</SelectItem>
+                                                        <SelectItem value="Refrigerador">{__('Caja Refrigerada (Termo)')}</SelectItem>
+                                                        <SelectItem value="Plataforma">{__('Plataforma')}</SelectItem>
+                                                        <SelectItem value="Cama Baja">{__('Cama Baja (Lowboy)')}</SelectItem>
+                                                        <SelectItem value="Redilas">{__('Redilas')}</SelectItem>
+                                                        <SelectItem value="Tanque">{__('Tanque / Pipa')}</SelectItem>
+                                                        <SelectItem value="Tolva">{__('Tolva')}</SelectItem>
+                                                        <SelectItem value="Volteo">{__('Volteo')}</SelectItem>
+                                                        <SelectItem value="Chasis">{__('Chasis')}</SelectItem>
+                                                        <SelectItem value="Pick-up">{__('Pick-up')}</SelectItem>
+                                                        <SelectItem value="Panel">{__('Panel')}</SelectItem>
+                                                        <SelectItem value="Jaula">{__('Jaula')}</SelectItem>
+                                                        <SelectItem value="Portacontenedor">{__('Portacontenedor')}</SelectItem>
+                                                        <SelectItem value="Otro">{__('Otro')}</SelectItem>
+                                                    </SelectContent>
+                                                </Select>
+                                            </div>
+
+                                            <div className="space-y-1.5">
+                                                <Label className="text-xs font-semibold">{__('Placa de la Unidad *')}</Label>
+                                                <Input
+                                                    value={newVehicle.placa}
+                                                    onChange={(e) => setNewVehicle(prev => ({ ...prev, placa: e.target.value.toUpperCase() }))}
+                                                    placeholder="Ej: ABC-1234 o 12-AA-3B"
+                                                    className="h-9 text-xs font-mono font-bold uppercase"
+                                                />
+                                            </div>
+
+                                            <div className="space-y-1.5">
+                                                <Label className="text-xs font-semibold">{__('Marca *')}</Label>
                                                 <Input
                                                     value={newVehicle.marca}
                                                     onChange={(e) => setNewVehicle(prev => ({ ...prev, marca: e.target.value }))}
-                                                    placeholder="Ej: Chevrolet, Toyota"
+                                                    placeholder="Ej: Freightliner, Kenworth, Toyota"
+                                                    className="h-9 text-xs"
                                                 />
                                             </div>
+
                                             <div className="space-y-1.5">
-                                                <Label>{__('Model *')}</Label>
+                                                <Label className="text-xs font-semibold">{__('Modelo *')}</Label>
                                                 <Input
                                                     value={newVehicle.modelo}
                                                     onChange={(e) => setNewVehicle(prev => ({ ...prev, modelo: e.target.value }))}
-                                                    placeholder="Ej: Hilux, Aveo"
+                                                    placeholder="Ej: Cascadia, T680, Hilux"
+                                                    className="h-9 text-xs"
                                                 />
                                             </div>
+
                                             <div className="space-y-1.5">
-                                                <Label>{__('Year *')}</Label>
+                                                <Label className="text-xs font-semibold">{__('Año *')}</Label>
                                                 <Input
                                                     type="number"
                                                     value={newVehicle.year}
                                                     onChange={(e) => setNewVehicle(prev => ({ ...prev, year: e.target.value }))}
-                                                    placeholder="Ej: 2020"
-                                                />
-                                            </div>
-                                            <div className="space-y-1.5 sm:col-span-2">
-                                                <Label>{__('License Plate *')}</Label>
-                                                <Input
-                                                    value={newVehicle.placa}
-                                                    onChange={(e) => setNewVehicle(prev => ({ ...prev, placa: e.target.value }))}
-                                                    placeholder="Ej: ABC-1234"
+                                                    placeholder="Ej: 2024"
+                                                    className="h-9 text-xs"
                                                 />
                                             </div>
 
-                                            {/* Photo uploads */}
-                                            <div className="space-y-2 sm:col-span-2 border-t pt-4 mt-2">
-                                                <h4 className="text-xs font-semibold text-slate-500">{__('Vehicle Photos')}</h4>
-                                                
-                                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 mt-2">
-                                                    {/* Foto frontal */}
-                                                    <div className="space-y-2">
-                                                        <Label className="text-xs font-medium">{__('Foto Frontal')}</Label>
-                                                        <div className="relative flex items-center justify-center border rounded-xl h-28 bg-white overflow-hidden shadow-sm">
-                                                            {newVehicle.foto_frontal ? (
-                                                                <img src={newVehicle.foto_frontal} className="w-full h-full object-cover" />
-                                                            ) : (
-                                                                <span className="text-xs italic text-slate-400">{__('No front photo')}</span>
-                                                            )}
+                                            <div className="space-y-1.5">
+                                                <Label className="text-xs font-semibold">{__('VIN / Número de Serie (17 dígitos)')}</Label>
+                                                <Input
+                                                    value={newVehicle.numero_serie_vin || ''}
+                                                    onChange={(e) => setNewVehicle(prev => ({ ...prev, numero_serie_vin: e.target.value.toUpperCase() }))}
+                                                    placeholder="1M8GDM9A_KP042788"
+                                                    className="h-9 text-xs font-mono uppercase"
+                                                    maxLength={17}
+                                                />
+                                            </div>
+                                        </div>
+
+                                        {/* SECCIÓN CAJA / SEMIRREMOLQUE (NOM-035-SCT) */}
+                                        <div className="border-t pt-4 space-y-3">
+                                            <div className="bg-slate-100 dark:bg-slate-800/80 p-3 rounded-xl flex items-center justify-between border">
+                                                <div className="flex items-center gap-2.5">
+                                                    <Truck className="w-5 h-5 text-[#104a29]" />
+                                                    <div>
+                                                        <p className="text-xs font-bold text-slate-800 dark:text-slate-100">
+                                                            {__('¿Lleva Caja o Semirremolque acoplado?')}
+                                                        </p>
+                                                        <p className="text-[11px] text-muted-foreground">
+                                                            {__('Registrar especificaciones de la placa de identificación (NOM-035-SCT-2-2010)')}
+                                                        </p>
+                                                    </div>
+                                                </div>
+                                                <input
+                                                    type="checkbox"
+                                                    checked={Boolean(newVehicle.tiene_remolque)}
+                                                    onChange={(e) => setNewVehicle(prev => ({ ...prev, tiene_remolque: e.target.checked }))}
+                                                    className="w-5 h-5 accent-[#104a29] cursor-pointer rounded"
+                                                />
+                                            </div>
+
+                                            {newVehicle.tiene_remolque && (
+                                                <div className="p-4 bg-emerald-50/30 border border-emerald-200/80 rounded-xl space-y-4">
+                                                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                                                        <div className="space-y-1.5">
+                                                            <Label className="text-xs font-semibold">{__('Fabricante de la Caja *')}</Label>
+                                                            <Input
+                                                                value={newVehicle.remolque_fabricante || ''}
+                                                                onChange={(e) => setNewVehicle(prev => ({ ...prev, remolque_fabricante: e.target.value }))}
+                                                                placeholder="Ej: Great Dane, Utility, Wabash"
+                                                                className="h-9 text-xs"
+                                                            />
                                                         </div>
-                                                        <div className="grid grid-cols-2 gap-1.5">
-                                                            <Button
-                                                                type="button"
-                                                                variant="outline"
-                                                                size="sm"
-                                                                className="text-[11px] h-8 px-1 flex items-center justify-center gap-1 relative"
+                                                        <div className="space-y-1.5">
+                                                            <Label className="text-xs font-semibold">{__('Placa de la Caja *')}</Label>
+                                                            <Input
+                                                                value={newVehicle.remolque_placa || ''}
+                                                                onChange={(e) => setNewVehicle(prev => ({ ...prev, remolque_placa: e.target.value.toUpperCase() }))}
+                                                                placeholder="Ej: 34-TY-8U"
+                                                                className="h-9 text-xs font-mono font-bold uppercase"
+                                                            />
+                                                        </div>
+                                                        <div className="space-y-1.5">
+                                                            <Label className="text-xs font-semibold">{__('Tipo de Semirremolque')}</Label>
+                                                            <Select
+                                                                value={newVehicle.remolque_tipo || 'Caja Seca'}
+                                                                onValueChange={(val) => setNewVehicle(prev => ({ ...prev, remolque_tipo: val }))}
                                                             >
-                                                                <ImageIcon className="w-3.5 h-3.5" />
-                                                                {__('Upload')}
-                                                                <input 
-                                                                    type="file" 
-                                                                    accept="image/*" 
-                                                                    onChange={(e) => handleFileChange(e, 'foto_frontal', 'vehicle')}
-                                                                    className="absolute inset-0 opacity-0 cursor-pointer"
-                                                                />
-                                                            </Button>
-                                                            <Button
-                                                                type="button"
-                                                                variant="outline"
-                                                                size="sm"
-                                                                className="text-[11px] h-8 px-1 flex items-center justify-center gap-1 text-[#104a29] border-[#104a29]/30 hover:bg-[#104a29]/10"
-                                                                onClick={() => handleOpenCamera('vehicle', 'foto_frontal')}
-                                                            >
-                                                                <CameraIcon className="w-3.5 h-3.5" />
-                                                                {__('Camera')}
-                                                            </Button>
+                                                                <SelectTrigger className="w-full h-9 text-xs">
+                                                                    <SelectValue placeholder={__('Tipo')} />
+                                                                </SelectTrigger>
+                                                                <SelectContent>
+                                                                    <SelectItem value="Caja Seca">{__('Caja Seca')}</SelectItem>
+                                                                    <SelectItem value="Caja Refrigerada">{__('Caja Refrigerada (Termo)')}</SelectItem>
+                                                                    <SelectItem value="Plataforma">{__('Plataforma')}</SelectItem>
+                                                                    <SelectItem value="Cama Baja">{__('Cama Baja')}</SelectItem>
+                                                                    <SelectItem value="Tanque">{__('Tanque')}</SelectItem>
+                                                                    <SelectItem value="Tolva">{__('Tolva')}</SelectItem>
+                                                                    <SelectItem value="Portacontenedores">{__('Portacontenedores')}</SelectItem>
+                                                                </SelectContent>
+                                                            </Select>
                                                         </div>
                                                     </div>
 
-                                                    {/* Foto trasera */}
-                                                    <div className="space-y-2">
-                                                        <Label className="text-xs font-medium">{__('Foto Trasera')}</Label>
-                                                        <div className="relative flex items-center justify-center border rounded-xl h-28 bg-white overflow-hidden shadow-sm">
-                                                            {newVehicle.foto_trasera ? (
-                                                                <img src={newVehicle.foto_trasera} className="w-full h-full object-cover" />
-                                                            ) : (
-                                                                <span className="text-xs italic text-slate-400">{__('No rear photo')}</span>
-                                                            )}
+                                                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                                                        <div className="space-y-1.5">
+                                                            <Label className="text-xs font-semibold">{__('VIN de la Caja (17 dígitos)')}</Label>
+                                                            <Input
+                                                                value={newVehicle.remolque_vin || ''}
+                                                                onChange={(e) => setNewVehicle(prev => ({ ...prev, remolque_vin: e.target.value.toUpperCase() }))}
+                                                                placeholder="VIN placa caja"
+                                                                className="h-9 text-xs font-mono uppercase"
+                                                                maxLength={17}
+                                                            />
                                                         </div>
-                                                        <div className="grid grid-cols-2 gap-1.5">
-                                                            <Button
-                                                                type="button"
-                                                                variant="outline"
-                                                                size="sm"
-                                                                className="text-[11px] h-8 px-1 flex items-center justify-center gap-1 relative"
-                                                            >
-                                                                <ImageIcon className="w-3.5 h-3.5" />
-                                                                {__('Upload')}
-                                                                <input 
-                                                                    type="file" 
-                                                                    accept="image/*" 
-                                                                    onChange={(e) => handleFileChange(e, 'foto_trasera', 'vehicle')}
-                                                                    className="absolute inset-0 opacity-0 cursor-pointer"
-                                                                />
-                                                            </Button>
-                                                            <Button
-                                                                type="button"
-                                                                variant="outline"
-                                                                size="sm"
-                                                                className="text-[11px] h-8 px-1 flex items-center justify-center gap-1 text-[#104a29] border-[#104a29]/30 hover:bg-[#104a29]/10"
-                                                                onClick={() => handleOpenCamera('vehicle', 'foto_trasera')}
-                                                            >
-                                                                <CameraIcon className="w-3.5 h-3.5" />
-                                                                {__('Camera')}
-                                                            </Button>
+                                                        <div className="space-y-1.5">
+                                                            <Label className="text-xs font-semibold">{__('Largo (pies/m)')}</Label>
+                                                            <Input
+                                                                value={newVehicle.remolque_largo || "53'"}
+                                                                onChange={(e) => setNewVehicle(prev => ({ ...prev, remolque_largo: e.target.value }))}
+                                                                placeholder="53', 48', 16.15m"
+                                                                className="h-9 text-xs"
+                                                            />
+                                                        </div>
+                                                        <div className="space-y-1.5">
+                                                            <Label className="text-xs font-semibold">{__('No. Ejes de la Caja')}</Label>
+                                                            <Input
+                                                                type="number"
+                                                                value={newVehicle.remolque_ejes || '2'}
+                                                                onChange={(e) => setNewVehicle(prev => ({ ...prev, remolque_ejes: e.target.value }))}
+                                                                placeholder="2"
+                                                                className="h-9 text-xs"
+                                                            />
+                                                        </div>
+                                                    </div>
+
+                                                    {/* Fotos del Semirremolque */}
+                                                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-2 border-t border-emerald-200">
+                                                        {/* Foto Placa Técnica */}
+                                                        <div className="space-y-2">
+                                                            <Label className="text-xs font-bold text-emerald-900 block">
+                                                                {__('Foto de la Placa Técnica (NOM-035)')}
+                                                            </Label>
+                                                            <div className="relative flex items-center justify-center border rounded-xl h-24 bg-white overflow-hidden shadow-xs">
+                                                                {newVehicle.remolque_foto_placa ? (
+                                                                    <img src={newVehicle.remolque_foto_placa} className="w-full h-full object-cover" />
+                                                                ) : (
+                                                                    <span className="text-xs italic text-slate-400">{__('Sin foto de placa técnica')}</span>
+                                                                )}
+                                                            </div>
+                                                            <div className="grid grid-cols-2 gap-1.5">
+                                                                <Button type="button" variant="outline" size="sm" className="text-[11px] h-8 relative">
+                                                                    <ImageIcon className="w-3.5 h-3.5 mr-1" />
+                                                                    {__('Subir')}
+                                                                    <input 
+                                                                        type="file" 
+                                                                        accept="image/*" 
+                                                                        onChange={(e) => handleFileChange(e, 'remolque_foto_placa', 'vehicle')} 
+                                                                        className="absolute inset-0 opacity-0 cursor-pointer"
+                                                                    />
+                                                                </Button>
+                                                                <Button 
+                                                                    type="button" 
+                                                                    variant="outline" 
+                                                                    size="sm" 
+                                                                    className="text-[11px] h-8 text-[#104a29]" 
+                                                                    onClick={() => handleOpenCamera('vehicle', 'remolque_foto_placa')}
+                                                                >
+                                                                    <CameraIcon className="w-3.5 h-3.5 mr-1" />
+                                                                    {__('Cámara')}
+                                                                </Button>
+                                                            </div>
+                                                        </div>
+
+                                                        {/* Foto Lateral Caja */}
+                                                        <div className="space-y-2">
+                                                            <Label className="text-xs font-bold text-slate-700 block">
+                                                                {__('Foto Lateral de la Caja')}
+                                                            </Label>
+                                                            <div className="relative flex items-center justify-center border rounded-xl h-24 bg-white overflow-hidden shadow-xs">
+                                                                {newVehicle.remolque_foto_lateral ? (
+                                                                    <img src={newVehicle.remolque_foto_lateral} className="w-full h-full object-cover" />
+                                                                ) : (
+                                                                    <span className="text-xs italic text-slate-400">{__('Sin foto lateral')}</span>
+                                                                )}
+                                                            </div>
+                                                            <div className="grid grid-cols-2 gap-1.5">
+                                                                <Button type="button" variant="outline" size="sm" className="text-[11px] h-8 relative">
+                                                                    <ImageIcon className="w-3.5 h-3.5 mr-1" />
+                                                                    {__('Subir')}
+                                                                    <input 
+                                                                        type="file" 
+                                                                        accept="image/*" 
+                                                                        onChange={(e) => handleFileChange(e, 'remolque_foto_lateral', 'vehicle')} 
+                                                                        className="absolute inset-0 opacity-0 cursor-pointer"
+                                                                    />
+                                                                </Button>
+                                                                <Button 
+                                                                    type="button" 
+                                                                    variant="outline" 
+                                                                    size="sm" 
+                                                                    className="text-[11px] h-8 text-[#104a29]" 
+                                                                    onClick={() => handleOpenCamera('vehicle', 'remolque_foto_lateral')}
+                                                                >
+                                                                    <CameraIcon className="w-3.5 h-3.5 mr-1" />
+                                                                    {__('Cámara')}
+                                                                </Button>
+                                                            </div>
                                                         </div>
                                                     </div>
                                                 </div>
-                                            </div>
-
+                                            )}
                                         </div>
+
+                                        {/* Fotos de la Unidad Tractor/Camión */}
+                                        <div className="space-y-2 border-t pt-4">
+                                            <h4 className="text-xs font-semibold text-slate-500">{__('Fotos de la Unidad Motriz')}</h4>
+                                            
+                                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-2">
+                                                {/* Foto frontal */}
+                                                <div className="space-y-2">
+                                                    <Label className="text-xs font-medium">{__('Foto Frontal')}</Label>
+                                                    <div className="relative flex items-center justify-center border rounded-xl h-24 bg-white overflow-hidden shadow-xs">
+                                                        {newVehicle.foto_frontal ? (
+                                                            <img src={newVehicle.foto_frontal} className="w-full h-full object-cover" />
+                                                        ) : (
+                                                            <span className="text-xs italic text-slate-400">{__('Sin foto frontal')}</span>
+                                                        )}
+                                                    </div>
+                                                    <div className="grid grid-cols-2 gap-1.5">
+                                                        <Button
+                                                            type="button"
+                                                            variant="outline"
+                                                            size="sm"
+                                                            className="text-[11px] h-8 relative"
+                                                        >
+                                                            <ImageIcon className="w-3.5 h-3.5 mr-1" />
+                                                            {__('Subir')}
+                                                            <input 
+                                                                type="file" 
+                                                                accept="image/*" 
+                                                                onChange={(e) => handleFileChange(e, 'foto_frontal', 'vehicle')}
+                                                                className="absolute inset-0 opacity-0 cursor-pointer"
+                                                            />
+                                                        </Button>
+                                                        <Button
+                                                            type="button"
+                                                            variant="outline"
+                                                            size="sm"
+                                                            className="text-[11px] h-8 text-[#104a29]"
+                                                            onClick={() => handleOpenCamera('vehicle', 'foto_frontal')}
+                                                        >
+                                                            <CameraIcon className="w-3.5 h-3.5 mr-1" />
+                                                            {__('Cámara')}
+                                                        </Button>
+                                                    </div>
+                                                </div>
+
+                                                {/* Foto trasera */}
+                                                <div className="space-y-2">
+                                                    <Label className="text-xs font-medium">{__('Foto Trasera')}</Label>
+                                                    <div className="relative flex items-center justify-center border rounded-xl h-24 bg-white overflow-hidden shadow-xs">
+                                                        {newVehicle.foto_trasera ? (
+                                                            <img src={newVehicle.foto_trasera} className="w-full h-full object-cover" />
+                                                        ) : (
+                                                            <span className="text-xs italic text-slate-400">{__('Sin foto trasera')}</span>
+                                                        )}
+                                                    </div>
+                                                    <div className="grid grid-cols-2 gap-1.5">
+                                                        <Button
+                                                            type="button"
+                                                            variant="outline"
+                                                            size="sm"
+                                                            className="text-[11px] h-8 relative"
+                                                        >
+                                                            <ImageIcon className="w-3.5 h-3.5 mr-1" />
+                                                            {__('Subir')}
+                                                            <input 
+                                                                type="file" 
+                                                                accept="image/*" 
+                                                                onChange={(e) => handleFileChange(e, 'foto_trasera', 'vehicle')}
+                                                                className="absolute inset-0 opacity-0 cursor-pointer"
+                                                            />
+                                                        </Button>
+                                                        <Button
+                                                            type="button"
+                                                            variant="outline"
+                                                            size="sm"
+                                                            className="text-[11px] h-8 text-[#104a29]"
+                                                            onClick={() => handleOpenCamera('vehicle', 'foto_trasera')}
+                                                        >
+                                                            <CameraIcon className="w-3.5 h-3.5 mr-1" />
+                                                            {__('Cámara')}
+                                                        </Button>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+
                                         <div className="flex justify-end gap-2 pt-2 border-t mt-2">
                                             <Button 
                                                 type="button" 
                                                 variant="outline" 
-                                                size="sm"
+                                                size="sm" 
                                                 onClick={() => setShowVehicleForm(false)}
                                             >
-                                                {__('Cancel')}
+                                                {__('Cancelar')}
                                             </Button>
                                             <Button 
                                                 type="button" 
-                                                size="sm"
-                                                onClick={handleAddVehicle}
+                                                size="sm" 
+                                                onClick={handleAddVehicle} 
                                                 className="bg-[#104a29] hover:bg-[#0c371e] text-white"
                                             >
-                                                {__('Save Vehicle')}
+                                                {__('Guardar Vehículo')}
                                             </Button>
                                         </div>
                                     </div>
@@ -958,23 +1335,38 @@ export default function Wizard({ preRegistro, paises, mapbox_api_key, mapbox_act
                                     {vehicles.length === 0 ? (
                                         <div className="text-center py-10 border-2 border-dashed rounded-2xl text-muted-foreground bg-slate-50/20 dark:bg-slate-900/10">
                                             <Car className="w-10 h-10 mx-auto text-slate-300 mb-2" />
-                                            <p className="text-sm font-medium">{__('No vehicles registered.')}</p>
-                                            <p className="text-xs text-slate-400 mt-0.5">{__('If collaborators will arrive by vehicle, add it here.')}</p>
+                                            <p className="text-sm font-medium">{__('No hay vehículos registrados.')}</p>
+                                            <p className="text-xs text-slate-400 mt-0.5">{__('Si sus transportistas o colaboradores ingresan en vehículo, regístrelos aquí.')}</p>
                                         </div>
                                     ) : (
                                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                                             {vehicles.map((veh, i) => (
-                                                <div key={i} className="p-4 border rounded-2xl flex justify-between items-center bg-white dark:bg-slate-900 shadow-xs">
-                                                    <div className="flex items-center gap-3">
-                                                        <div className="w-10 h-10 border rounded-lg overflow-hidden shrink-0 bg-slate-50 flex items-center justify-center">
-                                                            {veh.foto_frontal ? <img src={veh.foto_frontal} className="w-full h-full object-cover" /> : <Car className="w-6 h-6 text-slate-300" />}
+                                                <div key={i} className="p-4 border rounded-2xl flex flex-col justify-between gap-3 bg-white dark:bg-slate-900 shadow-xs">
+                                                    <div className="flex items-start justify-between gap-2">
+                                                        <div className="flex items-center gap-3">
+                                                            <div className="w-12 h-12 border rounded-lg overflow-hidden shrink-0 bg-slate-50 flex items-center justify-center">
+                                                                {veh.foto_frontal ? <img src={veh.foto_frontal} className="w-full h-full object-cover" /> : <Car className="w-6 h-6 text-slate-300" />}
+                                                            </div>
+                                                            <div>
+                                                                <span className="font-semibold text-sm block">{veh.marca} {veh.modelo} ({veh.year})</span>
+                                                                <div className="flex flex-wrap gap-1.5 text-xs text-slate-500 font-mono mt-0.5">
+                                                                    <span className="bg-[#104a29]/10 text-[#104a29] px-1.5 py-0.2 rounded font-bold">{veh.placa}</span>
+                                                                    <span>• {veh.tipo_vehiculo}</span>
+                                                                </div>
+                                                            </div>
                                                         </div>
-                                                        <div>
-                                                            <span className="font-semibold text-sm block">{veh.marca} {veh.modelo} ({veh.year})</span>
-                                                            <span className="text-xs text-slate-400 font-mono">{__('License Plate:')} {veh.placa} • {veh.tipo_vehiculo}</span>
-                                                        </div>
+                                                        <Button variant="ghost" size="icon" onClick={() => handleRemoveVehicle(i)} className="text-rose-600 hover:bg-rose-50"><Trash2 className="w-4 h-4" /></Button>
                                                     </div>
-                                                    <Button variant="ghost" size="icon" onClick={() => handleRemoveVehicle(i)} className="text-rose-600 hover:bg-rose-50"><Trash2 className="w-4 h-4" /></Button>
+
+                                                    {/* Badge de Remolque / Caja */}
+                                                    {veh.tiene_remolque && (
+                                                        <div className="p-2 bg-emerald-50 dark:bg-emerald-950/30 border border-emerald-200/80 rounded-lg text-xs text-emerald-900 dark:text-emerald-200 flex items-center justify-between">
+                                                            <span>Caja: {veh.remolque_tipo || 'Semirremolque'} ({veh.remolque_largo || "53'"})</span>
+                                                            <span className="font-mono font-bold bg-white dark:bg-slate-900 px-1.5 py-0.5 rounded border border-emerald-300">
+                                                                Placa Caja: {veh.remolque_placa || 'N/E'}
+                                                            </span>
+                                                        </div>
+                                                    )}
                                                 </div>
                                             ))}
                                         </div>
