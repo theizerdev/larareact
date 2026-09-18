@@ -86,6 +86,15 @@ interface ProveedorVehiculosModalProps {
 
 type CameraFieldType = 'foto_frontal' | 'foto_trasera' | 'remolque_foto_placa' | 'remolque_foto_lateral';
 
+const cleanUtf8 = (str?: string | null) => {
+    if (!str) return '';
+    try {
+        return decodeURIComponent(escape(str));
+    } catch (_) {
+        return str;
+    }
+};
+
 const initialForm = {
     categoria_vehiculo: 'carga',
     tipo_vehiculo: 'Tractocamión',
@@ -491,7 +500,7 @@ export default function ProveedorVehiculosModal({
                                     {__('Vehículos y Semirremolques del Proveedor')}
                                 </DialogTitle>
                                 <DialogDescription className="text-xs md:text-sm mt-0.5">
-                                    {__('Registro técnico reglamentario (Reglamento de Tránsito Federal Art. 24 y Placa de Semirremolque NOM-035-SCT-2-2010) para')} <span className="font-semibold text-slate-800 dark:text-slate-200">{proveedor?.razon_social}</span>.
+                                    {__('Registro técnico reglamentario (Reglamento de Tránsito Federal Art. 24 y Placa de Semirremolque NOM-035-SCT-2-2010) para')} <span className="font-semibold text-slate-800 dark:text-slate-200">{cleanUtf8(proveedor?.razon_social)}</span>.
                                 </DialogDescription>
                             </div>
                         </div>
@@ -590,13 +599,13 @@ export default function ProveedorVehiculosModal({
 
                                     {/* Categoría y Tipo de Vehículo */}
                                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                                        <div className="space-y-1.5">
+                                        <div className="space-y-1.5 w-full">
                                             <Label className="text-xs font-semibold">{__('Categoría Federal')} *</Label>
                                             <Select
                                                 value={form.categoria_vehiculo}
                                                 onValueChange={(v) => setForm((prev) => ({ ...prev, categoria_vehiculo: v }))}
                                             >
-                                                <SelectTrigger className="h-9 text-xs">
+                                                <SelectTrigger className="w-full h-9 text-xs">
                                                     <SelectValue placeholder="Seleccione Categoría" />
                                                 </SelectTrigger>
                                                 <SelectContent>
@@ -607,13 +616,13 @@ export default function ProveedorVehiculosModal({
                                             </Select>
                                         </div>
 
-                                        <div className="space-y-1.5">
+                                        <div className="space-y-1.5 w-full">
                                             <Label className="text-xs font-semibold">{__('Tipo de Vehículo')} *</Label>
                                             <Select
                                                 value={form.tipo_vehiculo}
                                                 onValueChange={handleTipoVehiculoChange}
                                             >
-                                                <SelectTrigger className="h-9 text-xs">
+                                                <SelectTrigger className="w-full h-9 text-xs">
                                                     <SelectValue placeholder="Tipo de Vehículo" />
                                                 </SelectTrigger>
                                                 <SelectContent>
@@ -651,13 +660,13 @@ export default function ProveedorVehiculosModal({
 
                                     {/* Subtipo de Carrocería */}
                                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                                        <div className="space-y-1.5">
+                                        <div className="space-y-1.5 w-full">
                                             <Label className="text-xs font-semibold">{__('Subtipo de Carrocería')} (Art. 24)</Label>
                                             <Select
                                                 value={form.subtipo_carroceria}
                                                 onValueChange={(v) => setForm((prev) => ({ ...prev, subtipo_carroceria: v }))}
                                             >
-                                                <SelectTrigger className="h-9 text-xs">
+                                                <SelectTrigger className="w-full h-9 text-xs">
                                                     <SelectValue placeholder="Configuración de Carrocería" />
                                                 </SelectTrigger>
                                                 <SelectContent>
@@ -680,12 +689,12 @@ export default function ProveedorVehiculosModal({
                                             </Select>
                                         </div>
 
-                                        <div className="space-y-1.5">
+                                        <div className="space-y-1.5 w-full">
                                             <Label className="text-xs font-semibold">{__('Placa de la Unidad')} *</Label>
                                             <Input
                                                 value={form.placa}
                                                 onChange={(e) => setForm((prev) => ({ ...prev, placa: e.target.value.toUpperCase() }))}
-                                                className="h-9 text-xs font-mono font-bold uppercase"
+                                                className="w-full h-9 text-xs font-mono font-bold uppercase"
                                                 placeholder="Ej: 12-AA-3B o ABC-123"
                                                 required
                                             />
@@ -693,34 +702,34 @@ export default function ProveedorVehiculosModal({
                                     </div>
 
                                     {/* Marca, Modelo, Año */}
-                                    <div className="grid grid-cols-3 gap-3">
-                                        <div className="space-y-1.5">
+                                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                                        <div className="space-y-1.5 w-full">
                                             <Label className="text-xs font-semibold">{__('Marca')} *</Label>
                                             <Input
                                                 value={form.marca}
                                                 onChange={(e) => setForm((prev) => ({ ...prev, marca: e.target.value }))}
-                                                className="h-9 text-xs"
+                                                className="w-full h-9 text-xs"
                                                 placeholder="Ej: Kenworth, Freightliner"
                                                 required
                                             />
                                         </div>
-                                        <div className="space-y-1.5">
+                                        <div className="space-y-1.5 w-full">
                                             <Label className="text-xs font-semibold">{__('Modelo')} *</Label>
                                             <Input
                                                 value={form.modelo}
                                                 onChange={(e) => setForm((prev) => ({ ...prev, modelo: e.target.value }))}
-                                                className="h-9 text-xs"
+                                                className="w-full h-9 text-xs"
                                                 placeholder="Ej: T680, Cascadia"
                                                 required
                                             />
                                         </div>
-                                        <div className="space-y-1.5">
+                                        <div className="space-y-1.5 w-full">
                                             <Label className="text-xs font-semibold">{__('Año')} *</Label>
                                             <Input
                                                 type="number"
                                                 value={form.year}
                                                 onChange={(e) => setForm((prev) => ({ ...prev, year: Number(e.target.value) }))}
-                                                className="h-9 text-xs"
+                                                className="w-full h-9 text-xs"
                                                 required
                                             />
                                         </div>
@@ -728,23 +737,23 @@ export default function ProveedorVehiculosModal({
 
                                     {/* VIN de la Unidad y Número de Ejes */}
                                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-2 border-t">
-                                        <div className="space-y-1.5">
+                                        <div className="space-y-1.5 w-full">
                                             <Label className="text-xs font-semibold">{__('VIN / Número de Serie (17 dígitos)')}</Label>
                                             <Input
                                                 value={form.numero_serie_vin}
                                                 onChange={(e) => setForm((prev) => ({ ...prev, numero_serie_vin: e.target.value.toUpperCase() }))}
-                                                className="h-9 text-xs font-mono uppercase"
+                                                className="w-full h-9 text-xs font-mono uppercase"
                                                 placeholder="1M8GDM9A_KP042788"
                                                 maxLength={17}
                                             />
                                         </div>
-                                        <div className="space-y-1.5">
+                                        <div className="space-y-1.5 w-full">
                                             <Label className="text-xs font-semibold">{__('No. Ejes del Tractor / Camión')}</Label>
                                             <Select
                                                 value={String(form.numero_ejes)}
                                                 onValueChange={(v) => setForm((prev) => ({ ...prev, numero_ejes: Number(v) }))}
                                             >
-                                                <SelectTrigger className="h-9 text-xs">
+                                                <SelectTrigger className="w-full h-9 text-xs">
                                                     <SelectValue placeholder="Ejes" />
                                                 </SelectTrigger>
                                                 <SelectContent>
@@ -758,32 +767,41 @@ export default function ProveedorVehiculosModal({
                                     </div>
 
                                     {/* Tarjeta de Circulación y Seguro Obligatorio */}
-                                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                                        <div className="space-y-1.5">
-                                            <Label className="text-xs font-semibold">{__('Folio Tarjeta Circulación')}</Label>
+                                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+                                        <div className="space-y-1.5 w-full">
+                                            <Label className="text-xs font-semibold">{__('Folio Tarjeta')}</Label>
                                             <Input
                                                 value={form.tarjeta_circulacion}
                                                 onChange={(e) => setForm((prev) => ({ ...prev, tarjeta_circulacion: e.target.value }))}
-                                                className="h-9 text-xs"
+                                                className="w-full h-9 text-xs"
                                                 placeholder="Folio SCT/Estatal"
                                             />
                                         </div>
-                                        <div className="space-y-1.5">
+                                        <div className="space-y-1.5 w-full">
                                             <Label className="text-xs font-semibold">{__('Aseguradora')}</Label>
                                             <Input
                                                 value={form.aseguradora}
                                                 onChange={(e) => setForm((prev) => ({ ...prev, aseguradora: e.target.value }))}
-                                                className="h-9 text-xs"
+                                                className="w-full h-9 text-xs"
                                                 placeholder="Ej: Qualitas, GNP"
                                             />
                                         </div>
-                                        <div className="space-y-1.5">
+                                        <div className="space-y-1.5 w-full">
                                             <Label className="text-xs font-semibold">{__('No. Póliza Seguro')}</Label>
                                             <Input
                                                 value={form.poliza_seguro}
                                                 onChange={(e) => setForm((prev) => ({ ...prev, poliza_seguro: e.target.value }))}
-                                                className="h-9 text-xs"
+                                                className="w-full h-9 text-xs"
                                                 placeholder="Póliza vigente"
+                                            />
+                                        </div>
+                                        <div className="space-y-1.5 w-full">
+                                            <Label className="text-xs font-semibold">{__('Vigencia Póliza')}</Label>
+                                            <Input
+                                                type="date"
+                                                value={form.vigencia_seguro}
+                                                onChange={(e) => setForm((prev) => ({ ...prev, vigencia_seguro: e.target.value }))}
+                                                className="w-full h-9 text-xs"
                                             />
                                         </div>
                                     </div>
@@ -835,21 +853,21 @@ export default function ProveedorVehiculosModal({
                                         <div className="space-y-4">
                                             {/* Datos del Fabricante de la Caja */}
                                             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                                                <div className="space-y-1.5">
-                                                    <Label className="text-xs font-semibold">{__('Fabricante de la Caja')} *</Label>
+                                                <div className="space-y-1.5 w-full">
+                                                    <Label className="text-xs font-semibold">{__('Fabricante / Marca')} *</Label>
                                                     <Input
                                                         value={form.remolque_fabricante}
                                                         onChange={(e) => setForm((prev) => ({ ...prev, remolque_fabricante: e.target.value }))}
-                                                        className="h-9 text-xs"
+                                                        className="w-full h-9 text-xs"
                                                         placeholder="Ej: Utility, Great Dane, Wabash, Fruehauf"
                                                     />
                                                 </div>
-                                                <div className="space-y-1.5">
+                                                <div className="space-y-1.5 w-full">
                                                     <Label className="text-xs font-semibold">{__('No. Serie del Fabricante')}</Label>
                                                     <Input
                                                         value={form.remolque_serie_fabricante}
                                                         onChange={(e) => setForm((prev) => ({ ...prev, remolque_serie_fabricante: e.target.value }))}
-                                                        className="h-9 text-xs"
+                                                        className="w-full h-9 text-xs"
                                                         placeholder="Folio de serie del fabricante"
                                                     />
                                                 </div>
@@ -857,32 +875,32 @@ export default function ProveedorVehiculosModal({
 
                                             {/* Identificación: VIN y Placa de la Caja */}
                                             <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                                                <div className="space-y-1.5">
+                                                <div className="space-y-1.5 w-full">
                                                     <Label className="text-xs font-semibold">{__('VIN de la Caja (17 caracteres)')}</Label>
                                                     <Input
                                                         value={form.remolque_vin}
                                                         onChange={(e) => setForm((prev) => ({ ...prev, remolque_vin: e.target.value.toUpperCase() }))}
-                                                        className="h-9 text-xs font-mono uppercase"
+                                                        className="w-full h-9 text-xs font-mono uppercase"
                                                         placeholder="VIN placa de caja"
                                                         maxLength={17}
                                                     />
                                                 </div>
-                                                <div className="space-y-1.5">
+                                                <div className="space-y-1.5 w-full">
                                                     <Label className="text-xs font-semibold">{__('Placa del Semirremolque')} *</Label>
                                                     <Input
                                                         value={form.remolque_placa}
                                                         onChange={(e) => setForm((prev) => ({ ...prev, remolque_placa: e.target.value.toUpperCase() }))}
-                                                        className="h-9 text-xs font-mono font-bold uppercase"
+                                                        className="w-full h-9 text-xs font-mono font-bold uppercase"
                                                         placeholder="Ej: 34-TY-8U"
                                                     />
                                                 </div>
-                                                <div className="space-y-1.5">
+                                                <div className="space-y-1.5 w-full">
                                                     <Label className="text-xs font-semibold">{__('Tipo de Semirremolque')}</Label>
                                                     <Select
                                                         value={form.remolque_tipo}
                                                         onValueChange={(v) => setForm((prev) => ({ ...prev, remolque_tipo: v }))}
                                                     >
-                                                        <SelectTrigger className="h-9 text-xs">
+                                                        <SelectTrigger className="w-full h-9 text-xs">
                                                             <SelectValue placeholder="Tipo de Semirremolque" />
                                                         </SelectTrigger>
                                                         <SelectContent>
@@ -909,61 +927,61 @@ export default function ProveedorVehiculosModal({
                                                     {__('Pesos y Dimensiones (Datos de la Placa Técnica)')}
                                                 </span>
 
-                                                <div className="grid grid-cols-3 gap-3">
-                                                    <div className="space-y-1.5">
+                                                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                                                    <div className="space-y-1.5 w-full">
                                                         <Label className="text-xs font-medium">{__('Largo (pies/m)')}</Label>
                                                         <Input
                                                             value={form.remolque_largo}
                                                             onChange={(e) => setForm((prev) => ({ ...prev, remolque_largo: e.target.value }))}
-                                                            className="h-9 text-xs"
+                                                            className="w-full h-9 text-xs"
                                                             placeholder="Ej: 53', 48', 16.15m"
                                                         />
                                                     </div>
-                                                    <div className="space-y-1.5">
+                                                    <div className="space-y-1.5 w-full">
                                                         <Label className="text-xs font-medium">{__('Ancho')}</Label>
                                                         <Input
                                                             value={form.remolque_ancho}
                                                             onChange={(e) => setForm((prev) => ({ ...prev, remolque_ancho: e.target.value }))}
-                                                            className="h-9 text-xs"
+                                                            className="w-full h-9 text-xs"
                                                             placeholder="Ej: 2.60 m"
                                                         />
                                                     </div>
-                                                    <div className="space-y-1.5">
+                                                    <div className="space-y-1.5 w-full">
                                                         <Label className="text-xs font-medium">{__('Alto')}</Label>
                                                         <Input
                                                             value={form.remolque_alto}
                                                             onChange={(e) => setForm((prev) => ({ ...prev, remolque_alto: e.target.value }))}
-                                                            className="h-9 text-xs"
+                                                            className="w-full h-9 text-xs"
                                                             placeholder="Ej: 4.15 m"
                                                         />
                                                     </div>
                                                 </div>
 
-                                                <div className="grid grid-cols-3 gap-3">
-                                                    <div className="space-y-1.5">
+                                                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                                                    <div className="space-y-1.5 w-full">
                                                         <Label className="text-xs font-medium">{__('PBVO (kg/lbs)')}</Label>
                                                         <Input
                                                             value={form.remolque_peso_bruto_vehicular}
                                                             onChange={(e) => setForm((prev) => ({ ...prev, remolque_peso_bruto_vehicular: e.target.value }))}
-                                                            className="h-9 text-xs"
+                                                            className="w-full h-9 text-xs"
                                                             placeholder="Peso Bruto Veh."
                                                         />
                                                     </div>
-                                                    <div className="space-y-1.5">
+                                                    <div className="space-y-1.5 w-full">
                                                         <Label className="text-xs font-medium">{__('Tara (kg/lbs)')}</Label>
                                                         <Input
                                                             value={form.remolque_peso_vehicular}
                                                             onChange={(e) => setForm((prev) => ({ ...prev, remolque_peso_vehicular: e.target.value }))}
-                                                            className="h-9 text-xs"
+                                                            className="w-full h-9 text-xs"
                                                             placeholder="Peso vacío / Tara"
                                                         />
                                                     </div>
-                                                    <div className="space-y-1.5">
+                                                    <div className="space-y-1.5 w-full">
                                                         <Label className="text-xs font-medium">{__('Carga Útil')}</Label>
                                                         <Input
                                                             value={form.remolque_capacidad_carga}
                                                             onChange={(e) => setForm((prev) => ({ ...prev, remolque_capacidad_carga: e.target.value }))}
-                                                            className="h-9 text-xs"
+                                                            className="w-full h-9 text-xs"
                                                             placeholder="Capacidad de carga"
                                                         />
                                                     </div>
@@ -978,13 +996,13 @@ export default function ProveedorVehiculosModal({
                                                 </span>
 
                                                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                                                    <div className="space-y-1.5">
+                                                    <div className="space-y-1.5 w-full">
                                                         <Label className="text-xs font-medium">{__('No. Ejes')}</Label>
                                                         <Select
                                                             value={String(form.remolque_ejes)}
                                                             onValueChange={(v) => setForm((prev) => ({ ...prev, remolque_ejes: Number(v) }))}
                                                         >
-                                                            <SelectTrigger className="h-9 text-xs">
+                                                            <SelectTrigger className="w-full h-9 text-xs">
                                                                 <SelectValue placeholder="Ejes" />
                                                             </SelectTrigger>
                                                             <SelectContent>
@@ -996,13 +1014,13 @@ export default function ProveedorVehiculosModal({
                                                         </Select>
                                                     </div>
 
-                                                    <div className="space-y-1.5">
+                                                    <div className="space-y-1.5 w-full">
                                                         <Label className="text-xs font-medium">{__('Suspensión')}</Label>
                                                         <Select
                                                             value={form.remolque_tipo_suspension}
                                                             onValueChange={(v) => setForm((prev) => ({ ...prev, remolque_tipo_suspension: v }))}
                                                         >
-                                                            <SelectTrigger className="h-9 text-xs">
+                                                            <SelectTrigger className="w-full h-9 text-xs">
                                                                 <SelectValue placeholder="Suspensión" />
                                                             </SelectTrigger>
                                                             <SelectContent>
@@ -1012,43 +1030,43 @@ export default function ProveedorVehiculosModal({
                                                         </Select>
                                                     </div>
 
-                                                    <div className="space-y-1.5">
+                                                    <div className="space-y-1.5 w-full">
                                                         <Label className="text-xs font-medium">{__('Capacidad Patines')}</Label>
                                                         <Input
                                                             value={form.remolque_capacidad_patines}
                                                             onChange={(e) => setForm((prev) => ({ ...prev, remolque_capacidad_patines: e.target.value }))}
-                                                            className="h-9 text-xs"
+                                                            className="w-full h-9 text-xs"
                                                             placeholder="Ej: 50,000 lbs"
                                                         />
                                                     </div>
                                                 </div>
 
                                                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                                                    <div className="space-y-1.5">
+                                                    <div className="space-y-1.5 w-full">
                                                         <Label className="text-xs font-medium">{__('Cantidad Llantas')}</Label>
                                                         <Input
                                                             type="number"
                                                             value={form.remolque_cantidad_llantas}
                                                             onChange={(e) => setForm((prev) => ({ ...prev, remolque_cantidad_llantas: Number(e.target.value) }))}
-                                                            className="h-9 text-xs"
+                                                            className="w-full h-9 text-xs"
                                                             placeholder="Ej: 8"
                                                         />
                                                     </div>
-                                                    <div className="space-y-1.5">
+                                                    <div className="space-y-1.5 w-full">
                                                         <Label className="text-xs font-medium">{__('Medida Llantas')}</Label>
                                                         <Input
                                                             value={form.remolque_medida_llantas}
                                                             onChange={(e) => setForm((prev) => ({ ...prev, remolque_medida_llantas: e.target.value }))}
-                                                            className="h-9 text-xs"
+                                                            className="w-full h-9 text-xs"
                                                             placeholder="295/75R22.5 o 11R22.5"
                                                         />
                                                     </div>
-                                                    <div className="space-y-1.5">
+                                                    <div className="space-y-1.5 w-full">
                                                         <Label className="text-xs font-medium">{__('Presión (PSI)')}</Label>
                                                         <Input
                                                             value={form.remolque_presion_llantas}
                                                             onChange={(e) => setForm((prev) => ({ ...prev, remolque_presion_llantas: e.target.value }))}
-                                                            className="h-9 text-xs"
+                                                            className="w-full h-9 text-xs"
                                                             placeholder="Ej: 100 PSI"
                                                         />
                                                     </div>
