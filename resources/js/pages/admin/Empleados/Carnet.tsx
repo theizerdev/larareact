@@ -229,11 +229,6 @@ export default function CarnetPage({ empleado }: CarnetPageProps) {
                         fontFamily: 'system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif'
                     }}
                 >
-                    {/* Watercolor abstract top spots matching physical card */}
-                    <div style={{ position: 'absolute', top: '-8px', left: '-5px', width: '95px', height: '60px', backgroundColor: 'rgba(211, 18, 42, 0.95)', borderRadius: '45% 55% 70% 30% / 50% 60% 40% 50%', filter: 'blur(1.5px)', mixBlendMode: 'multiply' }} />
-                    <div style={{ position: 'absolute', top: '-12px', left: '80px', width: '85px', height: '58px', backgroundColor: 'rgba(88, 28, 93, 0.9)', borderRadius: '50% 40% 60% 40% / 40% 50% 50% 60%', filter: 'blur(1.5px)', mixBlendMode: 'multiply' }} />
-                    <div style={{ position: 'absolute', top: '-15px', left: '155px', width: '90px', height: '52px', backgroundColor: 'rgba(16, 117, 188, 0.9)', borderRadius: '30% 70% 40% 60% / 50% 40% 60% 50%', filter: 'blur(1.5px)', mixBlendMode: 'multiply' }} />
-
                     {/* ══ Sección Superior (Nombres Apilados y Foto) ══ */}
                     <div
                         style={{
@@ -241,7 +236,7 @@ export default function CarnetPage({ empleado }: CarnetPageProps) {
                             flexDirection: 'row',
                             alignItems: 'center',
                             justifyContent: 'space-between',
-                            padding: '48px 20px 10px 20px',
+                            padding: '24px 20px 10px 20px',
                             boxSizing: 'border-box',
                             height: '190px',
                             zIndex: 10

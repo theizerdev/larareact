@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Head, router } from '@inertiajs/react';
+import { Head, Link, router } from '@inertiajs/react';
 import { Breadcrumbs } from '@/components/breadcrumbs';
 import { ModuleHeader } from '@/components/module-header';
 import { StatCard } from '@/components/stat-card';
@@ -10,21 +10,25 @@ import {
     LogIn, 
     LogOut, 
     Utensils, 
-    Coffee,
-    Search,
-    RotateCcw,
-    Eye,
-    Building2,
-    UserCheck,
-    ListOrdered,
-    ShieldCheck,
-    Camera,
-    MapPin,
-    FileText,
-    Timer,
-    AlertTriangle,
-    CheckCircle2,
-    Hourglass
+    Coffee, 
+    Search, 
+    RotateCcw, 
+    Eye, 
+    Building2, 
+    UserCheck, 
+    ListOrdered, 
+    ShieldCheck, 
+    Camera, 
+    MapPin, 
+    FileText, 
+    Timer, 
+    AlertTriangle, 
+    CheckCircle2, 
+    Hourglass,
+    Download,
+    FileSpreadsheet,
+    LayoutDashboard,
+    ExternalLink
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -52,10 +56,15 @@ interface MarcajeIndividual {
     tipo_marcaje: 'entrada' | 'salida_comida' | 'entrada_comida' | 'salida' | 'descanso_inicio' | 'descanso_fin' | 'entrada_extraordinaria';
     fecha_hora: string;
     fecha_hora_iso?: string;
+    fecha_hora_local?: string;
+    zona_horaria?: string;
     origen: string;
+    latitud?: number | string | null;
+    longitud?: number | string | null;
+    geolocalizacion?: string | null;
     fotografia_path?: string | null;
     observaciones?: string | null;
-    sucursal?: { nombre: string };
+    sucursal?: { nombre: string; zona_horaria?: string };
 }
 
 interface EmpleadoBitacora {
@@ -65,6 +74,8 @@ interface EmpleadoBitacora {
     documento_identidad: string;
     departamento?: { nombre: string };
     cargo?: { nombre: string };
+    responsable?: { nombres: string; apellidos: string };
+    sucursal?: { nombre: string; zona_horaria?: string };
     turnoLaboral?: { minutos_descanso?: number; nombre?: string };
     ultimo_marcaje?: MarcajeIndividual | null;
     tiempo_restante_info?: TiempoRestanteInfo | null;
@@ -158,23 +169,41 @@ interface Stats {
     salidas: number;
 }
 
+interface SucursalOption {
+    id: number;
+    nombre: string;
+    zona_horaria?: string;
+}
+
+interface ResponsableOption {
+    id: number;
+    nombres: string;
+    apellidos: string;
+}
+
 interface Props {
     marcajes: Paginated<EmpleadoBitacora>;
     stats?: Stats;
+    sucursales?: SucursalOption[];
+    responsables?: ResponsableOption[];
     filters: {
         search?: string;
         tipo_marcaje?: string;
         origen?: string;
         fecha_inicio?: string;
         fecha_fin?: string;
+        sucursal_id?: number | string;
+        responsable_id?: number | string;
         perPage?: number;
     };
 }
 
-export default function AsistenciaBitacoraIndex({ marcajes, stats, filters }: Props) {
+export default function AsistenciaBitacoraIndex({ marcajes, stats, sucursales = [], responsables = [], filters }: Props) {
     const [search, setSearch] = useState(filters.search || '');
     const [tipoMarcaje, setTipoMarcaje] = useState(filters.tipo_marcaje || 'todos');
     const [origen, setOrigen] = useState(filters.origen || 'todos');
+    const [sucursalId, setSucursalId] = useState(filters.sucursal_id ? String(filters.sucursal_id) : 'todas');
+    const [responsableId, setResponsableId] = useState(filters.responsable_id ? String(filters.responsable_id) : 'todos');
     const [fechaInicio, setFechaInicio] = useState(filters.fecha_inicio || '');
     const [fechaFin, setFechaFin] = useState(filters.fecha_fin || '');
     const [selectedEmpleado, setSelectedEmpleado] = useState<EmpleadoBitacora | null>(null);
@@ -206,6 +235,8 @@ export default function AsistenciaBitacoraIndex({ marcajes, stats, filters }: Pr
             search: search || undefined,
             tipo_marcaje: tipoMarcaje !== 'todos' ? tipoMarcaje : undefined,
             origen: origen !== 'todos' ? origen : undefined,
+            sucursal_id: sucursalId !== 'todas' ? sucursalId : undefined,
+            responsable_id: responsableId !== 'todos' ? responsableId : undefined,
             fecha_inicio: fechaInicio || undefined,
             fecha_fin: fechaFin || undefined,
         }, { preserveState: true });
@@ -215,9 +246,25 @@ export default function AsistenciaBitacoraIndex({ marcajes, stats, filters }: Pr
         setSearch('');
         setTipoMarcaje('todos');
         setOrigen('todos');
+        setSucursalId('todas');
+        setResponsableId('todos');
         setFechaInicio('');
         setFechaFin('');
         router.get('/admin/asistencia/bitacora', {}, { preserveState: true });
+    };
+
+    const handleExport = (formato: 'excel' | 'csv') => {
+        const params = new URLSearchParams();
+        params.set('formato', formato);
+        if (search) params.set('search', search);
+        if (tipoMarcaje && tipoMarcaje !== 'todos') params.set('tipo_marcaje', tipoMarcaje);
+        if (origen && origen !== 'todos') params.set('origen', origen);
+        if (sucursalId && sucursalId !== 'todas') params.set('sucursal_id', sucursalId);
+        if (responsableId && responsableId !== 'todos') params.set('responsable_id', responsableId);
+        if (fechaInicio) params.set('fecha_inicio', fechaInicio);
+        if (fechaFin) params.set('fecha_fin', fechaFin);
+
+        window.open(`/admin/asistencia/bitacora/exportar?${params.toString()}`, '_blank');
     };
 
     const setQuickDate = (range: 'today' | 'week' | 'month') => {
@@ -305,7 +352,34 @@ export default function AsistenciaBitacoraIndex({ marcajes, stats, filters }: Pr
                     description="Supervisión agrupada de marcajes, descansos de Ley Silla y almuerzos en tiempo real."
                     icon={<Clock className="h-6 w-6 text-white" />}
                     colorClassName="bg-indigo-600"
-                />
+                >
+                    <div className="flex flex-wrap items-center gap-2">
+                        <Link href="/admin/asistencia/panel-control">
+                            <Button variant="secondary" size="sm" className="bg-white/20 hover:bg-white/30 text-white border-0 gap-1.5 text-xs font-semibold shadow-xs">
+                                <LayoutDashboard className="w-3.5 h-3.5" />
+                                Panel por Sede
+                            </Button>
+                        </Link>
+                        <Button
+                            onClick={() => handleExport('excel')}
+                            variant="secondary"
+                            size="sm"
+                            className="bg-emerald-600 hover:bg-emerald-700 text-white border-0 gap-1.5 text-xs font-semibold shadow-xs"
+                        >
+                            <FileSpreadsheet className="w-3.5 h-3.5" />
+                            Exportar Excel
+                        </Button>
+                        <Button
+                            onClick={() => handleExport('csv')}
+                            variant="secondary"
+                            size="sm"
+                            className="bg-slate-800/90 hover:bg-slate-900 text-white border border-white/20 gap-1.5 text-xs font-semibold shadow-xs"
+                        >
+                            <Download className="w-3.5 h-3.5" />
+                            CSV
+                        </Button>
+                    </div>
+                </ModuleHeader>
 
                 <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
                     <StatCard
@@ -335,17 +409,49 @@ export default function AsistenciaBitacoraIndex({ marcajes, stats, filters }: Pr
                 </div>
 
                 <FilterBar>
-                    <div className="grid grid-cols-1 md:grid-cols-5 gap-3 w-full">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-3 w-full">
                         <FilterField label="Buscar Empleado">
                             <div className="relative">
                                 <Search className="w-4 h-4 absolute left-2.5 top-2.5 text-muted-foreground" />
                                 <Input
-                                    placeholder="Nombre o N° Empleado..."
+                                    placeholder="Nombre o N°..."
                                     value={search}
                                     onChange={(e) => setSearch(e.target.value)}
                                     className="pl-9 text-xs"
                                 />
                             </div>
+                        </FilterField>
+
+                        <FilterField label="Sede / Sucursal">
+                            <Select value={sucursalId} onValueChange={setSucursalId}>
+                                <SelectTrigger className="text-xs">
+                                    <SelectValue placeholder="Todas las sedes" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    <SelectItem value="todas">Todas las sedes</SelectItem>
+                                    {sucursales.map((s) => (
+                                        <SelectItem key={s.id} value={String(s.id)}>
+                                            {s.nombre}
+                                        </SelectItem>
+                                    ))}
+                                </SelectContent>
+                            </Select>
+                        </FilterField>
+
+                        <FilterField label="Responsable">
+                            <Select value={responsableId} onValueChange={setResponsableId}>
+                                <SelectTrigger className="text-xs">
+                                    <SelectValue placeholder="Todos" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    <SelectItem value="todos">Todos los supervisores</SelectItem>
+                                    {responsables.map((r) => (
+                                        <SelectItem key={r.id} value={String(r.id)}>
+                                            {r.nombres} {r.apellidos}
+                                        </SelectItem>
+                                    ))}
+                                </SelectContent>
+                            </Select>
                         </FilterField>
 
                         <FilterField label="Tipo de Marcaje">
@@ -373,10 +479,10 @@ export default function AsistenciaBitacoraIndex({ marcajes, stats, filters }: Pr
                                 </SelectTrigger>
                                 <SelectContent>
                                     <SelectItem value="todos">Todos los orígenes</SelectItem>
-                                    <SelectItem value="kiosko_tactil">Reloj Checador</SelectItem>
+                                    <SelectItem value="kiosko">Reloj Checador (Kiosko)</SelectItem>
+                                    <SelectItem value="app">App Móvil</SelectItem>
                                     <SelectItem value="garita">Garita de Acceso</SelectItem>
-                                    <SelectItem value="app_movil">App Móvil</SelectItem>
-                                    <SelectItem value="reconocimiento_facial">Facial AI</SelectItem>
+                                    <SelectItem value="facial">Reconocimiento Facial</SelectItem>
                                     <SelectItem value="manual_admin">Manual Admin</SelectItem>
                                 </SelectContent>
                             </Select>
@@ -503,8 +609,22 @@ export default function AsistenciaBitacoraIndex({ marcajes, stats, filters }: Pr
                                                     <td className="px-4 py-3.5">
                                                         {ultimo && origenBadge ? (
                                                             <div className="space-y-1">
-                                                                <Badge variant="outline" className={`capitalize font-normal border text-xs ${origenBadge.class}`}>{origenBadge.label}</Badge>
-                                                                <div className="flex items-center gap-1 text-xs text-slate-500"><Building2 className="w-3 h-3" /> {ultimo.sucursal?.nombre || 'Matriz'}</div>
+                                                                <div className="flex items-center gap-1.5 flex-wrap">
+                                                                    <Badge variant="outline" className={`capitalize font-normal border text-xs ${origenBadge.class}`}>{origenBadge.label}</Badge>
+                                                                    {ultimo.latitud && ultimo.longitud && (
+                                                                        <a
+                                                                            href={`https://www.google.com/maps?q=${ultimo.latitud},${ultimo.longitud}`}
+                                                                            target="_blank"
+                                                                            rel="noreferrer"
+                                                                            title={`Ver GPS en Google Maps (${ultimo.latitud}, ${ultimo.longitud})`}
+                                                                            className="text-blue-600 hover:text-blue-700 dark:text-blue-400 inline-flex items-center gap-0.5 text-[10px] font-mono bg-blue-50 dark:bg-blue-950/40 px-1.5 py-0.5 rounded border border-blue-200 dark:border-blue-900 hover:underline"
+                                                                        >
+                                                                            <MapPin className="w-3 h-3 text-blue-500" />
+                                                                            GPS
+                                                                        </a>
+                                                                    )}
+                                                                </div>
+                                                                <div className="flex items-center gap-1 text-xs text-slate-500"><Building2 className="w-3 h-3" /> {ultimo.sucursal?.nombre || 'General'}</div>
                                                             </div>
                                                         ) : <span className="text-xs text-muted-foreground">-</span>}
                                                     </td>
@@ -617,15 +737,29 @@ export default function AsistenciaBitacoraIndex({ marcajes, stats, filters }: Pr
 
                                                         {/* Metadata: Origen, Sucursal y Evidencia */}
                                                         <div className="flex flex-wrap items-center justify-between gap-2 pt-1 border-t border-dashed text-xs text-muted-foreground">
-                                                            <div className="flex items-center gap-3">
+                                                            <div className="flex items-center gap-3 flex-wrap">
                                                                 <span className="flex items-center gap-1">
                                                                     <Building2 className="w-3.5 h-3.5" />
-                                                                    <strong className="text-slate-700 dark:text-slate-300">{m.sucursal?.nombre || 'Matriz'}</strong>
+                                                                    <strong className="text-slate-700 dark:text-slate-300">{m.sucursal?.nombre || 'General'}</strong>
                                                                 </span>
                                                                 <span>•</span>
                                                                 <Badge variant="outline" className={`text-[10px] font-normal border ${origenBadge.class}`}>
                                                                     {origenBadge.label}
                                                                 </Badge>
+                                                                {m.latitud && m.longitud ? (
+                                                                    <a
+                                                                        href={`https://www.google.com/maps?q=${m.latitud},${m.longitud}`}
+                                                                        target="_blank"
+                                                                        rel="noreferrer"
+                                                                        className="inline-flex items-center gap-1 text-[11px] text-blue-600 dark:text-blue-400 font-medium hover:underline bg-blue-50 dark:bg-blue-950/40 px-2 py-0.5 rounded border border-blue-200 dark:border-blue-900"
+                                                                    >
+                                                                        <MapPin className="w-3.5 h-3.5" /> GPS ({Number(m.latitud).toFixed(4)}, {Number(m.longitud).toFixed(4)})
+                                                                    </a>
+                                                                ) : (
+                                                                    <span className="text-[11px] text-slate-400 flex items-center gap-1">
+                                                                        <MapPin className="w-3 h-3 opacity-40" /> Sin GPS
+                                                                    </span>
+                                                                )}
                                                             </div>
 
                                                             {m.fotografia_path && (

@@ -50,6 +50,10 @@ class AsistenciaMarcaje extends Model
         'tipo_entrada',
     ];
 
+    protected $appends = [
+        'fecha_hora_local',
+    ];
+
     protected function casts(): array
     {
         return [
@@ -57,6 +61,15 @@ class AsistenciaMarcaje extends Model
             'latitud' => 'decimal:7',
             'longitud' => 'decimal:7',
         ];
+    }
+
+    /**
+     * Obtener la fecha y hora convertida a la zona horaria de la sucursal o empresa asignada.
+     */
+    public function getFechaHoraLocalAttribute(): string
+    {
+        $tz = $this->sucursal?->zona_horaria ?? $this->empresa?->zona_horaria ?? config('app.timezone', 'America/Mexico_City');
+        return \Carbon\Carbon::parse($this->fecha_hora)->timezone($tz)->format('Y-m-d H:i:s');
     }
 
     /**

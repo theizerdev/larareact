@@ -532,6 +532,12 @@ export default function AdminSaasLayout({
                                     permission: 'asistencia.kiosko',
                                 },
                                 {
+                                    title: 'Panel por Sede y Responsable',
+                                    href: '/admin/asistencia/panel-control',
+                                    permission: 'asistencia.bitacora',
+                                    key: 'reloj_checador.bitacora',
+                                },
+                                {
                                     title: 'Pre-Nómina y Horas Extra',
                                     href: '/admin/asistencia/calculo-nomina',
                                     permission: 'asistencia.nomina',

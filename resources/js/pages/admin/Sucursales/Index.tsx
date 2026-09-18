@@ -630,36 +630,6 @@ return;
 
                             {/* ══ Tab 2: Ubicación ══════════════════════════════════════════════════ */}
                             <TabsContent value="ubicacion" className="space-y-4">
-                                {/* Coordenadas manuales */}
-                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                    <div>
-                                        <Label htmlFor="latitud">{__('Latitude')}</Label>
-                                        <Input
-                                            id="latitud"
-                                            type="number"
-                                            step="any"
-                                            value={data.latitud ?? ''}
-                                            onChange={(e) =>
-                                                setData('latitud', e.target.value ? parseFloat(e.target.value) : null)
-                                            }
-                                            placeholder="10.48801"
-                                        />
-                                    </div>
-                                    <div>
-                                        <Label htmlFor="longitud">{__('Longitude')}</Label>
-                                        <Input
-                                            id="longitud"
-                                            type="number"
-                                            step="any"
-                                            value={data.longitud ?? ''}
-                                            onChange={(e) =>
-                                                setData('longitud', e.target.value ? parseFloat(e.target.value) : null)
-                                            }
-                                            placeholder="-66.87919"
-                                        />
-                                    </div>
-                                </div>
-
                                 {/* Dirección */}
                                 <div>
                                     <Label htmlFor="direccion">{__('Address')}</Label>
@@ -670,6 +640,90 @@ return;
                                         placeholder={__('The address will be auto-filled when you click on the map...')}
                                         rows={2}
                                     />
+                                    {errors.direccion && (
+                                        <p className="text-red-500 text-xs mt-1">{errors.direccion}</p>
+                                    )}
+                                </div>
+
+                                <div className="flex items-center gap-2">
+                                    <Button
+                                        type="button"
+                                        variant="outline"
+                                        size="sm"
+                                        onClick={handleForceGeocode}
+                                        disabled={geocoding}
+                                    >
+                                        <MapPin className="mr-2 h-4 w-4" />
+                                        {geocoding ? __('Locating...') : __('Locate address on map')}
+                                    </Button>
+                                    <span className="text-xs text-muted-foreground">
+                                        {__('Or click / drag the marker on the map for precise coordinates.')}
+                                    </span>
+                                </div>
+
+                                {/* Coordenadas (prevalecen sobre la dirección) */}
+                                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                                    <div>
+                                        <Label htmlFor="latitud">{__('Latitude')}</Label>
+                                        <Input
+                                            id="latitud"
+                                            type="number"
+                                            step="any"
+                                            value={data.latitud ?? ''}
+                                            onChange={(e) => {
+                                                coordsSourceRef.current = 'manual';
+                                                setData('latitud', e.target.value ? parseFloat(e.target.value) : null);
+                                            }}
+                                            placeholder="19.92"
+                                        />
+                                        {errors.latitud && <p className="text-red-500 text-xs mt-1">{errors.latitud}</p>}
+                                    </div>
+                                    <div>
+                                        <Label htmlFor="longitud">{__('Longitude')}</Label>
+                                        <Input
+                                            id="longitud"
+                                            type="number"
+                                            step="any"
+                                            value={data.longitud ?? ''}
+                                            onChange={(e) => {
+                                                coordsSourceRef.current = 'manual';
+                                                setData('longitud', e.target.value ? parseFloat(e.target.value) : null);
+                                            }}
+                                            placeholder="-102.01"
+                                        />
+                                        {errors.longitud && (
+                                            <p className="text-red-500 text-xs mt-1">{errors.longitud}</p>
+                                        )}
+                                    </div>
+                                    <div>
+                                        <Label htmlFor="zona_horaria">{__('Time Zone')}</Label>
+                                        <Select
+                                            value={data.zona_horaria || 'America/Mexico_City'}
+                                            onValueChange={(v) => setData('zona_horaria', v)}
+                                        >
+                                            <SelectTrigger id="zona_horaria" className="w-full text-xs font-mono">
+                                                <SelectValue placeholder="Seleccionar zona horaria" />
+                                            </SelectTrigger>
+                                            <SelectContent>
+                                                <SelectItem value="America/Mexico_City">America/Mexico_City (Centro: CDMX, GDL, MTY)</SelectItem>
+                                                <SelectItem value="America/Tijuana">America/Tijuana (Noroeste: BC - Tijuana, Mexicali)</SelectItem>
+                                                <SelectItem value="America/Hermosillo">America/Hermosillo (Sonora - Sin horario estacional)</SelectItem>
+                                                <SelectItem value="America/Ciudad_Juarez">America/Ciudad_Juarez (Chihuahua Frontera)</SelectItem>
+                                                <SelectItem value="America/Chihuahua">America/Chihuahua (Chihuahua Estatal)</SelectItem>
+                                                <SelectItem value="America/Mazatlan">America/Mazatlan (Pacífico: Sinaloa, BCS, Nayarit)</SelectItem>
+                                                <SelectItem value="America/Cancun">America/Cancun (Sureste: Quintana Roo)</SelectItem>
+                                                <SelectItem value="America/Monterrey">America/Monterrey (Nuevo León)</SelectItem>
+                                                <SelectItem value="America/Bogota">America/Bogota (Colombia / UTC-5)</SelectItem>
+                                                <SelectItem value="America/Lima">America/Lima (Perú / UTC-5)</SelectItem>
+                                                <SelectItem value="America/New_York">America/New_York (US Eastern / UTC-5)</SelectItem>
+                                                <SelectItem value="America/Los_Angeles">America/Los_Angeles (US Pacific / UTC-8)</SelectItem>
+                                                <SelectItem value="UTC">UTC (Universal Coordinated Time)</SelectItem>
+                                            </SelectContent>
+                                        </Select>
+                                        {errors.zona_horaria && (
+                                            <p className="text-red-500 text-xs mt-1">{errors.zona_horaria}</p>
+                                        )}
+                                    </div>
                                 </div>
 
                                 {/* Mapa */}
