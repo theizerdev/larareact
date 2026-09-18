@@ -1873,6 +1873,29 @@ export default function Index({
                                                         tipo: veh.tipo_vehiculo || 'Auto',
                                                         fotoFrontal: veh.foto_frontal || null,
                                                         fotoTrasera: veh.foto_trasera || null,
+                                                        clasificacionFederal: veh.clasificacion_federal || null,
+                                                        subtipoCarroceria: veh.subtipo_carroceria || null,
+                                                        numeroEjes: veh.numero_ejes || null,
+                                                        aseguradora: veh.aseguradora || null,
+                                                        numeroPoliza: veh.numero_poliza || null,
+                                                        tieneRemolque: !!veh.tiene_remolque,
+                                                        remolqueTipo: veh.remolque_tipo || null,
+                                                        remolquePlaca: veh.remolque_placa || null,
+                                                        remolqueFabricante: veh.remolque_fabricante || veh.remolque_marca || null,
+                                                        remolqueVin: veh.remolque_vin || null,
+                                                        remolqueLargo: veh.remolque_largo || null,
+                                                        remolqueAncho: veh.remolque_ancho || null,
+                                                        remolqueAlto: veh.remolque_alto || null,
+                                                        remolquePbvo: veh.remolque_pbvo_kg || null,
+                                                        remolqueTara: veh.remolque_tara_kg || null,
+                                                        remolqueCargaUtil: veh.remolque_carga_util_kg || null,
+                                                        remolqueEjes: veh.remolque_numero_ejes || null,
+                                                        remolqueSuspension: veh.remolque_tipo_suspension || null,
+                                                        remolquePatines: veh.remolque_tipo_patines || null,
+                                                        remolqueLlantas: veh.remolque_tamano_llantas || null,
+                                                        remolquePsi: veh.remolque_presion_psi || null,
+                                                        remolqueFotoPlaca: veh.remolque_foto_placa || null,
+                                                        remolqueFotoLateral: veh.remolque_foto_lateral || null,
                                                     };
                                                 }
 
@@ -1883,6 +1906,29 @@ export default function Index({
                                                     tipo: selectedAccesoDetail.vehiculo_tipo || 'Auto',
                                                     fotoFrontal: selectedAccesoDetail.vehiculo_foto_frontal,
                                                     fotoTrasera: selectedAccesoDetail.vehiculo_foto_trasera,
+                                                    clasificacionFederal: null,
+                                                    subtipoCarroceria: null,
+                                                    numeroEjes: null,
+                                                    aseguradora: null,
+                                                    numeroPoliza: null,
+                                                    tieneRemolque: false,
+                                                    remolqueTipo: null,
+                                                    remolquePlaca: null,
+                                                    remolqueFabricante: null,
+                                                    remolqueVin: null,
+                                                    remolqueLargo: null,
+                                                    remolqueAncho: null,
+                                                    remolqueAlto: null,
+                                                    remolquePbvo: null,
+                                                    remolqueTara: null,
+                                                    remolqueCargaUtil: null,
+                                                    remolqueEjes: null,
+                                                    remolqueSuspension: null,
+                                                    remolquePatines: null,
+                                                    remolqueLlantas: null,
+                                                    remolquePsi: null,
+                                                    remolqueFotoPlaca: null,
+                                                    remolqueFotoLateral: null,
                                                 };
                                             })();
 
@@ -1908,6 +1954,30 @@ export default function Index({
                                                             </span>
                                                         </div>
                                                     </div>
+
+                                                    {/* Clasificación Federal y Datos Adicionales si existen */}
+                                                    {(vDet.clasificacionFederal || vDet.subtipoCarroceria || vDet.aseguradora) && (
+                                                        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 text-xs bg-slate-50/70 dark:bg-slate-800/20 p-3 rounded-xl border border-dashed">
+                                                            <div>
+                                                                <span className="text-slate-500 block">{__('Clasificación / Carrocería')}</span>
+                                                                <span className="font-semibold text-slate-800 dark:text-slate-200">
+                                                                    {vDet.clasificacionFederal || '-'}{vDet.subtipoCarroceria ? ` • ${vDet.subtipoCarroceria}` : ''}
+                                                                </span>
+                                                            </div>
+                                                            <div>
+                                                                <span className="text-slate-500 block">{__('Ejes Motrices')}</span>
+                                                                <span className="font-semibold text-slate-800 dark:text-slate-200">
+                                                                    {vDet.numeroEjes ? `${vDet.numeroEjes} ejes` : '-'}
+                                                                </span>
+                                                            </div>
+                                                            <div>
+                                                                <span className="text-slate-500 block">{__('Seguro / Póliza')}</span>
+                                                                <span className="font-semibold text-slate-800 dark:text-slate-200">
+                                                                    {vDet.aseguradora || '-'}{vDet.numeroPoliza ? ` (${vDet.numeroPoliza})` : ''}
+                                                                </span>
+                                                            </div>
+                                                        </div>
+                                                    )}
 
                                                     {/* Fotos Frontal y Trasera panorámicas */}
                                                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-1">
@@ -1947,6 +2017,104 @@ export default function Index({
                                                             </div>
                                                         </div>
                                                     </div>
+
+                                                    {/* SECCIÓN CAJA / REMOLQUE NOM-035 */}
+                                                    {vDet.tieneRemolque && (
+                                                        <div className="mt-4 p-4 rounded-xl bg-amber-50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-800 space-y-3">
+                                                            <div className="flex items-center justify-between border-b border-amber-200 dark:border-amber-800/60 pb-2">
+                                                                <span className="text-xs font-bold text-amber-800 dark:text-amber-300 flex items-center gap-1.5 uppercase tracking-wide">
+                                                                    <Truck className="w-4 h-4 text-amber-600" /> {__('Caja / Semirremolque Acoplado (NOM-035-SCT-2-2010)')}
+                                                                </span>
+                                                                <span className="px-2.5 py-0.5 rounded-md font-mono font-bold text-xs bg-amber-600 text-white shadow-sm">
+                                                                    PLACA: {vDet.remolquePlaca || __('SIN PLACA')}
+                                                                </span>
+                                                            </div>
+
+                                                            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-xs">
+                                                                <div>
+                                                                    <span className="text-slate-500 block">{__('Tipo')}</span>
+                                                                    <span className="font-semibold text-slate-800 dark:text-slate-200">{vDet.remolqueTipo || '-'}</span>
+                                                                </div>
+                                                                <div>
+                                                                    <span className="text-slate-500 block">{__('Fabricante')}</span>
+                                                                    <span className="font-semibold text-slate-800 dark:text-slate-200">{vDet.remolqueFabricante || '-'}</span>
+                                                                </div>
+                                                                <div>
+                                                                    <span className="text-slate-500 block">{__('VIN / N° Serie')}</span>
+                                                                    <span className="font-mono font-semibold text-slate-800 dark:text-slate-200">{vDet.remolqueVin || '-'}</span>
+                                                                </div>
+                                                                <div>
+                                                                    <span className="text-slate-500 block">{__('Dimensiones')}</span>
+                                                                    <span className="font-semibold text-slate-800 dark:text-slate-200">
+                                                                        {vDet.remolqueLargo ? `${vDet.remolqueLargo}m` : '-'}
+                                                                        {vDet.remolqueAncho ? ` × ${vDet.remolqueAncho}m` : ''}
+                                                                        {vDet.remolqueAlto ? ` × ${vDet.remolqueAlto}m` : ''}
+                                                                    </span>
+                                                                </div>
+                                                                <div>
+                                                                    <span className="text-slate-500 block">{__('Pesos (PBVO / Tara / Útil)')}</span>
+                                                                    <span className="font-semibold text-slate-800 dark:text-slate-200">
+                                                                        {vDet.remolquePbvo ? `${vDet.remolquePbvo}kg` : '-'} / {vDet.remolqueTara ? `${vDet.remolqueTara}kg` : '-'} / {vDet.remolqueCargaUtil ? `${vDet.remolqueCargaUtil}kg` : '-'}
+                                                                    </span>
+                                                                </div>
+                                                                <div>
+                                                                    <span className="text-slate-500 block">{__('Ejes / Suspensión')}</span>
+                                                                    <span className="font-semibold text-slate-800 dark:text-slate-200">
+                                                                        {vDet.remolqueEjes ? `${vDet.remolqueEjes} ejes` : '-'} {vDet.remolqueSuspension ? `(${vDet.remolqueSuspension})` : ''}
+                                                                    </span>
+                                                                </div>
+                                                                <div>
+                                                                    <span className="text-slate-500 block">{__('Llantas / Presión')}</span>
+                                                                    <span className="font-semibold text-slate-800 dark:text-slate-200">
+                                                                        {vDet.remolqueLlantas || '-'} {vDet.remolquePsi ? `(${vDet.remolquePsi} PSI)` : ''}
+                                                                    </span>
+                                                                </div>
+                                                                <div>
+                                                                    <span className="text-slate-500 block">{__('Patines')}</span>
+                                                                    <span className="font-semibold text-slate-800 dark:text-slate-200">{vDet.remolquePatines || '-'}</span>
+                                                                </div>
+                                                            </div>
+
+                                                            {/* Fotografías de la Caja / Placa Técnica */}
+                                                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-2 border-t border-amber-200 dark:border-amber-800/60">
+                                                                <div className="space-y-1">
+                                                                    <span className="text-[11px] font-semibold flex items-center gap-1 text-slate-700 dark:text-slate-300">
+                                                                        <Camera className="w-3.5 h-3.5 text-amber-600" /> {__('Foto Placa Técnica NOM-035')}
+                                                                    </span>
+                                                                    <div className="w-full aspect-[16/9] rounded-xl overflow-hidden bg-slate-100 dark:bg-slate-800 border flex items-center justify-center">
+                                                                        {vDet.remolqueFotoPlaca ? (
+                                                                            <img
+                                                                                src={formatImageUrl(vDet.remolqueFotoPlaca)!}
+                                                                                alt="Placa Técnica NOM-035"
+                                                                                className="w-full h-full object-cover cursor-pointer hover:scale-105 transition-transform"
+                                                                                onClick={() => window.open(formatImageUrl(vDet.remolqueFotoPlaca)!, '_blank')}
+                                                                            />
+                                                                        ) : (
+                                                                            <span className="text-xs text-slate-400 italic">{__('Sin fotografía de placa técnica')}</span>
+                                                                        )}
+                                                                    </div>
+                                                                </div>
+
+                                                                <div className="space-y-1">
+                                                                    <span className="text-[11px] font-semibold flex items-center gap-1 text-slate-700 dark:text-slate-300">
+                                                                        <Camera className="w-3.5 h-3.5 text-amber-600" /> {__('Foto Lateral de la Caja')}
+                                                                    </span>
+                                                                    <div className="w-full aspect-[16/9] rounded-xl overflow-hidden bg-slate-100 dark:bg-slate-800 border flex items-center justify-center">
+                                                                        {vDet.remolqueFotoLateral ? (
+                                                                            <img
+                                                                                src={formatImageUrl(vDet.remolqueFotoLateral)!}
+                                                                                alt="Foto Lateral Caja"
+                                                                                className="w-full h-full object-cover cursor-pointer hover:scale-105 transition-transform"
+                                                                                onClick={() => window.open(formatImageUrl(vDet.remolqueFotoLateral)!, '_blank')}
+                                                                            />
+                                                                        ) : (
+                                                                            <span className="text-xs text-slate-400 italic">{__('Sin fotografía lateral de la caja')}</span>
+                                                                        )}
+                                                                    </div>
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                    )}
                                                 </>
                                             );
                                         })()}

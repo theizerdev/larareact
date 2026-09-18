@@ -10,6 +10,7 @@ import {
     Calendar,
     Clock,
     Car,
+    Truck,
     Footprints,
     CheckCircle2,
     XCircle,
@@ -1620,6 +1621,7 @@ export default function GaritaControl({
                                                                         {record.vehiculos.map((v: any) => (
                                                                             <option key={v.id} value={v.id}>
                                                                                 {v.placa ? `[${v.placa}] ` : ''}{v.marca || ''} {v.modelo || ''} ({v.tipo_vehiculo || 'Auto'})
+                                                                                {v.tiene_remolque ? ` + Caja [${v.remolque_placa || 'S/P'}]` : ''}
                                                                             </option>
                                                                         ))}
                                                                     </select>
@@ -1660,6 +1662,56 @@ export default function GaritaControl({
                                                                                     )}
                                                                                 </div>
                                                                             </div>
+
+                                                                            {/* Datos y Fotografías de Caja / Semirremolque NOM-035 si cuenta con remolque */}
+                                                                            {Boolean(selVeh.tiene_remolque) && (
+                                                                                <div className="mt-2.5 p-3 rounded-2xl bg-amber-500/10 border border-amber-500/30 text-xs space-y-2">
+                                                                                    <div className="flex items-center justify-between font-bold text-amber-900 dark:text-amber-300">
+                                                                                        <span className="flex items-center gap-1.5 text-[11px] uppercase tracking-wide">
+                                                                                            <Truck className="w-3.5 h-3.5 text-amber-600" />
+                                                                                            {selVeh.remolque_tipo || __('Caja / Semirremolque')}
+                                                                                        </span>
+                                                                                        <span className="font-mono bg-amber-600 text-white px-2 py-0.5 rounded-md text-[10px] font-extrabold shadow-sm">
+                                                                                            PLACA: {selVeh.remolque_placa || __('SIN PLACA')}
+                                                                                        </span>
+                                                                                    </div>
+
+                                                                                    <div className="grid grid-cols-2 gap-1.5 text-[11px] text-slate-700 dark:text-slate-300">
+                                                                                        <div><span className="text-slate-400">{__('Fabricante:')}</span> {selVeh.remolque_fabricante || '-'}</div>
+                                                                                        <div><span className="text-slate-400">{__('VIN:')}</span> <span className="font-mono">{selVeh.remolque_vin || '-'}</span></div>
+                                                                                        <div><span className="text-slate-400">{__('Largo:')}</span> {selVeh.remolque_largo ? `${selVeh.remolque_largo} m` : '-'}</div>
+                                                                                        <div><span className="text-slate-400">{__('Ejes:')}</span> {selVeh.remolque_numero_ejes ? `${selVeh.remolque_numero_ejes} ejes` : '-'} {selVeh.remolque_tipo_suspension ? `(${selVeh.remolque_tipo_suspension})` : ''}</div>
+                                                                                    </div>
+
+                                                                                    {(formatImageUrl(selVeh.remolque_foto_placa) || formatImageUrl(selVeh.remolque_foto_lateral)) && (
+                                                                                        <div className="grid grid-cols-2 gap-2 pt-1 border-t border-amber-500/20">
+                                                                                            <div className="text-center space-y-1">
+                                                                                                <span className="text-[10px] font-bold text-slate-500">{__('Placa NOM-035')}</span>
+                                                                                                {formatImageUrl(selVeh.remolque_foto_placa) ? (
+                                                                                                    <div className="w-full aspect-[4/3] rounded-xl overflow-hidden border border-amber-300 cursor-pointer group relative" onClick={() => setActiveImageModal(formatImageUrl(selVeh.remolque_foto_placa)!)}>
+                                                                                                        <img src={formatImageUrl(selVeh.remolque_foto_placa)!} alt="Placa NOM-035" className="w-full h-full object-cover group-hover:scale-105 transition-transform" />
+                                                                                                        <div className="absolute inset-0 bg-black/30 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center text-white"><Maximize2 className="w-4 h-4" /></div>
+                                                                                                    </div>
+                                                                                                ) : (
+                                                                                                    <div className="w-full aspect-[4/3] rounded-xl bg-amber-50 border border-dashed border-amber-300 flex items-center justify-center text-slate-400 text-[10px] font-medium">{__('Sin foto')}</div>
+                                                                                                )}
+                                                             </div>
+
+                                                                                            <div className="text-center space-y-1">
+                                                                                                <span className="text-[10px] font-bold text-slate-500">{__('Lateral Caja')}</span>
+                                                                                                {formatImageUrl(selVeh.remolque_foto_lateral) ? (
+                                                                                                    <div className="w-full aspect-[4/3] rounded-xl overflow-hidden border border-amber-300 cursor-pointer group relative" onClick={() => setActiveImageModal(formatImageUrl(selVeh.remolque_foto_lateral)!)}>
+                                                                                                        <img src={formatImageUrl(selVeh.remolque_foto_lateral)!} alt="Lateral Caja" className="w-full h-full object-cover group-hover:scale-105 transition-transform" />
+                                                                                                        <div className="absolute inset-0 bg-black/30 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center text-white"><Maximize2 className="w-4 h-4" /></div>
+                                                                                                    </div>
+                                                                                                ) : (
+                                                                                                    <div className="w-full aspect-[4/3] rounded-xl bg-amber-50 border border-dashed border-amber-300 flex items-center justify-center text-slate-400 text-[10px] font-medium">{__('Sin foto')}</div>
+                                                                                                )}
+                                                                                            </div>
+                                                                                        </div>
+                                                                                    )}
+                                                                                </div>
+                                                                            )}
                                                                         </div>
                                                                     );
                                                                 })()}
@@ -1860,6 +1912,59 @@ export default function GaritaControl({
                                                         )}
                                                     </div>
                                                 </div>
+
+                                                {/* Caja / Semirremolque en Accesos Registrados */}
+                                                {(() => {
+                                                    const pVeh = accesoExistente?.proveedor_vehiculo || accesoExistente?.proveedorVehiculo || record?.proveedor_vehiculo || record?.proveedorVehiculo;
+                                                    if (!pVeh || !pVeh.tiene_remolque) return null;
+                                                    return (
+                                                        <div className="p-3 rounded-2xl bg-amber-100/70 border border-amber-300 text-xs space-y-2">
+                                                            <div className="flex items-center justify-between font-bold text-amber-900">
+                                                                <span className="flex items-center gap-1.5">
+                                                                    <Truck className="w-4 h-4 text-amber-600" />
+                                                                    {__('Caja / Semirremolque:')} {pVeh.remolque_tipo || 'Semirremolque'}
+                                                                </span>
+                                                                <span className="font-mono bg-amber-600 text-white px-2 py-0.5 rounded-md text-[10px] font-extrabold shadow-sm">
+                                                                    PLACA: {pVeh.remolque_placa || __('SIN PLACA')}
+                                                                </span>
+                                                            </div>
+                                                            <div className="grid grid-cols-2 gap-1 text-[11px] text-amber-950 font-sans">
+                                                                <div><span className="text-amber-800 font-medium">{__('Fabricante:')}</span> {pVeh.remolque_fabricante || '-'}</div>
+                                                                <div><span className="text-amber-800 font-medium">{__('VIN:')}</span> <span className="font-mono">{pVeh.remolque_vin || '-'}</span></div>
+                                                                <div><span className="text-amber-800 font-medium">{__('Largo:')}</span> {pVeh.remolque_largo ? `${pVeh.remolque_largo} m` : '-'}</div>
+                                                                <div><span className="text-amber-800 font-medium">{__('Ejes:')}</span> {pVeh.remolque_numero_ejes ? `${pVeh.remolque_numero_ejes} ejes` : '-'} {pVeh.remolque_tipo_suspension ? `(${pVeh.remolque_tipo_suspension})` : ''}</div>
+                                                            </div>
+
+                                                            {(formatImageUrl(pVeh.remolque_foto_placa) || formatImageUrl(pVeh.remolque_foto_lateral)) && (
+                                                                <div className="grid grid-cols-2 gap-2 pt-1 border-t border-amber-300">
+                                                                    <div className="text-center space-y-1">
+                                                                        <span className="text-[10px] font-bold text-slate-500">{__('Placa NOM-035')}</span>
+                                                                        {formatImageUrl(pVeh.remolque_foto_placa) ? (
+                                                                            <div className="w-full aspect-[4/3] rounded-xl overflow-hidden border border-slate-300 cursor-pointer group relative" onClick={() => setActiveImageModal(formatImageUrl(pVeh.remolque_foto_placa)!)}>
+                                                                                <img src={formatImageUrl(pVeh.remolque_foto_placa)!} alt="Placa NOM-035" className="w-full h-full object-cover group-hover:scale-105 transition-transform" />
+                                                                                <div className="absolute inset-0 bg-black/30 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center text-white"><Maximize2 className="w-4 h-4" /></div>
+                                                                            </div>
+                                                                        ) : (
+                                                                            <div className="w-full aspect-[4/3] rounded-xl bg-amber-100/50 border border-dashed border-amber-300 flex items-center justify-center text-slate-400 text-[10px] font-medium">{__('Sin foto')}</div>
+                                                                        )}
+                                                                    </div>
+
+                                                                    <div className="text-center space-y-1">
+                                                                        <span className="text-[10px] font-bold text-slate-500">{__('Lateral Caja')}</span>
+                                                                        {formatImageUrl(pVeh.remolque_foto_lateral) ? (
+                                                                            <div className="w-full aspect-[4/3] rounded-xl overflow-hidden border border-slate-300 cursor-pointer group relative" onClick={() => setActiveImageModal(formatImageUrl(pVeh.remolque_foto_lateral)!)}>
+                                                                                <img src={formatImageUrl(pVeh.remolque_foto_lateral)!} alt="Lateral Caja" className="w-full h-full object-cover group-hover:scale-105 transition-transform" />
+                                                                                <div className="absolute inset-0 bg-black/30 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center text-white"><Maximize2 className="w-4 h-4" /></div>
+                                                                            </div>
+                                                                        ) : (
+                                                                            <div className="w-full aspect-[4/3] rounded-xl bg-amber-100/50 border border-dashed border-amber-300 flex items-center justify-center text-slate-400 text-[10px] font-medium">{__('Sin foto')}</div>
+                                                                        )}
+                                                                    </div>
+                                                                </div>
+                                                            )}
+                                                        </div>
+                                                    );
+                                                })()}
                                             </div>
                                         ) : (
                                             <div className="p-4 rounded-3xl bg-emerald-50 border border-emerald-200 text-emerald-900 font-extrabold text-sm flex items-center gap-2">
