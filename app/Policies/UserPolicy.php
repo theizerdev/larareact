@@ -27,7 +27,11 @@ class UserPolicy
      */
     public function viewAny(User $user): bool
     {
-        return $user->hasRole('Administrador') || $user->can('users.index') || $user->can('usuarios.index');
+        return $user->hasRole('Administrador')
+            || $user->can('users.view')
+            || $user->can('users.index')
+            || $user->can('usuarios.view')
+            || $user->can('usuarios.index');
     }
 
     /**

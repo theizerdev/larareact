@@ -69,7 +69,11 @@ class UserController extends Controller
             } elseif ($request->has('sucursal_id') && $request->input('sucursal_id') === 'all') {
                 $targetSucursalId = null;
             } else {
-                $targetSucursalId = $currentUser?->sucursal_id;
+                if ($targetEmpresaId === (int) $currentUser?->empresa_id) {
+                    $targetSucursalId = $currentUser?->sucursal_id;
+                } else {
+                    $targetSucursalId = null;
+                }
             }
         }
 
