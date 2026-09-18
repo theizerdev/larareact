@@ -1,33 +1,38 @@
 <?php
 
-namespace App\Http\Controllers\Admin;
+namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use App\Models\AsistenciaMarcaje;
+use App\Models\AsistenciaResumenDiario;
 use App\Models\ConfiguracionAsistencia;
 use App\Models\Empleado;
+use App\Models\Sucursal;
 use App\Services\CalculoAsistenciaLftService;
 use App\Services\NotificacionAsistenciaWhatsAppService;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
-use Inertia\Inertia;
 
-class RelojChecadorKioskoController extends Controller
+class KioskoApiController extends Controller
 {
     /**
-     * Muestra la interfaz táctil del Kiosko Reloj Checador.
+     * Obtener configuración de asistencia de la empresa del usuario autenticado.
+     *
+     * Devuelve los campos de configuración en la raíz (formato que ya consume la
+     * app móvil) más la zona horaria resuelta igual que el kiosko web.
      */
-    public function kioskoView(Request $request)
+    public function configuracion(Request $request)
     {
         $user = $request->user();
         $empresaId = $user ? $user->empresa_id : null;
 
         $configuracion = ConfiguracionAsistencia::where('empresa_id', $empresaId)->first();
 
-        // Obtener la zona horaria (Sucursal -> Empresa -> País -> App Config -> America/Mexico_City)
+        // Zona horaria: Sucursal -> Empresa -> País -> App Config -> America/Mexico_City
         $empresa = $user ? $user->empresa : null;
-        $sucursal = ($user && !empty($user->sucursal_id)) ? \App\Models\Sucursal::find($user->sucursal_id) : null;
+        $sucursal = ($user && ! empty($user->sucursal_id)) ? Sucursal::find($user->sucursal_id) : null;
 
         $zonaHoraria = $sucursal?->zona_horaria
             ?? $empresa?->zona_horaria
@@ -35,16 +40,17 @@ class RelojChecadorKioskoController extends Controller
             ?? config('app.timezone')
             ?? 'America/Mexico_City';
 
-        return Inertia::render('admin/reloj-checador/Kiosko', [
-            'configuracion' => $configuracion,
-            'zona_horaria'  => $zonaHoraria,
-        ]);
+        $payload = $configuracion ? $configuracion->toArray() : [];
+        $payload['zona_horaria'] = $zonaHoraria;
+
+        return response()->json($payload);
     }
 
     /**
-     * Busca al empleado por documento de identidad o teléfono y sugiere el siguiente tipo de marcaje.
+     * Buscar empleado por documento, código de acceso, CURP o teléfono
+     * y sugerir el siguiente tipo de marcaje.
      */
-    public function buscarEmpleado(Request $request)
+    public function buscar(Request $request)
     {
         $request->validate([
             'query' => 'required|string',
@@ -56,7 +62,7 @@ class RelojChecadorKioskoController extends Controller
 
         $cleanQuery = preg_replace('/[^a-zA-Z0-9]/', '', $query);
         $isNumeric = ctype_digit($cleanQuery);
-        $intVal = $isNumeric ? (int)$cleanQuery : null;
+        $intVal = $isNumeric ? (int) $cleanQuery : null;
         $padded8 = $isNumeric ? sprintf('%08d', $intVal) : null;
         $padded6 = $isNumeric ? sprintf('%06d', $intVal) : null;
 
@@ -75,8 +81,8 @@ class RelojChecadorKioskoController extends Controller
                 if ($isNumeric && $intVal > 0) {
                     $q->orWhere('codigo_acceso', $padded8)
                         ->orWhere('documento_identidad', $padded6)
-                        ->orWhere('codigo_acceso', (string)$intVal)
-                        ->orWhere('documento_identidad', (string)$intVal)
+                        ->orWhere('codigo_acceso', (string) $intVal)
+                        ->orWhere('documento_identidad', (string) $intVal)
                         ->orWhere('codigo_acceso', 'like', "%{$cleanQuery}");
                 }
             })
@@ -133,24 +139,87 @@ class RelojChecadorKioskoController extends Controller
                 'nombre_completo' => $empleado->nombre_completo,
                 'documento_identidad' => $empleado->codigo_acceso ?: $empleado->documento_identidad,
                 'codigo_acceso' => $empleado->codigo_acceso ?: $empleado->documento_identidad,
-                'foto_empleado' => $empleado->foto_empleado ? Storage::url($empleado->foto_empleado) : null,
+                'numero_empleado' => $empleado->codigo_acceso,
                 'departamento' => $empleado->departamento?->nombre,
                 'cargo' => $empleado->cargo?->nombre,
                 'turno' => $empleado->turnoLaboral?->nombre ?? 'Sin turno asignado',
+                'foto_empleado' => $empleado->foto_empleado ? asset('storage/'.$empleado->foto_empleado) : null,
                 'ultimo_marcaje_tipo' => $ultimoMarcaje?->tipo_marcaje,
             ],
             'ultimo_marcaje' => $ultimoMarcaje ? [
                 'tipo' => $ultimoMarcaje->tipo_marcaje,
-                'hora' => $ultimoMarcaje->fecha_hora->format('H:i:s'),
+                'hora' => Carbon::parse($ultimoMarcaje->fecha_hora)->format('H:i:s'),
             ] : null,
             'sugerencia_marcaje' => $siguienteMarcaje,
         ]);
     }
 
     /**
-     * Registra una marca de reloj (Entrada, Salida Comida, Regreso Comida, Salida Final).
+     * Autoservicio: devuelve el empleado vinculado a la cuenta autenticada
+     * (empleados.user_id), con la misma forma que buscar(). 404 si la cuenta
+     * no corresponde a un empleado.
      */
-    public function registrarMarcaje(Request $request, CalculoAsistenciaLftService $calculoService)
+    public function miEmpleado(Request $request)
+    {
+        $user = $request->user();
+
+        $empleado = Empleado::with(['turnoLaboral', 'departamento', 'cargo'])
+            ->where('user_id', $user->id)
+            ->where('status', true)
+            ->first();
+
+        if (! $empleado) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Tu cuenta no está vinculada a un empleado.',
+            ], 404);
+        }
+
+        $ultimoMarcaje = AsistenciaMarcaje::where('empleado_id', $empleado->id)
+            ->whereDate('fecha_hora', Carbon::today())
+            ->latest('fecha_hora')
+            ->first();
+
+        $siguienteMarcaje = 'entrada';
+        if ($ultimoMarcaje) {
+            switch ($ultimoMarcaje->tipo_marcaje) {
+                case 'entrada': $siguienteMarcaje = 'salida_comida'; break;
+                case 'salida_comida': $siguienteMarcaje = 'entrada_comida'; break;
+                case 'entrada_comida': $siguienteMarcaje = 'salida'; break;
+                case 'descanso_inicio': $siguienteMarcaje = 'descanso_fin'; break;
+                case 'descanso_fin': $siguienteMarcaje = 'descanso_inicio'; break;
+                case 'incidente_inicio': $siguienteMarcaje = 'incidente_fin'; break;
+                case 'incidente_fin': $siguienteMarcaje = 'salida'; break;
+                case 'salida': $siguienteMarcaje = 'entrada'; break;
+            }
+        }
+
+        return response()->json([
+            'success' => true,
+            'empleado' => [
+                'id' => $empleado->id,
+                'nombre_completo' => $empleado->nombre_completo,
+                'documento_identidad' => $empleado->codigo_acceso ?: $empleado->documento_identidad,
+                'codigo_acceso' => $empleado->codigo_acceso ?: $empleado->documento_identidad,
+                'numero_empleado' => $empleado->codigo_acceso,
+                'departamento' => $empleado->departamento?->nombre,
+                'cargo' => $empleado->cargo?->nombre,
+                'turno' => $empleado->turnoLaboral?->nombre ?? 'Sin turno asignado',
+                'foto_empleado' => $empleado->foto_empleado ? asset('storage/'.$empleado->foto_empleado) : null,
+                'ultimo_marcaje_tipo' => $ultimoMarcaje?->tipo_marcaje,
+            ],
+            'ultimo_marcaje' => $ultimoMarcaje ? [
+                'tipo' => $ultimoMarcaje->tipo_marcaje,
+                'hora' => Carbon::parse($ultimoMarcaje->fecha_hora)->format('H:i:s'),
+            ] : null,
+            'sugerencia_marcaje' => $siguienteMarcaje,
+        ]);
+    }
+
+    /**
+     * Registrar un marcaje enviado desde la app móvil.
+     */
+    public function registrar(Request $request, CalculoAsistenciaLftService $calculoService)
     {
         $validated = $request->validate([
             'empleado_id' => 'required|exists:empleados,id',
@@ -164,15 +233,33 @@ class RelojChecadorKioskoController extends Controller
             'tipo_entrada' => 'nullable|string|in:normal,extraordinaria_doble,extraordinaria_triple',
         ]);
 
-        $empleado = Empleado::findOrFail($validated['empleado_id']);
+        // El scope de multitenancy aplica aquí: si el empleado es de otra empresa,
+        // find() devuelve null aunque la regla exists lo haya dejado pasar.
+        $empleado = Empleado::find($validated['empleado_id']);
+
+        if (! $empleado) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Empleado no encontrado o inactivo.',
+            ], 404);
+        }
+
+        // Autoservicio: si la cuenta autenticada está vinculada a un empleado,
+        // solo puede registrar SUS PROPIOS marcajes (ignora empleado_id ajenos).
+        // Las cuentas de operador/admin (sin empleado vinculado) pueden registrar
+        // a cualquier empleado, como en el kiosko.
+        $propioEmpleado = $request->user()?->empleado;
+        if ($propioEmpleado) {
+            $empleado = $propioEmpleado;
+        }
+
         $now = Carbon::now();
 
         // Aplicar redondeo si está configurado en ConfiguracionAsistencia
         $config = ConfiguracionAsistencia::where('empresa_id', $empleado->empresa_id)->first();
         if ($config && $config->redondeo_marcaje_minutos > 0) {
             $minutos = $config->redondeo_marcaje_minutos;
-            $minute = $now->minute;
-            $remainder = $minute % $minutos;
+            $remainder = $now->minute % $minutos;
 
             if ($remainder >= ($minutos / 2)) {
                 $now->addMinutes($minutos - $remainder)->second(0);
@@ -181,7 +268,7 @@ class RelojChecadorKioskoController extends Controller
             }
         }
 
-        // Guardar foto si se envió en base64
+        // Guardar foto si se envió en base64 (Flutter puede mandarla como data URI)
         $fotoPath = null;
         if (! empty($validated['fotografia_base64'])) {
             $image = str_replace('data:image/png;base64,', '', $validated['fotografia_base64']);
@@ -202,7 +289,7 @@ class RelojChecadorKioskoController extends Controller
             'empleado_id' => $empleado->id,
             'tipo_marcaje' => $validated['tipo_marcaje'],
             'fecha_hora' => $now,
-            'origen' => 'kiosko',
+            'origen' => 'app',
             'fotografia_path' => $fotoPath,
             'latitud' => $lat,
             'longitud' => $lon,
@@ -221,18 +308,61 @@ class RelojChecadorKioskoController extends Controller
         try {
             app(NotificacionAsistenciaWhatsAppService::class)->notificarMarcaje($empleado, $marcaje);
         } catch (\Exception $e) {
-            \Illuminate\Support\Facades\Log::error("Error enviando WhatsApp marcaje: " . $e->getMessage());
+            Log::error('Error enviando WhatsApp marcaje: '.$e->getMessage());
         }
 
         return response()->json([
             'success' => true,
             'message' => 'Marcaje registrado con éxito.',
+            'empleado_nombre' => $empleado->nombre_completo,
             'marcaje' => [
                 'tipo_marcaje' => $marcaje->tipo_marcaje,
                 'hora' => $marcaje->fecha_hora->format('H:i:s'),
                 'fecha' => $marcaje->fecha_hora->format('d/m/Y'),
             ],
-            'empleado_nombre' => $empleado->nombre_completo,
+        ]);
+    }
+
+    /**
+     * Historial de asistencia del empleado vinculado al usuario (autoservicio):
+     * sus marcajes recientes + resumen de la semana en curso.
+     */
+    public function miHistorial(Request $request)
+    {
+        $empleado = Empleado::where('user_id', $request->user()->id)->first();
+
+        if (! $empleado) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Tu cuenta no está vinculada a un empleado.',
+            ], 404);
+        }
+
+        $desde = Carbon::today()->subDays(14);
+
+        $marcajes = AsistenciaMarcaje::where('empleado_id', $empleado->id)
+            ->where('fecha_hora', '>=', $desde)
+            ->orderBy('fecha_hora', 'desc')
+            ->limit(100)
+            ->get()
+            ->map(fn (AsistenciaMarcaje $m) => [
+                'tipo' => $m->tipo_marcaje,
+                'fecha' => Carbon::parse($m->fecha_hora)->format('d/m/Y'),
+                'hora' => Carbon::parse($m->fecha_hora)->format('H:i:s'),
+            ]);
+
+        $resumen = AsistenciaResumenDiario::where('empleado_id', $empleado->id)
+            ->where('fecha', '>=', Carbon::now()->startOfWeek())
+            ->get();
+
+        return response()->json([
+            'empleado' => ['nombre_completo' => $empleado->nombre_completo],
+            'resumen_semana' => [
+                'horas_ordinarias' => (float) $resumen->sum('horas_ordinarias'),
+                'horas_extra' => (float) $resumen->sum('horas_extra_diarias'),
+                'dias_asistidos' => $resumen->count(),
+            ],
+            'marcajes' => $marcajes,
         ]);
     }
 }
