@@ -18,7 +18,16 @@ import {
     CalendarCheck,
     Briefcase,
     BadgeCheck,
-    Coffee
+    Coffee,
+    Scale,
+    AlertTriangle,
+    Bell,
+    Mail,
+    ShieldAlert,
+    Check,
+    Sliders,
+    TrendingDown,
+    Activity
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -42,6 +51,33 @@ interface ConfiguracionAsistencia {
     porcentaje_prima_dominical: string;
     requiere_foto_marcaje: boolean;
     redondeo_marcaje_minutos: number;
+    ley_silla_intervalo_horas?: string | number;
+    ley_silla_descanso_minutos?: number;
+    whatsapp_recordatorio_descanso?: boolean;
+    whatsapp_recordatorio_horas_post_entrada?: string | number;
+    // Reforma Laboral 48h -> 40h
+    reforma_laboral_ano?: number;
+    limite_horas_normales_semanal?: string | number;
+    limite_tex_doble_semanal?: string | number;
+    limite_tex_triple_semanal?: string | number;
+    // Semáforo Normal
+    semaforo_normal_verde?: string | number;
+    semaforo_normal_amarillo?: string | number;
+    semaforo_normal_rojo?: string | number;
+    // Semáforo TEX Doble
+    semaforo_tex_doble_verde?: string | number;
+    semaforo_tex_doble_amarillo?: string | number;
+    semaforo_tex_doble_rojo?: string | number;
+    // Semáforo TEX Triple
+    semaforo_tex_triple_verde?: string | number;
+    semaforo_tex_triple_amarillo?: string | number;
+    semaforo_tex_triple_rojo?: string | number;
+    // Notificaciones Escalonadas
+    notif_rh_email?: string | null;
+    notif_rh_enabled?: boolean;
+    notif_responsable_enabled?: boolean;
+    notif_dg_email?: string | null;
+    notif_dg_enabled?: boolean;
 }
 
 interface TurnoLaboral {
@@ -69,6 +105,7 @@ interface Props {
     configuracion: ConfiguracionAsistencia;
     turnos: TurnoLaboral[];
     diasFestivos: DiaFestivo[];
+    cronogramaReforma?: Record<number, { normales: number; tex_doble: number; tex_triple: number; total: number }>;
 }
 
 const DIAS_SEMANA = [
@@ -108,10 +145,18 @@ function normalizeDiasLaborables(dias: any[]): number[] {
     return res.length > 0 ? res : [1, 2, 3, 4, 5];
 }
 
+const CRONOGRAMA_OFICIAL: Record<number, { normales: number; tex_doble: number; tex_triple: number; total: number }> = {
+    2026: { normales: 48, tex_doble: 12, tex_triple: 4, total: 64 },
+    2027: { normales: 46, tex_doble: 9,  tex_triple: 4, total: 59 },
+    2028: { normales: 44, tex_doble: 9,  tex_triple: 4, total: 57 },
+    2029: { normales: 42, tex_doble: 9,  tex_triple: 4, total: 55 },
+    2030: { normales: 40, tex_doble: 9,  tex_triple: 4, total: 53 },
+};
+
 export default function ConfiguracionAsistenciaIndex({ configuracion, turnos, diasFestivos }: Props) {
     const [activeTab, setActiveTab] = useState('politicas');
 
-    // Formulario de Configuración General
+    // Formulario de Configuración General y Reforma Laboral
     const configForm = useForm({
         tolerancia_retardo_minutos: configuracion?.tolerancia_retardo_minutos ?? 10,
         tolerancia_falta_minutos: configuracion?.tolerancia_falta_minutos ?? 30,
@@ -124,13 +169,49 @@ export default function ConfiguracionAsistenciaIndex({ configuracion, turnos, di
         ley_silla_descanso_minutos: configuracion?.ley_silla_descanso_minutos ?? 5,
         whatsapp_recordatorio_descanso: configuracion?.whatsapp_recordatorio_descanso ?? true,
         whatsapp_recordatorio_horas_post_entrada: configuracion?.whatsapp_recordatorio_horas_post_entrada ?? '4.00',
+        // Reforma Laboral 48h -> 40h
+        reforma_laboral_ano: configuracion?.reforma_laboral_ano ?? 2026,
+        limite_horas_normales_semanal: configuracion?.limite_horas_normales_semanal ?? 48,
+        limite_tex_doble_semanal: configuracion?.limite_tex_doble_semanal ?? 12,
+        limite_tex_triple_semanal: configuracion?.limite_tex_triple_semanal ?? 4,
+        // Semáforo Normal
+        semaforo_normal_verde: configuracion?.semaforo_normal_verde ?? 42,
+        semaforo_normal_amarillo: configuracion?.semaforo_normal_amarillo ?? 44,
+        semaforo_normal_rojo: configuracion?.semaforo_normal_rojo ?? 46,
+        // Semáforo TEX Doble
+        semaforo_tex_doble_verde: configuracion?.semaforo_tex_doble_verde ?? 7,
+        semaforo_tex_doble_amarillo: configuracion?.semaforo_tex_doble_amarillo ?? 8,
+        semaforo_tex_doble_rojo: configuracion?.semaforo_tex_doble_rojo ?? 9,
+        // Semáforo TEX Triple
+        semaforo_tex_triple_verde: configuracion?.semaforo_tex_triple_verde ?? 2,
+        semaforo_tex_triple_amarillo: configuracion?.semaforo_tex_triple_amarillo ?? 3,
+        semaforo_tex_triple_rojo: configuracion?.semaforo_tex_triple_rojo ?? 4,
+        // Notificaciones Escalonadas
+        notif_rh_email: configuracion?.notif_rh_email ?? '',
+        notif_rh_enabled: configuracion?.notif_rh_enabled ?? true,
+        notif_responsable_enabled: configuracion?.notif_responsable_enabled ?? true,
+        notif_dg_email: configuracion?.notif_dg_email ?? '',
+        notif_dg_enabled: configuracion?.notif_dg_enabled ?? true,
     });
+
+    const handleSelectRegimenAno = (ano: number) => {
+        const info = CRONOGRAMA_OFICIAL[ano];
+        if (info) {
+            configForm.setData({
+                ...configForm.data,
+                reforma_laboral_ano: ano,
+                limite_horas_normales_semanal: info.normales,
+                limite_tex_doble_semanal: info.tex_doble,
+                limite_tex_triple_semanal: info.tex_triple,
+            });
+        }
+    };
 
     const handleSaveConfig = (e: React.FormEvent) => {
         e.preventDefault();
         configForm.put('/admin/asistencia/configuracion', {
             preserveScroll: true,
-            onSuccess: () => notifySuccess('Configuración de asistencia guardada correctamente.'),
+            onSuccess: () => notifySuccess('Configuración guardada correctamente.'),
         });
     };
 
@@ -316,10 +397,14 @@ export default function ConfiguracionAsistenciaIndex({ configuracion, turnos, di
 
                 {/* Contenido en Pestañas */}
                 <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-                    <TabsList className="grid grid-cols-3 w-full max-w-2xl">
+                    <TabsList className="grid grid-cols-4 w-full max-w-3xl">
                         <TabsTrigger value="politicas" className="flex items-center gap-2">
                             <Clock className="w-4 h-4" />
                             <span>Políticas de Asistencia</span>
+                        </TabsTrigger>
+                        <TabsTrigger value="reforma" className="flex items-center gap-2">
+                            <Scale className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
+                            <span>Reforma 40h & Semáforos</span>
                         </TabsTrigger>
                         <TabsTrigger value="turnos" className="flex items-center gap-2">
                             <Briefcase className="w-4 h-4" />
@@ -534,6 +619,519 @@ export default function ConfiguracionAsistenciaIndex({ configuracion, turnos, di
                                 <Button type="submit" disabled={configForm.processing} className="gap-2">
                                     <Save className="w-4 h-4" />
                                     <span>Guardar Configuración General</span>
+                                </Button>
+                            </div>
+                        </form>
+                    </TabsContent>
+
+                    {/* PESTAÑA: REFORMA LABORAL 48H A 40H & SEMÁFOROS ESCALONADOS LFT */}
+                    <TabsContent value="reforma">
+                        <form onSubmit={handleSaveConfig} className="space-y-6">
+                            {/* Card 1: Cronograma Oficial de Reducción Gradual */}
+                            <Card className="border-emerald-500/30 dark:border-emerald-500/20 shadow-sm overflow-hidden">
+                                <CardHeader className="bg-emerald-500/5 dark:bg-emerald-950/20 border-b border-emerald-500/20">
+                                    <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-2">
+                                        <div className="flex items-center gap-3">
+                                            <div className="p-2 rounded-lg bg-emerald-500/10 text-emerald-600 dark:text-emerald-400">
+                                                <Scale className="w-5 h-5" />
+                                            </div>
+                                            <div>
+                                                <CardTitle className="text-base font-bold flex items-center gap-2">
+                                                    Cronograma de Reducción Gradual de Jornada (LFT)
+                                                    <Badge variant="outline" className="bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/30 text-xs">
+                                                        2 hrs / año
+                                                    </Badge>
+                                                </CardTitle>
+                                                <CardDescription>
+                                                    Transición escalonada de 48h a 40h semanales. Selecciona el año en curso para sincronizar los límites laborales.
+                                                </CardDescription>
+                                            </div>
+                                        </div>
+                                        <div className="flex items-center gap-2">
+                                            <span className="text-xs text-muted-foreground">Régimen Activo:</span>
+                                            <Badge className="bg-emerald-600 text-white font-bold px-3 py-1 text-sm">
+                                                Año {configForm.data.reforma_laboral_ano} ({configForm.data.limite_horas_normales_semanal}h Normales)
+                                            </Badge>
+                                        </div>
+                                    </div>
+                                </CardHeader>
+                                <CardContent className="p-6 space-y-6">
+                                    {/* Tabla Interactiva de Transición */}
+                                    <div className="overflow-x-auto rounded-xl border border-slate-200 dark:border-slate-800">
+                                        <table className="w-full text-sm text-left">
+                                            <thead>
+                                                <tr className="bg-slate-100 dark:bg-slate-800/60 border-b border-slate-200 dark:border-slate-800 font-semibold text-slate-700 dark:text-slate-300">
+                                                    <th className="py-3 px-4">Semana / Concepto</th>
+                                                    {[2026, 2027, 2028, 2029, 2030].map((ano) => {
+                                                        const isActive = configForm.data.reforma_laboral_ano === ano;
+                                                        return (
+                                                            <th key={ano} className={`py-3 px-4 text-center transition-colors ${isActive ? 'bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 font-black' : ''}`}>
+                                                                <div className="flex flex-col items-center gap-0.5">
+                                                                    <span>{ano}</span>
+                                                                    {isActive && (
+                                                                        <Badge className="bg-emerald-600 text-[10px] text-white px-1.5 py-0 h-4">
+                                                                            Vigente
+                                                                        </Badge>
+                                                                    )}
+                                                                </div>
+                                                            </th>
+                                                        );
+                                                    })}
+                                                </tr>
+                                            </thead>
+                                            <tbody className="divide-y divide-slate-200 dark:divide-slate-800">
+                                                <tr className="hover:bg-slate-50/50 dark:hover:bg-slate-800/40">
+                                                    <td className="py-3 px-4 font-medium text-slate-900 dark:text-slate-100 flex items-center gap-2">
+                                                        <Clock className="w-4 h-4 text-blue-500" />
+                                                        <span>Horas Normales Semanales</span>
+                                                    </td>
+                                                    {[2026, 2027, 2028, 2029, 2030].map((ano) => (
+                                                        <td key={ano} className={`py-3 px-4 text-center font-semibold ${configForm.data.reforma_laboral_ano === ano ? 'bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 font-bold' : ''}`}>
+                                                            {CRONOGRAMA_OFICIAL[ano].normales} hrs
+                                                        </td>
+                                                    ))}
+                                                </tr>
+                                                <tr className="hover:bg-slate-50/50 dark:hover:bg-slate-800/40">
+                                                    <td className="py-3 px-4 font-medium text-slate-900 dark:text-slate-100 flex items-center gap-2">
+                                                        <TrendingDown className="w-4 h-4 text-amber-500" />
+                                                        <span>TEX Doble (Horas Extra 2x)</span>
+                                                    </td>
+                                                    {[2026, 2027, 2028, 2029, 2030].map((ano) => (
+                                                        <td key={ano} className={`py-3 px-4 text-center font-semibold ${configForm.data.reforma_laboral_ano === ano ? 'bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 font-bold' : ''}`}>
+                                                            {CRONOGRAMA_OFICIAL[ano].tex_doble} hrs
+                                                        </td>
+                                                    ))}
+                                                </tr>
+                                                <tr className="hover:bg-slate-50/50 dark:hover:bg-slate-800/40">
+                                                    <td className="py-3 px-4 font-medium text-slate-900 dark:text-slate-100 flex items-center gap-2">
+                                                        <AlertTriangle className="w-4 h-4 text-rose-500" />
+                                                        <span>TEX Triple (Horas Extra 3x)</span>
+                                                    </td>
+                                                    {[2026, 2027, 2028, 2029, 2030].map((ano) => (
+                                                        <td key={ano} className={`py-3 px-4 text-center font-semibold ${configForm.data.reforma_laboral_ano === ano ? 'bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 font-bold' : ''}`}>
+                                                            {CRONOGRAMA_OFICIAL[ano].tex_triple} hrs
+                                                        </td>
+                                                    ))}
+                                                </tr>
+                                                <tr className="bg-slate-50/80 dark:bg-slate-800/60 font-bold">
+                                                    <td className="py-3 px-4 font-bold text-slate-900 dark:text-slate-100 flex items-center gap-2">
+                                                        <Activity className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
+                                                        <span>Total Horas Máximas</span>
+                                                    </td>
+                                                    {[2026, 2027, 2028, 2029, 2030].map((ano) => (
+                                                        <td key={ano} className={`py-3 px-4 text-center font-black ${configForm.data.reforma_laboral_ano === ano ? 'bg-emerald-500/20 text-emerald-800 dark:text-emerald-200' : 'text-slate-700 dark:text-slate-300'}`}>
+                                                            {CRONOGRAMA_OFICIAL[ano].total} hrs
+                                                        </td>
+                                                    ))}
+                                                </tr>
+                                                <tr>
+                                                    <td className="py-3 px-4 text-xs text-muted-foreground font-medium">
+                                                        Selección Rápida
+                                                    </td>
+                                                    {[2026, 2027, 2028, 2029, 2030].map((ano) => {
+                                                        const isCurrent = configForm.data.reforma_laboral_ano === ano;
+                                                        return (
+                                                            <td key={ano} className="py-2.5 px-3 text-center">
+                                                                <Button
+                                                                    type="button"
+                                                                    size="sm"
+                                                                    variant={isCurrent ? "default" : "outline"}
+                                                                    onClick={() => handleSelectRegimenAno(ano)}
+                                                                    className={`w-full text-xs h-7 gap-1 ${isCurrent ? 'bg-emerald-600 hover:bg-emerald-700 text-white shadow-sm' : 'border-slate-300 dark:border-slate-700'}`}
+                                                                >
+                                                                    {isCurrent ? (
+                                                                        <>
+                                                                            <Check className="w-3 h-3" />
+                                                                            <span>Activo</span>
+                                                                        </>
+                                                                    ) : (
+                                                                        <span>Aplicar {ano}</span>
+                                                                    )}
+                                                                </Button>
+                                                            </td>
+                                                        );
+                                                    })}
+                                                </tr>
+                                            </tbody>
+                                        </table>
+                                    </div>
+
+                                    {/* Ajuste manual fino de límites si se desea */}
+                                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4 p-4 rounded-xl border bg-slate-50/50 dark:bg-slate-900/30">
+                                        <div className="space-y-1.5">
+                                            <Label className="text-xs font-semibold">Límite Horas Normales (Semana)</Label>
+                                            <Input
+                                                type="number"
+                                                step="0.5"
+                                                min="30"
+                                                max="60"
+                                                value={configForm.data.limite_horas_normales_semanal}
+                                                onChange={(e) => configForm.setData('limite_horas_normales_semanal', e.target.value)}
+                                            />
+                                            <p className="text-[11px] text-muted-foreground">Horas ordinarias legales para el régimen seleccionado.</p>
+                                        </div>
+
+                                        <div className="space-y-1.5">
+                                            <Label className="text-xs font-semibold">Límite Horas Extras Dobles (Semana)</Label>
+                                            <Input
+                                                type="number"
+                                                step="0.5"
+                                                min="0"
+                                                max="30"
+                                                value={configForm.data.limite_tex_doble_semanal}
+                                                onChange={(e) => configForm.setData('limite_tex_doble_semanal', e.target.value)}
+                                            />
+                                            <p className="text-[11px] text-muted-foreground">Horas pagadas al 200% (12h en 2026, 9h a partir de 2027).</p>
+                                        </div>
+
+                                        <div className="space-y-1.5">
+                                            <Label className="text-xs font-semibold">Límite Horas Extras Triples (Semana)</Label>
+                                            <Input
+                                                type="number"
+                                                step="0.5"
+                                                min="0"
+                                                max="20"
+                                                value={configForm.data.limite_tex_triple_semanal}
+                                                onChange={(e) => configForm.setData('limite_tex_triple_semanal', e.target.value)}
+                                            />
+                                            <p className="text-[11px] text-muted-foreground">Límite máximo permitido de horas triples al 300% (4 hrs).</p>
+                                        </div>
+                                    </div>
+                                </CardContent>
+                            </Card>
+
+                            {/* Card 2: Matriz de Semáforos LFT y Notificaciones Escalonadas */}
+                            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                                {/* Subcard A: Semáforo Normal */}
+                                <Card className="border-blue-500/30 dark:border-blue-500/20 shadow-sm flex flex-col justify-between">
+                                    <CardHeader className="bg-blue-500/5 dark:bg-blue-950/20 border-b border-blue-500/20 pb-4">
+                                        <CardTitle className="text-sm font-bold flex items-center gap-2">
+                                            <Clock className="w-4 h-4 text-blue-600 dark:text-blue-400" />
+                                            Semáforo Normal
+                                        </CardTitle>
+                                        <CardDescription className="text-xs">
+                                            Monitoreo de horas ordinarias acumuladas con alertas escalonadas.
+                                        </CardDescription>
+                                    </CardHeader>
+                                    <CardContent className="p-4 space-y-4 flex-1">
+                                        <div className="p-3 rounded-lg border border-emerald-500/30 bg-emerald-500/10 space-y-2">
+                                            <div className="flex items-center justify-between">
+                                                <span className="text-xs font-bold text-emerald-700 dark:text-emerald-300 flex items-center gap-1.5">
+                                                    🟢 Nivel Verde
+                                                </span>
+                                                <Badge className="bg-emerald-600 text-white text-[10px]">Notif: RH</Badge>
+                                            </div>
+                                            <div className="space-y-1">
+                                                <Label className="text-[11px] text-muted-foreground">Umbral de Horas</Label>
+                                                <div className="flex items-center gap-2">
+                                                    <Input
+                                                        type="number"
+                                                        step="0.5"
+                                                        value={configForm.data.semaforo_normal_verde}
+                                                        onChange={(e) => configForm.setData('semaforo_normal_verde', e.target.value)}
+                                                        className="h-8 text-xs font-bold font-mono"
+                                                    />
+                                                    <span className="text-xs text-muted-foreground font-semibold">hrs</span>
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        <div className="p-3 rounded-lg border border-amber-500/30 bg-amber-500/10 space-y-2">
+                                            <div className="flex items-center justify-between">
+                                                <span className="text-xs font-bold text-amber-700 dark:text-amber-300 flex items-center gap-1.5">
+                                                    🟡 Nivel Amarillo
+                                                </span>
+                                                <Badge className="bg-amber-600 text-white text-[10px]">Notif: Responsable</Badge>
+                                            </div>
+                                            <div className="space-y-1">
+                                                <Label className="text-[11px] text-muted-foreground">Umbral de Horas</Label>
+                                                <div className="flex items-center gap-2">
+                                                    <Input
+                                                        type="number"
+                                                        step="0.5"
+                                                        value={configForm.data.semaforo_normal_amarillo}
+                                                        onChange={(e) => configForm.setData('semaforo_normal_amarillo', e.target.value)}
+                                                        className="h-8 text-xs font-bold font-mono"
+                                                    />
+                                                    <span className="text-xs text-muted-foreground font-semibold">hrs</span>
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        <div className="p-3 rounded-lg border border-rose-500/30 bg-rose-500/10 space-y-2">
+                                            <div className="flex items-center justify-between">
+                                                <span className="text-xs font-bold text-rose-700 dark:text-rose-300 flex items-center gap-1.5">
+                                                    🔴 Nivel Rojo
+                                                </span>
+                                                <Badge className="bg-rose-600 text-white text-[10px]">Notif: DG</Badge>
+                                            </div>
+                                            <div className="space-y-1">
+                                                <Label className="text-[11px] text-muted-foreground">Umbral de Horas</Label>
+                                                <div className="flex items-center gap-2">
+                                                    <Input
+                                                        type="number"
+                                                        step="0.5"
+                                                        value={configForm.data.semaforo_normal_rojo}
+                                                        onChange={(e) => configForm.setData('semaforo_normal_rojo', e.target.value)}
+                                                        className="h-8 text-xs font-bold font-mono"
+                                                    />
+                                                    <span className="text-xs text-muted-foreground font-semibold">hrs</span>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </CardContent>
+                                </Card>
+
+                                {/* Subcard B: Semáforo TEX Doble */}
+                                <Card className="border-amber-500/30 dark:border-amber-500/20 shadow-sm flex flex-col justify-between">
+                                    <CardHeader className="bg-amber-500/5 dark:bg-amber-950/20 border-b border-amber-500/20 pb-4">
+                                        <CardTitle className="text-sm font-bold flex items-center gap-2">
+                                            <TrendingDown className="w-4 h-4 text-amber-600 dark:text-amber-400" />
+                                            Semáforo TEX Doble
+                                        </CardTitle>
+                                        <CardDescription className="text-xs">
+                                            Horas extras al 200% acumuladas en la semana.
+                                        </CardDescription>
+                                    </CardHeader>
+                                    <CardContent className="p-4 space-y-4 flex-1">
+                                        <div className="p-3 rounded-lg border border-emerald-500/30 bg-emerald-500/10 space-y-2">
+                                            <div className="flex items-center justify-between">
+                                                <span className="text-xs font-bold text-emerald-700 dark:text-emerald-300">
+                                                    🟢 Nivel Verde
+                                                </span>
+                                                <span className="text-[11px] text-muted-foreground">Preventivo</span>
+                                            </div>
+                                            <div className="space-y-1">
+                                                <Label className="text-[11px] text-muted-foreground">Umbral de Horas</Label>
+                                                <div className="flex items-center gap-2">
+                                                    <Input
+                                                        type="number"
+                                                        step="0.5"
+                                                        value={configForm.data.semaforo_tex_doble_verde}
+                                                        onChange={(e) => configForm.setData('semaforo_tex_doble_verde', e.target.value)}
+                                                        className="h-8 text-xs font-bold font-mono"
+                                                    />
+                                                    <span className="text-xs text-muted-foreground font-semibold">hrs</span>
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        <div className="p-3 rounded-lg border border-amber-500/30 bg-amber-500/10 space-y-2">
+                                            <div className="flex items-center justify-between">
+                                                <span className="text-xs font-bold text-amber-700 dark:text-amber-300">
+                                                    🟡 Nivel Amarillo
+                                                </span>
+                                                <span className="text-[11px] text-muted-foreground">Atención</span>
+                                            </div>
+                                            <div className="space-y-1">
+                                                <Label className="text-[11px] text-muted-foreground">Umbral de Horas</Label>
+                                                <div className="flex items-center gap-2">
+                                                    <Input
+                                                        type="number"
+                                                        step="0.5"
+                                                        value={configForm.data.semaforo_tex_doble_amarillo}
+                                                        onChange={(e) => configForm.setData('semaforo_tex_doble_amarillo', e.target.value)}
+                                                        className="h-8 text-xs font-bold font-mono"
+                                                    />
+                                                    <span className="text-xs text-muted-foreground font-semibold">hrs</span>
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        <div className="p-3 rounded-lg border border-rose-500/30 bg-rose-500/10 space-y-2">
+                                            <div className="flex items-center justify-between">
+                                                <span className="text-xs font-bold text-rose-700 dark:text-rose-300">
+                                                    🔴 Nivel Rojo
+                                                </span>
+                                                <span className="text-[11px] text-muted-foreground font-bold">Límite Máximo</span>
+                                            </div>
+                                            <div className="space-y-1">
+                                                <Label className="text-[11px] text-muted-foreground">Umbral de Horas</Label>
+                                                <div className="flex items-center gap-2">
+                                                    <Input
+                                                        type="number"
+                                                        step="0.5"
+                                                        value={configForm.data.semaforo_tex_doble_rojo}
+                                                        onChange={(e) => configForm.setData('semaforo_tex_doble_rojo', e.target.value)}
+                                                        className="h-8 text-xs font-bold font-mono"
+                                                    />
+                                                    <span className="text-xs text-muted-foreground font-semibold">hrs</span>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </CardContent>
+                                </Card>
+
+                                {/* Subcard C: Semáforo TEX Triple */}
+                                <Card className="border-rose-500/30 dark:border-rose-500/20 shadow-sm flex flex-col justify-between">
+                                    <CardHeader className="bg-rose-500/5 dark:bg-rose-950/20 border-b border-rose-500/20 pb-4">
+                                        <CardTitle className="text-sm font-bold flex items-center gap-2">
+                                            <AlertTriangle className="w-4 h-4 text-rose-600 dark:text-rose-400" />
+                                            Semáforo TEX Triple
+                                        </CardTitle>
+                                        <CardDescription className="text-xs">
+                                            Horas extras al 300% (excedentes de horas dobles).
+                                        </CardDescription>
+                                    </CardHeader>
+                                    <CardContent className="p-4 space-y-4 flex-1">
+                                        <div className="p-3 rounded-lg border border-emerald-500/30 bg-emerald-500/10 space-y-2">
+                                            <div className="flex items-center justify-between">
+                                                <span className="text-xs font-bold text-emerald-700 dark:text-emerald-300">
+                                                    🟢 Nivel Verde
+                                                </span>
+                                                <span className="text-[11px] text-muted-foreground">Alerta Inicial</span>
+                                            </div>
+                                            <div className="space-y-1">
+                                                <Label className="text-[11px] text-muted-foreground">Umbral de Horas</Label>
+                                                <div className="flex items-center gap-2">
+                                                    <Input
+                                                        type="number"
+                                                        step="0.5"
+                                                        value={configForm.data.semaforo_tex_triple_verde}
+                                                        onChange={(e) => configForm.setData('semaforo_tex_triple_verde', e.target.value)}
+                                                        className="h-8 text-xs font-bold font-mono"
+                                                    />
+                                                    <span className="text-xs text-muted-foreground font-semibold">hrs</span>
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        <div className="p-3 rounded-lg border border-amber-500/30 bg-amber-500/10 space-y-2">
+                                            <div className="flex items-center justify-between">
+                                                <span className="text-xs font-bold text-amber-700 dark:text-amber-300">
+                                                    🟡 Nivel Amarillo
+                                                </span>
+                                                <span className="text-[11px] text-muted-foreground font-semibold">Alerta Crítica</span>
+                                            </div>
+                                            <div className="space-y-1">
+                                                <Label className="text-[11px] text-muted-foreground">Umbral de Horas</Label>
+                                                <div className="flex items-center gap-2">
+                                                    <Input
+                                                        type="number"
+                                                        step="0.5"
+                                                        value={configForm.data.semaforo_tex_triple_amarillo}
+                                                        onChange={(e) => configForm.setData('semaforo_tex_triple_amarillo', e.target.value)}
+                                                        className="h-8 text-xs font-bold font-mono"
+                                                    />
+                                                    <span className="text-xs text-muted-foreground font-semibold">hrs</span>
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        <div className="p-3 rounded-lg border border-rose-500/30 bg-rose-500/10 space-y-2">
+                                            <div className="flex items-center justify-between">
+                                                <span className="text-xs font-bold text-rose-700 dark:text-rose-300">
+                                                    🔴 Nivel Rojo
+                                                </span>
+                                                <span className="text-[11px] text-rose-600 dark:text-rose-400 font-bold">Máximo LFT</span>
+                                            </div>
+                                            <div className="space-y-1">
+                                                <Label className="text-[11px] text-muted-foreground">Umbral de Horas</Label>
+                                                <div className="flex items-center gap-2">
+                                                    <Input
+                                                        type="number"
+                                                        step="0.5"
+                                                        value={configForm.data.semaforo_tex_triple_rojo}
+                                                        onChange={(e) => configForm.setData('semaforo_tex_triple_rojo', e.target.value)}
+                                                        className="h-8 text-xs font-bold font-mono"
+                                                    />
+                                                    <span className="text-xs text-muted-foreground font-semibold">hrs</span>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </CardContent>
+                                </Card>
+                            </div>
+
+                            {/* Card 3: Canales de Notificaciones Escalonadas */}
+                            <Card className="border-slate-200 dark:border-slate-800 shadow-sm">
+                                <CardHeader className="bg-slate-50 dark:bg-slate-900/40 border-b pb-4">
+                                    <CardTitle className="text-sm font-bold flex items-center gap-2">
+                                        <Bell className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
+                                        Destinatarios y Canales de Notificaciones Escalonadas
+                                    </CardTitle>
+                                    <CardDescription className="text-xs">
+                                        Configura hacia quién se dirigen los avisos al cruzar los umbrales de jornada laboral.
+                                    </CardDescription>
+                                </CardHeader>
+                                <CardContent className="p-6 space-y-6">
+                                    <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                                        {/* RH */}
+                                        <div className="p-4 rounded-xl border border-emerald-500/30 bg-emerald-500/5 space-y-3">
+                                            <div className="flex items-center justify-between">
+                                                <div className="flex items-center gap-2">
+                                                    <Badge className="bg-emerald-600 text-white font-bold">🟢 RH (42h)</Badge>
+                                                    <span className="text-xs font-semibold">Recursos Humanos</span>
+                                                </div>
+                                                <Switch
+                                                    checked={configForm.data.notif_rh_enabled}
+                                                    onCheckedChange={(checked) => configForm.setData('notif_rh_enabled', checked)}
+                                                />
+                                            </div>
+                                            <div className="space-y-1.5">
+                                                <Label className="text-xs">Correo Electrónico de RH</Label>
+                                                <Input
+                                                    type="email"
+                                                    placeholder="rh@empresa.com"
+                                                    value={configForm.data.notif_rh_email || ''}
+                                                    onChange={(e) => configForm.setData('notif_rh_email', e.target.value)}
+                                                    className="h-8 text-xs"
+                                                />
+                                            </div>
+                                            <p className="text-[11px] text-muted-foreground">Aviso preventivo cuando un colaborador alcanza 42h ordinarias semanales.</p>
+                                        </div>
+
+                                        {/* Responsable */}
+                                        <div className="p-4 rounded-xl border border-amber-500/30 bg-amber-500/5 space-y-3">
+                                            <div className="flex items-center justify-between">
+                                                <div className="flex items-center gap-2">
+                                                    <Badge className="bg-amber-600 text-white font-bold">🟡 Responsable (44h)</Badge>
+                                                    <span className="text-xs font-semibold">Supervisor / Sede</span>
+                                                </div>
+                                                <Switch
+                                                    checked={configForm.data.notif_responsable_enabled}
+                                                    onCheckedChange={(checked) => configForm.setData('notif_responsable_enabled', checked)}
+                                                />
+                                            </div>
+                                            <div className="p-2 rounded-lg bg-amber-500/10 border border-amber-500/20 text-[11px] text-amber-800 dark:text-amber-200">
+                                                <p className="font-semibold">Responsable directo asignado</p>
+                                                <p className="text-[10px] text-muted-foreground mt-0.5">Se notifica automáticamente al supervisor directo de sede que tenga registrado el colaborador.</p>
+                                            </div>
+                                            <p className="text-[11px] text-muted-foreground">Aviso de atención cuando un colaborador alcanza 44h ordinarias semanales.</p>
+                                        </div>
+
+                                        {/* Dirección General */}
+                                        <div className="p-4 rounded-xl border border-rose-500/30 bg-rose-500/5 space-y-3">
+                                            <div className="flex items-center justify-between">
+                                                <div className="flex items-center gap-2">
+                                                    <Badge className="bg-rose-600 text-white font-bold">🔴 DG (46h)</Badge>
+                                                    <span className="text-xs font-semibold">Dirección General</span>
+                                                </div>
+                                                <Switch
+                                                    checked={configForm.data.notif_dg_enabled}
+                                                    onCheckedChange={(checked) => configForm.setData('notif_dg_enabled', checked)}
+                                                />
+                                            </div>
+                                            <div className="space-y-1.5">
+                                                <Label className="text-xs">Correo Dirección General</Label>
+                                                <Input
+                                                    type="email"
+                                                    placeholder="direccion@empresa.com"
+                                                    value={configForm.data.notif_dg_email || ''}
+                                                    onChange={(e) => configForm.setData('notif_dg_email', e.target.value)}
+                                                    className="h-8 text-xs"
+                                                />
+                                            </div>
+                                            <p className="text-[11px] text-muted-foreground">Alerta crítica a la alta dirección al alcanzar 46h ordinarias semanales.</p>
+                                        </div>
+                                    </div>
+                                </CardContent>
+                            </Card>
+
+                            <div className="flex justify-end pt-2">
+                                <Button type="submit" disabled={configForm.processing} className="gap-2 bg-emerald-600 hover:bg-emerald-700 text-white font-semibold">
+                                    <Save className="w-4 h-4" />
+                                    <span>Guardar Parámetros de Reforma Laboral & Semáforos</span>
                                 </Button>
                             </div>
                         </form>
