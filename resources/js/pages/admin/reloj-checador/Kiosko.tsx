@@ -19,7 +19,8 @@ import {
     X,
     Sparkles,
     SwitchCamera,
-    AlertTriangle
+    AlertTriangle,
+    MapPin
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
@@ -66,6 +67,32 @@ export default function RelojChecadorKiosko({ configuracion, zona_horaria }: Pro
     const [tipoMarcajeSeleccionado, setTipoMarcajeSeleccionado] = useState<string>('entrada');
     const [errorMessage, setErrorMessage] = useState<string | null>(null);
     const [successMessage, setSuccessMessage] = useState<string | null>(null);
+
+    // Geoubicación del Kiosko / Dispositivo
+    const [gpsPosition, setGpsPosition] = useState<{ lat: number; lng: number } | null>(null);
+    const [gpsStatus, setGpsStatus] = useState<'obteniendo' | 'activo' | 'denegado' | 'no_soportado'>('obteniendo');
+
+    useEffect(() => {
+        if (!navigator.geolocation) {
+            setGpsStatus('no_soportado');
+            return;
+        }
+
+        navigator.geolocation.getCurrentPosition(
+            (pos) => {
+                setGpsPosition({
+                    lat: pos.coords.latitude,
+                    lng: pos.coords.longitude,
+                });
+                setGpsStatus('activo');
+            },
+            (err) => {
+                console.warn('Geolocalización no disponible:', err);
+                setGpsStatus('denegado');
+            },
+            { enableHighAccuracy: true, timeout: 10000, maximumAge: 60000 }
+        );
+    }, []);
 
     // Cámara de evidencia de marcaje
     const videoRef = useRef<HTMLVideoElement | null>(null);
@@ -361,6 +388,8 @@ export default function RelojChecadorKiosko({ configuracion, zona_horaria }: Pro
                     empleado_id: empleado.id,
                     tipo_marcaje: tipo,
                     fotografia_base64: fotoBase64,
+                    latitud: gpsPosition?.lat ?? null,
+                    longitud: gpsPosition?.lng ?? null,
                     ...extraPayload,
                 }),
             });
@@ -883,7 +912,21 @@ export default function RelojChecadorKiosko({ configuracion, zona_horaria }: Pro
 
             {/* PIE DE PÁGINA */}
             <div className="border-t border-slate-900 pt-4 flex flex-col sm:flex-row items-center justify-between text-xs text-slate-500 gap-2">
-                <div>Sistema Kiosko Checador • Soporte para Teclado, Pistola USB y QR Gafete</div>
+                <div className="flex items-center gap-3">
+                    <span>Sistema Kiosko Checador • Soporte para Teclado, Pistola USB y QR Gafete</span>
+                    {gpsStatus === 'activo' && gpsPosition && (
+                        <Badge variant="outline" className="text-[10px] bg-emerald-950/40 text-emerald-400 border-emerald-800 flex items-center gap-1 font-mono">
+                            <MapPin className="w-3 h-3 text-emerald-400" />
+                            GPS: {gpsPosition.lat.toFixed(4)}, {gpsPosition.lng.toFixed(4)}
+                        </Badge>
+                    )}
+                    {gpsStatus === 'obteniendo' && (
+                        <span className="text-[10px] text-slate-400 flex items-center gap-1">
+                            <MapPin className="w-3 h-3 text-amber-400 animate-pulse" />
+                            Sincronizando GPS...
+                        </span>
+                    )}
+                </div>
                 <div className="flex items-center gap-2">
                     <ShieldCheck className="w-4 h-4 text-emerald-500" />
                     <span>Control de Asistencia & Horarios</span>

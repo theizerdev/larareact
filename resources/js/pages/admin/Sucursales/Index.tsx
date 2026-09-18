@@ -935,13 +935,32 @@ return;
                                     </div>
                                     <div>
                                         <Label htmlFor="zona_horaria">{__('Time Zone')}</Label>
-                                        <Input
-                                            id="zona_horaria"
-                                            value={data.zona_horaria || ''}
-                                            onChange={(e) => setData('zona_horaria', e.target.value)}
-                                            placeholder="America/Mexico_City"
-                                            className="font-mono text-xs"
-                                        />
+                                        <Select
+                                            value={data.zona_horaria || 'America/Mexico_City'}
+                                            onValueChange={(v) => setData('zona_horaria', v)}
+                                        >
+                                            <SelectTrigger id="zona_horaria" className="w-full text-xs font-mono">
+                                                <SelectValue placeholder="Seleccionar zona horaria" />
+                                            </SelectTrigger>
+                                            <SelectContent>
+                                                <SelectItem value="America/Mexico_City">America/Mexico_City (Centro: CDMX, GDL, MTY)</SelectItem>
+                                                <SelectItem value="America/Tijuana">America/Tijuana (Noroeste: BC - Tijuana, Mexicali)</SelectItem>
+                                                <SelectItem value="America/Hermosillo">America/Hermosillo (Sonora - Sin horario estacional)</SelectItem>
+                                                <SelectItem value="America/Ciudad_Juarez">America/Ciudad_Juarez (Chihuahua Frontera)</SelectItem>
+                                                <SelectItem value="America/Chihuahua">America/Chihuahua (Chihuahua Estatal)</SelectItem>
+                                                <SelectItem value="America/Mazatlan">America/Mazatlan (Pacífico: Sinaloa, BCS, Nayarit)</SelectItem>
+                                                <SelectItem value="America/Cancun">America/Cancun (Sureste: Quintana Roo)</SelectItem>
+                                                <SelectItem value="America/Monterrey">America/Monterrey (Nuevo León)</SelectItem>
+                                                <SelectItem value="America/Bogota">America/Bogota (Colombia / UTC-5)</SelectItem>
+                                                <SelectItem value="America/Lima">America/Lima (Perú / UTC-5)</SelectItem>
+                                                <SelectItem value="America/New_York">America/New_York (US Eastern / UTC-5)</SelectItem>
+                                                <SelectItem value="America/Los_Angeles">America/Los_Angeles (US Pacific / UTC-8)</SelectItem>
+                                                <SelectItem value="UTC">UTC (Universal Coordinated Time)</SelectItem>
+                                            </SelectContent>
+                                        </Select>
+                                        {errors.zona_horaria && (
+                                            <p className="text-red-500 text-xs mt-1">{errors.zona_horaria}</p>
+                                        )}
                                     </div>
                                 </div>
 

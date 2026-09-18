@@ -279,6 +279,10 @@ class KioskoApiController extends Controller
             $fotoPath = $imageName;
         }
 
+        $lat = $validated['latitud'] ?? null;
+        $lon = $validated['longitud'] ?? null;
+        $geoloc = ($lat && $lon) ? "{$lat}, {$lon}" : null;
+
         $marcaje = AsistenciaMarcaje::create([
             'empresa_id' => $empleado->empresa_id,
             'sucursal_id' => $empleado->sucursal_id,
@@ -287,8 +291,9 @@ class KioskoApiController extends Controller
             'fecha_hora' => $now,
             'origen' => 'app',
             'fotografia_path' => $fotoPath,
-            'latitud' => $validated['latitud'] ?? null,
-            'longitud' => $validated['longitud'] ?? null,
+            'latitud' => $lat,
+            'longitud' => $lon,
+            'geolocalizacion' => $geoloc,
             'observaciones' => $validated['observaciones'] ?? null,
             'incidente_causa' => $validated['incidente_causa'] ?? null,
             'duracion_descanso_minutos' => $validated['duracion_descanso_minutos'] ?? null,

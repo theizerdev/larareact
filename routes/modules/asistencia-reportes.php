@@ -9,6 +9,16 @@ Route::middleware(['auth', 'verified'])->group(function () {
         ->middleware('permission:asistencia.bitacora|asistencia.view')
         ->name('asistencia.bitacora.index');
 
+    // Exportación de Marcajes en Excel (.xlsx) y CSV
+    Route::get('/asistencia/bitacora/exportar', [AsistenciaReporteController::class, 'exportarMarcajes'])
+        ->middleware('permission:asistencia.bitacora|asistencia.view')
+        ->name('asistencia.bitacora.exportar');
+
+    // Panel de Control en Tiempo Real por Sede y Responsable
+    Route::get('/asistencia/panel-control', [AsistenciaReporteController::class, 'panelControl'])
+        ->middleware('permission:asistencia.bitacora|asistencia.view')
+        ->name('asistencia.panel-control.index');
+
     // Consola de Pre-Nómina y Cálculo de Horas LFT
     Route::get('/asistencia/calculo-nomina', [AsistenciaReporteController::class, 'calculoNomina'])
         ->middleware('permission:asistencia.nomina|asistencia.view')
