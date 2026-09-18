@@ -23,6 +23,7 @@ interface SearchableSelectProps {
     popoverContentClassName?: string;
     disabled?: boolean;
     id?: string;
+    modal?: boolean;
 }
 
 export default function SearchableSelect({
@@ -36,6 +37,7 @@ export default function SearchableSelect({
     popoverContentClassName,
     disabled = false,
     id,
+    modal = true,
 }: SearchableSelectProps) {
     const { __ } = useTranslate();
     const [open, setOpen] = useState(false);
@@ -63,7 +65,7 @@ export default function SearchableSelect({
     };
 
     return (
-        <Popover open={open} onOpenChange={setOpen}>
+        <Popover modal={modal} open={open} onOpenChange={setOpen}>
             <PopoverTrigger asChild>
                 <Button
                     id={id}
@@ -91,6 +93,9 @@ export default function SearchableSelect({
                 )}
                 align="start"
                 sideOffset={4}
+                onCloseAutoFocus={(e) => {
+                    e.preventDefault();
+                }}
             >
                 <div className="flex items-center px-2 py-1 border-b mb-1 gap-1.5">
                     <Search className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
@@ -121,9 +126,20 @@ export default function SearchableSelect({
                             return (
                                 <div
                                     key={opt.value}
-                                    onClick={() => handleSelect(opt.value)}
+                                    role="option"
+                                    aria-selected={isSelected}
+                                    onPointerDown={(e) => {
+                                        e.preventDefault();
+                                        e.stopPropagation();
+                                        handleSelect(opt.value);
+                                    }}
+                                    onClick={(e) => {
+                                        e.preventDefault();
+                                        e.stopPropagation();
+                                        handleSelect(opt.value);
+                                    }}
                                     className={cn(
-                                        'flex items-center justify-between px-2.5 py-1.5 text-xs rounded-sm cursor-pointer transition-colors',
+                                        'flex items-center justify-between px-2.5 py-1.5 text-xs rounded-sm cursor-pointer transition-colors select-none',
                                         isSelected
                                             ? 'bg-blue-50 text-blue-700 dark:bg-blue-950/60 dark:text-blue-300 font-medium'
                                             : 'hover:bg-accent hover:text-accent-foreground text-slate-700 dark:text-slate-300'

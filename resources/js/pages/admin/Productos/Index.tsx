@@ -262,17 +262,18 @@ export default function Index({ productos, categorias: categoriasProp, marcas: m
 
     const handleMarcaSelect = (val: string) => {
         setSelMarcaId(val);
+        setSelFamiliaId('all');
     };
 
     const handleCategoriaSelect = (val: string) => {
         setSelCategoriaId(val);
+        setSelFamiliaId('all');
     };
 
-    // Modelos filtrados en cascada según Categoría, Marca y Familia seleccionadas
+    // Modelos filtrados en cascada según Categoría y Marca seleccionadas
     const filteredModelos = modelos.filter((m) => {
         if (selMarcaId !== 'all' && String(m.marca_id) !== String(selMarcaId)) return false;
         if (selCategoriaId !== 'all' && m.categoria_id && String(m.categoria_id) !== String(selCategoriaId)) return false;
-        if (selFamiliaId !== 'all' && m.familia_id && String(m.familia_id) !== String(selFamiliaId)) return false;
         return true;
     });
 
@@ -403,6 +404,8 @@ export default function Index({ productos, categorias: categoriasProp, marcas: m
         setData((prev) => ({
             ...prev,
             modelo_id: modeloId,
+            categoria_id: mod.categoria_id ? String(mod.categoria_id) : prev.categoria_id,
+            marca_id: mod.marca_id ? String(mod.marca_id) : prev.marca_id,
             nombre_variante: nombre,
             sku: newSku,
         }));
@@ -1274,8 +1277,20 @@ export default function Index({ productos, categorias: categoriasProp, marcas: m
                 >
                     <DialogContent
                         className="sm:max-w-4xl max-h-[90vh] flex flex-col z-50"
-                        onPointerDownOutside={(e) => e.preventDefault()}
-                        onInteractOutside={(e) => e.preventDefault()}
+                        onPointerDownOutside={(e) => {
+                            const originalTarget = ((e as any).detail?.originalEvent?.target || (e as any).target) as HTMLElement | undefined;
+                            if (originalTarget?.closest?.('[data-radix-popper-content-wrapper], [data-radix-portal], [role="dialog"], [role="combobox"], [role="listbox"], [role="option"], [data-slot="popover-content"]')) {
+                                return;
+                            }
+                            e.preventDefault();
+                        }}
+                        onInteractOutside={(e) => {
+                            const originalTarget = ((e as any).detail?.originalEvent?.target || (e as any).target) as HTMLElement | undefined;
+                            if (originalTarget?.closest?.('[data-radix-popper-content-wrapper], [data-radix-portal], [role="dialog"], [role="combobox"], [role="listbox"], [role="option"], [data-slot="popover-content"]')) {
+                                return;
+                            }
+                            e.preventDefault();
+                        }}
                     >
                         <DialogHeader>
                             <DialogTitle className="flex items-center gap-2">
