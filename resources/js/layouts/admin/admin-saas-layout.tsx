@@ -28,6 +28,8 @@ import {
     CreditCard,
     Smartphone,
     PanelLeft,
+    PanelLeftClose,
+    PanelLeftOpen,
     Users,
     CalendarDays,
 } from 'lucide-react';
@@ -646,7 +648,7 @@ export default function AdminSaasLayout({
                                     <Button
                                         variant="ghost"
                                         size="icon"
-                                        className="h-8 w-8 text-muted-foreground hover:bg-accent hover:text-foreground -ml-1 rounded-md"
+                                        className="h-8 w-8 text-muted-foreground hover:bg-accent hover:text-foreground active:scale-95 transition-all -ml-1 rounded-md"
                                         onClick={() => {
                                             if (typeof window !== 'undefined' && window.innerWidth < 1024) {
                                                 setMobileMenuOpen(!mobileMenuOpen);
@@ -656,7 +658,24 @@ export default function AdminSaasLayout({
                                         }}
                                         aria-label={collapsed ? __('Expand sidebar') : __('Collapse sidebar')}
                                     >
-                                        <PanelLeft className="size-4.5" />
+                                        <span className="relative flex size-4.5 items-center justify-center overflow-hidden">
+                                            <PanelLeftClose
+                                                className={cn(
+                                                    'size-4.5 transition-all duration-300 ease-in-out',
+                                                    collapsed
+                                                        ? 'scale-0 -rotate-90 opacity-0 pointer-events-none absolute'
+                                                        : 'scale-100 rotate-0 opacity-100'
+                                                )}
+                                            />
+                                            <PanelLeftOpen
+                                                className={cn(
+                                                    'size-4.5 transition-all duration-300 ease-in-out',
+                                                    collapsed
+                                                        ? 'scale-100 rotate-0 opacity-100'
+                                                        : 'scale-0 rotate-90 opacity-0 pointer-events-none absolute'
+                                                )}
+                                            />
+                                        </span>
                                     </Button>
                                 </TooltipTrigger>
                                 <TooltipContent side="bottom" align="start">
