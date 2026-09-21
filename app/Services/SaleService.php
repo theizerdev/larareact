@@ -99,13 +99,30 @@ class SaleService
                 ];
             }
 
+            $rawTotalPaid = array_sum(array_column($payments, 'monto'));
+            $montoRecibido = isset($data['monto_recibido']) && (float) $data['monto_recibido'] > 0
+                ? (float) $data['monto_recibido']
+                : (float) $rawTotalPaid;
+
+            $cambio = $esCredito ? 0 : max(0, $montoRecibido - $total);
+
+            // Si el monto pagado excede el total de la venta (ej. cliente dio un billete mayor para recibir cambio),
+            // ajustar la forma de pago en efectivo/dólar para que refleje el importe neto pagado a la venta
+            // y no infle los ingresos ni el arqueo físico de la caja.
+            if (!$esCredito && $rawTotalPaid > $total) {
+                $excess = $rawTotalPaid - $total;
+                foreach ($payments as &$p) {
+                    if (in_array($p['metodo_pago'], ['efectivo', 'dolar']) && $excess > 0) {
+                        $reduction = min((float) $p['monto'], $excess);
+                        $p['monto'] = (float) $p['monto'] - $reduction;
+                        $excess -= $reduction;
+                    }
+                }
+                unset($p);
+            }
+
             $totalPaid = array_sum(array_column($payments, 'monto'));
             $saldoCredito = $esCredito ? max(0, $total - $totalPaid) : 0;
-            $montoRecibido = $totalPaid;
-            $cambio = max(0, $montoRecibido - $total);
-            if ($esCredito) {
-                $cambio = 0;
-            }
 
             // Primary payment method (highest amount)
             $primaryMethod = 'efectivo';

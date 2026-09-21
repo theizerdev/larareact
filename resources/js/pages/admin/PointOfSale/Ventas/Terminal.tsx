@@ -1024,7 +1024,17 @@ export default function Terminal({
         return acc + val;
     }, 0);
     const remaining = Math.max(0, total - totalPaid);
-    const cambio = activeTicket.esCredito ? 0 : Math.max(0, totalPaid - total);
+
+    // Calcular el dinero recibido real en moneda base para calcular el cambio sin desfasar la venta
+    const pagaConVal = parseFloat(pagaCon);
+    const isPrimaryDolar = paymentLines[0]?.metodo_pago === 'dolar';
+    const pagaConMXN = !isNaN(pagaConVal) && pagaConVal > 0
+        ? (isPrimaryDolar
+            ? pagaConVal * (valorDolar || 1)
+            : (isVenezuela && valorDolar > 0 ? pagaConVal / valorDolar : pagaConVal))
+        : totalPaid;
+
+    const cambio = activeTicket.esCredito ? 0 : Math.max(0, pagaConMXN - total);
     const cambioUSD = valorDolar > 0 ? cambio / valorDolar : 0;
 
     const addPaymentLine = () => setPaymentLines((prev) => [...prev, { metodo_pago: 'efectivo', monto: '' }]);
@@ -1064,12 +1074,36 @@ export default function Terminal({
 
     const handlePagaConChange = (val: string) => {
         setPagaCon(val);
+        const numVal = parseFloat(val);
+
         setPaymentLines((prev) => {
             if (prev.length === 0) {
-                return [{ metodo_pago: 'efectivo', monto: val }];
+                const targetExact = isVenezuela ? total * valorDolar : total;
+                const charge = !isNaN(numVal) && numVal >= targetExact ? targetExact.toFixed(2) : (val || '');
+                return [{ metodo_pago: 'efectivo', monto: charge }];
             }
+
+            // Calcular el total requerido para la primera forma de pago
+            const otherMethodsTotalMXN = prev.slice(1).reduce((acc, pl) => {
+                const v = parseFloat(pl.monto) || 0;
+                return acc + (pl.metodo_pago === 'dolar' ? v * (valorDolar || 1) : v);
+            }, 0);
+
+            const remainingForFirstMXN = Math.max(0, total - otherMethodsTotalMXN);
+            const isDolar = prev[0].metodo_pago === 'dolar';
+            const targetExact = isDolar
+                ? (valorDolar > 0 ? remainingForFirstMXN / valorDolar : remainingForFirstMXN)
+                : (isVenezuela ? remainingForFirstMXN * valorDolar : remainingForFirstMXN);
+
+            // Si el cliente entrega un monto igual o mayor a lo requerido para cubrir el ticket,
+            // el cobro liquidado para la venta se limita al total exacto necesario,
+            // y el excedente se reportará como cambio devuelto.
+            const charge = (!isNaN(numVal) && numVal >= targetExact)
+                ? targetExact.toFixed(2)
+                : (val || '');
+
             const copy = [...prev];
-            copy[0] = { ...copy[0], monto: val };
+            copy[0] = { ...copy[0], monto: charge };
             return copy;
         });
     };
@@ -1115,13 +1149,17 @@ export default function Terminal({
         isProcessingSaleRef.current = true;
         setIsProcessingSale(true);
 
+        const montoRecibidoBase = (pagaCon !== '' && !isNaN(pagaConVal) && pagaConVal > 0)
+            ? pagaConMXN
+            : totalPaid;
+
         const payload = {
             cliente_nombre: activeTicket.clienteNombre || 'Cliente General',
             cliente_id: activeTicket.clienteId,
             es_credito: activeTicket.esCredito,
             descuento: activeTicket.descuento,
             impuesto: 0,
-            monto_recibido: totalPaid,
+            monto_recibido: montoRecibidoBase,
             payments,
             items: activeTicket.cart.map((ci) => ({
                 itemable_id: ci.itemable_id,
@@ -1151,8 +1189,8 @@ export default function Terminal({
                     descuento: payload.descuento,
                     total: total,
                     metodo_pago: payments[0]?.metodo_pago || 'efectivo',
-                    monto_recibido: totalPaid,
-                    cambio: Math.max(0, totalPaid - total),
+                    monto_recibido: montoRecibidoBase,
+                    cambio: Math.max(0, montoRecibidoBase - total),
                     items: payload.items.map((it: any) => ({
                         ...it,
                         subtotal: (Number(it.cantidad) || 1) * (Number(it.precio_unitario) || 0),
@@ -2408,12 +2446,12 @@ export default function Terminal({
                                             size="sm"
                                             className="h-8 px-3 text-xs font-mono font-bold bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 border-emerald-300 shadow-2xs hover:bg-emerald-100"
                                             onClick={() => {
-                                                const m = total.toFixed(2);
+                                                const m = totalUSD.toFixed(2);
                                                 setPagaCon(m);
                                                 setPaymentLines([{ metodo_pago: 'dolar', monto: m }]);
                                             }}
                                         >
-                                            💵 Exacto USD (${total.toFixed(2)})
+                                            💵 Exacto USD (${totalUSD.toFixed(2)})
                                         </Button>
                                         <Button
                                             type="button"
@@ -2422,7 +2460,8 @@ export default function Terminal({
                                             className="h-8 px-3 text-xs font-mono font-bold bg-white dark:bg-slate-800 shadow-2xs hover:bg-slate-100"
                                             onClick={() => {
                                                 setPagaCon('20');
-                                                setPaymentLines([{ metodo_pago: 'dolar', monto: '20' }]);
+                                                const charged = Math.min(20, totalUSD).toFixed(2);
+                                                setPaymentLines([{ metodo_pago: 'dolar', monto: charged }]);
                                             }}
                                         >
                                             $20 USD
@@ -2434,7 +2473,8 @@ export default function Terminal({
                                             className="h-8 px-3 text-xs font-mono font-bold bg-white dark:bg-slate-800 shadow-2xs hover:bg-slate-100"
                                             onClick={() => {
                                                 setPagaCon('50');
-                                                setPaymentLines([{ metodo_pago: 'dolar', monto: '50' }]);
+                                                const charged = Math.min(50, totalUSD).toFixed(2);
+                                                setPaymentLines([{ metodo_pago: 'dolar', monto: charged }]);
                                             }}
                                         >
                                             $50 USD
@@ -2446,7 +2486,8 @@ export default function Terminal({
                                             className="h-8 px-3 text-xs font-mono font-bold bg-white dark:bg-slate-800 shadow-2xs hover:bg-slate-100"
                                             onClick={() => {
                                                 setPagaCon('100');
-                                                setPaymentLines([{ metodo_pago: 'dolar', monto: '100' }]);
+                                                const charged = Math.min(100, totalUSD).toFixed(2);
+                                                setPaymentLines([{ metodo_pago: 'dolar', monto: charged }]);
                                             }}
                                         >
                                             $100 USD
@@ -2463,7 +2504,7 @@ export default function Terminal({
                                         </Label>
                                         {cambio > 0 && (
                                             <span className="text-xs font-mono font-black text-emerald-700 dark:text-emerald-300 bg-emerald-100 dark:bg-emerald-950/80 px-2.5 py-0.5 rounded-full border border-emerald-300 dark:border-emerald-700">
-                                                {__('Cambio:')} {currencySymbol}{cambio.toFixed(2)} {isVenezuela ? 'Bs.' : 'MXN'}
+                                                {__('Cambio:')} {currencySymbol}{cambio.toFixed(2)} {isVenezuela ? 'Bs.' : 'MXN'} {isPrimaryDolar ? `(≈ $${cambioUSD.toFixed(2)} USD)` : ''}
                                             </span>
                                         )}
                                     </div>
@@ -2476,7 +2517,7 @@ export default function Terminal({
                                                 type="number"
                                                 step="0.01"
                                                 min="0"
-                                                placeholder={(isVenezuela ? total * valorDolar : total).toFixed(2)}
+                                                placeholder={(isVenezuela ? total * valorDolar : (isPrimaryDolar ? totalUSD : total)).toFixed(2)}
                                                 value={pagaCon}
                                                 onChange={(e) => handlePagaConChange(e.target.value)}
                                                 onFocus={(e) => e.target.select()}
@@ -2484,7 +2525,7 @@ export default function Terminal({
                                                 className="font-mono text-2xl font-black bg-white dark:bg-slate-950 h-13 border-slate-300 dark:border-slate-700 pl-3 pr-16 focus:border-emerald-500 focus:ring-emerald-500 shadow-2xs"
                                             />
                                             <span className="absolute right-3 top-3.5 text-xs font-bold text-muted-foreground font-mono bg-slate-100 dark:bg-slate-800 px-1.5 py-0.5 rounded">
-                                                {isVenezuela ? 'Bs.' : currencyCode}
+                                                {isVenezuela ? 'Bs.' : (isPrimaryDolar ? 'USD' : currencyCode)}
                                             </span>
                                         </div>
 
