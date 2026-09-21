@@ -33,6 +33,7 @@ import {
     Hash,
     ChevronRight,
     Box,
+    Search,
 } from 'lucide-react';
 import React, { useState, useEffect } from 'react';
 import { Breadcrumbs } from '@/components/breadcrumbs';
@@ -147,6 +148,8 @@ interface Props {
     filters: {
         search?: string;
         modelo_id?: string;
+        categoria_id?: string;
+        marca_id?: string;
         condicion?: string;
         tipo_producto?: string;
         sortBy?: string;
@@ -177,6 +180,8 @@ export default function Index({ productos, categorias: categoriasProp, marcas: m
     const [tipoProductoFilter, setTipoProductoFilter] = useState<string>(filters.tipo_producto || 'all');
     const [modeloFilter, setModeloFilter] = useState<string>(filters.modelo_id || 'all');
     const [condicionFilter, setCondicionFilter] = useState<string>(filters.condicion || 'all');
+    const [categoriaFilter, setCategoriaFilter] = useState<string>(filters.categoria_id || 'all');
+    const [marcaFilter, setMarcaFilter] = useState<string>(filters.marca_id || 'all');
 
     // Estados dinámicos para mantener listas actualizadas al crear sub-elementos en caliente
     const [categorias, setCategorias] = useState<Option[]>(categoriasProp);
@@ -288,10 +293,13 @@ export default function Index({ productos, categorias: categoriasProp, marcas: m
         router.get(
             '/admin/productos',
             cleanParams({
-                search: searchTerm,
+                search: searchTerm || undefined,
                 modelo_id: modeloFilter === 'all' ? undefined : modeloFilter,
+                categoria_id: categoriaFilter === 'all' ? undefined : categoriaFilter,
+                marca_id: marcaFilter === 'all' ? undefined : marcaFilter,
                 condicion: condicionFilter === 'all' ? undefined : condicionFilter,
                 tipo_producto: targetTipo === 'all' ? undefined : targetTipo,
+                perPage: filters.perPage || undefined,
             }),
             { preserveState: true, preserveScroll: true }
         );
@@ -302,6 +310,8 @@ export default function Index({ productos, categorias: categoriasProp, marcas: m
         setModeloFilter('all');
         setCondicionFilter('all');
         setTipoProductoFilter('all');
+        setCategoriaFilter('all');
+        setMarcaFilter('all');
         router.get('/admin/productos', {}, { preserveState: true, preserveScroll: true });
     };
 
@@ -1046,46 +1056,6 @@ export default function Index({ productos, categorias: categoriasProp, marcas: m
         { title: __('Inventario') },
     ];
 
-    const filterFields: FilterField[] = [
-        {
-            name: 'tipo_producto',
-            label: __('Tipo de Inventario'),
-            type: 'select',
-            options: [
-                { label: __('Todos los tipos'), value: 'all' },
-                { label: __('🛍️ Productos Venta (POS)'), value: 'venta' },
-                { label: __('🛠️ Repuestos Taller'), value: 'repuesto' },
-                { label: __('⚡ Servicios'), value: 'servicio' },
-            ],
-            value: tipoProductoFilter,
-            onChange: (val) => { setTipoProductoFilter(val); handleFilter(val); },
-        },
-        {
-            name: 'modelo_id',
-            label: __('Modelo de Equipo'),
-            type: 'select',
-            options: [
-                { label: __('Todos los modelos'), value: 'all' },
-                ...modelos.map((m) => ({ label: m.nombre, value: String(m.id) })),
-            ],
-            value: modeloFilter,
-            onChange: (val) => { setModeloFilter(val); handleFilter(); },
-        },
-        {
-            name: 'condicion',
-            label: __('Condición'),
-            type: 'select',
-            options: [
-                { label: __('Todas las condiciones'), value: 'all' },
-                { label: __('Nuevo'), value: 'nuevo' },
-                { label: __('Usado'), value: 'usado' },
-                { label: __('Reacondicionado'), value: 'reacondicionado' },
-                { label: __('Para Repuesto'), value: 'repuesto' },
-            ],
-            value: condicionFilter,
-            onChange: (val) => { setCondicionFilter(val); handleFilter(); },
-        },
-    ];
 
     const catalogInheritedSpecs = specsTargetProducto ? {
         ...(specsTargetProducto.modelo?.specs_overrides || {})
@@ -1239,15 +1209,156 @@ export default function Index({ productos, categorias: categoriasProp, marcas: m
                     </button>
                 </div>
 
-                {/* Barra de Filtros */}
-                <FilterBar
-                    fields={filterFields}
-                    searchPlaceholder={__('Buscar por SKU, nombre, código de barras o modelo...')}
-                    searchValue={searchTerm}
-                    onSearchChange={(value) => { setSearchTerm(value); handleFilter(); }}
-                    onFilter={handleFilter}
-                    onClear={handleClearFilters}
-                />
+                {/* Barra de Filtros (Card Filter) */}
+                <FilterBar className="bg-card text-card-foreground shadow-sm rounded-xl border border-slate-200 dark:border-slate-800">
+                    <div className="flex flex-wrap items-end gap-3.5 w-full">
+                        {/* Buscador general */}
+                        <FilterField label={__('Buscar')} className="flex-1 min-w-[220px]">
+                            <div className="relative">
+                                <Search className="w-4 h-4 absolute left-3 top-3 text-muted-foreground" />
+                                <Input
+                                    placeholder={__('Buscar por SKU, nombre, código de barras...')}
+                                    className="pl-9 h-10 text-xs sm:text-sm"
+                                    value={searchTerm}
+                                    onChange={(e) => setSearchTerm(e.target.value)}
+                                    onKeyDown={(e) => {
+                                        if (e.key === 'Enter') handleFilter();
+                                    }}
+                                />
+                            </div>
+                        </FilterField>
+
+                        {/* Tipo de Producto */}
+                        <FilterField label={__('Tipo')} className="w-full sm:w-44">
+                            <Select
+                                value={tipoProductoFilter}
+                                onValueChange={(val) => {
+                                    setTipoProductoFilter(val);
+                                    handleFilter(val);
+                                }}
+                            >
+                                <SelectTrigger className="h-10 text-xs">
+                                    <SelectValue placeholder={__('Todos los tipos')} />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    <SelectItem value="all">{__('Todos los tipos')}</SelectItem>
+                                    <SelectItem value="venta">{__('🛍️ Venta (POS)')}</SelectItem>
+                                    <SelectItem value="repuesto">{__('🛠️ Repuestos')}</SelectItem>
+                                    <SelectItem value="servicio">{__('⚡ Servicios')}</SelectItem>
+                                </SelectContent>
+                            </Select>
+                        </FilterField>
+
+                        {/* Categoría */}
+                        <FilterField label={__('Categoría')} className="w-full sm:w-44">
+                            <Select
+                                value={categoriaFilter}
+                                onValueChange={(val) => {
+                                    setCategoriaFilter(val);
+                                }}
+                            >
+                                <SelectTrigger className="h-10 text-xs">
+                                    <SelectValue placeholder={__('Todas')} />
+                                </SelectTrigger>
+                                <SelectContent className="max-h-60">
+                                    <SelectItem value="all">{__('Todas las categorías')}</SelectItem>
+                                    {categorias.map((c) => (
+                                        <SelectItem key={c.id} value={String(c.id)}>
+                                            {c.nombre}
+                                        </SelectItem>
+                                    ))}
+                                </SelectContent>
+                            </Select>
+                        </FilterField>
+
+                        {/* Marca */}
+                        <FilterField label={__('Marca')} className="w-full sm:w-44">
+                            <Select
+                                value={marcaFilter}
+                                onValueChange={(val) => {
+                                    setMarcaFilter(val);
+                                }}
+                            >
+                                <SelectTrigger className="h-10 text-xs">
+                                    <SelectValue placeholder={__('Todas')} />
+                                </SelectTrigger>
+                                <SelectContent className="max-h-60">
+                                    <SelectItem value="all">{__('Todas las marcas')}</SelectItem>
+                                    {marcas.map((m) => (
+                                        <SelectItem key={m.id} value={String(m.id)}>
+                                            {m.nombre}
+                                        </SelectItem>
+                                    ))}
+                                </SelectContent>
+                            </Select>
+                        </FilterField>
+
+                        {/* Modelo de Equipo */}
+                        <FilterField label={__('Modelo')} className="w-full sm:w-48">
+                            <Select
+                                value={modeloFilter}
+                                onValueChange={(val) => {
+                                    setModeloFilter(val);
+                                }}
+                            >
+                                <SelectTrigger className="h-10 text-xs">
+                                    <SelectValue placeholder={__('Todos')} />
+                                </SelectTrigger>
+                                <SelectContent className="max-h-60">
+                                    <SelectItem value="all">{__('Todos los modelos')}</SelectItem>
+                                    {modelos.map((m) => (
+                                        <SelectItem key={m.id} value={String(m.id)}>
+                                            {m.nombre}
+                                        </SelectItem>
+                                    ))}
+                                </SelectContent>
+                            </Select>
+                        </FilterField>
+
+                        {/* Condición */}
+                        <FilterField label={__('Condición')} className="w-full sm:w-36">
+                            <Select
+                                value={condicionFilter}
+                                onValueChange={(val) => {
+                                    setCondicionFilter(val);
+                                }}
+                            >
+                                <SelectTrigger className="h-10 text-xs">
+                                    <SelectValue placeholder={__('Todas')} />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    <SelectItem value="all">{__('Todas')}</SelectItem>
+                                    <SelectItem value="nuevo">{__('Nuevo')}</SelectItem>
+                                    <SelectItem value="usado">{__('Usado')}</SelectItem>
+                                    <SelectItem value="reacondicionado">{__('Reacondicionado')}</SelectItem>
+                                    <SelectItem value="repuesto">{__('Para Repuesto')}</SelectItem>
+                                </SelectContent>
+                            </Select>
+                        </FilterField>
+
+                        {/* Botones de Acción */}
+                        <div className="flex items-center gap-2">
+                            <Button
+                                type="button"
+                                onClick={() => handleFilter()}
+                                className="h-10 px-4 bg-blue-600 hover:bg-blue-700 text-white font-semibold text-xs gap-1.5 shadow-sm"
+                            >
+                                <Search className="w-4 h-4" />
+                                {__('Filtrar')}
+                            </Button>
+
+                            <Button
+                                type="button"
+                                variant="outline"
+                                onClick={handleClearFilters}
+                                className="h-10 px-4 font-semibold text-xs"
+                                title={__('Limpiar Filtros')}
+                            >
+                                {__('Limpiar')}
+                            </Button>
+                        </div>
+                    </div>
+                </FilterBar>
 
                 {/* Tabla Principal */}
                 <DataTable

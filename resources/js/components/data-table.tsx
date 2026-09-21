@@ -477,7 +477,7 @@ return null;
             </div>
 
             {/* Componente de Paginación Integrado */}
-            {data && !Array.isArray(data) && 'current_page' in data && (
+            {data && !Array.isArray(data) && ('current_page' in data || ('meta' in (data as any) && 'current_page' in (data as any).meta)) && (
                 <Pagination paginatedData={data as any} filters={filters} />
             )}
         </div>

@@ -43,7 +43,8 @@ export default function Pagination({
 
     if (!paginatedData) return null;
 
-    const { current_page = 1, last_page = 1, per_page = 10, total = 0, from = null, to = null } = paginatedData;
+    const source = (paginatedData as any)?.meta ? (paginatedData as any).meta : paginatedData;
+    const { current_page = 1, last_page = 1, per_page = 15, total = 0, from = null, to = null } = source;
 
     // Direct page navigation helper
     const goToPage = (page: number) => {
@@ -131,6 +132,7 @@ export default function Pagination({
                         </SelectTrigger>
                         <SelectContent align="end">
                             <SelectItem value="10">10</SelectItem>
+                            <SelectItem value="15">15</SelectItem>
                             <SelectItem value="25">25</SelectItem>
                             <SelectItem value="50">50</SelectItem>
                             <SelectItem value="100">100</SelectItem>

@@ -61,6 +61,22 @@ class ProductoController extends Controller
             $query->where('modelo_id', $modeloId);
         }
 
+        // Filtro por Categoría
+        if ($categoriaId = $request->input('categoria_id')) {
+            $query->where(function ($q) use ($categoriaId) {
+                $q->where('categoria_id', $categoriaId)
+                  ->orWhereHas('modelo', fn ($m) => $m->withoutGlobalScope('multitenancy')->where('categoria_id', $categoriaId));
+            });
+        }
+
+        // Filtro por Marca
+        if ($marcaId = $request->input('marca_id')) {
+            $query->where(function ($q) use ($marcaId) {
+                $q->where('marca_id', $marcaId)
+                  ->orWhereHas('modelo', fn ($m) => $m->withoutGlobalScope('multitenancy')->where('marca_id', $marcaId));
+            });
+        }
+
         // Filtro por Condición
         if ($condicion = $request->input('condicion')) {
             $query->where('condicion', $condicion);
@@ -86,8 +102,10 @@ class ProductoController extends Controller
             $query->latest();
         }
 
-        $perPage = (int) $request->input('perPage', 10);
-        $productos = $query->paginate($perPage)->withQueryString();
+        $perPage = (int) $request->input('perPage', 15);
+        $productos = $query->paginate($perPage)
+            ->withQueryString()
+            ->through(fn ($p) => (new ProductoResource($p))->resolve());
 
         // Opciones de Categorías, Marcas, Familias y Modelos para selectores en cascada y creaciones en caliente
         $categorias = Categoria::where('estado', true)
@@ -141,12 +159,12 @@ class ProductoController extends Controller
         ];
 
         return Inertia::render('admin/Productos/Index', [
-            'productos' => ProductoResource::collection($productos),
+            'productos' => $productos,
             'categorias' => $categorias,
             'marcas' => $marcas,
             'familias' => $familias,
             'modelos' => $modelos,
-            'filters' => $request->only(['search', 'modelo_id', 'condicion', 'tipo_producto', 'sortBy', 'sortDir', 'perPage']),
+            'filters' => $request->only(['search', 'modelo_id', 'categoria_id', 'marca_id', 'condicion', 'tipo_producto', 'sortBy', 'sortDir', 'perPage']),
             'stats' => [
                 'totalProductos' => $totalProductos,
                 'stockTotal' => (float) $stockTotal,
