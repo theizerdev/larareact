@@ -66,6 +66,8 @@ interface ModeloItem {
     nombre_comercial: string;
     codigo_modelo?: string;
     marca_id: number;
+    categoria_id?: number | null;
+    categoria?: { id: number; nombre: string; slug?: string } | null;
 }
 
 interface MarcaItem {
@@ -748,6 +750,18 @@ export default function CreateReparacion({
 
     // Modelos filtrados por la búsqueda rápida (Select2)
     const modelosFiltradosBusqueda = modelosFiltrados.filter((mod) => {
+        const catNombre = (mod.categoria?.nombre || '').toLowerCase().trim();
+        const catSlug = ((mod.categoria as any)?.slug || '').toLowerCase().trim();
+        if (catNombre === 'display' || catNombre === 'displays' || catSlug === 'display' || catSlug === 'displays') {
+            return false;
+        }
+        if (mod.categoria_id) {
+            const matchedCat = categoriasList.find((c) => c.id === mod.categoria_id);
+            const mName = (matchedCat?.nombre || '').toLowerCase().trim();
+            if (mName === 'display' || mName === 'displays') {
+                return false;
+            }
+        }
         if (!searchModeloTerm || searchModeloTerm.trim() === '') return true;
         const term = searchModeloTerm.toLowerCase().trim();
         return (

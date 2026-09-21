@@ -199,13 +199,30 @@ class ReparacionController extends Controller
         }
         $clientes = $clientesQuery->orderBy('nombre')->get(['id', 'nombre', 'telefono', 'email']);
 
-        $marcas = Marca::with('modelos')->where('empresa_id', $empresaId)->orderBy('nombre')->get();
+        $marcas = Marca::with([
+            'modelos' => function ($query) {
+                $query->whereDoesntHave('categoria', function ($cq) {
+                    $cq->withoutGlobalScope('multitenancy')
+                        ->where(function ($sub) {
+                            $sub->whereRaw('LOWER(TRIM(nombre)) IN (?, ?)', ['display', 'displays'])
+                                ->orWhereIn('slug', ['display', 'displays']);
+                        });
+                });
+            },
+        ])->where('empresa_id', $empresaId)->orderBy('nombre')->get();
         $modelos = Modelo::withoutGlobalScope('multitenancy')
             ->where(function ($q) use ($empresaId) {
                 $q->where('empresa_id', $empresaId)
                   ->orWhereNull('empresa_id');
             })
             ->where('estado', true)
+            ->whereDoesntHave('categoria', function ($cq) {
+                $cq->withoutGlobalScope('multitenancy')
+                    ->where(function ($sub) {
+                        $sub->whereRaw('LOWER(TRIM(nombre)) IN (?, ?)', ['display', 'displays'])
+                            ->orWhereIn('slug', ['display', 'displays']);
+                    });
+            })
             ->orderBy('nombre_comercial')
             ->get(['id', 'marca_id', 'categoria_id', 'nombre_comercial', 'codigo_modelo']);
 
@@ -294,7 +311,17 @@ class ReparacionController extends Controller
         }
         $clientes = $clientesQuery->orderBy('nombre')->get(['id', 'nombre', 'telefono', 'email']);
 
-        $marcas = Marca::with('modelos')->where('empresa_id', $empresaId)->orderBy('nombre')->get();
+        $marcas = Marca::with([
+            'modelos' => function ($query) {
+                $query->whereDoesntHave('categoria', function ($cq) {
+                    $cq->withoutGlobalScope('multitenancy')
+                        ->where(function ($sub) {
+                            $sub->whereRaw('LOWER(TRIM(nombre)) IN (?, ?)', ['display', 'displays'])
+                                ->orWhereIn('slug', ['display', 'displays']);
+                        });
+                });
+            },
+        ])->where('empresa_id', $empresaId)->orderBy('nombre')->get();
 
         $tecnicosQuery = User::where('empresa_id', $empresaId);
         if ($sucursalId) {
@@ -816,7 +843,17 @@ class ReparacionController extends Controller
 
         $tecnicos = User::where('empresa_id', $empresaId)->get(['id', 'name']);
         $clientes = \App\Models\Cliente::where('empresa_id', $empresaId)->orderBy('nombre')->get(['id', 'nombre', 'telefono', 'email']);
-        $marcas = Marca::with('modelos')->where('empresa_id', $empresaId)->orderBy('nombre')->get();
+        $marcas = Marca::with([
+            'modelos' => function ($query) {
+                $query->whereDoesntHave('categoria', function ($cq) {
+                    $cq->withoutGlobalScope('multitenancy')
+                        ->where(function ($sub) {
+                            $sub->whereRaw('LOWER(TRIM(nombre)) IN (?, ?)', ['display', 'displays'])
+                                ->orWhereIn('slug', ['display', 'displays']);
+                        });
+                });
+            },
+        ])->where('empresa_id', $empresaId)->orderBy('nombre')->get();
         $categorias = \App\Models\Categoria::withoutGlobalScope('multitenancy')
             ->where(function ($q) use ($empresaId) {
                 $q->where('empresa_id', $empresaId)
@@ -1407,7 +1444,12 @@ class ReparacionController extends Controller
             ]);
         }
 
-        $categoria = \App\Models\Categoria::where('empresa_id', $empresaId)->first();
+        $categoria = \App\Models\Categoria::where('empresa_id', $empresaId)
+            ->where(function ($q) {
+                $q->whereRaw('LOWER(TRIM(nombre)) NOT IN (?, ?)', ['display', 'displays'])
+                  ->whereNotIn('slug', ['display', 'displays']);
+            })
+            ->first();
         if (!$categoria) {
             $categoria = \App\Models\Categoria::create([
                 'nombre' => 'General',
