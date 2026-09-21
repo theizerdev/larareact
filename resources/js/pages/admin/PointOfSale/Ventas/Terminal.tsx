@@ -453,6 +453,7 @@ export default function Terminal({
     const [isPaymentModalOpen, setIsPaymentModalOpen] = useState(false);
     const [isProcessingSale, setIsProcessingSale] = useState(false);
     const isProcessingSaleRef = useRef(false);
+    const [processingSaleType, setProcessingSaleType] = useState<'ticket' | 'no_ticket' | null>(null);
     const [paymentLines, setPaymentLines] = useState<PaymentLine[]>([{ metodo_pago: 'efectivo', monto: '' }]);
     const [pagaCon, setPagaCon] = useState('');
     const montoRef = useRef<HTMLInputElement>(null);
@@ -474,6 +475,7 @@ export default function Terminal({
         } else {
             isProcessingSaleRef.current = false;
             setIsProcessingSale(false);
+            setProcessingSaleType(null);
         }
     }, [isPaymentModalOpen]);
 
@@ -534,6 +536,7 @@ export default function Terminal({
 
     // Success receipt dialog
     const [completedSale, setCompletedSale] = useState<any | null>(null);
+    const [printTicketMode, setPrintTicketMode] = useState<boolean>(true);
 
     // New client modal (F6)
     const [isNewClientModalOpen, setIsNewClientModalOpen] = useState(false);
@@ -1109,7 +1112,7 @@ export default function Terminal({
     };
 
     // Open Payment Modal
-    const handleOpenPayment = useCallback(() => {
+    const handleOpenPayment = useCallback((shouldPrintTicket: boolean = true) => {
         if (!activeRegister) {
             notifyError(__('Debe tener una caja abierta para procesar ventas.'));
             return;
@@ -1118,6 +1121,7 @@ export default function Terminal({
             notifyError(__('El carrito de compras está vacío.'));
             return;
         }
+        setPrintTicketMode(shouldPrintTicket);
         const exactMonto = (isVenezuela ? total * valorDolar : total).toFixed(2);
         setPagaCon(exactMonto);
         setPaymentLines([{ metodo_pago: 'efectivo', monto: exactMonto }]);
@@ -1125,8 +1129,7 @@ export default function Terminal({
     }, [activeRegister, activeTicket.cart, total, isVenezuela, valorDolar]);
 
     // Handle Complete Sale
-    const handleCompleteSale = (e: React.FormEvent) => {
-        e.preventDefault();
+    const executeSale = (printTicket: boolean = true) => {
         if (isProcessingSale || isProcessingSaleRef.current) return;
 
         const payments = paymentLines
@@ -1142,12 +1145,14 @@ export default function Terminal({
         if (!activeTicket.esCredito && remaining > 0.01) {
             isProcessingSaleRef.current = false;
             setIsProcessingSale(false);
+            setProcessingSaleType(null);
             notifyError(__('El monto pagado no cubre el total de la venta.'));
             return;
         }
 
         isProcessingSaleRef.current = true;
         setIsProcessingSale(true);
+        setProcessingSaleType(printTicket ? 'ticket' : 'no_ticket');
 
         const montoRecibidoBase = (pagaCon !== '' && !isNaN(pagaConVal) && pagaConVal > 0)
             ? pagaConMXN
@@ -1176,10 +1181,11 @@ export default function Terminal({
             onSuccess: (page) => {
                 isProcessingSaleRef.current = false;
                 setIsProcessingSale(false);
+                setProcessingSaleType(null);
                 setIsPaymentModalOpen(false);
                 setPagaCon('');
                 setPaymentLines([{ metodo_pago: 'efectivo', monto: '' }]);
-                notifySuccess(__('Venta completada exitosamente.'));
+
                 const flashSale = (page.props as any).notification?.sale || (page.props as any).flash?.notification?.sale;
                 const completedSaleData = flashSale || {
                     codigo_ticket: `VTA-${String(Math.floor(Math.random() * 900000) + 100000)}`,
@@ -1198,26 +1204,49 @@ export default function Terminal({
                     payments: payload.payments,
                 };
 
-                // Limpiar carrito e invocar inmediatamente la ventana modal del ticket de admin/ventas
-                clearActiveCart();
-                setCompletedSale(completedSaleData);
+                const cambioDevuelto = Math.max(0, montoRecibidoBase - total);
 
-                if (hasTicketPrinter && autoPrintOnSale) {
-                    setTimeout(() => {
-                        window.print();
-                    }, 300);
+                // Limpiar carrito
+                clearActiveCart();
+
+                if (printTicket) {
+                    notifySuccess(__('Venta completada exitosamente.'));
+                    setCompletedSale(completedSaleData);
+
+                    if (hasTicketPrinter && autoPrintOnSale) {
+                        setTimeout(() => {
+                            window.print();
+                        }, 300);
+                    }
+                } else {
+                    setCompletedSale(null);
+                    if (cambioDevuelto > 0) {
+                        notifySuccess(`${__('¡Venta cobrada exitosamente!')} ${__('Cambio a entregar:')} ${currencySymbol}${cambioDevuelto.toFixed(2)}`);
+                    } else {
+                        notifySuccess(__('¡Venta cobrada exitosamente (sin ticket)!'));
+                    }
                 }
             },
             onError: () => {
                 isProcessingSaleRef.current = false;
                 setIsProcessingSale(false);
+                setProcessingSaleType(null);
                 notifyError(__('Ocurrió un error al procesar la venta.'));
             },
             onFinish: () => {
                 isProcessingSaleRef.current = false;
                 setIsProcessingSale(false);
+                setProcessingSaleType(null);
             },
         });
+    };
+
+    const executeSaleRef = useRef(executeSale);
+    executeSaleRef.current = executeSale;
+
+    const handleCompleteSale = (e: React.FormEvent) => {
+        e.preventDefault();
+        executeSale(printTicketMode);
     };
 
     // Handle Cash Movement submission (Entrada / Salida)
@@ -1281,13 +1310,21 @@ export default function Terminal({
     // Keyboard Shortcuts (F11/F12: Emitir Ticket y Cobrar, F10: Buscar, F9: Verificador, F8: Corte, INS: Art Vario, F6: Nuevo Cliente, F5: En Espera)
     useEffect(() => {
         const handleKeyDown = (e: KeyboardEvent) => {
-            if (e.key === 'F11' || e.key === 'F12') {
+            if (e.key === 'F11') {
                 e.preventDefault();
                 if (isProcessingSaleRef.current || isProcessingSale) return;
                 if (isPaymentModalOpen && activeTicket.cart.length > 0 && !completedSale) {
-                    paymentFormRef.current?.requestSubmit();
+                    executeSaleRef.current(true);
                 } else if (activeTicket.cart.length > 0 && activeRegister && !completedSale) {
-                    handleOpenPayment();
+                    handleOpenPayment(true);
+                }
+            } else if (e.key === 'F12') {
+                e.preventDefault();
+                if (isProcessingSaleRef.current || isProcessingSale) return;
+                if (isPaymentModalOpen && activeTicket.cart.length > 0 && !completedSale) {
+                    executeSaleRef.current(false);
+                } else if (activeTicket.cart.length > 0 && activeRegister && !completedSale) {
+                    handleOpenPayment(false);
                 }
             } else if (e.key === 'F10') {
                 e.preventDefault();
@@ -1849,19 +1886,38 @@ export default function Terminal({
 
                             <Button
                                 type="button"
-                                className="h-10 px-6 bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-sm shadow-md gap-2"
+                                className="h-10 px-4 bg-slate-700 hover:bg-slate-800 text-white font-bold text-xs sm:text-sm shadow-md gap-1.5"
                                 disabled={activeTicket.cart.length === 0 || !activeRegister || isProcessingSale}
-                                onClick={handleOpenPayment}
+                                onClick={() => handleOpenPayment(false)}
                             >
-                                {isProcessingSale ? (
+                                {processingSaleType === 'no_ticket' ? (
                                     <>
                                         <Loader2 className="w-4 h-4 animate-spin" />
-                                        {__('Procesando...')}
+                                        <span>{__('Cobrando...')}</span>
                                     </>
                                 ) : (
                                     <>
-                                        <DollarSign className="w-4.5 h-4.5" />
-                                        [F11] {__('Emitir Ticket y Cobrar')}
+                                        <CheckCircle2 className="w-4 h-4 text-emerald-400" />
+                                        <span>[F12] {__('Solo Cobrar')}</span>
+                                    </>
+                                )}
+                            </Button>
+
+                            <Button
+                                type="button"
+                                className="h-10 px-5 bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs sm:text-sm shadow-md gap-1.5"
+                                disabled={activeTicket.cart.length === 0 || !activeRegister || isProcessingSale}
+                                onClick={() => handleOpenPayment(true)}
+                            >
+                                {processingSaleType === 'ticket' ? (
+                                    <>
+                                        <Loader2 className="w-4 h-4 animate-spin" />
+                                        <span>{__('Procesando...')}</span>
+                                    </>
+                                ) : (
+                                    <>
+                                        <Printer className="w-4 h-4" />
+                                        <span>[F11] {__('Cobrar y Ticket')}</span>
                                     </>
                                 )}
                             </Button>
@@ -2645,39 +2701,67 @@ export default function Terminal({
                                 )}
                             </div>
 
-                            <DialogFooter className="pt-3 gap-3 sm:gap-3 flex items-center justify-end">
+                            <DialogFooter className="flex flex-col sm:flex-row items-center justify-between gap-3 border-t pt-4">
                                 <Button
                                     type="button"
-                                    variant="outline"
-                                    size="lg"
-                                    className="h-12 px-6 font-semibold"
+                                    variant="ghost"
                                     disabled={isProcessingSale}
                                     onClick={() => {
                                         setIsPaymentModalOpen(false);
+                                        setPagaCon('');
                                         isProcessingSaleRef.current = false;
                                         setIsProcessingSale(false);
+                                        setProcessingSaleType(null);
                                     }}
                                 >
                                     {__('Cancelar')}
                                 </Button>
-                                <Button
-                                    type="submit"
-                                    size="lg"
-                                    disabled={isProcessingSale}
-                                    className="h-12 px-8 bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold text-base min-w-[220px] gap-2 shadow-md hover:shadow-lg transition-all"
-                                >
-                                    {isProcessingSale ? (
-                                        <>
-                                            <Loader2 className="w-5 h-5 animate-spin" />
-                                            {__('Procesando Venta...')}
-                                        </>
-                                    ) : (
-                                        <>
-                                            <span className="font-black bg-emerald-800/50 px-2 py-0.5 rounded text-xs">[F11]</span>
-                                            <span>{__('Emitir Ticket y Cobrar')}</span>
-                                        </>
-                                    )}
-                                </Button>
+
+                                <div className="flex flex-col sm:flex-row items-center gap-2.5 w-full sm:w-auto">
+                                    {/* BOTÓN 1: SOLO COBRAR (SIN TICKET) */}
+                                    <Button
+                                        type="button"
+                                        size="lg"
+                                        disabled={isProcessingSale}
+                                        onClick={() => executeSale(false)}
+                                        className="w-full sm:w-auto h-12 px-5 bg-slate-700 hover:bg-slate-800 dark:bg-slate-800 dark:hover:bg-slate-700 text-white font-bold text-sm gap-2 shadow-md hover:shadow-lg transition-all"
+                                    >
+                                        {processingSaleType === 'no_ticket' ? (
+                                            <>
+                                                <Loader2 className="w-4 h-4 animate-spin" />
+                                                <span>{__('Cobrando...')}</span>
+                                            </>
+                                        ) : (
+                                            <>
+                                                <CheckCircle2 className="w-4 h-4 text-emerald-400" />
+                                                <span className="font-black bg-slate-900/60 px-2 py-0.5 rounded text-xs">[F12]</span>
+                                                <span>{__('Solo Cobrar (Sin Ticket)')}</span>
+                                            </>
+                                        )}
+                                    </Button>
+
+                                    {/* BOTÓN 2: EMITIR TICKET Y COBRAR */}
+                                    <Button
+                                        type="button"
+                                        size="lg"
+                                        disabled={isProcessingSale}
+                                        onClick={() => executeSale(true)}
+                                        className="w-full sm:w-auto h-12 px-6 bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold text-sm gap-2 shadow-md hover:shadow-lg transition-all"
+                                    >
+                                        {processingSaleType === 'ticket' ? (
+                                            <>
+                                                <Loader2 className="w-4 h-4 animate-spin" />
+                                                <span>{__('Procesando Ticket...')}</span>
+                                            </>
+                                        ) : (
+                                            <>
+                                                <Printer className="w-4 h-4 text-white" />
+                                                <span className="font-black bg-emerald-800/50 px-2 py-0.5 rounded text-xs">[F11]</span>
+                                                <span>{__('Cobrar y Emitir Ticket')}</span>
+                                            </>
+                                        )}
+                                    </Button>
+                                </div>
                             </DialogFooter>
                         </form>
                     </DialogContent>
