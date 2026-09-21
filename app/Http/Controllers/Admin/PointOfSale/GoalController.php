@@ -97,16 +97,8 @@ class GoalController extends Controller
             $targetAmount = round($actualSalesTotal * (1 + $incrementPercentage / 100), 2);
         }
 
-        // Calcular días laborables del mes (Lunes a Sábado, excluyendo Domingos)
-        $workingDaysInMonth = 0;
-        for ($d = 1; $d <= $daysInMonth; $d++) {
-            $dateObj = Carbon::createFromDate($year, $month, $d, $timezone);
-            if ($dateObj->dayOfWeek !== Carbon::SUNDAY) {
-                $workingDaysInMonth++;
-            }
-        }
-
-        $dailyAverageTarget = $workingDaysInMonth > 0 ? round($targetAmount / $workingDaysInMonth, 2) : 0;
+        // Objetivo promedio diario del mes completo
+        $dailyAverageTarget = $daysInMonth > 0 ? round($targetAmount / $daysInMonth, 2) : 0;
 
         // Generar rangos dinámicos de semanas (Lunes a Domingo)
         // Semana 1: del día 1 hasta el primer domingo del mes.
@@ -136,11 +128,15 @@ class GoalController extends Controller
         }
 
         $weeksBreakdown = [];
+        $totalAllocatedMeta = 0.0;
+        $totalWeeks = count($weekRanges);
 
-        foreach ($weekRanges as $range) {
+        foreach ($weekRanges as $idx => $range) {
             $semNum = $range['semana'];
             $startDay = $range['inicio'];
             $endDay = $range['fin'];
+            $countDays = $endDay - $startDay + 1;
+            $isLastWeek = ($idx === $totalWeeks - 1);
 
             $dailySalesMap = [
                 'lunes' => 0.0,
@@ -153,7 +149,6 @@ class GoalController extends Controller
             ];
 
             $totalSemana = 0.0;
-            $countWorkingDays = 0;
 
             for ($d = $startDay; $d <= $endDay; $d++) {
                 $dateObj = Carbon::createFromDate($year, $month, $d, $timezone);
@@ -168,26 +163,29 @@ class GoalController extends Controller
                 if (isset($dailySalesMap[$dayOfWeekKey])) {
                     $dailySalesMap[$dayOfWeekKey] += $montoDia;
                 }
-
-                // Contar días laborables (Lunes a Sábado, se trabaja de lunes a sábado)
-                if ($dateObj->dayOfWeek !== Carbon::SUNDAY) {
-                    $countWorkingDays++;
-                }
             }
 
-            $metaSemanal = round($dailyAverageTarget * $countWorkingDays, 2);
+            // Distribuir meta proporcional a los días de la semana y cuadrar centavos en la última semana
+            if ($isLastWeek && $targetAmount > 0) {
+                $metaSemanal = round($targetAmount - $totalAllocatedMeta, 2);
+            } else {
+                $metaSemanal = round(($targetAmount / $daysInMonth) * $countDays, 2);
+                $totalAllocatedMeta += $metaSemanal;
+            }
+
             $porcentajeAvance = $metaSemanal > 0 ? round(($totalSemana / $metaSemanal) * 100, 1) : 0;
+            $objetivoDiario = $countDays > 0 ? round($metaSemanal / $countDays, 2) : 0;
 
             $weeksBreakdown[] = [
                 'semana' => "Semana {$semNum}",
                 'inicio_dia' => $startDay,
                 'fin_dia' => $endDay,
-                'dias' => $countWorkingDays,
+                'dias' => $countDays,
                 'dias_map' => $dailySalesMap,
                 'total_ventas' => $totalSemana,
                 'meta_semanal' => $metaSemanal,
                 'porcentaje_avance' => $porcentajeAvance,
-                'objetivo_diario' => $dailyAverageTarget,
+                'objetivo_diario' => $objetivoDiario,
             ];
         }
 

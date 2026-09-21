@@ -12,7 +12,7 @@ import {
     AlertCircle,
     Info,
 } from 'lucide-react';
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { Breadcrumbs } from '@/components/breadcrumbs';
 import { ModuleHeader } from '@/components/module-header';
 import { StatCard } from '@/components/stat-card';
@@ -205,6 +205,36 @@ export default function MetasIndexPage({
     const totalSab = weeksBreakdown.reduce((acc, w) => acc + w.dias_map.sabado, 0);
     const totalDom = weeksBreakdown.reduce((acc, w) => acc + w.dias_map.domingo, 0);
     const totalDiasMes = weeksBreakdown.reduce((acc, w) => acc + w.dias, 0);
+
+    // Recalcular semanas dinámicamente según la meta manual o calculada en tiempo real
+    const dynamicWeeks = useMemo(() => {
+        const totalDays = totalDiasMes;
+        const currentTarget = Number(data.target_amount) || 0;
+        const dailyAvg = totalDays > 0 ? currentTarget / totalDays : 0;
+
+        let allocated = 0;
+        return weeksBreakdown.map((wb, idx) => {
+            const isLast = idx === weeksBreakdown.length - 1;
+            const weekMeta = currentTarget > 0
+                ? (isLast ? Math.round((currentTarget - allocated) * 100) / 100 : Math.round(dailyAvg * wb.dias * 100) / 100)
+                : 0;
+            allocated += weekMeta;
+
+            const avance = weekMeta > 0 ? Math.round((wb.total_ventas / weekMeta) * 100 * 10) / 10 : 0;
+            const objDiario = wb.dias > 0 ? Math.round((weekMeta / wb.dias) * 100) / 100 : 0;
+
+            return {
+                ...wb,
+                meta_semanal: weekMeta,
+                porcentaje_avance: avance,
+                objetivo_diario: objDiario,
+            };
+        });
+    }, [weeksBreakdown, totalDiasMes, data.target_amount]);
+
+    const dynamicDailyAverage = totalDiasMes > 0
+        ? Math.round(((Number(data.target_amount) || 0) / totalDiasMes) * 100) / 100
+        : 0;
 
     return (
         <>
@@ -513,7 +543,7 @@ export default function MetasIndexPage({
                                 </tr>
                             </thead>
                             <tbody className="divide-y divide-slate-200 dark:divide-slate-800">
-                                {weeksBreakdown.map((wb, idx) => {
+                                {dynamicWeeks.map((wb, idx) => {
                                     const isRowGreen = wb.porcentaje_avance >= 100;
                                     const isRowYellow = wb.porcentaje_avance >= 80 && wb.porcentaje_avance < 100;
                                     const isRowRed = wb.porcentaje_avance < 80;
@@ -531,7 +561,7 @@ export default function MetasIndexPage({
                                             {/* Span solo en primera fila para Meta Mensual */}
                                             {idx === 0 ? (
                                                 <td
-                                                    rowSpan={weeksBreakdown.length}
+                                                    rowSpan={dynamicWeeks.length}
                                                     className="p-2.5 border-r font-bold text-base text-center bg-slate-50/50 dark:bg-slate-900/30 align-middle text-slate-800 dark:text-slate-200"
                                                 >
                                                     {formatMoney(data.target_amount)}
@@ -645,7 +675,7 @@ export default function MetasIndexPage({
                                     <td className="p-2.5 border-r border-slate-300 dark:border-slate-700 text-center">
                                         {totalDiasMes}
                                     </td>
-                                    <td className="p-2.5 text-right font-mono">{formatMoney(dailyAverageTarget)}</td>
+                                    <td className="p-2.5 text-right font-mono">{formatMoney(dynamicDailyAverage)}</td>
                                 </tr>
                             </tfoot>
                         </table>
