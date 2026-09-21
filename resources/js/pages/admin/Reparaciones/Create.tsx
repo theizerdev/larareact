@@ -1166,8 +1166,12 @@ export default function CreateReparacion({
         }));
 
         post('/admin/reparaciones', {
-            onSuccess: () => notifySuccess(__('Orden de reparación registrada exitosamente.')),
+            onSuccess: () => {
+                document.body.style.pointerEvents = '';
+                notifySuccess(__('Orden de reparación registrada exitosamente.'));
+            },
             onError: (errs) => {
+                document.body.style.pointerEvents = '';
                 console.error('Errores al guardar orden:', errs);
                 notifyError(__('Por favor completa los campos requeridos.'));
             },

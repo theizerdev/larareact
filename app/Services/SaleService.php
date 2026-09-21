@@ -281,13 +281,18 @@ class SaleService
             if ($cashRegister) {
                 foreach ($payments as $payment) {
                     if ((float) $payment['monto'] > 0) {
+                        $desc = "Venta {$codigoTicket} - {$sale->cliente_nombre}";
+                        if ($cambio > 0 && in_array($payment['metodo_pago'], ['efectivo', 'dolar'])) {
+                            $desc .= " (Recibió: $" . number_format($montoRecibido, 2) . " · Cambio: $" . number_format($cambio, 2) . ")";
+                        }
+
                         $this->cashRegisterService->addMovement(
                             $cashRegister,
                             'inflow',
                             'venta',
                             $payment['metodo_pago'],
                             (float) $payment['monto'],
-                            "Venta {$codigoTicket} - {$sale->cliente_nombre}",
+                            $desc,
                             $userId
                         );
                     }

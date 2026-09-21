@@ -787,19 +787,34 @@ export default function ShowReparacion({
         }
     };
 
+    const hasOpenedWaRef = React.useRef(false);
     useEffect(() => {
+        document.body.style.pointerEvents = "";
         const waUrl = pageProps.flash?.whatsapp_url || pageProps.whatsapp_url;
-        if (waUrl) {
+        if (waUrl && !hasOpenedWaRef.current) {
+            hasOpenedWaRef.current = true;
             window.open(waUrl, '_blank');
         }
-    }, [pageProps]);
+    }, [pageProps.flash?.whatsapp_url, pageProps.whatsapp_url]);
+
+    useEffect(() => {
+        const handleAfterPrint = () => {
+            document.body.style.pointerEvents = "";
+        };
+        window.addEventListener('afterprint', handleAfterPrint);
+        return () => {
+            window.removeEventListener('afterprint', handleAfterPrint);
+        };
+    }, []);
 
     const handleExecutePrint = (type: 'cliente' | 'tecnico') => {
         setPrintType(type);
         setIsPrintModalOpen(false);
+        document.body.style.pointerEvents = "";
         setTimeout(() => {
             window.print();
-        }, 100);
+            document.body.style.pointerEvents = "";
+        }, 350);
     };
 
     const [activeTab, setActiveTab] = useState<'general' | 'preservicio' | 'postservicio' | 'repuestos' | 'fotos' | 'historial'>('general');
@@ -4903,8 +4918,16 @@ export default function ShowReparacion({
                 )}
 
                 {/* MODAL SELECCIONAR TIPO DE TICKET (CLIENTE O TÉCNICO) */}
-                <Dialog open={isPrintModalOpen} onOpenChange={setIsPrintModalOpen}>
-                    <DialogContent className="sm:max-w-2xl p-6 sm:p-8 rounded-2xl">
+                <Dialog
+                    open={isPrintModalOpen}
+                    onOpenChange={(open) => {
+                        setIsPrintModalOpen(open);
+                        if (!open) {
+                            document.body.style.pointerEvents = "";
+                        }
+                    }}
+                >
+                    <DialogContent className="sm:max-w-2xl p-6 sm:p-8 rounded-2xl pointer-events-auto">
                         <DialogHeader className="pb-2">
                             <DialogTitle className="flex items-center gap-3 text-xl font-extrabold text-slate-900 dark:text-slate-100">
                                 <div className="w-10 h-10 rounded-xl bg-blue-500/15 flex items-center justify-center text-blue-600 dark:text-blue-400">
@@ -4924,7 +4947,7 @@ export default function ShowReparacion({
                                 <button
                                     type="button"
                                     onClick={() => handleExecutePrint('cliente')}
-                                    className="p-6 rounded-2xl border-2 border-slate-200 dark:border-slate-800 hover:border-blue-500 dark:hover:border-blue-500 bg-slate-50/80 dark:bg-slate-900/60 hover:bg-blue-50/60 dark:hover:bg-blue-950/40 transition-all text-left group flex flex-col justify-between space-y-5 shadow-sm hover:shadow-xl hover:-translate-y-0.5"
+                                    className="p-6 rounded-2xl border-2 border-slate-200 dark:border-slate-800 hover:border-blue-500 dark:hover:border-blue-500 bg-slate-50/80 dark:bg-slate-900/60 hover:bg-blue-50/60 dark:hover:bg-blue-950/40 transition-all text-left group flex flex-col justify-between space-y-5 shadow-sm hover:shadow-xl hover:-translate-y-0.5 cursor-pointer"
                                 >
                                     <div className="flex items-center justify-between">
                                         <div className="w-14 h-14 rounded-2xl bg-blue-100 dark:bg-blue-900/50 flex items-center justify-center text-blue-600 dark:text-blue-400 group-hover:scale-110 transition-transform shadow-inner">
@@ -4948,7 +4971,7 @@ export default function ShowReparacion({
                                 <button
                                     type="button"
                                     onClick={() => handleExecutePrint('tecnico')}
-                                    className="p-6 rounded-2xl border-2 border-slate-200 dark:border-slate-800 hover:border-purple-500 dark:hover:border-purple-500 bg-slate-50/80 dark:bg-slate-900/60 hover:bg-purple-50/60 dark:hover:bg-purple-950/40 transition-all text-left group flex flex-col justify-between space-y-5 shadow-sm hover:shadow-xl hover:-translate-y-0.5"
+                                    className="p-6 rounded-2xl border-2 border-slate-200 dark:border-slate-800 hover:border-purple-500 dark:hover:border-purple-500 bg-slate-50/80 dark:bg-slate-900/60 hover:bg-purple-50/60 dark:hover:bg-purple-950/40 transition-all text-left group flex flex-col justify-between space-y-5 shadow-sm hover:shadow-xl hover:-translate-y-0.5 cursor-pointer"
                                 >
                                     <div className="flex items-center justify-between">
                                         <div className="w-14 h-14 rounded-2xl bg-purple-100 dark:bg-purple-900/50 flex items-center justify-center text-purple-600 dark:text-purple-400 group-hover:scale-110 transition-transform shadow-inner">
@@ -4969,6 +4992,20 @@ export default function ShowReparacion({
                                 </button>
                             </div>
                         </div>
+
+                        <DialogFooter className="border-t border-slate-100 dark:border-slate-800 pt-3 flex items-center justify-end">
+                            <Button
+                                type="button"
+                                variant="outline"
+                                onClick={() => {
+                                    setIsPrintModalOpen(false);
+                                    document.body.style.pointerEvents = "";
+                                }}
+                                className="h-10 px-5 text-xs font-semibold"
+                            >
+                                {__('Cerrar')}
+                            </Button>
+                        </DialogFooter>
                     </DialogContent>
                 </Dialog>
 
