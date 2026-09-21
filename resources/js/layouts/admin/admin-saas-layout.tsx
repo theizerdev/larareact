@@ -27,6 +27,7 @@ import {
     Fingerprint,
     CreditCard,
     Smartphone,
+    PanelLeft,
     Users,
     CalendarDays,
 } from 'lucide-react';
@@ -87,12 +88,12 @@ const mainNavItems: NavItem[] = [
 
 // We removed settingsNavItems as they are now defined inline in the CollapsibleNavItem component.
 
-function NavItem({ item, collapsed }: { item: NavItem; collapsed: boolean }) {
+function NavItem({ item }: { item: NavItem }) {
     const { url } = usePage();
     const active = url.startsWith(item.href as string);
     const { __ } = useTranslate();
 
-    const linkContent = (
+    return (
         <Link
             href={item.href}
             className={cn(
@@ -103,24 +104,10 @@ function NavItem({ item, collapsed }: { item: NavItem; collapsed: boolean }) {
             )}
         >
             {item.icon && <item.icon className="size-5 shrink-0" />}
-            <span
-                className={cn(
-                    'whitespace-nowrap transition-opacity duration-300',
-                    collapsed && 'opacity-0',
-                )}
-            >
+            <span className="whitespace-nowrap">
                 {__(item.title)}
             </span>
         </Link>
-    );
-
-    return collapsed ? (
-        <Tooltip>
-            <TooltipTrigger asChild>{linkContent}</TooltipTrigger>
-            <TooltipContent side="right">{__(item.title)}</TooltipContent>
-        </Tooltip>
-    ) : (
-        linkContent
     );
 }
 
@@ -128,12 +115,10 @@ function CollapsibleNavItem({
     title,
     icon: Icon,
     items,
-    collapsed,
 }: {
     title: string;
     icon: React.ComponentType<any>;
     items: { title: string; href: string }[];
-    collapsed: boolean;
 }) {
     const { url } = usePage();
     const { __ } = useTranslate();
@@ -155,41 +140,6 @@ function CollapsibleNavItem({
         e.preventDefault();
         setIsOpen(!isOpen);
     };
-
-    if (collapsed) {
-        return (
-            <Tooltip>
-                <TooltipTrigger asChild>
-                    <button
-                        onClick={handleToggle}
-                        className={cn(
-                            'group flex w-full items-center justify-center rounded-lg p-2.5 text-sm font-medium transition-all text-sidebar-foreground/70 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground',
-                            isAnyActive && 'bg-primary/10 text-primary'
-                        )}
-                    >
-                        <Icon className="size-5 shrink-0" />
-                    </button>
-                </TooltipTrigger>
-                <TooltipContent side="right">
-                    <div className="flex flex-col gap-1 p-1">
-                        <p className="font-semibold text-white border-b border-sidebar-border pb-1 mb-1">{__(title)}</p>
-                        {items.map((item, idx) => (
-                            <Link
-                                key={idx}
-                                href={item.href}
-                                className={cn(
-                                    'text-xs py-1 px-2 rounded hover:bg-sidebar-accent block',
-                                    url.startsWith(item.href) ? 'text-primary font-semibold' : 'text-sidebar-foreground/80'
-                                )}
-                            >
-                                {__(item.title)}
-                            </Link>
-                        ))}
-                    </div>
-                </TooltipContent>
-            </Tooltip>
-        );
-    }
 
     return (
         <div className="space-y-1">
@@ -300,29 +250,11 @@ export default function AdminSaasLayout({
                 {/* Sidebar */}
                 <aside
                     className={cn(
-                        'fixed inset-y-0 left-0 z-50 flex flex-col border-r border-sidebar-border bg-sidebar text-sidebar-foreground transition-all duration-300',
-                        collapsed ? 'lg:w-[72px]' : 'lg:w-64',
-                        mobileMenuOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0',
-                        'w-64 lg:flex',
+                        'fixed inset-y-0 left-0 z-50 flex w-64 flex-col border-r border-sidebar-border bg-sidebar text-sidebar-foreground transition-transform duration-300 ease-in-out',
+                        mobileMenuOpen ? 'translate-x-0' : '-translate-x-full',
+                        collapsed ? 'lg:-translate-x-full' : 'lg:translate-x-0',
                     )}
                 >
-                    {/* Desktop Collapse Toggle Button (Floating Embedded) */}
-                    <div
-                        className="hidden lg:flex absolute top-[10px] -right-[22px] z-50 h-11 w-11 items-center justify-center rounded-full bg-slate-100 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-sm"
-                    >
-                        <button
-                            onClick={() => setCollapsed(!collapsed)}
-                            className="h-7 w-7 items-center justify-center rounded-full bg-primary hover:bg-primary/90 text-primary-foreground shadow focus:outline-none cursor-pointer flex border border-primary/20"
-                            title={collapsed ? __('Expand sidebar') : __('Collapse sidebar')}
-                        >
-                            {collapsed ? (
-                                <ChevronRight className="size-4" />
-                            ) : (
-                                <ChevronLeft className="size-4" />
-                            )}
-                        </button>
-                    </div>
-
                     {/* Logo area */}
                     <div className="flex h-16 items-center justify-between border-b border-sidebar-border px-4">
                         <Link
@@ -336,12 +268,7 @@ export default function AdminSaasLayout({
                                     className="h-9 w-auto object-contain"
                                 />
                             </div>
-                            <span
-                                className={cn(
-                                    'text-base font-semibold whitespace-nowrap text-white transition-opacity duration-300',
-                                    collapsed && 'opacity-0',
-                                )}
-                            >
+                            <span className="text-base font-semibold whitespace-nowrap text-white">
                                 SICA
                             </span>
                         </Link>
@@ -361,23 +288,15 @@ export default function AdminSaasLayout({
                             <Search className="absolute top-1/2 left-3 size-4 -translate-y-1/2 text-sidebar-foreground/50" />
                             <Input
                                 type="search"
-                                placeholder={collapsed ? '' : 'Buscar...'}
-                                className={cn(
-                                    'h-9 border-sidebar-border bg-sidebar-accent/30 pl-9 text-sm text-sidebar-foreground placeholder:text-sidebar-foreground/50 focus-visible:ring-primary',
-                                    collapsed && 'w-full pl-9',
-                                )}
+                                placeholder="Buscar..."
+                                className="h-9 border-sidebar-border bg-sidebar-accent/30 pl-9 text-sm text-sidebar-foreground placeholder:text-sidebar-foreground/50 focus-visible:ring-primary"
                             />
                         </div>
                     </div>
 
                     {/* Navigation */}
                     <nav className="flex-1 min-h-0 overflow-y-auto overflow-x-hidden custom-scrollbar space-y-1 px-3 py-2">
-                        <p
-                            className={cn(
-                                'px-3 pb-2 text-xs font-semibold tracking-wider text-slate-500 uppercase transition-opacity duration-300',
-                                collapsed && 'opacity-0',
-                            )}
-                        >
+                        <p className="px-3 pb-2 text-xs font-semibold tracking-wider text-slate-500 uppercase">
                             {__('Platform')}
                         </p>
                         {mainNavItems
@@ -391,7 +310,6 @@ export default function AdminSaasLayout({
                                 <NavItem
                                     key={item.title}
                                     item={item}
-                                    collapsed={collapsed}
                                 />
                             ))
                         }
@@ -423,7 +341,6 @@ export default function AdminSaasLayout({
                                     <CollapsibleNavItem
                                         title="Financiamiento"
                                         icon={CreditCard}
-                                        collapsed={collapsed}
                                         items={creditoItems}
                                     />
                                 </div>
@@ -462,7 +379,6 @@ export default function AdminSaasLayout({
                                     <CollapsibleNavItem
                                         title="Equipos & Clientes"
                                         icon={Smartphone}
-                                        collapsed={collapsed}
                                         items={invItems}
                                     />
                                 </div>
@@ -487,7 +403,6 @@ export default function AdminSaasLayout({
                                     <CollapsibleNavItem
                                         title="Organization"
                                         icon={Briefcase}
-                                        collapsed={collapsed}
                                         items={orgItems}
                                     />
                                 </div>
@@ -527,7 +442,6 @@ export default function AdminSaasLayout({
                                     <CollapsibleNavItem
                                         title="Settings"
                                         icon={Settings}
-                                        collapsed={collapsed}
                                         items={settingsItems}
                                     />
                                 </div>
@@ -552,7 +466,6 @@ export default function AdminSaasLayout({
                                     <CollapsibleNavItem
                                         title="Integrations"
                                         icon={Link2}
-                                        collapsed={collapsed}
                                         items={integrationsItems}
                                     />
                                 </div>
@@ -581,7 +494,6 @@ export default function AdminSaasLayout({
                                     <CollapsibleNavItem
                                         title="Security"
                                         icon={Shield}
-                                        collapsed={collapsed}
                                         items={securityItems}
                                     />
                                 </div>
@@ -630,7 +542,6 @@ export default function AdminSaasLayout({
                                     <CollapsibleNavItem
                                         title="Monitoring"
                                         icon={Activity}
-                                        collapsed={collapsed}
                                         items={monitoringItems}
                                     />
                                 </div>
@@ -640,32 +551,22 @@ export default function AdminSaasLayout({
 
                     {/* Bottom section */}
                     <div className="border-t border-sidebar-border p-3">
-                        <div
-                            className={cn(
-                                'mb-3 flex items-center gap-3 rounded-lg bg-sidebar-accent/50 p-3 transition-all',
-                                collapsed && 'justify-center px-2',
-                            )}
-                        >
+                        <div className="mb-3 flex items-center gap-3 rounded-lg bg-sidebar-accent/50 p-3 transition-all">
                             <Avatar className="size-9 shrink-0 border border-sidebar-border">
                                 <AvatarImage
-                                    src={auth.user?.avatar}
-                                    alt={auth.user?.name}
+                                    src={(auth as any)?.user?.avatar}
+                                    alt={(auth as any)?.user?.name}
                                 />
                                 <AvatarFallback className="bg-primary text-primary-foreground text-xs font-medium">
-                                    {getInitials(auth.user?.name ?? '')}
+                                    {getInitials((auth as any)?.user?.name ?? '')}
                                 </AvatarFallback>
                             </Avatar>
-                            <div
-                                className={cn(
-                                    'min-w-0 flex-1 overflow-hidden transition-opacity duration-300',
-                                    collapsed && 'opacity-0',
-                                )}
-                            >
+                            <div className="min-w-0 flex-1 overflow-hidden">
                                 <p className="truncate text-sm font-medium text-sidebar-foreground">
-                                    {auth.user?.name}
+                                    {(auth as any)?.user?.name}
                                 </p>
                                 <p className="truncate text-xs text-sidebar-foreground/50">
-                                    {auth.user?.email}
+                                    {(auth as any)?.user?.email}
                                 </p>
                             </div>
                         </div>
@@ -725,9 +626,8 @@ export default function AdminSaasLayout({
                 {/* Main content area */}
                 <div
                     className={cn(
-                        'flex flex-1 flex-col transition-all duration-300 min-w-0',
-                        collapsed ? 'lg:pl-[72px]' : 'lg:pl-64',
-                        'pl-0',
+                        'flex flex-1 flex-col transition-all duration-300 min-w-0 pl-0',
+                        collapsed ? 'lg:pl-0' : 'lg:pl-64',
                     )}
                 >
                     {/* Top bar */}
@@ -739,20 +639,35 @@ export default function AdminSaasLayout({
                             settings.navbarType === 'hidden' && 'hidden'
                         )}
                     >
-                        <div className="flex items-center gap-3">
-                            <Button
-                                variant="ghost"
-                                size="icon"
-                                className="lg:hidden text-muted-foreground hover:bg-accent -ml-2"
-                                onClick={() => setMobileMenuOpen(true)}
-                            >
-                                <Menu className="size-5" />
-                            </Button>
+                        <div className="flex items-center gap-2">
+                            {/* Toggle sidebar button - Laravel Starter Kit React style */}
+                            <Tooltip>
+                                <TooltipTrigger asChild>
+                                    <Button
+                                        variant="ghost"
+                                        size="icon"
+                                        className="h-8 w-8 text-muted-foreground hover:bg-accent hover:text-foreground -ml-1 rounded-md"
+                                        onClick={() => {
+                                            if (typeof window !== 'undefined' && window.innerWidth < 1024) {
+                                                setMobileMenuOpen(!mobileMenuOpen);
+                                            } else {
+                                                setCollapsed(!collapsed);
+                                            }
+                                        }}
+                                        aria-label={collapsed ? __('Expand sidebar') : __('Collapse sidebar')}
+                                    >
+                                        <PanelLeft className="size-4.5" />
+                                    </Button>
+                                </TooltipTrigger>
+                                <TooltipContent side="bottom" align="start">
+                                    {collapsed ? __('Expand sidebar') : __('Collapse sidebar')}
+                                </TooltipContent>
+                            </Tooltip>
 
                             <nav className="flex items-center gap-2 text-sm text-muted-foreground">
                                 <Link
                                     href={home()}
-                                    className="flex items-center gap-1 transition-colors hover:text-foreground shrink-0"
+                                    className="flex items-center gap-1.5 transition-colors hover:text-foreground shrink-0"
                                 >
                                     <Home className="size-3.5" />
                                     <span className="hidden sm:inline">{__('Home')}</span>
