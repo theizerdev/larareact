@@ -497,10 +497,10 @@ export default function ProveedorVehiculosModal({
                             </div>
                             <div>
                                 <DialogTitle className="text-xl md:text-2xl text-slate-800 dark:text-slate-100 flex items-center gap-2">
-                                    {__('Vehículos y Semirremolques del Proveedor')}
+                                    {__('Supplier Vehicles and Semi-trailers')}
                                 </DialogTitle>
                                 <DialogDescription className="text-xs md:text-sm mt-0.5">
-                                    {__('Registro técnico reglamentario (Reglamento de Tránsito Federal Art. 24 y Placa de Semirremolque NOM-035-SCT-2-2010) para')} <span className="font-semibold text-slate-800 dark:text-slate-200">{cleanUtf8(proveedor?.razon_social)}</span>.
+                                    {__('Regulatory technical registry (Federal Traffic Regulations Art. 24 and Semi-trailer Plate NOM-035-SCT-2-2010) for')} <span className="font-semibold text-slate-800 dark:text-slate-200">{cleanUtf8(proveedor?.razon_social)}</span>.
                                 </DialogDescription>
                             </div>
                         </div>
@@ -523,7 +523,7 @@ export default function ProveedorVehiculosModal({
                             <div className="flex items-center gap-2">
                                 <Car className="w-5 h-5 text-[#104a29]" />
                                 <h3 className="font-bold text-slate-800 dark:text-slate-100 text-base">
-                                    {editingVehicle ? __('Editar Vehículo') : __('Registrar Nuevo Vehículo')}
+                                    {editingVehicle ? __('Edit Vehicle') : __('Register New Vehicle')}
                                 </h3>
                             </div>
                             {editingVehicle && (
@@ -534,7 +534,7 @@ export default function ProveedorVehiculosModal({
                                     onClick={handleResetForm}
                                     className="h-8 text-xs text-rose-600 hover:text-rose-700"
                                 >
-                                    {__('Cancelar')}
+                                    {__('Cancel')}
                                 </Button>
                             )}
                         </div>
@@ -552,7 +552,7 @@ export default function ProveedorVehiculosModal({
                                 )}
                             >
                                 <Truck className="w-3.5 h-3.5" />
-                                <span>1. Unidad Motriz</span>
+                                <span>{__('1. Motor Unit')}</span>
                             </button>
                             
                             <button
@@ -566,7 +566,7 @@ export default function ProveedorVehiculosModal({
                                 )}
                             >
                                 <Container className="w-3.5 h-3.5" />
-                                <span>2. Caja / Remolque</span>
+                                <span>{__('2. Box / Trailer')}</span>
                                 {form.tiene_remolque && (
                                     <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
                                 )}
@@ -583,7 +583,7 @@ export default function ProveedorVehiculosModal({
                                 )}
                             >
                                 <Camera className="w-3.5 h-3.5" />
-                                <span>3. Fotografías</span>
+                                <span>{__('3. Photographs')}</span>
                             </button>
                         </div>
 
@@ -594,63 +594,63 @@ export default function ProveedorVehiculosModal({
                                 <div className="space-y-4 animate-in fade-in duration-200">
                                     <div className="bg-emerald-50/50 dark:bg-emerald-950/20 border border-emerald-100 dark:border-emerald-900/40 p-3 rounded-xl flex items-center gap-2.5 text-xs text-emerald-800 dark:text-emerald-300">
                                         <Shield className="w-4 h-4 shrink-0 text-emerald-600" />
-                                        <span>Clasificación según Reglamento de Tránsito en Carreteras Federales (Art. 24)</span>
+                                        <span>{__('Classification according to Federal Highway Traffic Regulations (Art. 24)')}</span>
                                     </div>
 
                                     {/* Categoría y Tipo de Vehículo */}
                                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                                         <div className="space-y-1.5 w-full">
-                                            <Label className="text-xs font-semibold">{__('Categoría Federal')} *</Label>
+                                            <Label className="text-xs font-semibold">{__('Federal Category')} *</Label>
                                             <Select
                                                 value={form.categoria_vehiculo}
                                                 onValueChange={(v) => setForm((prev) => ({ ...prev, categoria_vehiculo: v }))}
                                             >
                                                 <SelectTrigger className="w-full h-9 text-xs">
-                                                    <SelectValue placeholder="Seleccione Categoría" />
+                                                    <SelectValue placeholder={__('Select Category')} />
                                                 </SelectTrigger>
                                                 <SelectContent>
-                                                    <SelectItem value="carga">{__('Transporte de Carga')}</SelectItem>
-                                                    <SelectItem value="personas">{__('Transporte de Personas')}</SelectItem>
-                                                    <SelectItem value="excepcional">{__('Tránsito Excepcional / Especial')}</SelectItem>
+                                                    <SelectItem value="carga">{__('Freight Transport')}</SelectItem>
+                                                    <SelectItem value="personas">{__('Passenger Transport')}</SelectItem>
+                                                    <SelectItem value="excepcional">{__('Exceptional / Special Traffic')}</SelectItem>
                                                 </SelectContent>
                                             </Select>
                                         </div>
 
                                         <div className="space-y-1.5 w-full">
-                                            <Label className="text-xs font-semibold">{__('Tipo de Vehículo')} *</Label>
+                                            <Label className="text-xs font-semibold">{__('Vehicle Type')} *</Label>
                                             <Select
                                                 value={form.tipo_vehiculo}
                                                 onValueChange={handleTipoVehiculoChange}
                                             >
                                                 <SelectTrigger className="w-full h-9 text-xs">
-                                                    <SelectValue placeholder="Tipo de Vehículo" />
+                                                    <SelectValue placeholder={__('Vehicle Type')} />
                                                 </SelectTrigger>
                                                 <SelectContent>
                                                     {form.categoria_vehiculo === 'carga' ? (
                                                         <>
-                                                            <SelectItem value="Tractocamión">{__('Tractocamión (Quinta Rueda)')}</SelectItem>
-                                                            <SelectItem value="Camión Remolque">{__('Camión Remolque')}</SelectItem>
-                                                            <SelectItem value="Camión Unitario Pesado">{__('Camión Unitario Pesado (C3+)')}</SelectItem>
-                                                            <SelectItem value="Camión Unitario Ligero">{__('Camión Unitario Ligero (C2)')}</SelectItem>
-                                                            <SelectItem value="Semirremolque">{__('Semirremolque')}</SelectItem>
-                                                            <SelectItem value="Remolque">{__('Remolque')}</SelectItem>
-                                                            <SelectItem value="Vehículo Tipo Grúa">{__('Vehículo Tipo Grúa')}</SelectItem>
+                                                            <SelectItem value="Tractocamión">{__('Tractor Truck (Fifth Wheel)')}</SelectItem>
+                                                            <SelectItem value="Camión Remolque">{__('Truck Trailer')}</SelectItem>
+                                                            <SelectItem value="Camión Unitario Pesado">{__('Heavy Unit Truck (C3+)')}</SelectItem>
+                                                            <SelectItem value="Camión Unitario Ligero">{__('Light Unit Truck (C2)')}</SelectItem>
+                                                            <SelectItem value="Semirremolque">{__('Semi-trailer')}</SelectItem>
+                                                            <SelectItem value="Remolque">{__('Trailer')}</SelectItem>
+                                                            <SelectItem value="Vehículo Tipo Grúa">{__('Tow Truck')}</SelectItem>
                                                         </>
                                                     ) : form.categoria_vehiculo === 'personas' ? (
                                                         <>
-                                                            <SelectItem value="Automóvil">{__('Automóvil (Sedán/Hatchback)')}</SelectItem>
-                                                            <SelectItem value="Camioneta">{__('Camioneta / SUV')}</SelectItem>
-                                                            <SelectItem value="Pick-up">{__('Pick-up')}</SelectItem>
-                                                            <SelectItem value="Vagoneta">{__('Vagoneta / Van')}</SelectItem>
-                                                            <SelectItem value="Autobús">{__('Autobús')}</SelectItem>
-                                                            <SelectItem value="Midibús">{__('Midibús')}</SelectItem>
-                                                            <SelectItem value="Motocicleta">{__('Motocicleta')}</SelectItem>
+                                                            <SelectItem value="Automóvil">{__('Car (Sedan/Hatchback)')}</SelectItem>
+                                                            <SelectItem value="Camioneta">{__('SUV / Truck')}</SelectItem>
+                                                            <SelectItem value="Pick-up">{__('Pickup')}</SelectItem>
+                                                            <SelectItem value="Vagoneta">{__('Van / Station Wagon')}</SelectItem>
+                                                            <SelectItem value="Autobús">{__('Bus')}</SelectItem>
+                                                            <SelectItem value="Midibús">{__('Midibus')}</SelectItem>
+                                                            <SelectItem value="Motocicleta">{__('Motorcycle')}</SelectItem>
                                                         </>
                                                     ) : (
                                                         <>
-                                                            <SelectItem value="Tractor Agrícola">{__('Tractor Agrícola')}</SelectItem>
-                                                            <SelectItem value="Maquinaria Construcción">{__('Maquinaria / Autopropulsado')}</SelectItem>
-                                                            <SelectItem value="Especial Indivisible">{__('Diseño Especial (Gran Peso/Volumen)')}</SelectItem>
+                                                            <SelectItem value="Tractor Agrícola">{__('Agricultural Tractor')}</SelectItem>
+                                                            <SelectItem value="Maquinaria Construcción">{__('Machinery / Self-propelled')}</SelectItem>
+                                                            <SelectItem value="Especial Indivisible">{__('Special Design (Heavy Weight/Volume)')}</SelectItem>
                                                         </>
                                                     )}
                                                 </SelectContent>
@@ -661,41 +661,41 @@ export default function ProveedorVehiculosModal({
                                     {/* Subtipo de Carrocería */}
                                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                                         <div className="space-y-1.5 w-full">
-                                            <Label className="text-xs font-semibold">{__('Subtipo de Carrocería')} (Art. 24)</Label>
+                                            <Label className="text-xs font-semibold">{__('Body Subtype')} (Art. 24)</Label>
                                             <Select
                                                 value={form.subtipo_carroceria}
                                                 onValueChange={(v) => setForm((prev) => ({ ...prev, subtipo_carroceria: v }))}
                                             >
                                                 <SelectTrigger className="w-full h-9 text-xs">
-                                                    <SelectValue placeholder="Configuración de Carrocería" />
+                                                    <SelectValue placeholder={__('Body Configuration')} />
                                                 </SelectTrigger>
                                                 <SelectContent>
-                                                    <SelectItem value="Caja Seca">{__('Caja Seca / Cerrada')}</SelectItem>
-                                                    <SelectItem value="Refrigerador">{__('Caja Refrigerada (Termo)')}</SelectItem>
-                                                    <SelectItem value="Plataforma">{__('Plataforma')}</SelectItem>
-                                                    <SelectItem value="Cama Baja">{__('Cama Baja (Lowboy)')}</SelectItem>
-                                                    <SelectItem value="Redilas">{__('Redilas')}</SelectItem>
-                                                    <SelectItem value="Tanque">{__('Tanque / Pipa')}</SelectItem>
-                                                    <SelectItem value="Tolva">{__('Tolva')}</SelectItem>
-                                                    <SelectItem value="Volteo">{__('Volteo')}</SelectItem>
-                                                    <SelectItem value="Chasis">{__('Chasis')}</SelectItem>
-                                                    <SelectItem value="Caseta">{__('Caseta / Camper')}</SelectItem>
+                                                    <SelectItem value="Caja Seca">{__('Dry / Closed Box')}</SelectItem>
+                                                    <SelectItem value="Refrigerador">{__('Refrigerated Box (Thermo)')}</SelectItem>
+                                                    <SelectItem value="Plataforma">{__('Flatbed')}</SelectItem>
+                                                    <SelectItem value="Cama Baja">{__('Lowboy')}</SelectItem>
+                                                    <SelectItem value="Redilas">{__('Stake Truck')}</SelectItem>
+                                                    <SelectItem value="Tanque">{__('Tank / Tanker')}</SelectItem>
+                                                    <SelectItem value="Tolva">{__('Hopper')}</SelectItem>
+                                                    <SelectItem value="Volteo">{__('Dump')}</SelectItem>
+                                                    <SelectItem value="Chasis">{__('Chassis')}</SelectItem>
+                                                    <SelectItem value="Caseta">{__('Camper / Shell')}</SelectItem>
                                                     <SelectItem value="Panel">{__('Panel')}</SelectItem>
-                                                    <SelectItem value="Pick-up">{__('Pick-up')}</SelectItem>
-                                                    <SelectItem value="Jaula">{__('Jaula')}</SelectItem>
-                                                    <SelectItem value="Portacontenedor">{__('Portacontenedor')}</SelectItem>
-                                                    <SelectItem value="Otro">{__('Otro')}</SelectItem>
+                                                    <SelectItem value="Pick-up">{__('Pickup')}</SelectItem>
+                                                    <SelectItem value="Jaula">{__('Cage')}</SelectItem>
+                                                    <SelectItem value="Portacontenedor">{__('Container Carrier')}</SelectItem>
+                                                    <SelectItem value="Otro">{__('Other')}</SelectItem>
                                                 </SelectContent>
                                             </Select>
                                         </div>
 
                                         <div className="space-y-1.5 w-full">
-                                            <Label className="text-xs font-semibold">{__('Placa de la Unidad')} *</Label>
+                                            <Label className="text-xs font-semibold">{__('Unit License Plate')} *</Label>
                                             <Input
                                                 value={form.placa}
                                                 onChange={(e) => setForm((prev) => ({ ...prev, placa: e.target.value.toUpperCase() }))}
                                                 className="w-full h-9 text-xs font-mono font-bold uppercase"
-                                                placeholder="Ej: 12-AA-3B o ABC-123"
+                                                placeholder={__('e.g. 12-AA-3B or ABC-123')}
                                                 required
                                             />
                                         </div>
@@ -704,27 +704,27 @@ export default function ProveedorVehiculosModal({
                                     {/* Marca, Modelo, Año */}
                                     <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                                         <div className="space-y-1.5 w-full">
-                                            <Label className="text-xs font-semibold">{__('Marca')} *</Label>
+                                            <Label className="text-xs font-semibold">{__('Brand')} *</Label>
                                             <Input
                                                 value={form.marca}
                                                 onChange={(e) => setForm((prev) => ({ ...prev, marca: e.target.value }))}
                                                 className="w-full h-9 text-xs"
-                                                placeholder="Ej: Kenworth, Freightliner"
+                                                placeholder={__('e.g. Kenworth, Freightliner')}
                                                 required
                                             />
                                         </div>
                                         <div className="space-y-1.5 w-full">
-                                            <Label className="text-xs font-semibold">{__('Modelo')} *</Label>
+                                            <Label className="text-xs font-semibold">{__('Model')} *</Label>
                                             <Input
                                                 value={form.modelo}
                                                 onChange={(e) => setForm((prev) => ({ ...prev, modelo: e.target.value }))}
                                                 className="w-full h-9 text-xs"
-                                                placeholder="Ej: T680, Cascadia"
+                                                placeholder={__('e.g. T680, Cascadia')}
                                                 required
                                             />
                                         </div>
                                         <div className="space-y-1.5 w-full">
-                                            <Label className="text-xs font-semibold">{__('Año')} *</Label>
+                                            <Label className="text-xs font-semibold">{__('Year')} *</Label>
                                             <Input
                                                 type="number"
                                                 value={form.year}
@@ -738,7 +738,7 @@ export default function ProveedorVehiculosModal({
                                     {/* VIN de la Unidad y Número de Ejes */}
                                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-2 border-t">
                                         <div className="space-y-1.5 w-full">
-                                            <Label className="text-xs font-semibold">{__('VIN / Número de Serie (17 dígitos)')}</Label>
+                                            <Label className="text-xs font-semibold">{__('VIN / Serial Number (17 digits)')}</Label>
                                             <Input
                                                 value={form.numero_serie_vin}
                                                 onChange={(e) => setForm((prev) => ({ ...prev, numero_serie_vin: e.target.value.toUpperCase() }))}
@@ -748,19 +748,19 @@ export default function ProveedorVehiculosModal({
                                             />
                                         </div>
                                         <div className="space-y-1.5 w-full">
-                                            <Label className="text-xs font-semibold">{__('No. Ejes del Tractor / Camión')}</Label>
+                                            <Label className="text-xs font-semibold">{__('Tractor / Truck Axles Count')}</Label>
                                             <Select
                                                 value={String(form.numero_ejes)}
                                                 onValueChange={(v) => setForm((prev) => ({ ...prev, numero_ejes: Number(v) }))}
                                             >
                                                 <SelectTrigger className="w-full h-9 text-xs">
-                                                    <SelectValue placeholder="Ejes" />
+                                                    <SelectValue placeholder={__('Axles')} />
                                                 </SelectTrigger>
                                                 <SelectContent>
-                                                    <SelectItem value="2">2 Ejes</SelectItem>
-                                                    <SelectItem value="3">3 Ejes (Tándem)</SelectItem>
-                                                    <SelectItem value="4">4 Ejes</SelectItem>
-                                                    <SelectItem value="5">5 Ejes</SelectItem>
+                                                    <SelectItem value="2">{__('2 Axles')}</SelectItem>
+                                                    <SelectItem value="3">{__('3 Axles (Tandem)')}</SelectItem>
+                                                    <SelectItem value="4">{__('4 Axles')}</SelectItem>
+                                                    <SelectItem value="5">{__('5 Axles')}</SelectItem>
                                                 </SelectContent>
                                             </Select>
                                         </div>
@@ -769,34 +769,34 @@ export default function ProveedorVehiculosModal({
                                     {/* Tarjeta de Circulación y Seguro Obligatorio */}
                                     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
                                         <div className="space-y-1.5 w-full">
-                                            <Label className="text-xs font-semibold">{__('Folio Tarjeta')}</Label>
+                                            <Label className="text-xs font-semibold">{__('Card Folio')}</Label>
                                             <Input
                                                 value={form.tarjeta_circulacion}
                                                 onChange={(e) => setForm((prev) => ({ ...prev, tarjeta_circulacion: e.target.value }))}
                                                 className="w-full h-9 text-xs"
-                                                placeholder="Folio SCT/Estatal"
+                                                placeholder={__('SCT/State Folio')}
                                             />
                                         </div>
                                         <div className="space-y-1.5 w-full">
-                                            <Label className="text-xs font-semibold">{__('Aseguradora')}</Label>
+                                            <Label className="text-xs font-semibold">{__('Insurance Company')}</Label>
                                             <Input
                                                 value={form.aseguradora}
                                                 onChange={(e) => setForm((prev) => ({ ...prev, aseguradora: e.target.value }))}
                                                 className="w-full h-9 text-xs"
-                                                placeholder="Ej: Qualitas, GNP"
+                                                placeholder={__('e.g. Qualitas, GNP')}
                                             />
                                         </div>
                                         <div className="space-y-1.5 w-full">
-                                            <Label className="text-xs font-semibold">{__('No. Póliza Seguro')}</Label>
+                                            <Label className="text-xs font-semibold">{__('Insurance Policy No.')}</Label>
                                             <Input
                                                 value={form.poliza_seguro}
                                                 onChange={(e) => setForm((prev) => ({ ...prev, poliza_seguro: e.target.value }))}
                                                 className="w-full h-9 text-xs"
-                                                placeholder="Póliza vigente"
+                                                placeholder={__('Valid policy')}
                                             />
                                         </div>
                                         <div className="space-y-1.5 w-full">
-                                            <Label className="text-xs font-semibold">{__('Vigencia Póliza')}</Label>
+                                            <Label className="text-xs font-semibold">{__('Policy Validity')}</Label>
                                             <Input
                                                 type="date"
                                                 value={form.vigencia_seguro}
@@ -818,10 +818,10 @@ export default function ProveedorVehiculosModal({
                                             <Container className="w-5 h-5 text-[#104a29]" />
                                             <div>
                                                 <p className="text-xs font-bold text-slate-800 dark:text-slate-100">
-                                                    {__('¿Lleva Caja / Semirremolque acoplado?')}
+                                                    {__('Has Box / Semi-trailer attached?')}
                                                 </p>
                                                 <p className="text-[11px] text-muted-foreground">
-                                                    {__('Activar para registrar las especificaciones técnicas de la placa del fabricante (NOM-035-SCT-2-2010)')}
+                                                    {__('Enable to register manufacturer plate technical specifications (NOM-035-SCT-2-2010)')}
                                                 </p>
                                             </div>
                                         </div>
@@ -837,7 +837,7 @@ export default function ProveedorVehiculosModal({
                                         <div className="p-8 border border-dashed rounded-xl text-center bg-white dark:bg-slate-900/30">
                                             <Container className="w-8 h-8 text-slate-300 dark:text-slate-600 mx-auto mb-2" />
                                             <p className="text-xs font-medium text-slate-500">
-                                                {__('Este vehículo no tiene caja o semirremolque acoplado.')}
+                                                {__('This vehicle has no box or semi-trailer attached.')}
                                             </p>
                                             <Button
                                                 type="button"
@@ -846,7 +846,7 @@ export default function ProveedorVehiculosModal({
                                                 onClick={() => setForm((prev) => ({ ...prev, tiene_remolque: true }))}
                                                 className="mt-3 text-xs text-[#104a29] border-[#104a29]/30"
                                             >
-                                                {__('Habilitar Registro de Caja / Remolque')}
+                                                {__('Enable Box / Trailer Registration')}
                                             </Button>
                                         </div>
                                     ) : (
@@ -854,21 +854,21 @@ export default function ProveedorVehiculosModal({
                                             {/* Datos del Fabricante de la Caja */}
                                             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                                                 <div className="space-y-1.5 w-full">
-                                                    <Label className="text-xs font-semibold">{__('Fabricante / Marca')} *</Label>
+                                                    <Label className="text-xs font-semibold">{__('Manufacturer / Brand')} *</Label>
                                                     <Input
                                                         value={form.remolque_fabricante}
                                                         onChange={(e) => setForm((prev) => ({ ...prev, remolque_fabricante: e.target.value }))}
                                                         className="w-full h-9 text-xs"
-                                                        placeholder="Ej: Utility, Great Dane, Wabash, Fruehauf"
+                                                        placeholder={__('e.g. Utility, Great Dane, Wabash, Fruehauf')}
                                                     />
                                                 </div>
                                                 <div className="space-y-1.5 w-full">
-                                                    <Label className="text-xs font-semibold">{__('No. Serie del Fabricante')}</Label>
+                                                    <Label className="text-xs font-semibold">{__('Manufacturer Serial No.')}</Label>
                                                     <Input
                                                         value={form.remolque_serie_fabricante}
                                                         onChange={(e) => setForm((prev) => ({ ...prev, remolque_serie_fabricante: e.target.value }))}
                                                         className="w-full h-9 text-xs"
-                                                        placeholder="Folio de serie del fabricante"
+                                                        placeholder={__('Manufacturer serial folio')}
                                                     />
                                                 </div>
                                             </div>
@@ -876,45 +876,45 @@ export default function ProveedorVehiculosModal({
                                             {/* Identificación: VIN y Placa de la Caja */}
                                             <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                                                 <div className="space-y-1.5 w-full">
-                                                    <Label className="text-xs font-semibold">{__('VIN de la Caja (17 caracteres)')}</Label>
+                                                    <Label className="text-xs font-semibold">{__('Box VIN (17 characters)')}</Label>
                                                     <Input
                                                         value={form.remolque_vin}
                                                         onChange={(e) => setForm((prev) => ({ ...prev, remolque_vin: e.target.value.toUpperCase() }))}
                                                         className="w-full h-9 text-xs font-mono uppercase"
-                                                        placeholder="VIN placa de caja"
+                                                        placeholder={__('Box plate VIN')}
                                                         maxLength={17}
                                                     />
                                                 </div>
                                                 <div className="space-y-1.5 w-full">
-                                                    <Label className="text-xs font-semibold">{__('Placa del Semirremolque')} *</Label>
+                                                    <Label className="text-xs font-semibold">{__('Semi-trailer License Plate')} *</Label>
                                                     <Input
                                                         value={form.remolque_placa}
                                                         onChange={(e) => setForm((prev) => ({ ...prev, remolque_placa: e.target.value.toUpperCase() }))}
                                                         className="w-full h-9 text-xs font-mono font-bold uppercase"
-                                                        placeholder="Ej: 34-TY-8U"
+                                                        placeholder={__('e.g. 34-TY-8U')}
                                                     />
                                                 </div>
                                                 <div className="space-y-1.5 w-full">
-                                                    <Label className="text-xs font-semibold">{__('Tipo de Semirremolque')}</Label>
+                                                    <Label className="text-xs font-semibold">{__('Semi-trailer Type')}</Label>
                                                     <Select
                                                         value={form.remolque_tipo}
                                                         onValueChange={(v) => setForm((prev) => ({ ...prev, remolque_tipo: v }))}
                                                     >
                                                         <SelectTrigger className="w-full h-9 text-xs">
-                                                            <SelectValue placeholder="Tipo de Semirremolque" />
+                                                            <SelectValue placeholder={__('Semi-trailer Type')} />
                                                         </SelectTrigger>
                                                         <SelectContent>
-                                                            <SelectItem value="Caja Seca">{__('Caja Seca')}</SelectItem>
-                                                            <SelectItem value="Caja Refrigerada">{__('Caja Refrigerada (Termo)')}</SelectItem>
-                                                            <SelectItem value="Cajas Conservadoras">{__('Caja Conservadora')}</SelectItem>
-                                                            <SelectItem value="Plataforma">{__('Plataforma')}</SelectItem>
-                                                            <SelectItem value="Cama Baja">{__('Cama Baja')}</SelectItem>
-                                                            <SelectItem value="Redilas">{__('Redilas')}</SelectItem>
-                                                            <SelectItem value="Tanque">{__('Tanque')}</SelectItem>
-                                                            <SelectItem value="Tolva">{__('Tolva')}</SelectItem>
-                                                            <SelectItem value="Portacontenedores">{__('Portacontenedores')}</SelectItem>
-                                                            <SelectItem value="Volteo">{__('Volteo')}</SelectItem>
-                                                            <SelectItem value="Jaula">{__('Jaula')}</SelectItem>
+                                                            <SelectItem value="Caja Seca">{__('Dry Box')}</SelectItem>
+                                                            <SelectItem value="Caja Refrigerada">{__('Refrigerated Box (Thermo)')}</SelectItem>
+                                                            <SelectItem value="Cajas Conservadoras">{__('Preservation Box')}</SelectItem>
+                                                            <SelectItem value="Plataforma">{__('Flatbed')}</SelectItem>
+                                                            <SelectItem value="Cama Baja">{__('Lowboy')}</SelectItem>
+                                                            <SelectItem value="Redilas">{__('Stake')}</SelectItem>
+                                                            <SelectItem value="Tanque">{__('Tank')}</SelectItem>
+                                                            <SelectItem value="Tolva">{__('Hopper')}</SelectItem>
+                                                            <SelectItem value="Portacontenedores">{__('Container Carriers')}</SelectItem>
+                                                            <SelectItem value="Volteo">{__('Dump')}</SelectItem>
+                                                            <SelectItem value="Jaula">{__('Cage')}</SelectItem>
                                                         </SelectContent>
                                                     </Select>
                                                 </div>
@@ -924,65 +924,65 @@ export default function ProveedorVehiculosModal({
                                             <div className="pt-2 border-t space-y-3">
                                                 <span className="text-xs font-bold text-slate-700 dark:text-slate-300 block flex items-center gap-1.5">
                                                     <Gauge className="w-3.5 h-3.5 text-[#104a29]" />
-                                                    {__('Pesos y Dimensiones (Datos de la Placa Técnica)')}
+                                                    {__('Weights and Dimensions (Technical Plate Data)')}
                                                 </span>
 
                                                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                                                     <div className="space-y-1.5 w-full">
-                                                        <Label className="text-xs font-medium">{__('Largo (pies/m)')}</Label>
+                                                        <Label className="text-xs font-medium">{__('Length (feet/m)')}</Label>
                                                         <Input
                                                             value={form.remolque_largo}
                                                             onChange={(e) => setForm((prev) => ({ ...prev, remolque_largo: e.target.value }))}
                                                             className="w-full h-9 text-xs"
-                                                            placeholder="Ej: 53', 48', 16.15m"
+                                                            placeholder="53', 48', 16.15m"
                                                         />
                                                     </div>
                                                     <div className="space-y-1.5 w-full">
-                                                        <Label className="text-xs font-medium">{__('Ancho')}</Label>
+                                                        <Label className="text-xs font-medium">{__('Width')}</Label>
                                                         <Input
                                                             value={form.remolque_ancho}
                                                             onChange={(e) => setForm((prev) => ({ ...prev, remolque_ancho: e.target.value }))}
                                                             className="w-full h-9 text-xs"
-                                                            placeholder="Ej: 2.60 m"
+                                                            placeholder="2.60 m"
                                                         />
                                                     </div>
                                                     <div className="space-y-1.5 w-full">
-                                                        <Label className="text-xs font-medium">{__('Alto')}</Label>
+                                                        <Label className="text-xs font-medium">{__('Height')}</Label>
                                                         <Input
                                                             value={form.remolque_alto}
                                                             onChange={(e) => setForm((prev) => ({ ...prev, remolque_alto: e.target.value }))}
                                                             className="w-full h-9 text-xs"
-                                                            placeholder="Ej: 4.15 m"
+                                                            placeholder="4.15 m"
                                                         />
                                                     </div>
                                                 </div>
 
                                                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                                                     <div className="space-y-1.5 w-full">
-                                                        <Label className="text-xs font-medium">{__('PBVO (kg/lbs)')}</Label>
+                                                        <Label className="text-xs font-medium">{__('GVWR (kg/lbs)')}</Label>
                                                         <Input
                                                             value={form.remolque_peso_bruto_vehicular}
                                                             onChange={(e) => setForm((prev) => ({ ...prev, remolque_peso_bruto_vehicular: e.target.value }))}
                                                             className="w-full h-9 text-xs"
-                                                            placeholder="Peso Bruto Veh."
+                                                            placeholder={__('Gross Vehicle Wt.')}
                                                         />
                                                     </div>
                                                     <div className="space-y-1.5 w-full">
-                                                        <Label className="text-xs font-medium">{__('Tara (kg/lbs)')}</Label>
+                                                        <Label className="text-xs font-medium">{__('Tare (kg/lbs)')}</Label>
                                                         <Input
                                                             value={form.remolque_peso_vehicular}
                                                             onChange={(e) => setForm((prev) => ({ ...prev, remolque_peso_vehicular: e.target.value }))}
                                                             className="w-full h-9 text-xs"
-                                                            placeholder="Peso vacío / Tara"
+                                                            placeholder={__('Empty weight / Tare')}
                                                         />
                                                     </div>
                                                     <div className="space-y-1.5 w-full">
-                                                        <Label className="text-xs font-medium">{__('Carga Útil')}</Label>
+                                                        <Label className="text-xs font-medium">{__('Payload')}</Label>
                                                         <Input
                                                             value={form.remolque_capacidad_carga}
                                                             onChange={(e) => setForm((prev) => ({ ...prev, remolque_capacidad_carga: e.target.value }))}
                                                             className="w-full h-9 text-xs"
-                                                            placeholder="Capacidad de carga"
+                                                            placeholder={__('Load capacity')}
                                                         />
                                                     </div>
                                                 </div>
@@ -992,82 +992,82 @@ export default function ProveedorVehiculosModal({
                                             <div className="pt-2 border-t space-y-3">
                                                 <span className="text-xs font-bold text-slate-700 dark:text-slate-300 block flex items-center gap-1.5">
                                                     <Sliders className="w-3.5 h-3.5 text-[#104a29]" />
-                                                    {__('Tren Rodante y Rodaje del Semirremolque')}
+                                                    {__('Running Gear and Underpass of Semi-trailer')}
                                                 </span>
 
                                                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                                                     <div className="space-y-1.5 w-full">
-                                                        <Label className="text-xs font-medium">{__('No. Ejes')}</Label>
+                                                        <Label className="text-xs font-medium">{__('Axles Count')}</Label>
                                                         <Select
                                                             value={String(form.remolque_ejes)}
                                                             onValueChange={(v) => setForm((prev) => ({ ...prev, remolque_ejes: Number(v) }))}
                                                         >
                                                             <SelectTrigger className="w-full h-9 text-xs">
-                                                                <SelectValue placeholder="Ejes" />
+                                                                <SelectValue placeholder={__('Axles')} />
                                                             </SelectTrigger>
                                                             <SelectContent>
-                                                                <SelectItem value="1">1 Eje</SelectItem>
-                                                                <SelectItem value="2">2 Ejes (Tándem)</SelectItem>
-                                                                <SelectItem value="3">3 Ejes (Trídem)</SelectItem>
-                                                                <SelectItem value="4">4 Ejes</SelectItem>
+                                                                <SelectItem value="1">{__('1 Axle')}</SelectItem>
+                                                                <SelectItem value="2">{__('2 Axles (Tandem)')}</SelectItem>
+                                                                <SelectItem value="3">{__('3 Axles (Tridem)')}</SelectItem>
+                                                                <SelectItem value="4">{__('4 Axles')}</SelectItem>
                                                             </SelectContent>
                                                         </Select>
                                                     </div>
 
                                                     <div className="space-y-1.5 w-full">
-                                                        <Label className="text-xs font-medium">{__('Suspensión')}</Label>
+                                                        <Label className="text-xs font-medium">{__('Suspension')}</Label>
                                                         <Select
                                                             value={form.remolque_tipo_suspension}
                                                             onValueChange={(v) => setForm((prev) => ({ ...prev, remolque_tipo_suspension: v }))}
                                                         >
                                                             <SelectTrigger className="w-full h-9 text-xs">
-                                                                <SelectValue placeholder="Suspensión" />
+                                                                <SelectValue placeholder={__('Suspension')} />
                                                             </SelectTrigger>
                                                             <SelectContent>
-                                                                <SelectItem value="Neumática">{__('Neumática (Aire)')}</SelectItem>
-                                                                <SelectItem value="Mecánica">{__('Mecánica (Muelles)')}</SelectItem>
+                                                                <SelectItem value="Neumática">{__('Pneumatic (Air)')}</SelectItem>
+                                                                <SelectItem value="Mecánica">{__('Mechanical (Springs)')}</SelectItem>
                                                             </SelectContent>
                                                         </Select>
                                                     </div>
 
                                                     <div className="space-y-1.5 w-full">
-                                                        <Label className="text-xs font-medium">{__('Capacidad Patines')}</Label>
+                                                        <Label className="text-xs font-medium">{__('Landing Gear Capacity')}</Label>
                                                         <Input
                                                             value={form.remolque_capacidad_patines}
                                                             onChange={(e) => setForm((prev) => ({ ...prev, remolque_capacidad_patines: e.target.value }))}
                                                             className="w-full h-9 text-xs"
-                                                            placeholder="Ej: 50,000 lbs"
+                                                            placeholder="50,000 lbs"
                                                         />
                                                     </div>
                                                 </div>
 
                                                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                                                     <div className="space-y-1.5 w-full">
-                                                        <Label className="text-xs font-medium">{__('Cantidad Llantas')}</Label>
+                                                        <Label className="text-xs font-medium">{__('Tire Quantity')}</Label>
                                                         <Input
                                                             type="number"
                                                             value={form.remolque_cantidad_llantas}
                                                             onChange={(e) => setForm((prev) => ({ ...prev, remolque_cantidad_llantas: Number(e.target.value) }))}
                                                             className="w-full h-9 text-xs"
-                                                            placeholder="Ej: 8"
+                                                            placeholder="8"
                                                         />
                                                     </div>
                                                     <div className="space-y-1.5 w-full">
-                                                        <Label className="text-xs font-medium">{__('Medida Llantas')}</Label>
+                                                        <Label className="text-xs font-medium">{__('Tire Size')}</Label>
                                                         <Input
                                                             value={form.remolque_medida_llantas}
                                                             onChange={(e) => setForm((prev) => ({ ...prev, remolque_medida_llantas: e.target.value }))}
                                                             className="w-full h-9 text-xs"
-                                                            placeholder="295/75R22.5 o 11R22.5"
+                                                            placeholder="295/75R22.5 / 11R22.5"
                                                         />
                                                     </div>
                                                     <div className="space-y-1.5 w-full">
-                                                        <Label className="text-xs font-medium">{__('Presión (PSI)')}</Label>
+                                                        <Label className="text-xs font-medium">{__('Pressure (PSI)')}</Label>
                                                         <Input
                                                             value={form.remolque_presion_llantas}
                                                             onChange={(e) => setForm((prev) => ({ ...prev, remolque_presion_llantas: e.target.value }))}
                                                             className="w-full h-9 text-xs"
-                                                            placeholder="Ej: 100 PSI"
+                                                            placeholder="100 PSI"
                                                         />
                                                     </div>
                                                 </div>
@@ -1081,7 +1081,7 @@ export default function ProveedorVehiculosModal({
                             {activeFormTab === 'fotos' && (
                                 <div className="space-y-4 animate-in fade-in duration-200">
                                     <div className="bg-slate-100 dark:bg-slate-800/80 p-3 rounded-xl text-xs text-slate-600 dark:text-slate-300">
-                                        {__('Suba fotografías o use la cámara web para capturar las placas y la placa técnica del fabricante de la caja.')}
+                                        {__('Upload photos or use the webcam to capture the plates and the manufacturer technical plate of the box.')}
                                     </div>
 
                                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -1089,7 +1089,7 @@ export default function ProveedorVehiculosModal({
                                         {/* Foto 1: Frente Unidad */}
                                         <div className="space-y-2 border p-3 rounded-xl bg-white dark:bg-slate-900">
                                             <span className="text-xs font-bold text-slate-700 dark:text-slate-200 block">
-                                                {__('1. Foto Frontal (Unidad / Placa)')}
+                                                {__('1. Front Photo (Unit / Plate)')}
                                             </span>
                                             <div className="aspect-[1.8/1] rounded-lg border bg-slate-50 dark:bg-slate-800/50 flex items-center justify-center overflow-hidden">
                                                 {previews.foto_frontal ? (
@@ -1101,7 +1101,7 @@ export default function ProveedorVehiculosModal({
                                             <div className="flex gap-2">
                                                 <label className="flex-1 flex items-center justify-center gap-1 h-8 border border-dashed rounded-lg bg-slate-50 hover:bg-slate-100 text-[11px] font-semibold cursor-pointer">
                                                     <UploadCloud className="w-3.5 h-3.5 text-[#104a29]" />
-                                                    <span>{__('Subir')}</span>
+                                                    <span>{__('Upload')}</span>
                                                     <input type="file" accept="image/*" className="hidden" onChange={(e) => handleFileChange(e, 'foto_frontal')} />
                                                 </label>
                                                 <Button type="button" variant="outline" size="sm" onClick={() => handleOpenCamera('foto_frontal')} className="h-8 text-[11px]">
@@ -1113,7 +1113,7 @@ export default function ProveedorVehiculosModal({
                                         {/* Foto 2: Trasera Unidad */}
                                         <div className="space-y-2 border p-3 rounded-xl bg-white dark:bg-slate-900">
                                             <span className="text-xs font-bold text-slate-700 dark:text-slate-200 block">
-                                                {__('2. Foto Trasera (Unidad / Placa)')}
+                                                {__('2. Rear Photo (Unit / Plate)')}
                                             </span>
                                             <div className="aspect-[1.8/1] rounded-lg border bg-slate-50 dark:bg-slate-800/50 flex items-center justify-center overflow-hidden">
                                                 {previews.foto_trasera ? (
@@ -1125,7 +1125,7 @@ export default function ProveedorVehiculosModal({
                                             <div className="flex gap-2">
                                                 <label className="flex-1 flex items-center justify-center gap-1 h-8 border border-dashed rounded-lg bg-slate-50 hover:bg-slate-100 text-[11px] font-semibold cursor-pointer">
                                                     <UploadCloud className="w-3.5 h-3.5 text-[#104a29]" />
-                                                    <span>{__('Subir')}</span>
+                                                    <span>{__('Upload')}</span>
                                                     <input type="file" accept="image/*" className="hidden" onChange={(e) => handleFileChange(e, 'foto_trasera')} />
                                                 </label>
                                                 <Button type="button" variant="outline" size="sm" onClick={() => handleOpenCamera('foto_trasera')} className="h-8 text-[11px]">
@@ -1138,9 +1138,9 @@ export default function ProveedorVehiculosModal({
                                         <div className={cn('space-y-2 border p-3 rounded-xl bg-white dark:bg-slate-900', !form.tiene_remolque && 'opacity-50 pointer-events-none')}>
                                             <div className="flex items-center justify-between">
                                                 <span className="text-xs font-bold text-slate-700 dark:text-slate-200">
-                                                    {__('3. Placa Técnica de la Caja (NOM-035)')}
+                                                    {__('3. Box Technical Plate (NOM-035)')}
                                                 </span>
-                                                <span className="text-[10px] bg-[#104a29]/10 text-[#104a29] px-1.5 py-0.5 rounded font-bold">Requerida</span>
+                                                <span className="text-[10px] bg-[#104a29]/10 text-[#104a29] px-1.5 py-0.5 rounded font-bold">{__('Required')}</span>
                                             </div>
                                             <div className="aspect-[1.8/1] rounded-lg border bg-slate-50 dark:bg-slate-800/50 flex items-center justify-center overflow-hidden">
                                                 {previews.remolque_foto_placa ? (
@@ -1152,7 +1152,7 @@ export default function ProveedorVehiculosModal({
                                             <div className="flex gap-2">
                                                 <label className="flex-1 flex items-center justify-center gap-1 h-8 border border-dashed rounded-lg bg-slate-50 hover:bg-slate-100 text-[11px] font-semibold cursor-pointer">
                                                     <UploadCloud className="w-3.5 h-3.5 text-[#104a29]" />
-                                                    <span>{__('Subir Placa')}</span>
+                                                    <span>{__('Upload Plate')}</span>
                                                     <input type="file" accept="image/*" className="hidden" onChange={(e) => handleFileChange(e, 'remolque_foto_placa')} />
                                                 </label>
                                                 <Button type="button" variant="outline" size="sm" onClick={() => handleOpenCamera('remolque_foto_placa')} className="h-8 text-[11px]">
@@ -1164,7 +1164,7 @@ export default function ProveedorVehiculosModal({
                                         {/* Foto 4: Lateral / Panorámica de la Caja */}
                                         <div className={cn('space-y-2 border p-3 rounded-xl bg-white dark:bg-slate-900', !form.tiene_remolque && 'opacity-50 pointer-events-none')}>
                                             <span className="text-xs font-bold text-slate-700 dark:text-slate-200 block">
-                                                {__('4. Vista Lateral de la Caja')}
+                                                {__('4. Box Side View')}
                                             </span>
                                             <div className="aspect-[1.8/1] rounded-lg border bg-slate-50 dark:bg-slate-800/50 flex items-center justify-center overflow-hidden">
                                                 {previews.remolque_foto_lateral ? (
@@ -1176,7 +1176,7 @@ export default function ProveedorVehiculosModal({
                                             <div className="flex gap-2">
                                                 <label className="flex-1 flex items-center justify-center gap-1 h-8 border border-dashed rounded-lg bg-slate-50 hover:bg-slate-100 text-[11px] font-semibold cursor-pointer">
                                                     <UploadCloud className="w-3.5 h-3.5 text-[#104a29]" />
-                                                    <span>{__('Subir Caja')}</span>
+                                                    <span>{__('Upload Box')}</span>
                                                     <input type="file" accept="image/*" className="hidden" onChange={(e) => handleFileChange(e, 'remolque_foto_lateral')} />
                                                 </label>
                                                 <Button type="button" variant="outline" size="sm" onClick={() => handleOpenCamera('remolque_foto_lateral')} className="h-8 text-[11px]">
@@ -1196,11 +1196,11 @@ export default function ProveedorVehiculosModal({
                                 className="w-full bg-[#104a29] hover:bg-[#0c371e] text-white h-11 text-sm font-semibold flex items-center justify-center gap-2 mt-4 shadow-sm"
                             >
                                 {isSubmitting ? (
-                                    <span>{__('Guardando registro vehicular...')}</span>
+                                    <span>{__('Saving vehicle record...')}</span>
                                 ) : (
                                     <>
                                         <Check className="w-5 h-5" />
-                                        <span>{editingVehicle ? __('Actualizar Vehículo y Caja') : __('Guardar Vehículo y Caja')}</span>
+                                        <span>{editingVehicle ? __('Update Vehicle and Box') : __('Save Vehicle and Box')}</span>
                                     </>
                                 )}
                             </Button>
@@ -1214,7 +1214,7 @@ export default function ProveedorVehiculosModal({
                         <div className="flex items-center justify-between border-b pb-3 mb-4 shrink-0">
                             <div className="flex items-center gap-2">
                                 <span className="font-bold text-slate-800 dark:text-slate-100 text-base">
-                                    {__('Vehículos Registrados')}
+                                    {__('Registered Vehicles')}
                                 </span>
                                 <span className="bg-[#104a29]/10 text-[#104a29] dark:bg-[#104a29]/20 text-xs px-2.5 py-0.5 rounded-full font-bold">
                                     {vehicles.length}
@@ -1226,14 +1226,14 @@ export default function ProveedorVehiculosModal({
                         <div className="flex-1 space-y-3.5 overflow-y-auto pr-1">
                             {isLoadingList ? (
                                 <div className="h-40 flex items-center justify-center text-sm text-muted-foreground">
-                                    {__('Cargando lista de vehículos...')}
+                                    {__('Loading vehicles list...')}
                                 </div>
                             ) : vehicles.length === 0 ? (
                                 <div className="h-56 border border-dashed rounded-xl flex flex-col items-center justify-center p-8 text-center bg-slate-50/50 dark:bg-slate-900/10">
                                     <Truck className="w-10 h-10 text-slate-300 dark:text-slate-700 mb-3" />
-                                    <p className="text-sm font-semibold text-slate-600">{__('No hay vehículos registrados para este proveedor.')}</p>
+                                    <p className="text-sm font-semibold text-slate-600">{__('No vehicles registered for this supplier.')}</p>
                                     <p className="text-xs text-muted-foreground mt-1 max-w-[320px]">
-                                        {__('Complete el formulario de la izquierda con la ficha técnica de la unidad y su caja para agregarlo al sistema.')}
+                                        {__('Fill out the form on the left with the technical sheet of the unit and its box to add it to the system.')}
                                     </p>
                                 </div>
                             ) : (
@@ -1266,7 +1266,7 @@ export default function ProveedorVehiculosModal({
                                                         <h4 className="font-bold text-slate-800 dark:text-slate-100 text-sm">
                                                             {veh.marca} {veh.modelo}
                                                         </h4>
-                                                        <span className="text-[11px] font-mono bg-[#104a29]/10 text-[#104a29] px-2 py-0.5 rounded font-bold uppercase">
+                                                        <span className="text-[11px] font-mono bg-[#104a29]/10 text-[#104a29] px-2 py-0.5 rounded font-bold uppercase" dir="ltr">
                                                             {veh.placa}
                                                         </span>
                                                     </div>
@@ -1286,7 +1286,7 @@ export default function ProveedorVehiculosModal({
                                                             {veh.year}
                                                         </span>
                                                         {veh.numero_serie_vin && (
-                                                            <span className="text-[10px] font-mono text-slate-500 bg-slate-50 dark:bg-slate-800/40 px-1.5 py-0.5 rounded">
+                                                            <span className="text-[10px] font-mono text-slate-500 bg-slate-50 dark:bg-slate-800/40 px-1.5 py-0.5 rounded" dir="ltr">
                                                                 VIN: {veh.numero_serie_vin}
                                                             </span>
                                                         )}
@@ -1302,10 +1302,10 @@ export default function ProveedorVehiculosModal({
                                                     size="sm"
                                                     onClick={() => setViewingDocsVehicle(veh)}
                                                     className="h-8 text-xs flex items-center gap-1 px-2.5 border-slate-200 hover:bg-slate-100"
-                                                    title={__('Ver Ficha Técnica y Fotos')}
+                                                    title={__('View Technical Sheet and Photos')}
                                                 >
                                                     <Eye className="w-3.5 h-3.5 text-[#104a29]" />
-                                                    <span className="hidden sm:inline">{__('Ficha')}</span>
+                                                    <span className="hidden sm:inline">{__('Sheet')}</span>
                                                 </Button>
 
                                                 <Button
@@ -1314,7 +1314,7 @@ export default function ProveedorVehiculosModal({
                                                     size="icon"
                                                     onClick={() => handleEditClick(veh)}
                                                     className="h-8 w-8 text-slate-600 hover:text-slate-900"
-                                                    title={__('Editar')}
+                                                    title={__('Edit')}
                                                 >
                                                     <Pencil className="w-3.5 h-3.5" />
                                                 </Button>
@@ -1325,7 +1325,7 @@ export default function ProveedorVehiculosModal({
                                                     size="icon"
                                                     onClick={() => handleDeleteClick(veh.id)}
                                                     className="h-8 w-8 text-rose-600 hover:text-rose-700 hover:bg-rose-50"
-                                                    title={__('Eliminar')}
+                                                    title={__('Delete')}
                                                 >
                                                     <Trash2 className="w-3.5 h-3.5" />
                                                 </Button>
@@ -1339,16 +1339,16 @@ export default function ProveedorVehiculosModal({
                                                     <Container className="w-4 h-4 text-emerald-700 dark:text-emerald-400 shrink-0" />
                                                     <div>
                                                         <span className="font-bold text-emerald-900 dark:text-emerald-200">
-                                                            Caja: {veh.remolque_tipo || 'Semirremolque'} ({veh.remolque_fabricante || 'Fabricante N/E'})
+                                                            {__('Box')}: {veh.remolque_tipo || __('Semi-trailer')} ({veh.remolque_fabricante || __('Manufacturer N/A')})
                                                         </span>
                                                         <div className="flex flex-wrap gap-2 text-[11px] text-emerald-800/80 dark:text-emerald-300 mt-0.5">
                                                             {veh.remolque_placa && (
-                                                                <span className="font-mono font-bold bg-white/80 dark:bg-slate-900/80 px-1.5 py-0.2 rounded border border-emerald-200 text-emerald-900 dark:text-emerald-200">
-                                                                    Placa: {veh.remolque_placa}
+                                                                <span className="font-mono font-bold bg-white/80 dark:bg-slate-900/80 px-1.5 py-0.2 rounded border border-emerald-200 text-emerald-900 dark:text-emerald-200" dir="ltr">
+                                                                    {__('Plate')}: {veh.remolque_placa}
                                                                 </span>
                                                             )}
-                                                            {veh.remolque_largo && <span>Largo: {veh.remolque_largo}</span>}
-                                                            {veh.remolque_ejes && <span>• {veh.remolque_ejes} Ejes ({veh.remolque_tipo_suspension || 'Suspensión'})</span>}
+                                                            {veh.remolque_largo && <span>{__('Length')}: {veh.remolque_largo}</span>}
+                                                            {veh.remolque_ejes && <span>• {veh.remolque_ejes} {__('Axles')} ({veh.remolque_tipo_suspension || __('Suspension')})</span>}
                                                         </div>
                                                     </div>
                                                 </div>
@@ -1356,13 +1356,13 @@ export default function ProveedorVehiculosModal({
                                                 {/* Indicador de foto de placa de caja */}
                                                 {veh.remolque_foto_placa && (
                                                     <span className="text-[10px] bg-emerald-600 text-white font-semibold px-2 py-0.5 rounded-full flex items-center gap-1">
-                                                        <Check className="w-3 h-3" /> Placa Técnica
+                                                        <Check className="w-3 h-3" /> {__('Technical Plate')}
                                                     </span>
                                                 )}
                                             </div>
                                         ) : (
                                             <div className="text-[11px] text-slate-400 italic px-1">
-                                                {__('Sin semirremolque acoplado')}
+                                                {__('No semi-trailer attached')}
                                             </div>
                                         )}
 
@@ -1383,7 +1383,7 @@ export default function ProveedorVehiculosModal({
                     <DialogHeader className="border-b pb-3">
                         <DialogTitle className="flex items-center gap-2 text-lg text-slate-800 dark:text-slate-100">
                             <Truck className="w-5 h-5 text-[#104a29]" />
-                            {__('Ficha Técnica Reglamentaria')} - {viewingDocsVehicle?.marca} {viewingDocsVehicle?.modelo} ({viewingDocsVehicle?.placa})
+                            {__('Regulatory Technical Sheet')} - {viewingDocsVehicle?.marca} {viewingDocsVehicle?.modelo} ({viewingDocsVehicle?.placa})
                         </DialogTitle>
                     </DialogHeader>
 
@@ -1393,25 +1393,25 @@ export default function ProveedorVehiculosModal({
                             {/* Resumen Ficha Unidad */}
                             <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 bg-slate-50 dark:bg-slate-900 p-4 rounded-xl border text-xs">
                                 <div>
-                                    <span className="text-slate-500 block">{__('Categoría / Tipo')}</span>
+                                    <span className="text-slate-500 block">{__('Category / Type')}</span>
                                     <span className="font-bold text-slate-800 dark:text-slate-200">
                                         {viewingDocsVehicle.tipo_vehiculo}
                                     </span>
                                 </div>
                                 <div>
-                                    <span className="text-slate-500 block">{__('Carrocería')}</span>
+                                    <span className="text-slate-500 block">{__('Bodywork')}</span>
                                     <span className="font-bold text-slate-800 dark:text-slate-200">
                                         {viewingDocsVehicle.subtipo_carroceria || 'N/A'}
                                     </span>
                                 </div>
                                 <div>
-                                    <span className="text-slate-500 block">{__('VIN Unidad')}</span>
-                                    <span className="font-bold font-mono text-slate-800 dark:text-slate-200">
+                                    <span className="text-slate-500 block">{__('Unit VIN')}</span>
+                                    <span className="font-bold font-mono text-slate-800 dark:text-slate-200" dir="ltr">
                                         {viewingDocsVehicle.numero_serie_vin || 'N/A'}
                                     </span>
                                 </div>
                                 <div>
-                                    <span className="text-slate-500 block">{__('Póliza Seguro')}</span>
+                                    <span className="text-slate-500 block">{__('Insurance Policy')}</span>
                                     <span className="font-bold text-slate-800 dark:text-slate-200">
                                         {viewingDocsVehicle.poliza_seguro ? `${viewingDocsVehicle.aseguradora || ''} (${viewingDocsVehicle.poliza_seguro})` : 'N/A'}
                                     </span>
@@ -1424,32 +1424,32 @@ export default function ProveedorVehiculosModal({
                                     <div className="flex items-center justify-between border-b border-emerald-200 pb-2">
                                         <h4 className="font-bold text-emerald-900 dark:text-emerald-200 flex items-center gap-2">
                                             <Container className="w-4 h-4 text-emerald-600" />
-                                            {__('Especificaciones de la Placa del Semirremolque (NOM-035-SCT)')}
+                                            {__('Semi-trailer Plate Specifications (NOM-035-SCT)')}
                                         </h4>
-                                        <span className="font-mono font-bold bg-white px-2 py-0.5 rounded border text-emerald-900">
-                                            Placa Caja: {viewingDocsVehicle.remolque_placa || 'N/A'}
+                                        <span className="font-mono font-bold bg-white px-2 py-0.5 rounded border text-emerald-900" dir="ltr">
+                                            {__('Box Plate')}: {viewingDocsVehicle.remolque_placa || 'N/A'}
                                         </span>
                                     </div>
 
                                     <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
                                         <div>
-                                            <span className="text-slate-500 block">{__('Fabricante')}</span>
+                                            <span className="text-slate-500 block">{__('Manufacturer')}</span>
                                             <span className="font-bold">{viewingDocsVehicle.remolque_fabricante || 'N/A'}</span>
                                         </div>
                                         <div>
-                                            <span className="text-slate-500 block">{__('VIN Caja')}</span>
-                                            <span className="font-bold font-mono">{viewingDocsVehicle.remolque_vin || 'N/A'}</span>
+                                            <span className="text-slate-500 block">{__('Box VIN')}</span>
+                                            <span className="font-bold font-mono" dir="ltr">{viewingDocsVehicle.remolque_vin || 'N/A'}</span>
                                         </div>
                                         <div>
-                                            <span className="text-slate-500 block">{__('Dimensiones')}</span>
-                                            <span className="font-bold">
-                                                {viewingDocsVehicle.remolque_largo || '53\''} × {viewingDocsVehicle.remolque_ancho || '2.60m'} × {viewingDocsVehicle.remolque_alto || '4.15m'}
+                                            <span className="text-slate-500 block">{__('Dimensions')}</span>
+                                            <span className="font-bold" dir="ltr">
+                                                {viewingDocsVehicle.remolque_largo || "53'"} × {viewingDocsVehicle.remolque_ancho || '2.60m'} × {viewingDocsVehicle.remolque_alto || '4.15m'}
                                             </span>
                                         </div>
                                         <div>
-                                            <span className="text-slate-500 block">{__('Tren Rodante')}</span>
+                                            <span className="text-slate-500 block">{__('Running Gear')}</span>
                                             <span className="font-bold">
-                                                {viewingDocsVehicle.remolque_ejes || 2} Ejes • {viewingDocsVehicle.remolque_tipo_suspension || 'Neumática'}
+                                                {viewingDocsVehicle.remolque_ejes || 2} {__('Axles')} • {viewingDocsVehicle.remolque_tipo_suspension || __('Pneumatic (Air)')}
                                             </span>
                                         </div>
                                     </div>
@@ -1459,48 +1459,48 @@ export default function ProveedorVehiculosModal({
                             {/* Galería de Fotografías */}
                             <div className="space-y-3">
                                 <h4 className="text-xs font-bold text-slate-700 uppercase tracking-wider">
-                                    {__('Evidencia Fotográfica')}
+                                    {__('Photographic Evidence')}
                                 </h4>
 
                                 <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
                                     
                                     {/* Frontal */}
                                     <div className="space-y-1.5 text-center">
-                                        <span className="text-[11px] font-semibold text-slate-600 block">Frente Unidad</span>
+                                        <span className="text-[11px] font-semibold text-slate-600 block">{__('Front Unit')}</span>
                                         <div className="aspect-[1.3/1] border rounded-xl overflow-hidden bg-slate-100 flex items-center justify-center shadow-xs">
                                             {viewingDocsVehicle.foto_frontal ? (
                                                 <img src={`/storage/${viewingDocsVehicle.foto_frontal}`} className="object-contain w-full h-full" alt="Frente" />
-                                            ) : <span className="text-xs text-slate-400 italic">Sin foto</span>}
+                                            ) : <span className="text-xs text-slate-400 italic">{__('No photo')}</span>}
                                         </div>
                                     </div>
 
                                     {/* Trasera */}
                                     <div className="space-y-1.5 text-center">
-                                        <span className="text-[11px] font-semibold text-slate-600 block">Trasera Unidad</span>
+                                        <span className="text-[11px] font-semibold text-slate-600 block">{__('Rear Unit')}</span>
                                         <div className="aspect-[1.3/1] border rounded-xl overflow-hidden bg-slate-100 flex items-center justify-center shadow-xs">
                                             {viewingDocsVehicle.foto_trasera ? (
                                                 <img src={`/storage/${viewingDocsVehicle.foto_trasera}`} className="object-contain w-full h-full" alt="Trasera" />
-                                            ) : <span className="text-xs text-slate-400 italic">Sin foto</span>}
+                                            ) : <span className="text-xs text-slate-400 italic">{__('No photo')}</span>}
                                         </div>
                                     </div>
 
                                     {/* Placa Técnica Caja */}
                                     <div className="space-y-1.5 text-center">
-                                        <span className="text-[11px] font-semibold text-slate-600 block text-emerald-800 font-bold">Placa Técnica (NOM-035)</span>
+                                        <span className="text-[11px] font-semibold text-slate-600 block text-emerald-800 font-bold">{__('Technical Plate (NOM-035)')}</span>
                                         <div className="aspect-[1.3/1] border rounded-xl overflow-hidden bg-emerald-50 flex items-center justify-center shadow-xs">
                                             {viewingDocsVehicle.remolque_foto_placa ? (
                                                 <img src={`/storage/${viewingDocsVehicle.remolque_foto_placa}`} className="object-contain w-full h-full" alt="Placa Técnica" />
-                                            ) : <span className="text-xs text-slate-400 italic">Sin foto</span>}
+                                            ) : <span className="text-xs text-slate-400 italic">{__('No photo')}</span>}
                                         </div>
                                     </div>
 
                                     {/* Vista Lateral Caja */}
                                     <div className="space-y-1.5 text-center">
-                                        <span className="text-[11px] font-semibold text-slate-600 block">Lateral Caja</span>
+                                        <span className="text-[11px] font-semibold text-slate-600 block">{__('Box Side')}</span>
                                         <div className="aspect-[1.3/1] border rounded-xl overflow-hidden bg-slate-100 flex items-center justify-center shadow-xs">
                                             {viewingDocsVehicle.remolque_foto_lateral ? (
                                                 <img src={`/storage/${viewingDocsVehicle.remolque_foto_lateral}`} className="object-contain w-full h-full" alt="Lateral" />
-                                            ) : <span className="text-xs text-slate-400 italic">Sin foto</span>}
+                                            ) : <span className="text-xs text-slate-400 italic">{__('No photo')}</span>}
                                         </div>
                                     </div>
 
@@ -1516,7 +1516,7 @@ export default function ProveedorVehiculosModal({
                             onClick={() => setViewingDocsVehicle(null)}
                             className="bg-slate-800 text-white hover:bg-slate-700 h-9 px-5 text-xs font-semibold"
                         >
-                            {__('Cerrar')}
+                            {__('Close')}
                         </Button>
                     </div>
                 </DialogContent>
@@ -1529,12 +1529,12 @@ export default function ProveedorVehiculosModal({
                         <DialogTitle className="flex items-center gap-2 text-md">
                             <Camera className="w-5 h-5 text-[#104a29]" />
                             {activeCameraField === 'remolque_foto_placa'
-                                ? __('Capturar Placa Técnica NOM-035')
+                                ? __('Capture Technical Plate NOM-035')
                                 : activeCameraField === 'remolque_foto_lateral'
-                                ? __('Capturar Vista de la Caja')
+                                ? __('Capture Box View')
                                 : activeCameraField === 'foto_frontal'
-                                ? __('Capturar Foto Frontal')
-                                : __('Capturar Foto Trasera')}
+                                ? __('Capture Front Photo')
+                                : __('Capture Rear Photo')}
                         </DialogTitle>
                     </DialogHeader>
 
@@ -1555,7 +1555,7 @@ export default function ProveedorVehiculosModal({
                             onClick={handleCloseCamera}
                             className="h-9 px-4 text-xs"
                         >
-                            {__('Cancelar')}
+                            {__('Cancel')}
                         </Button>
                         <Button
                             type="button"
@@ -1563,7 +1563,7 @@ export default function ProveedorVehiculosModal({
                             className="bg-[#104a29] hover:bg-[#0c371e] text-white h-9 px-6 text-xs font-semibold flex items-center gap-2"
                         >
                             <Camera className="w-4 h-4" />
-                            {__('Capturar')}
+                            {__('Capture')}
                         </Button>
                     </div>
                 </DialogContent>

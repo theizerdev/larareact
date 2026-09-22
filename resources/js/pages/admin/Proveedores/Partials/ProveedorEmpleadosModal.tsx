@@ -468,9 +468,9 @@ export default function ProveedorEmpleadosModal({
                                             <SelectValue placeholder={__('Select')} />
                                         </SelectTrigger>
                                         <SelectContent>
-                                            <SelectItem value="masculino">{__('Masculino')}</SelectItem>
-                                            <SelectItem value="femenino">{__('Femenino')}</SelectItem>
-                                            <SelectItem value="otro">{__('Otro')}</SelectItem>
+                                            <SelectItem value="masculino">{__('Male')}</SelectItem>
+                                            <SelectItem value="femenino">{__('Female')}</SelectItem>
+                                            <SelectItem value="otro">{__('Other')}</SelectItem>
                                         </SelectContent>
                                     </Select>
                                 </div>
@@ -526,7 +526,7 @@ export default function ProveedorEmpleadosModal({
                                         value={form.cargo}
                                         onChange={(e) => setForm((prev) => ({ ...prev, cargo: e.target.value }))}
                                         className="h-10 text-sm"
-                                        placeholder="Ej: Conductor, Supervisor"
+                                        placeholder={__('e.g. Driver, Supervisor')}
                                     />
                                 </div>
                             </div>
@@ -539,7 +539,7 @@ export default function ProveedorEmpleadosModal({
 
                                 {/* Uploader 1: Foto Carnet */}
                                 <div className="space-y-1.5">
-                                    <span className="text-xs text-muted-foreground block font-medium">{__('ID Badge Photo (Foto Carnet)')}</span>
+                                    <span className="text-xs text-muted-foreground block font-medium">{__('ID Badge Photo')}</span>
                                     <div className="flex items-center gap-4">
                                         <div className="relative w-14 h-14 rounded-lg border bg-white dark:bg-slate-900 flex items-center justify-center overflow-hidden shrink-0">
                                             {previews.foto_carnet ? (
@@ -577,7 +577,7 @@ export default function ProveedorEmpleadosModal({
 
                                 {/* Uploader 2: Documentación Frontal */}
                                 <div className="space-y-1.5">
-                                    <span className="text-xs text-muted-foreground block font-medium">{__('Document Front Side (Cara Frontal)')}</span>
+                                    <span className="text-xs text-muted-foreground block font-medium">{__('Document Front Side')}</span>
                                     <div className="flex items-center gap-4">
                                         <div className="relative w-14 h-14 rounded-lg border bg-white dark:bg-slate-900 flex items-center justify-center overflow-hidden shrink-0">
                                             {previews.documento_frontal ? (
@@ -615,7 +615,7 @@ export default function ProveedorEmpleadosModal({
 
                                 {/* Uploader 3: Documentación Reverso */}
                                 <div className="space-y-1.5">
-                                    <span className="text-xs text-muted-foreground block font-medium">{__('Document Back Side (Cara Reverso)')}</span>
+                                    <span className="text-xs text-muted-foreground block font-medium">{__('Document Back Side')}</span>
                                     <div className="flex items-center gap-4">
                                         <div className="relative w-14 h-14 rounded-lg border bg-white dark:bg-slate-900 flex items-center justify-center overflow-hidden shrink-0">
                                             {previews.documento_reverso ? (
@@ -817,7 +817,7 @@ export default function ProveedorEmpleadosModal({
                         {/* Lado Frontal */}
                         <div className="space-y-2">
                             <h4 className="text-xs font-semibold text-slate-500 uppercase tracking-wider text-center">
-                                {__('Front Side (Anverso)')}
+                                {__('Document Front Side')}
                             </h4>
                             <div className="aspect-[1.6/1] border rounded-xl overflow-hidden bg-slate-100 flex items-center justify-center shadow-sm relative group">
                                 {viewingDocsEmployee?.documento_frontal ? (
@@ -835,7 +835,7 @@ export default function ProveedorEmpleadosModal({
                         {/* Lado Reverso */}
                         <div className="space-y-2">
                             <h4 className="text-xs font-semibold text-slate-500 uppercase tracking-wider text-center">
-                                {__('Back Side (Reverso)')}
+                                {__('Document Back Side')}
                             </h4>
                             <div className="aspect-[1.6/1] border rounded-xl overflow-hidden bg-slate-100 flex items-center justify-center shadow-sm relative group">
                                 {viewingDocsEmployee?.documento_reverso ? (

@@ -199,7 +199,7 @@ export default function ProveedoresIndexPage({
             onSuccess: () => {
                 setIsPreRegistroModalOpen(false);
                 preRegistroForm.reset();
-                notifySuccess(__('Pre-registro invitation sent successfully by WhatsApp.'));
+                notifySuccess(__('Pre-registration invitation sent successfully.'));
             },
             onError: () => {
                 notifyError(__('Please review the highlighted fields.'));
@@ -378,8 +378,8 @@ export default function ProveedoresIndexPage({
     const handleSendCarnetWhatsApp = (prov: Proveedor) => {
         router.post(`/admin/proveedores/${prov.id}/send-carnet-whatsapp`, {}, {
             preserveScroll: true,
-            onSuccess: () => notifySuccess(__('Gafete Rojo enviado por WhatsApp.')),
-            onError: () => notifyError(__('No se pudo enviar el WhatsApp.')),
+            onSuccess: () => notifySuccess(__('ID badge sent via WhatsApp.')),
+            onError: () => notifyError(__('Could not send WhatsApp message.')),
         });
     };
 
@@ -470,12 +470,12 @@ export default function ProveedoresIndexPage({
     // ── Columnas de la tabla ──────────────────────────────────────────────────
     const columns: ColumnDef<Proveedor>[] = [
         {
-            header: 'Supplier',
+            header: __('Supplier'),
             accessorKey: 'razon_social',
             className: 'font-medium',
             cell: (prov) => (
                 <div className="flex items-center gap-3">
-                    <div className="w-9 h-9 rounded bg-[#104a29]/10 flex items-center justify-center">
+                    <div className="w-9 h-9 rounded bg-[#104a29]/10 flex items-center justify-center shrink-0">
                         <Truck className="w-5 h-5 text-[#104a29]" />
                     </div>
                     <div>
@@ -486,19 +486,19 @@ export default function ProveedoresIndexPage({
             ),
         },
         {
-            header: 'Código / RFC',
+            header: __('Code / RFC'),
             accessorKey: 'codigo_acceso',
             cell: (prov) => (
                 <div className="flex flex-col gap-0.5">
                     <span className="inline-flex items-center px-2 py-0.5 rounded-md bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 font-mono font-bold text-xs tracking-wider border border-emerald-500/20 w-fit">
-                        CÓD: {prov.codigo_acceso || prov.documento_identidad || 'N/A'}
+                        {__('CODE:')} {prov.codigo_acceso || prov.documento_identidad || 'N/A'}
                     </span>
                     {prov.rfc && <span className="text-xs font-mono text-slate-500">RFC: {prov.rfc}</span>}
                 </div>
             ),
         },
         {
-            header: 'Responsable / CURP',
+            header: __('Responsible / CURP'),
             accessorKey: 'responsable',
             cell: (prov) => (
                 <div className="text-sm">
@@ -507,13 +507,13 @@ export default function ProveedoresIndexPage({
                         <span>{prov.responsable || '—'}</span>
                     </div>
                     {prov.curp && (
-                        <p className="text-xs font-mono text-muted-foreground ml-4">CURP: {prov.curp}</p>
+                        <p className="text-xs font-mono text-muted-foreground ml-4 rtl:ml-0 rtl:mr-4">CURP: {prov.curp}</p>
                     )}
                 </div>
             ),
         },
         {
-            header: 'Phone',
+            header: __('Phone'),
             accessorKey: 'telefono',
             cell: (prov) => {
                 if (!prov.telefono) return <span className="text-muted-foreground">—</span>;
@@ -521,7 +521,7 @@ export default function ProveedoresIndexPage({
                     ? `${prov.pais_telefono.codigo_telefonico} `
                     : '';
                 return (
-                    <div className="flex items-center gap-1 text-sm font-mono">
+                    <div className="flex items-center gap-1 text-sm font-mono" dir="ltr">
                         <Phone className="w-3.5 h-3.5 text-muted-foreground" />
                         <span>{prefix}{prov.telefono}</span>
                     </div>
@@ -529,7 +529,7 @@ export default function ProveedoresIndexPage({
             },
         },
         {
-            header: 'Status',
+            header: __('Status'),
             cell: (prov) => {
                 let badgeStyle = '';
                 let label = '';
@@ -575,8 +575,8 @@ export default function ProveedoresIndexPage({
             },
         },
         {
-            header: 'Actions',
-            className: 'text-right',
+            header: __('Actions'),
+            className: 'text-right rtl:text-left',
             hideable: false,
             stopRowClick: true,
             cell: (prov) => (
@@ -588,32 +588,32 @@ export default function ProveedoresIndexPage({
                     </DropdownMenuTrigger>
                     <DropdownMenuContent align="end">
                         <DropdownMenuItem onClick={() => handleEditClick(prov)}>
-                            <Pencil className="mr-2 h-4 w-4" />
+                            <Pencil className="mr-2 rtl:mr-0 rtl:ml-2 h-4 w-4" />
                             {__('Edit')}
                         </DropdownMenuItem>
                         <DropdownMenuItem onClick={() => router.get(`/admin/proveedores/${prov.id}/carnet`)}>
-                            <QrCode className="mr-2 h-4 w-4 text-rose-600" />
-                            {__('Gafete Rojo / Carnet')}
+                            <QrCode className="mr-2 rtl:mr-0 rtl:ml-2 h-4 w-4 text-rose-600" />
+                            {__('ID Badge')}
                         </DropdownMenuItem>
                         {prov.telefono && (
                             <DropdownMenuItem onClick={() => handleSendCarnetWhatsApp(prov)}>
-                                <Send className="mr-2 h-4 w-4 text-emerald-600" />
-                                {__('Enviar Gafete por WhatsApp')}
+                                <Send className="mr-2 rtl:mr-0 rtl:ml-2 h-4 w-4 text-emerald-600" />
+                                {__('Send ID Card via WhatsApp')}
                             </DropdownMenuItem>
                         )}
                         <DropdownMenuItem onClick={() => handleManageEmployeesClick(prov)}>
-                            <UserIcon className="mr-2 h-4 w-4 text-[#104a29]" />
+                            <UserIcon className="mr-2 rtl:mr-0 rtl:ml-2 h-4 w-4 text-[#104a29]" />
                             {__('Employees')}
                         </DropdownMenuItem>
                         <DropdownMenuItem onClick={() => handleManageVehiclesClick(prov)}>
-                            <Car className="mr-2 h-4 w-4 text-[#104a29]" />
+                            <Car className="mr-2 rtl:mr-0 rtl:ml-2 h-4 w-4 text-[#104a29]" />
                             {__('Vehicles')}
                         </DropdownMenuItem>
                         <DropdownMenuItem
                             onClick={() => setDeletingProveedor(prov)}
                             className="text-rose-600 focus:text-rose-600 dark:text-rose-400"
                         >
-                            <Trash2 className="mr-2 h-4 w-4" />
+                            <Trash2 className="mr-2 rtl:mr-0 rtl:ml-2 h-4 w-4" />
                             {__('Delete')}
                         </DropdownMenuItem>
                     </DropdownMenuContent>
@@ -644,13 +644,13 @@ export default function ProveedoresIndexPage({
                             className="bg-white text-[#104a29] hover:bg-white/90 font-semibold flex items-center gap-1.5 shadow-sm"
                         >
                             <Phone className="w-4 h-4" />
-                            {__('Pre-registro')}
+                            {__('Pre-registration')}
                         </Button>
                         <Button
                             onClick={handleCreateClick}
                             className="bg-white text-[#104a29] hover:bg-white/90 font-semibold flex items-center gap-1.5 shadow-sm"
                         >
-                            <Plus className="w-4.5 h-4.5" />
+                            <Plus className="mr-1 rtl:mr-0 rtl:ml-1 h-4 w-4" />
                             {__('New Supplier')}
                         </Button>
                     </div>
@@ -844,7 +844,7 @@ export default function ProveedoresIndexPage({
 
                                     {/* Persona Responsable / Contacto */}
                                     <div className="space-y-1.5">
-                                        <Label htmlFor="responsable">{__('Persona Responsable / Contacto')}</Label>
+                                        <Label htmlFor="responsable">{__('Responsible Person / Contact')}</Label>
                                         <Input
                                             id="responsable"
                                             placeholder="ej. Juan Pérez"
@@ -862,7 +862,7 @@ export default function ProveedoresIndexPage({
 
                                     {/* CURP (del Responsable) */}
                                     <div className="space-y-1.5">
-                                        <Label htmlFor="curp">{__('CURP (del Responsable)')}</Label>
+                                        <Label htmlFor="curp">{__('CURP (Responsible)')}</Label>
                                         <Input
                                             id="curp"
                                             placeholder="ej. ABCD900101HDFRRR01"
@@ -1056,9 +1056,9 @@ export default function ProveedoresIndexPage({
             }}>
                 <DialogContent className="max-w-md">
                     <DialogHeader>
-                        <DialogTitle>{__('Pre-registro de Proveedor')}</DialogTitle>
+                        <DialogTitle>{__('Supplier Pre-registration')}</DialogTitle>
                         <DialogDescription>
-                            {__('Ingrese el nombre comercial y el teléfono del proveedor para enviar una invitación de registro rápido a su WhatsApp.')}
+                            {__('Enter supplier trade name and phone to send a quick registration invite via WhatsApp.')}
                         </DialogDescription>
                     </DialogHeader>
                     <form onSubmit={handlePreRegistroSubmit} className="space-y-4">
@@ -1105,7 +1105,7 @@ export default function ProveedoresIndexPage({
                                 disabled={preRegistroForm.processing}
                                 className="bg-[#104a29] hover:bg-[#0c371e] text-white flex items-center gap-1.5"
                             >
-                                {__('Enviar invitación')}
+                                {__('Send Invitation')}
                             </Button>
                         </DialogFooter>
                     </form>

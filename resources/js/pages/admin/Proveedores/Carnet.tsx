@@ -169,12 +169,12 @@ export default function CarnetProveedorPage({ proveedor }: CarnetProveedorPagePr
                             href="/admin/proveedores"
                             className="flex items-center gap-1.5 text-sm font-medium text-slate-600 hover:text-slate-900 dark:text-slate-400 dark:hover:text-slate-100 transition-colors"
                         >
-                            <ArrowLeft className="w-4 h-4" />
-                            {__('Proveedores')}
+                            <ArrowLeft className="w-4 h-4 rtl:rotate-180" />
+                            {__('Suppliers')}
                         </Link>
                     ) : (
                         <span className="text-xs font-bold text-rose-700 dark:text-rose-400 bg-rose-50 dark:bg-rose-950/60 px-2.5 py-1 rounded-full border border-rose-200 dark:border-rose-800">
-                            🪪 Gafete de Proveedor
+                            🪪 {__('Supplier ID Badge')}
                         </span>
                     )}
 
@@ -186,7 +186,7 @@ export default function CarnetProveedorPage({ proveedor }: CarnetProveedorPagePr
                             className="border-rose-600 text-rose-700 hover:bg-rose-50 dark:border-rose-500 dark:text-rose-300 dark:hover:bg-rose-950 flex items-center gap-1.5 shadow-xs text-xs font-bold"
                         >
                             <Download className="w-4 h-4" />
-                            {downloading ? __('Generando...') : __('Descargar')}
+                            {downloading ? __('Generating...') : __('Download')}
                         </Button>
                     </div>
                 </div>
