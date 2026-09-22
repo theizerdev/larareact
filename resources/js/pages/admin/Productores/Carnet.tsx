@@ -126,7 +126,7 @@ export default function CarnetProductorPage({ productor }: CarnetProductorPagePr
 
     return (
         <>
-            <Head title={`${__('Gafete Productor')} - ${displayName}`} />
+            <Head title={`${__('Producer ID Badge')} - ${displayName}`} />
 
             <style dangerouslySetInnerHTML={{
                 __html: `
@@ -169,12 +169,12 @@ export default function CarnetProductorPage({ productor }: CarnetProductorPagePr
                             href="/admin/productores"
                             className="flex items-center gap-1.5 text-sm font-medium text-slate-600 hover:text-slate-900 dark:text-slate-400 dark:hover:text-slate-100 transition-colors"
                         >
-                            <ArrowLeft className="w-4 h-4" />
-                            {__('Productores')}
+                            <ArrowLeft className="w-4 h-4 rtl:rotate-180" />
+                            {__('Producers')}
                         </Link>
                     ) : (
                         <span className="text-xs font-bold text-blue-700 dark:text-blue-400 bg-blue-50 dark:bg-blue-950/60 px-2.5 py-1 rounded-full border border-blue-200 dark:border-blue-800">
-                            🪪 Gafete de Productor
+                            🪪 {__('Producer ID Badge')}
                         </span>
                     )}
 
@@ -186,7 +186,7 @@ export default function CarnetProductorPage({ productor }: CarnetProductorPagePr
                             className="border-blue-600 text-blue-700 hover:bg-blue-50 dark:border-blue-500 dark:text-blue-300 dark:hover:bg-blue-950 flex items-center gap-1.5 shadow-xs text-xs font-bold"
                         >
                             <Download className="w-4 h-4" />
-                            {downloading ? __('Generando...') : __('Descargar')}
+                            {downloading ? __('Generating...') : __('Download')}
                         </Button>
                     </div>
                 </div>
@@ -378,7 +378,7 @@ export default function CarnetProductorPage({ productor }: CarnetProductorPagePr
                         className="w-full bg-[#1d4ed8] hover:bg-[#1e40af] text-white py-6 rounded-xl font-bold flex items-center justify-center gap-2 shadow-lg text-base"
                     >
                         <Download className="w-5 h-5" />
-                        {downloading ? __('Generando Imagen PNG...') : __('Descargar Gafete como Imagen')}
+                        {downloading ? __('Generating PNG Image...') : __('Download ID Badge as Image')}
                     </Button>
 
                     {auth?.user && productor.telefono && (
@@ -389,7 +389,7 @@ export default function CarnetProductorPage({ productor }: CarnetProductorPagePr
                             className="w-full border-emerald-600 text-emerald-700 hover:bg-emerald-50 dark:border-emerald-500 dark:text-emerald-300 dark:hover:bg-emerald-950 py-5 rounded-xl font-bold flex items-center justify-center gap-2 shadow-xs text-sm"
                         >
                             <Send className="w-4 h-4 text-emerald-600" />
-                            {sendingWhatsapp ? __('Enviando a WhatsApp...') : __('Enviar Gafete a WhatsApp')}
+                            {sendingWhatsapp ? __('Sending to WhatsApp...') : __('Send ID Badge to WhatsApp')}
                         </Button>
                     )}
 
@@ -399,7 +399,7 @@ export default function CarnetProductorPage({ productor }: CarnetProductorPagePr
                         className="w-full text-slate-600 hover:text-slate-900 dark:text-slate-400 py-3 text-xs flex items-center justify-center gap-1.5"
                     >
                         <Printer className="w-4 h-4" />
-                        {__('Imprimir Gafete')}
+                        {__('Print ID Badge')}
                     </Button>
                 </div>
 

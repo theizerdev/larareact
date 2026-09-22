@@ -110,7 +110,7 @@ export default function ProductorVehiculosModal({
             }
         } catch (err) {
             console.error('Error starting camera:', err);
-            toast.error(__('No se pudo acceder a la cámara. Por favor otorgue permisos.'));
+            toast.error(__('Could not access camera. Please grant permissions.'));
             setActiveCameraTarget(null);
         }
     };
@@ -321,7 +321,7 @@ export default function ProductorVehiculosModal({
                             onClick={() => setViewingVehicle(null)}
                             className="gap-2 text-slate-600 dark:text-slate-400"
                         >
-                            <ArrowLeft className="h-4 w-4" />
+                            <ArrowLeft className="h-4 w-4 rtl:rotate-180" />
                             {__('Back to list')}
                         </Button>
                         <div className="bg-slate-50 dark:bg-slate-900/50 p-6 rounded-xl border border-slate-100 dark:border-slate-800">
@@ -330,7 +330,7 @@ export default function ProductorVehiculosModal({
                             </h3>
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-sm">
                                 <div><span className="text-slate-500">{__('Type')}:</span> <span className="font-medium text-slate-800 dark:text-slate-200">{viewingVehicle.tipo_vehiculo}</span></div>
-                                <div><span className="text-slate-500">{__('License Plate')}:</span> <span className="font-semibold text-emerald-600 dark:text-emerald-400">{viewingVehicle.placa}</span></div>
+                                <div><span className="text-slate-500">{__('License Plate')}:</span> <span className="font-semibold text-emerald-600 dark:text-emerald-400" dir="ltr">{viewingVehicle.placa}</span></div>
                             </div>
                         </div>
 
@@ -368,27 +368,27 @@ export default function ProductorVehiculosModal({
 
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                             <div>
-                                <Label htmlFor="tipo_vehiculo">{__('Tipo de Vehículo')} *</Label>
+                                <Label htmlFor="tipo_vehiculo">{__('Vehicle Type')} *</Label>
                                 <Select 
                                     value={formData.tipo_vehiculo} 
                                     onValueChange={(val) => setFormData({ ...formData, tipo_vehiculo: val })}
                                 >
                                     <SelectTrigger id="tipo_vehiculo" className="mt-1.5 w-full">
-                                        <SelectValue placeholder={__('Seleccionar tipo de vehículo')} />
+                                        <SelectValue placeholder={__('Select vehicle type')} />
                                     </SelectTrigger>
                                     <SelectContent>
                                         <SelectItem value="sedan">{__('Sedan')}</SelectItem>
                                         <SelectItem value="suv">{__('SUV')}</SelectItem>
-                                        <SelectItem value="pickup">{__('Pick-up / Camioneta')}</SelectItem>
-                                        <SelectItem value="camion">{__('Camión')}</SelectItem>
-                                        <SelectItem value="furgon">{__('Furgón / Van')}</SelectItem>
-                                        <SelectItem value="motocicleta">{__('Motocicleta')}</SelectItem>
-                                        <SelectItem value="otro">{__('Otro')}</SelectItem>
+                                        <SelectItem value="pickup">{__('Pickup / Truck')}</SelectItem>
+                                        <SelectItem value="camion">{__('Truck')}</SelectItem>
+                                        <SelectItem value="furgon">{__('Van')}</SelectItem>
+                                        <SelectItem value="motocicleta">{__('Motorcycle')}</SelectItem>
+                                        <SelectItem value="otro">{__('Other')}</SelectItem>
                                     </SelectContent>
                                 </Select>
                             </div>
                             <div>
-                                <Label htmlFor="marca">{__('Marca')} *</Label>
+                                <Label htmlFor="marca">{__('Brand')} *</Label>
                                 <Input 
                                     id="marca"
                                     required 
@@ -399,7 +399,7 @@ export default function ProductorVehiculosModal({
                                 />
                             </div>
                             <div>
-                                <Label htmlFor="modelo">{__('Modelo')} *</Label>
+                                <Label htmlFor="modelo">{__('Model')} *</Label>
                                 <Input 
                                     id="modelo"
                                     required 
@@ -410,7 +410,7 @@ export default function ProductorVehiculosModal({
                                 />
                             </div>
                             <div>
-                                <Label htmlFor="year">{__('Año')} *</Label>
+                                <Label htmlFor="year">{__('Year')} *</Label>
                                 <Input 
                                     id="year"
                                     type="number"
@@ -421,10 +421,10 @@ export default function ProductorVehiculosModal({
                                 />
                             </div>
                             <div className="md:col-span-2">
-                                <Label htmlFor="placa">{__('Placa / Matrícula')} *</Label>
+                                <Label htmlFor="placa">{__('License Plate')} *</Label>
                                 <Input 
                                     id="placa"
-                                    required
+                                    required 
                                     className="mt-1.5 w-full"
                                     placeholder="ej. ABC-123"
                                     value={formData.placa}
@@ -438,7 +438,7 @@ export default function ProductorVehiculosModal({
                             {/* 1. Foto Frontal */}
                             <div className="border rounded-xl p-3.5 bg-slate-50/50 dark:bg-slate-900/40 space-y-2 text-center">
                                 <Label className="text-xs font-semibold block text-slate-700 dark:text-slate-300">
-                                    {__('Foto Frontal del Vehículo')}
+                                    {__('Front Vehicle Photo')}
                                 </Label>
                                 
                                 {previewFrontal ? (
@@ -458,7 +458,7 @@ export default function ProductorVehiculosModal({
                                 ) : (
                                     <div className="h-36 border-2 border-dashed border-slate-200 dark:border-slate-800 rounded-lg flex flex-col items-center justify-center p-2 text-slate-400 bg-white dark:bg-slate-950">
                                         <Camera className="h-6 w-6 mb-1 text-slate-400" />
-                                        <span className="text-xs">{__('Sin foto frontal')}</span>
+                                        <span className="text-xs">{__('No front photo')}</span>
                                     </div>
                                 )}
 
@@ -471,7 +471,7 @@ export default function ProductorVehiculosModal({
                                         onClick={() => startCamera('frontal')}
                                     >
                                         <Camera className="h-3.5 w-3.5 text-emerald-600" />
-                                        {__('Cámara')}
+                                        {__('Camera')}
                                     </Button>
 
                                     <input 
@@ -492,7 +492,7 @@ export default function ProductorVehiculosModal({
                                         className="inline-flex items-center justify-center rounded-md text-xs font-medium transition-colors border border-input bg-background hover:bg-accent hover:text-accent-foreground h-8 px-2 cursor-pointer gap-1"
                                     >
                                         <Upload className="h-3.5 w-3.5 text-blue-600" />
-                                        {__('Subir')}
+                                        {__('Upload')}
                                     </label>
                                 </div>
                             </div>
@@ -500,7 +500,7 @@ export default function ProductorVehiculosModal({
                             {/* 2. Foto Trasera */}
                             <div className="border rounded-xl p-3.5 bg-slate-50/50 dark:bg-slate-900/40 space-y-2 text-center">
                                 <Label className="text-xs font-semibold block text-slate-700 dark:text-slate-300">
-                                    {__('Foto Trasera del Vehículo')}
+                                    {__('Rear Vehicle Photo')}
                                 </Label>
                                 
                                 {previewTrasera ? (
@@ -520,7 +520,7 @@ export default function ProductorVehiculosModal({
                                 ) : (
                                     <div className="h-36 border-2 border-dashed border-slate-200 dark:border-slate-800 rounded-lg flex flex-col items-center justify-center p-2 text-slate-400 bg-white dark:bg-slate-950">
                                         <Camera className="h-6 w-6 mb-1 text-slate-400" />
-                                        <span className="text-xs">{__('Sin foto trasera')}</span>
+                                        <span className="text-xs">{__('No rear photo')}</span>
                                     </div>
                                 )}
 
@@ -533,7 +533,7 @@ export default function ProductorVehiculosModal({
                                         onClick={() => startCamera('trasera')}
                                     >
                                         <Camera className="h-3.5 w-3.5 text-emerald-600" />
-                                        {__('Cámara')}
+                                        {__('Camera')}
                                     </Button>
 
                                     <input 
@@ -554,7 +554,7 @@ export default function ProductorVehiculosModal({
                                         className="inline-flex items-center justify-center rounded-md text-xs font-medium transition-colors border border-input bg-background hover:bg-accent hover:text-accent-foreground h-8 px-2 cursor-pointer gap-1"
                                     >
                                         <Upload className="h-3.5 w-3.5 text-blue-600" />
-                                        {__('Subir')}
+                                        {__('Upload')}
                                     </label>
                                 </div>
                             </div>
@@ -593,7 +593,7 @@ export default function ProductorVehiculosModal({
                                                     {veh.marca} {veh.modelo} ({veh.year})
                                                 </h4>
                                                 <div className="flex items-center gap-3 text-xs text-slate-500 mt-0.5">
-                                                    <span className="font-semibold text-emerald-600 dark:text-emerald-400">{veh.placa}</span>
+                                                    <span className="font-semibold text-emerald-600 dark:text-emerald-400" dir="ltr">{veh.placa}</span>
                                                     <span>• {veh.tipo_vehiculo}</span>
                                                 </div>
                                             </div>
@@ -624,8 +624,8 @@ export default function ProductorVehiculosModal({
                             <DialogTitle className="text-base font-bold text-slate-900 dark:text-white flex items-center gap-2">
                                 <Camera className="h-5 w-5 text-emerald-600" />
                                 {activeCameraTarget === 'frontal'
-                                    ? __('Tomar Foto Frontal del Vehículo')
-                                    : __('Tomar Foto Trasera del Vehículo')}
+                                    ? __('Take Front Vehicle Photo')
+                                    : __('Take Rear Vehicle Photo')}
                             </DialogTitle>
                         </DialogHeader>
 
@@ -644,17 +644,17 @@ export default function ProductorVehiculosModal({
                                 }}
                             >
                                 <RefreshCw className="h-3.5 w-3.5" />
-                                {__('Cambiar Cámara')}
+                                {__('Switch Camera')}
                             </Button>
                         </div>
 
                         <DialogFooter className="gap-2 sm:gap-0">
                             <Button type="button" variant="outline" onClick={stopCamera}>
-                                {__('Cancelar')}
+                                {__('Cancel')}
                             </Button>
                             <Button type="button" onClick={capturePhoto} className="bg-emerald-600 hover:bg-emerald-700 text-white gap-2">
                                 <Camera className="h-4 w-4" />
-                                {__('Capturar Foto')}
+                                {__('Capture Photo')}
                             </Button>
                         </DialogFooter>
                     </DialogContent>

@@ -368,7 +368,7 @@ export default function Index({
             `/admin/productores/${productor.id}/toggle-status`,
             { status: nextStatus },
             {
-                onSuccess: () => toast.success(__('Estado actualizado correctamente')),
+                onSuccess: () => toast.success(__('Status updated successfully')),
             }
         );
     };
@@ -376,8 +376,8 @@ export default function Index({
     const handleSendCarnetWhatsApp = (productor: Productor) => {
         router.post(`/admin/productores/${productor.id}/send-carnet-whatsapp`, {}, {
             preserveScroll: true,
-            onSuccess: () => toast.success(__('Gafete Azul enviado por WhatsApp.')),
-            onError: () => toast.error(__('No se pudo enviar el WhatsApp.')),
+            onSuccess: () => toast.success(__('Blue ID Badge sent via WhatsApp.')),
+            onError: () => toast.error(__('Could not send WhatsApp.')),
         });
     };
 
@@ -385,10 +385,10 @@ export default function Index({
     const columns: ColumnDef<Productor>[] = [
         {
             accessorKey: 'razon_social',
-            header: __('Rancho'),
+            header: __('Ranch'),
             cell: (productor: Productor) => (
                 <div className="flex items-center gap-3">
-                    <div className="h-9 w-9 rounded-lg bg-[#104a29]/10 text-[#104a29] dark:bg-emerald-950/40 dark:text-emerald-400 flex items-center justify-center font-bold">
+                    <div className="h-9 w-9 rounded-lg bg-[#104a29]/10 text-[#104a29] dark:bg-emerald-950/40 dark:text-emerald-400 flex items-center justify-center font-bold shrink-0">
                         <Sprout className="h-5 w-5" />
                     </div>
                     <div>
@@ -402,13 +402,13 @@ export default function Index({
         },
         {
             accessorKey: 'codigo_acceso',
-            header: __('Código / RFC'),
+            header: __('Code / RFC'),
             cell: (productor: Productor) => (
                 <div className="flex flex-col gap-0.5">
-                    <span className="inline-flex items-center px-2 py-0.5 rounded-md bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 font-mono font-bold text-xs tracking-wider border border-emerald-500/20 w-fit">
-                        CÓD: {productor.codigo_acceso || productor.documento_identidad || 'N/A'}
+                    <span className="inline-flex items-center px-2 py-0.5 rounded-md bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 font-mono font-bold text-xs tracking-wider border border-emerald-500/20 w-fit" dir="ltr">
+                        {__('COD')}: {productor.codigo_acceso || productor.documento_identidad || 'N/A'}
                     </span>
-                    {productor.rfc && <span className="text-xs font-mono text-slate-500">RFC: {productor.rfc}</span>}
+                    {productor.rfc && <span className="text-xs font-mono text-slate-500" dir="ltr">RFC: {productor.rfc}</span>}
                 </div>
             ),
         },
@@ -416,8 +416,8 @@ export default function Index({
             accessorKey: 'telefono',
             header: __('Phone'),
             cell: (productor: Productor) => (
-                <div className="text-xs text-slate-600 dark:text-slate-300 flex items-center gap-1.5">
-                    <Phone className="h-3.5 w-3.5 text-slate-400" />
+                <div className="text-xs text-slate-600 dark:text-slate-300 flex items-center gap-1.5" dir="ltr">
+                    <Phone className="h-3.5 w-3.5 text-slate-400 shrink-0" />
                     <span>
                         {productor.pais_telefono?.codigo_telefonico} {productor.telefono}
                     </span>
@@ -426,29 +426,29 @@ export default function Index({
         },
         {
             accessorKey: 'responsable',
-            header: __('Responsable / CURP'),
+            header: __('Responsible / CURP'),
             cell: (productor: Productor) => (
                 <div className="text-xs text-slate-600 dark:text-slate-300">
                     <div className="font-medium text-slate-800 dark:text-slate-200">{productor.responsable || '-'}</div>
                     {productor.curp && (
-                        <div className="font-mono text-[11px] text-slate-400">CURP: {productor.curp}</div>
+                        <div className="font-mono text-[11px] text-slate-400" dir="ltr">CURP: {productor.curp}</div>
                     )}
                 </div>
             ),
         },
         {
             accessorKey: 'status',
-            header: __('Estado'),
+            header: __('Status'),
             cell: (productor: Productor) => {
                 const rawStatus = (productor.status || '').toLowerCase();
                 const isActive = rawStatus === 'activo' || rawStatus === 'active';
                 const isReview = rawStatus === 'en_revision' || rawStatus === 'under_review' || rawStatus === 'pending';
 
                 const statusText = isActive
-                    ? __('Activo')
+                    ? __('Active')
                     : isReview
-                        ? __('En Revisión')
-                        : __('Suspendido');
+                        ? __('Under Review')
+                        : __('Suspended');
 
                 return (
                     <div className="flex items-center gap-2.5" onClick={(e) => e.stopPropagation()}>
@@ -482,7 +482,8 @@ export default function Index({
             },
         },
         {
-            header: __('Acciones'),
+            header: __('Actions'),
+            className: 'text-right rtl:text-left',
             cell: (productor: Productor) => {
                 const rawStatus = (productor.status || '').toLowerCase();
                 const isActive = rawStatus === 'activo' || rawStatus === 'active';
@@ -496,29 +497,29 @@ export default function Index({
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end" className="w-48">
                             <DropdownMenuItem onClick={() => setSelectedProductorForEmployees(productor)}>
-                                <Users className="h-4 w-4 mr-2 text-emerald-600" />
-                                {__('Colaboradores')}
+                                <Users className="h-4 w-4 mr-2 rtl:mr-0 rtl:ml-2 text-emerald-600" />
+                                {__('Collaborators')}
                             </DropdownMenuItem>
                             <DropdownMenuItem onClick={() => setSelectedProductorForVehicles(productor)}>
-                                <Car className="h-4 w-4 mr-2 text-indigo-600" />
-                                {__('Vehículos')}
+                                <Car className="h-4 w-4 mr-2 rtl:mr-0 rtl:ml-2 text-indigo-600" />
+                                {__('Vehicles')}
                             </DropdownMenuItem>
                             <DropdownMenuItem onClick={() => handleToggleStatus(productor)}>
-                                <ToggleRight className="h-4 w-4 mr-2 text-amber-600" />
-                                {isActive ? __('Suspender') : __('Activar')}
+                                <ToggleRight className="h-4 w-4 mr-2 rtl:mr-0 rtl:ml-2 text-amber-600" />
+                                {isActive ? __('Suspend') : __('Activate')}
                             </DropdownMenuItem>
                             <DropdownMenuItem onClick={() => handleOpenEditModal(productor)}>
-                                <Pencil className="h-4 w-4 mr-2 text-slate-600" />
-                                {__('Editar Productor')}
+                                <Pencil className="h-4 w-4 mr-2 rtl:mr-0 rtl:ml-2 text-slate-600" />
+                                {__('Edit Producer')}
                             </DropdownMenuItem>
                             <DropdownMenuItem onClick={() => router.get(`/admin/productores/${productor.id}/carnet`)}>
-                                <QrCode className="h-4 w-4 mr-2 text-blue-600" />
-                                {__('Gafete Azul / Carnet')}
+                                <QrCode className="h-4 w-4 mr-2 rtl:mr-0 rtl:ml-2 text-blue-600" />
+                                {__('Blue ID Badge / Carnet')}
                             </DropdownMenuItem>
                             {productor.telefono && (
                                 <DropdownMenuItem onClick={() => handleSendCarnetWhatsApp(productor)}>
-                                    <Send className="h-4 w-4 mr-2 text-emerald-600" />
-                                    {__('Enviar Gafete por WhatsApp')}
+                                    <Send className="h-4 w-4 mr-2 rtl:mr-0 rtl:ml-2 text-emerald-600" />
+                                    {__('Send ID Badge via WhatsApp')}
                                 </DropdownMenuItem>
                             )}
                             <DropdownMenuItem
@@ -528,8 +529,8 @@ export default function Index({
                                 }}
                                 className="text-red-600 focus:text-red-600"
                             >
-                                <Trash2 className="h-4 w-4 mr-2" />
-                                {__('Eliminar')}
+                                <Trash2 className="h-4 w-4 mr-2 rtl:mr-0 rtl:ml-2" />
+                                {__('Delete')}
                             </DropdownMenuItem>
                         </DropdownMenuContent>
                     </DropdownMenu>
@@ -567,7 +568,7 @@ export default function Index({
                             className="bg-white text-[#104a29] hover:bg-white/90 font-semibold flex items-center gap-1.5 shadow-sm"
                         >
                             <Send className="h-4 w-4" />
-                            {__('Pre-registro')}
+                            {__('Pre-registration')}
                         </Button>
                         <Button
                             onClick={handleOpenCreateModal}
@@ -599,7 +600,7 @@ export default function Index({
                         colorClassName="bg-rose-100 text-rose-600 dark:bg-rose-950/20 dark:text-rose-400"
                     />
                     <StatCard
-                        title={__('En Revisión')}
+                        title={__('Under Review')}
                         value={stats.en_revision}
                         icon={<Activity className="h-6 w-6" />}
                         colorClassName="bg-amber-100 text-amber-600 dark:bg-amber-950/20 dark:text-amber-400"
@@ -608,7 +609,7 @@ export default function Index({
 
                 <FilterBar>
                     <div className="flex flex-wrap items-end gap-4">
-                        <FilterField label={__('Buscar')}>
+                        <FilterField label={__('Search')}>
                             <Input
                                 placeholder={__('Search by rancho, RFC, responsible, phone...')}
                                 className="w-full md:w-80"
@@ -616,16 +617,16 @@ export default function Index({
                                 onChange={(e) => setSearchTerm(e.target.value)}
                             />
                         </FilterField>
-                        <FilterField label={__('Estado')}>
+                        <FilterField label={__('Status')}>
                             <Select value={statusFilter} onValueChange={setStatusFilter}>
                                 <SelectTrigger className="w-full md:w-44">
-                                    <SelectValue placeholder={__('Todos')} />
+                                    <SelectValue placeholder={__('All')} />
                                 </SelectTrigger>
                                 <SelectContent>
-                                    <SelectItem value="">{__('Todos')}</SelectItem>
-                                    <SelectItem value="activo">{__('Activo')}</SelectItem>
-                                    <SelectItem value="suspendido">{__('Suspendido')}</SelectItem>
-                                    <SelectItem value="en_revision">{__('En Revisión')}</SelectItem>
+                                    <SelectItem value="">{__('All')}</SelectItem>
+                                    <SelectItem value="activo">{__('Active')}</SelectItem>
+                                    <SelectItem value="suspendido">{__('Suspended')}</SelectItem>
+                                    <SelectItem value="en_revision">{__('Under Review')}</SelectItem>
                                 </SelectContent>
                             </Select>
                         </FilterField>
@@ -674,23 +675,23 @@ export default function Index({
             <Dialog open={isCreateModalOpen} onOpenChange={setIsCreateModalOpen}>
                 <DialogContent className="w-[95vw] sm:max-w-[900px] lg:max-w-[1100px] xl:max-w-[1200px] max-h-[90vh] overflow-y-auto">
                     <DialogHeader className="border-b pb-4">
-                        <DialogTitle>{editingProductor ? __('Editar Productor') : __('Nuevo Productor')}</DialogTitle>
+                        <DialogTitle>{editingProductor ? __('Edit Producer') : __('New Producer')}</DialogTitle>
                     </DialogHeader>
                     <form onSubmit={handleSubmit} className="space-y-6 py-2">
                         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
                             <TabsList className="grid grid-cols-2 mb-6">
-                                <TabsTrigger value="general">{__('Datos del Rancho')}</TabsTrigger>
-                                <TabsTrigger value="location">{__('Ubicación y Dirección')}</TabsTrigger>
+                                <TabsTrigger value="general">{__('Ranch Data')}</TabsTrigger>
+                                <TabsTrigger value="location">{__('Location & Address')}</TabsTrigger>
                             </TabsList>
                             <TabsContent value="general" className="space-y-6">
                                 <div className="bg-slate-50/70 dark:bg-slate-900/50 p-5 rounded-xl border border-slate-200/80 dark:border-slate-800 space-y-4">
                                     <h4 className="text-xs font-bold text-slate-600 dark:text-slate-300 uppercase tracking-wider flex items-center gap-2">
                                         <Building2 className="h-4 w-4 text-[#104a29]" />
-                                        {__('Datos del Rancho')}
+                                        {__('Ranch Data')}
                                     </h4>
                                     <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
                                         <div>
-                                            <Label htmlFor="razon_social">{__('Razón Social del Rancho')} *</Label>
+                                            <Label htmlFor="razon_social">{__('Ranch Business Name')} *</Label>
                                             <Input
                                                 id="razon_social"
                                                 required
@@ -706,7 +707,7 @@ export default function Index({
                                         </div>
 
                                         <div>
-                                            <Label htmlFor="nombre_comercial">{__('Nombre Comercial del Rancho')} *</Label>
+                                            <Label htmlFor="nombre_comercial">{__('Ranch Trade Name')} *</Label>
                                             <Input
                                                 id="nombre_comercial"
                                                 required
@@ -734,7 +735,7 @@ export default function Index({
                                         </div>
 
                                         <div>
-                                            <Label htmlFor="responsable">{__('Persona Responsable / Contacto')}</Label>
+                                            <Label htmlFor="responsable">{__('Responsible Person / Contact')}</Label>
                                             <Input
                                                 id="responsable"
                                                 className="mt-1.5 w-full"
@@ -746,7 +747,7 @@ export default function Index({
                                         </div>
 
                                         <div>
-                                            <Label htmlFor="curp">{__('CURP (del Responsable)')}</Label>
+                                            <Label htmlFor="curp">{__('CURP (Responsible)')}</Label>
                                             <Input
                                                 id="curp"
                                                 className="mt-1.5 w-full"
@@ -759,7 +760,7 @@ export default function Index({
                                         </div>
 
                                         <div className="md:col-span-2">
-                                            <Label>{__('Teléfono de Contacto')}</Label>
+                                            <Label>{__('Contact Phone')}</Label>
                                             <div className="mt-1.5 w-full">
                                                 <PhoneInputGroup
                                                     paises={paises}
@@ -773,15 +774,15 @@ export default function Index({
                                         </div>
 
                                         <div className="md:col-span-2">
-                                            <Label htmlFor="status">{__('Estado del Productor')}</Label>
+                                            <Label htmlFor="status">{__('Producer Status')}</Label>
                                             <Select value={data.status} onValueChange={(val: any) => setData('status', val)}>
                                                 <SelectTrigger id="status" className="mt-1.5 w-full">
-                                                    <SelectValue placeholder={__('Seleccionar estado')} />
+                                                    <SelectValue placeholder={__('Select Status')} />
                                                 </SelectTrigger>
                                                 <SelectContent>
-                                                    <SelectItem value="activo">{__('Activo')}</SelectItem>
-                                                    <SelectItem value="suspendido">{__('Suspendido')}</SelectItem>
-                                                    <SelectItem value="en_revision">{__('En Revisión')}</SelectItem>
+                                                    <SelectItem value="activo">{__('Active')}</SelectItem>
+                                                    <SelectItem value="suspendido">{__('Suspended')}</SelectItem>
+                                                    <SelectItem value="en_revision">{__('Under Review')}</SelectItem>
                                                 </SelectContent>
                                             </Select>
                                         </div>
@@ -795,21 +796,21 @@ export default function Index({
                                     <div className="flex items-center justify-between">
                                         <h4 className="text-xs font-bold text-slate-600 dark:text-slate-300 uppercase tracking-wider flex items-center gap-2">
                                             <MapPin className="h-4 w-4 text-[#104a29]" />
-                                            {__('Ubicación y Dirección del Rancho')}
+                                            {__('Location & Address')}
                                         </h4>
                                         {sucursal?.nombre && (
                                             <span className="text-xs font-semibold text-[#104a29] bg-emerald-50 dark:bg-emerald-950/40 px-3 py-1 rounded-full border border-emerald-200 dark:border-emerald-900/50">
-                                                Sucursal de Origen: {sucursal.nombre}
+                                                {__('Origin Branch')}: {sucursal.nombre}
                                             </span>
                                         )}
                                     </div>
 
                                     <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
                                         <div>
-                                            <Label htmlFor="pais_id">{__('País')} *</Label>
+                                            <Label htmlFor="pais_id">{__('Country')} *</Label>
                                             <Select value={data.pais_id} onValueChange={handlePaisChange}>
                                                 <SelectTrigger id="pais_id" className="mt-1.5 w-full">
-                                                    <SelectValue placeholder={__('Seleccionar país')} />
+                                                    <SelectValue placeholder={__('Select Country')} />
                                                 </SelectTrigger>
                                                 <SelectContent>
                                                     {paises.map((p) => (
@@ -822,7 +823,7 @@ export default function Index({
                                         </div>
 
                                         <div>
-                                            <Label htmlFor="estado">{__('Estado')}</Label>
+                                            <Label htmlFor="estado">{__('State')}</Label>
                                             <Input
                                                 id="estado"
                                                 className="mt-1.5 w-full"
@@ -833,7 +834,7 @@ export default function Index({
                                         </div>
 
                                         <div>
-                                            <Label htmlFor="codigo_postal">{__('Código Postal')}</Label>
+                                            <Label htmlFor="codigo_postal">{__('Postal Code')}</Label>
                                             <Input
                                                 id="codigo_postal"
                                                 className="mt-1.5 w-full"
@@ -844,15 +845,15 @@ export default function Index({
                                         </div>
 
                                         <div>
-                                            <Label>{__('Referencia de la Sucursal')}</Label>
+                                            <Label>{__('Branch Reference')}</Label>
                                             <div className="mt-1.5 h-10 px-3 py-2 rounded-md border border-slate-200 dark:border-slate-800 bg-slate-100/70 dark:bg-slate-800/70 text-xs text-slate-700 dark:text-slate-300 flex items-center gap-2 w-full">
                                                 <Building2 className="h-4 w-4 text-slate-400 shrink-0" />
-                                                <span className="truncate">Centrado cerca de Sucursal {sucursal?.nombre || 'principal'}</span>
+                                                <span className="truncate">{__('Centered near Branch')} {sucursal?.nombre || __('Main')}</span>
                                             </div>
                                         </div>
 
                                         <div className="md:col-span-2">
-                                            <Label htmlFor="direccion">{__('Dirección Completa del Rancho')}</Label>
+                                            <Label htmlFor="direccion">{__('Full Ranch Address')}</Label>
                                             <Textarea
                                                 id="direccion"
                                                 rows={2}
@@ -871,7 +872,7 @@ export default function Index({
                                                 <Navigation className="h-4 w-4 text-[#104a29]" />
                                                 {__('Click or drag marker on map to set rancho location (centered at your branch sucursal)')}
                                             </span>
-                                            <span className="font-mono text-[11px] bg-slate-200/60 dark:bg-slate-800 px-2 py-0.5 rounded">
+                                            <span className="font-mono text-[11px] bg-slate-200/60 dark:bg-slate-800 px-2 py-0.5 rounded" dir="ltr">
                                                 Lat: {data.latitud?.toFixed(5) || '0'}, Lng: {data.longitud?.toFixed(5) || '0'}
                                             </span>
                                         </div>
@@ -899,14 +900,14 @@ export default function Index({
 
                         <DialogFooter className="pt-4 border-t dark:border-slate-800">
                             <Button type="button" variant="outline" onClick={() => setIsCreateModalOpen(false)}>
-                                {__('Cancelar')}
+                                {__('Cancel')}
                             </Button>
                             <Button
                                 type="submit"
                                 disabled={processing}
                                 className="bg-[#104a29] hover:bg-[#0c371e] text-white font-semibold shadow-sm px-6"
                             >
-                                {processing ? __('Guardando...') : (editingProductor ? __('Guardar Cambios') : __('Guardar Productor'))}
+                                {processing ? __('Saving...') : (editingProductor ? __('Save Changes') : __('Save Producer'))}
                             </Button>
                         </DialogFooter>
                     </form>
@@ -921,10 +922,10 @@ export default function Index({
                             <ShieldAlert className="h-5 w-5" />
                         </div>
                         <DialogTitle className="text-lg font-bold text-slate-900 dark:text-white">
-                            {__('Eliminar Productor')}
+                            {__('Delete Producer')}
                         </DialogTitle>
                         <DialogDescription className="text-xs text-slate-500">
-                            {__('¿Está seguro de que desea eliminar a este productor? Esta acción no se puede deshacer y eliminará colaboradores, vehículos e historial de accesos/visitas asociados.')}
+                            {__('Are you sure you want to delete this producer? This action cannot be undone and will delete associated collaborators, vehicles, and access history.')}
                         </DialogDescription>
                     </DialogHeader>
 
@@ -936,10 +937,10 @@ export default function Index({
 
                     <DialogFooter className="pt-4">
                         <Button variant="outline" onClick={() => setIsDeleteModalOpen(false)}>
-                            {__('Cancelar')}
+                            {__('Cancel')}
                         </Button>
                         <Button variant="destructive" onClick={handleDelete} disabled={processing}>
-                            {processing ? __('Eliminando...') : __('Sí, Eliminar')}
+                            {processing ? __('Deleting...') : __('Yes, Delete')}
                         </Button>
                     </DialogFooter>
                 </DialogContent>
@@ -953,16 +954,16 @@ export default function Index({
                             <Send className="h-5 w-5" />
                         </div>
                         <DialogTitle className="text-lg font-bold text-slate-900 dark:text-white">
-                            {__('Pre-registro de Productor / Rancho')}
+                            {__('Producer Pre-registration')}
                         </DialogTitle>
                         <DialogDescription className="text-xs text-slate-500">
-                            {__('Envía una invitación por WhatsApp al productor para que complete el formulario con los datos de su rancho, colaboradores y vehículos.')}
+                            {__('Send a WhatsApp invitation to the producer to complete the form with ranch, collaborator, and vehicle details.')}
                         </DialogDescription>
                     </DialogHeader>
 
                     <form onSubmit={handlePreRegistroSubmit} className="space-y-4 pt-2">
                         <div>
-                            <Label htmlFor="pre_razon_social_rancho">{__('Razón Social del Rancho')}</Label>
+                            <Label htmlFor="pre_razon_social_rancho">{__('Ranch Business Name')}</Label>
                             <Input
                                 id="pre_razon_social_rancho"
                                 required
@@ -977,7 +978,7 @@ export default function Index({
                         </div>
 
                         <div>
-                            <Label htmlFor="pre_nombre_comercial_rancho">{__('Nombre Comercial del Rancho / Predio')}</Label>
+                            <Label htmlFor="pre_nombre_comercial_rancho">{__('Ranch Trade Name')}</Label>
                             <Input
                                 id="pre_nombre_comercial_rancho"
                                 required
@@ -992,7 +993,7 @@ export default function Index({
                         </div>
 
                         <div>
-                            <Label>{__('WhatsApp del Productor')}</Label>
+                            <Label>{__('Producer WhatsApp')}</Label>
                             <div className="mt-1.5 w-full">
                                 <PhoneInputGroup
                                     paises={paises}
@@ -1011,7 +1012,7 @@ export default function Index({
 
                         <DialogFooter className="pt-4 border-t border-slate-100 dark:border-slate-800">
                             <Button type="button" variant="outline" onClick={() => setIsPreRegistroModalOpen(false)}>
-                                {__('Cancelar')}
+                                {__('Cancel')}
                             </Button>
                             <Button
                                 type="submit"
@@ -1019,7 +1020,7 @@ export default function Index({
                                 className="bg-[#104a29] hover:bg-[#0c371e] text-white font-semibold flex items-center gap-2"
                             >
                                 <Send className="h-4 w-4" />
-                                {preRegistroForm.processing ? __('Enviando...') : __('Enviar Invitación')}
+                                {preRegistroForm.processing ? __('Sending...') : __('Send Invitation')}
                             </Button>
                         </DialogFooter>
                     </form>

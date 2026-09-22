@@ -109,7 +109,7 @@ export default function ProductorEmpleadosModal({
                 setEmployees(data.employees);
             }
         } catch (e) {
-            toast.error(__('Error al cargar colaboradores'));
+            toast.error(__('Error loading collaborators'));
         } finally {
             setLoading(false);
         }
@@ -155,7 +155,7 @@ export default function ProductorEmpleadosModal({
             }
         } catch (err) {
             console.error('Error starting camera:', err);
-            toast.error(__('No se pudo acceder a la cámara. Por favor otorgue permisos.'));
+            toast.error(__('Could not access camera. Please grant permissions.'));
             setActiveCameraTarget(null);
         }
     };
@@ -215,7 +215,7 @@ export default function ProductorEmpleadosModal({
                     setPreviewReverso(previewUrl);
                 }
 
-                toast.success(__('Fotografía capturada correctamente'));
+                toast.success(__('Photo captured successfully'));
                 stopCamera();
             },
             'image/jpeg',
@@ -260,7 +260,7 @@ export default function ProductorEmpleadosModal({
     };
 
     const handleDelete = async (id: number) => {
-        if (!confirm(__('¿Está seguro de que desea eliminar a este colaborador?'))) return;
+        if (!confirm(__('Are you sure you want to delete this collaborator?'))) return;
         try {
             const csrfToken = (document.querySelector('meta[name="csrf-token"]') as HTMLMetaElement)?.content;
             const response = await fetch(`/admin/productor-empleados/${id}`, {
@@ -272,13 +272,13 @@ export default function ProductorEmpleadosModal({
             });
             const data = await response.json();
             if (data.success) {
-                toast.success(__('Colaborador eliminado correctamente'));
+                toast.success(__('Collaborator deleted successfully'));
                 fetchEmployees();
             } else {
-                toast.error(data.message || __('Error al eliminar colaborador'));
+                toast.error(data.message || __('Error deleting collaborator'));
             }
         } catch (e) {
-            toast.error(__('Error al eliminar colaborador'));
+            toast.error(__('Error deleting collaborator'));
         }
     };
 
@@ -317,16 +317,16 @@ export default function ProductorEmpleadosModal({
 
             const resData = await response.json();
             if (resData.success) {
-                toast.success(editingEmployee ? __('Colaborador actualizado correctamente') : __('Colaborador registrado correctamente'));
+                toast.success(editingEmployee ? __('Collaborator updated successfully') : __('Collaborator registered successfully'));
                 fetchEmployees();
                 setIsAdding(false);
                 setEditingEmployee(null);
                 resetForm();
             } else {
-                toast.error(resData.message || __('Error al guardar colaborador'));
+                toast.error(resData.message || __('Error saving collaborator'));
             }
         } catch (e) {
-            toast.error(__('Error al guardar colaborador'));
+            toast.error(__('Error saving collaborator'));
         } finally {
             setSubmitting(false);
         }
@@ -340,15 +340,15 @@ export default function ProductorEmpleadosModal({
                 <DialogHeader className="border-b pb-4 dark:border-slate-800">
                     <div className="flex items-center justify-between">
                         <div className="flex items-center gap-3">
-                            <div className="h-10 w-10 rounded-lg bg-emerald-50 dark:bg-emerald-950/40 text-emerald-600 dark:text-emerald-400 flex items-center justify-center">
+                            <div className="h-10 w-10 rounded-lg bg-emerald-50 dark:bg-emerald-950/40 text-emerald-600 dark:text-emerald-400 flex items-center justify-center shrink-0">
                                 <Users className="h-5 w-5" />
                             </div>
                             <div>
                                 <DialogTitle className="text-lg font-bold text-slate-900 dark:text-white">
-                                    {__('Colaboradores del Productor')}
+                                    {__('Producer Collaborators')}
                                 </DialogTitle>
                                 <DialogDescription className="text-xs text-slate-500">
-                                    Rancho / Productor: <span className="font-semibold text-slate-700 dark:text-slate-300">{productor.razon_social}</span>
+                                    {__('Ranch / Producer')}: <span className="font-semibold text-slate-700 dark:text-slate-300">{productor.razon_social}</span>
                                 </DialogDescription>
                             </div>
                         </div>
@@ -359,7 +359,7 @@ export default function ProductorEmpleadosModal({
                                 className="gap-2 bg-emerald-600 hover:bg-emerald-700 text-white"
                             >
                                 <UserPlus className="h-4 w-4" />
-                                {__('Agregar Colaborador')}
+                                {__('Add Collaborator')}
                             </Button>
                         )}
                     </div>
@@ -370,10 +370,10 @@ export default function ProductorEmpleadosModal({
                     <div className="p-4 bg-slate-950 rounded-xl space-y-4 my-2 border border-slate-800 animate-in fade-in-50">
                         <div className="flex items-center justify-between text-white">
                             <h4 className="text-sm font-semibold flex items-center gap-2">
-                                <Camera className="h-4 w-4 text-emerald-400" />
-                                {activeCameraTarget === 'foto' && __('Tomar Foto del Colaborador')}
-                                {activeCameraTarget === 'frontal' && __('Tomar Foto Documento Frente')}
-                                {activeCameraTarget === 'reverso' && __('Tomar Foto Documento Reverso')}
+                                <Camera className="h-4 w-4 text-emerald-400 shrink-0" />
+                                {activeCameraTarget === 'foto' && __('Take Collaborator Photo')}
+                                {activeCameraTarget === 'frontal' && __('Take ID Front Photo')}
+                                {activeCameraTarget === 'reverso' && __('Take ID Back Photo')}
                             </h4>
                             <Button
                                 variant="ghost"
@@ -382,8 +382,8 @@ export default function ProductorEmpleadosModal({
                                 className="text-slate-400 hover:text-white"
                                 onClick={() => startCamera(activeCameraTarget, facingMode === 'user' ? 'environment' : 'user')}
                             >
-                                <SwitchCamera className="h-4 w-4 mr-1.5" />
-                                {__('Cambiar Cámara')}
+                                <SwitchCamera className="h-4 w-4 mr-1.5 rtl:mr-0 rtl:ml-1.5" />
+                                {__('Switch Camera')}
                             </Button>
                         </div>
 
@@ -409,8 +409,8 @@ export default function ProductorEmpleadosModal({
                                     </div>
 
                                     <div className="mt-3 px-3 py-1 bg-black/70 backdrop-blur-sm text-white text-xs rounded-full border border-emerald-500/40 flex items-center gap-1.5 shadow-lg">
-                                        <IdCard className="h-3.5 w-3.5 text-emerald-400" />
-                                        <span>{__('Alinee el rostro del colaborador dentro del recuadro carnet')}</span>
+                                        <IdCard className="h-3.5 w-3.5 text-emerald-400 shrink-0" />
+                                        <span>{__('Align collaborator face within the ID badge frame')}</span>
                                     </div>
                                 </div>
                             ) : (
@@ -424,8 +424,8 @@ export default function ProductorEmpleadosModal({
                                     </div>
 
                                     <div className="mt-3 px-3 py-1 bg-black/70 backdrop-blur-sm text-white text-xs rounded-full border border-emerald-500/40 flex items-center gap-1.5 shadow-lg">
-                                        <IdCard className="h-3.5 w-3.5 text-emerald-400" />
-                                        <span>{__('Coloque el documento dentro del recuadro')}</span>
+                                        <IdCard className="h-3.5 w-3.5 text-emerald-400 shrink-0" />
+                                        <span>{__('Place document within the frame')}</span>
                                     </div>
                                 </div>
                             )}
@@ -433,11 +433,11 @@ export default function ProductorEmpleadosModal({
 
                         <div className="flex items-center justify-end gap-3 pt-2">
                             <Button variant="outline" type="button" onClick={stopCamera} className="text-slate-300 border-slate-700 hover:bg-slate-800">
-                                {__('Cancelar')}
+                                {__('Cancel')}
                             </Button>
                             <Button type="button" onClick={capturePhoto} className="bg-emerald-600 hover:bg-emerald-700 text-white gap-2">
                                 <Camera className="h-4 w-4" />
-                                {__('Capturar Foto')}
+                                {__('Capture Photo')}
                             </Button>
                         </div>
                     </div>
@@ -452,8 +452,8 @@ export default function ProductorEmpleadosModal({
                             onClick={() => setViewingEmployee(null)}
                             className="gap-2 text-slate-600 dark:text-slate-400"
                         >
-                            <ArrowLeft className="h-4 w-4" />
-                            {__('Volver a la lista')}
+                            <ArrowLeft className="h-4 w-4 rtl:rotate-180" />
+                            {__('Back to list')}
                         </Button>
                         <div className="flex flex-col md:flex-row gap-6 items-start bg-slate-50 dark:bg-slate-900/50 p-6 rounded-xl border border-slate-100 dark:border-slate-800">
                             {viewingEmployee.foto_carnet ? (
@@ -472,11 +472,11 @@ export default function ProductorEmpleadosModal({
                                     {viewingEmployee.nombres} {viewingEmployee.apellidos}
                                 </h3>
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-sm">
-                                    <div><span className="text-slate-500">{__('RFC / Documento')}:</span> <span className="font-semibold text-slate-800 dark:text-slate-200">{viewingEmployee.documento_identidad}</span></div>
-                                    <div><span className="text-slate-500">{__('Cargo / Puesto')}:</span> <span className="font-semibold text-slate-800 dark:text-slate-200">{viewingEmployee.cargo || '-'}</span></div>
-                                    <div><span className="text-slate-500">{__('Género')}:</span> <span className="font-semibold text-slate-800 dark:text-slate-200">{viewingEmployee.genero || '-'}</span></div>
-                                    <div><span className="text-slate-500">{__('Fecha de Nacimiento')}:</span> <span className="font-semibold text-slate-800 dark:text-slate-200">{viewingEmployee.fecha_nacimiento ? String(viewingEmployee.fecha_nacimiento).split('T')[0] : '-'}</span></div>
-                                    <div><span className="text-slate-500">{__('Correo Electrónico')}:</span> <span className="font-semibold text-slate-800 dark:text-slate-200">{viewingEmployee.correo || '-'}</span></div>
+                                    <div><span className="text-slate-500">{__('RFC / Document')}:</span> <span className="font-semibold text-slate-800 dark:text-slate-200" dir="ltr">{viewingEmployee.documento_identidad}</span></div>
+                                    <div><span className="text-slate-500">{__('Position / Role')}:</span> <span className="font-semibold text-slate-800 dark:text-slate-200">{viewingEmployee.cargo || '-'}</span></div>
+                                    <div><span className="text-slate-500">{__('Gender')}:</span> <span className="font-semibold text-slate-800 dark:text-slate-200">{viewingEmployee.genero || '-'}</span></div>
+                                    <div><span className="text-slate-500">{__('Birth Date')}:</span> <span className="font-semibold text-slate-800 dark:text-slate-200" dir="ltr">{viewingEmployee.fecha_nacimiento ? String(viewingEmployee.fecha_nacimiento).split('T')[0] : '-'}</span></div>
+                                    <div><span className="text-slate-500">{__('Email')}:</span> <span className="font-semibold text-slate-800 dark:text-slate-200" dir="ltr">{viewingEmployee.correo || '-'}</span></div>
                                 </div>
                             </div>
                         </div>
@@ -486,23 +486,23 @@ export default function ProductorEmpleadosModal({
                             <div className="bg-slate-50 dark:bg-slate-900/50 p-4 rounded-xl border border-slate-100 dark:border-slate-800">
                                 <Label className="text-xs font-bold text-slate-600 dark:text-slate-300 mb-3 block flex items-center gap-2">
                                     <IdCard className="h-4 w-4 text-[#104a29]" />
-                                    {__('Documento Frente')}
+                                    {__('Document Front')}
                                 </Label>
                                 {viewingEmployee.documento_frontal ? (
                                     <img src={`/storage/${viewingEmployee.documento_frontal}`} alt="Front" className="w-full h-56 rounded-lg object-cover border border-slate-200 dark:border-slate-800" />
                                 ) : (
-                                    <div className="w-full h-56 rounded-lg bg-slate-100 dark:bg-slate-800/50 border border-dashed flex items-center justify-center text-slate-400 text-xs">{__('Sin documento frontal')}</div>
+                                    <div className="w-full h-56 rounded-lg bg-slate-100 dark:bg-slate-800/50 border border-dashed flex items-center justify-center text-slate-400 text-xs">{__('No front document')}</div>
                                 )}
                             </div>
                             <div className="bg-slate-50 dark:bg-slate-900/50 p-4 rounded-xl border border-slate-100 dark:border-slate-800">
                                 <Label className="text-xs font-bold text-slate-600 dark:text-slate-300 mb-3 block flex items-center gap-2">
                                     <IdCard className="h-4 w-4 text-[#104a29]" />
-                                    {__('Documento Reverso')}
+                                    {__('Document Back')}
                                 </Label>
                                 {viewingEmployee.documento_reverso ? (
                                     <img src={`/storage/${viewingEmployee.documento_reverso}`} alt="Reverse" className="w-full h-56 rounded-lg object-cover border border-slate-200 dark:border-slate-800" />
                                 ) : (
-                                    <div className="w-full h-56 rounded-lg bg-slate-100 dark:bg-slate-800/50 border border-dashed flex items-center justify-center text-slate-400 text-xs">{__('Sin documento reverso')}</div>
+                                    <div className="w-full h-56 rounded-lg bg-slate-100 dark:bg-slate-800/50 border border-dashed flex items-center justify-center text-slate-400 text-xs">{__('No back document')}</div>
                                 )}
                             </div>
                         </div>
@@ -512,16 +512,16 @@ export default function ProductorEmpleadosModal({
                     <form onSubmit={handleSubmit} className="space-y-6 py-4">
                         <div className="flex items-center justify-between border-b pb-3 dark:border-slate-800">
                             <h4 className="text-sm font-semibold text-slate-900 dark:text-white">
-                                {editingEmployee ? __('Editar Colaborador') : __('Nuevo Colaborador')}
+                                {editingEmployee ? __('Edit Collaborator') : __('New Collaborator')}
                             </h4>
                             <Button variant="ghost" size="sm" type="button" onClick={() => { stopCamera(); setIsAdding(false); }}>
-                                {__('Cancelar')}
+                                {__('Cancel')}
                             </Button>
                         </div>
 
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
                             <div>
-                                <Label htmlFor="nombres">{__('Nombres')} *</Label>
+                                <Label htmlFor="nombres">{__('First Name')} *</Label>
                                 <Input 
                                     id="nombres"
                                     required 
@@ -531,7 +531,7 @@ export default function ProductorEmpleadosModal({
                                 />
                             </div>
                             <div>
-                                <Label htmlFor="apellidos">{__('Apellidos')} *</Label>
+                                <Label htmlFor="apellidos">{__('Last Name')} *</Label>
                                 <Input 
                                     id="apellidos"
                                     required 
@@ -552,7 +552,7 @@ export default function ProductorEmpleadosModal({
                                 />
                             </div>
                             <div>
-                                <Label htmlFor="cargo">{__('Cargo / Puesto')}</Label>
+                                <Label htmlFor="cargo">{__('Position / Role')}</Label>
                                 <Input 
                                     id="cargo"
                                     className="mt-1.5 w-full"
@@ -562,20 +562,20 @@ export default function ProductorEmpleadosModal({
                                 />
                             </div>
                             <div>
-                                <Label htmlFor="genero">{__('Género')}</Label>
+                                <Label htmlFor="genero">{__('Gender')}</Label>
                                 <Select value={formData.genero} onValueChange={(val) => setFormData({ ...formData, genero: val })}>
                                     <SelectTrigger id="genero" className="mt-1.5 w-full">
-                                        <SelectValue placeholder={__('Seleccionar género')} />
+                                        <SelectValue placeholder={__('Select Gender')} />
                                     </SelectTrigger>
                                     <SelectContent>
-                                        <SelectItem value="masculino">{__('Masculino')}</SelectItem>
-                                        <SelectItem value="femenino">{__('Femenino')}</SelectItem>
-                                        <SelectItem value="otro">{__('Otro')}</SelectItem>
+                                        <SelectItem value="masculino">{__('Male')}</SelectItem>
+                                        <SelectItem value="femenino">{__('Female')}</SelectItem>
+                                        <SelectItem value="otro">{__('Other')}</SelectItem>
                                     </SelectContent>
                                 </Select>
                             </div>
                             <div>
-                                <Label htmlFor="fecha_nacimiento">{__('Fecha de Nacimiento')}</Label>
+                                <Label htmlFor="fecha_nacimiento">{__('Birth Date')}</Label>
                                 <Input 
                                     id="fecha_nacimiento"
                                     type="date"
@@ -585,7 +585,7 @@ export default function ProductorEmpleadosModal({
                                 />
                             </div>
                             <div className="md:col-span-2">
-                                <Label htmlFor="correo">{__('Correo Electrónico')}</Label>
+                                <Label htmlFor="correo">{__('Email')}</Label>
                                 <Input 
                                     id="correo"
                                     type="email"
@@ -601,7 +601,7 @@ export default function ProductorEmpleadosModal({
                         <div className="grid grid-cols-1 md:grid-cols-3 gap-5 pt-2">
                             {/* 1. Foto del Colaborador */}
                             <div className="space-y-2 bg-slate-50 dark:bg-slate-900/50 p-4 rounded-xl border border-slate-200 dark:border-slate-800">
-                                <Label className="text-xs font-bold text-slate-700 dark:text-slate-300 block">{__('Foto del Colaborador')}</Label>
+                                <Label className="text-xs font-bold text-slate-700 dark:text-slate-300 block">{__('Collaborator Photo')}</Label>
                                 
                                 <div className="relative h-40 w-full overflow-hidden rounded-lg border-2 border-dashed border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 flex items-center justify-center">
                                     {previewFoto ? (
@@ -609,7 +609,7 @@ export default function ProductorEmpleadosModal({
                                     ) : (
                                         <div className="text-center p-3 text-slate-400">
                                             <Camera className="h-8 w-8 mx-auto mb-1 text-slate-400" />
-                                            <span className="text-xs font-medium block">{__('Sin fotografía')}</span>
+                                            <span className="text-xs font-medium block">{__('No photo')}</span>
                                         </div>
                                     )}
                                 </div>
@@ -621,7 +621,7 @@ export default function ProductorEmpleadosModal({
                                         id="foto_carnet"
                                         className="hidden"
                                         onChange={(e) => {
-                                            const file = e.target.files?.[0];
+                                             const file = e.target.files?.[0];
                                             if (file) {
                                                 setFotoCarnet(file);
                                                 setPreviewFoto(URL.createObjectURL(file));
@@ -631,7 +631,7 @@ export default function ProductorEmpleadosModal({
                                     <label htmlFor="foto_carnet" className="cursor-pointer">
                                         <Button variant="outline" size="sm" type="button" className="w-full text-xs gap-1 pointer-events-none">
                                             <UploadCloud className="h-3.5 w-3.5" />
-                                            {__('Subir')}
+                                            {__('Upload')}
                                         </Button>
                                     </label>
                                     <Button 
@@ -642,14 +642,14 @@ export default function ProductorEmpleadosModal({
                                         className="w-full text-xs gap-1 bg-emerald-600 hover:bg-emerald-700 text-white"
                                     >
                                         <Camera className="h-3.5 w-3.5" />
-                                        {__('Cámara')}
+                                        {__('Camera')}
                                     </Button>
                                 </div>
                             </div>
 
                             {/* 2. Documento Frente */}
                             <div className="space-y-2 bg-slate-50 dark:bg-slate-900/50 p-4 rounded-xl border border-slate-200 dark:border-slate-800">
-                                <Label className="text-xs font-bold text-slate-700 dark:text-slate-300 block">{__('Documento Frente')}</Label>
+                                <Label className="text-xs font-bold text-slate-700 dark:text-slate-300 block">{__('Document Front')}</Label>
                                 
                                 <div className="relative h-40 w-full overflow-hidden rounded-lg border-2 border-dashed border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 flex items-center justify-center">
                                     {previewFrontal ? (
@@ -657,7 +657,7 @@ export default function ProductorEmpleadosModal({
                                     ) : (
                                         <div className="text-center p-3 text-slate-400">
                                             <IdCard className="h-8 w-8 mx-auto mb-1 text-slate-400" />
-                                            <span className="text-xs font-medium block">{__('Sin documento frente')}</span>
+                                            <span className="text-xs font-medium block">{__('No front document')}</span>
                                         </div>
                                     )}
                                 </div>
@@ -679,7 +679,7 @@ export default function ProductorEmpleadosModal({
                                     <label htmlFor="doc_frontal" className="cursor-pointer">
                                         <Button variant="outline" size="sm" type="button" className="w-full text-xs gap-1 pointer-events-none">
                                             <UploadCloud className="h-3.5 w-3.5" />
-                                            {__('Subir')}
+                                            {__('Upload')}
                                         </Button>
                                     </label>
                                     <Button 
@@ -690,14 +690,14 @@ export default function ProductorEmpleadosModal({
                                         className="w-full text-xs gap-1 bg-emerald-600 hover:bg-emerald-700 text-white"
                                     >
                                         <Camera className="h-3.5 w-3.5" />
-                                        {__('Cámara')}
+                                        {__('Camera')}
                                     </Button>
                                 </div>
                             </div>
 
                             {/* 3. Documento Reverso */}
                             <div className="space-y-2 bg-slate-50 dark:bg-slate-900/50 p-4 rounded-xl border border-slate-200 dark:border-slate-800">
-                                <Label className="text-xs font-bold text-slate-700 dark:text-slate-300 block">{__('Documento Reverso')}</Label>
+                                <Label className="text-xs font-bold text-slate-700 dark:text-slate-300 block">{__('Document Back')}</Label>
                                 
                                 <div className="relative h-40 w-full overflow-hidden rounded-lg border-2 border-dashed border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 flex items-center justify-center">
                                     {previewReverso ? (
@@ -705,7 +705,7 @@ export default function ProductorEmpleadosModal({
                                     ) : (
                                         <div className="text-center p-3 text-slate-400">
                                             <IdCard className="h-8 w-8 mx-auto mb-1 text-slate-400" />
-                                            <span className="text-xs font-medium block">{__('Sin documento reverso')}</span>
+                                            <span className="text-xs font-medium block">{__('No back document')}</span>
                                         </div>
                                     )}
                                 </div>
@@ -727,7 +727,7 @@ export default function ProductorEmpleadosModal({
                                     <label htmlFor="doc_reverso" className="cursor-pointer">
                                         <Button variant="outline" size="sm" type="button" className="w-full text-xs gap-1 pointer-events-none">
                                             <UploadCloud className="h-3.5 w-3.5" />
-                                            {__('Subir')}
+                                            {__('Upload')}
                                         </Button>
                                     </label>
                                     <Button 
@@ -738,7 +738,7 @@ export default function ProductorEmpleadosModal({
                                         className="w-full text-xs gap-1 bg-emerald-600 hover:bg-emerald-700 text-white"
                                     >
                                         <Camera className="h-3.5 w-3.5" />
-                                        {__('Cámara')}
+                                        {__('Camera')}
                                     </Button>
                                 </div>
                             </div>
@@ -746,11 +746,11 @@ export default function ProductorEmpleadosModal({
 
                         <div className="flex justify-end gap-3 pt-4 border-t dark:border-slate-800">
                             <Button variant="outline" type="button" onClick={() => { stopCamera(); setIsAdding(false); }}>
-                                {__('Cancelar')}
+                                {__('Cancel')}
                             </Button>
                             <Button type="submit" disabled={submitting} className="bg-emerald-600 hover:bg-emerald-700 text-white gap-2">
                                 <Check className="h-4 w-4" />
-                                {submitting ? __('Guardando...') : __('Guardar Colaborador')}
+                                {submitting ? __('Saving...') : __('Save Collaborator')}
                             </Button>
                         </div>
                     </form>
@@ -758,12 +758,12 @@ export default function ProductorEmpleadosModal({
                     /* Employee Table List */
                     <div className="py-4 space-y-4">
                         {loading ? (
-                            <div className="py-12 text-center text-slate-400 text-sm">{__('Cargando colaboradores...')}</div>
+                            <div className="py-12 text-center text-slate-400 text-sm">{__('Loading collaborators...')}</div>
                         ) : employees.length === 0 ? (
                             <div className="py-12 text-center text-slate-400 border border-dashed rounded-xl p-8">
                                 <Users className="h-10 w-10 mx-auto text-slate-300 mb-2" />
-                                <p className="text-sm font-semibold">{__('No hay colaboradores registrados')}</p>
-                                <p className="text-xs mt-1 text-slate-400">{__('Haga clic en "Agregar Colaborador" para registrar empleados de este productor.')}</p>
+                                <p className="text-sm font-semibold">{__('No collaborators registered')}</p>
+                                <p className="text-xs mt-1 text-slate-400">{__('Click "Add Collaborator" to register employees for this producer.')}</p>
                             </div>
                         ) : (
                             <div className="divide-y divide-slate-100 dark:divide-slate-800 border rounded-xl overflow-hidden">
@@ -782,7 +782,7 @@ export default function ProductorEmpleadosModal({
                                                     {emp.nombres} {emp.apellidos}
                                                 </h4>
                                                 <div className="flex items-center gap-3 text-xs text-slate-500 mt-0.5">
-                                                    <span>RFC/ID: {emp.documento_identidad}</span>
+                                                    <span dir="ltr">RFC/ID: {emp.documento_identidad}</span>
                                                     {emp.cargo && <span>• {emp.cargo}</span>}
                                                 </div>
                                             </div>
