@@ -33,7 +33,7 @@ trait Multitenantable
                         }
                     }
 
-                    if ($table !== 'sucursales' && isset($user->sucursal_id) && $user->sucursal_id) {
+                    if ($table !== 'empresas' && $table !== 'sucursales' && isset($user->sucursal_id) && $user->sucursal_id) {
                         if (! isset($model->sucursal_id) || empty($model->sucursal_id)) {
                             $model->sucursal_id = $user->sucursal_id;
                         }
