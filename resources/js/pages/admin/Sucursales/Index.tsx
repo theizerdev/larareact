@@ -427,7 +427,7 @@ return;
 
     const columns: ColumnDef<Sucursal>[] = [
         {
-            header: 'Branch',
+            header: __('Branch'),
             accessorKey: 'nombre',
             className: 'font-medium',
             cell: (sucursal) => (
@@ -445,7 +445,7 @@ return;
             ),
         },
         {
-            header: 'Company',
+            header: __('Company'),
             accessorKey: 'empresa',
             hideOn: 'mobile',
             cell: (sucursal) => (
@@ -468,7 +468,7 @@ return;
             ),
         },
         {
-            header: 'Contact',
+            header: __('Contact'),
             hideOn: 'mobile',
             cell: (sucursal) => (
                 <div className="space-y-0.5">
@@ -501,7 +501,7 @@ return;
             ),
         },
         {
-            header: 'Status',
+            header: __('Status'),
             stopRowClick: true,
             cell: (sucursal) => (
                 <div className="flex items-center space-x-2">
@@ -521,7 +521,7 @@ return;
             ),
         },
         {
-            header: 'Actions',
+            header: __('Actions'),
             className: 'text-right',
             hideable: false,
             stopRowClick: true,
@@ -534,18 +534,18 @@ return;
                     </DropdownMenuTrigger>
                     <DropdownMenuContent align="end">
                         <DropdownMenuItem onClick={() => handleEditClick(sucursal)}>
-                            <Pencil className="mr-2 h-4 w-4" />
+                            <Pencil className="mr-2 rtl:mr-0 rtl:ml-2 h-4 w-4" />
                             {__('Edit')}
                         </DropdownMenuItem>
                         <DropdownMenuItem onClick={() => handleToggleStatus(sucursal)}>
-                            <ToggleRight className="mr-2 h-4 w-4" />
+                            <ToggleRight className="mr-2 rtl:mr-0 rtl:ml-2 h-4 w-4" />
                             {sucursal.status ? __('Deactivate') : __('Activate')}
                         </DropdownMenuItem>
                         <DropdownMenuItem
                             onClick={() => setDeletingSucursal(sucursal)}
                             className="text-red-600 focus:text-red-600 dark:text-red-400"
                         >
-                            <Trash2 className="mr-2 h-4 w-4" />
+                            <Trash2 className="mr-2 rtl:mr-0 rtl:ml-2 h-4 w-4" />
                             {__('Delete')}
                         </DropdownMenuItem>
                     </DropdownMenuContent>
@@ -570,7 +570,7 @@ return;
                     colorClassName="bg-violet-600"
                 >
                     <Button onClick={handleCreateClick}>
-                        <Plus className="mr-2 h-4 w-4" />
+                        <Plus className="mr-2 rtl:mr-0 rtl:ml-2 h-4 w-4" />
                         {__('New Branch')}
                     </Button>
                 </ModuleHeader>
@@ -659,11 +659,11 @@ return;
                         isLoading={isTableLoading}
                         onRowClick={(sucursal) => handleEditClick(sucursal)}
                         emptyState={{
-                            title: 'No branches found',
+                            title: __('No branches found'),
                             description: searchTerm || statusFilter || empresaFilter
-                                ? 'Try clearing your search filters or changing your query.'
-                                : 'You have not registered any branches yet.',
-                            ctaLabel: 'New Branch',
+                                ? __('Try clearing your search filters or changing your query.')
+                                : __('You have not registered any branches yet.'),
+                            ctaLabel: __('New Branch'),
                             onCtaClick: handleCreateClick,
                         }}
                     />
@@ -740,7 +740,7 @@ return;
                                             id="nombre"
                                             value={data.nombre}
                                             onChange={(e) => setData('nombre', e.target.value)}
-                                            placeholder="Ej: Sucursal Centro"
+                                            placeholder={__('e.g. Downtown Branch')}
                                             className="h-10 text-sm"
                                         />
                                         {errors.nombre && (
@@ -750,7 +750,7 @@ return;
 
                                     {/* Numeral Planta (Código de Acceso) */}
                                     <div>
-                                        <Label htmlFor="codigo_numeral">Numeral Planta (Ej: 01 Purépero, 02 Tuxcueca) *</Label>
+                                        <Label htmlFor="codigo_numeral">{__('Plant Numeral (e.g. 01 Purépero, 02 Tuxcueca)')} *</Label>
                                         <Input
                                             id="codigo_numeral"
                                             value={data.codigo_numeral}
@@ -830,7 +830,7 @@ return;
                                             id="ciudad"
                                             value={data.ciudad || ''}
                                             onChange={(e) => setData('ciudad', e.target.value)}
-                                            placeholder="Ej: Purépero"
+                                            placeholder={__('City')}
                                         />
                                         {errors.ciudad && <p className="text-red-500 text-xs mt-1">{errors.ciudad}</p>}
                                     </div>
@@ -840,7 +840,7 @@ return;
                                             id="estado"
                                             value={data.estado || ''}
                                             onChange={(e) => setData('estado', e.target.value)}
-                                            placeholder="Ej: Michoacán"
+                                            placeholder={__('State')}
                                         />
                                         {errors.estado && <p className="text-red-500 text-xs mt-1">{errors.estado}</p>}
                                     </div>
@@ -850,7 +850,7 @@ return;
                                             id="colonia"
                                             value={data.colonia || ''}
                                             onChange={(e) => setData('colonia', e.target.value)}
-                                            placeholder="Ej: Centro"
+                                            placeholder={__('Neighborhood')}
                                         />
                                         {errors.colonia && <p className="text-red-500 text-xs mt-1">{errors.colonia}</p>}
                                     </div>
@@ -860,7 +860,7 @@ return;
                                             id="codigo_postal"
                                             value={data.codigo_postal || ''}
                                             onChange={(e) => setData('codigo_postal', e.target.value)}
-                                            placeholder="Ej: 58540"
+                                            placeholder="58540"
                                         />
                                         {errors.codigo_postal && (
                                             <p className="text-red-500 text-xs mt-1">{errors.codigo_postal}</p>
@@ -891,7 +891,7 @@ return;
                                         onClick={handleForceGeocode}
                                         disabled={geocoding}
                                     >
-                                        <MapPin className="mr-2 h-4 w-4" />
+                                        <MapPin className="mr-2 rtl:mr-0 rtl:ml-2 h-4 w-4" />
                                         {geocoding ? __('Locating...') : __('Locate address on map')}
                                     </Button>
                                     <span className="text-xs text-muted-foreground">
@@ -940,7 +940,7 @@ return;
                                             onValueChange={(v) => setData('zona_horaria', v)}
                                         >
                                             <SelectTrigger id="zona_horaria" className="w-full text-xs font-mono">
-                                                <SelectValue placeholder="Seleccionar zona horaria" />
+                                                <SelectValue placeholder={__('Select time zone')} />
                                             </SelectTrigger>
                                             <SelectContent>
                                                 <SelectItem value="America/Mexico_City">America/Mexico_City (Centro: CDMX, GDL, MTY)</SelectItem>

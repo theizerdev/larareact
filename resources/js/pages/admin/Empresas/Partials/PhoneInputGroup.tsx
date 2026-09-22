@@ -1,6 +1,7 @@
 import { ChevronDown, Search } from 'lucide-react';
 import React, { useState, useMemo, useRef, useEffect } from 'react';
 import { Input } from '@/components/ui/input';
+import { useTranslate } from '@/hooks/use-translate';
 import { cn } from '@/lib/utils';
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
@@ -68,6 +69,7 @@ export default function PhoneInputGroup({
     error,
     className,
 }: PhoneInputGroupProps) {
+    const { __ } = useTranslate();
     const [isOpen, setIsOpen] = useState(false);
     const [search, setSearch] = useState('');
     const searchRef  = useRef<HTMLInputElement>(null);
@@ -188,7 +190,7 @@ return paises;
                                 type="text"
                                 value={search}
                                 onChange={(e) => setSearch(e.target.value)}
-                                placeholder="Buscar país o código..."
+                                placeholder={__('Search country or code...')}
                                 className={cn(
                                     'w-full pl-8 pr-3 py-1.5 text-sm',
                                     'bg-muted rounded-md',
@@ -213,7 +215,7 @@ return paises;
                             )}
                         >
                             <span className="text-base w-6 leading-none select-none">🌐</span>
-                            <span className="text-muted-foreground italic">Sin país</span>
+                            <span className="text-muted-foreground italic">{__('No country')}</span>
                         </button>
 
                         {filtered.map((pais) => {
@@ -245,7 +247,7 @@ return paises;
 
                         {filtered.length === 0 && (
                             <p className="px-3 py-5 text-sm text-center text-muted-foreground">
-                                No se encontraron países
+                                {__('No countries found')}
                             </p>
                         )}
                     </div>
