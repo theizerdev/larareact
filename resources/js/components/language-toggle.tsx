@@ -34,6 +34,9 @@ export default function LanguageToggle() {
                 onSuccess: () => {
                     window.location.reload();
                 },
+                onError: (err) => {
+                    console.error('Error switching language:', err);
+                },
             },
         );
     };

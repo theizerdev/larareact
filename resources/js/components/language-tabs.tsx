@@ -36,6 +36,9 @@ export default function LanguageTabs({
                 onSuccess: () => {
                     window.location.reload();
                 },
+                onError: (err) => {
+                    console.error('Error switching language:', err);
+                },
             },
         );
     };

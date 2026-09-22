@@ -62,7 +62,7 @@ export function TemplateSettingsProvider({ children }: { children: React.ReactNo
         const base = { ...DEFAULT_SETTINGS, direction: defaultDir };
 
         if (dbSettings) {
-            return { ...base, ...dbSettings };
+            return { ...base, ...dbSettings, direction: defaultDir };
         }
 
         if (typeof window === 'undefined') {
@@ -73,7 +73,9 @@ export function TemplateSettingsProvider({ children }: { children: React.ReactNo
             const stored = localStorage.getItem('template-settings');
 
             if (stored) {
-                return { ...base, ...JSON.parse(stored) };
+                const parsed = JSON.parse(stored);
+                // Ensure locale always determines direction
+                return { ...base, ...parsed, direction: defaultDir };
             }
         } catch (e) {
             console.error('Error loading template settings', e);
@@ -94,12 +96,14 @@ export function TemplateSettingsProvider({ children }: { children: React.ReactNo
     // Automatically sync direction when locale changes (e.g. switching to/from Arabic)
     const prevLocale = useRef(locale);
     useEffect(() => {
-        if (locale && locale !== prevLocale.current) {
-            prevLocale.current = locale;
+        if (locale) {
             const targetDir: 'ltr' | 'rtl' = locale === 'ar' ? 'rtl' : 'ltr';
-            updateSetting('direction', targetDir);
+            if (locale !== prevLocale.current || settings.direction !== targetDir) {
+                prevLocale.current = locale;
+                updateSetting('direction', targetDir);
+            }
         }
-    }, [locale]);
+    }, [locale, settings.direction]);
 
     // Sync settings state ONLY if user changes (e.g. login/logout)
     const prevUserId = useRef(userId);
