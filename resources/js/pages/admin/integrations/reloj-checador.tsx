@@ -120,6 +120,7 @@ export default function RelojChecadorIntegration({
                                     <Input
                                         id="biotime_base_url"
                                         type="text"
+                                        dir="ltr"
                                         placeholder="http://187.201.95.48:8081"
                                         value={biotimeForm.data.biotime_base_url}
                                         onChange={(e) => biotimeForm.setData('biotime_base_url', e.target.value)}
@@ -133,6 +134,7 @@ export default function RelojChecadorIntegration({
                                     <Input
                                         id="biotime_username"
                                         type="text"
+                                        dir="ltr"
                                         placeholder="Sistemas"
                                         value={biotimeForm.data.biotime_username}
                                         onChange={(e) => biotimeForm.setData('biotime_username', e.target.value)}
@@ -146,7 +148,7 @@ export default function RelojChecadorIntegration({
                                     <Input
                                         id="biotime_password"
                                         type="password"
-                                        placeholder={biotime_password_set ? '•••••••• (unchanged)' : ''}
+                                        placeholder={biotime_password_set ? __('•••••••• (unchanged)') : ''}
                                         value={biotimeForm.data.biotime_password}
                                         onChange={(e) => biotimeForm.setData('biotime_password', e.target.value)}
                                         disabled={!biotimeForm.data.biotime_active}

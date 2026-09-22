@@ -435,6 +435,7 @@ return '';
                                         <Label htmlFor="whatsapp_api_url">{__('Connection IP / API URL')}</Label>
                                         <Input
                                             id="whatsapp_api_url"
+                                            dir="ltr"
                                             placeholder="http://localhost:8092"
                                             value={configForm.data.whatsapp_api_url}
                                             onChange={(e) => configForm.setData('whatsapp_api_url', e.target.value)}
@@ -450,6 +451,7 @@ return '';
                                         <Label htmlFor="whatsapp_instance">{__('WhatsApp Instance Name')}</Label>
                                         <Input
                                             id="whatsapp_instance"
+                                            dir="ltr"
                                             placeholder="empresa_1"
                                             value={configForm.data.whatsapp_instance}
                                             onChange={(e) => configForm.setData('whatsapp_instance', e.target.value)}
@@ -466,6 +468,7 @@ return '';
                                         <Input
                                             id="whatsapp_rate_limit"
                                             type="number"
+                                            dir="ltr"
                                             min="1"
                                             max="1000"
                                             value={configForm.data.whatsapp_rate_limit}
@@ -483,6 +486,7 @@ return '';
                                             <Input
                                                 id="whatsapp_api_key"
                                                 type="text"
+                                                dir="ltr"
                                                 placeholder={__('Paste or enter API token...')}
                                                 value={configForm.data.whatsapp_api_key}
                                                 onChange={(e) => configForm.setData('whatsapp_api_key', e.target.value)}

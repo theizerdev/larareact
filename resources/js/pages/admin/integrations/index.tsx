@@ -131,6 +131,7 @@ export default function Integrations({
                                     <Input
                                         id="mapbox_api_key"
                                         type="password"
+                                        dir="ltr"
                                         placeholder="pk.eyJ1..."
                                         value={mapboxForm.data.mapbox_api_key}
                                         onChange={(e) => mapboxForm.setData('mapbox_api_key', e.target.value)}
@@ -199,6 +200,7 @@ export default function Integrations({
                                     <Input
                                         id="google_maps_api_key"
                                         type="password"
+                                        dir="ltr"
                                         placeholder="AIzaSy..."
                                         value={googleMapsForm.data.google_maps_api_key}
                                         onChange={(e) => googleMapsForm.setData('google_maps_api_key', e.target.value)}

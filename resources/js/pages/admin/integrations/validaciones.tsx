@@ -131,6 +131,7 @@ export default function Validaciones({ jaak_api_key, jaak_environment, jaak_acti
                                     <Input
                                         id="jaak_api_key"
                                         type="password"
+                                        dir="ltr"
                                         placeholder="eyJhbGciOi..."
                                         value={jaakForm.data.jaak_api_key}
                                         onChange={(e) => jaakForm.setData('jaak_api_key', e.target.value)}

@@ -117,6 +117,7 @@ export default function ControlAccesoIntegration({
                                     <Input
                                         id="control_acceso_base_url"
                                         type="text"
+                                        dir="ltr"
                                         placeholder="https://tu-middleware.ejemplo.com"
                                         value={controlAccesoForm.data.control_acceso_base_url}
                                         onChange={(e) => controlAccesoForm.setData('control_acceso_base_url', e.target.value)}
@@ -130,6 +131,7 @@ export default function ControlAccesoIntegration({
                                     <Input
                                         id="control_acceso_app_token"
                                         type="password"
+                                        dir="ltr"
                                         placeholder="shk_..."
                                         value={controlAccesoForm.data.control_acceso_app_token}
                                         onChange={(e) => controlAccesoForm.setData('control_acceso_app_token', e.target.value)}
@@ -144,6 +146,7 @@ export default function ControlAccesoIntegration({
                                     <Input
                                         id="control_acceso_user_token"
                                         type="password"
+                                        dir="ltr"
                                         placeholder="usr_..."
                                         value={controlAccesoForm.data.control_acceso_user_token}
                                         onChange={(e) => controlAccesoForm.setData('control_acceso_user_token', e.target.value)}

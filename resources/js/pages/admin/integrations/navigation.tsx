@@ -707,8 +707,8 @@ return <Navigation className="h-6 w-6 text-emerald-400 rotate-90" />;
                                 <div className="p-2.5 bg-emerald-500/10 rounded-lg text-emerald-400 border border-emerald-500/20">
                                     <Gauge className="h-6 w-6" />
                                 </div>
-                                <div className="text-left">
-                                    <p className="text-2xl font-black text-white font-mono tracking-tight">{speed} <span className="text-xs font-semibold text-slate-400 font-sans">km/h</span></p>
+                                <div className="text-start">
+                                    <p className="text-2xl font-black text-white font-mono tracking-tight">{speed} <span className="text-xs font-semibold text-slate-400 font-sans">{__('km/h')}</span></p>
                                     <p className="text-[9px] font-bold text-slate-500 uppercase tracking-widest">{__('Speed')}</p>
                                 </div>
                             </div>
@@ -718,7 +718,7 @@ return <Navigation className="h-6 w-6 text-emerald-400 rotate-90" />;
                                 {/* Time Left Card */}
                                 <div className="bg-slate-800/40 border border-slate-850 p-3 px-4 rounded-xl flex items-center gap-3 justify-center">
                                     <Clock className="h-5 w-5 text-indigo-400 shrink-0" />
-                                    <div className="text-left min-w-0">
+                                    <div className="text-start min-w-0">
                                         <p className="text-lg font-bold text-white tracking-tight truncate">{remainingDuration !== null ? formatDuration(remainingDuration) : '--'}</p>
                                         <p className="text-[9px] font-bold text-slate-500 uppercase tracking-widest truncate">{__('Time left')}</p>
                                     </div>
@@ -727,7 +727,7 @@ return <Navigation className="h-6 w-6 text-emerald-400 rotate-90" />;
                                 {/* Distance Left Card */}
                                 <div className="bg-slate-800/40 border border-slate-850 p-3 px-4 rounded-xl flex items-center gap-3 justify-center">
                                     <Flag className="h-5 w-5 text-indigo-400 shrink-0" />
-                                    <div className="text-left min-w-0">
+                                    <div className="text-start min-w-0">
                                         <p className="text-lg font-bold text-white tracking-tight truncate">{remainingDistance !== null ? formatDistance(remainingDistance) : '--'}</p>
                                         <p className="text-[9px] font-bold text-slate-500 uppercase tracking-widest truncate">{__('Distance left')}</p>
                                     </div>
@@ -736,7 +736,7 @@ return <Navigation className="h-6 w-6 text-emerald-400 rotate-90" />;
                                 {/* ETA Card */}
                                 <div className="bg-slate-800/40 border border-slate-850 p-3 px-4 rounded-xl flex items-center gap-3 justify-center">
                                     <Compass className="h-5 w-5 text-emerald-400 shrink-0" />
-                                    <div className="text-left min-w-0">
+                                    <div className="text-start min-w-0">
                                         <p className="text-lg font-bold text-emerald-400 tracking-tight truncate">{eta}</p>
                                         <p className="text-[9px] font-bold text-slate-500 uppercase tracking-widest truncate">{__('ETA')}</p>
                                     </div>
