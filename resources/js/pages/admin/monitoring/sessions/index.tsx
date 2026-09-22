@@ -170,7 +170,7 @@ export default function SessionMonitoring({ sessions }: PageProps) {
                                                 )}
                                                 <div>
                                                     <p className="text-sm font-medium">
-                                                        {session.browser} en {session.os}
+                                                        {session.browser} {__('on')} {session.os}
                                                     </p>
                                                     <p className="text-xs text-muted-foreground capitalize">
                                                         {session.device}
@@ -181,7 +181,7 @@ export default function SessionMonitoring({ sessions }: PageProps) {
 
                                         {/* IP */}
                                         <TableCell className="font-mono text-xs text-slate-700 dark:text-slate-300">
-                                            {session.ip_address}
+                                            <span dir="ltr">{session.ip_address}</span>
                                         </TableCell>
 
                                         {/* Ubicación */}

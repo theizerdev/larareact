@@ -49,25 +49,25 @@ export default function QueueMonitoring({ stats, pendingJobs, failedJobs }: Page
         router.post(`/admin/monitoring/queues/${id}/retry`, {}, {
             preserveScroll: true,
             onSuccess: () => {
-                Swal.fire(__('Trabajo Reintentado'), __('El trabajo ha sido devuelto a la cola de procesamiento.'), 'success');
+                Swal.fire(__('Job Retried'), __('The job has been returned to the processing queue.'), 'success');
             }
         });
     };
 
     const handleRetryAll = () => {
         Swal.fire({
-            title: __('¿Reintentar todos?'),
-            text: __('Se pondrán en cola nuevamente todos los trabajos fallidos.'),
+            title: __('Retry all failed jobs?'),
+            text: __('All failed jobs will be queued again for processing.'),
             icon: 'info',
             showCancelButton: true,
-            confirmButtonText: __('Sí, reintentar todos'),
-            cancelButtonText: __('Cancelar'),
+            confirmButtonText: __('Yes, retry all'),
+            cancelButtonText: __('Cancel'),
         }).then((result) => {
             if (result.isConfirmed) {
                 router.post('/admin/monitoring/queues/retry-all', {}, {
                     preserveScroll: true,
                     onSuccess: () => {
-                        Swal.fire(__('Reintentando'), __('Todos los trabajos han sido encolados de nuevo.'), 'success');
+                        Swal.fire(__('Retrying'), __('All jobs have been queued again.'), 'success');
                     }
                 });
             }
@@ -76,18 +76,18 @@ export default function QueueMonitoring({ stats, pendingJobs, failedJobs }: Page
 
     const handleDelete = (id: number) => {
         Swal.fire({
-            title: __('¿Estás seguro?'),
-            text: __('El registro de este error se eliminará permanentemente.'),
+            title: __('Are you sure?'),
+            text: __('The error record will be permanently deleted.'),
             icon: 'warning',
             showCancelButton: true,
-            confirmButtonText: __('Sí, eliminar'),
-            cancelButtonText: __('Cancelar'),
+            confirmButtonText: __('Yes, delete'),
+            cancelButtonText: __('Cancel'),
         }).then((result) => {
             if (result.isConfirmed) {
                 router.delete(`/admin/monitoring/queues/${id}`, {
                     preserveScroll: true,
                     onSuccess: () => {
-                        Swal.fire(__('Eliminado'), __('El trabajo fallido ha sido eliminado.'), 'success');
+                        Swal.fire(__('Deleted'), __('The failed job has been deleted.'), 'success');
                     }
                 });
             }
@@ -96,12 +96,12 @@ export default function QueueMonitoring({ stats, pendingJobs, failedJobs }: Page
 
     const handleClearAll = () => {
         Swal.fire({
-            title: __('¿Vaciar historial de fallas?'),
-            text: __('Esta acción eliminará de forma permanente todos los trabajos fallidos.'),
+            title: __('Clear failure history?'),
+            text: __('This action will permanently delete all failed jobs.'),
             icon: 'warning',
             showCancelButton: true,
-            confirmButtonText: __('Sí, vaciar todo'),
-            cancelButtonText: __('Cancelar'),
+            confirmButtonText: __('Yes, clear all'),
+            cancelButtonText: __('Cancel'),
             customClass: {
                 confirmButton: 'bg-destructive text-destructive-foreground hover:bg-destructive/90',
             }
@@ -110,7 +110,7 @@ export default function QueueMonitoring({ stats, pendingJobs, failedJobs }: Page
                 router.delete('/admin/monitoring/queues/clear-all', {
                     preserveScroll: true,
                     onSuccess: () => {
-                        Swal.fire(__('Historial Vacíado'), __('Todos los registros de trabajos fallidos se han eliminado.'), 'success');
+                        Swal.fire(__('History Cleared'), __('All failed job records have been deleted.'), 'success');
                     }
                 });
             }
@@ -134,10 +134,10 @@ export default function QueueMonitoring({ stats, pendingJobs, failedJobs }: Page
                     <div>
                         <h1 className="text-3xl font-bold tracking-tight flex items-center gap-3">
                             <Layers className="h-8 w-8 text-indigo-600" />
-                            {__('Monitoreo de Colas y Procesos')}
+                            {__('Queue & Process Monitoring')}
                         </h1>
                         <p className="text-muted-foreground mt-1">
-                            {__('Supervisa el estado y ejecución de tus procesos asíncronos y colas de trabajo (Jobs) en ejecución.')}
+                            {__('Monitor the status and execution of your asynchronous processes and job queues.')}
                         </p>
                     </div>
 
@@ -150,7 +150,7 @@ export default function QueueMonitoring({ stats, pendingJobs, failedJobs }: Page
                                 onClick={handleRetryAll}
                             >
                                 <RefreshCw className="h-4 w-4" />
-                                {__('Reintentar Todos')}
+                                {__('Retry All')}
                             </Button>
                             <Button 
                                 variant="destructive" 
@@ -159,7 +159,7 @@ export default function QueueMonitoring({ stats, pendingJobs, failedJobs }: Page
                                 onClick={handleClearAll}
                             >
                                 <Trash2 className="h-4 w-4" />
-                                {__('Vaciar Fallidos')}
+                                {__('Clear Failed')}
                             </Button>
                         </div>
                     )}
@@ -169,45 +169,45 @@ export default function QueueMonitoring({ stats, pendingJobs, failedJobs }: Page
                 <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
                     <Card className="shadow-sm">
                         <CardHeader className="flex flex-row items-center justify-between pb-2">
-                            <CardTitle className="text-sm font-semibold text-muted-foreground uppercase">{__('Driver Activo')}</CardTitle>
+                            <CardTitle className="text-sm font-semibold text-muted-foreground uppercase">{__('Active Driver')}</CardTitle>
                             <Cpu className="h-5 w-5 text-indigo-500" />
                         </CardHeader>
                         <CardContent>
                             <div className="text-2xl font-bold capitalize">{stats.connection}</div>
-                            <p className="text-xs text-muted-foreground mt-1">{__('Conexión del sistema de colas')}</p>
+                            <p className="text-xs text-muted-foreground mt-1">{__('Queue system connection')}</p>
                         </CardContent>
                     </Card>
 
                     <Card className="shadow-sm">
                         <CardHeader className="flex flex-row items-center justify-between pb-2">
-                            <CardTitle className="text-sm font-semibold text-muted-foreground uppercase">{__('Pendientes')}</CardTitle>
+                            <CardTitle className="text-sm font-semibold text-muted-foreground uppercase">{__('Pending')}</CardTitle>
                             <Layers className="h-5 w-5 text-blue-500" />
                         </CardHeader>
                         <CardContent>
                             <div className="text-2xl font-bold">{stats.pending}</div>
-                            <p className="text-xs text-muted-foreground mt-1">{__('Trabajos esperando procesamiento')}</p>
+                            <p className="text-xs text-muted-foreground mt-1">{__('Jobs waiting for processing')}</p>
                         </CardContent>
                     </Card>
 
                     <Card className="shadow-sm">
                         <CardHeader className="flex flex-row items-center justify-between pb-2">
-                            <CardTitle className="text-sm font-semibold text-muted-foreground uppercase">{__('En Ejecución')}</CardTitle>
+                            <CardTitle className="text-sm font-semibold text-muted-foreground uppercase">{__('Running')}</CardTitle>
                             <Play className="h-5 w-5 text-emerald-500 animate-pulse" />
                         </CardHeader>
                         <CardContent>
                             <div className="text-2xl font-bold text-emerald-600 dark:text-emerald-400">{stats.running}</div>
-                            <p className="text-xs text-muted-foreground mt-1">{__('Procesos activos actualmente')}</p>
+                            <p className="text-xs text-muted-foreground mt-1">{__('Currently active processes')}</p>
                         </CardContent>
                     </Card>
 
                     <Card className="shadow-sm">
                         <CardHeader className="flex flex-row items-center justify-between pb-2">
-                            <CardTitle className="text-sm font-semibold text-muted-foreground uppercase">{__('Fallidos')}</CardTitle>
+                            <CardTitle className="text-sm font-semibold text-muted-foreground uppercase">{__('Failed')}</CardTitle>
                             <AlertTriangle className="h-5 w-5 text-rose-500" />
                         </CardHeader>
                         <CardContent>
                             <div className="text-2xl font-bold text-rose-600 dark:text-rose-400">{stats.failed}</div>
-                            <p className="text-xs text-muted-foreground mt-1">{__('Trabajos que reportaron un error')}</p>
+                            <p className="text-xs text-muted-foreground mt-1">{__('Jobs that reported an error')}</p>
                         </CardContent>
                     </Card>
                 </div>
@@ -215,26 +215,26 @@ export default function QueueMonitoring({ stats, pendingJobs, failedJobs }: Page
                 {/* Tabs de Radix UI */}
                 <Tabs defaultValue="pending" className="w-full">
                     <TabsList className="grid grid-cols-2 max-w-[360px]">
-                        <TabsTrigger value="pending">{__('Trabajos Activos')} ({pendingJobs.length})</TabsTrigger>
-                        <TabsTrigger value="failed">{__('Trabajos Fallidos')} ({failedJobs.length})</TabsTrigger>
+                        <TabsTrigger value="pending">{__('Active Jobs')} ({pendingJobs.length})</TabsTrigger>
+                        <TabsTrigger value="failed">{__('Failed Jobs')} ({failedJobs.length})</TabsTrigger>
                     </TabsList>
 
                     {/* Tab 1: Pendientes y Ejecución */}
                     <TabsContent value="pending" className="mt-4">
                         <Card className="shadow-sm">
                             <CardHeader>
-                                <CardTitle>{__('Cola de Procesamiento')}</CardTitle>
-                                <CardDescription>{__('Procesos asíncronos activos o esperando su turno de ejecución.')}</CardDescription>
+                                <CardTitle>{__('Processing Queue')}</CardTitle>
+                                <CardDescription>{__('Active or queued asynchronous processes awaiting execution.')}</CardDescription>
                             </CardHeader>
                             <CardContent>
                                 <Table>
                                     <TableHeader>
                                         <TableRow>
                                             <TableHead className="w-20">{__('ID')}</TableHead>
-                                            <TableHead>{__('Cola (Queue)')}</TableHead>
-                                            <TableHead className="text-center">{__('Intentos')}</TableHead>
-                                            <TableHead>{__('Fecha de Encolado')}</TableHead>
-                                            <TableHead className="text-right">{__('Estado')}</TableHead>
+                                            <TableHead>{__('Queue')}</TableHead>
+                                            <TableHead className="text-center">{__('Attempts')}</TableHead>
+                                            <TableHead>{__('Queued Date')}</TableHead>
+                                            <TableHead className="text-right">{__('Status')}</TableHead>
                                         </TableRow>
                                     </TableHeader>
                                     <TableBody>
@@ -257,7 +257,7 @@ export default function QueueMonitoring({ stats, pendingJobs, failedJobs }: Page
                                                         variant={job.status === 'running' ? 'default' : 'secondary'}
                                                         className={job.status === 'running' ? 'bg-emerald-600 text-white' : ''}
                                                     >
-                                                        {job.status === 'running' ? __('Ejecutándose') : __('Pendiente')}
+                                                        {job.status === 'running' ? __('Running') : __('Pending')}
                                                     </Badge>
                                                 </TableCell>
                                             </TableRow>
@@ -266,7 +266,7 @@ export default function QueueMonitoring({ stats, pendingJobs, failedJobs }: Page
                                         {pendingJobs.length === 0 && (
                                             <TableRow>
                                                 <TableCell colSpan={5} className="text-center py-8 text-muted-foreground">
-                                                    {__('No hay trabajos pendientes ni en ejecución en este momento.')}
+                                                    {__('No pending or running jobs at this time.')}
                                                 </TableCell>
                                             </TableRow>
                                         )}
@@ -280,18 +280,18 @@ export default function QueueMonitoring({ stats, pendingJobs, failedJobs }: Page
                     <TabsContent value="failed" className="mt-4">
                         <Card className="shadow-sm">
                             <CardHeader>
-                                <CardTitle>{__('Registro de Fallas')}</CardTitle>
-                                <CardDescription>{__('Listado de trabajos que fallaron. Puedes reintentarlos o eliminarlos del historial.')}</CardDescription>
+                                <CardTitle>{__('Failure Log')}</CardTitle>
+                                <CardDescription>{__('List of failed jobs. You can retry or delete them from the history.')}</CardDescription>
                             </CardHeader>
                             <CardContent>
                                 <Table>
                                     <TableHeader>
                                         <TableRow>
                                             <TableHead className="w-20">{__('ID')}</TableHead>
-                                            <TableHead>{__('Cola')}</TableHead>
-                                            <TableHead>{__('Fecha de Falla')}</TableHead>
-                                            <TableHead>{__('Excepción / Mensaje')}</TableHead>
-                                            <TableHead className="w-32 text-right">{__('Acciones')}</TableHead>
+                                            <TableHead>{__('Queue')}</TableHead>
+                                            <TableHead>{__('Failed Date')}</TableHead>
+                                            <TableHead>{__('Exception / Message')}</TableHead>
+                                            <TableHead className="w-32 text-right">{__('Actions')}</TableHead>
                                         </TableRow>
                                     </TableHeader>
                                     <TableBody>
@@ -315,7 +315,7 @@ export default function QueueMonitoring({ stats, pendingJobs, failedJobs }: Page
                                                             variant="ghost" 
                                                             size="icon" 
                                                             onClick={() => setSelectedException(job.full_exception)}
-                                                            title={__('Ver Excepción Completa')}
+                                                            title={__('View Full Exception')}
                                                         >
                                                             <Eye className="h-4 w-4 text-indigo-500" />
                                                         </Button>
@@ -323,7 +323,7 @@ export default function QueueMonitoring({ stats, pendingJobs, failedJobs }: Page
                                                             variant="ghost" 
                                                             size="icon" 
                                                             onClick={() => handleRetry(job.id)}
-                                                            title={__('Reintentar')}
+                                                            title={__('Retry')}
                                                         >
                                                             <RefreshCw className="h-4 w-4 text-emerald-500" />
                                                         </Button>
@@ -331,7 +331,7 @@ export default function QueueMonitoring({ stats, pendingJobs, failedJobs }: Page
                                                             variant="ghost" 
                                                             size="icon" 
                                                             onClick={() => handleDelete(job.id)}
-                                                            title={__('Eliminar')}
+                                                            title={__('Delete')}
                                                         >
                                                             <Trash2 className="h-4 w-4 text-red-500" />
                                                         </Button>
@@ -343,7 +343,7 @@ export default function QueueMonitoring({ stats, pendingJobs, failedJobs }: Page
                                         {failedJobs.length === 0 && (
                                             <TableRow>
                                                 <TableCell colSpan={5} className="text-center py-8 text-muted-foreground">
-                                                    {__('No se encontraron trabajos fallidos.')}
+                                                    {__('No failed jobs found.')}
                                                 </TableCell>
                                             </TableRow>
                                         )}
@@ -361,7 +361,7 @@ export default function QueueMonitoring({ stats, pendingJobs, failedJobs }: Page
                     <DialogHeader>
                         <DialogTitle className="flex items-center gap-2 text-rose-600">
                             <AlertTriangle className="h-5 w-5 animate-bounce" />
-                            {__('Detalle del Error de Encolado')}
+                            {__('Queue Error Detail')}
                         </DialogTitle>
                         <DialogDescription className="font-mono text-xs bg-slate-950 text-slate-300 p-4 rounded-lg overflow-x-auto whitespace-pre select-text border border-slate-800 mt-4 max-h-[60vh] overscroll-contain">
                             {selectedException}

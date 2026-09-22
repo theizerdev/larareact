@@ -222,7 +222,7 @@ return '0';
                         disabled={loading}
                     >
                         <RefreshCw className="h-4 w-4" />
-                        {__('Refrescar')}
+                        {__('Refresh')}
                     </Button>
                 </div>
 
@@ -287,9 +287,9 @@ return '0';
                         <CardHeader>
                             <CardTitle className="flex items-center gap-2">
                                 <Activity className="h-5 w-5 text-indigo-500" />
-                                {__('Consultas por Segundo (QPS)')}
+                                {__('Queries per Second (QPS)')}
                             </CardTitle>
-                            <CardDescription>{__('Carga transaccional actual en tiempo real (3s de refresco).')}</CardDescription>
+                            <CardDescription>{__('Live transactional load in real time (3s refresh).')}</CardDescription>
                         </CardHeader>
                         <CardContent>
                             <Chart 
@@ -305,9 +305,9 @@ return '0';
                         <CardHeader>
                             <CardTitle className="flex items-center gap-2">
                                 <Hash className="h-5 w-5 text-blue-500" />
-                                {__('Distribución de Consultas')}
+                                {__('Query Distribution')}
                             </CardTitle>
-                            <CardDescription>{__('Estadística del tipo de operaciones ejecutadas.')}</CardDescription>
+                            <CardDescription>{__('Statistics of the type of operations executed.')}</CardDescription>
                         </CardHeader>
                         <CardContent className="flex flex-col justify-between h-[300px]">
                             <div className="pt-2">
@@ -325,8 +325,8 @@ return '0';
                 {/* Detalle Radix UI Tabs */}
                 <Tabs defaultValue="tables" className="w-full">
                     <TabsList className="grid grid-cols-3 max-w-[480px]">
-                        <TabsTrigger value="tables">{__('Tablas y Tamaño')}</TabsTrigger>
-                        <TabsTrigger value="processes">{__('Procesos Activos')}</TabsTrigger>
+                        <TabsTrigger value="tables">{__('Tables & Size')}</TabsTrigger>
+                        <TabsTrigger value="processes">{__('Active Processes')}</TabsTrigger>
                         <TabsTrigger value="slow-queries">{__('Slow Queries')}</TabsTrigger>
                     </TabsList>
 
@@ -334,16 +334,16 @@ return '0';
                     <TabsContent value="tables" className="mt-4">
                         <Card className="shadow-sm">
                             <CardHeader>
-                                <CardTitle>{__('Tamaño de Tablas y Almacenamiento')}</CardTitle>
-                                <CardDescription>{__('Listado y volumen físico de datos por cada tabla en la BD.')}</CardDescription>
+                                <CardTitle>{__('Table Sizes & Storage')}</CardTitle>
+                                <CardDescription>{__('List and physical data volume for each table in the database.')}</CardDescription>
                             </CardHeader>
                             <CardContent>
                                 <Table>
                                     <TableHeader>
                                         <TableRow>
-                                            <TableHead>{__('Nombre de la Tabla')}</TableHead>
-                                            <TableHead className="text-right">{__('Filas Estimadas')}</TableHead>
-                                            <TableHead className="text-right">{__('Tamaño Físico (MB)')}</TableHead>
+                                            <TableHead>{__('Table Name')}</TableHead>
+                                            <TableHead className="text-right">{__('Estimated Rows')}</TableHead>
+                                            <TableHead className="text-right">{__('Physical Size (MB)')}</TableHead>
                                         </TableRow>
                                     </TableHeader>
                                     <TableBody>
@@ -370,19 +370,19 @@ return '0';
                     <TabsContent value="processes" className="mt-4">
                         <Card className="shadow-sm">
                             <CardHeader>
-                                <CardTitle>{__('Lista de Procesos (Threads)')}</CardTitle>
-                                <CardDescription>{__('Conexiones activas actualmente procesadas por la base de datos.')}</CardDescription>
+                                <CardTitle>{__('Process List (Threads)')}</CardTitle>
+                                <CardDescription>{__('Active connections currently being processed by the database.')}</CardDescription>
                             </CardHeader>
                             <CardContent>
                                 <Table>
                                     <TableHeader>
                                         <TableRow>
                                             <TableHead className="w-16">{__('ID')}</TableHead>
-                                            <TableHead>{__('Usuario')}</TableHead>
+                                            <TableHead>{__('User')}</TableHead>
                                             <TableHead>{__('Host')}</TableHead>
-                                            <TableHead>{__('Comando')}</TableHead>
-                                            <TableHead className="text-right">{__('Tiempo (s)')}</TableHead>
-                                            <TableHead>{__('Estado')}</TableHead>
+                                            <TableHead>{__('Command')}</TableHead>
+                                            <TableHead className="text-right">{__('Time (s)')}</TableHead>
+                                            <TableHead>{__('State')}</TableHead>
                                             <TableHead className="max-w-[300px] truncate">{__('Query')}</TableHead>
                                         </TableRow>
                                     </TableHeader>
@@ -400,7 +400,7 @@ return '0';
                                                 <TableCell className="text-right tabular-nums font-mono text-xs">{p.time}</TableCell>
                                                 <TableCell className="text-xs text-slate-600">{p.state || 'idle'}</TableCell>
                                                 <TableCell className="font-mono text-xs max-w-[300px] truncate text-slate-700 dark:text-slate-300" title={p.info}>
-                                                    {p.info || <span className="italic text-muted-foreground">{__('Ninguno')}</span>}
+                                                    {p.info || <span className="italic text-muted-foreground">{__('None')}</span>}
                                                 </TableCell>
                                             </TableRow>
                                         ))}
@@ -416,9 +416,9 @@ return '0';
                             <CardHeader>
                                 <CardTitle className="flex items-center gap-2">
                                     <ShieldAlert className="h-5 w-5 text-amber-500" />
-                                    {__('Registro de Slow Queries')}
+                                    {__('Slow Queries Log')}
                                 </CardTitle>
-                                <CardDescription>{__('Alertas de consultas que exceden el tiempo óptimo de respuesta (100ms).')}</CardDescription>
+                                <CardDescription>{__('Query alerts exceeding the optimal response time threshold (100ms).')}</CardDescription>
                             </CardHeader>
                             <CardContent>
                                 <div className="space-y-4">
@@ -428,10 +428,10 @@ return '0';
                                                 <p className="font-mono text-xs bg-white dark:bg-slate-900 p-2.5 rounded border overflow-x-auto text-red-800 dark:text-red-300">
                                                     {q.query}
                                                 </p>
-                                                <p className="text-xs text-muted-foreground">{__('Ejecutado a las')} {q.time}</p>
+                                                <p className="text-xs text-muted-foreground">{__('Executed at')} <span dir="ltr">{q.time}</span></p>
                                             </div>
                                             <div className="flex gap-2 self-start md:self-auto items-center">
-                                                <span className="text-xs text-muted-foreground">{__('Duración:')}</span>
+                                                <span className="text-xs text-muted-foreground">{__('Duration:')}</span>
                                                 <Badge variant="destructive" className="font-mono text-xs">
                                                     {q.duration}
                                                 </Badge>
