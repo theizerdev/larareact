@@ -191,6 +191,10 @@ function CameraWidget({ onCapture, onCancel }: CameraWidgetProps) {
     const startCamera = async () => {
         setError(null);
         setCaptured(null);
+        if (!navigator?.mediaDevices?.getUserMedia) {
+            setError(__('Sin acceso a la cámara o dispositivo no encontrado.'));
+            return;
+        }
         try {
             const mediaStream = await navigator.mediaDevices.getUserMedia({
                 video: { width: 640, height: 480, facingMode: 'environment' }

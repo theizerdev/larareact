@@ -124,6 +124,10 @@ function CameraWidget({ onCapture, onCancel, title, faceGuide = false, docGuide 
     const faceStableCountRef = useRef(0);
 
     useEffect(() => {
+        if (!navigator?.mediaDevices?.enumerateDevices) {
+            setHasMultipleCameras(false);
+            return;
+        }
         navigator.mediaDevices.enumerateDevices().then(devices => {
             const videoInputs = devices.filter(d => d.kind === 'videoinput');
             setHasMultipleCameras(videoInputs.length > 1);
@@ -155,6 +159,10 @@ function CameraWidget({ onCapture, onCancel, title, faceGuide = false, docGuide 
         setCountdown(3);
         faceStableCountRef.current = 0;
         if (countdownIntervalRef.current) { clearInterval(countdownIntervalRef.current); countdownIntervalRef.current = null; }
+        if (!navigator?.mediaDevices?.getUserMedia) {
+            setError(__('No se pudo acceder a la cámara. Verifique los permisos en su navegador o tablet.'));
+            return;
+        }
         try {
             const mediaStream = await navigator.mediaDevices.getUserMedia({
                 video: { width: 640, height: 480, facingMode: mode }
@@ -165,7 +173,7 @@ function CameraWidget({ onCapture, onCancel, title, faceGuide = false, docGuide 
             }
         } catch (err) {
             console.error(err);
-            setError('Sin acceso a la cámara. Por favor active los permisos del navegador.');
+            setError(__('No se pudo acceder a la cámara. Verifique los permisos en su navegador o tablet.'));
         }
     };
 
@@ -418,19 +426,19 @@ function CameraWidget({ onCapture, onCancel, title, faceGuide = false, docGuide 
                                         {faceStatus === 'searching' && (
                                             <div className="bg-black/70 backdrop-blur-sm rounded-full px-4 py-2 flex items-center gap-2 animate-pulse">
                                                 <Scan className="w-4 h-4 text-slate-400" />
-                                                <span className="text-[11px] font-bold text-slate-300">Coloque su rostro dentro del marco</span>
+                                                <span className="text-[11px] font-bold text-slate-300">{__('Coloque su rostro dentro del marco')}</span>
                                             </div>
                                         )}
                                         {faceStatus === 'detected' && (
                                             <div className="bg-black/70 backdrop-blur-sm rounded-full px-4 py-2 flex items-center gap-2">
                                                 <User className="w-4 h-4 text-yellow-400" />
-                                                <span className="text-[11px] font-bold text-yellow-300">Rostro detectado — mantenga la posición</span>
+                                                <span className="text-[11px] font-bold text-yellow-300">{__('Rostro detectado — mantenga la posición')}</span>
                                             </div>
                                         )}
                                         {faceStatus === 'countdown' && (
                                             <div className="bg-emerald-600/90 backdrop-blur-sm rounded-full px-5 py-2.5 flex items-center gap-2 shadow-lg shadow-emerald-500/30">
                                                 <Camera className="w-4 h-4 text-white" />
-                                                <span className="text-xs font-extrabold text-white">Capturando en {countdown}...</span>
+                                                <span className="text-xs font-extrabold text-white">{__('Capturando en')} {countdown}...</span>
                                             </div>
                                         )}
                                     </div>
@@ -506,13 +514,13 @@ function CameraWidget({ onCapture, onCancel, title, faceGuide = false, docGuide 
                                             <div className="bg-black/75 backdrop-blur-sm rounded-full px-4 py-2 flex items-center gap-2 border border-slate-700 shadow-md">
                                                 <FileText className="w-4 h-4 text-emerald-400" />
                                                 <span className="text-[11px] font-bold text-slate-200">
-                                                    Alinee la credencial — Esquinas: {cornersCount} / 4
+                                                    {__('Alinee la credencial')} — {__('Esquinas')}: {cornersCount} / 4
                                                 </span>
                                             </div>
                                         ) : (
                                             <div className="bg-emerald-600/90 backdrop-blur-sm rounded-full px-5 py-2.5 flex items-center gap-2 shadow-lg shadow-emerald-500/30">
                                                 <Camera className="w-4 h-4 text-white" />
-                                                <span className="text-xs font-extrabold text-white">¡Documento Alineado! Capturando en {countdown}...</span>
+                                                <span className="text-xs font-extrabold text-white">{__('¡Documento Alineado! Capturando en')} {countdown}...</span>
                                             </div>
                                         )}
                                     </div>
@@ -531,8 +539,8 @@ function CameraWidget({ onCapture, onCancel, title, faceGuide = false, docGuide 
                                 <button
                                     type="button"
                                     onClick={flipCamera}
-                                    title={facingMode === 'environment' ? 'Cambiar a cámara frontal' : 'Cambiar a cámara trasera'}
-                                    className="absolute top-3 right-3 bg-black/60 hover:bg-black/80 text-white p-2.5 rounded-full shadow-lg transition-all active:scale-90"
+                                    title={facingMode === 'environment' ? __('Cambiar a cámara frontal') : __('Cambiar a cámara trasera')}
+                                    className="absolute top-3 right-3 rtl:right-auto rtl:left-3 bg-black/60 hover:bg-black/80 text-white p-2.5 rounded-full shadow-lg transition-all active:scale-90"
                                 >
                                     <SwitchCamera className="w-5 h-5" />
                                 </button>
@@ -543,7 +551,7 @@ function CameraWidget({ onCapture, onCancel, title, faceGuide = false, docGuide 
                                 className="absolute bottom-4 bg-emerald-600 hover:bg-emerald-700 text-white shadow-lg rounded-full px-6 py-3 text-xs font-extrabold flex items-center gap-2 transition-transform active:scale-95"
                             >
                                 <Camera className="w-4 h-4" />
-                                {(faceGuide || docGuide) ? 'Capturar Manualmente' : 'Tomar Fotografía'}
+                                {(faceGuide || docGuide) ? __('Capturar Manualmente') : __('Tomar Fotografía')}
                             </button>
                         </div>
                     )}
@@ -559,14 +567,14 @@ function CameraWidget({ onCapture, onCancel, title, faceGuide = false, docGuide 
                                     onClick={() => startCamera()}
                                     className="flex-1 py-3 px-4 rounded-xl border border-slate-700 bg-slate-800 text-xs font-bold hover:bg-slate-700 flex items-center justify-center gap-2"
                                 >
-                                    <RefreshCw className="w-4 h-4" /> Repetir Foto
+                                    <RefreshCw className="w-4 h-4 mr-1 rtl:mr-0 rtl:ml-1" /> {__('Repetir Foto')}
                                 </button>
                                 <button
                                     type="button"
                                     onClick={() => { stopCamera(); if (captured) onCapture(captured); }}
                                     className="flex-1 py-3 px-4 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-extrabold flex items-center justify-center gap-2"
                                 >
-                                    <Check className="w-4 h-4" /> Usar Foto
+                                    <Check className="w-4 h-4 mr-1 rtl:mr-0 rtl:ml-1" /> {__('Usar Foto')}
                                 </button>
                             </div>
                         </div>
@@ -873,6 +881,10 @@ export default function GaritaControl({
 
         if (isScanningCamera) {
             setCameraError(null);
+            if (!navigator?.mediaDevices?.getUserMedia) {
+                setCameraError(__('No se pudo acceder a la cámara. Verifique los permisos en su navegador o tablet.'));
+                return;
+            }
             navigator.mediaDevices.getUserMedia({
                 video: { facingMode: facingMode, width: { ideal: 1280 }, height: { ideal: 720 } }
             })
@@ -1305,7 +1317,7 @@ export default function GaritaControl({
                                 onClick={() => router.get('/admin/visitas-accesos')}
                                 className="bg-white/10 hover:bg-white/20 text-white border-white/20 text-xs font-bold rounded-xl gap-2 backdrop-blur-md"
                             >
-                                <ArrowRight className="w-4 h-4 rotate-180" />
+                                <ArrowRight className="w-4 h-4 rotate-180 rtl:rotate-0" />
                                 {__('Panel Admin')}
                             </Button>
                         </div>
@@ -1318,14 +1330,14 @@ export default function GaritaControl({
                     <div className="bg-white border-2 border-[#104a29]/30 rounded-3xl p-5 shadow-lg space-y-4">
                         <form onSubmit={handleSearchSubmit} className="flex flex-col md:flex-row gap-3">
                             <div className="relative flex-1">
-                                <QrCode className="absolute left-4 top-1/2 -translate-y-1/2 h-6 w-6 text-[#104a29] pointer-events-none" />
+                                <QrCode className="absolute left-4 rtl:left-auto rtl:right-4 top-1/2 -translate-y-1/2 h-6 w-6 text-[#104a29] pointer-events-none" />
                                 <Input
                                     ref={searchInputRef}
                                     type="text"
                                     placeholder={__('Escanee código QR o busque por Código, Nombres, DNI o Placa...')}
                                     value={query}
                                     onChange={(e) => setQuery(e.target.value)}
-                                    className="pl-13 h-14 w-full bg-slate-50 text-slate-900 text-base font-medium rounded-2xl border-slate-300 focus:border-[#104a29] focus:ring-2 focus:ring-[#104a29]/20"
+                                    className="pl-13 rtl:pl-4 rtl:pr-13 h-14 w-full bg-slate-50 text-slate-900 text-base font-medium rounded-2xl border-slate-300 focus:border-[#104a29] focus:ring-2 focus:ring-[#104a29]/20"
                                 />
                             </div>
 
@@ -1398,53 +1410,53 @@ export default function GaritaControl({
                                 <div className="flex items-center gap-3">
                                     {(isEmpleado || isProveedor || isProductor) && accesoExistente && (
                                         <Badge className="bg-blue-300 text-blue-950 font-extrabold text-xs px-3.5 py-1.5 rounded-full border-0">
-                                            <CheckCircle2 className="w-4 h-4 mr-1" />
+                                            <CheckCircle2 className="w-4 h-4 mr-1 rtl:mr-0 rtl:ml-1" />
                                             {__('EN INSTALACIONES (INGRESADO)')}
                                         </Badge>
                                     )}
                                     {(isProveedor || isProductor) && !accesoExistente && (
                                         <Badge className="bg-emerald-400 text-emerald-950 font-extrabold text-xs px-3.5 py-1.5 rounded-full border-0">
-                                            <CheckCircle2 className="w-4 h-4 mr-1" />
+                                            <CheckCircle2 className="w-4 h-4 mr-1 rtl:mr-0 rtl:ml-1" />
                                             {__('GAFETE AUTORIZADO - LISTO PARA INGRESAR')}
                                         </Badge>
                                     )}
                                     {isEmpleado && !accesoExistente && autorizadoHoy && (
                                         <Badge className="bg-emerald-400 text-emerald-950 font-extrabold text-xs px-3.5 py-1.5 rounded-full border-0">
-                                            <CheckCircle2 className="w-4 h-4 mr-1" />
+                                            <CheckCircle2 className="w-4 h-4 mr-1 rtl:mr-0 rtl:ml-1" />
                                             {__('AUTORIZADO PARA INGRESAR')}
                                         </Badge>
                                     )}
                                     {isEmpleado && !accesoExistente && !autorizadoHoy && (
                                         <Badge className="bg-rose-400 text-rose-950 font-extrabold text-xs px-3.5 py-1.5 rounded-full border-0">
-                                            <AlertTriangle className="w-4 h-4 mr-1" />
+                                            <AlertTriangle className="w-4 h-4 mr-1 rtl:mr-0 rtl:ml-1" />
                                             {__('REQUIERE AUTORIZACIÓN FUERA DE HORARIO')}
                                         </Badge>
                                     )}
                                     {isInvitacion && record.status === 'pendiente' && (
                                         <Badge className="bg-emerald-400 text-emerald-950 font-extrabold text-xs px-3.5 py-1.5 rounded-full border-0">
-                                            <CheckCircle2 className="w-4 h-4 mr-1" />
+                                            <CheckCircle2 className="w-4 h-4 mr-1 rtl:mr-0 rtl:ml-1" />
                                             {__('PASE PENDIENTE - LISTO PARA INGRESAR')}
                                         </Badge>
                                     )}
                                     {isAcceso && record.status === 1 && (
                                         <Badge className="bg-blue-300 text-blue-950 font-extrabold text-xs px-3.5 py-1.5 rounded-full border-0">
-                                            <CheckCircle2 className="w-4 h-4 mr-1" />
+                                            <CheckCircle2 className="w-4 h-4 mr-1 rtl:mr-0 rtl:ml-1" />
                                             {__('EN INSTALACIONES (INGRESADO)')}
                                         </Badge>
                                     )}
                                     {isAcceso && record.status === 2 && (
                                         <Badge className="bg-slate-300 text-slate-900 font-extrabold text-xs px-3.5 py-1.5 rounded-full border-0">
-                                            <LogOut className="w-4 h-4 mr-1" />
+                                            <LogOut className="w-4 h-4 mr-1 rtl:mr-0 rtl:ml-1" />
                                             {__('SALIDA CONCLUIDA')}
                                         </Badge>
                                     )}
                                     {isInvitacion && record.status === 'ingresado' && (
                                         <Badge className="bg-blue-400 text-blue-950 font-extrabold text-xs px-3.5 py-1.5 rounded-full border-0">
-                                            <CheckCircle2 className="w-4 h-4 mr-1" />
+                                            <CheckCircle2 className="w-4 h-4 mr-1 rtl:mr-0 rtl:ml-1" />
                                             {__('INGRESADO PREVIAMENTE')}
                                         </Badge>
                                     )}
-                                    <span className="font-mono text-xs font-bold bg-white/10 px-3 py-1 rounded-full border border-white/20">
+                                    <span dir="ltr" className="font-mono text-xs font-bold bg-white/10 px-3 py-1 rounded-full border border-white/20">
                                         N° {record.documento_identidad || record.codigo_invitacion || record.codigo_visitante || record.id}
                                     </span>
                                 </div>
@@ -1733,7 +1745,7 @@ export default function GaritaControl({
                                                                         <label className="text-[10px] font-bold text-slate-500 uppercase block mb-1">{__('Placa *')}</label>
                                                                         <Input
                                                                             type="text"
-                                                                            placeholder="EJ: ABC-123"
+                                                                            placeholder={__('EJ: ABC-123')}
                                                                             value={nuevoVehiculoPlaca}
                                                                             onChange={(e) => setNuevoVehiculoPlaca(e.target.value.toUpperCase())}
                                                                             className="h-9 text-xs font-mono font-extrabold uppercase bg-white border-slate-300 focus:border-amber-500"
@@ -1747,10 +1759,10 @@ export default function GaritaControl({
                                                                             onChange={(e) => setNuevoVehiculoTipo(e.target.value)}
                                                                             className="w-full h-9 bg-white border border-slate-300 rounded-xl px-2 text-xs font-medium focus:border-amber-500"
                                                                         >
-                                                                            <option value="Auto">Auto</option>
-                                                                            <option value="Camioneta">Camioneta</option>
-                                                                            <option value="Motocicleta">Motocicleta</option>
-                                                                            <option value="Camión">Camión</option>
+                                                                            <option value="Auto">{__('Auto')}</option>
+                                                                            <option value="Camioneta">{__('Camioneta')}</option>
+                                                                            <option value="Motocicleta">{__('Motocicleta')}</option>
+                                                                            <option value="Camión">{__('Camión')}</option>
                                                                         </select>
                                                                     </div>
 
@@ -1758,7 +1770,7 @@ export default function GaritaControl({
                                                                         <label className="text-[10px] font-bold text-slate-500 uppercase block mb-1">{__('Marca')}</label>
                                                                         <Input
                                                                             type="text"
-                                                                            placeholder="Nissan, Toyota..."
+                                                                            placeholder={__('Nissan, Toyota...')}
                                                                             value={nuevoVehiculoMarca}
                                                                             onChange={(e) => setNuevoVehiculoMarca(e.target.value)}
                                                                             className="h-9 text-xs font-medium bg-white border-slate-300 focus:border-amber-500"
@@ -1769,7 +1781,7 @@ export default function GaritaControl({
                                                                         <label className="text-[10px] font-bold text-slate-500 uppercase block mb-1">{__('Modelo')}</label>
                                                                         <Input
                                                                             type="text"
-                                                                            placeholder="Sentra, Hilux..."
+                                                                            placeholder={__('Sentra, Hilux...')}
                                                                             value={nuevoVehiculoModelo}
                                                                             onChange={(e) => setNuevoVehiculoModelo(e.target.value)}
                                                                             className="h-9 text-xs font-medium bg-white border-slate-300 focus:border-amber-500"
@@ -2549,7 +2561,7 @@ export default function GaritaControl({
                                     <Input
                                         type="text"
                                         required
-                                        placeholder="Ej: Juan Antonio"
+                                        placeholder={__('Ej: Juan Antonio')}
                                         value={nuevoAcompanante.nombres}
                                         onChange={(e) => setNuevoAcompanante(prev => ({ ...prev, nombres: e.target.value }))}
                                         className="w-full h-auto p-3 rounded-xl border-slate-300 bg-white text-xs font-medium"
@@ -2563,7 +2575,7 @@ export default function GaritaControl({
                                     <Input
                                         type="text"
                                         required
-                                        placeholder="Ej: Pérez Gómez"
+                                        placeholder={__('Ej: Pérez Gómez')}
                                         value={nuevoAcompanante.apellidos}
                                         onChange={(e) => setNuevoAcompanante(prev => ({ ...prev, apellidos: e.target.value }))}
                                         className="w-full h-auto p-3 rounded-xl border-slate-300 bg-white text-xs font-medium"
@@ -2578,7 +2590,7 @@ export default function GaritaControl({
                                     </Label>
                                     <Input
                                         type="text"
-                                        placeholder="EJ: PEGJ900101HDF..."
+                                        placeholder={__('EJ: PEGJ900101HDF...')}
                                         value={nuevoAcompanante.curp}
                                         onChange={(e) => setNuevoAcompanante(prev => ({ ...prev, curp: e.target.value.toUpperCase(), documento: e.target.value.toUpperCase() }))}
                                         className="w-full h-auto p-3 rounded-xl border-slate-300 bg-white text-xs font-mono uppercase"
@@ -2618,7 +2630,7 @@ export default function GaritaControl({
                                     <Label className="font-bold text-slate-700">{__('Edad (Años)')}</Label>
                                     <Input
                                         type="number"
-                                        placeholder="Ej: 30"
+                                        placeholder={__('Ej: 30')}
                                         value={nuevoAcompanante.edad || ''}
                                         onChange={(e) => setNuevoAcompanante(prev => ({ ...prev, edad: e.target.value }))}
                                         className="w-full h-auto p-3 rounded-xl border-slate-300 bg-white text-xs font-mono"
@@ -2629,7 +2641,7 @@ export default function GaritaControl({
                                     <Label className="font-bold text-slate-700">{__('Correo Electrónico')}</Label>
                                     <Input
                                         type="email"
-                                        placeholder="ejemplo@correo.com"
+                                        placeholder={__('ejemplo@correo.com')}
                                         value={nuevoAcompanante.correo}
                                         onChange={(e) => setNuevoAcompanante(prev => ({ ...prev, correo: e.target.value }))}
                                         className="w-full h-auto p-3 rounded-xl border-slate-300 bg-white text-xs font-medium"
@@ -2640,7 +2652,7 @@ export default function GaritaControl({
                                     <Label className="font-bold text-slate-700">{__('Cargo (Solo si aplica)')}</Label>
                                     <Input
                                         type="text"
-                                        placeholder="Ej: Asistente, Técnico..."
+                                        placeholder={__('Ej: Asistente, Técnico...')}
                                         value={nuevoAcompanante.cargo}
                                         onChange={(e) => setNuevoAcompanante(prev => ({ ...prev, cargo: e.target.value }))}
                                         className="w-full h-auto p-3 rounded-xl border-slate-300 bg-white text-xs font-medium"

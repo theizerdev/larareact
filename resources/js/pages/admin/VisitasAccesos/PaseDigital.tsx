@@ -200,6 +200,10 @@ function CameraWidget({ onCapture, onCancel, title, faceGuide = false, docGuide 
 
     // Detectar si el dispositivo tiene más de una cámara
     useEffect(() => {
+        if (!navigator?.mediaDevices?.enumerateDevices) {
+            setHasMultipleCameras(false);
+            return;
+        }
         navigator.mediaDevices.enumerateDevices().then(devices => {
             const videoInputs = devices.filter(d => d.kind === 'videoinput');
             setHasMultipleCameras(videoInputs.length > 1);
@@ -232,6 +236,10 @@ function CameraWidget({ onCapture, onCancel, title, faceGuide = false, docGuide 
         setCountdown(3);
         faceStableCountRef.current = 0;
         if (countdownIntervalRef.current) { clearInterval(countdownIntervalRef.current); countdownIntervalRef.current = null; }
+        if (!navigator?.mediaDevices?.getUserMedia) {
+            setError(__('No se pudo acceder a la cámara. Verifique los permisos en su navegador o tablet.'));
+            return;
+        }
         try {
             const mediaStream = await navigator.mediaDevices.getUserMedia({
                 video: { width: 640, height: 480, facingMode: mode }
@@ -242,7 +250,7 @@ function CameraWidget({ onCapture, onCancel, title, faceGuide = false, docGuide 
             }
         } catch (err) {
             console.error(err);
-            setError('Sin acceso a la cámara. Por favor active los permisos del navegador.');
+            setError(__('No se pudo acceder a la cámara. Verifique los permisos en su navegador o tablet.'));
         }
     };
 
