@@ -70,11 +70,21 @@ export default function ControlAccesoTarjetas({ items, filters, error }: PagePro
     ];
 
     const columns: ColumnDef<IvmsAccessCard>[] = [
-        { header: 'Card No.', accessorKey: 'card_no', className: 'font-mono font-semibold' },
-        { header: 'Employee No.', accessorKey: 'employee_no', className: 'font-mono text-xs' },
-        { header: 'Card Type', accessorKey: 'card_type', hideOn: 'mobile' },
         {
-            header: 'Leader Card',
+            header: __('Card No.'),
+            accessorKey: 'card_no',
+            className: 'font-mono font-semibold',
+            cell: (row) => <span dir="ltr">{row.card_no}</span>,
+        },
+        {
+            header: __('Employee No.'),
+            accessorKey: 'employee_no',
+            className: 'font-mono text-xs',
+            cell: (row) => (row.employee_no ? <span dir="ltr">{row.employee_no}</span> : '—'),
+        },
+        { header: __('Card Type'), accessorKey: 'card_type', hideOn: 'mobile' },
+        {
+            header: __('Leader Card'),
             cell: (row) =>
                 row.is_leader_card ? (
                     <span className="text-xs font-medium px-2 py-0.5 rounded-full border bg-amber-50 text-amber-700 border-amber-200 dark:bg-amber-950/20 dark:text-amber-400 dark:border-amber-900">
@@ -85,9 +95,9 @@ export default function ControlAccesoTarjetas({ items, filters, error }: PagePro
                 ),
         },
         {
-            header: 'Created',
+            header: __('Created'),
             hideOn: 'mobile',
-            cell: (row) => (row.created_at ? new Date(row.created_at).toLocaleString() : '—'),
+            cell: (row) => (row.created_at ? <span dir="ltr">{new Date(row.created_at).toLocaleString()}</span> : '—'),
         },
     ];
 
@@ -143,8 +153,8 @@ export default function ControlAccesoTarjetas({ items, filters, error }: PagePro
                     filters={currentFilters}
                     isLoading={isTableLoading}
                     emptyState={{
-                        title: 'No access cards found',
-                        description: 'No access cards were returned by the Access Control middleware.',
+                        title: __('No access cards found'),
+                        description: __('No access cards were returned by the Access Control middleware.'),
                     }}
                 />
             </div>

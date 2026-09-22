@@ -85,12 +85,22 @@ export default function ControlAccesoEmpleados({ items, filters, error }: PagePr
     ];
 
     const columns: ColumnDef<IvmsEmployee>[] = [
-        { header: 'Employee No.', accessorKey: 'employee_no', className: 'font-mono text-xs' },
-        { header: 'Full Name', accessorKey: 'full_name', className: 'font-medium' },
-        { header: 'Email', accessorKey: 'email', hideOn: 'mobile' },
-        { header: 'User Type', accessorKey: 'user_type', hideOn: 'tablet' },
         {
-            header: 'Validity',
+            header: __('Employee No.'),
+            accessorKey: 'employee_no',
+            className: 'font-mono text-xs',
+            cell: (row) => <span dir="ltr">{row.employee_no}</span>,
+        },
+        { header: __('Full Name'), accessorKey: 'full_name', className: 'font-medium' },
+        {
+            header: __('Email'),
+            accessorKey: 'email',
+            hideOn: 'mobile',
+            cell: (row) => (row.email ? <span dir="ltr">{row.email}</span> : '—'),
+        },
+        { header: __('User Type'), accessorKey: 'user_type', hideOn: 'tablet' },
+        {
+            header: __('Validity'),
             cell: (row) => (
                 <span
                     className={cn(
@@ -104,12 +114,24 @@ export default function ControlAccesoEmpleados({ items, filters, error }: PagePr
                 </span>
             ),
         },
-        { header: 'Cards', accessorKey: 'num_cards', className: 'text-center', hideOn: 'tablet' },
-        { header: 'Faces', accessorKey: 'num_faces', className: 'text-center', hideOn: 'tablet' },
         {
-            header: 'Created',
+            header: __('Cards'),
+            accessorKey: 'num_cards',
+            className: 'text-center',
+            hideOn: 'tablet',
+            cell: (row) => <span dir="ltr">{row.num_cards}</span>,
+        },
+        {
+            header: __('Faces'),
+            accessorKey: 'num_faces',
+            className: 'text-center',
+            hideOn: 'tablet',
+            cell: (row) => <span dir="ltr">{row.num_faces}</span>,
+        },
+        {
+            header: __('Created'),
             hideOn: 'mobile',
-            cell: (row) => (row.created_at ? new Date(row.created_at).toLocaleString() : '—'),
+            cell: (row) => (row.created_at ? <span dir="ltr">{new Date(row.created_at).toLocaleString()}</span> : '—'),
         },
     ];
 
@@ -177,8 +199,8 @@ export default function ControlAccesoEmpleados({ items, filters, error }: PagePr
                     filters={currentFilters}
                     isLoading={isTableLoading}
                     emptyState={{
-                        title: 'No employees found',
-                        description: 'No employees were returned by the Access Control middleware.',
+                        title: __('No employees found'),
+                        description: __('No employees were returned by the Access Control middleware.'),
                     }}
                 />
             </div>

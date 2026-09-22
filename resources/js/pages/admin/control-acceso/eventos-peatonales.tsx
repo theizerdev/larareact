@@ -87,17 +87,35 @@ export default function ControlAccesoEventosPeatonales({ items, filters, error }
 
     const columns: ColumnDef<IvmsAccessEvent>[] = [
         {
-            header: 'Date/Time',
+            header: __('Date/Time'),
             className: 'font-medium',
-            cell: (row) => new Date(row.event_time).toLocaleString(),
+            cell: (row) => <span dir="ltr">{new Date(row.event_time).toLocaleString()}</span>,
         },
-        { header: 'Person', cell: (row) => row.person_name || row.employee_no || '—' },
-        { header: 'Card No.', accessorKey: 'card_no', className: 'font-mono text-xs', hideOn: 'mobile' },
-        { header: 'Terminal', accessorKey: 'terminal_ip', className: 'font-mono text-xs', hideOn: 'tablet' },
-        { header: 'Door', accessorKey: 'door_no', className: 'text-center', hideOn: 'tablet' },
-        { header: 'Verify Mode', accessorKey: 'verify_mode', hideOn: 'tablet' },
+        { header: __('Person'), cell: (row) => row.person_name || (row.employee_no ? <span dir="ltr">{row.employee_no}</span> : '—') },
         {
-            header: 'Identity Match',
+            header: __('Card No.'),
+            accessorKey: 'card_no',
+            className: 'font-mono text-xs',
+            hideOn: 'mobile',
+            cell: (row) => (row.card_no ? <span dir="ltr">{row.card_no}</span> : '—'),
+        },
+        {
+            header: __('Terminal'),
+            accessorKey: 'terminal_ip',
+            className: 'font-mono text-xs',
+            hideOn: 'tablet',
+            cell: (row) => <span dir="ltr">{row.terminal_ip}</span>,
+        },
+        {
+            header: __('Door'),
+            accessorKey: 'door_no',
+            className: 'text-center',
+            hideOn: 'tablet',
+            cell: (row) => (row.door_no !== null ? <span dir="ltr">{row.door_no}</span> : '—'),
+        },
+        { header: __('Verify Mode'), accessorKey: 'verify_mode', hideOn: 'tablet' },
+        {
+            header: __('Identity Match'),
             cell: (row) => (
                 <span
                     className={cn(
@@ -112,7 +130,7 @@ export default function ControlAccesoEventosPeatonales({ items, filters, error }
             ),
         },
         {
-            header: 'Photo',
+            header: __('Photo'),
             hideable: false,
             stopRowClick: true,
             cell: (row) =>
@@ -191,8 +209,8 @@ export default function ControlAccesoEventosPeatonales({ items, filters, error }
                     filters={currentFilters}
                     isLoading={isTableLoading}
                     emptyState={{
-                        title: 'No access events found',
-                        description: 'No pedestrian access events were returned by the Access Control middleware.',
+                        title: __('No access events found'),
+                        description: __('No pedestrian access events were returned by the Access Control middleware.'),
                     }}
                 />
             </div>

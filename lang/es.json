@@ -2484,5 +2484,8 @@
     "🪪 Gafete Azul • Productor Autorizado": "🪪 Gafete Azul • Productor Autorizado",
     "🪪 Gafete Rojo • Empleado de Proveedor": "🪪 Gafete Rojo • Empleado de Proveedor",
     "🪪 Gafete Rojo • Proveedor Autorizado": "🪪 Gafete Rojo • Proveedor Autorizado",
-    "Buscar": "Buscar"
+    "Buscar": "Buscar",
+    "Last Seen": "Última vez visto",
+    "Registered": "Registrado",
+    "Vehicle directory detected by ANPR cameras and registered vehicles from the Access Control middleware (read-only).": "Directorio de vehículos detectados por cámaras ANPR y vehículos registrados en el middleware de Control de Acceso (solo lectura)."
 }

@@ -84,23 +84,34 @@ export default function ControlAccesoVehiculos({ items, filters, error }: PagePr
     ];
 
     const columns: ColumnDef<IvmsVehicleDirectoryEntry>[] = [
-        { header: 'Plate Number', accessorKey: 'plate_number', className: 'font-mono font-semibold' },
         {
-            header: 'Last Seen',
-            cell: (row) => (row.last_seen_at ? new Date(row.last_seen_at).toLocaleString() : '—'),
+            header: __('Plate Number'),
+            accessorKey: 'plate_number',
+            className: 'font-mono font-semibold',
+            cell: (row) => <span dir="ltr">{row.plate_number}</span>,
         },
-        { header: 'Camera', accessorKey: 'last_seen_camera_ip', className: 'font-mono text-xs', hideOn: 'tablet' },
-        { header: 'Type', cell: (row) => row.vehicle_type || row.detected_vehicle_type || '—', hideOn: 'mobile' },
-        { header: 'Color', cell: (row) => row.vehicle_color || row.detected_vehicle_color || '—', hideOn: 'mobile' },
-        { header: 'Brand', cell: (row) => row.brand || row.detected_brand_code || '—', hideOn: 'tablet' },
         {
-            header: 'Confidence',
+            header: __('Last Seen'),
+            cell: (row) => (row.last_seen_at ? <span dir="ltr">{new Date(row.last_seen_at).toLocaleString()}</span> : '—'),
+        },
+        {
+            header: __('Camera'),
+            accessorKey: 'last_seen_camera_ip',
+            className: 'font-mono text-xs',
+            hideOn: 'tablet',
+            cell: (row) => (row.last_seen_camera_ip ? <span dir="ltr">{row.last_seen_camera_ip}</span> : '—'),
+        },
+        { header: __('Type'), cell: (row) => row.vehicle_type || row.detected_vehicle_type || '—', hideOn: 'mobile' },
+        { header: __('Color'), cell: (row) => row.vehicle_color || row.detected_vehicle_color || '—', hideOn: 'mobile' },
+        { header: __('Brand'), cell: (row) => row.brand || row.detected_brand_code || '—', hideOn: 'tablet' },
+        {
+            header: __('Confidence'),
             className: 'text-center',
             hideOn: 'tablet',
-            cell: (row) => (row.detected_confidence !== null ? `${row.detected_confidence}%` : '—'),
+            cell: (row) => (row.detected_confidence !== null ? <span dir="ltr">{row.detected_confidence}%</span> : '—'),
         },
         {
-            header: 'Registered',
+            header: __('Registered'),
             cell: (row) => (
                 <span
                     className={cn(
@@ -114,9 +125,14 @@ export default function ControlAccesoVehiculos({ items, filters, error }: PagePr
                 </span>
             ),
         },
-        { header: 'Employee No.', cell: (row) => row.employee_no || '—', className: 'font-mono text-xs', hideOn: 'tablet' },
         {
-            header: 'Photo',
+            header: __('Employee No.'),
+            cell: (row) => (row.employee_no ? <span dir="ltr">{row.employee_no}</span> : '—'),
+            className: 'font-mono text-xs',
+            hideOn: 'tablet',
+        },
+        {
+            header: __('Photo'),
             hideable: false,
             stopRowClick: true,
             cell: (row) =>
@@ -201,8 +217,8 @@ export default function ControlAccesoVehiculos({ items, filters, error }: PagePr
                     filters={currentFilters}
                     isLoading={isTableLoading}
                     emptyState={{
-                        title: 'No vehicles found',
-                        description: 'No vehicles were returned by the Access Control middleware.',
+                        title: __('No vehicles found'),
+                        description: __('No vehicles were returned by the Access Control middleware.'),
                     }}
                 />
             </div>

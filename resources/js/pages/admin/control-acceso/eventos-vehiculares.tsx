@@ -84,23 +84,36 @@ export default function ControlAccesoEventosVehiculares({ items, filters, error 
 
     const columns: ColumnDef<IvmsPlateEvent>[] = [
         {
-            header: 'Date/Time',
+            header: __('Date/Time'),
             className: 'font-medium',
-            cell: (row) => new Date(row.event_time).toLocaleString(),
+            cell: (row) => <span dir="ltr">{new Date(row.event_time).toLocaleString()}</span>,
         },
-        { header: 'Plate Number', accessorKey: 'plate_number', className: 'font-mono font-semibold' },
         {
-            header: 'Confidence',
+            header: __('Plate Number'),
+            accessorKey: 'plate_number',
+            className: 'font-mono font-semibold',
+            cell: (row) => (row.plate_number ? <span dir="ltr">{row.plate_number}</span> : '—'),
+        },
+        {
+            header: __('Confidence'),
             className: 'text-center',
             hideOn: 'tablet',
-            cell: (row) => (row.confidence !== null ? `${row.confidence}%` : '—'),
+            cell: (row) => (row.confidence !== null ? <span dir="ltr">{row.confidence}%</span> : '—'),
         },
-        { header: 'Vehicle', hideOn: 'mobile', cell: (row) => [row.vehicle_color, row.vehicle_type].filter(Boolean).join(' / ') || '—' },
-        { header: 'Camera', cell: (row) => row.channel_name || row.camera_ip, hideOn: 'tablet' },
-        { header: 'List Type', accessorKey: 'list_type', hideOn: 'tablet' },
-        { header: 'Direction', accessorKey: 'direction', hideOn: 'mobile' },
         {
-            header: 'Photo',
+            header: __('Vehicle'),
+            hideOn: 'mobile',
+            cell: (row) => [row.vehicle_color, row.vehicle_type].filter(Boolean).join(' / ') || '—',
+        },
+        {
+            header: __('Camera'),
+            cell: (row) => <span dir="ltr">{row.channel_name || row.camera_ip}</span>,
+            hideOn: 'tablet',
+        },
+        { header: __('List Type'), accessorKey: 'list_type', hideOn: 'tablet' },
+        { header: __('Direction'), accessorKey: 'direction', hideOn: 'mobile' },
+        {
+            header: __('Photo'),
             hideable: false,
             stopRowClick: true,
             cell: (row) =>
@@ -187,8 +200,8 @@ export default function ControlAccesoEventosVehiculares({ items, filters, error 
                     filters={currentFilters}
                     isLoading={isTableLoading}
                     emptyState={{
-                        title: 'No vehicle access events found',
-                        description: 'No plate reading events were returned by the Access Control middleware.',
+                        title: __('No vehicle access events found'),
+                        description: __('No plate reading events were returned by the Access Control middleware.'),
                     }}
                 />
             </div>

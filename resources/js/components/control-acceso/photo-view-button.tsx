@@ -51,7 +51,7 @@ export function PhotoViewButton({ src, photoIndexUrl, count = 1, label }: PhotoV
             <Button variant="outline" size="sm" className="gap-1.5" onClick={() => setOpen(true)}>
                 <Eye className="h-3.5 w-3.5" />
                 {__('View Photo')}
-                {total > 1 && <span className="text-xs text-muted-foreground">({total})</span>}
+                {total > 1 && <span dir="ltr" className="text-xs text-muted-foreground">({total})</span>}
             </Button>
             <DialogPrimitive.Root open={open} onOpenChange={handleOpenChange}>
                 <DialogPrimitive.Portal>
@@ -68,7 +68,7 @@ export function PhotoViewButton({ src, photoIndexUrl, count = 1, label }: PhotoV
                                 <DialogPrimitive.Title className="font-semibold text-foreground">{label || __('Photo')}</DialogPrimitive.Title>
                                 {total > 1 && (
                                     <p className="text-xs text-muted-foreground">
-                                        {total} {__('Photos')}
+                                        <span dir="ltr">{total}</span> {__('Photos')}
                                     </p>
                                 )}
                             </div>
@@ -99,7 +99,7 @@ export function PhotoViewButton({ src, photoIndexUrl, count = 1, label }: PhotoV
                                                 />
                                             )}
                                             {total > 1 && (
-                                                <span className="text-center text-xs text-muted-foreground">
+                                                <span dir="ltr" className="text-center text-xs text-muted-foreground">
                                                     {i + 1} / {total}
                                                 </span>
                                             )}
