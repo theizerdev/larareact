@@ -32,7 +32,7 @@ export default function LanguageToggle() {
             {
                 preserveScroll: true,
                 onSuccess: () => {
-                    router.reload();
+                    window.location.reload();
                 },
             },
         );

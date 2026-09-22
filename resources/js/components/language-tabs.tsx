@@ -34,7 +34,7 @@ export default function LanguageTabs({
             {
                 preserveScroll: true,
                 onSuccess: () => {
-                    router.reload();
+                    window.location.reload();
                 },
             },
         );

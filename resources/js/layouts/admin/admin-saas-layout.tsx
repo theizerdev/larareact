@@ -183,12 +183,12 @@ function NestedNavGroup({
                 {isOpen ? (
                     <ChevronDown className="size-4 text-slate-500 group-hover:text-slate-300" />
                 ) : (
-                    <ChevronRight className="size-4 text-slate-500 group-hover:text-slate-300" />
+                    <ChevronRight className="size-4 text-slate-500 group-hover:text-slate-300 rtl:rotate-180 transition-transform" />
                 )}
             </button>
 
             {isOpen && (
-                <div className="pl-4 space-y-1">
+                <div className="pl-4 rtl:pl-0 rtl:pr-4 space-y-1">
                     {items.map((item, idx) => {
                         const active = url === item.href || url.startsWith(item.href);
 
@@ -316,12 +316,12 @@ function CollapsibleNavItem({
                 {isOpen ? (
                     <ChevronDown className="size-4 text-slate-500 group-hover:text-slate-300" />
                 ) : (
-                    <ChevronRight className="size-4 text-slate-500 group-hover:text-slate-300" />
+                    <ChevronRight className="size-4 text-slate-500 group-hover:text-slate-300 rtl:rotate-180 transition-transform" />
                 )}
             </button>
 
             {isOpen && (
-                <div className="pl-9 space-y-1 transition-all duration-300">
+                <div className="pl-9 rtl:pl-0 rtl:pr-9 space-y-1 transition-all duration-300">
                     {items.map((item, idx) => {
                         if (isGroupEntry(item)) {
                             return (
@@ -421,7 +421,7 @@ export default function AdminSaasLayout({
                 {/* Sidebar */}
                 <aside
                     className={cn(
-                        'fixed inset-y-0 left-0 z-50 flex flex-col border-r border-sidebar-border bg-sidebar text-sidebar-foreground transition-all duration-300',
+                        'fixed inset-y-0 left-0 rtl:left-auto rtl:right-0 z-50 flex flex-col border-r rtl:border-r-0 rtl:border-l border-sidebar-border bg-sidebar text-sidebar-foreground transition-all duration-300',
                         collapsed ? 'lg:w-[72px]' : 'lg:w-64',
                         mobileMenuOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0',
                         'w-64 lg:flex',
@@ -429,7 +429,7 @@ export default function AdminSaasLayout({
                 >
                     {/* Desktop Collapse Toggle Button (Floating Embedded) */}
                     <div
-                        className="hidden lg:flex absolute top-[10px] -right-[22px] z-50 h-11 w-11 items-center justify-center rounded-full bg-slate-100 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-sm"
+                        className="hidden lg:flex absolute top-[10px] -right-[22px] rtl:-right-auto rtl:-left-[22px] z-50 h-11 w-11 items-center justify-center rounded-full bg-slate-100 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-sm"
                     >
                         <button
                             onClick={() => setCollapsed(!collapsed)}
@@ -471,13 +471,13 @@ export default function AdminSaasLayout({
                     {/* Search */}
                     <div className="px-3 py-4">
                         <div className="relative">
-                            <Search className="absolute top-1/2 left-3 size-4 -translate-y-1/2 text-sidebar-foreground/50" />
+                            <Search className="absolute top-1/2 left-3 rtl:left-auto rtl:right-3 size-4 -translate-y-1/2 text-sidebar-foreground/50" />
                             <Input
                                 type="search"
-                                placeholder={collapsed ? '' : 'Buscar...'}
+                                placeholder={collapsed ? '' : __('Search...')}
                                 className={cn(
-                                    'h-9 border-sidebar-border bg-sidebar-accent/30 pl-9 text-sm text-sidebar-foreground placeholder:text-sidebar-foreground/50 focus-visible:ring-primary',
-                                    collapsed && 'w-full pl-9',
+                                    'h-9 border-sidebar-border bg-sidebar-accent/30 pl-9 rtl:pl-3 rtl:pr-9 text-sm text-sidebar-foreground placeholder:text-sidebar-foreground/50 focus-visible:ring-primary',
+                                    collapsed && 'w-full pl-9 rtl:pr-9',
                                 )}
                             />
                         </div>
@@ -1029,8 +1029,8 @@ export default function AdminSaasLayout({
                 <div
                     className={cn(
                         'flex flex-1 flex-col transition-all duration-300 min-w-0',
-                        collapsed ? 'lg:pl-[72px]' : 'lg:pl-64',
-                        'pl-0',
+                        collapsed ? 'lg:pl-[72px] rtl:lg:pl-0 rtl:lg:pr-[72px]' : 'lg:pl-64 rtl:lg:pl-0 rtl:lg:pr-64',
+                        'pl-0 rtl:pr-0',
                     )}
                 >
                     {/* Top bar */}

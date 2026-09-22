@@ -57,6 +57,7 @@ Route::post('locale', function (Request $request) {
     ]);
 
     session(['locale' => $request->locale]);
+    app()->setLocale($request->locale);
 
     return back();
 })->name('locale.update');
