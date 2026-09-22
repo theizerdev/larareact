@@ -41,7 +41,7 @@ export default function SettingsLayout({ children }: PropsWithChildren) {
                 description={__('Manage your profile and account settings')}
             />
 
-            <div className="flex flex-col lg:flex-row lg:space-x-12">
+            <div className="flex flex-col lg:flex-row lg:space-x-12 rtl:space-x-reverse">
                 <aside className="w-full max-w-xl lg:w-48">
                     <nav
                         className="flex flex-col space-y-1 space-x-0"
@@ -53,7 +53,7 @@ export default function SettingsLayout({ children }: PropsWithChildren) {
                                 size="sm"
                                 variant="ghost"
                                 asChild
-                                className={cn('w-full justify-start', {
+                                className={cn('w-full justify-start rtl:justify-end', {
                                     'bg-muted': isCurrentOrParentUrl(item.href),
                                 })}
                             >

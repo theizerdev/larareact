@@ -227,7 +227,7 @@ export default function PaisesIndexPage({ auth, paises, stats, filters }: Paises
 
     const bulkActions = [
         {
-            label: 'Delete selected',
+            label: __('Delete selected'),
             icon: <Trash2 className="h-4 w-4" />,
             onClick: handleBulkDeleteClick,
             variant: 'destructive' as const,
@@ -236,30 +236,32 @@ export default function PaisesIndexPage({ auth, paises, stats, filters }: Paises
 
     const columns: ColumnDef<Pais>[] = [
         {
-            header: 'Name',
+            header: __('Name'),
             accessorKey: 'nombre',
             className: 'font-medium',
             sortable: true,
         },
         {
-            header: 'ISO2 Code',
+            header: __('ISO2 Code'),
             accessorKey: 'codigo_iso2',
             sortable: true,
             hideOn: 'mobile',
+            cell: (pais) => <span dir="ltr">{pais.codigo_iso2}</span>,
         },
         {
-            header: 'ISO3 Code',
+            header: __('ISO3 Code'),
             accessorKey: 'codigo_iso3',
             sortable: true,
             hideOn: 'mobile',
+            cell: (pais) => <span dir="ltr">{pais.codigo_iso3}</span>,
         },
         {
-            header: 'Status',
+            header: __('Status'),
             sortable: true,
             sortKey: 'activo',
             stopRowClick: true,
             cell: (pais) => (
-                <div className="flex items-center space-x-2">
+                <div className="flex items-center space-x-2 rtl:space-x-reverse">
                     <Switch
                         checked={pais.activo}
                         onCheckedChange={() => handleToggleActive(pais)}
@@ -276,8 +278,8 @@ export default function PaisesIndexPage({ auth, paises, stats, filters }: Paises
             )
         },
         {
-            header: 'Actions',
-            className: 'text-right',
+            header: __('Actions'),
+            className: 'text-right rtl:text-left',
             hideable: false,
             stopRowClick: true,
             cell: (pais) => (
@@ -289,11 +291,11 @@ export default function PaisesIndexPage({ auth, paises, stats, filters }: Paises
                     </DropdownMenuTrigger>
                     <DropdownMenuContent align="end">
                         <DropdownMenuItem onClick={() => handleEditClick(pais)}>
-                            <Pencil className="mr-2 h-4 w-4" />
+                            <Pencil className="mr-2 rtl:mr-0 rtl:ml-2 h-4 w-4" />
                             {__('Edit')}
                         </DropdownMenuItem>
                         <DropdownMenuItem onClick={() => handleToggleActive(pais)}>
-                            <ToggleRight className="mr-2 h-4 w-4" />
+                            <ToggleRight className="mr-2 rtl:mr-0 rtl:ml-2 h-4 w-4" />
                             {pais.activo ? __('Deactivate') : __('Activate')}
                         </DropdownMenuItem>
                     </DropdownMenuContent>
@@ -316,7 +318,7 @@ export default function PaisesIndexPage({ auth, paises, stats, filters }: Paises
                     colorClassName="bg-blue-600"
                 >
                     <Button onClick={handleCreateClick}>
-                        <Plus className="mr-2 h-4 w-4" />
+                        <Plus className="mr-2 rtl:mr-0 rtl:ml-2 h-4 w-4" />
                         {__('New Country')}
                     </Button>
                 </ModuleHeader>
@@ -480,7 +482,7 @@ export default function PaisesIndexPage({ auth, paises, stats, filters }: Paises
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                     <div>
                                         <Label htmlFor="moneda_principal">{__('Main Currency')}</Label>
-                                        <Input id="moneda_principal" value={data.moneda_principal || ''} onChange={(e) => setData('moneda_principal', e.target.value)} placeholder="USD, EUR, MXN..." />
+                                        <Input id="moneda_principal" value={data.moneda_principal || ''} onChange={(e) => setData('moneda_principal', e.target.value)} placeholder={__('USD, EUR, MXN...')} />
                                     </div>
                                     <div>
                                         <Label htmlFor="formato_moneda">{__('Currency Format')}</Label>

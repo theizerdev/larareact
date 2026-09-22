@@ -489,7 +489,7 @@ formData.append('logo_mini', logoMiniFile);
 
     const columns: ColumnDef<Empresa>[] = [
         {
-            header: 'Company',
+            header: __('Company'),
             accessorKey: 'razon_social',
             className: 'font-medium',
             cell: (empresa) => (
@@ -507,13 +507,13 @@ formData.append('logo_mini', logoMiniFile);
                     )}
                     <div>
                         <p className="font-medium text-sm">{empresa.razon_social}</p>
-                        <p className="text-xs text-muted-foreground">{empresa.documento}</p>
+                        <p className="text-xs text-muted-foreground"><span dir="ltr">{empresa.documento}</span></p>
                     </div>
                 </div>
             ),
         },
         {
-            header: 'Country',
+            header: __('Country'),
             accessorKey: 'pais',
             hideOn: 'mobile',
             cell: (empresa) => (
@@ -523,14 +523,14 @@ formData.append('logo_mini', logoMiniFile);
             ),
         },
         {
-            header: 'Contact',
+            header: __('Contact'),
             hideOn: 'mobile',
             cell: (empresa) => (
                 <div className="space-y-0.5">
                     {empresa.telefono && (
                         <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
                             <Phone className="w-3 h-3" />
-                            {empresa.telefono}
+                            <span dir="ltr">{empresa.telefono}</span>
                         </div>
                     )}
                     {empresa.email && (
@@ -554,10 +554,10 @@ formData.append('logo_mini', logoMiniFile);
             ),
         },
         {
-            header: 'Status',
+            header: __('Status'),
             stopRowClick: true,
             cell: (empresa) => (
-                <div className="flex items-center space-x-2">
+                <div className="flex items-center space-x-2 rtl:space-x-reverse">
                     <Switch
                         checked={empresa.status}
                         onCheckedChange={() => handleToggleStatus(empresa)}
@@ -574,8 +574,8 @@ formData.append('logo_mini', logoMiniFile);
             ),
         },
         {
-            header: 'Actions',
-            className: 'text-right',
+            header: __('Actions'),
+            className: 'text-right rtl:text-left',
             hideable: false,
             stopRowClick: true,
             cell: (empresa) => (
@@ -587,11 +587,11 @@ formData.append('logo_mini', logoMiniFile);
                     </DropdownMenuTrigger>
                     <DropdownMenuContent align="end">
                         <DropdownMenuItem onClick={() => handleEditClick(empresa)}>
-                            <Pencil className="mr-2 h-4 w-4" />
+                            <Pencil className="mr-2 rtl:mr-0 rtl:ml-2 h-4 w-4" />
                             {__('Edit')}
                         </DropdownMenuItem>
                         <DropdownMenuItem onClick={() => handleToggleStatus(empresa)}>
-                            <ToggleRight className="mr-2 h-4 w-4" />
+                            <ToggleRight className="mr-2 rtl:mr-0 rtl:ml-2 h-4 w-4" />
                             {empresa.status ? __('Deactivate') : __('Activate')}
                         </DropdownMenuItem>
                     </DropdownMenuContent>
@@ -616,7 +616,7 @@ formData.append('logo_mini', logoMiniFile);
                     colorClassName="bg-indigo-600"
                 >
                     <Button onClick={handleCreateClick}>
-                        <Plus className="mr-2 h-4 w-4" />
+                        <Plus className="mr-2 rtl:mr-0 rtl:ml-2 h-4 w-4" />
                         {__('New Company')}
                     </Button>
                 </ModuleHeader>
@@ -743,7 +743,7 @@ formData.append('logo_mini', logoMiniFile);
                                             id="razon_social"
                                             value={data.razon_social}
                                             onChange={(e) => setData('razon_social', e.target.value)}
-                                            placeholder="Ej: Empresa S.A. de C.V."
+                                            placeholder={__('Ej: Empresa S.A. de C.V.')}
                                         />
                                         {errors.razon_social && (
                                             <p className="text-red-500 text-xs mt-1">{errors.razon_social}</p>
@@ -757,7 +757,7 @@ formData.append('logo_mini', logoMiniFile);
                                             id="nombre_comercial"
                                             value={data.nombre_comercial || ''}
                                             onChange={(e) => setData('nombre_comercial', e.target.value)}
-                                            placeholder="Ej: Nombre Comercial"
+                                            placeholder={__('Ej: Nombre Comercial')}
                                         />
                                         {errors.nombre_comercial && (
                                             <p className="text-red-500 text-xs mt-1">{errors.nombre_comercial}</p>
@@ -771,7 +771,7 @@ formData.append('logo_mini', logoMiniFile);
                                             id="documento"
                                             value={data.documento}
                                             onChange={(e) => setData('documento', e.target.value)}
-                                            placeholder="RFC..."
+                                            placeholder={__('RFC...')}
                                         />
                                         {errors.documento && (
                                             <p className="text-red-500 text-xs mt-1">{errors.documento}</p>
@@ -785,7 +785,7 @@ formData.append('logo_mini', logoMiniFile);
                                             id="representante_legal"
                                             value={data.representante_legal || ''}
                                             onChange={(e) => setData('representante_legal', e.target.value)}
-                                            placeholder="Nombre completo"
+                                            placeholder={__('Nombre completo')}
                                         />
                                         {errors.representante_legal && (
                                             <p className="text-red-500 text-xs mt-1">{errors.representante_legal}</p>
@@ -799,7 +799,7 @@ formData.append('logo_mini', logoMiniFile);
                                             id="curp_representante_legal"
                                             value={data.curp_representante_legal || ''}
                                             onChange={(e) => setData('curp_representante_legal', e.target.value)}
-                                            placeholder="CURP (18 caracteres)"
+                                            placeholder={__('CURP (18 caracteres)')}
                                             maxLength={18}
                                         />
                                         {errors.curp_representante_legal && (
@@ -816,7 +816,7 @@ formData.append('logo_mini', logoMiniFile);
                                             phoneValue={data.telefono || ''}
                                             onPaisChange={(v) => setData('pais_telefono_id', v)}
                                             onPhoneChange={(v) => setData('telefono', v)}
-                                            placeholder="000-0000000"
+                                            placeholder={__('000-0000000')}
                                             error={errors.telefono}
                                         />
                                     </div>
@@ -829,7 +829,7 @@ formData.append('logo_mini', logoMiniFile);
                                             type="email"
                                             value={data.email || ''}
                                             onChange={(e) => setData('email', e.target.value)}
-                                            placeholder="correo@empresa.com"
+                                            placeholder={__('correo@empresa.com')}
                                         />
                                         {errors.email && (
                                             <p className="text-red-500 text-xs mt-1">{errors.email}</p>
@@ -839,7 +839,7 @@ formData.append('logo_mini', logoMiniFile);
                                     {/* 8. Status */}
                                     <div>
                                         <Label htmlFor="status">{__('Status')}</Label>
-                                        <div className="flex items-center space-x-2 pt-2">
+                                        <div className="flex items-center space-x-2 rtl:space-x-reverse pt-2">
                                             <Switch
                                                 id="status"
                                                 checked={data.status}
@@ -892,7 +892,7 @@ formData.append('logo_mini', logoMiniFile);
                                             id="ciudad"
                                             value={data.ciudad || ''}
                                             onChange={(e) => setData('ciudad', e.target.value)}
-                                            placeholder="Ej: Zamora"
+                                            placeholder={__('Ej: Zamora')}
                                         />
                                         {errors.ciudad && <p className="text-red-500 text-xs mt-1">{errors.ciudad}</p>}
                                     </div>
@@ -902,7 +902,7 @@ formData.append('logo_mini', logoMiniFile);
                                             id="estado"
                                             value={data.estado || ''}
                                             onChange={(e) => setData('estado', e.target.value)}
-                                            placeholder="Ej: Michoacán"
+                                            placeholder={__('Ej: Michoacán')}
                                         />
                                         {errors.estado && <p className="text-red-500 text-xs mt-1">{errors.estado}</p>}
                                     </div>
@@ -912,7 +912,7 @@ formData.append('logo_mini', logoMiniFile);
                                             id="colonia"
                                             value={data.colonia || ''}
                                             onChange={(e) => setData('colonia', e.target.value)}
-                                            placeholder="Ej: Centro"
+                                            placeholder={__('Ej: Centro')}
                                         />
                                         {errors.colonia && <p className="text-red-500 text-xs mt-1">{errors.colonia}</p>}
                                     </div>
@@ -922,7 +922,7 @@ formData.append('logo_mini', logoMiniFile);
                                             id="codigo_postal"
                                             value={data.codigo_postal || ''}
                                             onChange={(e) => setData('codigo_postal', e.target.value)}
-                                            placeholder="Ej: 59600"
+                                            placeholder={__('Ej: 59600')}
                                         />
                                         {errors.codigo_postal && (
                                             <p className="text-red-500 text-xs mt-1">{errors.codigo_postal}</p>
@@ -953,7 +953,7 @@ formData.append('logo_mini', logoMiniFile);
                                         onClick={handleForceGeocode}
                                         disabled={geocoding}
                                     >
-                                        <MapPin className="mr-2 h-4 w-4" />
+                                        <MapPin className="mr-2 rtl:mr-0 rtl:ml-2 h-4 w-4" />
                                         {geocoding ? __('Locating...') : __('Locate address on map')}
                                     </Button>
                                     <span className="text-xs text-muted-foreground">
@@ -974,7 +974,7 @@ formData.append('logo_mini', logoMiniFile);
                                                 coordsSourceRef.current = 'manual';
                                                 setData('latitud', e.target.value ? parseFloat(e.target.value) : null);
                                             }}
-                                            placeholder="19.98"
+                                            placeholder={__('19.98')}
                                         />
                                         {errors.latitud && (
                                             <p className="text-red-500 text-xs mt-1">{errors.latitud}</p>
@@ -991,7 +991,7 @@ formData.append('logo_mini', logoMiniFile);
                                                 coordsSourceRef.current = 'manual';
                                                 setData('longitud', e.target.value ? parseFloat(e.target.value) : null);
                                             }}
-                                            placeholder="-102.28"
+                                            placeholder={__('-102.28')}
                                         />
                                         {errors.longitud && (
                                             <p className="text-red-500 text-xs mt-1">{errors.longitud}</p>
@@ -1003,7 +1003,7 @@ formData.append('logo_mini', logoMiniFile);
                                             id="zona_horaria"
                                             value={data.zona_horaria || ''}
                                             onChange={(e) => setData('zona_horaria', e.target.value)}
-                                            placeholder="America/Mexico_City"
+                                            placeholder={__('America/Mexico_City')}
                                             className="font-mono text-xs"
                                         />
                                         {errors.zona_horaria && (
@@ -1100,7 +1100,7 @@ handleLogoFileChange(file, 'logo');
                                                             <ImageIcon className="h-7 w-7 text-indigo-400" />
                                                         </div>
                                                         <p className="text-xs font-medium">{__('Click or drag to upload')}</p>
-                                                        <p className="text-xs text-slate-300">PNG, JPG, WEBP · max 5MB</p>
+                                                        <p className="text-xs text-slate-300">{__('PNG, JPG, WEBP · max 5MB')}</p>
                                                     </div>
                                                 )}
                                             </div>
@@ -1174,7 +1174,7 @@ handleLogoFileChange(file, 'logo_mini');
                                                             <ImageIcon className="h-7 w-7 text-purple-400" />
                                                         </div>
                                                         <p className="text-xs font-medium">{__('Click or drag to upload')}</p>
-                                                        <p className="text-xs text-slate-300">PNG, JPG, WEBP · max 2MB</p>
+                                                        <p className="text-xs text-slate-300">{__('PNG, JPG, WEBP · max 2MB')}</p>
                                                     </div>
                                                 )}
                                             </div>
@@ -1206,7 +1206,7 @@ handleLogoFileChange(file, 'logo_mini');
                                         >
                                             {uploadingLogos ? (
                                                 <>
-                                                    <svg className="animate-spin h-4 w-4 mr-2" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                                    <svg className="animate-spin h-4 w-4 mr-2 rtl:mr-0 rtl:ml-2" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
                                                         <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
                                                         <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                                                     </svg>
@@ -1214,7 +1214,7 @@ handleLogoFileChange(file, 'logo_mini');
                                                 </>
                                             ) : (
                                                 <>
-                                                    <Upload className="h-4 w-4 mr-2" />
+                                                    <Upload className="h-4 w-4 mr-2 rtl:mr-0 rtl:ml-2" />
                                                     {__('Upload Logos')}
                                                 </>
                                             )}
