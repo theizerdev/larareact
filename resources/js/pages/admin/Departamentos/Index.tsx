@@ -408,7 +408,7 @@ return;
             ),
         },
         {
-            header: 'Actions',
+            header: __('Actions'),
             className: 'text-right',
             hideable: false,
             stopRowClick: true,
@@ -421,18 +421,18 @@ return;
                     </DropdownMenuTrigger>
                     <DropdownMenuContent align="end">
                         <DropdownMenuItem onClick={() => handleEditClick(dep)}>
-                            <Pencil className="mr-2 h-4 w-4" />
+                            <Pencil className="mr-2 rtl:mr-0 rtl:ml-2 h-4 w-4" />
                             {__('Edit')}
                         </DropdownMenuItem>
                         <DropdownMenuItem onClick={() => handleToggleStatus(dep)}>
-                            <ToggleRight className="mr-2 h-4 w-4" />
+                            <ToggleRight className="mr-2 rtl:mr-0 rtl:ml-2 h-4 w-4" />
                             {dep.status === 1 ? __('Deactivate') : __('Activate')}
                         </DropdownMenuItem>
                         <DropdownMenuItem
                             onClick={() => setDeletingDepartamento(dep)}
                             className="text-red-600 focus:text-red-600 dark:text-red-400"
                         >
-                            <Trash2 className="mr-2 h-4 w-4" />
+                            <Trash2 className="mr-2 rtl:mr-0 rtl:ml-2 h-4 w-4" />
                             {__('Delete')}
                         </DropdownMenuItem>
                     </DropdownMenuContent>
@@ -457,7 +457,7 @@ return;
                     colorClassName="bg-indigo-600"
                 >
                     <Button onClick={handleCreateClick}>
-                        <Plus className="mr-2 h-4 w-4" />
+                        <Plus className="mr-2 rtl:mr-0 rtl:ml-2 h-4 w-4" />
                         {__('New Department')}
                     </Button>
                 </ModuleHeader>
@@ -531,11 +531,11 @@ return;
                         isLoading={isTableLoading}
                         onRowClick={(dep) => handleEditClick(dep)}
                         emptyState={{
-                            title: 'No departments found',
+                            title: __('No departments found'),
                             description: searchTerm || statusFilter
-                                ? 'Try clearing your search filters or changing your query.'
-                                : 'You have not registered any departments yet.',
-                            ctaLabel: 'New Department',
+                                ? __('Try clearing your search filters or changing your query.')
+                                : __('You have not registered any departments yet.'),
+                            ctaLabel: __('New Department'),
                             onCtaClick: handleCreateClick,
                         }}
                     />
@@ -631,7 +631,7 @@ return;
                                             id="nombre"
                                             value={data.nombre}
                                             onChange={(e) => setData('nombre', e.target.value)}
-                                            placeholder="Ej: Contabilidad y Finanzas"
+                                            placeholder={__('e.g. Accounting and Finance')}
                                         />
                                         {errors.nombre && (
                                             <p className="text-red-500 text-xs mt-1">{errors.nombre}</p>
@@ -645,7 +645,7 @@ return;
                                             id="codigo"
                                             value={data.codigo}
                                             onChange={(e) => setData('codigo', e.target.value)}
-                                            placeholder="Ej: DEP-FIN-01"
+                                            placeholder="DEP-FIN-01"
                                         />
                                         {errors.codigo && (
                                             <p className="text-red-500 text-xs mt-1">{errors.codigo}</p>
@@ -659,7 +659,7 @@ return;
                                             id="responsable"
                                             value={data.responsable}
                                             onChange={(e) => setData('responsable', e.target.value)}
-                                            placeholder="Ej: Carlos Mendoza"
+                                            placeholder={__('e.g. Carlos Mendoza')}
                                         />
                                         {errors.responsable && (
                                             <p className="text-red-500 text-xs mt-1">{errors.responsable}</p>
@@ -673,7 +673,7 @@ return;
                                             id="piso"
                                             value={data.piso}
                                             onChange={(e) => setData('piso', e.target.value)}
-                                            placeholder="Ej: Piso 3, Oficina 304"
+                                            placeholder={__('e.g. Floor 3, Office 304')}
                                         />
                                         {errors.piso && (
                                             <p className="text-red-500 text-xs mt-1">{errors.piso}</p>

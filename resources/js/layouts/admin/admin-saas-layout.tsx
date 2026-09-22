@@ -1109,20 +1109,20 @@ export default function AdminSaasLayout({
                                         }
                                         className="cursor-pointer"
                                     >
-                                        <Sun className="mr-2 size-4" />
-                                        Claro
+                                        <Sun className="mr-2 rtl:mr-0 rtl:ml-2 size-4" />
+                                        {__('Light')}
                                         {appearance === 'light' && (
-                                            <Check className="ml-auto size-4" />
+                                            <Check className="ml-auto rtl:ml-0 rtl:mr-auto size-4" />
                                         )}
                                     </DropdownMenuItem>
                                     <DropdownMenuItem
                                         onClick={() => updateAppearance('dark')}
                                         className="cursor-pointer"
                                     >
-                                        <Moon className="mr-2 size-4" />
-                                        Oscuro
+                                        <Moon className="mr-2 rtl:mr-0 rtl:ml-2 size-4" />
+                                        {__('Dark')}
                                         {appearance === 'dark' && (
-                                            <Check className="ml-auto size-4" />
+                                            <Check className="ml-auto rtl:ml-0 rtl:mr-auto size-4" />
                                         )}
                                     </DropdownMenuItem>
                                     <DropdownMenuItem
@@ -1131,10 +1131,10 @@ export default function AdminSaasLayout({
                                         }
                                         className="cursor-pointer"
                                     >
-                                        <Monitor className="mr-2 size-4" />
-                                        Sistema
+                                        <Monitor className="mr-2 rtl:mr-0 rtl:ml-2 size-4" />
+                                        {__('System')}
                                         {appearance === 'system' && (
-                                            <Check className="ml-auto size-4" />
+                                            <Check className="ml-auto rtl:ml-0 rtl:mr-auto size-4" />
                                         )}
                                     </DropdownMenuItem>
                                 </DropdownMenuContent>
