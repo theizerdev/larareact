@@ -99,7 +99,7 @@ class AsistenciaConfiguracionController extends Controller
 
         return back()->with('notification', [
             'type' => 'success',
-            'message' => 'Configuración de asistencia y Reforma Laboral actualizada con éxito.',
+            'message' => __('Configuración de asistencia y Reforma Laboral actualizada con éxito.'),
         ]);
     }
 
@@ -131,7 +131,7 @@ class AsistenciaConfiguracionController extends Controller
 
         return back()->with('notification', [
             'type' => 'success',
-            'message' => 'Turno laboral registrado correctamente.',
+            'message' => __('Turno laboral registrado correctamente.'),
         ]);
     }
 
@@ -158,7 +158,7 @@ class AsistenciaConfiguracionController extends Controller
 
         return back()->with('notification', [
             'type' => 'success',
-            'message' => 'Turno laboral actualizado correctamente.',
+            'message' => __('Turno laboral actualizado correctamente.'),
         ]);
     }
 
@@ -207,7 +207,7 @@ class AsistenciaConfiguracionController extends Controller
 
         return back()->with('notification', [
             'type' => 'success',
-            'message' => 'Estado del turno actualizado.',
+            'message' => __('Estado del turno actualizado.'),
         ]);
     }
 
@@ -220,7 +220,7 @@ class AsistenciaConfiguracionController extends Controller
 
         return back()->with('notification', [
             'type' => 'success',
-            'message' => 'Turno laboral eliminado.',
+            'message' => __('Turno laboral eliminado.'),
         ]);
     }
 
@@ -244,7 +244,7 @@ class AsistenciaConfiguracionController extends Controller
 
         return back()->with('notification', [
             'type' => 'success',
-            'message' => 'Día festivo guardado correctamente.',
+            'message' => __('Día festivo guardado correctamente.'),
         ]);
     }
 
@@ -264,7 +264,7 @@ class AsistenciaConfiguracionController extends Controller
 
         return back()->with('notification', [
             'type' => 'success',
-            'message' => 'Día festivo actualizado.',
+            'message' => __('Día festivo actualizado.'),
         ]);
     }
 
@@ -277,7 +277,7 @@ class AsistenciaConfiguracionController extends Controller
 
         return back()->with('notification', [
             'type' => 'success',
-            'message' => 'Día festivo eliminado.',
+            'message' => __('Día festivo eliminado.'),
         ]);
     }
 
@@ -312,7 +312,7 @@ class AsistenciaConfiguracionController extends Controller
 
         return back()->with('notification', [
             'type' => 'success',
-            'message' => "Se han precargado los días festivos oficiales para el año {$year}.",
+            'message' => __('Se han precargado los días festivos oficiales para el año :year.', ['year' => $year]),
         ]);
     }
 }

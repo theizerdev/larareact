@@ -40,6 +40,7 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { notifySuccess } from '@/utils/notifications';
+import { useTranslate } from '@/hooks/use-translate';
 
 interface ConfiguracionAsistencia {
     id: number;
@@ -154,6 +155,7 @@ const CRONOGRAMA_OFICIAL: Record<number, { normales: number; tex_doble: number; 
 };
 
 export default function ConfiguracionAsistenciaIndex({ configuracion, turnos, diasFestivos }: Props) {
+    const { __, currentLocale, isRtl } = useTranslate();
     const [activeTab, setActiveTab] = useState('politicas');
 
     // Formulario de Configuración General y Reforma Laboral
@@ -211,7 +213,7 @@ export default function ConfiguracionAsistenciaIndex({ configuracion, turnos, di
         e.preventDefault();
         configForm.put('/admin/asistencia/configuracion', {
             preserveScroll: true,
-            onSuccess: () => notifySuccess('Configuración guardada correctamente.'),
+            onSuccess: () => notifySuccess(__('Configuración guardada correctamente.')),
         });
     };
 
@@ -279,7 +281,7 @@ export default function ConfiguracionAsistenciaIndex({ configuracion, turnos, di
                 preserveScroll: true,
                 onSuccess: () => {
                     setIsTurnoModalOpen(false);
-                    notifySuccess('Turno laboral actualizado.');
+                    notifySuccess(__('Turno laboral actualizado.'));
                 },
             });
         } else {
@@ -287,7 +289,7 @@ export default function ConfiguracionAsistenciaIndex({ configuracion, turnos, di
                 preserveScroll: true,
                 onSuccess: () => {
                     setIsTurnoModalOpen(false);
-                    notifySuccess('Turno laboral creado.');
+                    notifySuccess(__('Turno laboral creado.'));
                 },
             });
         }
@@ -347,7 +349,7 @@ export default function ConfiguracionAsistenciaIndex({ configuracion, turnos, di
                 preserveScroll: true,
                 onSuccess: () => {
                     setIsFestivoModalOpen(false);
-                    notifySuccess('Día festivo actualizado.');
+                    notifySuccess(__('Día festivo actualizado.'));
                 },
             });
         } else {
@@ -355,7 +357,7 @@ export default function ConfiguracionAsistenciaIndex({ configuracion, turnos, di
                 preserveScroll: true,
                 onSuccess: () => {
                     setIsFestivoModalOpen(false);
-                    notifySuccess('Día festivo guardado.');
+                    notifySuccess(__('Día festivo guardado.'));
                 },
             });
         }
@@ -376,13 +378,13 @@ export default function ConfiguracionAsistenciaIndex({ configuracion, turnos, di
     };
 
     const breadcrumbs = [
-        { title: 'Dashboard', href: '/dashboard' },
-        { title: 'Configuración de Asistencia', href: '/admin/asistencia/configuracion' },
+        { title: __('Dashboard'), href: '/dashboard' },
+        { title: __('Configuración de Asistencia'), href: '/admin/asistencia/configuracion' },
     ];
 
     return (
         <>
-            <Head title="Configuración de Asistencia" />
+            <Head title={__('Configuración de Asistencia')} />
 
             <div className="space-y-6">
                 <Breadcrumbs breadcrumbs={breadcrumbs} />
@@ -390,8 +392,8 @@ export default function ConfiguracionAsistenciaIndex({ configuracion, turnos, di
                 {/* ModuleHeader Estándar del Sistema */}
                 <ModuleHeader
                     icon={<Clock className="h-6 w-6 text-white" />}
-                    title="Configuración de Asistencia & Turnos"
-                    description="Políticas de tolerancia, catálogo de turnos por jornada (Diurna, Nocturna, Mixta), descansos y días festivos."
+                    title={__('Configuración de Asistencia & Turnos')}
+                    description={__('Políticas de tolerancia, catálogo de turnos por jornada (Diurna, Nocturna, Mixta), descansos y días festivos.')}
                     colorClassName="bg-slate-900 dark:bg-slate-800"
                 />
 
@@ -400,19 +402,19 @@ export default function ConfiguracionAsistenciaIndex({ configuracion, turnos, di
                     <TabsList className="grid grid-cols-4 w-full max-w-3xl">
                         <TabsTrigger value="politicas" className="flex items-center gap-2">
                             <Clock className="w-4 h-4" />
-                            <span>Políticas de Asistencia</span>
+                            <span>{__('Políticas de Asistencia')}</span>
                         </TabsTrigger>
                         <TabsTrigger value="reforma" className="flex items-center gap-2">
                             <Scale className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
-                            <span>Reforma 40h & Semáforos</span>
+                            <span>{__('Reforma 40h & Semáforos')}</span>
                         </TabsTrigger>
                         <TabsTrigger value="turnos" className="flex items-center gap-2">
                             <Briefcase className="w-4 h-4" />
-                            <span>Turnos y Jornadas ({turnos.length})</span>
+                            <span>{__('Turnos y Jornadas')} (<span dir="ltr">{turnos.length}</span>)</span>
                         </TabsTrigger>
                         <TabsTrigger value="festivos" className="flex items-center gap-2">
                             <Calendar className="w-4 h-4" />
-                            <span>Días Festivos ({diasFestivos.length})</span>
+                            <span>{__('Días Festivos')} (<span dir="ltr">{diasFestivos.length}</span>)</span>
                         </TabsTrigger>
                     </TabsList>
 
@@ -424,15 +426,15 @@ export default function ConfiguracionAsistenciaIndex({ configuracion, turnos, di
                                     <CardHeader>
                                         <CardTitle className="text-base flex items-center gap-2">
                                             <Clock className="w-5 h-5 text-emerald-600 dark:text-emerald-400" />
-                                            Tolerancias y Marcaje
+                                            <span>{__('Tolerancias y Marcaje')}</span>
                                         </CardTitle>
                                         <CardDescription>
-                                            Límites de tiempo para considerar asistencias a tiempo o retardo.
+                                            {__('Límites de tiempo para considerar asistencias a tiempo o retardo.')}
                                         </CardDescription>
                                     </CardHeader>
                                     <CardContent className="space-y-4">
                                         <div className="space-y-2">
-                                            <Label>Tolerancia para Retardo (Minutos)</Label>
+                                            <Label>{__('Tolerancia para Retardo (Minutos)')}</Label>
                                             <Input
                                                 type="number"
                                                 min="0"
@@ -440,11 +442,11 @@ export default function ConfiguracionAsistenciaIndex({ configuracion, turnos, di
                                                 value={configForm.data.tolerancia_retardo_minutos}
                                                 onChange={(e) => configForm.setData('tolerancia_retardo_minutos', parseInt(e.target.value) || 0)}
                                             />
-                                            <p className="text-xs text-muted-foreground">Minutos posteriores a la hora de entrada permitidos sin sancionar.</p>
+                                            <p className="text-xs text-muted-foreground">{__('Minutos posteriores a la hora de entrada permitidos sin sancionar.')}</p>
                                         </div>
 
                                         <div className="space-y-2">
-                                            <Label>Tolerancia Máxima antes de Falta (Minutos)</Label>
+                                            <Label>{__('Tolerancia Máxima antes de Falta (Minutos)')}</Label>
                                             <Input
                                                 type="number"
                                                 min="0"
@@ -452,31 +454,31 @@ export default function ConfiguracionAsistenciaIndex({ configuracion, turnos, di
                                                 value={configForm.data.tolerancia_falta_minutos}
                                                 onChange={(e) => configForm.setData('tolerancia_falta_minutos', parseInt(e.target.value) || 0)}
                                             />
-                                            <p className="text-xs text-muted-foreground">Pasado este tiempo, el sistema marcará Falta injustificada.</p>
+                                            <p className="text-xs text-muted-foreground">{__('Pasado este tiempo, el sistema marcará Falta injustificada.')}</p>
                                         </div>
 
                                         <div className="space-y-2">
-                                            <Label>Redondeo de Hora de Marcaje</Label>
+                                            <Label>{__('Redondeo de Hora de Marcaje')}</Label>
                                             <Select
                                                 value={configForm.data.redondeo_marcaje_minutos.toString()}
                                                 onValueChange={(val) => configForm.setData('redondeo_marcaje_minutos', parseInt(val))}
                                             >
                                                 <SelectTrigger>
-                                                    <SelectValue placeholder="Seleccionar redondeo" />
+                                                    <SelectValue placeholder={__('Seleccionar redondeo')} />
                                                 </SelectTrigger>
                                                 <SelectContent>
-                                                    <SelectItem value="0">Sin redondeo (Hora exacta del servidor)</SelectItem>
-                                                    <SelectItem value="5">Redondear a los 5 minutos más cercanos</SelectItem>
-                                                    <SelectItem value="10">Redondear a los 10 minutos más cercanos</SelectItem>
-                                                    <SelectItem value="15">Redondear a los 15 minutos (Cuarto de hora)</SelectItem>
+                                                    <SelectItem value="0">{__('Sin redondeo (Hora exacta del servidor)')}</SelectItem>
+                                                    <SelectItem value="5">{__('Redondear a los 5 minutos más cercanos')}</SelectItem>
+                                                    <SelectItem value="10">{__('Redondear a los 10 minutos más cercanos')}</SelectItem>
+                                                    <SelectItem value="15">{__('Redondear a los 15 minutos (Cuarto de hora)')}</SelectItem>
                                                 </SelectContent>
                                             </Select>
                                         </div>
 
                                         <div className="flex items-center justify-between pt-2 border-t">
                                             <div className="space-y-0.5">
-                                                <Label>Requiere Foto de Evidencia</Label>
-                                                <p className="text-xs text-muted-foreground">Captura la fotografía del empleado en el Kiosko Checador.</p>
+                                                <Label>{__('Requiere Foto de Evidencia')}</Label>
+                                                <p className="text-xs text-muted-foreground">{__('Captura la fotografía del empleado en el Kiosko Checador.')}</p>
                                             </div>
                                             <Switch
                                                 checked={configForm.data.requiere_foto_marcaje}
@@ -490,10 +492,10 @@ export default function ConfiguracionAsistenciaIndex({ configuracion, turnos, di
                                     <CardHeader>
                                         <CardTitle className="text-base flex items-center gap-2">
                                             <ShieldCheck className="w-5 h-5 text-emerald-600 dark:text-emerald-400" />
-                                            Reglas de Horas Extras
+                                            <span>{__('Reglas de Horas Extras')}</span>
                                         </CardTitle>
                                         <CardDescription>
-                                            Cálculo de descansos, horas extra dobles/triples y primas.
+                                            {__('Cálculo de descansos, horas extra dobles/triples y primas.')}
                                         </CardDescription>
                                     </CardHeader>
                                     <CardContent className="space-y-5">
@@ -502,7 +504,7 @@ export default function ConfiguracionAsistenciaIndex({ configuracion, turnos, di
                                             <div className="flex items-center justify-between">
                                                 <div className="flex items-center gap-2">
                                                     <Coffee className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
-                                                    <Label className="font-semibold">Descanso es Tiempo Efectivo</Label>
+                                                    <Label className="font-semibold">{__('Descanso es Tiempo Efectivo')}</Label>
                                                 </div>
                                                 <Switch
                                                     checked={configForm.data.descanso_es_tiempo_efectivo}
@@ -511,9 +513,9 @@ export default function ConfiguracionAsistenciaIndex({ configuracion, turnos, di
                                             </div>
                                             <p className="text-xs text-muted-foreground leading-relaxed">
                                                 {configForm.data.descanso_es_tiempo_efectivo ? (
-                                                    <span className="text-emerald-600 dark:text-emerald-400 font-medium">✓ Si el trabajador no puede salir del lugar de trabajo durante el descanso, este se computará como tiempo efectivo de jornada laboral.</span>
+                                                    <span className="text-emerald-600 dark:text-emerald-400 font-medium">{__('✓ Si el trabajador no puede salir del lugar de trabajo durante el descanso, este se computará como tiempo efectivo de jornada laboral.')}</span>
                                                 ) : (
-                                                    <span>Los 30 minutos de descanso son libres fuera del centro de trabajo y no se computan dentro de las horas laboradas.</span>
+                                                    <span>{__('Los 30 minutos de descanso son libres fuera del centro de trabajo y no se computan dentro de las horas laboradas.')}</span>
                                                 )}
                                             </p>
                                         </div>
@@ -521,8 +523,8 @@ export default function ConfiguracionAsistenciaIndex({ configuracion, turnos, di
                                         {/* Aprobación Horas Extra */}
                                         <div className="flex items-center justify-between pt-2 border-t">
                                             <div className="space-y-0.5">
-                                                <Label>Aprobación Previa de Horas Extras</Label>
-                                                <p className="text-xs text-muted-foreground">Requiere validación de supervisor antes de transferir excedentes a nómina.</p>
+                                                <Label>{__('Aprobación Previa de Horas Extras')}</Label>
+                                                <p className="text-xs text-muted-foreground">{__('Requiere validación de supervisor antes de transferir excedentes a nómina.')}</p>
                                             </div>
                                             <Switch
                                                 checked={configForm.data.horas_extra_requieren_aprobacion}
@@ -532,7 +534,7 @@ export default function ConfiguracionAsistenciaIndex({ configuracion, turnos, di
 
                                         {/* Prima Dominical */}
                                         <div className="space-y-2 pt-2 border-t">
-                                            <Label>Porcentaje Prima Dominical (%)</Label>
+                                            <Label>{__('Porcentaje Prima Dominical (%)')}</Label>
                                             <div className="relative">
                                                 <Input
                                                     type="number"
@@ -543,21 +545,21 @@ export default function ConfiguracionAsistenciaIndex({ configuracion, turnos, di
                                                     onChange={(e) => configForm.setData('porcentaje_prima_dominical', e.target.value)}
                                                     className="pr-8"
                                                 />
-                                                <span className="absolute right-3 top-2.5 text-muted-foreground text-sm">%</span>
+                                                <span className="absolute right-3 rtl:right-auto rtl:left-3 top-2.5 text-muted-foreground text-sm">%</span>
                                             </div>
-                                            <p className="text-xs text-muted-foreground">Por ley es mínimo el 25% sobre el salario diario ordinario.</p>
+                                            <p className="text-xs text-muted-foreground">{__('Por ley es mínimo el 25% sobre el salario diario ordinario.')}</p>
                                         </div>
 
                                         {/* Ley Silla & Descansos */}
                                         <div className="p-4 rounded-xl border space-y-4 bg-muted/20 border-emerald-500/30">
                                             <h4 className="text-xs font-bold uppercase tracking-wider text-emerald-600 dark:text-emerald-400 flex items-center gap-2">
                                                 <Coffee className="w-4 h-4" />
-                                                Regla Ley Silla & Recordatorios de Descanso
+                                                <span>{__('Regla Ley Silla & Recordatorios de Descanso')}</span>
                                             </h4>
 
                                             <div className="grid grid-cols-2 gap-4">
                                                 <div className="space-y-1.5">
-                                                    <Label className="text-xs">Intervalo de Trabajo (Horas)</Label>
+                                                    <Label className="text-xs">{__('Intervalo de Trabajo (Horas)')}</Label>
                                                     <Input
                                                         type="number"
                                                         step="0.5"
@@ -566,11 +568,11 @@ export default function ConfiguracionAsistenciaIndex({ configuracion, turnos, di
                                                         value={configForm.data.ley_silla_intervalo_horas}
                                                         onChange={(e) => configForm.setData('ley_silla_intervalo_horas', e.target.value)}
                                                     />
-                                                    <p className="text-[11px] text-muted-foreground">Horas continuas de labor.</p>
+                                                    <p className="text-[11px] text-muted-foreground">{__('Horas continuas de labor.')}</p>
                                                 </div>
 
                                                 <div className="space-y-1.5">
-                                                    <Label className="text-xs">Minutos Descanso Sentado</Label>
+                                                    <Label className="text-xs">{__('Minutos Descanso Sentado')}</Label>
                                                     <Input
                                                         type="number"
                                                         step="1"
@@ -579,15 +581,15 @@ export default function ConfiguracionAsistenciaIndex({ configuracion, turnos, di
                                                         value={configForm.data.ley_silla_descanso_minutos}
                                                         onChange={(e) => configForm.setData('ley_silla_descanso_minutos', parseInt(e.target.value) || 5)}
                                                     />
-                                                    <p className="text-[11px] text-muted-foreground">Tiempo asignado por intervalo.</p>
+                                                    <p className="text-[11px] text-muted-foreground">{__('Tiempo asignado por intervalo.')}</p>
                                                 </div>
                                             </div>
 
                                             <div className="pt-2 border-t space-y-3">
                                                 <div className="flex items-center justify-between">
                                                     <div className="space-y-0.5">
-                                                        <Label className="text-xs font-semibold">Recordatorio de Descanso por WhatsApp</Label>
-                                                        <p className="text-[11px] text-muted-foreground">Notifica al empleado en su marcaje de entrada cuándo tomar su descanso.</p>
+                                                        <Label className="text-xs font-semibold">{__('Recordatorio de Descanso por WhatsApp')}</Label>
+                                                        <p className="text-[11px] text-muted-foreground">{__('Notifica al empleado en su marcaje de entrada cuándo tomar su descanso.')}</p>
                                                     </div>
                                                     <Switch
                                                         checked={configForm.data.whatsapp_recordatorio_descanso}
@@ -597,7 +599,7 @@ export default function ConfiguracionAsistenciaIndex({ configuracion, turnos, di
 
                                                 {configForm.data.whatsapp_recordatorio_descanso && (
                                                     <div className="space-y-1.5">
-                                                        <Label className="text-xs">Recordar a las (Horas post-entrada):</Label>
+                                                        <Label className="text-xs">{__('Recordar a las (Horas post-entrada):')}</Label>
                                                         <Input
                                                             type="number"
                                                             step="0.5"
@@ -606,7 +608,7 @@ export default function ConfiguracionAsistenciaIndex({ configuracion, turnos, di
                                                             value={configForm.data.whatsapp_recordatorio_horas_post_entrada}
                                                             onChange={(e) => configForm.setData('whatsapp_recordatorio_horas_post_entrada', e.target.value)}
                                                         />
-                                                        <p className="text-[11px] text-muted-foreground">Ejemplo: 4.0 hrs (A las 4 horas de iniciada la jornada laboral).</p>
+                                                        <p className="text-[11px] text-muted-foreground">{__('Ejemplo: 4.0 hrs (A las 4 horas de iniciada la jornada laboral).')}</p>
                                                     </div>
                                                 )}
                                             </div>
@@ -618,7 +620,7 @@ export default function ConfiguracionAsistenciaIndex({ configuracion, turnos, di
                             <div className="flex justify-end">
                                 <Button type="submit" disabled={configForm.processing} className="gap-2">
                                     <Save className="w-4 h-4" />
-                                    <span>Guardar Configuración General</span>
+                                    <span>{__('Guardar Configuración General')}</span>
                                 </Button>
                             </div>
                         </form>
@@ -637,20 +639,20 @@ export default function ConfiguracionAsistenciaIndex({ configuracion, turnos, di
                                             </div>
                                             <div>
                                                 <CardTitle className="text-base font-bold flex items-center gap-2">
-                                                    Cronograma de Reducción Gradual de Jornada (LFT)
+                                                    <span>{__('Cronograma de Reducción Gradual de Jornada (LFT)')}</span>
                                                     <Badge variant="outline" className="bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/30 text-xs">
-                                                        2 hrs / año
+                                                        <span dir="ltr">2</span> {__('hrs / año')}
                                                     </Badge>
                                                 </CardTitle>
                                                 <CardDescription>
-                                                    Transición escalonada de 48h a 40h semanales. Selecciona el año en curso para sincronizar los límites laborales.
+                                                    {__('Transición escalonada de 48h a 40h semanales. Selecciona el año en curso para sincronizar los límites laborales.')}
                                                 </CardDescription>
                                             </div>
                                         </div>
                                         <div className="flex items-center gap-2">
-                                            <span className="text-xs text-muted-foreground">Régimen Activo:</span>
+                                            <span className="text-xs text-muted-foreground">{__('Régimen Activo:')}</span>
                                             <Badge className="bg-emerald-600 text-white font-bold px-3 py-1 text-sm">
-                                                Año {configForm.data.reforma_laboral_ano} ({configForm.data.limite_horas_normales_semanal}h Normales)
+                                                {__('Año')} <span dir="ltr">{configForm.data.reforma_laboral_ano}</span> (<span dir="ltr">{configForm.data.limite_horas_normales_semanal}</span>h {__('Normales')})
                                             </Badge>
                                         </div>
                                     </div>
@@ -661,7 +663,7 @@ export default function ConfiguracionAsistenciaIndex({ configuracion, turnos, di
                                         <table className="w-full text-sm text-left">
                                             <thead>
                                                 <tr className="bg-slate-100 dark:bg-slate-800/60 border-b border-slate-200 dark:border-slate-800 font-semibold text-slate-700 dark:text-slate-300">
-                                                    <th className="py-3 px-4">Semana / Concepto</th>
+                                                    <th className="py-3 px-4 text-left rtl:text-right">{__('Semana / Concepto')}</th>
                                                     {[2026, 2027, 2028, 2029, 2030].map((ano) => {
                                                         const isActive = configForm.data.reforma_laboral_ano === ano;
                                                         return (
@@ -670,7 +672,7 @@ export default function ConfiguracionAsistenciaIndex({ configuracion, turnos, di
                                                                     <span>{ano}</span>
                                                                     {isActive && (
                                                                         <Badge className="bg-emerald-600 text-[10px] text-white px-1.5 py-0 h-4">
-                                                                            Vigente
+                                                                            {__('Vigente')}
                                                                         </Badge>
                                                                     )}
                                                                 </div>
@@ -683,50 +685,50 @@ export default function ConfiguracionAsistenciaIndex({ configuracion, turnos, di
                                                 <tr className="hover:bg-slate-50/50 dark:hover:bg-slate-800/40">
                                                     <td className="py-3 px-4 font-medium text-slate-900 dark:text-slate-100 flex items-center gap-2">
                                                         <Clock className="w-4 h-4 text-blue-500" />
-                                                        <span>Horas Normales Semanales</span>
+                                                        <span>{__('Horas Normales Semanales')}</span>
                                                     </td>
                                                     {[2026, 2027, 2028, 2029, 2030].map((ano) => (
                                                         <td key={ano} className={`py-3 px-4 text-center font-semibold ${configForm.data.reforma_laboral_ano === ano ? 'bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 font-bold' : ''}`}>
-                                                            {CRONOGRAMA_OFICIAL[ano].normales} hrs
+                                                            <span dir="ltr">{CRONOGRAMA_OFICIAL[ano].normales}</span> {__('hrs')}
                                                         </td>
                                                     ))}
                                                 </tr>
                                                 <tr className="hover:bg-slate-50/50 dark:hover:bg-slate-800/40">
                                                     <td className="py-3 px-4 font-medium text-slate-900 dark:text-slate-100 flex items-center gap-2">
                                                         <TrendingDown className="w-4 h-4 text-amber-500" />
-                                                        <span>TEX Doble (Horas Extra 2x)</span>
+                                                        <span>{__('TEX Doble (Horas Extra 2x)')}</span>
                                                     </td>
                                                     {[2026, 2027, 2028, 2029, 2030].map((ano) => (
                                                         <td key={ano} className={`py-3 px-4 text-center font-semibold ${configForm.data.reforma_laboral_ano === ano ? 'bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 font-bold' : ''}`}>
-                                                            {CRONOGRAMA_OFICIAL[ano].tex_doble} hrs
+                                                            <span dir="ltr">{CRONOGRAMA_OFICIAL[ano].tex_doble}</span> {__('hrs')}
                                                         </td>
                                                     ))}
                                                 </tr>
                                                 <tr className="hover:bg-slate-50/50 dark:hover:bg-slate-800/40">
                                                     <td className="py-3 px-4 font-medium text-slate-900 dark:text-slate-100 flex items-center gap-2">
                                                         <AlertTriangle className="w-4 h-4 text-rose-500" />
-                                                        <span>TEX Triple (Horas Extra 3x)</span>
+                                                        <span>{__('TEX Triple (Horas Extra 3x)')}</span>
                                                     </td>
                                                     {[2026, 2027, 2028, 2029, 2030].map((ano) => (
                                                         <td key={ano} className={`py-3 px-4 text-center font-semibold ${configForm.data.reforma_laboral_ano === ano ? 'bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 font-bold' : ''}`}>
-                                                            {CRONOGRAMA_OFICIAL[ano].tex_triple} hrs
+                                                            <span dir="ltr">{CRONOGRAMA_OFICIAL[ano].tex_triple}</span> {__('hrs')}
                                                         </td>
                                                     ))}
                                                 </tr>
                                                 <tr className="bg-slate-50/80 dark:bg-slate-800/60 font-bold">
                                                     <td className="py-3 px-4 font-bold text-slate-900 dark:text-slate-100 flex items-center gap-2">
                                                         <Activity className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
-                                                        <span>Total Horas Máximas</span>
+                                                        <span>{__('Total Horas Máximas')}</span>
                                                     </td>
                                                     {[2026, 2027, 2028, 2029, 2030].map((ano) => (
                                                         <td key={ano} className={`py-3 px-4 text-center font-black ${configForm.data.reforma_laboral_ano === ano ? 'bg-emerald-500/20 text-emerald-800 dark:text-emerald-200' : 'text-slate-700 dark:text-slate-300'}`}>
-                                                            {CRONOGRAMA_OFICIAL[ano].total} hrs
+                                                            <span dir="ltr">{CRONOGRAMA_OFICIAL[ano].total}</span> {__('hrs')}
                                                         </td>
                                                     ))}
                                                 </tr>
                                                 <tr>
-                                                    <td className="py-3 px-4 text-xs text-muted-foreground font-medium">
-                                                        Selección Rápida
+                                                    <td className="py-3 px-4 text-xs text-muted-foreground font-medium text-left rtl:text-right">
+                                                        {__('Selección Rápida')}
                                                     </td>
                                                     {[2026, 2027, 2028, 2029, 2030].map((ano) => {
                                                         const isCurrent = configForm.data.reforma_laboral_ano === ano;
@@ -742,10 +744,10 @@ export default function ConfiguracionAsistenciaIndex({ configuracion, turnos, di
                                                                     {isCurrent ? (
                                                                         <>
                                                                             <Check className="w-3 h-3" />
-                                                                            <span>Activo</span>
+                                                                            <span>{__('Activo')}</span>
                                                                         </>
                                                                     ) : (
-                                                                        <span>Aplicar {ano}</span>
+                                                                        <span>{__('Aplicar')} <span dir="ltr">{ano}</span></span>
                                                                     )}
                                                                 </Button>
                                                             </td>
@@ -759,7 +761,7 @@ export default function ConfiguracionAsistenciaIndex({ configuracion, turnos, di
                                     {/* Ajuste manual fino de límites si se desea */}
                                     <div className="grid grid-cols-1 md:grid-cols-3 gap-4 p-4 rounded-xl border bg-slate-50/50 dark:bg-slate-900/30">
                                         <div className="space-y-1.5">
-                                            <Label className="text-xs font-semibold">Límite Horas Normales (Semana)</Label>
+                                            <Label className="text-xs font-semibold">{__('Límite Horas Normales (Semana)')}</Label>
                                             <Input
                                                 type="number"
                                                 step="0.5"
@@ -768,11 +770,11 @@ export default function ConfiguracionAsistenciaIndex({ configuracion, turnos, di
                                                 value={configForm.data.limite_horas_normales_semanal}
                                                 onChange={(e) => configForm.setData('limite_horas_normales_semanal', e.target.value)}
                                             />
-                                            <p className="text-[11px] text-muted-foreground">Horas ordinarias legales para el régimen seleccionado.</p>
+                                            <p className="text-[11px] text-muted-foreground">{__('Horas ordinarias legales para el régimen seleccionado.')}</p>
                                         </div>
 
                                         <div className="space-y-1.5">
-                                            <Label className="text-xs font-semibold">Límite Horas Extras Dobles (Semana)</Label>
+                                            <Label className="text-xs font-semibold">{__('Límite Horas Extras Dobles (Semana)')}</Label>
                                             <Input
                                                 type="number"
                                                 step="0.5"
@@ -781,11 +783,11 @@ export default function ConfiguracionAsistenciaIndex({ configuracion, turnos, di
                                                 value={configForm.data.limite_tex_doble_semanal}
                                                 onChange={(e) => configForm.setData('limite_tex_doble_semanal', e.target.value)}
                                             />
-                                            <p className="text-[11px] text-muted-foreground">Horas pagadas al 200% (12h en 2026, 9h a partir de 2027).</p>
+                                            <p className="text-[11px] text-muted-foreground">{__('Horas pagadas al 200% (12h en 2026, 9h a partir de 2027).')}</p>
                                         </div>
 
                                         <div className="space-y-1.5">
-                                            <Label className="text-xs font-semibold">Límite Horas Extras Triples (Semana)</Label>
+                                            <Label className="text-xs font-semibold">{__('Límite Horas Extras Triples (Semana)')}</Label>
                                             <Input
                                                 type="number"
                                                 step="0.5"
@@ -794,7 +796,7 @@ export default function ConfiguracionAsistenciaIndex({ configuracion, turnos, di
                                                 value={configForm.data.limite_tex_triple_semanal}
                                                 onChange={(e) => configForm.setData('limite_tex_triple_semanal', e.target.value)}
                                             />
-                                            <p className="text-[11px] text-muted-foreground">Límite máximo permitido de horas triples al 300% (4 hrs).</p>
+                                            <p className="text-[11px] text-muted-foreground">{__('Límite máximo permitido de horas triples al 300% (4 hrs).')}</p>
                                         </div>
                                     </div>
                                 </CardContent>
@@ -807,22 +809,22 @@ export default function ConfiguracionAsistenciaIndex({ configuracion, turnos, di
                                     <CardHeader className="bg-blue-500/5 dark:bg-blue-950/20 border-b border-blue-500/20 pb-4">
                                         <CardTitle className="text-sm font-bold flex items-center gap-2">
                                             <Clock className="w-4 h-4 text-blue-600 dark:text-blue-400" />
-                                            Semáforo Normal
+                                            <span>{__('Semáforo Normal')}</span>
                                         </CardTitle>
                                         <CardDescription className="text-xs">
-                                            Monitoreo de horas ordinarias acumuladas con alertas escalonadas.
+                                            {__('Monitoreo de horas ordinarias acumuladas con alertas escalonadas.')}
                                         </CardDescription>
                                     </CardHeader>
                                     <CardContent className="p-4 space-y-4 flex-1">
                                         <div className="p-3 rounded-lg border border-emerald-500/30 bg-emerald-500/10 space-y-2">
                                             <div className="flex items-center justify-between">
                                                 <span className="text-xs font-bold text-emerald-700 dark:text-emerald-300 flex items-center gap-1.5">
-                                                    🟢 Nivel Verde
+                                                    {__('🟢 Nivel Verde')}
                                                 </span>
-                                                <Badge className="bg-emerald-600 text-white text-[10px]">Notif: RH</Badge>
+                                                <Badge className="bg-emerald-600 text-white text-[10px]">{__('Notif: RH')}</Badge>
                                             </div>
                                             <div className="space-y-1">
-                                                <Label className="text-[11px] text-muted-foreground">Umbral de Horas</Label>
+                                                <Label className="text-[11px] text-muted-foreground">{__('Umbral de Horas')}</Label>
                                                 <div className="flex items-center gap-2">
                                                     <Input
                                                         type="number"
@@ -831,7 +833,7 @@ export default function ConfiguracionAsistenciaIndex({ configuracion, turnos, di
                                                         onChange={(e) => configForm.setData('semaforo_normal_verde', e.target.value)}
                                                         className="h-8 text-xs font-bold font-mono"
                                                     />
-                                                    <span className="text-xs text-muted-foreground font-semibold">hrs</span>
+                                                    <span className="text-xs text-muted-foreground font-semibold">{__('hrs')}</span>
                                                 </div>
                                             </div>
                                         </div>
@@ -839,12 +841,12 @@ export default function ConfiguracionAsistenciaIndex({ configuracion, turnos, di
                                         <div className="p-3 rounded-lg border border-amber-500/30 bg-amber-500/10 space-y-2">
                                             <div className="flex items-center justify-between">
                                                 <span className="text-xs font-bold text-amber-700 dark:text-amber-300 flex items-center gap-1.5">
-                                                    🟡 Nivel Amarillo
+                                                    {__('🟡 Nivel Amarillo')}
                                                 </span>
-                                                <Badge className="bg-amber-600 text-white text-[10px]">Notif: Responsable</Badge>
+                                                <Badge className="bg-amber-600 text-white text-[10px]">{__('Notif: Responsable')}</Badge>
                                             </div>
                                             <div className="space-y-1">
-                                                <Label className="text-[11px] text-muted-foreground">Umbral de Horas</Label>
+                                                <Label className="text-[11px] text-muted-foreground">{__('Umbral de Horas')}</Label>
                                                 <div className="flex items-center gap-2">
                                                     <Input
                                                         type="number"
@@ -853,7 +855,7 @@ export default function ConfiguracionAsistenciaIndex({ configuracion, turnos, di
                                                         onChange={(e) => configForm.setData('semaforo_normal_amarillo', e.target.value)}
                                                         className="h-8 text-xs font-bold font-mono"
                                                     />
-                                                    <span className="text-xs text-muted-foreground font-semibold">hrs</span>
+                                                    <span className="text-xs text-muted-foreground font-semibold">{__('hrs')}</span>
                                                 </div>
                                             </div>
                                         </div>
@@ -861,12 +863,12 @@ export default function ConfiguracionAsistenciaIndex({ configuracion, turnos, di
                                         <div className="p-3 rounded-lg border border-rose-500/30 bg-rose-500/10 space-y-2">
                                             <div className="flex items-center justify-between">
                                                 <span className="text-xs font-bold text-rose-700 dark:text-rose-300 flex items-center gap-1.5">
-                                                    🔴 Nivel Rojo
+                                                    {__('🔴 Nivel Rojo')}
                                                 </span>
-                                                <Badge className="bg-rose-600 text-white text-[10px]">Notif: DG</Badge>
+                                                <Badge className="bg-rose-600 text-white text-[10px]">{__('Notif: DG')}</Badge>
                                             </div>
                                             <div className="space-y-1">
-                                                <Label className="text-[11px] text-muted-foreground">Umbral de Horas</Label>
+                                                <Label className="text-[11px] text-muted-foreground">{__('Umbral de Horas')}</Label>
                                                 <div className="flex items-center gap-2">
                                                     <Input
                                                         type="number"
@@ -875,7 +877,7 @@ export default function ConfiguracionAsistenciaIndex({ configuracion, turnos, di
                                                         onChange={(e) => configForm.setData('semaforo_normal_rojo', e.target.value)}
                                                         className="h-8 text-xs font-bold font-mono"
                                                     />
-                                                    <span className="text-xs text-muted-foreground font-semibold">hrs</span>
+                                                    <span className="text-xs text-muted-foreground font-semibold">{__('hrs')}</span>
                                                 </div>
                                             </div>
                                         </div>
@@ -887,22 +889,22 @@ export default function ConfiguracionAsistenciaIndex({ configuracion, turnos, di
                                     <CardHeader className="bg-amber-500/5 dark:bg-amber-950/20 border-b border-amber-500/20 pb-4">
                                         <CardTitle className="text-sm font-bold flex items-center gap-2">
                                             <TrendingDown className="w-4 h-4 text-amber-600 dark:text-amber-400" />
-                                            Semáforo TEX Doble
+                                            <span>{__('Semáforo TEX Doble')}</span>
                                         </CardTitle>
                                         <CardDescription className="text-xs">
-                                            Horas extras al 200% acumuladas en la semana.
+                                            {__('Horas extras al 200% acumuladas en la semana.')}
                                         </CardDescription>
                                     </CardHeader>
                                     <CardContent className="p-4 space-y-4 flex-1">
                                         <div className="p-3 rounded-lg border border-emerald-500/30 bg-emerald-500/10 space-y-2">
                                             <div className="flex items-center justify-between">
                                                 <span className="text-xs font-bold text-emerald-700 dark:text-emerald-300">
-                                                    🟢 Nivel Verde
+                                                    {__('🟢 Nivel Verde')}
                                                 </span>
-                                                <span className="text-[11px] text-muted-foreground">Preventivo</span>
+                                                <span className="text-[11px] text-muted-foreground">{__('Preventivo')}</span>
                                             </div>
                                             <div className="space-y-1">
-                                                <Label className="text-[11px] text-muted-foreground">Umbral de Horas</Label>
+                                                <Label className="text-[11px] text-muted-foreground">{__('Umbral de Horas')}</Label>
                                                 <div className="flex items-center gap-2">
                                                     <Input
                                                         type="number"
@@ -911,7 +913,7 @@ export default function ConfiguracionAsistenciaIndex({ configuracion, turnos, di
                                                         onChange={(e) => configForm.setData('semaforo_tex_doble_verde', e.target.value)}
                                                         className="h-8 text-xs font-bold font-mono"
                                                     />
-                                                    <span className="text-xs text-muted-foreground font-semibold">hrs</span>
+                                                    <span className="text-xs text-muted-foreground font-semibold">{__('hrs')}</span>
                                                 </div>
                                             </div>
                                         </div>
@@ -919,12 +921,12 @@ export default function ConfiguracionAsistenciaIndex({ configuracion, turnos, di
                                         <div className="p-3 rounded-lg border border-amber-500/30 bg-amber-500/10 space-y-2">
                                             <div className="flex items-center justify-between">
                                                 <span className="text-xs font-bold text-amber-700 dark:text-amber-300">
-                                                    🟡 Nivel Amarillo
+                                                    {__('🟡 Nivel Amarillo')}
                                                 </span>
-                                                <span className="text-[11px] text-muted-foreground">Atención</span>
+                                                <span className="text-[11px] text-muted-foreground">{__('Atención')}</span>
                                             </div>
                                             <div className="space-y-1">
-                                                <Label className="text-[11px] text-muted-foreground">Umbral de Horas</Label>
+                                                <Label className="text-[11px] text-muted-foreground">{__('Umbral de Horas')}</Label>
                                                 <div className="flex items-center gap-2">
                                                     <Input
                                                         type="number"
@@ -933,7 +935,7 @@ export default function ConfiguracionAsistenciaIndex({ configuracion, turnos, di
                                                         onChange={(e) => configForm.setData('semaforo_tex_doble_amarillo', e.target.value)}
                                                         className="h-8 text-xs font-bold font-mono"
                                                     />
-                                                    <span className="text-xs text-muted-foreground font-semibold">hrs</span>
+                                                    <span className="text-xs text-muted-foreground font-semibold">{__('hrs')}</span>
                                                 </div>
                                             </div>
                                         </div>
@@ -941,12 +943,12 @@ export default function ConfiguracionAsistenciaIndex({ configuracion, turnos, di
                                         <div className="p-3 rounded-lg border border-rose-500/30 bg-rose-500/10 space-y-2">
                                             <div className="flex items-center justify-between">
                                                 <span className="text-xs font-bold text-rose-700 dark:text-rose-300">
-                                                    🔴 Nivel Rojo
+                                                    {__('🔴 Nivel Rojo')}
                                                 </span>
-                                                <span className="text-[11px] text-muted-foreground font-bold">Límite Máximo</span>
+                                                <span className="text-[11px] text-muted-foreground font-bold">{__('Límite Máximo')}</span>
                                             </div>
                                             <div className="space-y-1">
-                                                <Label className="text-[11px] text-muted-foreground">Umbral de Horas</Label>
+                                                <Label className="text-[11px] text-muted-foreground">{__('Umbral de Horas')}</Label>
                                                 <div className="flex items-center gap-2">
                                                     <Input
                                                         type="number"
@@ -955,7 +957,7 @@ export default function ConfiguracionAsistenciaIndex({ configuracion, turnos, di
                                                         onChange={(e) => configForm.setData('semaforo_tex_doble_rojo', e.target.value)}
                                                         className="h-8 text-xs font-bold font-mono"
                                                     />
-                                                    <span className="text-xs text-muted-foreground font-semibold">hrs</span>
+                                                    <span className="text-xs text-muted-foreground font-semibold">{__('hrs')}</span>
                                                 </div>
                                             </div>
                                         </div>
@@ -967,22 +969,22 @@ export default function ConfiguracionAsistenciaIndex({ configuracion, turnos, di
                                     <CardHeader className="bg-rose-500/5 dark:bg-rose-950/20 border-b border-rose-500/20 pb-4">
                                         <CardTitle className="text-sm font-bold flex items-center gap-2">
                                             <AlertTriangle className="w-4 h-4 text-rose-600 dark:text-rose-400" />
-                                            Semáforo TEX Triple
+                                            <span>{__('Semáforo TEX Triple')}</span>
                                         </CardTitle>
                                         <CardDescription className="text-xs">
-                                            Horas extras al 300% (excedentes de horas dobles).
+                                            {__('Horas extras al 300% (excedentes de horas dobles).')}
                                         </CardDescription>
                                     </CardHeader>
                                     <CardContent className="p-4 space-y-4 flex-1">
                                         <div className="p-3 rounded-lg border border-emerald-500/30 bg-emerald-500/10 space-y-2">
                                             <div className="flex items-center justify-between">
                                                 <span className="text-xs font-bold text-emerald-700 dark:text-emerald-300">
-                                                    🟢 Nivel Verde
+                                                    {__('🟢 Nivel Verde')}
                                                 </span>
-                                                <span className="text-[11px] text-muted-foreground">Alerta Inicial</span>
+                                                <span className="text-[11px] text-muted-foreground">{__('Alerta Inicial')}</span>
                                             </div>
                                             <div className="space-y-1">
-                                                <Label className="text-[11px] text-muted-foreground">Umbral de Horas</Label>
+                                                <Label className="text-[11px] text-muted-foreground">{__('Umbral de Horas')}</Label>
                                                 <div className="flex items-center gap-2">
                                                     <Input
                                                         type="number"
@@ -991,7 +993,7 @@ export default function ConfiguracionAsistenciaIndex({ configuracion, turnos, di
                                                         onChange={(e) => configForm.setData('semaforo_tex_triple_verde', e.target.value)}
                                                         className="h-8 text-xs font-bold font-mono"
                                                     />
-                                                    <span className="text-xs text-muted-foreground font-semibold">hrs</span>
+                                                    <span className="text-xs text-muted-foreground font-semibold">{__('hrs')}</span>
                                                 </div>
                                             </div>
                                         </div>
@@ -999,12 +1001,12 @@ export default function ConfiguracionAsistenciaIndex({ configuracion, turnos, di
                                         <div className="p-3 rounded-lg border border-amber-500/30 bg-amber-500/10 space-y-2">
                                             <div className="flex items-center justify-between">
                                                 <span className="text-xs font-bold text-amber-700 dark:text-amber-300">
-                                                    🟡 Nivel Amarillo
+                                                    {__('🟡 Nivel Amarillo')}
                                                 </span>
-                                                <span className="text-[11px] text-muted-foreground font-semibold">Alerta Crítica</span>
+                                                <span className="text-[11px] text-muted-foreground font-semibold">{__('Alerta Crítica')}</span>
                                             </div>
                                             <div className="space-y-1">
-                                                <Label className="text-[11px] text-muted-foreground">Umbral de Horas</Label>
+                                                <Label className="text-[11px] text-muted-foreground">{__('Umbral de Horas')}</Label>
                                                 <div className="flex items-center gap-2">
                                                     <Input
                                                         type="number"
@@ -1013,7 +1015,7 @@ export default function ConfiguracionAsistenciaIndex({ configuracion, turnos, di
                                                         onChange={(e) => configForm.setData('semaforo_tex_triple_amarillo', e.target.value)}
                                                         className="h-8 text-xs font-bold font-mono"
                                                     />
-                                                    <span className="text-xs text-muted-foreground font-semibold">hrs</span>
+                                                    <span className="text-xs text-muted-foreground font-semibold">{__('hrs')}</span>
                                                 </div>
                                             </div>
                                         </div>
@@ -1021,12 +1023,12 @@ export default function ConfiguracionAsistenciaIndex({ configuracion, turnos, di
                                         <div className="p-3 rounded-lg border border-rose-500/30 bg-rose-500/10 space-y-2">
                                             <div className="flex items-center justify-between">
                                                 <span className="text-xs font-bold text-rose-700 dark:text-rose-300">
-                                                    🔴 Nivel Rojo
+                                                    {__('🔴 Nivel Rojo')}
                                                 </span>
-                                                <span className="text-[11px] text-rose-600 dark:text-rose-400 font-bold">Máximo LFT</span>
+                                                <span className="text-[11px] text-rose-600 dark:text-rose-400 font-bold">{__('Máximo LFT')}</span>
                                             </div>
                                             <div className="space-y-1">
-                                                <Label className="text-[11px] text-muted-foreground">Umbral de Horas</Label>
+                                                <Label className="text-[11px] text-muted-foreground">{__('Umbral de Horas')}</Label>
                                                 <div className="flex items-center gap-2">
                                                     <Input
                                                         type="number"
@@ -1035,7 +1037,7 @@ export default function ConfiguracionAsistenciaIndex({ configuracion, turnos, di
                                                         onChange={(e) => configForm.setData('semaforo_tex_triple_rojo', e.target.value)}
                                                         className="h-8 text-xs font-bold font-mono"
                                                     />
-                                                    <span className="text-xs text-muted-foreground font-semibold">hrs</span>
+                                                    <span className="text-xs text-muted-foreground font-semibold">{__('hrs')}</span>
                                                 </div>
                                             </div>
                                         </div>
@@ -1048,10 +1050,10 @@ export default function ConfiguracionAsistenciaIndex({ configuracion, turnos, di
                                 <CardHeader className="bg-slate-50 dark:bg-slate-900/40 border-b pb-4">
                                     <CardTitle className="text-sm font-bold flex items-center gap-2">
                                         <Bell className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
-                                        Destinatarios y Canales de Notificaciones Escalonadas
+                                        <span>{__('Destinatarios y Canales de Notificaciones Escalonadas')}</span>
                                     </CardTitle>
                                     <CardDescription className="text-xs">
-                                        Configura hacia quién se dirigen los avisos al cruzar los umbrales de jornada laboral.
+                                        {__('Configura hacia quién se dirigen los avisos al cruzar los umbrales de jornada laboral.')}
                                     </CardDescription>
                                 </CardHeader>
                                 <CardContent className="p-6 space-y-6">
@@ -1060,8 +1062,8 @@ export default function ConfiguracionAsistenciaIndex({ configuracion, turnos, di
                                         <div className="p-4 rounded-xl border border-emerald-500/30 bg-emerald-500/5 space-y-3">
                                             <div className="flex items-center justify-between">
                                                 <div className="flex items-center gap-2">
-                                                    <Badge className="bg-emerald-600 text-white font-bold">🟢 RH (42h)</Badge>
-                                                    <span className="text-xs font-semibold">Recursos Humanos</span>
+                                                    <Badge className="bg-emerald-600 text-white font-bold">{__('🟢 RH (42h)')}</Badge>
+                                                    <span className="text-xs font-semibold">{__('Recursos Humanos')}</span>
                                                 </div>
                                                 <Switch
                                                     checked={configForm.data.notif_rh_enabled}
@@ -1069,7 +1071,7 @@ export default function ConfiguracionAsistenciaIndex({ configuracion, turnos, di
                                                 />
                                             </div>
                                             <div className="space-y-1.5">
-                                                <Label className="text-xs">Correo Electrónico de RH</Label>
+                                                <Label className="text-xs">{__('Correo Electrónico de RH')}</Label>
                                                 <Input
                                                     type="email"
                                                     placeholder="rh@empresa.com"
@@ -1078,15 +1080,15 @@ export default function ConfiguracionAsistenciaIndex({ configuracion, turnos, di
                                                     className="h-8 text-xs"
                                                 />
                                             </div>
-                                            <p className="text-[11px] text-muted-foreground">Aviso preventivo cuando un colaborador alcanza 42h ordinarias semanales.</p>
+                                            <p className="text-[11px] text-muted-foreground">{__('Aviso preventivo cuando un colaborador alcanza 42h ordinarias semanales.')}</p>
                                         </div>
 
                                         {/* Responsable */}
                                         <div className="p-4 rounded-xl border border-amber-500/30 bg-amber-500/5 space-y-3">
                                             <div className="flex items-center justify-between">
                                                 <div className="flex items-center gap-2">
-                                                    <Badge className="bg-amber-600 text-white font-bold">🟡 Responsable (44h)</Badge>
-                                                    <span className="text-xs font-semibold">Supervisor / Sede</span>
+                                                    <Badge className="bg-amber-600 text-white font-bold">{__('🟡 Responsable (44h)')}</Badge>
+                                                    <span className="text-xs font-semibold">{__('Supervisor / Sede')}</span>
                                                 </div>
                                                 <Switch
                                                     checked={configForm.data.notif_responsable_enabled}
@@ -1094,18 +1096,18 @@ export default function ConfiguracionAsistenciaIndex({ configuracion, turnos, di
                                                 />
                                             </div>
                                             <div className="p-2 rounded-lg bg-amber-500/10 border border-amber-500/20 text-[11px] text-amber-800 dark:text-amber-200">
-                                                <p className="font-semibold">Responsable directo asignado</p>
-                                                <p className="text-[10px] text-muted-foreground mt-0.5">Se notifica automáticamente al supervisor directo de sede que tenga registrado el colaborador.</p>
+                                                <p className="font-semibold">{__('Responsable directo asignado')}</p>
+                                                <p className="text-[10px] text-muted-foreground mt-0.5">{__('Se notifica automáticamente al supervisor directo de sede que tenga registrado el colaborador.')}</p>
                                             </div>
-                                            <p className="text-[11px] text-muted-foreground">Aviso de atención cuando un colaborador alcanza 44h ordinarias semanales.</p>
+                                            <p className="text-[11px] text-muted-foreground">{__('Aviso de atención cuando un colaborador alcanza 44h ordinarias semanales.')}</p>
                                         </div>
 
-                                        {/* Dirección General */}
+                                        {/* {__('Dirección General')} */}
                                         <div className="p-4 rounded-xl border border-rose-500/30 bg-rose-500/5 space-y-3">
                                             <div className="flex items-center justify-between">
                                                 <div className="flex items-center gap-2">
-                                                    <Badge className="bg-rose-600 text-white font-bold">🔴 DG (46h)</Badge>
-                                                    <span className="text-xs font-semibold">Dirección General</span>
+                                                    <Badge className="bg-rose-600 text-white font-bold">{__('🔴 DG (46h)')}</Badge>
+                                                    <span className="text-xs font-semibold">{__('Dirección General')}</span>
                                                 </div>
                                                 <Switch
                                                     checked={configForm.data.notif_dg_enabled}
@@ -1113,7 +1115,7 @@ export default function ConfiguracionAsistenciaIndex({ configuracion, turnos, di
                                                 />
                                             </div>
                                             <div className="space-y-1.5">
-                                                <Label className="text-xs">Correo Dirección General</Label>
+                                                <Label className="text-xs">{__('Correo Dirección General')}</Label>
                                                 <Input
                                                     type="email"
                                                     placeholder="direccion@empresa.com"
@@ -1122,7 +1124,7 @@ export default function ConfiguracionAsistenciaIndex({ configuracion, turnos, di
                                                     className="h-8 text-xs"
                                                 />
                                             </div>
-                                            <p className="text-[11px] text-muted-foreground">Alerta crítica a la alta dirección al alcanzar 46h ordinarias semanales.</p>
+                                            <p className="text-[11px] text-muted-foreground">{__('Alerta crítica a la alta dirección al alcanzar 46h ordinarias semanales.')}</p>
                                         </div>
                                     </div>
                                 </CardContent>
@@ -1131,7 +1133,7 @@ export default function ConfiguracionAsistenciaIndex({ configuracion, turnos, di
                             <div className="flex justify-end pt-2">
                                 <Button type="submit" disabled={configForm.processing} className="gap-2 bg-emerald-600 hover:bg-emerald-700 text-white font-semibold">
                                     <Save className="w-4 h-4" />
-                                    <span>Guardar Parámetros de Reforma Laboral & Semáforos</span>
+                                    <span>{__('Guardar Parámetros de Reforma Laboral & Semáforos')}</span>
                                 </Button>
                             </div>
                         </form>
@@ -1141,12 +1143,12 @@ export default function ConfiguracionAsistenciaIndex({ configuracion, turnos, di
                     <TabsContent value="turnos" className="space-y-4">
                         <div className="flex items-center justify-between p-4 rounded-xl border bg-card">
                             <div>
-                                <h3 className="text-base font-semibold">Catálogo de Turnos Laborales</h3>
-                                <p className="text-muted-foreground text-xs">Clasificación de jornadas en Diurna (max 8h), Nocturna (max 7h) y Mixta (max 7.5h) según el tipo de jornada.</p>
+                                <h3 className="text-base font-semibold">{__('Catálogo de Turnos Laborales')}</h3>
+                                <p className="text-muted-foreground text-xs">{__('Clasificación de jornadas en Diurna (max 8h), Nocturna (max 7h) y Mixta (max 7.5h) según el tipo de jornada.')}</p>
                             </div>
                             <Button onClick={openTurnoCreate} className="gap-2">
                                 <Plus className="w-4 h-4" />
-                                <span>Nuevo Turno</span>
+                                <span>{__('Nuevo Turno')}</span>
                             </Button>
                         </div>
 
@@ -1162,7 +1164,7 @@ export default function ConfiguracionAsistenciaIndex({ configuracion, turnos, di
                                                     t.tipo_jornada === 'nocturna' ? 'bg-indigo-100 text-indigo-800 dark:bg-indigo-900/30 dark:text-indigo-400' :
                                                     'bg-emerald-100 text-emerald-800 dark:bg-emerald-900/30 dark:text-emerald-400'
                                                 }`}>
-                                                    Jornada {t.tipo_jornada} ({t.horas_diarias_ley}h)
+                                                    {__('Jornada')} {t.tipo_jornada === 'diurna' ? __('Diurna') : t.tipo_jornada === 'nocturna' ? __('Nocturna') : t.tipo_jornada === 'mixta' ? __('Mixta') : t.tipo_jornada} (<span dir="ltr">{t.horas_diarias_ley}</span>h)
                                                 </Badge>
                                             </div>
                                             <div className="flex items-center gap-1">
@@ -1177,15 +1179,15 @@ export default function ConfiguracionAsistenciaIndex({ configuracion, turnos, di
                                     </CardHeader>
                                     <CardContent className="space-y-3 text-xs">
                                         <div className="flex justify-between py-1 border-b">
-                                            <span className="text-muted-foreground">Horario Entrada / Salida:</span>
-                                            <span className="font-semibold">{t.hora_entrada.substring(0, 5)} - {t.hora_salida.substring(0, 5)} hrs</span>
+                                            <span className="text-muted-foreground">{__('Horario Entrada / Salida:')}</span>
+                                            <span className="font-semibold"><span dir="ltr">{t.hora_entrada.substring(0, 5)} - {t.hora_salida.substring(0, 5)}</span> {__('hrs')}</span>
                                         </div>
                                         <div className="flex justify-between py-1 border-b">
-                                            <span className="text-muted-foreground">Tiempo de Descanso:</span>
-                                            <span className="font-semibold">{t.minutos_descanso} min ({t.descanso_pagado ? 'Pagado' : 'No pagado'})</span>
+                                            <span className="text-muted-foreground">{__('Tiempo de Descanso:')}</span>
+                                            <span className="font-semibold"><span dir="ltr">{t.minutos_descanso}</span> {__('min')} ({t.descanso_pagado ? __('Pagado') : __('No pagado')})</span>
                                         </div>
                                         <div className="pt-1">
-                                            <span className="text-muted-foreground block mb-1">Días Laborables:</span>
+                                            <span className="text-muted-foreground block mb-1">{__('Días Laborables:')}</span>
                                             <div className="flex flex-wrap gap-1">
                                                 {(() => {
                                                     const norm = normalizeDiasLaborables(t.dias_laborables);
@@ -1195,7 +1197,7 @@ export default function ConfiguracionAsistenciaIndex({ configuracion, turnos, di
                                                             <span key={d.id} className={`px-2 py-0.5 rounded text-[10px] font-medium ${
                                                                 isLab ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-900/30 dark:text-emerald-400' : 'bg-muted text-muted-foreground'
                                                             }`}>
-                                                                {d.label.substring(0, 3)}
+                                                                {__(d.label).substring(0, 3)}
                                                             </span>
                                                         );
                                                     });
@@ -1204,15 +1206,15 @@ export default function ConfiguracionAsistenciaIndex({ configuracion, turnos, di
                                         </div>
 
                                         <div className="pt-2 flex justify-between items-center border-t">
-                                            <span className="text-muted-foreground">Estado:</span>
+                                            <span className="text-muted-foreground">{__('Estado:')}</span>
                                             <Button
                                                 size="sm"
                                                 variant="ghost"
                                                 onClick={() => handleToggleTurno(t)}
                                                 className={t.status ? 'text-emerald-600 dark:text-emerald-400' : 'text-muted-foreground'}
                                             >
-                                                {t.status ? <CheckCircle2 className="w-4 h-4 mr-1" /> : <XCircle className="w-4 h-4 mr-1" />}
-                                                {t.status ? 'Activo' : 'Inactivo'}
+                                                {t.status ? <CheckCircle2 className="w-4 h-4 mr-1 rtl:mr-0 rtl:ml-1" /> : <XCircle className="w-4 h-4 mr-1 rtl:mr-0 rtl:ml-1" />}
+                                                {t.status ? __('Activo') : __('Inactivo')}
                                             </Button>
                                         </div>
                                     </CardContent>
@@ -1225,17 +1227,17 @@ export default function ConfiguracionAsistenciaIndex({ configuracion, turnos, di
                     <TabsContent value="festivos" className="space-y-4">
                         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-4 rounded-xl border bg-card">
                             <div>
-                                <h3 className="text-base font-semibold">Días Festivos Obligatorios</h3>
-                                <p className="text-muted-foreground text-xs">Los días festivos trabajados se pagan al 200% adicional (Pago Triple total).</p>
+                                <h3 className="text-base font-semibold">{__('Días Festivos Obligatorios')}</h3>
+                                <p className="text-muted-foreground text-xs">{__('Los días festivos trabajados se pagan al 200% adicional (Pago Triple total).')}</p>
                             </div>
                             <div className="flex items-center gap-2">
                                 <Button onClick={handlePrecargarLft} variant="outline" className="gap-2">
                                     <Sparkles className="w-4 h-4" />
-                                    <span>Precargar Festivos Oficiales</span>
+                                    <span>{__('Precargar Festivos Oficiales')}</span>
                                 </Button>
                                 <Button onClick={openFestivoCreate} className="gap-2">
                                     <Plus className="w-4 h-4" />
-                                    <span>Agregar Festivo</span>
+                                    <span>{__('Agregar Festivo')}</span>
                                 </Button>
                             </div>
                         </div>
@@ -1245,40 +1247,40 @@ export default function ConfiguracionAsistenciaIndex({ configuracion, turnos, di
                                 <table className="w-full text-left text-sm">
                                     <thead className="bg-muted/50 text-xs font-semibold uppercase text-muted-foreground border-b">
                                         <tr>
-                                            <th className="px-4 py-3">Fecha</th>
-                                            <th className="px-4 py-3">Descripción</th>
-                                            <th className="px-4 py-3">Origen</th>
-                                            <th className="px-4 py-3">Pago Adicional</th>
-                                            <th className="px-4 py-3 text-right">Acciones</th>
+                                            <th className="px-4 py-3 text-left rtl:text-right">{__('Fecha')}</th>
+                                            <th className="px-4 py-3 text-left rtl:text-right">{__('Descripción')}</th>
+                                            <th className="px-4 py-3 text-left rtl:text-right">{__('Origen')}</th>
+                                            <th className="px-4 py-3 text-left rtl:text-right">{__('Pago Adicional')}</th>
+                                            <th className="px-4 py-3 text-right rtl:text-left">{__('Acciones')}</th>
                                         </tr>
                                     </thead>
                                     <tbody className="divide-y">
                                         {diasFestivos.length === 0 ? (
                                             <tr>
                                                 <td colSpan={5} className="px-4 py-8 text-center text-muted-foreground">
-                                                    No hay días festivos registrados. Haz clic en "Precargar Festivos Oficiales" para cargar los oficiales de Ley.
+                                                    {__('No hay días festivos registrados. Haz clic en "Precargar Festivos Oficiales" para cargar los oficiales de Ley.')}
                                                 </td>
                                             </tr>
                                         ) : (
                                             diasFestivos.map((f) => (
                                                 <tr key={f.id} className="hover:bg-muted/50 transition-colors">
                                                     <td className="px-4 py-3 font-semibold">
-                                                        {f.fecha.substring(0, 10)}
+                                                        <span dir="ltr">{f.fecha.substring(0, 10)}</span>
                                                     </td>
                                                     <td className="px-4 py-3">{f.descripcion}</td>
                                                     <td className="px-4 py-3">
                                                         {f.es_oficial_lft ? (
                                                             <Badge className="bg-emerald-100 text-emerald-800 dark:bg-emerald-900/30 dark:text-emerald-400 text-[11px]">
-                                                                Oficial Ley
+                                                                {__('Oficial Ley')}
                                                             </Badge>
                                                         ) : (
                                                             <Badge variant="outline" className="text-[11px]">
-                                                                Corporativo / Especial
+                                                                {__('Corporativo / Especial')}
                                                             </Badge>
                                                         )}
                                                     </td>
                                                     <td className="px-4 py-3 text-emerald-600 dark:text-emerald-400 font-bold">
-                                                        +{f.pago_porcentaje}% (Pago Triple)
+                                                        <span dir="ltr">+{f.pago_porcentaje}%</span> ({__('Pago Triple')})
                                                     </td>
                                                     <td className="px-4 py-3 text-right space-x-2">
                                                         <Button size="icon" variant="ghost" className="h-8 w-8 text-muted-foreground hover:text-foreground" onClick={() => openFestivoEdit(f)}>
@@ -1303,26 +1305,26 @@ export default function ConfiguracionAsistenciaIndex({ configuracion, turnos, di
             <Dialog open={isTurnoModalOpen} onOpenChange={setIsTurnoModalOpen}>
                 <DialogContent className="max-w-lg">
                     <DialogHeader>
-                        <DialogTitle>{editingTurno ? 'Editar Turno Laboral' : 'Nuevo Turno Laboral'}</DialogTitle>
+                        <DialogTitle>{editingTurno ? __('Editar Turno Laboral') : __('Nuevo Turno Laboral')}</DialogTitle>
                         <DialogDescription>
-                            Configure las horas y límites legales según la Ley Federal del Trabajo.
+                            {__('Configure las horas y límites legales según la Ley Federal del Trabajo.')}
                         </DialogDescription>
                     </DialogHeader>
 
                     <form onSubmit={handleSaveTurno} className="space-y-4 pt-2">
                         <div className="space-y-2">
-                            <Label>Nombre del Turno</Label>
+                            <Label>{__('Nombre del Turno')}</Label>
                             <Input
                                 required
                                 value={turnoForm.data.nombre}
                                 onChange={(e) => turnoForm.setData('nombre', e.target.value)}
-                                placeholder="Ej. Turno Matutino Planta 1"
+                                placeholder={__('Ej. Turno Matutino Planta 1')}
                             />
                         </div>
 
                         <div className="grid grid-cols-2 gap-4">
                             <div className="space-y-2">
-                                <Label>Tipo de Jornada</Label>
+                                <Label>{__('Tipo de Jornada')}</Label>
                                 <Select
                                     value={turnoForm.data.tipo_jornada}
                                     onValueChange={(val: any) => handleTipoJornadaChange(val)}
@@ -1331,16 +1333,16 @@ export default function ConfiguracionAsistenciaIndex({ configuracion, turnos, di
                                         <SelectValue />
                                     </SelectTrigger>
                                     <SelectContent>
-                                        <SelectItem value="diurna">Diurna (Máx 8.0h)</SelectItem>
-                                        <SelectItem value="nocturna">Nocturna (Máx 7.0h)</SelectItem>
-                                        <SelectItem value="mixta">Mixta (Máx 7.5h)</SelectItem>
-                                        <SelectItem value="personalizada">Personalizada</SelectItem>
+                                        <SelectItem value="diurna">{__('Diurna (Máx 8.0h)')}</SelectItem>
+                                        <SelectItem value="nocturna">{__('Nocturna (Máx 7.0h)')}</SelectItem>
+                                        <SelectItem value="mixta">{__('Mixta (Máx 7.5h)')}</SelectItem>
+                                        <SelectItem value="personalizada">{__('Personalizada')}</SelectItem>
                                     </SelectContent>
                                 </Select>
                             </div>
 
                             <div className="space-y-2">
-                                <Label>Horas Diarias Ley</Label>
+                                <Label>{__('Horas Diarias Ley')}</Label>
                                 <Input
                                     type="number"
                                     step="0.25"
@@ -1352,7 +1354,7 @@ export default function ConfiguracionAsistenciaIndex({ configuracion, turnos, di
 
                         <div className="grid grid-cols-2 gap-4">
                             <div className="space-y-2">
-                                <Label>Hora Entrada</Label>
+                                <Label>{__('Hora Entrada')}</Label>
                                 <Input
                                     type="time"
                                     required
@@ -1362,7 +1364,7 @@ export default function ConfiguracionAsistenciaIndex({ configuracion, turnos, di
                             </div>
 
                             <div className="space-y-2">
-                                <Label>Hora Salida</Label>
+                                <Label>{__('Hora Salida')}</Label>
                                 <Input
                                     type="time"
                                     required
@@ -1374,7 +1376,7 @@ export default function ConfiguracionAsistenciaIndex({ configuracion, turnos, di
 
                         <div className="grid grid-cols-2 gap-4 pt-2">
                             <div className="space-y-2">
-                                <Label>Descanso (Minutos)</Label>
+                                <Label>{__('Descanso (Minutos)')}</Label>
                                 <Input
                                     type="number"
                                     value={turnoForm.data.minutos_descanso}
@@ -1384,7 +1386,7 @@ export default function ConfiguracionAsistenciaIndex({ configuracion, turnos, di
 
                             <div className="flex flex-col justify-end space-y-2">
                                 <div className="flex items-center justify-between p-2 rounded border bg-muted/30">
-                                    <Label className="text-xs">Descanso Pagado</Label>
+                                    <Label className="text-xs">{__('Descanso Pagado')}</Label>
                                     <Switch
                                         checked={turnoForm.data.descanso_pagado}
                                         onCheckedChange={(checked) => turnoForm.setData('descanso_pagado', checked)}
@@ -1394,7 +1396,7 @@ export default function ConfiguracionAsistenciaIndex({ configuracion, turnos, di
                         </div>
 
                         <div className="space-y-2 pt-2">
-                            <Label className="block mb-1">Días Laborables de la Semana</Label>
+                            <Label className="block mb-1">{__('Días Laborables de la Semana')}</Label>
                             <div className="grid grid-cols-4 gap-2">
                                 {DIAS_SEMANA.map((d) => {
                                     const selected = turnoForm.data.dias_laborables.includes(d.id);
@@ -1413,7 +1415,7 @@ export default function ConfiguracionAsistenciaIndex({ configuracion, turnos, di
                                                     : 'bg-muted text-muted-foreground hover:bg-muted/80'
                                             }`}
                                         >
-                                            {d.label}
+                                            {__(d.label)}
                                         </button>
                                     );
                                 })}
@@ -1422,10 +1424,10 @@ export default function ConfiguracionAsistenciaIndex({ configuracion, turnos, di
 
                         <DialogFooter className="pt-4 border-t">
                             <Button type="button" variant="outline" onClick={() => setIsTurnoModalOpen(false)}>
-                                Cancelar
+                                {__('Cancelar')}
                             </Button>
                             <Button type="submit" disabled={turnoForm.processing}>
-                                {editingTurno ? 'Guardar Cambios' : 'Crear Turno'}
+                                {editingTurno ? __('Guardar Cambios') : __('Crear Turno')}
                             </Button>
                         </DialogFooter>
                     </form>
@@ -1436,15 +1438,15 @@ export default function ConfiguracionAsistenciaIndex({ configuracion, turnos, di
             <Dialog open={isFestivoModalOpen} onOpenChange={setIsFestivoModalOpen}>
                 <DialogContent className="max-w-md">
                     <DialogHeader>
-                        <DialogTitle>{editingFestivo ? 'Editar Día Festivo' : 'Nuevo Día Festivo'}</DialogTitle>
+                        <DialogTitle>{editingFestivo ? __('Editar Día Festivo') : __('Nuevo Día Festivo')}</DialogTitle>
                         <DialogDescription>
-                            Establezca la fecha y el porcentaje de remuneración adicional.
+                            {__('Establezca la fecha y el porcentaje de remuneración adicional.')}
                         </DialogDescription>
                     </DialogHeader>
 
                     <form onSubmit={handleSaveFestivo} className="space-y-4 pt-2">
                         <div className="space-y-2">
-                            <Label>Fecha del Festivo</Label>
+                            <Label>{__('Fecha del Festivo')}</Label>
                             <Input
                                 type="date"
                                 required
@@ -1454,17 +1456,17 @@ export default function ConfiguracionAsistenciaIndex({ configuracion, turnos, di
                         </div>
 
                         <div className="space-y-2">
-                            <Label>Descripción / Motivo</Label>
+                            <Label>{__('Descripción / Motivo')}</Label>
                             <Input
                                 required
                                 value={festivoForm.data.descripcion}
                                 onChange={(e) => festivoForm.setData('descripcion', e.target.value)}
-                                placeholder="Ej. Día del Trabajador Agrícola"
+                                placeholder={__('Ej. Día del Trabajador Agrícola')}
                             />
                         </div>
 
                         <div className="space-y-2">
-                            <Label>Pago Adicional (% Remuneración)</Label>
+                            <Label>{__('Pago Adicional (% Remuneración)')}</Label>
                             <Input
                                 type="number"
                                 step="10"
@@ -1472,11 +1474,11 @@ export default function ConfiguracionAsistenciaIndex({ configuracion, turnos, di
                                 value={festivoForm.data.pago_porcentaje}
                                 onChange={(e) => festivoForm.setData('pago_porcentaje', e.target.value)}
                             />
-                            <p className="text-xs text-muted-foreground">200.00% por Ley (Salario diario + 200% = Pago Triple).</p>
+                            <p className="text-xs text-muted-foreground">{__('200.00% por Ley (Salario diario + 200% = Pago Triple).')}</p>
                         </div>
 
                         <div className="flex items-center justify-between p-3 rounded-lg border bg-muted/30">
-                            <Label className="text-xs">Es Festivo Oficial de Ley</Label>
+                            <Label className="text-xs">{__('Es Festivo Oficial de Ley')}</Label>
                             <Switch
                                 checked={festivoForm.data.es_oficial_lft}
                                 onCheckedChange={(checked) => festivoForm.setData('es_oficial_lft', checked)}
@@ -1485,10 +1487,10 @@ export default function ConfiguracionAsistenciaIndex({ configuracion, turnos, di
 
                         <DialogFooter className="pt-4 border-t">
                             <Button type="button" variant="outline" onClick={() => setIsFestivoModalOpen(false)}>
-                                Cancelar
+                                {__('Cancelar')}
                             </Button>
                             <Button type="submit" disabled={festivoForm.processing}>
-                                Guardar Festivo
+                                {__('Guardar Festivo')}
                             </Button>
                         </DialogFooter>
                     </form>
@@ -1499,15 +1501,15 @@ export default function ConfiguracionAsistenciaIndex({ configuracion, turnos, di
             <AlertDialog open={!!deletingTurno} onOpenChange={() => setDeletingTurno(null)}>
                 <AlertDialogContent>
                     <AlertDialogHeader>
-                        <AlertDialogTitle>¿Eliminar Turno Laboral?</AlertDialogTitle>
+                        <AlertDialogTitle>{__('¿Eliminar Turno Laboral?')}</AlertDialogTitle>
                         <AlertDialogDescription>
-                            Esta acción eliminará el turno "{deletingTurno?.nombre}". Los empleados asignados perderán la vinculación a este turno.
+                            {__('Esta acción eliminará el turno ":nombre". Los empleados asignados perderán la vinculación a este turno.', { nombre: deletingTurno?.nombre ?? '' })}
                         </AlertDialogDescription>
                     </AlertDialogHeader>
                     <AlertDialogFooter>
-                        <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                        <AlertDialogCancel>{__('Cancelar')}</AlertDialogCancel>
                         <AlertDialogAction onClick={handleDeleteTurno} className="bg-rose-600 hover:bg-rose-700 text-white">
-                            Confirmar Eliminación
+                            {__('Confirmar Eliminación')}
                         </AlertDialogAction>
                     </AlertDialogFooter>
                 </AlertDialogContent>
@@ -1517,15 +1519,15 @@ export default function ConfiguracionAsistenciaIndex({ configuracion, turnos, di
             <AlertDialog open={!!deletingFestivo} onOpenChange={() => setDeletingFestivo(null)}>
                 <AlertDialogContent>
                     <AlertDialogHeader>
-                        <AlertDialogTitle>¿Eliminar Día Festivo?</AlertDialogTitle>
+                        <AlertDialogTitle>{__('¿Eliminar Día Festivo?')}</AlertDialogTitle>
                         <AlertDialogDescription>
-                            Se eliminará la fecha {deletingFestivo?.fecha} ({deletingFestivo?.descripcion}).
+                            {__('Se eliminará la fecha :fecha (:descripcion).', { fecha: deletingFestivo?.fecha ?? '', descripcion: deletingFestivo?.descripcion ?? '' })}
                         </AlertDialogDescription>
                     </AlertDialogHeader>
                     <AlertDialogFooter>
-                        <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                        <AlertDialogCancel>{__('Cancelar')}</AlertDialogCancel>
                         <AlertDialogAction onClick={handleDeleteFestivo} className="bg-rose-600 hover:bg-rose-700 text-white">
-                            Confirmar Eliminación
+                            {__('Confirmar Eliminación')}
                         </AlertDialogAction>
                     </AlertDialogFooter>
                 </AlertDialogContent>

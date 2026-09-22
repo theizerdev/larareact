@@ -41,6 +41,7 @@ import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import type { Paginated } from '@/types/app';
 import Pagination from '@/components/pagination';
+import { useTranslate } from '@/hooks/use-translate';
 
 interface TiempoRestanteInfo {
     estado: 'en_curso' | 'excedido' | 'completado' | 'normal';
@@ -145,12 +146,12 @@ function LiveBreakTimer({
 
     if (remainingSeconds > 0) {
         const formatted = formatTimeDuration(remainingSeconds);
-        const suffix = remainingSeconds < 3600 ? ' min restantes' : ' restantes';
+        const suffix = remainingSeconds < 3600 ? ' ' + __('min restantes') : ' ' + __('restantes');
         return (
             <div>
                 <Badge className="bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border-emerald-500/30 gap-1.5 px-2.5 py-1 font-semibold text-xs font-mono">
                     <Timer className="w-3.5 h-3.5 text-emerald-600 shrink-0 animate-pulse" />
-                    <span>{formatted}{suffix}</span>
+                    <span><span dir="ltr">{formatted}</span>{suffix}</span>
                 </Badge>
                 {subtexto && (
                     <div className="text-[11px] text-slate-500 dark:text-slate-400 font-medium mt-1">
@@ -162,12 +163,12 @@ function LiveBreakTimer({
     } else {
         const excessSeconds = Math.abs(remainingSeconds);
         const formatted = formatTimeDuration(excessSeconds);
-        const suffix = excessSeconds < 3600 ? ' min' : '';
+        const suffix = excessSeconds < 3600 ? ' ' + __('min') : '';
         return (
             <div>
                 <Badge className="bg-rose-500/15 text-rose-700 dark:text-rose-300 border-rose-500/30 gap-1.5 px-2.5 py-1 font-semibold text-xs font-mono">
                     <AlertTriangle className="w-3.5 h-3.5 text-rose-600 shrink-0 animate-bounce" />
-                    <span>Excedido por {formatted}{suffix}</span>
+                    <span>{__('Excedido por')} <span dir="ltr">{formatted}</span>{suffix}</span>
                 </Badge>
                 {subtexto && (
                     <div className="text-[11px] text-rose-600 dark:text-rose-400 font-medium mt-1">
@@ -216,6 +217,7 @@ interface Props {
 }
 
 export default function AsistenciaBitacoraIndex({ marcajes, stats, sucursales = [], responsables = [], filters }: Props) {
+    const { __, currentLocale, isRtl } = useTranslate();
     const [search, setSearch] = useState(filters.search || '');
     const [tipoMarcaje, setTipoMarcaje] = useState(filters.tipo_marcaje || 'todos');
     const [origen, setOrigen] = useState(filters.origen || 'todos');
@@ -230,12 +232,12 @@ export default function AsistenciaBitacoraIndex({ marcajes, stats, sucursales = 
         if (fechaStr.includes('T') || fechaStr.includes('Z')) {
             const dateObj = new Date(fechaStr);
             if (!isNaN(dateObj.getTime())) {
-                const datePart = dateObj.toLocaleDateString('es-MX', {
+                const datePart = dateObj.toLocaleDateString(currentLocale === 'ar' ? 'ar-u-nu-latn' : 'es-MX', {
                     day: '2-digit',
                     month: '2-digit',
                     year: 'numeric'
                 });
-                const timePart = dateObj.toLocaleTimeString('es-MX', {
+                const timePart = dateObj.toLocaleTimeString(currentLocale === 'ar' ? 'ar-u-nu-latn' : 'es-MX', {
                     hour: '2-digit',
                     minute: '2-digit',
                     second: '2-digit',
@@ -315,21 +317,21 @@ export default function AsistenciaBitacoraIndex({ marcajes, stats, sucursales = 
     const getBadgeStyle = (tipo: string) => {
         switch (tipo) {
             case 'entrada':
-                return { label: 'Entrada', class: 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20', icon: LogIn };
+                return { label: __('Entrada'), class: 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20', icon: LogIn };
             case 'salida_comida':
-                return { label: 'Salida Comida', class: 'bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/20', icon: Utensils };
+                return { label: __('Salida Comida'), class: 'bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/20', icon: Utensils };
             case 'entrada_comida':
-                return { label: 'Regreso Comida', class: 'bg-blue-500/10 text-blue-600 dark:text-blue-400 border-blue-500/20', icon: Utensils };
+                return { label: __('Regreso Comida'), class: 'bg-blue-500/10 text-blue-600 dark:text-blue-400 border-blue-500/20', icon: Utensils };
             case 'descanso_inicio':
-                return { label: 'Descanso Inicio', class: 'bg-purple-500/10 text-purple-600 dark:text-purple-400 border-purple-500/20', icon: Coffee };
+                return { label: __('Descanso Inicio'), class: 'bg-purple-500/10 text-purple-600 dark:text-purple-400 border-purple-500/20', icon: Coffee };
             case 'descanso_fin':
-                return { label: 'Descanso Fin', class: 'bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 border-indigo-500/20', icon: Coffee };
+                return { label: __('Descanso Fin'), class: 'bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 border-indigo-500/20', icon: Coffee };
             case 'salida':
-                return { label: 'Salida', class: 'bg-rose-500/10 text-rose-600 dark:text-rose-400 border-rose-500/20', icon: LogOut };
+                return { label: __('Salida'), class: 'bg-rose-500/10 text-rose-600 dark:text-rose-400 border-rose-500/20', icon: LogOut };
             case 'entrada_extraordinaria':
-                return { label: 'Entrada Extra', class: 'bg-cyan-500/10 text-cyan-600 dark:text-cyan-400 border-cyan-500/20', icon: LogIn };
+                return { label: __('Entrada Extra'), class: 'bg-cyan-500/10 text-cyan-600 dark:text-cyan-400 border-cyan-500/20', icon: LogIn };
             default:
-                return { label: tipo, class: 'bg-gray-500/10 text-gray-600 border-gray-500/20', icon: Clock };
+                return { label: __(tipo), class: 'bg-gray-500/10 text-gray-600 border-gray-500/20', icon: Clock };
         }
     };
 
@@ -338,43 +340,43 @@ export default function AsistenciaBitacoraIndex({ marcajes, stats, sucursales = 
             case 'kiosko_tactil':
             case 'kiosko':
             case 'reloj_checador':
-                return { label: 'Reloj Checador', class: 'bg-indigo-50 text-indigo-700 dark:bg-indigo-950/60 dark:text-indigo-300 border-indigo-200' };
+                return { label: __('Reloj Checador'), class: 'bg-indigo-50 text-indigo-700 dark:bg-indigo-950/60 dark:text-indigo-300 border-indigo-200' };
             case 'garita':
-                return { label: 'Garita Acceso', class: 'bg-amber-50 text-amber-700 dark:bg-amber-950/60 dark:text-amber-300 border-amber-200' };
+                return { label: __('Garita Acceso'), class: 'bg-amber-50 text-amber-700 dark:bg-amber-950/60 dark:text-amber-300 border-amber-200' };
             case 'app_movil':
-                return { label: 'App Móvil', class: 'bg-emerald-50 text-emerald-700 dark:bg-emerald-950/60 dark:text-emerald-300 border-emerald-200' };
+                return { label: __('App Móvil'), class: 'bg-emerald-50 text-emerald-700 dark:bg-emerald-950/60 dark:text-emerald-300 border-emerald-200' };
             case 'reconocimiento_facial':
-                return { label: 'Facial AI', class: 'bg-cyan-50 text-cyan-700 dark:bg-cyan-950/60 dark:text-cyan-300 border-cyan-200' };
+                return { label: __('Facial AI'), class: 'bg-cyan-50 text-cyan-700 dark:bg-cyan-950/60 dark:text-cyan-300 border-cyan-200' };
             case 'manual_admin':
-                return { label: 'Manual Admin', class: 'bg-slate-50 text-slate-700 dark:bg-slate-800 dark:text-slate-300 border-slate-200' };
+                return { label: __('Manual Admin'), class: 'bg-slate-50 text-slate-700 dark:bg-slate-800 dark:text-slate-300 border-slate-200' };
             default:
-                return { label: origenStr, class: 'bg-gray-50 text-gray-700 border-gray-200' };
+                return { label: __(origenStr), class: 'bg-gray-50 text-gray-700 border-gray-200' };
         }
     };
 
     return (
         <>
-            <Head title="Bitácora de Asistencia" />
+            <Head title={__('Bitácora de Asistencia')} />
 
             <div className="space-y-6">
                 <Breadcrumbs
                     breadcrumbs={[
-                        { title: 'Asistencia', href: '/admin/asistencia' },
-                        { title: 'Bitácora de Marcajes', href: '/admin/asistencia/bitacora' },
+                        { title: __('Asistencia'), href: '/admin/asistencia' },
+                        { title: __('Bitácora de Marcajes'), href: '/admin/asistencia/bitacora' },
                     ]}
                 />
 
                 <ModuleHeader
-                    title="Bitácora de Asistencia por Empleado"
-                    description="Supervisión agrupada de marcajes, descansos de Ley Silla y almuerzos en tiempo real."
+                    title={__('Bitácora de Asistencia por Empleado')}
+                    description={__('Supervisión agrupada de marcajes, descansos de Ley Silla y almuerzos en tiempo real.')}
                     icon={<Clock className="h-6 w-6 text-white" />}
                     colorClassName="bg-indigo-600"
                 >
                     <div className="flex flex-wrap items-center gap-2">
                         <Link href="/admin/asistencia/panel-control">
                             <Button variant="secondary" size="sm" className="bg-white/20 hover:bg-white/30 text-white border-0 gap-1.5 text-xs font-semibold shadow-xs">
-                                <LayoutDashboard className="w-3.5 h-3.5" />
-                                Panel por Sede
+                                <LayoutDashboard className="w-3.5 h-3.5 rtl:mr-0 rtl:ml-1.5" />
+                                {__('Panel por Sede')}
                             </Button>
                         </Link>
                         <Button
@@ -383,8 +385,8 @@ export default function AsistenciaBitacoraIndex({ marcajes, stats, sucursales = 
                             size="sm"
                             className="bg-emerald-600 hover:bg-emerald-700 text-white border-0 gap-1.5 text-xs font-semibold shadow-xs"
                         >
-                            <FileSpreadsheet className="w-3.5 h-3.5" />
-                            Exportar Excel
+                            <FileSpreadsheet className="w-3.5 h-3.5 rtl:mr-0 rtl:ml-1.5" />
+                            {__('Exportar Excel')}
                         </Button>
                         <Button
                             onClick={() => handleExport('csv')}
@@ -392,33 +394,33 @@ export default function AsistenciaBitacoraIndex({ marcajes, stats, sucursales = 
                             size="sm"
                             className="bg-slate-800/90 hover:bg-slate-900 text-white border border-white/20 gap-1.5 text-xs font-semibold shadow-xs"
                         >
-                            <Download className="w-3.5 h-3.5" />
-                            CSV
+                            <Download className="w-3.5 h-3.5 rtl:mr-0 rtl:ml-1.5" />
+                            {__('CSV')}
                         </Button>
                     </div>
                 </ModuleHeader>
 
                 <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
                     <StatCard
-                        title="Total Marcajes Auditados"
+                        title={__('Total Marcajes Auditados')}
                         value={stats?.total ?? marcajes.total}
                         icon={<Clock className="w-5 h-5 text-indigo-600" />}
                         colorClassName="bg-indigo-100 dark:bg-indigo-900/30"
                     />
                     <StatCard
-                        title="Entradas Registradas"
+                        title={__('Entradas Registradas')}
                         value={stats?.entradas ?? 0}
                         icon={<LogIn className="w-5 h-5 text-emerald-600" />}
                         colorClassName="bg-emerald-100 dark:bg-emerald-900/30"
                     />
                     <StatCard
-                        title="Descansos / Almuerzos"
+                        title={__('Descansos / Almuerzos')}
                         value={stats?.descansos ?? 0}
                         icon={<Coffee className="w-5 h-5 text-purple-600" />}
                         colorClassName="bg-purple-100 dark:bg-purple-900/30"
                     />
                     <StatCard
-                        title="Salidas Registradas"
+                        title={__('Salidas Registradas')}
                         value={stats?.salidas ?? 0}
                         icon={<LogOut className="w-5 h-5 text-rose-600" />}
                         colorClassName="bg-rose-100 dark:bg-rose-900/30"
@@ -427,25 +429,25 @@ export default function AsistenciaBitacoraIndex({ marcajes, stats, sucursales = 
 
                 <FilterBar>
                     <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-3 w-full">
-                        <FilterField label="Buscar Empleado">
+                        <FilterField label={__('Buscar Empleado')}>
                             <div className="relative">
-                                <Search className="w-4 h-4 absolute left-2.5 top-2.5 text-muted-foreground" />
+                                <Search className="w-4 h-4 absolute left-2.5 rtl:left-auto rtl:right-2.5 top-2.5 text-muted-foreground" />
                                 <Input
-                                    placeholder="Nombre o N°..."
+                                    placeholder={__('Nombre o N°...')}
                                     value={search}
                                     onChange={(e) => setSearch(e.target.value)}
-                                    className="pl-9 text-xs"
+                                    className="pl-9 rtl:pl-3 rtl:pr-9 text-xs"
                                 />
                             </div>
                         </FilterField>
 
-                        <FilterField label="Sede / Sucursal">
+                        <FilterField label={__('Sede / Sucursal')}>
                             <Select value={sucursalId} onValueChange={setSucursalId}>
                                 <SelectTrigger className="text-xs">
-                                    <SelectValue placeholder="Todas las sedes" />
+                                    <SelectValue placeholder={__('Todas las sedes')} />
                                 </SelectTrigger>
                                 <SelectContent>
-                                    <SelectItem value="todas">Todas las sedes</SelectItem>
+                                    <SelectItem value="todas">{__('Todas las sedes')}</SelectItem>
                                     {sucursales.map((s) => (
                                         <SelectItem key={s.id} value={String(s.id)}>
                                             {s.nombre}
@@ -455,13 +457,13 @@ export default function AsistenciaBitacoraIndex({ marcajes, stats, sucursales = 
                             </Select>
                         </FilterField>
 
-                        <FilterField label="Responsable">
+                        <FilterField label={__('Responsable')}>
                             <Select value={responsableId} onValueChange={setResponsableId}>
                                 <SelectTrigger className="text-xs">
-                                    <SelectValue placeholder="Todos" />
+                                    <SelectValue placeholder={__('Todos')} />
                                 </SelectTrigger>
                                 <SelectContent>
-                                    <SelectItem value="todos">Todos los supervisores</SelectItem>
+                                    <SelectItem value="todos">{__('Todos los supervisores')}</SelectItem>
                                     {responsables.map((r) => (
                                         <SelectItem key={r.id} value={String(r.id)}>
                                             {r.nombres} {r.apellidos}
@@ -471,41 +473,41 @@ export default function AsistenciaBitacoraIndex({ marcajes, stats, sucursales = 
                             </Select>
                         </FilterField>
 
-                        <FilterField label="Tipo de Marcaje">
+                        <FilterField label={__('Tipo de Marcaje')}>
                             <Select value={tipoMarcaje} onValueChange={setTipoMarcaje}>
                                 <SelectTrigger className="text-xs">
-                                    <SelectValue placeholder="Todos los eventos" />
+                                    <SelectValue placeholder={__('Todos los eventos')} />
                                 </SelectTrigger>
                                 <SelectContent>
-                                    <SelectItem value="todos">Todos los eventos</SelectItem>
-                                    <SelectItem value="entrada">Entradas</SelectItem>
-                                    <SelectItem value="salida_comida">Salidas a Comida</SelectItem>
-                                    <SelectItem value="entrada_comida">Regresos de Comida</SelectItem>
-                                    <SelectItem value="descanso_inicio">Inicio Descanso Ley Silla</SelectItem>
-                                    <SelectItem value="descanso_fin">Fin Descanso Ley Silla</SelectItem>
-                                    <SelectItem value="salida">Salidas</SelectItem>
-                                    <SelectItem value="entrada_extraordinaria">Entrada Extra</SelectItem>
+                                    <SelectItem value="todos">{__('Todos los eventos')}</SelectItem>
+                                    <SelectItem value="entrada">{__('Entradas')}</SelectItem>
+                                    <SelectItem value="salida_comida">{__('Salidas a Comida')}</SelectItem>
+                                    <SelectItem value="entrada_comida">{__('Regresos de Comida')}</SelectItem>
+                                    <SelectItem value="descanso_inicio">{__('Inicio Descanso Ley Silla')}</SelectItem>
+                                    <SelectItem value="descanso_fin">{__('Fin Descanso Ley Silla')}</SelectItem>
+                                    <SelectItem value="salida">{__('Salidas')}</SelectItem>
+                                    <SelectItem value="entrada_extraordinaria">{__('Entrada Extra')}</SelectItem>
                                 </SelectContent>
                             </Select>
                         </FilterField>
 
-                        <FilterField label="Origen / Dispositivo">
+                        <FilterField label={__('Origen / Dispositivo')}>
                             <Select value={origen} onValueChange={setOrigen}>
                                 <SelectTrigger className="text-xs">
-                                    <SelectValue placeholder="Todos los orígenes" />
+                                    <SelectValue placeholder={__('Todos los orígenes')} />
                                 </SelectTrigger>
                                 <SelectContent>
-                                    <SelectItem value="todos">Todos los orígenes</SelectItem>
-                                    <SelectItem value="kiosko">Reloj Checador (Kiosko)</SelectItem>
-                                    <SelectItem value="app">App Móvil</SelectItem>
-                                    <SelectItem value="garita">Garita de Acceso</SelectItem>
-                                    <SelectItem value="facial">Reconocimiento Facial</SelectItem>
-                                    <SelectItem value="manual_admin">Manual Admin</SelectItem>
+                                    <SelectItem value="todos">{__('Todos los orígenes')}</SelectItem>
+                                    <SelectItem value="kiosko">{__('Reloj Checador (Kiosko)')}</SelectItem>
+                                    <SelectItem value="app">{__('App Móvil')}</SelectItem>
+                                    <SelectItem value="garita">{__('Garita de Acceso')}</SelectItem>
+                                    <SelectItem value="facial">{__('Reconocimiento Facial')}</SelectItem>
+                                    <SelectItem value="manual_admin">{__('Manual Admin')}</SelectItem>
                                 </SelectContent>
                             </Select>
                         </FilterField>
 
-                        <FilterField label="Fecha Inicio">
+                        <FilterField label={__('Fecha Inicio')}>
                             <Input
                                 type="date"
                                 value={fechaInicio}
@@ -514,7 +516,7 @@ export default function AsistenciaBitacoraIndex({ marcajes, stats, sucursales = 
                             />
                         </FilterField>
 
-                        <FilterField label="Fecha Fin">
+                        <FilterField label={__('Fecha Fin')}>
                             <Input
                                 type="date"
                                 value={fechaFin}
@@ -525,13 +527,13 @@ export default function AsistenciaBitacoraIndex({ marcajes, stats, sucursales = 
                     </div>
 
                     <div className="flex items-center gap-2 pt-3 border-t border-muted/50 text-xs text-muted-foreground">
-                        <span className="font-medium">Accesos rápidos:</span>
-                        <button onClick={() => setQuickDate('today')} className="hover:underline text-indigo-600 font-medium">Hoy</button>
+                        <span className="font-medium">{__('Accesos rápidos:')}</span>
+                        <button onClick={() => setQuickDate('today')} className="hover:underline text-indigo-600 font-medium">{__('Hoy')}</button>
                         <span>•</span>
-                        <button onClick={() => setQuickDate('week')} className="hover:underline text-indigo-600 font-medium">Esta Semana</button>
+                        <button onClick={() => setQuickDate('week')} className="hover:underline text-indigo-600 font-medium">{__('Esta Semana')}</button>
                         <span>•</span>
-                        <button onClick={() => setQuickDate('month')} className="hover:underline text-indigo-600 font-medium">Este Mes</button>
-                        <Button size="sm" onClick={handleFilter} className="ml-auto bg-indigo-600 h-7 text-xs">Filtrar</Button>
+                        <button onClick={() => setQuickDate('month')} className="hover:underline text-indigo-600 font-medium">{__('Este Mes')}</button>
+                        <Button size="sm" onClick={handleFilter} className="ml-auto bg-indigo-600 h-7 text-xs">{__('Filtrar')}</Button>
                         <Button size="sm" variant="outline" onClick={handleReset} className="h-7"><RotateCcw className="w-3.5 h-3.5" /></Button>
                     </div>
                 </FilterBar>
@@ -540,10 +542,10 @@ export default function AsistenciaBitacoraIndex({ marcajes, stats, sucursales = 
                     <CardHeader className="flex flex-row items-center justify-between pb-4 border-b">
                         <div className="flex items-center gap-2">
                             <ShieldCheck className="w-5 h-5 text-indigo-600" />
-                            <CardTitle className="text-base font-semibold">Bitácora de Asistencia por Empleado</CardTitle>
+                            <CardTitle className="text-base font-semibold">{__('Bitácora de Asistencia por Empleado')}</CardTitle>
                         </div>
                         <Badge variant="secondary" className="font-mono text-xs">
-                            {marcajes.total || marcajes.data.length} empleados auditados
+                            <span dir="ltr">{marcajes.total || marcajes.data.length}</span> {__('empleados auditados')}
                         </Badge>
                     </CardHeader>
                     <CardContent className="p-0">
@@ -551,13 +553,13 @@ export default function AsistenciaBitacoraIndex({ marcajes, stats, sucursales = 
                             <table className="w-full text-left text-sm">
                                 <thead className="bg-muted/50 text-xs font-semibold uppercase text-muted-foreground border-b">
                                     <tr>
-                                        <th className="px-4 py-3.5">Empleado</th>
-                                        <th className="px-4 py-3.5">Último Evento</th>
-                                        <th className="px-4 py-3.5">Estado / Tiempo Restante</th>
-                                        <th className="px-4 py-3.5">Semáforo LFT (Semana)</th>
-                                        <th className="px-4 py-3.5">Eventos en Período</th>
-                                        <th className="px-4 py-3.5">Origen & Sucursal</th>
-                                        <th className="px-4 py-3.5 text-right">Acción</th>
+                                        <th className="px-4 py-3.5 text-left rtl:text-right">{__('Empleado')}</th>
+                                        <th className="px-4 py-3.5 text-left rtl:text-right">{__('Último Evento')}</th>
+                                        <th className="px-4 py-3.5 text-left rtl:text-right">{__('Estado / Tiempo Restante')}</th>
+                                        <th className="px-4 py-3.5 text-left rtl:text-right">{__('Semáforo LFT (Semana)')}</th>
+                                        <th className="px-4 py-3.5 text-center">{__('Eventos en Período')}</th>
+                                        <th className="px-4 py-3.5 text-left rtl:text-right">{__('Origen & Sucursal')}</th>
+                                        <th className="px-4 py-3.5 text-right rtl:text-left">{__('Acción')}</th>
                                     </tr>
                                 </thead>
                                 <tbody className="divide-y">
@@ -565,7 +567,7 @@ export default function AsistenciaBitacoraIndex({ marcajes, stats, sucursales = 
                                         <tr>
                                             <td colSpan={7} className="px-4 py-12 text-center text-muted-foreground">
                                                 <Clock className="w-8 h-8 mx-auto mb-2 opacity-40" />
-                                                <p className="font-medium">No se encontraron empleados con marcajes en el período.</p>
+                                                <p className="font-medium">{__('No se encontraron empleados con marcajes en el período.')}</p>
                                             </td>
                                         </tr>
                                     ) : (
@@ -587,9 +589,9 @@ export default function AsistenciaBitacoraIndex({ marcajes, stats, sucursales = 
                                                             <div>
                                                                 <div className="font-semibold text-slate-900 dark:text-slate-100">{emp.nombres} {emp.apellidos}</div>
                                                                 <div className="flex items-center gap-1.5 text-xs text-muted-foreground mt-0.5">
-                                                                    <span className="font-mono font-medium">N° {emp.documento_identidad}</span>
+                                                                    <span className="font-mono font-medium">{__('N°')} <span dir="ltr">{emp.documento_identidad}</span></span>
                                                                     <span>•</span>
-                                                                    <span>{emp.departamento?.nombre || 'General'}</span>
+                                                                    <span>{emp.departamento?.nombre || __('General')}</span>
                                                                 </div>
                                                             </div>
                                                         </div>
@@ -687,7 +689,7 @@ export default function AsistenciaBitacoraIndex({ marcajes, stats, sucursales = 
                                                                             href={`https://www.google.com/maps?q=${ultimo.latitud},${ultimo.longitud}`}
                                                                             target="_blank"
                                                                             rel="noreferrer"
-                                                                            title={`Ver GPS en Google Maps (${ultimo.latitud}, ${ultimo.longitud})`}
+                                                                            title={`${__('Ver GPS en Google Maps')} (${ultimo.latitud}, ${ultimo.longitud})`}
                                                                             className="text-blue-600 hover:text-blue-700 dark:text-blue-400 inline-flex items-center gap-0.5 text-[10px] font-mono bg-blue-50 dark:bg-blue-950/40 px-1.5 py-0.5 rounded border border-blue-200 dark:border-blue-900 hover:underline"
                                                                         >
                                                                             <MapPin className="w-3 h-3 text-blue-500" />
@@ -695,12 +697,12 @@ export default function AsistenciaBitacoraIndex({ marcajes, stats, sucursales = 
                                                                         </a>
                                                                     )}
                                                                 </div>
-                                                                <div className="flex items-center gap-1 text-xs text-slate-500"><Building2 className="w-3 h-3" /> {ultimo.sucursal?.nombre || 'General'}</div>
+                                                                <div className="flex items-center gap-1 text-xs text-slate-500"><Building2 className="w-3 h-3" /> {ultimo.sucursal?.nombre || __('General')}</div>
                                                             </div>
                                                         ) : <span className="text-xs text-muted-foreground">-</span>}
                                                     </td>
-                                                    <td className="px-4 py-3.5 text-right">
-                                                        <Button size="sm" onClick={() => setSelectedEmpleado(emp)} className="h-8 gap-1.5"><Eye className="w-3.5 h-3.5" /> Auditar</Button>
+                                                    <td className="px-4 py-3.5 text-right rtl:text-left">
+                                                        <Button size="sm" onClick={() => setSelectedEmpleado(emp)} className="h-8 gap-1.5"><Eye className="w-3.5 h-3.5" /> {__('Auditar')}</Button>
                                                     </td>
                                                 </tr>
                                             );
@@ -719,10 +721,10 @@ export default function AsistenciaBitacoraIndex({ marcajes, stats, sucursales = 
                     <DialogHeader>
                         <DialogTitle className="flex items-center gap-2 text-base font-bold">
                             <ShieldCheck className="w-5 h-5 text-indigo-600" />
-                            Historial y Auditoría de Bitácora
+                            {__('Historial y Auditoría de Bitácora')}
                         </DialogTitle>
                         <DialogDescription className="text-xs">
-                            Detalle completo de todos los marcajes auditados para el empleado.
+                            {__('Detalle completo de todos los marcajes auditados para el empleado.')}
                         </DialogDescription>
                     </DialogHeader>
 
@@ -739,9 +741,9 @@ export default function AsistenciaBitacoraIndex({ marcajes, stats, sucursales = 
                                             {selectedEmpleado.nombres} {selectedEmpleado.apellidos}
                                         </h3>
                                         <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground mt-0.5">
-                                            <span className="font-mono font-semibold text-indigo-600 dark:text-indigo-400">N° {selectedEmpleado.documento_identidad}</span>
+                                            <span className="font-mono font-semibold text-indigo-600 dark:text-indigo-400">{__('N°')} <span dir="ltr">{selectedEmpleado.documento_identidad}</span></span>
                                             <span>•</span>
-                                            <span>{selectedEmpleado.departamento?.nombre || 'General'}</span>
+                                            <span>{selectedEmpleado.departamento?.nombre || __('General')}</span>
                                             {selectedEmpleado.cargo?.nombre && (
                                                 <>
                                                     <span>•</span>
@@ -754,7 +756,7 @@ export default function AsistenciaBitacoraIndex({ marcajes, stats, sucursales = 
 
                                 <div className="flex items-center gap-2">
                                     <Badge variant="outline" className="bg-white/80 dark:bg-slate-800 font-mono text-xs border-indigo-200 px-3 py-1">
-                                        Turno: {selectedEmpleado.turnoLaboral?.nombre || 'Estándar'}
+                                        {__('Turno:')} {selectedEmpleado.turnoLaboral?.nombre || __('Estándar')}
                                     </Badge>
                                 </div>
                             </div>
@@ -766,15 +768,15 @@ export default function AsistenciaBitacoraIndex({ marcajes, stats, sucursales = 
                                         <div className="flex items-center gap-2">
                                             <Scale className="w-4 h-4 text-indigo-600" />
                                             <h4 className="text-xs font-bold uppercase tracking-wider text-slate-900 dark:text-slate-100">
-                                                Jornada Semanal & Semáforos LFT ({selectedEmpleado.semana_lft.periodo.inicio} al {selectedEmpleado.semana_lft.periodo.fin})
+                                                {__('Jornada Semanal & Semáforos LFT (:inicio al :fin)', { inicio: selectedEmpleado.semana_lft.periodo.inicio, fin: selectedEmpleado.semana_lft.periodo.fin })}
                                             </h4>
                                         </div>
                                         <div className="flex items-center gap-2">
                                             <Badge variant="outline" className="text-[11px] font-mono bg-indigo-50 dark:bg-indigo-950/50 text-indigo-700 dark:text-indigo-300 border-indigo-200">
-                                                Reforma {selectedEmpleado.semana_lft.periodo.ano_reforma}: {selectedEmpleado.semana_lft.limites.normales}h máx
+                                                {__('Reforma :ano: :horas h máx', { ano: selectedEmpleado.semana_lft.periodo.ano_reforma, horas: selectedEmpleado.semana_lft.limites.normales })}
                                             </Badge>
                                             <Badge variant="outline" className="text-[11px] font-mono">
-                                                Total Semana: <strong className="ml-1 font-black">{selectedEmpleado.semana_lft.horas.totales}h</strong> / {selectedEmpleado.semana_lft.limites.total}h
+                                                {__('Total Semana:')} <strong className="ml-1 rtl:ml-0 rtl:mr-1 font-black"><span dir="ltr">{selectedEmpleado.semana_lft.horas.totales}h</span></strong> / <span dir="ltr">{selectedEmpleado.semana_lft.limites.total}h</span>
                                             </Badge>
                                         </div>
                                     </div>
@@ -784,7 +786,7 @@ export default function AsistenciaBitacoraIndex({ marcajes, stats, sucursales = 
                                         {/* Semáforo Normal */}
                                         <div className="p-2.5 rounded-lg border bg-card space-y-1.5">
                                             <div className="flex items-center justify-between">
-                                                <span className="text-[10px] uppercase font-bold text-muted-foreground">Jornada Ordinaria</span>
+                                                <span className="text-[10px] uppercase font-bold text-muted-foreground">{__('Jornada Ordinaria')}</span>
                                                 <Badge variant="outline" className={`text-[10px] font-bold ${
                                                     selectedEmpleado.semana_lft.semaforos.normal.estado === 'rojo' ? 'bg-rose-500/20 text-rose-700 dark:text-rose-300 border-rose-500/30 font-bold' :
                                                     selectedEmpleado.semana_lft.semaforos.normal.estado === 'amarillo' ? 'bg-amber-500/20 text-amber-700 dark:text-amber-300 border-amber-500/30 font-bold' :
@@ -809,14 +811,14 @@ export default function AsistenciaBitacoraIndex({ marcajes, stats, sucursales = 
                                                 />
                                             </div>
                                             <p className="text-[10px] text-muted-foreground">
-                                                Alertas: 42h (RH) • 44h (Resp) • 46h (DG)
+                                                {__('Alertas: 42h (RH) • 44h (Resp) • 46h (DG)')}
                                             </p>
                                         </div>
 
                                         {/* TEX Doble */}
                                         <div className="p-2.5 rounded-lg border bg-card space-y-1.5">
                                             <div className="flex items-center justify-between">
-                                                <span className="text-[10px] uppercase font-bold text-muted-foreground">TEX Doble (200%)</span>
+                                                <span className="text-[10px] uppercase font-bold text-muted-foreground">{__('TEX Doble (200%)')}</span>
                                                 <Badge variant="outline" className={`text-[10px] font-bold ${
                                                     selectedEmpleado.semana_lft.semaforos.tex_doble.estado === 'rojo' ? 'bg-rose-500/20 text-rose-700 dark:text-rose-300 border-rose-500/30' :
                                                     selectedEmpleado.semana_lft.semaforos.tex_doble.estado === 'amarillo' ? 'bg-amber-500/20 text-amber-700 dark:text-amber-300 border-amber-500/30' :
@@ -840,14 +842,14 @@ export default function AsistenciaBitacoraIndex({ marcajes, stats, sucursales = 
                                                 />
                                             </div>
                                             <p className="text-[10px] text-muted-foreground">
-                                                Umbrales: 7h (Verde) • 8h (Amarillo) • 9h (Rojo)
+                                                {__('Umbrales: 7h (Verde) • 8h (Amarillo) • 9h (Rojo)')}
                                             </p>
                                         </div>
 
                                         {/* TEX Triple */}
                                         <div className="p-2.5 rounded-lg border bg-card space-y-1.5">
                                             <div className="flex items-center justify-between">
-                                                <span className="text-[10px] uppercase font-bold text-muted-foreground">TEX Triple (300%)</span>
+                                                <span className="text-[10px] uppercase font-bold text-muted-foreground">{__('TEX Triple (300%)')}</span>
                                                 <Badge variant="outline" className={`text-[10px] font-bold ${
                                                     selectedEmpleado.semana_lft.semaforos.tex_triple.estado === 'rojo' ? 'bg-rose-600 text-white border-rose-600 font-bold' :
                                                     selectedEmpleado.semana_lft.semaforos.tex_triple.estado === 'amarillo' ? 'bg-amber-500/20 text-amber-700 dark:text-amber-300 border-amber-500/30 font-bold' :
@@ -871,7 +873,7 @@ export default function AsistenciaBitacoraIndex({ marcajes, stats, sucursales = 
                                                 />
                                             </div>
                                             <p className="text-[10px] text-muted-foreground">
-                                                Umbrales: 2h (Verde) • 3h (Amarillo) • 4h (Rojo)
+                                                {__('Umbrales: 2h (Verde) • 3h (Amarillo) • 4h (Rojo)')}
                                             </p>
                                         </div>
                                     </div>
@@ -880,12 +882,12 @@ export default function AsistenciaBitacoraIndex({ marcajes, stats, sucursales = 
                                         <div className="p-2 rounded-lg bg-rose-500/10 border border-rose-500/30 flex items-center justify-between text-[11px]">
                                             <div className="flex items-center gap-1.5 text-rose-700 dark:text-rose-300 font-semibold">
                                                 <Bell className="w-3.5 h-3.5" />
-                                                <span>Notificaciones escalonadas activas:</span>
+                                                <span>{__('Notificaciones escalonadas activas:')}</span>
                                             </div>
                                             <div className="flex items-center gap-1">
                                                 {selectedEmpleado.semana_lft.semaforos.destinatarios.map((dest) => (
                                                     <Badge key={dest} className="bg-rose-600 text-white font-bold text-[10px]">
-                                                        {dest === 'RH' ? 'Recursos Humanos (RH)' : dest === 'Responsable' ? 'Supervisor de Sede' : 'Dirección General (DG)'}
+                                                        {dest === 'RH' ? __('Recursos Humanos (RH)') : dest === 'Responsable' ? __('Supervisor de Sede') : __('Dirección General (DG)')}
                                                     </Badge>
                                                 ))}
                                             </div>
@@ -898,12 +900,12 @@ export default function AsistenciaBitacoraIndex({ marcajes, stats, sucursales = 
                             <div className="space-y-3">
                                 <h4 className="text-xs font-bold uppercase tracking-wider text-muted-foreground flex items-center gap-1.5">
                                     <ListOrdered className="w-4 h-4 text-indigo-600" />
-                                    Línea de Tiempo de Marcajes ({selectedEmpleado.historial_marcajes.length} eventos)
+                                    {__('Línea de Tiempo de Marcajes (:count eventos)', { count: selectedEmpleado.historial_marcajes.length })}
                                 </h4>
 
                                 {selectedEmpleado.historial_marcajes.length === 0 ? (
                                     <div className="p-6 text-center text-xs text-muted-foreground border rounded-xl">
-                                        No hay eventos registrados para este empleado en el rango seleccionado.
+                                        {__('No hay eventos registrados para este empleado en el rango seleccionado.')}
                                     </div>
                                 ) : (
                                     <div className="relative pl-6 space-y-4 before:absolute before:left-2.5 before:top-2 before:bottom-2 before:w-0.5 before:bg-slate-200 dark:before:bg-slate-800">
@@ -930,7 +932,7 @@ export default function AsistenciaBitacoraIndex({ marcajes, stats, sucursales = 
 
                                                                 {idx === 0 && (
                                                                     <Badge variant="outline" className="text-[10px] bg-indigo-50 text-indigo-700 border-indigo-200 font-mono">
-                                                                        Último Evento
+                                                                        {__('Último Evento')}
                                                                     </Badge>
                                                                 )}
                                                             </div>
@@ -946,7 +948,7 @@ export default function AsistenciaBitacoraIndex({ marcajes, stats, sucursales = 
                                                             <div className="flex items-center gap-3 flex-wrap">
                                                                 <span className="flex items-center gap-1">
                                                                     <Building2 className="w-3.5 h-3.5" />
-                                                                    <strong className="text-slate-700 dark:text-slate-300">{m.sucursal?.nombre || 'General'}</strong>
+                                                                    <strong className="text-slate-700 dark:text-slate-300">{m.sucursal?.nombre || __('General')}</strong>
                                                                 </span>
                                                                 <span>•</span>
                                                                 <Badge variant="outline" className={`text-[10px] font-normal border ${origenBadge.class}`}>
@@ -963,7 +965,7 @@ export default function AsistenciaBitacoraIndex({ marcajes, stats, sucursales = 
                                                                     </a>
                                                                 ) : (
                                                                     <span className="text-[11px] text-slate-400 flex items-center gap-1">
-                                                                        <MapPin className="w-3 h-3 opacity-40" /> Sin GPS
+                                                                        <MapPin className="w-3 h-3 opacity-40" /> {__('Sin GPS')}
                                                                     </span>
                                                                 )}
                                                             </div>
@@ -975,14 +977,14 @@ export default function AsistenciaBitacoraIndex({ marcajes, stats, sucursales = 
                                                                     rel="noreferrer"
                                                                     className="inline-flex items-center gap-1 text-[11px] text-indigo-600 dark:text-indigo-400 font-medium hover:underline"
                                                                 >
-                                                                    <Camera className="w-3.5 h-3.5" /> Ver Evidencia Fotográfica
+                                                                    <Camera className="w-3.5 h-3.5 rtl:mr-0 rtl:ml-1" /> {__('Ver Evidencia Fotográfica')}
                                                                 </a>
                                                             )}
                                                         </div>
 
                                                         {m.observaciones && (
                                                             <div className="bg-amber-500/10 text-amber-800 dark:text-amber-300 p-2 rounded-md font-mono text-[11px] mt-1">
-                                                                <strong>Obs:</strong> {m.observaciones}
+                                                                <strong>{__('Obs:')}</strong> {m.observaciones}
                                                             </div>
                                                         )}
                                                     </div>

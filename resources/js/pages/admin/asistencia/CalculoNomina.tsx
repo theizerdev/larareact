@@ -18,6 +18,7 @@ import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
+import { useTranslate } from '@/hooks/use-translate';
 
 interface Empleado {
     id: number;
@@ -66,6 +67,7 @@ interface Props {
 }
 
 export default function CalculoNominaIndex({ resumenesSemanales, stats, filters }: Props) {
+    const { __, currentLocale } = useTranslate();
     const [fechaInicio, setFechaInicio] = useState(filters.fecha_inicio);
     const [fechaFin, setFechaFin] = useState(filters.fecha_fin);
     const [empleadoId, setEmpleadoId] = useState('todos');
@@ -98,17 +100,17 @@ export default function CalculoNominaIndex({ resumenesSemanales, stats, filters 
 
     const formatCurrency = (amount: number | string) => {
         const val = typeof amount === 'string' ? parseFloat(amount) : amount;
-        return new Intl.NumberFormat('es-MX', { style: 'currency', currency: 'MXN' }).format(val || 0);
+        return new Intl.NumberFormat(currentLocale === 'ar' ? 'ar-u-nu-latn' : 'es-MX', { style: 'currency', currency: 'MXN' }).format(val || 0);
     };
 
     const breadcrumbs = [
-        { title: 'Dashboard', href: '/dashboard' },
-        { title: 'Cálculo de Nómina', href: '/admin/asistencia/calculo-nomina' },
+        { title: __('Dashboard'), href: '/dashboard' },
+        { title: __('Cálculo de Nómina'), href: '/admin/asistencia/calculo-nomina' },
     ];
 
     return (
         <>
-            <Head title="Pre-Nómina y Horas Extra" />
+            <Head title={__('Pre-Nómina y Horas Extra')} />
 
             <div className="space-y-6">
                 <Breadcrumbs breadcrumbs={breadcrumbs} />
@@ -116,20 +118,20 @@ export default function CalculoNominaIndex({ resumenesSemanales, stats, filters 
                 {/* Encabezado Estándar del Sistema */}
                 <ModuleHeader
                     icon={<FileSpreadsheet className="h-6 w-6 text-white" />}
-                    title="Pre-Nómina y Horas Extra"
-                    description="Consolidación de horas ordinarias, extras dobles, extras triples, prima dominical y días festivos."
+                    title={__('Pre-Nómina y Horas Extra')}
+                    description={__('Consolidación de horas ordinarias, extras dobles, extras triples, prima dominical y días festivos.')}
                     colorClassName="bg-emerald-600"
                 >
                     <Button onClick={handleProcesar} className="gap-2">
-                        <RefreshCw className="h-4 w-4" />
-                        Procesar Horas del Período
+                        <RefreshCw className="h-4 w-4 rtl:rotate-180" />
+                        {__('Procesar Horas del Período')}
                     </Button>
                 </ModuleHeader>
 
                 {/* Filtros Estándar */}
-                <FilterBar title="Filtros del Período">
+                <FilterBar title={__('Filtros del Período')}>
                     <div className="flex flex-wrap items-end gap-4">
-                        <FilterField label="Fecha Inicio">
+                        <FilterField label={__('Fecha Inicio')}>
                             <Input
                                 type="date"
                                 value={fechaInicio}
@@ -137,7 +139,7 @@ export default function CalculoNominaIndex({ resumenesSemanales, stats, filters 
                             />
                         </FilterField>
 
-                        <FilterField label="Fecha Fin">
+                        <FilterField label={__('Fecha Fin')}>
                             <Input
                                 type="date"
                                 value={fechaFin}
@@ -146,13 +148,13 @@ export default function CalculoNominaIndex({ resumenesSemanales, stats, filters 
                         </FilterField>
 
                         <div className="flex items-center gap-2">
-                            <FilterField label="Empleado">
+                            <FilterField label={__('Empleado')}>
                                 <Select value={empleadoId} onValueChange={setEmpleadoId}>
                                     <SelectTrigger className="w-[200px]">
-                                        <SelectValue placeholder="Todos los empleados" />
+                                        <SelectValue placeholder={__('Todos los empleados')} />
                                     </SelectTrigger>
                                     <SelectContent>
-                                        <SelectItem value="todos">Todos los empleados</SelectItem>
+                                        <SelectItem value="todos">{__('Todos los empleados')}</SelectItem>
                                         {empleados.map((emp) => (
                                             <SelectItem key={emp.id} value={emp.id.toString()}>
                                                 {emp.nombres} {emp.apellidos}
@@ -163,12 +165,12 @@ export default function CalculoNominaIndex({ resumenesSemanales, stats, filters 
                             </FilterField>
 
                             <Button onClick={handleFilter} variant="outline">
-                                Filtrar Período
+                                {__('Filtrar Período')}
                             </Button>
                         </div>
 
                         <div className="text-xs text-muted-foreground self-center">
-                            * Regla de Horas Extra: Primeras 9h extra al 100% (dobles); excedentes al 200% (triples).
+                            {__('* Regla de Horas Extra: Primeras 9h extra al 100% (dobles); excedentes al 200% (triples).')}
                         </div>
                     </div>
                 </FilterBar>
@@ -177,31 +179,31 @@ export default function CalculoNominaIndex({ resumenesSemanales, stats, filters 
                 <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-5">
                     <StatCard
                         icon={<Users className="h-6 w-6" />}
-                        title="EMPLEADOS"
+                        title={__('EMPLEADOS')}
                         value={stats.total_empleados}
                         colorClassName="bg-blue-100 text-blue-600 dark:bg-blue-900/30 dark:text-blue-400"
                     />
                     <StatCard
                         icon={<Clock className="h-6 w-6" />}
-                        title="HORAS ORDINARIAS"
+                        title={__('HORAS ORDINARIAS')}
                         value={`${parseFloat(stats.total_horas_ordinarias.toString()).toFixed(1)} h`}
                         colorClassName="bg-emerald-100 text-emerald-600 dark:bg-emerald-900/30 dark:text-emerald-400"
                     />
                     <StatCard
                         icon={<TrendingUp className="h-6 w-6" />}
-                        title="EXTRA DOBLES (+100%)"
+                        title={__('EXTRA DOBLES (+100%)')}
                         value={`${parseFloat(stats.total_horas_dobles.toString()).toFixed(1)} h`}
                         colorClassName="bg-amber-100 text-amber-600 dark:bg-amber-900/30 dark:text-amber-400"
                     />
                     <StatCard
                         icon={<Sparkles className="h-6 w-6" />}
-                        title="EXTRA TRIPLES (+200%)"
+                        title={__('EXTRA TRIPLES (+200%)')}
                         value={`${parseFloat(stats.total_horas_triples.toString()).toFixed(1)} h`}
                         colorClassName="bg-rose-100 text-rose-600 dark:bg-rose-900/30 dark:text-rose-400"
                     />
                     <StatCard
                         icon={<DollarSign className="h-6 w-6" />}
-                        title="NÓMINA ESTIMADA"
+                        title={__('NÓMINA ESTIMADA')}
                         value={formatCurrency(stats.monto_total_nomina)}
                         colorClassName="bg-teal-100 text-teal-600 dark:bg-teal-900/30 dark:text-teal-400"
                     />
@@ -211,10 +213,10 @@ export default function CalculoNominaIndex({ resumenesSemanales, stats, filters 
                 <Card>
                     <CardHeader className="flex flex-row items-center justify-between pb-4">
                         <CardTitle className="text-base font-semibold">
-                            Desglose de Asistencia y Remuneraciones por Empleado
+                            {__('Desglose de Asistencia y Remuneraciones por Empleado')}
                         </CardTitle>
                         <Badge variant="outline">
-                            {filteredResumenes.length} Registros
+                            <span dir="ltr">{filteredResumenes.length}</span> {__('Registros')}
                         </Badge>
                     </CardHeader>
                     <CardContent className="p-0">
@@ -222,84 +224,84 @@ export default function CalculoNominaIndex({ resumenesSemanales, stats, filters 
                             <table className="w-full text-left text-sm">
                                 <thead className="bg-muted/50 text-xs font-semibold uppercase text-muted-foreground border-y">
                                     <tr>
-                                        <th className="px-4 py-3">Empleado</th>
-                                        <th className="px-4 py-3">Turno / Jornada</th>
-                                        <th className="px-4 py-3 text-center">Semáforo Semanal</th>
-                                        <th className="px-4 py-3 text-right">Salario Diario</th>
-                                        <th className="px-4 py-3 text-center">Hrs. Ordinarias</th>
-                                        <th className="px-4 py-3 text-center">HE Dobles (+100%)</th>
-                                        <th className="px-4 py-3 text-center">HE Triples (+200%)</th>
-                                        <th className="px-4 py-3 text-center">Prima Dom. (25%)</th>
-                                        <th className="px-4 py-3 text-center">Festivos (+200%)</th>
-                                        <th className="px-4 py-3 text-right">Total a Pagar</th>
+                                        <th className="px-4 py-3 text-left rtl:text-right">{__('Empleado')}</th>
+                                        <th className="px-4 py-3 text-left rtl:text-right">{__('Turno / Jornada')}</th>
+                                        <th className="px-4 py-3 text-center">{__('Semáforo Semanal')}</th>
+                                        <th className="px-4 py-3 text-right rtl:text-left">{__('Salario Diario')}</th>
+                                        <th className="px-4 py-3 text-center">{__('Hrs. Ordinarias')}</th>
+                                        <th className="px-4 py-3 text-center">{__('HE Dobles (+100%)')}</th>
+                                        <th className="px-4 py-3 text-center">{__('HE Triples (+200%)')}</th>
+                                        <th className="px-4 py-3 text-center">{__('Prima Dom. (25%)')}</th>
+                                        <th className="px-4 py-3 text-center">{__('Festivos (+200%)')}</th>
+                                        <th className="px-4 py-3 text-right rtl:text-left">{__('Total a Pagar')}</th>
                                     </tr>
                                 </thead>
                                 <tbody className="divide-y">
                                     {filteredResumenes.length === 0 ? (
                                         <tr>
                                             <td colSpan={10} className="px-4 py-8 text-center text-muted-foreground">
-                                                No hay datos procesados para el período seleccionado. Haz clic en "Procesar Horas del Período" para ejecutar el cálculo.
+                                                {__('No hay datos procesados para el período seleccionado. Haz clic en "Procesar Horas del Período" para ejecutar el cálculo.')}
                                             </td>
                                         </tr>
                                     ) : (
                                         filteredResumenes.map((r: any) => {
                                             const totalH = (parseFloat(r.total_horas_ordinarias || 0) + parseFloat(r.total_horas_extra_dobles || 0) + parseFloat(r.total_horas_extra_triples || 0));
                                             let semaforoBadgeClass = "bg-emerald-500/20 text-emerald-700 dark:text-emerald-300 border-emerald-500/40";
-                                            let semaforoText = `Verde (${totalH.toFixed(1)}h)`;
+                                            let semaforoText = `${__('Verde')} (${totalH.toFixed(1)}h)`;
 
                                             if (totalH > 60) {
                                                 semaforoBadgeClass = "bg-rose-950 text-rose-100 border-rose-600 animate-pulse font-black";
-                                                semaforoText = `🚨 ¡EXPLOTACIÓN! (${totalH.toFixed(1)}h)`;
+                                                semaforoText = `🚨 ${__('¡EXPLOTACIÓN!')} (${totalH.toFixed(1)}h)`;
                                             } else if (totalH > 48) {
                                                 semaforoBadgeClass = "bg-rose-500/20 text-rose-700 dark:text-rose-300 border-rose-500/40 font-bold";
-                                                semaforoText = `Rojo (${totalH.toFixed(1)}h)`;
+                                                semaforoText = `${__('Rojo')} (${totalH.toFixed(1)}h)`;
                                             } else if (totalH > 40) {
                                                 semaforoBadgeClass = "bg-amber-500/20 text-amber-700 dark:text-amber-300 border-amber-500/40";
-                                                semaforoText = `Amarillo (${totalH.toFixed(1)}h)`;
+                                                semaforoText = `${__('Amarillo')} (${totalH.toFixed(1)}h)`;
                                             }
 
                                             return (
                                                 <tr key={r.id} className="hover:bg-muted/50 transition-colors">
-                                                    <td className="px-4 py-3">
+                                                    <td className="px-4 py-3 text-left rtl:text-right">
                                                         <div className="font-semibold">{r.empleado.nombres} {r.empleado.apellidos}</div>
-                                                        <div className="text-xs text-muted-foreground">Doc: {r.empleado.documento_identidad} • {r.empleado.departamento?.nombre || 'General'}</div>
+                                                        <div className="text-xs text-muted-foreground">{__('Doc:')} <span dir="ltr">{r.empleado.documento_identidad}</span> • {r.empleado.departamento?.nombre || __('General')}</div>
                                                     </td>
-                                                    <td className="px-4 py-3">
-                                                        <div className="font-medium">{r.empleado.turnoLaboral?.nombre || 'Estándar'}</div>
+                                                    <td className="px-4 py-3 text-left rtl:text-right">
+                                                        <div className="font-medium">{r.empleado.turnoLaboral?.nombre || __('Estándar')}</div>
                                                         <Badge variant="secondary" className="text-[10px] capitalize">
-                                                            Jornada {r.empleado.turnoLaboral?.tipo_jornada || 'diurna'}
+                                                            {__('Jornada')} {__(r.empleado.turnoLaboral?.tipo_jornada || 'diurna')}
                                                         </Badge>
                                                     </td>
                                                     <td className="px-4 py-3 text-center">
                                                         <Badge className={`text-xs px-2.5 py-1 border ${semaforoBadgeClass}`}>
-                                                            {r.semaforo?.label || semaforoText}
+                                                            {r.semaforo?.label ? __(r.semaforo.label) : semaforoText}
                                                         </Badge>
                                                     </td>
-                                                    <td className="px-4 py-3 text-right font-mono font-medium">
-                                                        {formatCurrency(r.empleado.salario_diario || 0)}
+                                                    <td className="px-4 py-3 text-right rtl:text-left font-mono font-medium">
+                                                        <span dir="ltr">{formatCurrency(r.empleado.salario_diario || 0)}</span>
                                                     </td>
                                                     <td className="px-4 py-3 text-center font-mono font-medium">
-                                                        {r.total_horas_ordinarias} h
-                                                        <div className="text-[11px] text-muted-foreground">{formatCurrency(r.monto_horas_ordinarias)}</div>
+                                                        <span dir="ltr">{r.total_horas_ordinarias} h</span>
+                                                        <div className="text-[11px] text-muted-foreground"><span dir="ltr">{formatCurrency(r.monto_horas_ordinarias)}</span></div>
                                                     </td>
                                                     <td className="px-4 py-3 text-center font-mono font-medium text-amber-600 dark:text-amber-400">
-                                                        {r.total_horas_extra_dobles} h
-                                                        <div className="text-[11px] opacity-80">{formatCurrency(r.monto_horas_dobles)}</div>
+                                                        <span dir="ltr">{r.total_horas_extra_dobles} h</span>
+                                                        <div className="text-[11px] opacity-80"><span dir="ltr">{formatCurrency(r.monto_horas_dobles)}</span></div>
                                                     </td>
                                                     <td className="px-4 py-3 text-center font-mono font-medium text-rose-600 dark:text-rose-400">
-                                                        {r.total_horas_extra_triples} h
-                                                        <div className="text-[11px] opacity-80">{formatCurrency(r.monto_horas_triples)}</div>
+                                                        <span dir="ltr">{r.total_horas_extra_triples} h</span>
+                                                        <div className="text-[11px] opacity-80"><span dir="ltr">{formatCurrency(r.monto_horas_triples)}</span></div>
                                                     </td>
                                                     <td className="px-4 py-3 text-center font-mono">
-                                                        <span className="font-medium">{r.primas_dominicales_aplicadas} días</span>
-                                                        <div className="text-[11px] text-muted-foreground">{formatCurrency(r.monto_primas_dominicales)}</div>
+                                                        <span className="font-medium"><span dir="ltr">{r.primas_dominicales_aplicadas}</span> {__('días')}</span>
+                                                        <div className="text-[11px] text-muted-foreground"><span dir="ltr">{formatCurrency(r.monto_primas_dominicales)}</span></div>
                                                     </td>
                                                     <td className="px-4 py-3 text-center font-mono">
-                                                        <span className="font-medium text-emerald-600 dark:text-emerald-400">{r.dias_festivos_trabajados} días</span>
-                                                        <div className="text-[11px] opacity-80">{formatCurrency(r.monto_festivos)}</div>
+                                                        <span className="font-medium text-emerald-600 dark:text-emerald-400"><span dir="ltr">{r.dias_festivos_trabajados}</span> {__('días')}</span>
+                                                        <div className="text-[11px] opacity-80"><span dir="ltr">{formatCurrency(r.monto_festivos)}</span></div>
                                                     </td>
-                                                    <td className="px-4 py-3 text-right font-mono font-bold text-base text-emerald-600 dark:text-emerald-400">
-                                                        {formatCurrency(r.monto_total_pagar)}
+                                                    <td className="px-4 py-3 text-right rtl:text-left font-mono font-bold text-base text-emerald-600 dark:text-emerald-400">
+                                                        <span dir="ltr">{formatCurrency(r.monto_total_pagar)}</span>
                                                     </td>
                                                 </tr>
                                             );
