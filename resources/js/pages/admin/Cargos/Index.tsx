@@ -332,7 +332,7 @@ return;
             header: __('Status'),
             stopRowClick: true,
             cell: (cargo) => (
-                <div className="flex items-center space-x-2">
+                <div className="flex items-center gap-2">
                     <Switch
                         checked={cargo.status === 1}
                         onCheckedChange={() => handleToggleStatus(cargo)}
@@ -350,7 +350,7 @@ return;
         },
         {
             header: __('Actions'),
-            className: 'text-right',
+            className: 'text-right rtl:text-left',
             hideable: false,
             stopRowClick: true,
             cell: (cargo) => (
@@ -362,18 +362,18 @@ return;
                     </DropdownMenuTrigger>
                     <DropdownMenuContent align="end">
                         <DropdownMenuItem onClick={() => handleEditClick(cargo)}>
-                            <Pencil className="mr-2 h-4 w-4" />
+                            <Pencil className="mr-2 rtl:mr-0 rtl:ml-2 h-4 w-4" />
                             {__('Edit')}
                         </DropdownMenuItem>
                         <DropdownMenuItem onClick={() => handleToggleStatus(cargo)}>
-                            <ToggleRight className="mr-2 h-4 w-4" />
+                            <ToggleRight className="mr-2 rtl:mr-0 rtl:ml-2 h-4 w-4" />
                             {cargo.status === 1 ? __('Deactivate') : __('Activate')}
                         </DropdownMenuItem>
                         <DropdownMenuItem
                             onClick={() => setDeletingCargo(cargo)}
                             className="text-red-600 focus:text-red-600 dark:text-red-400"
                         >
-                            <Trash2 className="mr-2 h-4 w-4" />
+                            <Trash2 className="mr-2 rtl:mr-0 rtl:ml-2 h-4 w-4" />
                             {__('Delete')}
                         </DropdownMenuItem>
                     </DropdownMenuContent>
@@ -398,7 +398,7 @@ return;
                     colorClassName="bg-teal-600"
                 >
                     <Button onClick={handleCreateClick}>
-                        <Plus className="mr-2 h-4 w-4" />
+                        <Plus className="mr-2 rtl:mr-0 rtl:ml-2 h-4 w-4" />
                         {__('New Position')}
                     </Button>
                 </ModuleHeader>
@@ -487,11 +487,11 @@ return;
                         isLoading={isTableLoading}
                         onRowClick={(cargo) => handleEditClick(cargo)}
                         emptyState={{
-                            title: 'No positions found',
+                            title: __('No positions found'),
                             description: searchTerm || statusFilter || departamentoFilter
-                                ? 'Try clearing your search filters or changing your query.'
-                                : 'You have not registered any positions yet.',
-                            ctaLabel: 'New Position',
+                                ? __('Try clearing your search filters or changing your query.')
+                                : __('You have not registered any positions yet.'),
+                            ctaLabel: __('New Position'),
                             onCtaClick: handleCreateClick,
                         }}
                     />
@@ -603,7 +603,7 @@ return;
                                     id="nombre"
                                     value={data.nombre}
                                     onChange={(e) => setData('nombre', e.target.value)}
-                                    placeholder="Ej: Gerente de Finanzas"
+                                    placeholder={__('e.g. Finance Manager')}
                                 />
                                 {errors.nombre && (
                                     <p className="text-red-500 text-xs mt-1">{errors.nombre}</p>
@@ -636,7 +636,7 @@ return;
                             {/* Estado (Status) */}
                             <div>
                                 <Label htmlFor="status">{__('Status')}</Label>
-                                <div className="flex items-center space-x-2 pt-2">
+                                <div className="flex items-center gap-2 pt-2">
                                     <Switch
                                         id="status"
                                         checked={data.status === 1}
