@@ -1,6 +1,7 @@
 import { router, usePage } from '@inertiajs/react';
 import type { HTMLAttributes } from 'react';
 import { cn } from '@/lib/utils';
+import { useTemplateSettings } from '@/hooks/use-template-settings';
 
 export default function LanguageTabs({
     className = '',
@@ -8,12 +9,25 @@ export default function LanguageTabs({
 }: HTMLAttributes<HTMLDivElement>) {
     const { locale } = usePage().props as any;
 
+    let updateSetting: any = null;
+    try {
+        const templateSettings = useTemplateSettings();
+        updateSetting = templateSettings.updateSetting;
+    } catch {
+        // Outside provider
+    }
+
     const tabs = [
         { value: 'es', label: 'Español' },
         { value: 'en', label: 'English' },
+        { value: 'ar', label: 'العربية' },
     ];
 
     const changeLanguage = (lang: string) => {
+        if (updateSetting) {
+            updateSetting('direction', lang === 'ar' ? 'rtl' : 'ltr');
+        }
+
         router.post(
             '/locale',
             { locale: lang },

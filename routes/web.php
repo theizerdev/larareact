@@ -53,7 +53,7 @@ Route::middleware(['guest'])->group(function () {
 
 Route::post('locale', function (Request $request) {
     $request->validate([
-        'locale' => 'required|in:en,es',
+        'locale' => 'required|in:en,es,ar',
     ]);
 
     session(['locale' => $request->locale]);

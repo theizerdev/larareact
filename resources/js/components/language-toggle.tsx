@@ -7,11 +7,25 @@ import {
     DropdownMenuItem,
     DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
+import { useTemplateSettings } from '@/hooks/use-template-settings';
 
 export default function LanguageToggle() {
     const { locale } = usePage().props as any;
 
+    // Optional safe hook usage in case rendered outside Provider
+    let updateSetting: any = null;
+    try {
+        const templateSettings = useTemplateSettings();
+        updateSetting = templateSettings.updateSetting;
+    } catch {
+        // Rendered outside of TemplateSettingsProvider
+    }
+
     const changeLanguage = (lang: string) => {
+        if (updateSetting) {
+            updateSetting('direction', lang === 'ar' ? 'rtl' : 'ltr');
+        }
+
         router.post(
             '/locale',
             { locale: lang },
@@ -36,7 +50,7 @@ export default function LanguageToggle() {
                     <span className="sr-only">Toggle language</span>
                 </Button>
             </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="w-32">
+            <DropdownMenuContent align="end" className="w-36">
                 <DropdownMenuItem
                     onClick={() => changeLanguage('es')}
                     className="flex cursor-pointer items-center justify-between font-medium"
@@ -52,6 +66,15 @@ export default function LanguageToggle() {
                 >
                     <span>English</span>
                     {locale === 'en' && (
+                        <span className="h-1.5 w-1.5 rounded-full bg-indigo-500" />
+                    )}
+                </DropdownMenuItem>
+                <DropdownMenuItem
+                    onClick={() => changeLanguage('ar')}
+                    className="flex cursor-pointer items-center justify-between font-medium"
+                >
+                    <span>العربية</span>
+                    {locale === 'ar' && (
                         <span className="h-1.5 w-1.5 rounded-full bg-indigo-500" />
                     )}
                 </DropdownMenuItem>

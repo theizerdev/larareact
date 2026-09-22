@@ -20,6 +20,7 @@ import React, { useEffect, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { PageHeader } from '@/components/ui/page-header';
 import { SectionCard } from '@/components/ui/section-card';
+import { useTranslate } from '@/hooks/use-translate';
 import type { BreadcrumbItem } from '@/types';
 
 const breadcrumbs: BreadcrumbItem[] = [
@@ -45,6 +46,7 @@ interface Props {
 }
 
 export default function AdminDashboard({ moduleStats }: Props) {
+    const { __ } = useTranslate();
     const [chartMounted, setChartMounted] = useState(false);
     const [startDate, setStartDate] = useState(format(subDays(new Date(), 7), 'yyyy-MM-dd'));
     const [endDate, setEndDate] = useState(format(new Date(), 'yyyy-MM-dd'));
@@ -164,7 +166,7 @@ export default function AdminDashboard({ moduleStats }: Props) {
             },
         },
         noData: {
-            text: 'Cargando datos...',
+            text: __('Loading data...'),
             style: { color: '#64748b', fontSize: '13px' },
         },
     });
@@ -215,71 +217,71 @@ export default function AdminDashboard({ moduleStats }: Props) {
             },
         },
         noData: {
-            text: 'Cargando datos...',
+            text: __('Loading data...'),
             style: { color: '#64748b', fontSize: '13px' },
         },
     });
 
     const modulesList = [
         {
-            name: 'Caseta y Accesos',
-            desc: 'Control de entrada y lectura QR',
+            name: __('Gate and Access Control'),
+            desc: __('Entry control and QR reading'),
             icon: QrCode,
             href: '/admin/visitas-accesos',
-            count: `${overview.garita?.accesos_hoy || 0} hoy`,
+            count: `${overview.garita?.accesos_hoy || 0} ${__('today')}`,
             badgeColor: 'bg-emerald-500/10 text-emerald-500',
         },
         {
-            name: 'Visitas',
-            desc: 'Pases digitales e invitaciones',
+            name: __('Visits'),
+            desc: __('Digital visitor passes and invitations'),
             icon: KeyRound,
             href: '/admin/visitas-temporales',
-            count: `${overview.visitas_temporales?.total || 0} registradas`,
+            count: `${overview.visitas_temporales?.total || 0} ${__('registered')}`,
             badgeColor: 'bg-rose-500/10 text-rose-500',
         },
         {
-            name: 'Empleados',
-            desc: 'Gestión de personal y carnets',
+            name: __('Employees'),
+            desc: __('Staff management and ID cards'),
             icon: Users,
             href: '/admin/empleados',
-            count: `${overview.empleados?.total || 0} registrados`,
+            count: `${overview.empleados?.total || 0} ${__('registered')}`,
             badgeColor: 'bg-indigo-500/10 text-indigo-500',
         },
         {
-            name: 'Proveedores',
-            desc: 'Proveedores y contratistas',
+            name: __('Suppliers'),
+            desc: __('Suppliers and contractors'),
             icon: Building2,
             href: '/admin/proveedores',
-            count: `${overview.proveedores?.total || 0} empresas`,
+            count: `${overview.proveedores?.total || 0} ${__('companies')}`,
             badgeColor: 'bg-purple-500/10 text-purple-500',
         },
         {
-            name: 'Socio Comercial',
-            desc: 'Socios comerciales agrícolas y personal',
+            name: __('Business Partner'),
+            desc: __('Agricultural business partners and staff'),
             icon: UserCheck,
             href: '/admin/productores',
-            count: `${overview.productores?.total || 0} activos`,
+            count: `${overview.productores?.total || 0} ${__('active')}`,
             badgeColor: 'bg-amber-500/10 text-amber-500',
         },
         {
-            name: 'Estructura Organizacional',
-            desc: 'Empresas, sucursales y cargos',
+            name: __('Organizational Structure'),
+            desc: __('Companies, branches and positions'),
             icon: Layers,
             href: '/admin/empresas',
-            count: `${overview.organizacion?.sucursales || 0} sucursales`,
+            count: `${overview.organizacion?.sucursales || 0} ${__('branches')}`,
             badgeColor: 'bg-cyan-500/10 text-cyan-500',
         },
     ];
 
     return (
         <>
-            <Head title="Admin Dashboard" />
+            <Head title={__('Admin Dashboard')} />
 
             <div className="flex flex-col gap-6 p-2 md:p-4">
                 {/* Page Header */}
                 <PageHeader
-                    title="Dashboard General"
-                    description="Panel de control centralizado con métricas de todos los módulos."
+                    title={__('General Dashboard')}
+                    description={__('Centralized control panel with metrics from all modules.')}
                 >
                     <div className="flex flex-wrap items-center gap-3">
                         <div className="flex items-center gap-2 rounded-lg border border-border bg-card px-3 py-1.5 shadow-xs">
@@ -290,7 +292,7 @@ export default function AdminDashboard({ moduleStats }: Props) {
                                 onChange={(e) => setStartDate(e.target.value)}
                                 className="bg-transparent text-xs font-medium text-foreground outline-hidden"
                             />
-                            <span className="text-xs text-muted-foreground">a</span>
+                            <span className="text-xs text-muted-foreground">{__('to')}</span>
                             <input
                                 type="date"
                                 value={endDate}
@@ -307,7 +309,7 @@ export default function AdminDashboard({ moduleStats }: Props) {
                             disabled={loading}
                         >
                             <RefreshCw className={`size-3.5 ${loading ? 'animate-spin' : ''}`} />
-                            <span className="hidden sm:inline">Actualizar</span>
+                            <span className="hidden sm:inline">{__('Update')}</span>
                         </Button>
                     </div>
                 </PageHeader>
@@ -334,7 +336,7 @@ export default function AdminDashboard({ moduleStats }: Props) {
                                     </span>
                                 </div>
                             </div>
-                            <ArrowRight className="size-4 text-muted-foreground transition-transform group-hover:translate-x-1 group-hover:text-primary" />
+                            <ArrowRight className="size-4 text-muted-foreground transition-transform group-hover:translate-x-1 rtl:group-hover:-translate-x-1 group-hover:text-primary" />
                         </Link>
                     ))}
                 </div>
@@ -345,7 +347,7 @@ export default function AdminDashboard({ moduleStats }: Props) {
                         <div className="flex items-start justify-between">
                             <div>
                                 <p className="text-xs font-medium text-muted-foreground">
-                                    Accesos Registrados Hoy
+                                    {__('Accesses Registered Today')}
                                 </p>
                                 <p className="mt-2 text-2xl font-bold tracking-tight">
                                     {overview.garita?.accesos_hoy || 0}
@@ -357,7 +359,7 @@ export default function AdminDashboard({ moduleStats }: Props) {
                         </div>
                         <div className="mt-3 flex items-center gap-1.5 text-xs text-emerald-500">
                             <TrendingUp className="size-3.5" />
-                            <span>{overview.garita?.activos_dentro || 0} dentro actualmente</span>
+                            <span>{overview.garita?.activos_dentro || 0} {__('inside currently')}</span>
                         </div>
                     </SectionCard>
 
@@ -365,7 +367,7 @@ export default function AdminDashboard({ moduleStats }: Props) {
                         <div className="flex items-start justify-between">
                             <div>
                                 <p className="text-xs font-medium text-muted-foreground">
-                                    Visitas
+                                    {__('Visits')}
                                 </p>
                                 <p className="mt-2 text-2xl font-bold tracking-tight">
                                     {overview.visitas_temporales?.total || 0}
@@ -376,7 +378,7 @@ export default function AdminDashboard({ moduleStats }: Props) {
                             </div>
                         </div>
                         <div className="mt-3 flex items-center gap-1.5 text-xs text-muted-foreground">
-                            <span>Pases e invitaciones temporales</span>
+                            <span>{__('Temporary passes and invitations')}</span>
                         </div>
                     </SectionCard>
 
@@ -384,7 +386,7 @@ export default function AdminDashboard({ moduleStats }: Props) {
                         <div className="flex items-start justify-between">
                             <div>
                                 <p className="text-xs font-medium text-muted-foreground">
-                                    Empleados Activos
+                                    {__('Active Employees')}
                                 </p>
                                 <p className="mt-2 text-2xl font-bold tracking-tight">
                                     {overview.empleados?.total || 0}
@@ -395,7 +397,7 @@ export default function AdminDashboard({ moduleStats }: Props) {
                             </div>
                         </div>
                         <div className="mt-3 flex items-center gap-1.5 text-xs text-muted-foreground">
-                            <span>{overview.empleados?.preregistros_pendientes || 0} pre-registros por aprobar</span>
+                            <span>{overview.empleados?.preregistros_pendientes || 0} {__('pre-registrations pending approval')}</span>
                         </div>
                     </SectionCard>
 
@@ -403,7 +405,7 @@ export default function AdminDashboard({ moduleStats }: Props) {
                         <div className="flex items-start justify-between">
                             <div>
                                 <p className="text-xs font-medium text-muted-foreground">
-                                    Proveedores & Productores
+                                    {__('Suppliers & Producers')}
                                 </p>
                                 <p className="mt-2 text-2xl font-bold tracking-tight">
                                     {(overview.proveedores?.total || 0) + (overview.productores?.total || 0)}
@@ -414,7 +416,7 @@ export default function AdminDashboard({ moduleStats }: Props) {
                             </div>
                         </div>
                         <div className="mt-3 flex items-center gap-1.5 text-xs text-emerald-500">
-                            <span>{overview.proveedores?.total || 0} proveedores / {overview.productores?.total || 0} productores</span>
+                            <span>{overview.proveedores?.total || 0} {__('suppliers')} / {overview.productores?.total || 0} {__('producers')}</span>
                         </div>
                     </SectionCard>
                 </div>
@@ -423,8 +425,8 @@ export default function AdminDashboard({ moduleStats }: Props) {
                 <div className="grid gap-6 lg:grid-cols-2">
                     {/* Chart 1: Visitas y Accesos en Caseta */}
                     <SectionCard
-                        title="Visitas y Accesos en Caseta"
-                        description="Frecuencia diaria de personas e ingresos registrados en caseta"
+                        title={__('Gate Visits and Accesses')}
+                        description={__('Daily frequency of people and entries registered at gate')}
                         className="p-4"
                     >
                         <div className="mt-4 h-72 w-full">
@@ -433,7 +435,7 @@ export default function AdminDashboard({ moduleStats }: Props) {
                                     options={getGaritaChartOptions()}
                                     series={[
                                         {
-                                            name: 'Accesos Registrados',
+                                            name: __('Registered Accesses'),
                                             data: statsData.accesos,
                                         },
                                     ]}
@@ -442,7 +444,7 @@ export default function AdminDashboard({ moduleStats }: Props) {
                                 />
                             ) : (
                                 <div className="flex h-full items-center justify-center text-sm text-muted-foreground">
-                                    Cargando gráfico de accesos...
+                                    {__('Loading access chart...')}
                                 </div>
                             )}
                         </div>
@@ -450,8 +452,8 @@ export default function AdminDashboard({ moduleStats }: Props) {
 
                     {/* Chart 2: Visitas */}
                     <SectionCard
-                        title="Visitas"
-                        description="Pases de visita e invitaciones digitales creadas por día"
+                        title={__('Visits')}
+                        description={__('Digital visitor passes and invitations created per day')}
                         className="p-4"
                     >
                         <div className="mt-4 h-72 w-full">
@@ -460,7 +462,7 @@ export default function AdminDashboard({ moduleStats }: Props) {
                                     options={getTemporalesChartOptions()}
                                     series={[
                                         {
-                                            name: 'Visitas',
+                                            name: __('Visits'),
                                             data: statsData.visitas_temporales,
                                         },
                                     ]}
@@ -469,7 +471,7 @@ export default function AdminDashboard({ moduleStats }: Props) {
                                 />
                             ) : (
                                 <div className="flex h-full items-center justify-center text-sm text-muted-foreground">
-                                    Cargando gráfico de visitas...
+                                    {__('Loading visits chart...')}
                                 </div>
                             )}
                         </div>

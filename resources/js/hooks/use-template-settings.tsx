@@ -52,30 +52,34 @@ return '#ffffff';
 export function TemplateSettingsProvider({ children }: { children: React.ReactNode }) {
     const { appearance, resolvedAppearance, updateAppearance } = useAppearance();
     const page = usePage();
+    const locale = (page.props as any)?.locale;
+    const defaultDir: 'ltr' | 'rtl' = locale === 'ar' ? 'rtl' : 'ltr';
     const user = (page.props.auth as any)?.user;
     const dbSettings = user?.layout_settings;
     const userId = user?.id;
 
     const [settings, setSettings] = useState<TemplateSettings>(() => {
+        const base = { ...DEFAULT_SETTINGS, direction: defaultDir };
+
         if (dbSettings) {
-            return { ...DEFAULT_SETTINGS, ...dbSettings };
+            return { ...base, ...dbSettings };
         }
 
         if (typeof window === 'undefined') {
-return DEFAULT_SETTINGS;
-}
+            return base;
+        }
 
         try {
             const stored = localStorage.getItem('template-settings');
 
             if (stored) {
-                return { ...DEFAULT_SETTINGS, ...JSON.parse(stored) };
+                return { ...base, ...JSON.parse(stored) };
             }
         } catch (e) {
             console.error('Error loading template settings', e);
         }
 
-        return DEFAULT_SETTINGS;
+        return base;
     });
 
     const updateSetting = <K extends keyof TemplateSettings>(key: K, value: TemplateSettings[K]) => {
@@ -87,6 +91,16 @@ return DEFAULT_SETTINGS;
         });
     };
 
+    // Automatically sync direction when locale changes (e.g. switching to/from Arabic)
+    const prevLocale = useRef(locale);
+    useEffect(() => {
+        if (locale && locale !== prevLocale.current) {
+            prevLocale.current = locale;
+            const targetDir: 'ltr' | 'rtl' = locale === 'ar' ? 'rtl' : 'ltr';
+            updateSetting('direction', targetDir);
+        }
+    }, [locale]);
+
     // Sync settings state ONLY if user changes (e.g. login/logout)
     const prevUserId = useRef(userId);
     useEffect(() => {
@@ -94,12 +108,12 @@ return DEFAULT_SETTINGS;
             prevUserId.current = userId;
 
             if (dbSettings) {
-                setSettings({ ...DEFAULT_SETTINGS, ...dbSettings });
+                setSettings({ ...DEFAULT_SETTINGS, direction: defaultDir, ...dbSettings });
             } else {
-                setSettings(DEFAULT_SETTINGS);
+                setSettings({ ...DEFAULT_SETTINGS, direction: defaultDir });
             }
         }
-    }, [userId, dbSettings]);
+    }, [userId, dbSettings, defaultDir]);
 
     // Save changes to database (debounced and with progress indicators disabled)
     const isFirstRun = useRef(true);
