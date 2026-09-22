@@ -30,12 +30,12 @@ export default function TaskMonitoring({ tasks }: PageProps) {
 
     const handleRunTask = (task: TaskItem) => {
         Swal.fire({
-            title: __('¿Ejecutar Tarea?'),
-            text: __('Se forzará la ejecución inmediata de esta tarea programada.'),
+            title: __('Run Task?'),
+            text: __('This scheduled task will be forced to run immediately.'),
             icon: 'question',
             showCancelButton: true,
-            confirmButtonText: __('Sí, ejecutar'),
-            cancelButtonText: __('Cancelar'),
+            confirmButtonText: __('Yes, run it'),
+            cancelButtonText: __('Cancel'),
         }).then((result) => {
             if (result.isConfirmed) {
                 setRunningTaskId(task.id);
@@ -66,10 +66,10 @@ export default function TaskMonitoring({ tasks }: PageProps) {
                     <div>
                         <h1 className="text-3xl font-bold tracking-tight flex items-center gap-3">
                             <Calendar className="h-8 w-8 text-indigo-600" />
-                            {__('Programador de Tareas (Cron)')}
+                            {__('Task Scheduler (Cron)')}
                         </h1>
                         <p className="text-muted-foreground mt-1">
-                            {__('Supervisa, inspecciona y ejecuta los comandos automatizados programados en la aplicación.')}
+                            {__('Monitor, inspect and execute automated commands scheduled in the application.')}
                         </p>
                     </div>
                 </div>
@@ -77,21 +77,21 @@ export default function TaskMonitoring({ tasks }: PageProps) {
                 {/* Listado de Tareas */}
                 <Card className="shadow-sm">
                     <CardHeader>
-                        <CardTitle>{__('Tareas Programadas')} ({tasks.length})</CardTitle>
+                        <CardTitle>{__('Scheduled Tasks')} ({tasks.length})</CardTitle>
                         <CardDescription>
-                            {__('Eventos automatizados configurados para ejecutarse en segundo plano.')}
+                            {__('Automated events configured to run in the background.')}
                         </CardDescription>
                     </CardHeader>
                     <CardContent className="p-0">
                         <Table>
                             <TableHeader>
                                 <TableRow>
-                                    <TableHead>{__('Comando / Tarea')}</TableHead>
-                                    <TableHead>{__('Programación')}</TableHead>
-                                    <TableHead>{__('Expresión Cron')}</TableHead>
-                                    <TableHead>{__('Siguiente Ejecución')}</TableHead>
-                                    <TableHead className="text-center">{__('Zona Horaria')}</TableHead>
-                                    <TableHead className="text-right">{__('Acción')}</TableHead>
+                                    <TableHead>{__('Command / Task')}</TableHead>
+                                    <TableHead>{__('Schedule')}</TableHead>
+                                    <TableHead>{__('Cron Expression')}</TableHead>
+                                    <TableHead>{__('Next Execution')}</TableHead>
+                                    <TableHead className="text-center">{__('Timezone')}</TableHead>
+                                    <TableHead className="text-right">{__('Action')}</TableHead>
                                 </TableRow>
                             </TableHeader>
                             <TableBody>
@@ -142,7 +142,7 @@ export default function TaskMonitoring({ tasks }: PageProps) {
                                                 ) : (
                                                     <Play className="h-3.5 w-3.5" />
                                                 )}
-                                                {__('Ejecutar')}
+                                                {__('Run')}
                                             </Button>
                                         </TableCell>
                                     </TableRow>
@@ -151,7 +151,7 @@ export default function TaskMonitoring({ tasks }: PageProps) {
                                 {tasks.length === 0 && (
                                     <TableRow>
                                         <TableCell colSpan={6} className="text-center py-8 text-muted-foreground">
-                                            {__('No se encontraron tareas programadas en la aplicación.')}
+                                            {__('No scheduled tasks found in the application.')}
                                         </TableCell>
                                     </TableRow>
                                 )}

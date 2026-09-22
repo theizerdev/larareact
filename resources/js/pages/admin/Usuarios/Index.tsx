@@ -385,7 +385,7 @@ return;
             ),
         },
         {
-            header: 'Actions',
+            header: __('Actions'),
             className: 'text-right',
             hideable: false,
             stopRowClick: true,
@@ -541,11 +541,11 @@ return;
                         isLoading={isTableLoading}
                         onRowClick={(user) => handleEditClick(user)}
                         emptyState={{
-                            title: 'No users found',
+                            title: __('No users found'),
                             description: searchTerm || statusFilter || roleFilter || empresaFilter
-                                ? 'Try clearing your search filters or changing your query.'
-                                : 'You have not registered any users yet.',
-                            ctaLabel: 'New User',
+                                ? __('Try clearing your search filters or changing your query.')
+                                : __('You have not registered any users yet.'),
+                            ctaLabel: __('New User'),
                             onCtaClick: handleCreateClick,
                         }}
                     />
