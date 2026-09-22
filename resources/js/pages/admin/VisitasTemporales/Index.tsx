@@ -267,7 +267,7 @@ function CameraWidget({ onCapture, onCancel }: CameraWidgetProps) {
                             onClick={() => startCamera()}
                             className="flex items-center gap-1"
                         >
-                            <RefreshCw className="w-3.5 h-3.5" />
+                            <RefreshCw className="w-3.5 h-3.5 mr-1 rtl:mr-0 rtl:ml-1" />
                             {__('Retake')}
                         </Button>
                         <Button
@@ -276,7 +276,7 @@ function CameraWidget({ onCapture, onCancel }: CameraWidgetProps) {
                             onClick={() => onCapture(captured)}
                             className="flex items-center gap-1 bg-[#104a29] hover:bg-[#0c371e] text-white"
                         >
-                            <CheckCircle className="w-3.5 h-3.5" />
+                            <CheckCircle className="w-3.5 h-3.5 mr-1 rtl:mr-0 rtl:ml-1" />
                             {__('Save')}
                         </Button>
                     </div>
@@ -660,12 +660,14 @@ export default function Index({
                     <span className="font-semibold text-slate-700 dark:text-slate-200">
                         {visit.nombres} {visit.apellidos}
                         {visit.nombre_comercial && (
-                            <span className="text-xs text-emerald-600 dark:text-emerald-400 font-normal ml-1">
+                            <span className="text-xs text-emerald-600 dark:text-emerald-400 font-normal ml-1 rtl:ml-0 rtl:mr-1">
                                 ({visit.nombre_comercial})
                             </span>
                         )}
                     </span>
-                    <span className="text-xs text-muted-foreground font-mono">{visit.documento_identidad || __('Fast Delivery')}</span>
+                    <span className="text-xs text-muted-foreground font-mono">
+                        {visit.documento_identidad ? <span dir="ltr">{visit.documento_identidad}</span> : __('Fast Delivery')}
+                    </span>
                 </div>
             )
         },
@@ -673,7 +675,7 @@ export default function Index({
             id: 'telefono',
             header: __('Phone'),
             cell: (visit) => (
-                <span className="text-xs text-slate-600 dark:text-slate-300">
+                <span dir="ltr" className="text-xs text-slate-600 dark:text-slate-300">
                     {visit.pais_telefono ? `+${visit.pais_telefono.codigo_telefonico} ` : ''}{visit.telefono || '-'}
                 </span>
             )
@@ -719,14 +721,14 @@ export default function Index({
                 <div className="flex flex-col text-xs">
                     {visit.fecha_ingreso ? (
                         <span className="flex items-center gap-1 text-emerald-600 dark:text-emerald-400 font-medium">
-                            <Calendar className="w-3.5 h-3.5" /> {visit.fecha_ingreso} {visit.hora_ingreso ? visit.hora_ingreso.substring(0, 5) : ''}
+                            <Calendar className="w-3.5 h-3.5 shrink-0" /> <span dir="ltr">{visit.fecha_ingreso} {visit.hora_ingreso ? visit.hora_ingreso.substring(0, 5) : ''}</span>
                         </span>
                     ) : (
                         <span className="text-slate-400 italic">{__('Fast Delivery')}</span>
                     )}
                     {visit.fecha_salida && (
                         <span className="flex items-center gap-1 text-rose-600 dark:text-rose-400 mt-0.5">
-                            <Clock className="w-3.5 h-3.5" /> {visit.fecha_salida} {visit.hora_salida ? visit.hora_salida.substring(0, 5) : ''}
+                            <Clock className="w-3.5 h-3.5 shrink-0" /> <span dir="ltr">{visit.fecha_salida} {visit.hora_salida ? visit.hora_salida.substring(0, 5) : ''}</span>
                         </span>
                     )}
                 </div>
@@ -752,7 +754,7 @@ export default function Index({
                 }
 
                 return (
-                    <div className="flex items-center space-x-2">
+                    <div className="flex items-center space-x-2 rtl:space-x-reverse">
                         <Switch
                             checked={visit.status === 'activo'}
                             onCheckedChange={() => handleToggleStatus(visit)}
@@ -767,7 +769,7 @@ export default function Index({
         {
             id: 'actions',
             header: __('Actions'),
-            className: 'text-right',
+            className: 'text-right rtl:text-left',
             stopRowClick: true,
             cell: (visit) => (
                 <DropdownMenu>
@@ -778,26 +780,26 @@ export default function Index({
                     </DropdownMenuTrigger>
                     <DropdownMenuContent align="end">
                         <DropdownMenuItem onClick={() => handleEditClick(visit)}>
-                            <Pencil className="mr-2 h-4 w-4" />
+                            <Pencil className="mr-2 rtl:mr-0 rtl:ml-2 h-4 w-4" />
                             {__('Edit')}
                         </DropdownMenuItem>
                         <DropdownMenuItem onClick={() => router.patch(`/admin/visitas-temporales/${visit.id}/toggle-status`, { status: 'activo' }, { preserveScroll: true, onSuccess: () => notifySuccess(__('Status updated successfully.')) })}>
-                            <CheckCircle className="mr-2 h-4 w-4 text-emerald-500" />
+                            <CheckCircle className="mr-2 rtl:mr-0 rtl:ml-2 h-4 w-4 text-emerald-500" />
                             {__('Set Active')}
                         </DropdownMenuItem>
                         <DropdownMenuItem onClick={() => router.patch(`/admin/visitas-temporales/${visit.id}/toggle-status`, { status: 'suspendido' }, { preserveScroll: true, onSuccess: () => notifySuccess(__('Status updated successfully.')) })}>
-                            <XCircle className="mr-2 h-4 w-4 text-rose-500" />
+                            <XCircle className="mr-2 rtl:mr-0 rtl:ml-2 h-4 w-4 text-rose-500" />
                             {__('Set Suspended')}
                         </DropdownMenuItem>
                         <DropdownMenuItem onClick={() => router.patch(`/admin/visitas-temporales/${visit.id}/toggle-status`, { status: 'en_revision' }, { preserveScroll: true, onSuccess: () => notifySuccess(__('Status updated successfully.')) })}>
-                            <RefreshCw className="mr-2 h-4 w-4 text-amber-500" />
+                            <RefreshCw className="mr-2 rtl:mr-0 rtl:ml-2 h-4 w-4 text-amber-500" />
                             {__('Set Under Review')}
                         </DropdownMenuItem>
                         <DropdownMenuItem
                             onClick={() => setDeletingVisit(visit)}
                             className="text-red-650 focus:text-red-650 dark:text-red-400"
                         >
-                            <Trash2 className="mr-2 h-4 w-4" />
+                            <Trash2 className="mr-2 rtl:mr-0 rtl:ml-2 h-4 w-4" />
                             {__('Delete')}
                         </DropdownMenuItem>
                     </DropdownMenuContent>
@@ -840,11 +842,11 @@ export default function Index({
                             variant="outline"
                             className="border-[#2729c4] text-[#2729c4] hover:bg-[#2729c4]/10 dark:border-indigo-400 dark:text-indigo-400"
                         >
-                            <Link className="mr-2 h-4 w-4" />
-                            {__('Pre-registro')}
+                            <Link className="mr-2 rtl:mr-0 rtl:ml-2 h-4 w-4" />
+                            {__('Pre-registration')}
                         </Button> */}
                         <Button onClick={handleCreateClick} className="bg-[#104a29] hover:bg-[#0c371e] text-white">
-                            <Plus className="mr-2 h-4 w-4" />
+                            <Plus className="mr-2 rtl:mr-0 rtl:ml-2 h-4 w-4" />
                             {__('New Visit')}
                         </Button>
                     </div>
@@ -1132,7 +1134,7 @@ export default function Index({
 
                                             />
                                             {data.empleado_id && (
-                                                <div className="absolute right-3 top-1/2 -translate-y-1/2 bg-emerald-500/10 text-emerald-600 rounded-full p-0.5 border border-emerald-500/20">
+                                                <div className="absolute right-3 rtl:right-auto rtl:left-3 top-1/2 -translate-y-1/2 bg-emerald-500/10 text-emerald-600 rounded-full p-0.5 border border-emerald-500/20">
                                                     <Check className="w-3.5 h-3.5" />
                                                 </div>
                                             )}
@@ -1156,7 +1158,7 @@ export default function Index({
                                                                 setResponsibleSearch(`${r.nombres} ${r.apellidos}`);
                                                                 setShowResponsibleSuggestions(false);
                                                             }}
-                                                            className="w-full text-left px-4 py-2 text-sm hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors flex flex-col border-b last:border-0 border-slate-100 dark:border-slate-800/40"
+                                                            className="w-full text-left rtl:text-right px-4 py-2 text-sm hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors flex flex-col border-b last:border-0 border-slate-100 dark:border-slate-800/40"
                                                         >
                                                             <span className="font-semibold text-slate-800 dark:text-slate-200">{r.nombres} {r.apellidos}</span>
                                                             <span className="text-xs text-slate-500 dark:text-slate-400">
@@ -1307,9 +1309,9 @@ export default function Index({
             }}>
                 <DialogContent className="max-w-md">
                     <DialogHeader>
-                        <DialogTitle>{__('Pre-registro de Visita')}</DialogTitle>
+                        <DialogTitle>{__('Visit Pre-registration')}</DialogTitle>
                         <DialogDescription>
-                            {__('Ingrese los datos del visitante, el motivo, y a quién visita para enviar una invitación de registro rápido a su WhatsApp.')}
+                            {__('Enter visitor details, motive and host to send a quick registration invitation via WhatsApp.')}
                         </DialogDescription>
                     </DialogHeader>
                     <form onSubmit={handlePreRegistroSubmit} className="space-y-4">
@@ -1363,7 +1365,7 @@ export default function Index({
                                 value={preRegistroForm.data.motivo_registro}
                                 onChange={(e) => preRegistroForm.setData('motivo_registro', e.target.value)}
                                 className={cn(preRegistroForm.errors.motivo_registro && 'border-rose-500')}
-                                placeholder="Ej: Visita técnica, entrevista..."
+                                placeholder={__('e.g. Technical visit, interview...')}
                                 required
                             />
                             {preRegistroForm.errors.motivo_registro && (
@@ -1394,7 +1396,7 @@ export default function Index({
                                     required
                                 />
                                 {preRegistroForm.data.empleado_id && (
-                                    <div className="absolute right-3 top-1/2 -translate-y-1/2 bg-emerald-500/10 text-emerald-600 rounded-full p-0.5 border border-emerald-500/20">
+                                    <div className="absolute right-3 rtl:right-auto rtl:left-3 top-1/2 -translate-y-1/2 bg-emerald-500/10 text-emerald-600 rounded-full p-0.5 border border-emerald-500/20">
                                         <Check className="w-3.5 h-3.5" />
                                     </div>
                                 )}
@@ -1418,7 +1420,7 @@ export default function Index({
                                                     setPreRegistroResponsibleSearch(`${r.nombres} ${r.apellidos}`);
                                                     setShowPreRegistroSuggestions(false);
                                                 }}
-                                                className="w-full text-left px-4 py-2 text-sm hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors flex flex-col border-b last:border-0 border-slate-100 dark:border-slate-800/40"
+                                                className="w-full text-left rtl:text-right px-4 py-2 text-sm hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors flex flex-col border-b last:border-0 border-slate-100 dark:border-slate-800/40"
                                             >
                                                 <span className="font-semibold text-slate-800 dark:text-slate-200">{r.nombres} {r.apellidos}</span>
                                                 <span className="text-xs text-slate-500 dark:text-slate-400">
@@ -1446,7 +1448,7 @@ export default function Index({
                                 disabled={preRegistroForm.processing}
                                 className="bg-[#104a29] hover:bg-[#0c371e] text-white flex items-center gap-1.5"
                             >
-                                {__('Enviar invitación')}
+                                {__('Send Invitation')}
                             </Button>
                         </DialogFooter>
                     </form>
