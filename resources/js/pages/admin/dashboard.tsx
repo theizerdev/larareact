@@ -144,7 +144,7 @@ export default function AdminDashboard({ moduleStats }: Props) {
             forceNiceScale: true,
             labels: {
                 style: { colors: '#64748b', fontSize: '11px' },
-                formatter: (val: number) => Math.round(val).toString(),
+                formatter: (val: number) => (typeof val === 'number' && !isNaN(val)) ? Math.round(val).toString() : '0',
             },
         },
         grid: {
@@ -195,7 +195,7 @@ export default function AdminDashboard({ moduleStats }: Props) {
             forceNiceScale: true,
             labels: {
                 style: { colors: '#64748b', fontSize: '11px' },
-                formatter: (val: number) => Math.round(val).toString(),
+                formatter: (val: number) => (typeof val === 'number' && !isNaN(val)) ? Math.round(val).toString() : '0',
             },
         },
         grid: {
