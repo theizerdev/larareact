@@ -28,6 +28,8 @@ import { Badge } from '@/components/ui/badge';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
+import LanguageToggle from '@/components/language-toggle';
+import { useTranslate } from '@/hooks/use-translate';
 
 interface Configuracion {
     requiere_foto_marcaje?: boolean;
@@ -50,6 +52,8 @@ interface EmpleadoFound {
 }
 
 export default function RelojChecadorKiosko({ configuracion, zona_horaria }: Props) {
+    const { __, currentLocale, isRtl } = useTranslate();
+
     // Reloj digital en tiempo real (usa la zona horaria de la empresa/sucursal o America/Mexico_City por defecto)
     const tz = zona_horaria || 'America/Mexico_City';
     const [currentTime, setCurrentTime] = useState(new Date());
@@ -134,14 +138,18 @@ export default function RelojChecadorKiosko({ configuracion, zona_horaria }: Pro
 
     useEffect(() => {
         if (configuracion?.requiere_foto_marcaje) {
-            navigator.mediaDevices?.getUserMedia({ video: true })
-                .then((stream) => {
-                    if (videoRef.current) {
-                        videoRef.current.srcObject = stream;
-                        setCameraActive(true);
-                    }
-                })
-                .catch(() => setCameraActive(false));
+            if (navigator.mediaDevices && typeof navigator.mediaDevices.getUserMedia === 'function') {
+                navigator.mediaDevices.getUserMedia({ video: true })
+                    .then((stream) => {
+                        if (videoRef.current) {
+                            videoRef.current.srcObject = stream;
+                            setCameraActive(true);
+                        }
+                    })
+                    .catch(() => setCameraActive(false));
+            } else {
+                setCameraActive(false);
+            }
         }
     }, [configuracion]);
 
@@ -201,6 +209,12 @@ export default function RelojChecadorKiosko({ configuracion, zona_horaria }: Pro
 
         if (qrModalOpen) {
             setErrorMessage(null);
+            if (!navigator.mediaDevices || typeof navigator.mediaDevices.getUserMedia !== 'function') {
+                setErrorMessage(__('No se pudo acceder a la cámara o el dispositivo no soporta captura de video (requiere HTTPS).'));
+                setQrModalOpen(false);
+                return;
+            }
+
             navigator.mediaDevices.getUserMedia({
                 video: { facingMode: facingMode, width: { ideal: 1280 }, height: { ideal: 720 } }
             })
@@ -277,7 +291,7 @@ export default function RelojChecadorKiosko({ configuracion, zona_horaria }: Pro
                     animationFrameId = requestAnimationFrame(scanFrame);
                 })
                 .catch((err) => {
-                    setErrorMessage('No se pudo acceder a la cámara para escanear el gafete QR.');
+                    setErrorMessage(__('No se pudo acceder a la cámara para escanear el gafete QR.'));
                     setQrModalOpen(false);
                 });
         }
@@ -342,11 +356,11 @@ export default function RelojChecadorKiosko({ configuracion, zona_horaria }: Pro
                 setTipoMarcajeSeleccionado(data.sugerencia_marcaje);
             } else {
                 setEmpleado(null);
-                setErrorMessage(data.message || 'No se encontró ningún empleado activo con ese número o QR.');
+                setErrorMessage(data.message || __('No se encontró ningún empleado activo con ese número o QR.'));
             }
         } catch (err: any) {
             setEmpleado(null);
-            setErrorMessage('No se encontró ningún empleado activo con ese número o QR.');
+            setErrorMessage(__('No se encontró ningún empleado activo con ese número o QR.'));
         } finally {
             setLoadingSearch(false);
         }
@@ -355,6 +369,21 @@ export default function RelojChecadorKiosko({ configuracion, zona_horaria }: Pro
     const handleSearch = (e?: React.FormEvent) => {
         if (e) e.preventDefault();
         performSearch(documentInput);
+    };
+
+    const getTipoMarcajeLabel = (tipo: string) => {
+        switch (tipo) {
+            case 'entrada': return __('INICIO JORNADA');
+            case 'entrada_extraordinaria': return __('TIEMPO EXTRA');
+            case 'descanso_inicio': return __('DESCANSO');
+            case 'descanso_fin': return __('FIN DESCANSO');
+            case 'salida_comida': return __('INICIO COMIDA');
+            case 'entrada_comida': return __('FIN COMIDA');
+            case 'incidente_inicio': return __('INCIDENTE');
+            case 'incidente_fin': return __('FIN INCIDENTE');
+            case 'salida': return __('SALIDA JORNADA');
+            default: return tipo.replace('_', ' ').toUpperCase();
+        }
     };
 
     // Registrar Marcaje
@@ -398,7 +427,13 @@ export default function RelojChecadorKiosko({ configuracion, zona_horaria }: Pro
 
             if (response.ok && data.success) {
                 playBeepSound();
-                setSuccessMessage(`¡Marcaje de ${tipo.replace('_', ' ').toUpperCase()} registrado exitosamente para ${data.empleado_nombre}!`);
+                const tipoLabel = getTipoMarcajeLabel(tipo);
+                setSuccessMessage(
+                    __('¡Marcaje de :tipo registrado exitosamente para :nombre!', {
+                        tipo: tipoLabel,
+                        nombre: data.empleado_nombre || empleado.nombre_completo,
+                    })
+                );
                 setIsDescansoModalOpen(false);
                 setIsIncidenteModalOpen(false);
                 setTimeout(() => {
@@ -406,17 +441,20 @@ export default function RelojChecadorKiosko({ configuracion, zona_horaria }: Pro
                     setSuccessMessage(null);
                 }, 4000);
             } else {
-                setErrorMessage(data.message || 'Error al registrar el marcaje.');
+                setErrorMessage(data.message || __('Error al registrar el marcaje.'));
             }
         } catch (err: any) {
-            setErrorMessage('Error al registrar el marcaje.');
+            setErrorMessage(__('Error al registrar el marcaje.'));
         } finally {
             setLoadingSearch(false);
         }
     };
 
+    const isArabic = isRtl || currentLocale === 'ar';
+    const localeCode = isArabic ? 'ar-u-nu-latn' : 'es-MX';
+
     const formatTime = (date: Date) => {
-        return date.toLocaleTimeString('es-MX', {
+        return date.toLocaleTimeString(localeCode, {
             hour: '2-digit',
             minute: '2-digit',
             second: '2-digit',
@@ -426,7 +464,7 @@ export default function RelojChecadorKiosko({ configuracion, zona_horaria }: Pro
     };
 
     const formatDate = (date: Date) => {
-        return date.toLocaleDateString('es-MX', {
+        return date.toLocaleDateString(localeCode, {
             weekday: 'long',
             year: 'numeric',
             month: 'long',
@@ -437,7 +475,7 @@ export default function RelojChecadorKiosko({ configuracion, zona_horaria }: Pro
 
     return (
         <div className="min-h-screen bg-slate-950 text-white flex flex-col justify-between p-4 md:p-8 font-sans select-none">
-            <Head title="Kiosko Reloj Checador - Escáner QR Gafete" />
+            <Head title={__('Kiosko Reloj Checador - Escáner QR Gafete')} />
 
             {/* BARRA SUPERIOR */}
             <div className="flex items-center justify-between border-b border-slate-800 pb-4">
@@ -446,21 +484,25 @@ export default function RelojChecadorKiosko({ configuracion, zona_horaria }: Pro
                         <Clock className="w-8 h-8 animate-pulse" />
                     </div>
                     <div>
-                        <h1 className="text-xl font-bold text-white tracking-wide">RELOJ CHECADOR DIGITAL</h1>
-                        <p className="text-xs text-slate-400">Control de Asistencia por Numpad, QR Gafete & Pistola Lector</p>
+                        <h1 className="text-xl font-bold text-white tracking-wide">{__('RELOJ CHECADOR DIGITAL')}</h1>
+                        <p className="text-xs text-slate-400">{__('Control de Asistencia por Numpad, QR Gafete & Pistola Lector')}</p>
                     </div>
                 </div>
 
                 <div className="flex items-center gap-4">
-                    <div className="text-right hidden sm:block">
-                        <div className="text-2xl font-black text-emerald-400 font-mono tracking-wider">{formatTime(currentTime)}</div>
-                        <div className="text-xs text-slate-400 capitalize">{formatDate(currentTime)} • {tz}</div>
+                    <div className="text-right rtl:text-left hidden sm:block">
+                        <div className="text-2xl font-black text-emerald-400 font-mono tracking-wider"><span dir="ltr">{formatTime(currentTime)}</span></div>
+                        <div className="text-xs text-slate-400">
+                            <span>{formatDate(currentTime)}</span> • <span dir="ltr">{tz}</span>
+                        </div>
                     </div>
 
-                    <Link href="/dashboard">
+                    <LanguageToggle />
+
+                    <Link href="/admin/dashboard">
                         <Button variant="outline" className="border-slate-800 bg-slate-900 text-slate-300 hover:text-white">
-                            <ArrowLeft className="w-4 h-4 mr-2" />
-                            Panel Admin
+                            <ArrowLeft className="w-4 h-4 mr-2 rtl:mr-0 rtl:ml-2 rtl:rotate-180" />
+                            {__('Panel Admin')}
                         </Button>
                     </Link>
                 </div>
@@ -475,10 +517,10 @@ export default function RelojChecadorKiosko({ configuracion, zona_horaria }: Pro
                             <div className="text-center space-y-3">
                                 <div className="flex items-center justify-between">
                                     <Label className="text-slate-300 text-xs font-semibold uppercase tracking-wider block">
-                                        N° de Empleado, Documento o QR Gafete
+                                        {__('N° de Empleado, Documento o QR Gafete')}
                                     </Label>
                                     <Badge variant="outline" className="text-[10px] bg-indigo-950/60 text-indigo-300 border-indigo-800 flex items-center gap-1">
-                                        <Scan className="w-3 h-3" /> Lector USB listo
+                                        <Scan className="w-3 h-3" /> {__('Lector USB listo')}
                                     </Badge>
                                 </div>
 
@@ -486,10 +528,11 @@ export default function RelojChecadorKiosko({ configuracion, zona_horaria }: Pro
                                     <input
                                         ref={inputRef}
                                         type="text"
+                                        dir="ltr"
                                         value={documentInput}
                                         onChange={(e) => setDocumentInput(e.target.value)}
                                         onKeyDown={(e) => { if (e.key === 'Enter') handleSearch(); }}
-                                        placeholder="Ingrese número o escanee código de barras/QR..."
+                                        placeholder={__('Ingrese número o escanee código de barras/QR...')}
                                         className="w-full text-center text-2xl sm:text-3xl font-mono font-bold tracking-widest bg-slate-950 border-2 border-emerald-500/40 rounded-xl py-4 text-emerald-400 placeholder:text-slate-700 shadow-inner focus:outline-none focus:border-emerald-500"
                                         autoFocus
                                     />
@@ -503,7 +546,7 @@ export default function RelojChecadorKiosko({ configuracion, zona_horaria }: Pro
                                     className="w-full h-12 border-indigo-500/40 bg-indigo-950/40 hover:bg-indigo-900/60 text-indigo-200 font-bold rounded-xl flex items-center justify-center gap-2 border"
                                 >
                                     <QrCode className="w-5 h-5 text-indigo-400 animate-pulse" />
-                                    <span>ESCANEAR GAFETE QR (CÁMARA)</span>
+                                    <span>{__('ESCANEAR GAFETE QR (CÁMARA)')}</span>
                                 </Button>
                             </div>
 
@@ -516,7 +559,7 @@ export default function RelojChecadorKiosko({ configuracion, zona_horaria }: Pro
                                         onClick={() => handleNumpadPress(num)}
                                         className="h-14 rounded-xl bg-slate-800/80 hover:bg-emerald-600 text-2xl font-bold text-white border border-slate-700 hover:border-emerald-500 transition-all active:scale-95 shadow-md flex items-center justify-center"
                                     >
-                                        {num}
+                                        <span dir="ltr">{num}</span>
                                     </button>
                                 ))}
                                 <button
@@ -524,21 +567,21 @@ export default function RelojChecadorKiosko({ configuracion, zona_horaria }: Pro
                                     onClick={handleNumpadClear}
                                     className="h-14 rounded-xl bg-rose-950/60 hover:bg-rose-600 text-rose-300 hover:text-white text-xs font-bold border border-rose-900 transition-all active:scale-95 flex items-center justify-center"
                                 >
-                                    LIMPIAR
+                                    {__('LIMPIAR')}
                                 </button>
                                 <button
                                     type="button"
                                     onClick={() => handleNumpadPress('0')}
                                     className="h-14 rounded-xl bg-slate-800/80 hover:bg-emerald-600 text-2xl font-bold text-white border border-slate-700 hover:border-emerald-500 transition-all active:scale-95 shadow-md flex items-center justify-center"
                                 >
-                                    0
+                                    <span dir="ltr">0</span>
                                 </button>
                                 <button
                                     type="button"
                                     onClick={handleNumpadDelete}
                                     className="h-14 rounded-xl bg-amber-950/60 hover:bg-amber-600 text-amber-300 hover:text-white border border-amber-900 transition-all active:scale-95 flex items-center justify-center"
                                 >
-                                    <Delete className="w-6 h-6" />
+                                    <Delete className="w-6 h-6 rtl:rotate-180" />
                                 </button>
                             </div>
 
@@ -547,7 +590,7 @@ export default function RelojChecadorKiosko({ configuracion, zona_horaria }: Pro
                                 disabled={!documentInput.trim() || loadingSearch}
                                 className="w-full h-14 text-lg font-bold bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl shadow-lg shadow-emerald-950/50"
                             >
-                                {loadingSearch ? 'VERIFICANDO...' : 'VERIFICAR EMPLEADO'}
+                                {loadingSearch ? __('VERIFICANDO...') : __('VERIFICAR EMPLEADO')}
                             </Button>
                         </CardContent>
                     </Card>
@@ -566,7 +609,7 @@ export default function RelojChecadorKiosko({ configuracion, zona_horaria }: Pro
                         <Card className="bg-emerald-950/90 border-2 border-emerald-500 p-8 text-center space-y-4 shadow-2xl animate-bounce-short">
                             <CheckCircle2 className="w-20 h-20 text-emerald-400 mx-auto animate-pulse" />
                             <h2 className="text-2xl font-black text-white">{successMessage}</h2>
-                            <p className="text-emerald-200 text-sm">El sistema ha registrado el evento de asistencia y notificado por WhatsApp al empleado.</p>
+                            <p className="text-emerald-200 text-sm">{__('El sistema ha registrado el evento de asistencia y notificado por WhatsApp al empleado.')}</p>
                         </Card>
                     ) : empleado ? (
                         <Card className="bg-slate-900/90 border-2 border-emerald-500/40 shadow-2xl backdrop-blur-xl space-y-6 p-6">
@@ -580,17 +623,17 @@ export default function RelojChecadorKiosko({ configuracion, zona_horaria }: Pro
                                 </div>
                                 <div className="space-y-1">
                                     <Badge className="bg-emerald-500/20 text-emerald-300 border-emerald-500/30 text-xs">
-                                        Empleado Verificado
+                                        {__('Empleado Verificado')}
                                     </Badge>
                                     <h2 className="text-xl font-bold text-white">{empleado.nombre_completo}</h2>
-                                    <p className="text-xs text-slate-400">{empleado.cargo || 'Sin cargo'} • {empleado.departamento || 'Sin departamento'}</p>
-                                    <p className="text-xs text-emerald-400 font-medium">Turno: {empleado.turno}</p>
+                                    <p className="text-xs text-slate-400">{empleado.cargo || __('Sin cargo')} • {empleado.departamento || __('Sin departamento')}</p>
+                                    <p className="text-xs text-emerald-400 font-medium">{__('Turno:')} {empleado.turno}</p>
                                 </div>
                             </div>
 
                             <div className="space-y-3">
                                 <Label className="text-slate-300 text-xs font-semibold uppercase tracking-wider block">
-                                    SELECCIONE EL ACCIÓN A REGISTRAR:
+                                    {__('SELECCIONE LA ACCIÓN A REGISTRAR:')}
                                 </Label>
 
                                 <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
@@ -610,7 +653,7 @@ export default function RelojChecadorKiosko({ configuracion, zona_horaria }: Pro
                                                     }`}
                                                 >
                                                     <LogIn className="w-5 h-5 text-emerald-400" />
-                                                    <span>INICIO JORNADA</span>
+                                                    <span>{__('INICIO JORNADA')}</span>
                                                 </Button>
 
                                                 <Button
@@ -619,7 +662,7 @@ export default function RelojChecadorKiosko({ configuracion, zona_horaria }: Pro
                                                     className="h-20 text-xs sm:text-sm font-bold flex flex-col items-center justify-center gap-1 rounded-xl bg-purple-900/80 hover:bg-purple-800 text-purple-200 border border-purple-700/60 shadow-lg transition-all"
                                                 >
                                                     <Sparkles className="w-5 h-5 text-purple-400" />
-                                                    <span>TIEMPO EXTRA</span>
+                                                    <span>{__('TIEMPO EXTRA')}</span>
                                                 </Button>
 
                                                 <Button
@@ -638,7 +681,7 @@ export default function RelojChecadorKiosko({ configuracion, zona_horaria }: Pro
                                                     }`}
                                                 >
                                                     <Coffee className="w-5 h-5 text-teal-400" />
-                                                    <span>{esDescansoActivo ? 'FIN DESCANSO' : 'DESCANSO'}</span>
+                                                    <span>{esDescansoActivo ? __('FIN DESCANSO') : __('DESCANSO')}</span>
                                                 </Button>
 
                                                 <Button
@@ -651,7 +694,7 @@ export default function RelojChecadorKiosko({ configuracion, zona_horaria }: Pro
                                                     }`}
                                                 >
                                                     <Utensils className="w-5 h-5 text-amber-400" />
-                                                    <span>INICIO COMIDA</span>
+                                                    <span>{__('INICIO COMIDA')}</span>
                                                 </Button>
 
                                                 <Button
@@ -664,7 +707,7 @@ export default function RelojChecadorKiosko({ configuracion, zona_horaria }: Pro
                                                     }`}
                                                 >
                                                     <LogIn className="w-5 h-5 text-indigo-400" />
-                                                    <span>FIN COMIDA</span>
+                                                    <span>{__('FIN COMIDA')}</span>
                                                 </Button>
 
                                                 <Button
@@ -683,7 +726,7 @@ export default function RelojChecadorKiosko({ configuracion, zona_horaria }: Pro
                                                     }`}
                                                 >
                                                     <AlertTriangle className="w-5 h-5 text-amber-400" />
-                                                    <span>{esIncidenteActivo ? 'FIN INCIDENTE' : 'INCIDENTE'}</span>
+                                                    <span>{esIncidenteActivo ? __('FIN INCIDENTE') : __('INCIDENTE')}</span>
                                                 </Button>
 
                                                 <Button
@@ -696,7 +739,7 @@ export default function RelojChecadorKiosko({ configuracion, zona_horaria }: Pro
                                                     }`}
                                                 >
                                                     <LogOut className="w-6 h-6 text-rose-400" />
-                                                    <span>SALIDA JORNADA</span>
+                                                    <span>{__('SALIDA JORNADA')}</span>
                                                 </Button>
                                             </>
                                         );
@@ -707,8 +750,8 @@ export default function RelojChecadorKiosko({ configuracion, zona_horaria }: Pro
                     ) : (
                         <Card className="bg-slate-900/40 border-slate-800/80 p-8 text-center space-y-4">
                             <UserCheck className="w-16 h-16 text-slate-700 mx-auto" />
-                            <h3 className="text-slate-400 font-medium">En espera de ingreso de documento o lectura de QR...</h3>
-                            <p className="text-xs text-slate-600">Al ingresar el número de empleado o acercar el QR del gafete a la cámara/lector, aparecerá el perfil con las opciones de marcaje.</p>
+                            <h3 className="text-slate-400 font-medium">{__('En espera de ingreso de documento o lectura de QR...')}</h3>
+                            <p className="text-xs text-slate-600">{__('Al ingresar el número de empleado o acercar el QR del gafete a la cámara/lector, aparecerá el perfil con las opciones de marcaje.')}</p>
                         </Card>
                     )}
 
@@ -717,7 +760,7 @@ export default function RelojChecadorKiosko({ configuracion, zona_horaria }: Pro
                         <div className="p-3 bg-slate-900/60 rounded-xl border border-slate-800 flex items-center justify-between">
                             <div className="flex items-center gap-2 text-xs text-slate-300">
                                 <Camera className="w-4 h-4 text-emerald-400" />
-                                <span>Cámara de Evidencia Activa</span>
+                                <span>{__('Cámara de Evidencia Activa')}</span>
                             </div>
                             <div className="w-16 h-12 rounded bg-slate-950 border border-slate-800 overflow-hidden">
                                 <video ref={videoRef} autoPlay playsInline muted className="w-full h-full object-cover" />
@@ -735,7 +778,7 @@ export default function RelojChecadorKiosko({ configuracion, zona_horaria }: Pro
                             <div className="flex items-center gap-2">
                                 <Camera className="w-5 h-5 text-emerald-400 animate-pulse" />
                                 <h3 className="text-sm font-extrabold text-white">
-                                    Escáner QR de Cámara en Vivo
+                                    {__('Escáner QR de Cámara en Vivo')}
                                 </h3>
                             </div>
 
@@ -748,7 +791,7 @@ export default function RelojChecadorKiosko({ configuracion, zona_horaria }: Pro
                                     className="bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs rounded-xl border-slate-700 gap-1.5"
                                 >
                                     <SwitchCamera className="w-4 h-4 text-emerald-400" />
-                                    {facingMode === 'environment' ? 'Cámara Trasera' : 'Cámara Frontal'}
+                                    {facingMode === 'environment' ? __('Cámara Trasera') : __('Cámara Frontal')}
                                 </Button>
 
                                 <button
@@ -757,6 +800,7 @@ export default function RelojChecadorKiosko({ configuracion, zona_horaria }: Pro
                                     className="p-2 text-slate-400 hover:text-white bg-slate-800 hover:bg-slate-700 rounded-full transition-colors"
                                 >
                                     <X className="w-5 h-5" />
+                                    <span className="sr-only">{__('Cerrar')}</span>
                                 </button>
                             </div>
                         </div>
@@ -788,7 +832,7 @@ export default function RelojChecadorKiosko({ configuracion, zona_horaria }: Pro
 
                             <div className="absolute bottom-3 left-1/2 -translate-x-1/2 bg-black/80 backdrop-blur-md px-4 py-2 rounded-full border border-emerald-500/40 text-xs font-bold text-emerald-300 flex items-center gap-2 shadow-lg w-11/12 justify-center text-center">
                                 <Sparkles className="w-4 h-4 text-emerald-400 shrink-0 animate-spin" />
-                                <span>Escaneo 360° Activo: Acerque el QR a cualquier lugar de la pantalla</span>
+                                <span>{__('Escaneo 360° Activo: Acerque el QR a cualquier lugar de la pantalla')}</span>
                             </div>
                         </div>
                     </div>
@@ -801,10 +845,10 @@ export default function RelojChecadorKiosko({ configuracion, zona_horaria }: Pro
                     <DialogHeader>
                         <DialogTitle className="flex items-center gap-2 text-lg font-bold text-teal-400">
                             <Coffee className="w-5 h-5 text-teal-400" />
-                            Seleccionar Duración del Descanso
+                            {__('Seleccionar Duración del Descanso')}
                         </DialogTitle>
                         <DialogDescription className="text-xs text-slate-400">
-                            Elija los minutos asignados para su pausa o descanso de jornada.
+                            {__('Elija los minutos asignados para su pausa o descanso de jornada.')}
                         </DialogDescription>
                     </DialogHeader>
 
@@ -821,7 +865,7 @@ export default function RelojChecadorKiosko({ configuracion, zona_horaria }: Pro
                                             : 'bg-slate-800 border-slate-700 text-slate-300 hover:bg-slate-700'
                                     }`}
                                 >
-                                    {min} min
+                                    <span dir="ltr">{min}</span> {__('min')}
                                 </button>
                             ))}
                         </div>
@@ -833,7 +877,7 @@ export default function RelojChecadorKiosko({ configuracion, zona_horaria }: Pro
                                 onClick={() => setIsDescansoModalOpen(false)}
                                 className="border-slate-700 bg-slate-800 text-slate-300"
                             >
-                                Cancelar
+                                {__('Cancelar')}
                             </Button>
                             <Button
                                 type="button"
@@ -841,7 +885,7 @@ export default function RelojChecadorKiosko({ configuracion, zona_horaria }: Pro
                                 disabled={loadingSearch}
                                 className="bg-teal-600 hover:bg-teal-500 text-white font-bold"
                             >
-                                Confirmar {selectedMinutosDescanso} min
+                                {__('Confirmar')} <span dir="ltr" className="mx-1">{selectedMinutosDescanso}</span> {__('min')}
                             </Button>
                         </div>
                     </div>
@@ -854,36 +898,36 @@ export default function RelojChecadorKiosko({ configuracion, zona_horaria }: Pro
                     <DialogHeader>
                         <DialogTitle className="flex items-center gap-2 text-lg font-bold text-amber-400">
                             <AlertTriangle className="w-5 h-5 text-amber-400" />
-                            Registro de Incidente en Jornada
+                            {__('Registro de Incidente en Jornada')}
                         </DialogTitle>
                         <DialogDescription className="text-xs text-slate-400">
-                            Seleccione o describa la causa del incidente que interrumpe la actividad.
+                            {__('Seleccione o describa la causa del incidente que interrumpe la actividad.')}
                         </DialogDescription>
                     </DialogHeader>
 
                     <div className="space-y-4 pt-2">
                         <div className="space-y-2">
-                            <Label className="text-xs text-slate-300">Causas Frecuentes:</Label>
+                            <Label className="text-xs text-slate-300">{__('Causas Frecuentes:')}</Label>
                             <div className="flex flex-wrap gap-2">
                                 {['Falla Eléctrica / Maquinaria', 'Falta de Insumos', 'Cita / Atención Médica', 'Trámite Administrativo', 'Capacitación'].map((causa) => (
                                     <button
                                         key={causa}
                                         type="button"
-                                        onClick={() => setIncidenteCausaInput(causa)}
+                                        onClick={() => setIncidenteCausaInput(__(causa))}
                                         className="text-xs px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-amber-900/50 border border-slate-700 text-amber-200 transition-colors"
                                     >
-                                        {causa}
+                                        {__(causa)}
                                     </button>
                                 ))}
                             </div>
                         </div>
 
                         <div className="space-y-1.5">
-                            <Label className="text-xs text-slate-300">Causa o Detalle del Incidente:</Label>
+                            <Label className="text-xs text-slate-300">{__('Causa o Detalle del Incidente:')}</Label>
                             <Input
                                 value={incidenteCausaInput}
                                 onChange={(e) => setIncidenteCausaInput(e.target.value)}
-                                placeholder="Ej. Suspensión de energía en línea de empaque"
+                                placeholder={__('Ej. Suspensión de energía en línea de empaque')}
                                 className="bg-slate-950 border-slate-700 text-white text-xs"
                             />
                         </div>
@@ -895,15 +939,15 @@ export default function RelojChecadorKiosko({ configuracion, zona_horaria }: Pro
                                 onClick={() => setIsIncidenteModalOpen(false)}
                                 className="border-slate-700 bg-slate-800 text-slate-300"
                             >
-                                Cancelar
+                                {__('Cancelar')}
                             </Button>
                             <Button
                                 type="button"
-                                onClick={() => handleRegisterMarcaje('incidente_inicio', { incidente_causa: incidenteCausaInput || 'Incidente General' })}
+                                onClick={() => handleRegisterMarcaje('incidente_inicio', { incidente_causa: incidenteCausaInput || __('Incidente General') })}
                                 disabled={loadingSearch || !incidenteCausaInput.trim()}
                                 className="bg-amber-600 hover:bg-amber-500 text-white font-bold"
                             >
-                                Registrar Incidente
+                                {__('Registrar Incidente')}
                             </Button>
                         </div>
                     </div>
@@ -912,24 +956,24 @@ export default function RelojChecadorKiosko({ configuracion, zona_horaria }: Pro
 
             {/* PIE DE PÁGINA */}
             <div className="border-t border-slate-900 pt-4 flex flex-col sm:flex-row items-center justify-between text-xs text-slate-500 gap-2">
-                <div className="flex items-center gap-3">
-                    <span>Sistema Kiosko Checador • Soporte para Teclado, Pistola USB y QR Gafete</span>
+                <div className="flex flex-wrap items-center gap-3">
+                    <span>{__('Sistema Kiosko Checador • Soporte para Teclado, Pistola USB y QR Gafete')}</span>
                     {gpsStatus === 'activo' && gpsPosition && (
                         <Badge variant="outline" className="text-[10px] bg-emerald-950/40 text-emerald-400 border-emerald-800 flex items-center gap-1 font-mono">
                             <MapPin className="w-3 h-3 text-emerald-400" />
-                            GPS: {gpsPosition.lat.toFixed(4)}, {gpsPosition.lng.toFixed(4)}
+                            GPS: <span dir="ltr">{gpsPosition.lat.toFixed(4)}, {gpsPosition.lng.toFixed(4)}</span>
                         </Badge>
                     )}
                     {gpsStatus === 'obteniendo' && (
                         <span className="text-[10px] text-slate-400 flex items-center gap-1">
                             <MapPin className="w-3 h-3 text-amber-400 animate-pulse" />
-                            Sincronizando GPS...
+                            {__('Sincronizando GPS...')}
                         </span>
                     )}
                 </div>
                 <div className="flex items-center gap-2">
                     <ShieldCheck className="w-4 h-4 text-emerald-500" />
-                    <span>Control de Asistencia & Horarios</span>
+                    <span>{__('Control de Asistencia & Horarios')}</span>
                 </div>
             </div>
         </div>

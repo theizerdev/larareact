@@ -85,7 +85,7 @@ class RelojChecadorKioskoController extends Controller
         if (! $empleado) {
             return response()->json([
                 'success' => false,
-                'message' => 'Empleado no encontrado o inactivo.',
+                'message' => __('Empleado no encontrado o inactivo.'),
             ], 404);
         }
 
@@ -136,7 +136,7 @@ class RelojChecadorKioskoController extends Controller
                 'foto_empleado' => $empleado->foto_empleado ? Storage::url($empleado->foto_empleado) : null,
                 'departamento' => $empleado->departamento?->nombre,
                 'cargo' => $empleado->cargo?->nombre,
-                'turno' => $empleado->turnoLaboral?->nombre ?? 'Sin turno asignado',
+                'turno' => $empleado->turnoLaboral?->nombre ?? __('Sin turno asignado'),
                 'ultimo_marcaje_tipo' => $ultimoMarcaje?->tipo_marcaje,
             ],
             'ultimo_marcaje' => $ultimoMarcaje ? [
@@ -226,7 +226,7 @@ class RelojChecadorKioskoController extends Controller
 
         return response()->json([
             'success' => true,
-            'message' => 'Marcaje registrado con éxito.',
+            'message' => __('Marcaje registrado con éxito.'),
             'marcaje' => [
                 'tipo_marcaje' => $marcaje->tipo_marcaje,
                 'hora' => $marcaje->fecha_hora->format('H:i:s'),
