@@ -760,7 +760,7 @@ export default function EmpleadosIndexPage({
             header: __('Status'),
             stopRowClick: true,
             cell: (emp) => (
-                <div className="flex items-center space-x-2">
+                <div className="flex items-center gap-2">
                     <Switch
                         checked={emp.status}
                         onCheckedChange={() => handleToggleStatus(emp)}
@@ -777,8 +777,8 @@ export default function EmpleadosIndexPage({
             ),
         },
         {
-            header: 'Actions',
-            className: 'text-right',
+            header: __('Actions'),
+            className: 'text-right rtl:text-left',
             hideable: false,
             stopRowClick: true,
             cell: (emp) => (
@@ -790,26 +790,26 @@ export default function EmpleadosIndexPage({
                     </DropdownMenuTrigger>
                     <DropdownMenuContent align="end">
                         <DropdownMenuItem onClick={() => handleEditClick(emp)}>
-                            <Pencil className="mr-2 h-4 w-4" />
+                            <Pencil className="mr-2 rtl:mr-0 rtl:ml-2 h-4 w-4" />
                             {__('Edit')}
                         </DropdownMenuItem>
                         <DropdownMenuItem onClick={() => router.get(`/admin/empleados/${emp.id}/carnet`)}>
-                            <Eye className="mr-2 h-4 w-4" />
-                            {__('Ver Carnet')}
+                            <Eye className="mr-2 rtl:mr-0 rtl:ml-2 h-4 w-4" />
+                            {__('View ID Card')}
                         </DropdownMenuItem>
                         <DropdownMenuItem onClick={() => router.post(`/admin/empleados/${emp.id}/enviar-carnet`)}>
-                            <Send className="mr-2 h-4 w-4 text-emerald-600 dark:text-emerald-400" />
-                            {__('Enviar Carnet por WhatsApp')}
+                            <Send className="mr-2 rtl:mr-0 rtl:ml-2 h-4 w-4 text-emerald-600 dark:text-emerald-400" />
+                            {__('Send ID Card via WhatsApp')}
                         </DropdownMenuItem>
                         <DropdownMenuItem onClick={() => handleToggleStatus(emp)}>
-                            <ToggleRight className="mr-2 h-4 w-4" />
+                            <ToggleRight className="mr-2 rtl:mr-0 rtl:ml-2 h-4 w-4" />
                             {emp.status ? __('Deactivate') : __('Activate')}
                         </DropdownMenuItem>
                         <DropdownMenuItem
                             onClick={() => setDeletingEmpleado(emp)}
                             className="text-red-600 focus:text-red-600 dark:text-red-400"
                         >
-                            <Trash2 className="mr-2 h-4 w-4" />
+                            <Trash2 className="mr-2 rtl:mr-0 rtl:ml-2 h-4 w-4" />
                             {__('Delete')}
                         </DropdownMenuItem>
                     </DropdownMenuContent>
@@ -839,7 +839,7 @@ export default function EmpleadosIndexPage({
                             className="border-emerald-600 text-emerald-600 hover:bg-emerald-600/10 flex items-center gap-1.5"
                         >
                             <FileSpreadsheet className="w-4 h-4" />
-                            {__('Importar Excel')}
+                            {__('Import Excel')}
                         </Button>
                         <Button
                             type="button"
@@ -848,10 +848,10 @@ export default function EmpleadosIndexPage({
                             className="border-indigo-600 text-indigo-600 hover:bg-indigo-600/10 flex items-center gap-1.5"
                         >
                             <Phone className="w-4 h-4" />
-                            {__('Pre-registro')}
+                            {__('Pre-registration')}
                         </Button>
                         <Button onClick={handleCreateClick}>
-                            <Plus className="mr-2 h-4 w-4" />
+                            <Plus className="mr-2 rtl:mr-0 rtl:ml-2 h-4 w-4" />
                             {__('New Employee')}
                         </Button>
                     </div>
@@ -941,11 +941,11 @@ export default function EmpleadosIndexPage({
                         isLoading={isTableLoading}
                         onRowClick={(emp) => handleEditClick(emp)}
                         emptyState={{
-                            title: 'No employees found',
+                            title: __('No employees found'),
                             description: searchTerm || statusFilter || depFilter
-                                ? 'Try clearing your search filters or changing your query.'
-                                : 'You have not registered any employees yet.',
-                            ctaLabel: 'New Employee',
+                                ? __('Try clearing your search filters or changing your query.')
+                                : __('You have not registered any employees yet.'),
+                            ctaLabel: __('New Employee'),
                             onCtaClick: handleCreateClick,
                         }}
                     />
@@ -1020,10 +1020,10 @@ export default function EmpleadosIndexPage({
                                     <div className="md:col-span-1 p-4 rounded-xl border border-emerald-500/30 bg-emerald-50/40 dark:bg-emerald-950/40 space-y-2 transition-all shadow-sm">
                                         <div className="flex items-center justify-between mb-1">
                                             <Label htmlFor="codigo_acceso" className="font-semibold text-xs text-emerald-900 dark:text-emerald-200">
-                                                Código de Acceso (8 dígitos)
+                                                {__('Access Code (8 digits)')}
                                             </Label>
                                             <span className="text-[10px] text-emerald-600 dark:text-emerald-400 font-medium">
-                                                Auto de 8 dígitos
+                                                {__('8-digit auto')}
                                             </span>
                                         </div>
                                         <Input
@@ -1043,7 +1043,7 @@ export default function EmpleadosIndexPage({
                                     <div className="md:col-span-1 p-4 rounded-xl border border-indigo-500/30 bg-indigo-50/30 dark:bg-indigo-950/30 space-y-2 transition-all shadow-sm">
                                         <div className="flex items-center justify-between mb-1">
                                             <Label htmlFor="documento_identidad" className="font-semibold text-xs text-indigo-950 dark:text-indigo-200">
-                                                Código de Empleado (6 dígitos) *
+                                                {__('Employee Code (6 digits)')} *
                                             </Label>
                                             <button
                                                 type="button"
@@ -1054,7 +1054,7 @@ export default function EmpleadosIndexPage({
                                                 className="text-[11px] text-emerald-600 dark:text-emerald-400 hover:underline font-medium flex items-center gap-1"
                                             >
                                                 <Sparkles className="w-3 h-3 text-emerald-500" />
-                                                Generar 6D
+                                                {__('Generate 6D')}
                                             </button>
                                         </div>
                                         <Input
@@ -1939,9 +1939,9 @@ export default function EmpleadosIndexPage({
             }}>
                 <DialogContent className="max-w-md">
                     <DialogHeader>
-                        <DialogTitle>{__('Pre-registro de Empleado')}</DialogTitle>
+                        <DialogTitle>{__('Employee Pre-registration')}</DialogTitle>
                         <DialogDescription>
-                            {__('Ingrese los datos del colaborador, el motivo y quién autoriza para enviar una invitación de registro rápido a su WhatsApp.')}
+                            {__('Enter employee details, reason and authorizer to send a quick registration invite via WhatsApp.')}
                         </DialogDescription>
                     </DialogHeader>
                     <form onSubmit={handlePreRegistroSubmit} className="space-y-4">
@@ -1995,7 +1995,7 @@ export default function EmpleadosIndexPage({
                                 value={preRegistroForm.data.motivo_registro}
                                 onChange={(e) => preRegistroForm.setData('motivo_registro', e.target.value)}
                                 className={cn(preRegistroForm.errors.motivo_registro && 'border-rose-500')}
-                                placeholder="Ej: Nuevo ingreso, temporal, etc."
+                                placeholder={__('e.g. New hire, seasonal, etc.')}
                                 required
                             />
                             {preRegistroForm.errors.motivo_registro && (
@@ -2038,7 +2038,7 @@ export default function EmpleadosIndexPage({
                                 disabled={preRegistroForm.processing}
                                 className="bg-[#104a29] hover:bg-[#0c371e] text-white flex items-center gap-1.5"
                             >
-                                {__('Enviar invitación')}
+                                {__('Send Invitation')}
                             </Button>
                         </DialogFooter>
                     </form>

@@ -404,7 +404,7 @@ return;
             header: __('Status'),
             stopRowClick: true,
             cell: (resp) => (
-                <div className="flex items-center space-x-2">
+                <div className="flex items-center gap-2">
                     <Switch
                         checked={resp.status === 1}
                         onCheckedChange={() => handleToggleStatus(resp)}
@@ -421,8 +421,8 @@ return;
             ),
         },
         {
-            header: 'Actions',
-            className: 'text-right',
+            header: __('Actions'),
+            className: 'text-right rtl:text-left',
             hideable: false,
             stopRowClick: true,
             cell: (resp) => (
@@ -434,18 +434,18 @@ return;
                     </DropdownMenuTrigger>
                     <DropdownMenuContent align="end">
                         <DropdownMenuItem onClick={() => handleEditClick(resp)}>
-                            <Pencil className="mr-2 h-4 w-4" />
+                            <Pencil className="mr-2 rtl:mr-0 rtl:ml-2 h-4 w-4" />
                             {__('Edit')}
                         </DropdownMenuItem>
                         <DropdownMenuItem onClick={() => handleToggleStatus(resp)}>
-                            <ToggleRight className="mr-2 h-4 w-4" />
+                            <ToggleRight className="mr-2 rtl:mr-0 rtl:ml-2 h-4 w-4" />
                             {resp.status === 1 ? __('Deactivate') : __('Activate')}
                         </DropdownMenuItem>
                         <DropdownMenuItem
                             onClick={() => setDeletingResponsable(resp)}
                             className="text-red-600 focus:text-red-600 dark:text-red-400"
                         >
-                            <Trash2 className="mr-2 h-4 w-4" />
+                            <Trash2 className="mr-2 rtl:mr-0 rtl:ml-2 h-4 w-4" />
                             {__('Delete')}
                         </DropdownMenuItem>
                     </DropdownMenuContent>
@@ -470,7 +470,7 @@ return;
                     colorClassName="bg-teal-600"
                 >
                     <Button onClick={handleCreateClick}>
-                        <Plus className="mr-2 h-4 w-4" />
+                        <Plus className="mr-2 rtl:mr-0 rtl:ml-2 h-4 w-4" />
                         {__('New Responsible')}
                     </Button>
                 </ModuleHeader>
@@ -559,11 +559,11 @@ return;
                         isLoading={isTableLoading}
                         onRowClick={(resp) => handleEditClick(resp)}
                         emptyState={{
-                            title: 'No responsibles found',
+                            title: __('No responsibles found'),
                             description: searchTerm || statusFilter || departamentoFilter
-                                ? 'Try clearing your search filters or changing your query.'
-                                : 'You have not registered any responsibles yet.',
-                            ctaLabel: 'New Responsible',
+                                ? __('Try clearing your search filters or changing your query.')
+                                : __('You have not registered any responsibles yet.'),
+                            ctaLabel: __('New Responsible'),
                             onCtaClick: handleCreateClick,
                         }}
                     />
@@ -591,7 +591,7 @@ return;
                                     id="nombres"
                                     value={data.nombres}
                                     onChange={(e) => setData('nombres', e.target.value)}
-                                    placeholder="Ej: Juan"
+                                    placeholder={__('e.g. John')}
                                     required
                                 />
                                 {errors.nombres && (
@@ -606,7 +606,7 @@ return;
                                     id="apellidos"
                                     value={data.apellidos}
                                     onChange={(e) => setData('apellidos', e.target.value)}
-                                    placeholder="Ej: Pérez"
+                                    placeholder={__('e.g. Smith')}
                                     required
                                 />
                                 {errors.apellidos && (
@@ -621,7 +621,7 @@ return;
                                     id="documento_identidad"
                                     value={data.documento_identidad}
                                     onChange={(e) => setData('documento_identidad', e.target.value)}
-                                    placeholder="Ej: V-12345678"
+                                    placeholder={__('e.g. ID-12345678')}
                                 />
                                 {errors.documento_identidad && (
                                     <p className="text-red-500 text-xs mt-1">{errors.documento_identidad}</p>
@@ -636,7 +636,7 @@ return;
                                     type="email"
                                     value={data.correo}
                                     onChange={(e) => setData('correo', e.target.value)}
-                                    placeholder="juan.perez@empresa.com"
+                                    placeholder={__('name@company.com')}
                                 />
                                 {errors.correo && (
                                     <p className="text-red-500 text-xs mt-1">{errors.correo}</p>
@@ -801,7 +801,7 @@ return;
                             {/* Estado (Status) */}
                             <div className="md:col-span-2">
                                 <Label htmlFor="status">{__('Status')}</Label>
-                                <div className="flex items-center space-x-2 pt-2">
+                                <div className="flex items-center gap-2 pt-2">
                                     <Switch
                                         id="status"
                                         checked={data.status === 1}

@@ -1,5 +1,6 @@
 import React, { useState, useRef } from 'react';
 import { router } from '@inertiajs/react';
+import { useTranslate } from '@/hooks/use-translate';
 import {
     Dialog,
     DialogContent,
@@ -73,6 +74,8 @@ export const ImportWizardModal: React.FC<ImportWizardModalProps> = ({
     onOpenChange,
     onSuccess,
 }) => {
+    const { __ } = useTranslate();
+
     // Step state: 1 = Upload, 2 = Details & Duplicates, 3 = Password Auth, 4 = Progress
     const [step, setStep] = useState<number>(1);
 
@@ -98,7 +101,7 @@ export const ImportWizardModal: React.FC<ImportWizardModalProps> = ({
     // Execution & Progress state
     const [isProcessing, setIsProcessing] = useState<boolean>(false);
     const [progressPercent, setProgressPercent] = useState<number>(0);
-    const [progressMessage, setProgressMessage] = useState<string>('Iniciando importación...');
+    const [progressMessage, setProgressMessage] = useState<string>('');
     const [importResult, setImportResult] = useState<{
         success: boolean;
         created?: number;
@@ -132,8 +135,8 @@ export const ImportWizardModal: React.FC<ImportWizardModalProps> = ({
         if (!selectedFile.name.match(/\.(xlsx|xls|csv)$/i)) {
             Swal.fire({
                 icon: 'error',
-                title: 'Formato no soportado',
-                text: 'Por favor selecciona un archivo con extensión .xlsx, .xls o .csv',
+                title: __('Unsupported format'),
+                text: __('Please select a file with .xlsx, .xls or .csv extension'),
             });
             return;
         }
@@ -190,15 +193,15 @@ export const ImportWizardModal: React.FC<ImportWizardModalProps> = ({
             } else {
                 Swal.fire({
                     icon: 'error',
-                    title: 'Error al procesar archivo',
-                    text: data.message || 'No se pudo leer el archivo Excel.',
+                    title: __('Error processing file'),
+                    text: data.message || __('Could not read the Excel file.'),
                 });
             }
         } catch (err: any) {
             Swal.fire({
                 icon: 'error',
-                title: 'Error',
-                text: 'Ocurrió un error al subir el archivo.',
+                title: __('Error'),
+                text: __('An error occurred while uploading the file.'),
             });
         } finally {
             setIsUploading(false);
@@ -209,7 +212,7 @@ export const ImportWizardModal: React.FC<ImportWizardModalProps> = ({
     const handleVerifyAndPasswordSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         if (!password) {
-            setPasswordError('Por favor ingresa tu contraseña para continuar.');
+            setPasswordError(__('Please enter your password to continue.'));
             return;
         }
 
@@ -234,10 +237,10 @@ export const ImportWizardModal: React.FC<ImportWizardModalProps> = ({
                 setStep(4);
                 startImportProcess();
             } else {
-                setPasswordError(data.message || 'La contraseña ingresada es incorrecta.');
+                setPasswordError(data.message || __('The entered password is incorrect.'));
             }
         } catch (err: any) {
-            setPasswordError('Error al verificar la contraseña.');
+            setPasswordError(__('Error verifying password.'));
         } finally {
             setIsVerifyingPassword(false);
         }
@@ -247,7 +250,7 @@ export const ImportWizardModal: React.FC<ImportWizardModalProps> = ({
     const startImportProcess = async () => {
         setIsProcessing(true);
         setProgressPercent(15);
-        setProgressMessage('Preparando datos y estructurando colaboradores...');
+        setProgressMessage(__('Preparing data and structuring employees...'));
 
         try {
             // Simulated progress steps for smooth UX
@@ -280,7 +283,7 @@ export const ImportWizardModal: React.FC<ImportWizardModalProps> = ({
 
             if (res.ok && data.success) {
                 setProgressPercent(100);
-                setProgressMessage('¡Importación completada con éxito!');
+                setProgressMessage(__('Import completed successfully!'));
                 setImportResult(data);
                 setIsProcessing(false);
 
@@ -294,8 +297,8 @@ export const ImportWizardModal: React.FC<ImportWizardModalProps> = ({
                 setIsProcessing(false);
                 Swal.fire({
                     icon: 'error',
-                    title: 'Error en la Importación',
-                    text: data.message || 'Ocurrió un fallo durante el proceso.',
+                    title: __('Import Error'),
+                    text: data.message || __('A failure occurred during the process.'),
                 });
                 setStep(2);
             }
@@ -303,8 +306,8 @@ export const ImportWizardModal: React.FC<ImportWizardModalProps> = ({
             setIsProcessing(false);
             Swal.fire({
                 icon: 'error',
-                title: 'Error',
-                text: 'Error de conexión durante la importación.',
+                title: __('Error'),
+                text: __('Connection error during import.'),
             });
             setStep(2);
         }
@@ -320,15 +323,15 @@ export const ImportWizardModal: React.FC<ImportWizardModalProps> = ({
     return (
         <Dialog open={open} onOpenChange={handleClose}>
             <DialogContent className="sm:max-w-6xl md:max-w-7xl w-[96vw] max-h-[94vh] overflow-y-auto p-6 sm:p-8 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl shadow-2xl">
-                <DialogHeader className="border-b border-slate-100 dark:border-slate-800 pb-4">
+                <DialogHeader className="border-b border-slate-100 dark:border-slate-800 pb-4 text-left rtl:text-right">
                     <div className="flex items-center justify-between">
                         <div>
                             <DialogTitle className="text-xl font-bold text-slate-900 dark:text-slate-100 flex items-center gap-2">
                                 <FileSpreadsheet className="w-6 h-6 text-emerald-600 dark:text-emerald-400" />
-                                Importación Masiva de Empleados
+                                {__('Mass Employee Import')}
                             </DialogTitle>
                             <DialogDescription className="text-xs text-slate-500 dark:text-slate-400 mt-1">
-                                Carga rápida y actualización de colaboradores desde archivos Excel (`.xlsx`)
+                                {__('Quick bulk upload and update of employees from Excel files (*.xlsx*)')}
                             </DialogDescription>
                         </div>
                     </div>
@@ -336,10 +339,10 @@ export const ImportWizardModal: React.FC<ImportWizardModalProps> = ({
                     {/* Step Indicator Bar */}
                     <div className="grid grid-cols-4 gap-2 mt-4 pt-2">
                         {[
-                            { number: 1, label: '1. Carga Archivo' },
-                            { number: 2, label: '2. Detalles y Duplicados' },
-                            { number: 3, label: '3. Verificación' },
-                            { number: 4, label: '4. Importación' },
+                            { number: 1, title: __('Upload File') },
+                            { number: 2, title: __('Details & Duplicates') },
+                            { number: 3, title: __('Verification') },
+                            { number: 4, title: __('Import') },
                         ].map((s) => {
                             const isActive = step === s.number;
                             const isCompleted = step > s.number;
@@ -355,11 +358,11 @@ export const ImportWizardModal: React.FC<ImportWizardModalProps> = ({
                                     }`}
                                 >
                                     {isCompleted ? (
-                                        <Check className="w-3.5 h-3.5 mr-1" />
+                                        <Check className="w-3.5 h-3.5 mr-1 rtl:mr-0 rtl:ml-1" />
                                     ) : (
-                                        <span className="mr-1.5">{s.number}.</span>
+                                        <span className="mr-1.5 rtl:mr-0 rtl:ml-1.5">{s.number}.</span>
                                     )}
-                                    {s.label.split('. ')[1]}
+                                    {s.title}
                                 </div>
                             );
                         })}
@@ -408,17 +411,17 @@ export const ImportWizardModal: React.FC<ImportWizardModalProps> = ({
                                             {file.name}
                                         </p>
                                         <p className="text-xs text-slate-500 mt-1">
-                                            {(file.size / 1024).toFixed(1)} KB — Haz clic o arrastra para cambiar de archivo
+                                            {(file.size / 1024).toFixed(1)} KB — {__('Click or drag to change file')}
                                         </p>
                                     </div>
                                 ) : (
                                     <div>
                                         <p className="text-sm font-medium text-slate-700 dark:text-slate-200">
-                                            Arrastra y suelta tu archivo Excel aquí, o{' '}
-                                            <span className="text-emerald-600 font-semibold underline">examina tus archivos</span>
+                                            {__('Drag and drop your Excel file here, or')}{' '}
+                                            <span className="text-emerald-600 font-semibold underline">{__('browse your files')}</span>
                                         </p>
                                         <p className="text-xs text-slate-400 mt-1">
-                                            Formatos soportados: <span className="font-semibold text-slate-600 dark:text-slate-300">.XLSX, .XLS, .CSV</span> (Máx. 10 MB)
+                                            {__('Supported formats:')} <span className="font-semibold text-slate-600 dark:text-slate-300">.XLSX, .XLS, .CSV</span> {__('(Max. 10 MB)')}
                                         </p>
                                     </div>
                                 )}
@@ -426,25 +429,25 @@ export const ImportWizardModal: React.FC<ImportWizardModalProps> = ({
                         </div>
 
                         {/* Format Guidance Banner */}
-                        <div className="p-4 bg-slate-50 dark:bg-slate-800/50 rounded-lg border border-slate-200 dark:border-slate-700/60 text-xs text-slate-600 dark:text-slate-300 space-y-1">
+                        <div className="p-4 bg-slate-50 dark:bg-slate-800/50 rounded-lg border border-slate-200 dark:border-slate-700/60 text-xs text-slate-600 dark:text-slate-300 space-y-1 text-left rtl:text-right">
                             <p className="font-semibold text-slate-800 dark:text-slate-200 flex items-center gap-1.5">
-                                <CheckCircle2 className="w-4 h-4 text-emerald-500" />
-                                Estructura recomendada de columnas en el Excel:
+                                <CheckCircle2 className="w-4 h-4 text-emerald-500 shrink-0" />
+                                {__('Recommended column structure in Excel:')}
                             </p>
                             <div className="flex flex-wrap gap-1.5 pt-1">
                                 {[
-                                    'CURP / No. Empleado',
-                                    'Nombre',
-                                    'Apellido Paterno',
-                                    'Apellido Materno',
-                                    'Empresa',
-                                    'Área / Departamento',
-                                    'Correo',
-                                    'Teléfono',
-                                    'Tipo Vehículo',
-                                    'Marca Vehículo',
-                                    'Color Vehículo',
-                                    'Placa Vehículo',
+                                    __('CURP / Employee No.'),
+                                    __('First Name'),
+                                    __('Paternal Last Name'),
+                                    __('Maternal Last Name'),
+                                    __('Company'),
+                                    __('Area / Department'),
+                                    __('Email'),
+                                    __('Phone'),
+                                    __('Vehicle Type'),
+                                    __('Vehicle Brand'),
+                                    __('Vehicle Color'),
+                                    __('Vehicle License Plate'),
                                 ].map((col) => (
                                     <Badge key={col} variant="outline" className="bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-300 text-[11px]">
                                         {col}
@@ -456,7 +459,7 @@ export const ImportWizardModal: React.FC<ImportWizardModalProps> = ({
                         {/* Actions */}
                         <div className="flex justify-end gap-3 pt-2">
                             <Button variant="outline" onClick={handleClose} disabled={isUploading}>
-                                Cancelar
+                                {__('Cancel')}
                             </Button>
                             <Button
                                 onClick={handleProcessFile}
@@ -466,12 +469,12 @@ export const ImportWizardModal: React.FC<ImportWizardModalProps> = ({
                                 {isUploading ? (
                                     <>
                                         <RefreshCw className="w-4 h-4 animate-spin" />
-                                        Analizando archivo...
+                                        {__('Analyzing file...')}
                                     </>
                                 ) : (
                                     <>
-                                        Siguiente: Analizar Datos
-                                        <ArrowRight className="w-4 h-4" />
+                                        {__('Next: Analyze Data')}
+                                        <ArrowRight className="w-4 h-4 rtl:rotate-180" />
                                     </>
                                 )}
                             </Button>
@@ -487,24 +490,24 @@ export const ImportWizardModal: React.FC<ImportWizardModalProps> = ({
                         {/* Summary Cards */}
                         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
                             <div className="p-3 bg-slate-50 dark:bg-slate-800 rounded-lg border border-slate-200 dark:border-slate-700 text-center">
-                                <p className="text-xs text-slate-500 font-medium">Total Encontrados</p>
+                                <p className="text-xs text-slate-500 font-medium">{__('Total Found')}</p>
                                 <p className="text-xl font-bold text-slate-900 dark:text-slate-100">{stats.total}</p>
                             </div>
                             <div className="p-3 bg-emerald-50 dark:bg-emerald-950/40 rounded-lg border border-emerald-200 dark:border-emerald-800/50 text-center">
                                 <p className="text-xs text-emerald-600 dark:text-emerald-400 font-medium flex items-center justify-center gap-1">
-                                    <UserPlus className="w-3.5 h-3.5" /> Nuevos
+                                    <UserPlus className="w-3.5 h-3.5" /> {__('New')}
                                 </p>
                                 <p className="text-xl font-bold text-emerald-700 dark:text-emerald-300">{stats.nuevos}</p>
                             </div>
                             <div className="p-3 bg-amber-50 dark:bg-amber-950/40 rounded-lg border border-amber-200 dark:border-amber-800/50 text-center">
                                 <p className="text-xs text-amber-600 dark:text-amber-400 font-medium flex items-center justify-center gap-1">
-                                    <UserCheck className="w-3.5 h-3.5" /> Duplicados
+                                    <UserCheck className="w-3.5 h-3.5" /> {__('Duplicates')}
                                 </p>
                                 <p className="text-xl font-bold text-amber-700 dark:text-amber-300">{stats.actualizar}</p>
                             </div>
                             <div className="p-3 bg-rose-50 dark:bg-rose-950/40 rounded-lg border border-rose-200 dark:border-rose-800/50 text-center">
                                 <p className="text-xs text-rose-600 dark:text-rose-400 font-medium flex items-center justify-center gap-1">
-                                    <AlertTriangle className="w-3.5 h-3.5" /> Advertencias
+                                    <AlertTriangle className="w-3.5 h-3.5" /> {__('Warnings')}
                                 </p>
                                 <p className="text-xl font-bold text-rose-700 dark:text-rose-300">{stats.errores}</p>
                             </div>
@@ -515,12 +518,12 @@ export const ImportWizardModal: React.FC<ImportWizardModalProps> = ({
                             <div className="p-3.5 bg-amber-500/10 border border-amber-500/30 rounded-xl flex items-center justify-between gap-4">
                                 <div className="flex items-center gap-2.5">
                                     <AlertTriangle className="w-5 h-5 text-amber-600 shrink-0" />
-                                    <div>
+                                    <div className="text-left rtl:text-right">
                                         <p className="text-xs font-semibold text-amber-900 dark:text-amber-200">
-                                            Se detectaron {stats.actualizar} registros duplicados (Número de Empleado existente)
+                                            {__('Duplicate records detected (existing Employee Number)')} ({stats.actualizar})
                                         </p>
                                         <p className="text-[11px] text-amber-700 dark:text-amber-300">
-                                            Elige qué acción tomar cuando un colaborador ya exista en la base de datos:
+                                            {__('Choose which action to take when an employee already exists in the database:')}
                                         </p>
                                     </div>
                                 </div>
@@ -532,7 +535,7 @@ export const ImportWizardModal: React.FC<ImportWizardModalProps> = ({
                                         onClick={() => setDuplicateStrategy('update')}
                                         className={duplicateStrategy === 'update' ? 'bg-amber-600 hover:bg-amber-700 text-white text-xs' : 'text-xs'}
                                     >
-                                        Actualizar existentes
+                                        {__('Update existing')}
                                     </Button>
                                     <Button
                                         size="sm"
@@ -541,7 +544,7 @@ export const ImportWizardModal: React.FC<ImportWizardModalProps> = ({
                                         onClick={() => setDuplicateStrategy('skip')}
                                         className={duplicateStrategy === 'skip' ? 'bg-slate-700 text-white text-xs' : 'text-xs'}
                                     >
-                                        Omitir existentes
+                                        {__('Skip existing')}
                                     </Button>
                                 </div>
                             </div>
@@ -559,7 +562,7 @@ export const ImportWizardModal: React.FC<ImportWizardModalProps> = ({
                                             : 'text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800'
                                     }`}
                                 >
-                                    Todos ({records.length})
+                                    {__('All')} ({records.length})
                                 </button>
                                 <button
                                     type="button"
@@ -570,7 +573,7 @@ export const ImportWizardModal: React.FC<ImportWizardModalProps> = ({
                                             : 'text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800'
                                     }`}
                                 >
-                                    Solo Nuevos ({stats.nuevos})
+                                    {__('Only New')} ({stats.nuevos})
                                 </button>
                                 <button
                                     type="button"
@@ -581,26 +584,26 @@ export const ImportWizardModal: React.FC<ImportWizardModalProps> = ({
                                             : 'text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800'
                                     }`}
                                 >
-                                    Solo Duplicados ({stats.actualizar})
+                                    {__('Only Duplicates')} ({stats.actualizar})
                                 </button>
                             </div>
                             <span className="text-[11px] text-slate-400">
-                                Mostrando {filteredRecords.length} registros
+                                {__('Showing')} {filteredRecords.length} {__('records')}
                             </span>
                         </div>
 
                         {/* Records Preview Table */}
                         <div className="max-h-[48vh] overflow-y-auto border border-slate-200 dark:border-slate-800 rounded-xl shadow-inner">
-                            <table className="w-full text-xs text-left text-slate-700 dark:text-slate-300">
+                            <table className="w-full text-xs text-left rtl:text-right text-slate-700 dark:text-slate-300">
                                 <thead className="text-[11px] uppercase bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 sticky top-0">
                                     <tr>
-                                        <th className="py-2 px-3">Estatus</th>
-                                        <th className="py-2 px-3">CURP / No. Empleado</th>
-                                        <th className="py-2 px-3">Nombre Completo</th>
-                                        <th className="py-2 px-3">Departamento</th>
-                                        <th className="py-2 px-3">Tarjetas Acceso</th>
-                                        <th className="py-2 px-3">Teléfono (+52)</th>
-                                        <th className="py-2 px-3">Vehículo(s)</th>
+                                        <th className="py-2 px-3">{__('Status')}</th>
+                                        <th className="py-2 px-3">{__('CURP / Employee No.')}</th>
+                                        <th className="py-2 px-3">{__('Full Name')}</th>
+                                        <th className="py-2 px-3">{__('Department')}</th>
+                                        <th className="py-2 px-3">{__('Access Cards')}</th>
+                                        <th className="py-2 px-3">{__('Phone (+52)')}</th>
+                                        <th className="py-2 px-3">{__('Vehicle(s)')}</th>
                                     </tr>
                                 </thead>
                                 <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
@@ -609,11 +612,11 @@ export const ImportWizardModal: React.FC<ImportWizardModalProps> = ({
                                             <td className="py-2 px-3">
                                                 {r.is_duplicate ? (
                                                     <Badge className="bg-amber-100 dark:bg-amber-950 text-amber-700 dark:text-amber-300 border-amber-300 dark:border-amber-800 text-[10px]">
-                                                        Actualizar
+                                                        {__('Update')}
                                                     </Badge>
                                                 ) : (
                                                     <Badge className="bg-emerald-100 dark:bg-emerald-950 text-emerald-700 dark:text-emerald-300 border-emerald-300 dark:border-emerald-800 text-[10px]">
-                                                        Nuevo
+                                                        {__('New')}
                                                     </Badge>
                                                 )}
                                             </td>
@@ -624,7 +627,7 @@ export const ImportWizardModal: React.FC<ImportWizardModalProps> = ({
                                                 {r.nombres} {r.apellidos}
                                             </td>
                                             <td className="py-2 px-3 text-slate-600 dark:text-slate-400">
-                                                {r.departamento || 'General'}
+                                                {r.departamento || __('General')}
                                             </td>
                                             <td className="py-2 px-3">
                                                 <div className="flex items-center gap-1 font-mono text-[11px]">
@@ -661,14 +664,14 @@ export const ImportWizardModal: React.FC<ImportWizardModalProps> = ({
                         {/* Actions */}
                         <div className="flex justify-between items-center pt-2 border-t border-slate-100 dark:border-slate-800">
                             <Button variant="outline" size="sm" onClick={() => setStep(1)} className="gap-1 text-xs">
-                                <ArrowLeft className="w-3.5 h-3.5" /> Volver a Cargar
+                                <ArrowLeft className="w-3.5 h-3.5 rtl:rotate-180" /> {__('Back to Upload')}
                             </Button>
                             <Button
                                 onClick={() => setStep(3)}
                                 className="bg-emerald-600 hover:bg-emerald-700 text-white font-medium text-xs gap-2 shadow"
                             >
-                                Continuar a Confirmación
-                                <ArrowRight className="w-3.5 h-3.5" />
+                                {__('Continue to Confirmation')}
+                                <ArrowRight className="w-3.5 h-3.5 rtl:rotate-180" />
                             </Button>
                         </div>
                     </div>
@@ -684,19 +687,19 @@ export const ImportWizardModal: React.FC<ImportWizardModalProps> = ({
                                 <ShieldCheck className="w-6 h-6" />
                             </div>
                             <h4 className="text-base font-bold text-slate-900 dark:text-slate-100">
-                                Verificación de Seguridad Requerida
+                                {__('Security Verification Required')}
                             </h4>
                             <p className="text-xs text-slate-600 dark:text-slate-400 max-w-md mx-auto">
-                                Estás a punto de procesar la importación masiva de{' '}
-                                <span className="font-bold text-slate-900 dark:text-slate-100">{records.length} colaboradores</span> en el sistema.
-                                Por seguridad, por favor ingresa tu contraseña de usuario para autorizar la transacción.
+                                {__('You are about to process the bulk import of')}{' '}
+                                <span className="font-bold text-slate-900 dark:text-slate-100">{records.length} {__('employees')}</span>{' '}
+                                {__('into the system. For security, please enter your user password to authorize the transaction.')}
                             </p>
                         </div>
 
-                        <div className="space-y-2 max-w-md mx-auto">
+                        <div className="space-y-2 max-w-md mx-auto text-left rtl:text-right">
                             <Label htmlFor="auth-password" className="text-xs font-semibold text-slate-700 dark:text-slate-300 flex items-center gap-1.5">
                                 <Lock className="w-3.5 h-3.5 text-slate-400" />
-                                Contraseña del Usuario Autenticado
+                                {__('Authenticated User Password')}
                             </Label>
                             <div className="relative">
                                 <Input
@@ -707,14 +710,14 @@ export const ImportWizardModal: React.FC<ImportWizardModalProps> = ({
                                         setPassword(e.target.value);
                                         setPasswordError(null);
                                     }}
-                                    placeholder="Ingresa tu contraseña actual..."
-                                    className={`pr-10 ${passwordError ? 'border-rose-500 focus-visible:ring-rose-500' : ''}`}
+                                    placeholder={__('Enter your current password...')}
+                                    className={`pr-10 rtl:pr-3 rtl:pl-10 ${passwordError ? 'border-rose-500 focus-visible:ring-rose-500' : ''}`}
                                     autoFocus
                                 />
                                 <button
                                     type="button"
                                     onClick={() => setShowPassword(!showPassword)}
-                                    className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
+                                    className="absolute right-3 rtl:right-auto rtl:left-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
                                 >
                                     {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                                 </button>
@@ -730,7 +733,7 @@ export const ImportWizardModal: React.FC<ImportWizardModalProps> = ({
                         {/* Actions */}
                         <div className="flex justify-between items-center pt-2 border-t border-slate-100 dark:border-slate-800">
                             <Button type="button" variant="outline" size="sm" onClick={() => setStep(2)} disabled={isVerifyingPassword} className="gap-1 text-xs">
-                                <ArrowLeft className="w-3.5 h-3.5" /> Volver a Detalles
+                                <ArrowLeft className="w-3.5 h-3.5 rtl:rotate-180" /> {__('Back to Details')}
                             </Button>
                             <Button
                                 type="submit"
@@ -740,12 +743,12 @@ export const ImportWizardModal: React.FC<ImportWizardModalProps> = ({
                                 {isVerifyingPassword ? (
                                     <>
                                         <RefreshCw className="w-4 h-4 animate-spin" />
-                                        Verificando...
+                                        {__('Verifying...')}
                                     </>
                                 ) : (
                                     <>
                                         <ShieldCheck className="w-4 h-4" />
-                                        Autorizar e Iniciar Importación
+                                        {__('Authorize and Start Import')}
                                     </>
                                 )}
                             </Button>
@@ -766,17 +769,17 @@ export const ImportWizardModal: React.FC<ImportWizardModalProps> = ({
 
                                 <div className="space-y-1">
                                     <h4 className="text-lg font-bold text-slate-900 dark:text-slate-100">
-                                        Procesando Importación de Empleados
+                                        {__('Processing Employee Import')}
                                     </h4>
                                     <p className="text-xs text-slate-500 dark:text-slate-400">
-                                        {progressMessage}
+                                        {progressMessage || __('Starting import...')}
                                     </p>
                                 </div>
 
                                 {/* Animated Percentage Progress Bar */}
                                 <div className="space-y-2">
                                     <div className="flex justify-between text-xs font-semibold text-slate-700 dark:text-slate-300 px-1">
-                                        <span>Progreso del Archivo</span>
+                                        <span>{__('File Progress')}</span>
                                         <span className="text-emerald-600 font-mono font-bold">{progressPercent}%</span>
                                     </div>
                                     <Progress value={progressPercent} className="h-3 bg-slate-100 dark:bg-slate-800" />
@@ -790,25 +793,25 @@ export const ImportWizardModal: React.FC<ImportWizardModalProps> = ({
 
                                 <div className="space-y-1">
                                     <h4 className="text-xl font-bold text-slate-900 dark:text-slate-100">
-                                        ¡Importación Finalizada con Éxito!
+                                        {__('Import Completed Successfully!')}
                                     </h4>
                                     <p className="text-xs text-slate-500 dark:text-slate-400">
-                                        Todos los registros del archivo han sido procesados e ingresados a la base de datos.
+                                        {__('All records from the file have been processed and entered into the database.')}
                                     </p>
                                 </div>
 
                                 {/* Results Grid */}
                                 <div className="grid grid-cols-3 gap-3 p-4 bg-slate-50 dark:bg-slate-800/60 rounded-xl border border-slate-200 dark:border-slate-700">
                                     <div>
-                                        <p className="text-xs text-slate-500">Procesados</p>
+                                        <p className="text-xs text-slate-500">{__('Processed')}</p>
                                         <p className="text-lg font-bold text-slate-900 dark:text-slate-100">{importResult.total_processed}</p>
                                     </div>
                                     <div>
-                                        <p className="text-xs text-emerald-600 dark:text-emerald-400">Nuevos Creados</p>
+                                        <p className="text-xs text-emerald-600 dark:text-emerald-400">{__('New Created')}</p>
                                         <p className="text-lg font-bold text-emerald-600">{importResult.created}</p>
                                     </div>
                                     <div>
-                                        <p className="text-xs text-amber-600 dark:text-amber-400">Actualizados</p>
+                                        <p className="text-xs text-amber-600 dark:text-amber-400">{__('Updated')}</p>
                                         <p className="text-lg font-bold text-amber-600">{importResult.updated}</p>
                                     </div>
                                 </div>
@@ -817,7 +820,7 @@ export const ImportWizardModal: React.FC<ImportWizardModalProps> = ({
                                     onClick={handleClose}
                                     className="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-medium shadow-md"
                                 >
-                                    Finalizar y Cerrar
+                                    {__('Finish and Close')}
                                 </Button>
                             </div>
                         ) : null}

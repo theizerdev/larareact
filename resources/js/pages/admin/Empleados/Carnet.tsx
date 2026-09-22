@@ -188,7 +188,7 @@ export default function CarnetPage({ empleado }: CarnetPageProps) {
                             href="/admin/empleados"
                             className="flex items-center gap-1.5 text-sm font-medium text-slate-600 hover:text-slate-900 dark:text-slate-400 dark:hover:text-slate-100 transition-colors"
                         >
-                            <ArrowLeft className="w-4 h-4" />
+                            <ArrowLeft className="w-4 h-4 rtl:rotate-180" />
                             {__('Employees')}
                         </Link>
                     ) : (
@@ -205,7 +205,7 @@ export default function CarnetPage({ empleado }: CarnetPageProps) {
                             className="border-emerald-600 text-emerald-700 hover:bg-emerald-50 dark:border-emerald-500 dark:text-emerald-300 dark:hover:bg-emerald-950 flex items-center gap-1.5 shadow-sm text-xs"
                         >
                             <Download className="w-4 h-4" />
-                            {downloading ? __('Generando...') : __('Descargar')}
+                            {downloading ? __('Generating...') : __('Download')}
                         </Button>
 
 
