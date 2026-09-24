@@ -36,7 +36,6 @@ class EmpresaSeeder extends Seeder
             'api_key' => Empresa::generateApiKey(),
             'subscription_status' => 'active',
             'subscription_expires_at' => now()->addYear(),
-            'whatsapp_active' => false,
             'mapbox_active' => false,
             'google_maps_active' => false,
         ]);
