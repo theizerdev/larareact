@@ -344,8 +344,13 @@ export default function SubscriptionManage({ empresas, pagosPendientes, stats }:
                                         <TableCell className="text-xs">
                                             <span className="capitalize font-medium block">{pago.metodo_pago.replace('_', ' ')}</span>
                                             {pago.referencia_pago && (
-                                                <span className="font-mono text-[10px] text-muted-foreground">
+                                                <span className="font-mono text-[10px] text-muted-foreground block">
                                                     Ref: {pago.referencia_pago}
+                                                </span>
+                                            )}
+                                            {pago.notas && (
+                                                <span className="text-[10px] text-indigo-600 dark:text-indigo-400 font-medium block mt-0.5">
+                                                    {pago.notas}
                                                 </span>
                                             )}
                                         </TableCell>

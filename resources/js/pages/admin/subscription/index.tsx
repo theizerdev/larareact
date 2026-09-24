@@ -145,7 +145,13 @@ export default function SubscriptionIndex({ empresa, plan, planes = [], opciones
         ? Math.max(0, extraSucursales - empresa.max_sucursales)
         : Math.max(0, extraSucursales - (activeSelectedPlan?.sucursales_incluidas ?? 1));
     const precioSucursalExtra = (activeSelectedPlan?.precio_sucursal_extra_mensual && activeSelectedPlan.precio_sucursal_extra_mensual > 0) ? activeSelectedPlan.precio_sucursal_extra_mensual : 84.72;
-    const costoExtraSucursales = sucursalesExtrasCount * precioSucursalExtra;
+
+    const diasRestantesCiclo = Math.max(1, empresa.dias_restantes || 1);
+    const tarifaDiariaSucursal = precioSucursalExtra / 30;
+    const costoExtraSucursales = hasActivePaidSubscription
+        ? Math.round(sucursalesExtrasCount * tarifaDiariaSucursal * diasRestantesCiclo * 100) / 100
+        : sucursalesExtrasCount * precioSucursalExtra;
+
     const precioFinalEstimado = currentSubtotalPlan + costoExtraSucursales;
 
     // Formateador especial (con moneda de referencia mexicana MXN o Bolívares para Venezuela)
@@ -475,13 +481,20 @@ export default function SubscriptionIndex({ empresa, plan, planes = [], opciones
                                         </Label>
 
                                         <div className="p-4 bg-muted/30 rounded-xl border space-y-3">
-                                            <p className="text-xs text-muted-foreground">
+                                            <div className="text-xs text-muted-foreground space-y-1.5 leading-relaxed">
                                                 {hasActivePaidSubscription ? (
-                                                    <>{__('Actualmente tienes')} <strong className="text-primary font-bold">{empresa.max_sucursales} {__('sucursal(es) autorizada(s)')}</strong>. {__('Cada nueva sucursal adicional suma +')}<strong className="text-primary font-bold">{formatPrice(activeSelectedPlan?.precio_sucursal_extra_mensual ?? 84.72)}/{__('mes')}</strong>.</>
+                                                    <>
+                                                        <p>
+                                                            {__('Actualmente tienes')} <strong className="text-primary font-bold">{empresa.max_sucursales} {__('sucursal(es) autorizada(s)')}</strong>. {__('Tu corte de facturación vence el')} <strong className="text-foreground font-semibold">{empresa.subscription_expires_at ? new Date(empresa.subscription_expires_at).toLocaleDateString() : __('próximamente')}</strong> ({diasRestantesCiclo} {__('días restantes')}).
+                                                        </p>
+                                                        <div className="p-2.5 rounded-lg bg-indigo-50/70 dark:bg-indigo-950/40 border border-indigo-200/60 dark:border-indigo-800/40 text-indigo-900 dark:text-indigo-200 font-medium">
+                                                            💡 <strong>{__('Cobro justo por prorrateo:')}</strong> {__('Cada nueva sucursal se cobra únicamente por los')} <strong>{diasRestantesCiclo} {__('días restantes')}</strong> {__('hasta tu corte')} ({formatPrice(tarifaDiariaSucursal)}/{__('día')}). {__('En tu próxima mensualidad se unificarán todas tus sucursales en un solo pago.')}
+                                                        </div>
+                                                    </>
                                                 ) : (
-                                                    <>{__('El plan base incluye')} <strong>{activeSelectedPlan?.sucursales_incluidas ?? 1} {__('sucursal(es)')}</strong>. {__('Cada sucursal adicional suma +')}<strong className="text-primary font-bold">{formatPrice(activeSelectedPlan?.precio_sucursal_extra_mensual ?? 84.72)}/{__('mes')}</strong>.</>
+                                                    <p>{__('El plan base incluye')} <strong>{activeSelectedPlan?.sucursales_incluidas ?? 1} {__('sucursal(es)')}</strong>. {__('Cada sucursal adicional suma +')}<strong className="text-primary font-bold">{formatPrice(activeSelectedPlan?.precio_sucursal_extra_mensual ?? 84.72)}/{__('mes')}</strong>.</p>
                                                 )}
-                                            </p>
+                                            </div>
 
                                             <div className="flex items-center gap-3">
                                                 <Button
@@ -537,11 +550,11 @@ export default function SubscriptionIndex({ empresa, plan, planes = [], opciones
                                                 <div className="flex items-center gap-2">
                                                     {isVenezuela && (
                                                         <Badge variant="outline" className="text-[10px] border-amber-500/40 text-amber-300 bg-amber-500/10">
-                                                            Tasa BCV: Bs. {bcvRate.toFixed(2)} / USD
+                                                             Tasa BCV: Bs. {bcvRate.toFixed(2)} / USD
                                                         </Badge>
                                                     )}
                                                     <Badge variant="outline" className="text-[10px] border-slate-700 text-slate-300">
-                                                        {__('Cobro Mensual')}
+                                                        {hasActivePaidSubscription ? __('Prorrateo Ciclo') : __('Cobro Mensual')}
                                                     </Badge>
                                                 </div>
                                             </div>
@@ -558,9 +571,19 @@ export default function SubscriptionIndex({ empresa, plan, planes = [], opciones
                                                     </span>
                                                 </div>
                                                 {sucursalesExtrasCount > 0 && (
-                                                    <div className="flex justify-between text-indigo-300">
-                                                        <span>{sucursalesExtrasCount} {__('Sucursal(es) Extra')}:</span>
-                                                        <span className="font-mono font-semibold">+{formatPrice(costoExtraSucursales)}</span>
+                                                    <div className="space-y-0.5 pt-1 border-t border-slate-800">
+                                                        <div className="flex justify-between text-indigo-300">
+                                                            <span>
+                                                                {sucursalesExtrasCount} {__('Sucursal(es) Extra')}
+                                                                {hasActivePaidSubscription ? ` (${diasRestantesCiclo} ${__('días')})` : ''}:
+                                                            </span>
+                                                            <span className="font-mono font-semibold">+{formatPrice(costoExtraSucursales)}</span>
+                                                        </div>
+                                                        {hasActivePaidSubscription && (
+                                                            <p className="text-[10px] text-slate-400 italic">
+                                                                {formatPrice(tarifaDiariaSucursal)}/{__('día')} × {diasRestantesCiclo} {__('días')} × {sucursalesExtrasCount} {__('suc.')}
+                                                            </p>
+                                                        )}
                                                     </div>
                                                 )}
                                                 {isVenezuela && (
@@ -576,7 +599,7 @@ export default function SubscriptionIndex({ empresa, plan, planes = [], opciones
                                             <div>
                                                 <p className="text-xs text-slate-400 font-medium">
                                                     {hasActivePaidSubscription
-                                                        ? (isVenezuela ? __('Total Sucursales Extras (Bolívares):') : __('Total Sucursales Extras:'))
+                                                        ? (isVenezuela ? __('Total Prorrateo Sucursales (Bolívares):') : __('Total Prorrateo Sucursales:'))
                                                         : (isVenezuela ? __('Total a Transferir (Bolívares):') : __('Total a Transferir:'))
                                                     }
                                                 </p>

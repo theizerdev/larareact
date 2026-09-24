@@ -130,4 +130,20 @@ class SubscriptionPlan extends Model
 
         return round($basePrice + $costoSucursalesExtra, 2);
     }
+
+    /**
+     * Calcula el costo prorrateado de sucursales adicionales según los días restantes del ciclo.
+     */
+    public function calcularProrrateoSucursalExtra(int $sucursalesExtra, int $diasRestantes): float
+    {
+        if ($sucursalesExtra <= 0 || $diasRestantes <= 0) {
+            return 0.00;
+        }
+
+        $precioMensualExtra = $this->precio_sucursal_extra_mensual > 0 ? $this->precio_sucursal_extra_mensual : 84.72;
+        // Tarifa diaria considerando mes base estándar de 30 días
+        $tarifaDiaria = $precioMensualExtra / 30;
+
+        return round($sucursalesExtra * $tarifaDiaria * $diasRestantes, 2);
+    }
 }
