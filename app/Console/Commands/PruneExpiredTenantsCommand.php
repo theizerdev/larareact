@@ -130,12 +130,40 @@ class PruneExpiredTenantsCommand extends Command
                 ];
                 File::put($backupFile, json_encode($backupData, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE));
 
-                // 2. Desconectar y liberar instancia de WhatsApp
+                // 2. Desconectar y liberar instancias de WhatsApp de las sucursales
                 try {
-                    $empresaModel = Empresa::withoutGlobalScopes()->find($empresa->id);
-                    if ($empresaModel && $empresaModel->whatsapp_instance) {
-                        $wsService = WhatsAppService::forCompany($empresaModel);
-                        $wsService->disconnect();
+                    $sucursales = DB::table('sucursales')->where('empresa_id', $empresa->id)->get();
+                    foreach ($sucursales as $suc) {
+                        $instanceName = $suc->whatsapp_instance ?: "sucursal_{$suc->id}";
+                        try {
+                            $wsService = WhatsAppService::forCredentials([
+                                'empresa_id' => $empresa->id,
+                                'instance' => $instanceName,
+                            ]);
+                            $wsService->disconnect($instanceName);
+                        } catch (\Throwable $subEx) {
+                            // Continuar con siguientes sucursales
+                        }
+                    }
+
+                    // Intentar también liberar posibles instancias históricas por empresa
+                    $cleanSlug = preg_replace('/[^a-zA-Z0-9_-]/', '', str_replace(['/', ' '], '', strtolower($empresa->nombre_comercial ?: $empresa->razon_social)));
+                    if (! empty($cleanSlug)) {
+                        $legacyNames = [
+                            $cleanSlug . '_' . $empresa->id,
+                            'empresa_' . $empresa->id,
+                        ];
+                        foreach ($legacyNames as $legName) {
+                            try {
+                                $ws = WhatsAppService::forCredentials([
+                                    'empresa_id' => $empresa->id,
+                                    'instance' => $legName,
+                                ]);
+                                $ws->disconnect($legName);
+                            } catch (\Throwable $legEx) {
+                                // Ignorar si no existe
+                            }
+                        }
                     }
                 } catch (\Throwable $we) {
                     Log::warning("No se pudo desconectar WhatsApp para la empresa {$empresa->id}: " . $we->getMessage());
@@ -163,6 +191,9 @@ class PruneExpiredTenantsCommand extends Command
                                 ->orWhereIn('subject_id', $userIds)
                                 ->orWhere('empresa_id', $companyId)
                                 ->delete();
+                        }
+                        if (Schema::hasTable('sessions')) {
+                            DB::table('sessions')->whereIn('user_id', $userIds)->delete();
                         }
                     }
 
