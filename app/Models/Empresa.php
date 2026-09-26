@@ -14,8 +14,6 @@ class Empresa extends Model
 {
     use HasSpanishActivityLog, LogsActivity, Multitenantable;
 
-    protected $connection = 'landlord';
-
     protected $table = 'empresas';
 
     public function getActivitylogOptions(): LogOptions

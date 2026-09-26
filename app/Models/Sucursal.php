@@ -13,8 +13,6 @@ class Sucursal extends Model
 {
     use HasSpanishActivityLog, LogsActivity, Multitenantable;
 
-    protected $connection = 'landlord';
-
     protected $table = 'sucursales';
 
     public function getActivitylogOptions(): LogOptions

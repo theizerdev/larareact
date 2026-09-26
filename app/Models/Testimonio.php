@@ -9,8 +9,6 @@ class Testimonio extends Model
 {
     use HasFactory;
 
-    protected $connection = 'landlord';
-
     protected $table = 'testimonios';
 
     protected $fillable = [

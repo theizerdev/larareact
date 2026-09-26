@@ -6,7 +6,6 @@ use App\Models\Empresa;
 use App\Models\OrdenReparacion;
 use App\Models\OrdenReparacionHistorial;
 use App\Models\Pais;
-use App\Services\Tenancy\TenantManager;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Inertia\Response;

@@ -10,8 +10,6 @@ class SubscriptionPlan extends Model
 {
     use HasFactory;
 
-    protected $connection = 'landlord';
-
     protected $table = 'subscription_plans';
 
     protected $fillable = [

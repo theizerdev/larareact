@@ -39,8 +39,6 @@ use Spatie\Permission\Traits\HasRoles;
  */
 class User extends Authenticatable implements PasskeyUser
 {
-    protected $connection = 'landlord';
-
     protected $fillable = [
         'name',
         'username',
@@ -105,7 +103,7 @@ class User extends Authenticatable implements PasskeyUser
             || $this->hasRole('Super Administrador')
             || $this->hasRole('super-admin')
             || $this->hasRole('Super Admin')
-            || \Illuminate\Support\Facades\DB::connection('landlord')->table('model_has_roles')
+            || \Illuminate\Support\Facades\DB::table('model_has_roles')
                 ->join('roles', 'roles.id', '=', 'model_has_roles.role_id')
                 ->where('model_has_roles.model_id', $this->id)
                 ->whereIn('roles.name', ['Super Administrador', 'super-admin', 'Super Admin'])

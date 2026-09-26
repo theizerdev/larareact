@@ -33,7 +33,7 @@ class CreateWhatsAppInstanceCommand extends Command
         $empresaId = $this->argument('empresa_id');
         $force = (bool) $this->option('force');
 
-        $query = Empresa::on('landlord');
+        $query = Empresa::query();
         if ($empresaId) {
             $empresas = $query->where('id', $empresaId)->get();
             if ($empresas->isEmpty()) {

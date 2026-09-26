@@ -30,10 +30,10 @@ class CreateNewUser implements CreatesNewUsers
             'company_name' => ['required', 'string', 'max:255'],
             'nombre_comercial' => ['nullable', 'string', 'max:255'],
             'representante_legal' => ['required', 'string', 'max:255'],
-            'email' => ['required', 'string', 'email', 'max:255', 'unique:landlord.users,email'],
+            'email' => ['required', 'string', 'email', 'max:255', 'unique:users,email'],
             'password' => $this->passwordRules(),
             'company_phone' => ['nullable', 'string', 'max:255'],
-            'pais_id' => ['nullable', 'exists:landlord.pais,id'],
+            'pais_id' => ['nullable', 'exists:pais,id'],
         ], [
             'company_name.required' => __('El nombre de la empresa es obligatorio.'),
             'representante_legal.required' => __('El nombre del representante legal es obligatorio.'),
@@ -45,7 +45,7 @@ class CreateNewUser implements CreatesNewUsers
         $createdUser = null;
         $otpCode = null;
 
-        $createdUser = DB::connection('landlord')->transaction(function () use ($input, &$createdEmpresa, &$otpCode) {
+        $createdUser = DB::transaction(function () use ($input, &$createdEmpresa, &$otpCode) {
             $phone = $input['company_phone'] ?? ($input['phone'] ?? null);
             $paisId = $input['pais_id'] ?? ($input['pais_telefono_id'] ?? null);
             $nombreComercial = ! empty($input['nombre_comercial']) ? trim($input['nombre_comercial']) : null;
@@ -86,7 +86,7 @@ class CreateNewUser implements CreatesNewUsers
                 'estado' => 'trial',
             ]);
 
-            // 2. Crear Sucursal Principal en landlord
+            // 2. Crear Sucursal Principal
             $sucursal = Sucursal::create([
                 'empresa_id' => $empresa->id,
                 'nombre' => 'Sucursal Principal',
@@ -131,37 +131,36 @@ class CreateNewUser implements CreatesNewUsers
             // 3. Sincronizar rol Administrador exclusivo para la nueva empresa
             setPermissionsTeamId($empresa->id);
 
-            $adminRole = \App\Models\Role::on('landlord')->firstOrCreate([
+            $adminRole = \App\Models\Role::firstOrCreate([
                 'name' => 'Administrador',
                 'guard_name' => 'web',
                 'empresa_id' => $empresa->id,
             ]);
 
-            $permissions = \App\Models\Permission::on('landlord')
-                ->where('name', '!=', 'subscriptions.manage')
+            $permissions = \App\Models\Permission::where('name', '!=', 'subscriptions.manage')
                 ->get();
             
             $adminRole->syncPermissions($permissions);
 
             // Crear roles base adicionales para la empresa (Técnico y Vendedor)
-            $tecnicoRole = \App\Models\Role::on('landlord')->firstOrCreate([
+            $tecnicoRole = \App\Models\Role::firstOrCreate([
                 'name' => 'Técnico',
                 'guard_name' => 'web',
                 'empresa_id' => $empresa->id,
             ]);
-            $tecnicoPermissions = \App\Models\Permission::on('landlord')->whereIn('name', [
+            $tecnicoPermissions = \App\Models\Permission::whereIn('name', [
                 'dashboard.view',
                 'reparaciones.view', 'reparaciones.create', 'reparaciones.edit',
                 'inventario.view', 'clientes.view',
             ])->get();
             $tecnicoRole->syncPermissions($tecnicoPermissions);
 
-            $vendedorRole = \App\Models\Role::on('landlord')->firstOrCreate([
+            $vendedorRole = \App\Models\Role::firstOrCreate([
                 'name' => 'Vendedor',
                 'guard_name' => 'web',
                 'empresa_id' => $empresa->id,
             ]);
-            $vendedorPermissions = \App\Models\Permission::on('landlord')->whereIn('name', [
+            $vendedorPermissions = \App\Models\Permission::whereIn('name', [
                 'dashboard.view',
                 'pos.view', 'pos.create',
                 'clientes.view', 'clientes.create',
@@ -169,13 +168,13 @@ class CreateNewUser implements CreatesNewUsers
             ])->get();
             $vendedorRole->syncPermissions($vendedorPermissions);
 
-            // Asignar rol Administrador en model_has_roles de landlord
-            DB::connection('landlord')->table('model_has_roles')
+            // Asignar rol Administrador en model_has_roles
+            DB::table('model_has_roles')
                 ->where('model_type', get_class($user))
                 ->where('model_id', $user->id)
                 ->delete();
 
-            DB::connection('landlord')->table('model_has_roles')->insert([
+            DB::table('model_has_roles')->insert([
                 'role_id' => $adminRole->id,
                 'model_type' => get_class($user),
                 'model_id' => $user->id,
@@ -195,18 +194,6 @@ class CreateNewUser implements CreatesNewUsers
 
             return $user;
         });
-
-        // 5. Aprovisionamiento asíncrono de la base de datos del tenant
-        if ($createdEmpresa) {
-            $phone = $input['company_phone'] ?? ($input['phone'] ?? null);
-            $paisId = $input['pais_id'] ?? ($input['pais_telefono_id'] ?? null);
-
-            \App\Jobs\ProvisionTenantDatabaseJob::dispatch($createdEmpresa->id, [
-                'telefono' => $phone,
-                'pais_telefono_id' => $paisId,
-                'direccion' => 'Dirección Principal',
-            ]);
-        }
 
         $phone = $input['company_phone'] ?? ($input['phone'] ?? null);
         if ($phone && $createdUser && $createdEmpresa && $otpCode) {
