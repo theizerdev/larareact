@@ -83,12 +83,62 @@ class Sucursal extends Model
             return $this->whatsapp_instance;
         }
 
-        $empresa = $this->empresa;
-        $companyName = $empresa?->nombre_comercial ?: ($empresa?->razon_social ?: '');
-        $cleanSlug = preg_replace('/[^a-zA-Z0-9_-]/', '', str_replace(['/', ' '], '_', strtolower($companyName)));
-        $cleanSlug = trim($cleanSlug, '_');
+        return $this->buildWhatsAppInstanceName();
+    }
 
-        return (! empty($cleanSlug) ? $cleanSlug . '_' : '') . 'sucursal_' . $this->id;
+    /**
+     * Construye un nombre único y limpio para la instancia en el microservicio de WhatsApp
+     * utilizando el nombre de la sucursal y la empresa.
+     */
+    public function buildWhatsAppInstanceName(): string
+    {
+        $empresa = $this->empresa ?? Empresa::find($this->empresa_id);
+        $companyName = $empresa?->nombre_comercial ?: ($empresa?->razon_social ?: '');
+        $cleanCompanySlug = preg_replace('/[^a-z0-9_-]/', '', str_replace(['/', ' '], '_', strtolower($companyName)));
+        $cleanCompanySlug = trim($cleanCompanySlug, '_');
+
+        $branchName = $this->nombre ?: 'sucursal';
+        $cleanBranchSlug = preg_replace('/[^a-z0-9_-]/', '', str_replace(['/', ' '], '_', strtolower($branchName)));
+        $cleanBranchSlug = trim($cleanBranchSlug, '_');
+
+        $suffix = $this->id ? "_{$this->id}" : '';
+
+        if (! empty($cleanCompanySlug) && ! empty($cleanBranchSlug)) {
+            $name = "{$cleanCompanySlug}_{$cleanBranchSlug}{$suffix}";
+        } elseif (! empty($cleanBranchSlug)) {
+            $name = "{$cleanBranchSlug}{$suffix}";
+        } else {
+            $name = "sucursal{$suffix}";
+        }
+
+        return trim(preg_replace('/_+/', '_', $name), '_');
+    }
+
+    /**
+     * Inicializa y registra la instancia de esta sucursal en el microservicio de WhatsApp.
+     */
+    public function createWhatsAppInstanceOnMicroservice(): ?array
+    {
+        if (empty($this->whatsapp_instance)) {
+            $instanceName = $this->buildWhatsAppInstanceName();
+            $this->update([
+                'whatsapp_instance' => $instanceName,
+            ]);
+        } else {
+            $instanceName = $this->whatsapp_instance;
+        }
+
+        try {
+            $empresa = $this->empresa ?? Empresa::find($this->empresa_id);
+            $token = $empresa?->whatsapp_api_key ?? null;
+
+            return \App\Services\WhatsAppService::forSucursal($this)
+                ->setTimeout(5)
+                ->createInstance($instanceName, $token);
+        } catch (\Throwable $e) {
+            \Illuminate\Support\Facades\Log::warning("WhatsApp instance creation warning for sucursal {$this->id}: " . $e->getMessage());
+            return null;
+        }
     }
 
     /**

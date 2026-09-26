@@ -286,8 +286,11 @@ class IntegrationController extends Controller
                 'nombre' => 'Principal',
                 'telefono' => $empresa->telefono ?? null,
                 'direccion' => $empresa->direccion ?? 'Sede Principal',
-                'activo' => true,
+                'status' => true,
+                'whatsapp_status' => 'disconnected',
+                'whatsapp_active' => true,
             ]);
+            $defaultSucursal->createWhatsAppInstanceOnMicroservice();
             $sucursales = collect([$defaultSucursal]);
         }
 

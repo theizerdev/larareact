@@ -98,7 +98,10 @@ class SucursalController extends Controller
         }
 
         try {
-            Sucursal::create($validated);
+            $validated['whatsapp_active'] = $validated['whatsapp_active'] ?? true;
+            $validated['whatsapp_status'] = $validated['whatsapp_status'] ?? 'disconnected';
+            $sucursal = Sucursal::create($validated);
+            $sucursal->createWhatsAppInstanceOnMicroservice();
 
             return back()->with('notification', [
                 'type' => 'success',

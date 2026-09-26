@@ -98,23 +98,8 @@ class CreateNewUser implements CreatesNewUsers
                 'whatsapp_active' => true,
             ]);
 
-            $baseForInstance = $nombreComercial ?: $input['company_name'];
-            $cleanSlug = preg_replace('/[^a-zA-Z0-9_-]/', '', str_replace(['/', ' '], '_', strtolower($baseForInstance)));
-            $cleanSlug = trim($cleanSlug, '_');
-            $cleanInstanceName = (! empty($cleanSlug) ? ($cleanSlug . '_') : '') . 'sucursal_' . $sucursal->id;
-
-            $sucursal->update([
-                'whatsapp_instance' => $cleanInstanceName,
-            ]);
-
-            // Crear instancia inmediatamente en el microservicio de WhatsApp
-            try {
-                WhatsAppService::forBranch($sucursal)
-                    ->setTimeout(4)
-                    ->createInstance($cleanInstanceName, $empresa->whatsapp_api_key);
-            } catch (\Throwable $e) {
-                Log::warning("WhatsApp auto-create instance warning: " . $e->getMessage());
-            }
+            // Crear instancia inmediatamente en el microservicio de WhatsApp a nombre de la sucursal
+            $sucursal->createWhatsAppInstanceOnMicroservice();
 
             // 3. Crear Usuario Administrador asociado a la empresa y sucursal
             $user = User::create([

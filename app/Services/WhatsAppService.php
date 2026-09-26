@@ -69,6 +69,11 @@ class WhatsAppService
         return $service;
     }
 
+    public static function forBranch($sucursal): self
+    {
+        return self::forSucursal($sucursal);
+    }
+
     /**
      * Resuelve las credenciales provistas directamente como array
      */
