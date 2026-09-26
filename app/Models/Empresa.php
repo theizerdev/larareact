@@ -270,8 +270,9 @@ class Empresa extends Model
             return 0;
         }
 
-        $days = (int) $now->diffInDays($sub->fecha_vencimiento, false);
-        if ($days === 0 && $now->lt($sub->fecha_vencimiento)) {
+        $hours = $now->diffInHours($sub->fecha_vencimiento, false);
+        $days = (int) ceil($hours / 24);
+        if ($days <= 0 && $now->lt($sub->fecha_vencimiento)) {
             return 1;
         }
 

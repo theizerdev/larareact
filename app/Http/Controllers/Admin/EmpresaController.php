@@ -70,6 +70,21 @@ class EmpresaController extends Controller
             $empresa->max_sucursales = 1;
             $empresa->save();
 
+            $trialPlan = \App\Models\SubscriptionPlan::where('nombre', 'like', '%Prueba%')->first()
+                ?? \App\Models\SubscriptionPlan::first();
+
+            \App\Models\Subscription::create([
+                'empresa_id' => $empresa->id,
+                'plan_id' => $trialPlan?->id,
+                'nombre_plan' => 'Prueba Gratuita',
+                'ciclo_meses' => 0,
+                'max_sucursales' => 1,
+                'monto_total' => 0.00,
+                'fecha_inicio' => now(),
+                'fecha_vencimiento' => now()->addDays(7),
+                'estado' => 'trial',
+            ]);
+
             $baseForInstance = ! empty($empresa->nombre_comercial) ? $empresa->nombre_comercial : $empresa->razon_social;
             $instanceName = preg_replace('/[^a-zA-Z0-9_-]/', '', str_replace(['/', ' '], '', strtolower($baseForInstance)));
             if (empty($instanceName)) {

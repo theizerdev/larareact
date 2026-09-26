@@ -20,6 +20,9 @@ class CheckSubscriptionStatus
         'admin.subscription.reject',
         'admin.subscription.paypal.create-order',
         'admin.subscription.paypal.capture-order',
+        'verify-whatsapp.index',
+        'verify-whatsapp.verify',
+        'verify-whatsapp.resend',
         'logout',
     ];
 
@@ -43,14 +46,21 @@ class CheckSubscriptionStatus
             return $next($request);
         }
 
-        // 3. Si la ruta actual es una ruta exenta (pantalla de bloqueo, renovación, logout) -> Permitir
+        // 3. Si la ruta actual es una ruta exenta (pantalla de bloqueo, renovación, logout, verificación) -> Permitir
         $currentRoute = $request->route()?->getName();
         if ($currentRoute && in_array($currentRoute, $this->exceptRoutes)) {
             return $next($request);
         }
 
-        // También verificar por sufijos o prefijos de suscripción
-        if ($request->is('subscription/*') || $request->is('admin/subscription/*') || $request->is('admin/monitoring/subscription*') || $request->is('logout')) {
+        // También verificar por sufijos o prefijos de suscripción y verificación de WhatsApp
+        if (
+            $request->is('verify-whatsapp*') ||
+            $request->is('subscription/*') ||
+            $request->is('admin/subscription/*') ||
+            $request->is('admin/monitoring/subscription*') ||
+            $request->is('logout') ||
+            $request->is('locale*')
+        ) {
             return $next($request);
         }
 

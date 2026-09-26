@@ -24,6 +24,9 @@ class EnsureWhatsAppIsVerified
         // Rutas que siempre están permitidas sin verificación previa
         if (
             $request->is('verify-whatsapp*') ||
+            $request->is('subscription/*') ||
+            $request->is('admin/subscription/*') ||
+            $request->is('admin/monitoring/subscription*') ||
             $request->is('logout') ||
             $request->is('login') ||
             $request->is('register') ||
@@ -63,9 +66,14 @@ class EnsureWhatsAppIsVerified
                 ->exists();
 
         if ($isAdmin) {
+            // No forzar vinculación de WhatsApp si la empresa tiene suscripción vencida o si está en rutas de suscripción
+            if ($user->empresa && ! $user->empresa->hasActiveSubscription()) {
+                return $next($request);
+            }
+
             $sucursal = $user->sucursal ?? ($user->empresa?->sucursales()->first());
             if ($sucursal && (bool) $sucursal->whatsapp_active && $sucursal->whatsapp_status !== 'connected') {
-                if (! $request->is('admin/integrations/whatsapp*')) {
+                if (! $request->is('admin/integrations/whatsapp*') && ! $request->is('admin/monitoring/subscription*') && ! $request->is('admin/subscription*')) {
                     session()->flash('notification', [
                         'type' => 'info',
                         'message' => __('Atención: Debe vincular la cuenta de WhatsApp de su sucursal para comenzar a utilizar la plataforma.'),
