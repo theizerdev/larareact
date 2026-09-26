@@ -39,7 +39,7 @@ class ForgotPasswordOtpController extends Controller
     public function sendOtp(Request $request)
     {
         $request->validate([
-            'pais_telefono_id' => 'required|exists:landlord.pais,id',
+            'pais_telefono_id' => 'required|exists:pais,id',
             'telefono' => 'required|string',
         ]);
 
@@ -102,7 +102,7 @@ class ForgotPasswordOtpController extends Controller
     public function verifyOtp(Request $request)
     {
         $request->validate([
-            'pais_telefono_id' => 'required|exists:landlord.pais,id',
+            'pais_telefono_id' => 'required|exists:pais,id',
             'telefono' => 'required|string',
             'otp' => 'required|string|size:6',
         ]);

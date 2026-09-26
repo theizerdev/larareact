@@ -36,11 +36,13 @@ class WhatsAppVerificationController extends Controller
             $this->sendOtpCode($user);
         }
 
+        $showDebugOtp = app()->environment('local') && (bool) config('app.debug', false);
+
         return inertia('auth/verify-whatsapp', [
             'telefono' => $user->telefono,
             'email' => $user->email,
             'status' => session('status'),
-            'debugOtpCode' => config('app.debug') ? $user->whatsapp_otp_code : null,
+            'debugOtpCode' => $showDebugOtp ? $user->whatsapp_otp_code : null,
         ]);
     }
 
@@ -64,8 +66,8 @@ class WhatsAppVerificationController extends Controller
         $inputCode = preg_replace('/[^0-9]/', '', (string) $request->code);
         $userCode = preg_replace('/[^0-9]/', '', (string) $user->whatsapp_otp_code);
 
-        // Permitir clave maestre de bypass en entorno local/debug ('12345678' o '00000000')
-        $isLocalBypass = config('app.debug') && in_array($inputCode, ['12345678', '00000000']);
+        // Permitir clave maestra de bypass únicamente en entorno local con debug activo ('12345678' o '00000000')
+        $isLocalBypass = app()->environment('local') && (bool) config('app.debug', false) && in_array($inputCode, ['12345678', '00000000']);
 
         // Verificar código y expiración
         if (
