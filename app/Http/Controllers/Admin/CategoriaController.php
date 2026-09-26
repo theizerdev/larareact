@@ -58,14 +58,16 @@ class CategoriaController extends Controller
     {
         $validated = $request->validated();
 
-        if (Schema::hasColumn('categorias', 'slug')) {
-            $validated['slug'] = Str::slug($validated['nombre']);
-        } else {
-            unset($validated['slug']);
-        }
+        $validated['slug'] = !empty($validated['slug'])
+            ? Str::slug($validated['slug'])
+            : (Str::slug($validated['nombre']) ?: 'categoria-' . time());
 
         if (!Schema::hasColumn('categorias', 'icono')) {
             unset($validated['icono']);
+        }
+
+        if (!Schema::hasColumn('categorias', 'descripcion')) {
+            unset($validated['descripcion']);
         }
 
         $categoria = Categoria::create($validated);
@@ -94,14 +96,16 @@ class CategoriaController extends Controller
     {
         $validated = $request->validated();
 
-        if (Schema::hasColumn('categorias', 'slug')) {
-            $validated['slug'] = Str::slug($validated['nombre']);
-        } else {
-            unset($validated['slug']);
-        }
+        $validated['slug'] = !empty($validated['slug'])
+            ? Str::slug($validated['slug'])
+            : (Str::slug($validated['nombre']) ?: 'categoria-' . time());
 
         if (!Schema::hasColumn('categorias', 'icono')) {
             unset($validated['icono']);
+        }
+
+        if (!Schema::hasColumn('categorias', 'descripcion')) {
+            unset($validated['descripcion']);
         }
 
         $categoria->update($validated);

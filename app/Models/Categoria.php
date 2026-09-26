@@ -29,6 +29,21 @@ class Categoria extends Model
         'estado' => 'boolean',
     ];
 
+    protected static function booted(): void
+    {
+        static::creating(function ($categoria) {
+            if (empty($categoria->slug) && ! empty($categoria->nombre)) {
+                $categoria->slug = \Illuminate\Support\Str::slug($categoria->nombre) ?: 'categoria-' . time();
+            }
+        });
+
+        static::updating(function ($categoria) {
+            if (empty($categoria->slug) && ! empty($categoria->nombre)) {
+                $categoria->slug = \Illuminate\Support\Str::slug($categoria->nombre) ?: 'categoria-' . time();
+            }
+        });
+    }
+
     public function empresa(): BelongsTo
     {
         return $this->belongsTo(Empresa::class);

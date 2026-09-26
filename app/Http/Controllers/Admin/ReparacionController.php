@@ -1453,7 +1453,9 @@ class ReparacionController extends Controller
         if (!$categoria) {
             $categoria = \App\Models\Categoria::create([
                 'nombre' => 'General',
+                'slug' => 'general',
                 'empresa_id' => $empresaId,
+                'sucursal_id' => $user->sucursal_id,
                 'estado' => true,
             ]);
         }
