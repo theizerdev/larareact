@@ -6,7 +6,8 @@ use Illuminate\Support\Facades\Route;
 Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('/integrations', [IntegrationController::class, 'index'])->name('integrations.index')->can('integrations.view');
 
-    // Página de integración segmentada por especialidad (solo lectura + render, igual que validaciones)
+    // Páginas de integración segmentadas por especialidad (solo lectura + render, igual que validaciones)
+    Route::get('/integrations/reloj-checador', [IntegrationController::class, 'relojChecadorIndex'])->name('integrations.reloj-checador.index')->can('integrations.view');
     Route::get('/integrations/control-acceso', [IntegrationController::class, 'controlAccesoIndex'])->name('integrations.control-acceso.index')->can('integrations.view');
 
     Route::get('/integrations/map', [IntegrationController::class, 'mapboxMap'])->name('integrations.mapbox.map')->can('integrations.view');
@@ -15,6 +16,10 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::put('/integrations/google-maps', [IntegrationController::class, 'updateGoogleMaps'])->name('integrations.google-maps.update')->can('integrations.edit');
     Route::put('/integrations/control-acceso', [IntegrationController::class, 'updateControlAcceso'])->name('integrations.control-acceso.update')->can('integrations.edit');
     Route::post('/integrations/control-acceso/test', [IntegrationController::class, 'controlAccesoTest'])->name('integrations.control-acceso.test')->can('integrations.edit');
+
+    // BioTime PRO (ZKTeco) — configuración de conexión
+    Route::put('/integrations/biotime', [IntegrationController::class, 'updateBioTime'])->name('integrations.biotime.update')->can('integrations.edit');
+    Route::post('/integrations/biotime/test', [IntegrationController::class, 'bioTimeTest'])->name('integrations.biotime.test')->can('integrations.edit');
 
     // WhatsApp Integration Routes
     Route::get('/integrations/whatsapp', [IntegrationController::class, 'whatsappIndex'])->name('integrations.whatsapp.index')->can('whatsapp.view');

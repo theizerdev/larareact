@@ -65,6 +65,9 @@ class PermissionSeeder extends Seeder
                 // Permisos ZapSign (firma electrónica, dentro de Validaciones)
                 'zapsign.view' => 'Ver configuración de ZapSign',
                 'zapsign.manage' => 'Gestionar configuración ZapSign',
+                // Integración BioTime PRO (ZKTeco) — espejo de solo lectura
+                'biotime.view' => 'Ver datos de BioTime (relojes, empleados, marcajes)',
+                'biotime.manage' => 'Sincronizar y vincular datos de BioTime',
                 // Módulo Validaciones (resultados de identidad / KYC de las personas)
                 'validaciones.view' => 'Ver validaciones de identidad',
                 'validaciones.manage' => 'Gestionar / revalidar validaciones',
@@ -175,6 +178,7 @@ class PermissionSeeder extends Seeder
                     str_starts_with($permission, 'whatsapp.') => 'integraciones',
                     str_starts_with($permission, 'jaak.') => 'integraciones',
                     str_starts_with($permission, 'zapsign.') => 'integraciones',
+                    str_starts_with($permission, 'biotime.') => 'integraciones',
                     str_starts_with($permission, 'validaciones.') => 'validaciones',
                     str_starts_with($permission, 'proveedores.') => 'proveedores',
                     str_starts_with($permission, 'productores.') => 'productores',

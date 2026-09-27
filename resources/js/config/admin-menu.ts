@@ -46,6 +46,7 @@ export const ADMIN_MENU_NODES: AdminMenuNode[] = [
     { key: 'reloj_checador.nomina', labelKey: 'Pre-Nómina y Horas Extra', parent: 'reloj_checador' },
     { key: 'reloj_checador.bitacora', labelKey: 'Bitácora de Marcajes', parent: 'reloj_checador' },
     { key: 'reloj_checador.configuracion', labelKey: 'Configuración y Turnos', parent: 'reloj_checador' },
+    { key: 'reloj_checador.biotime', labelKey: 'BioTime PRO', parent: 'reloj_checador' },
 
     // Settings
     { key: 'settings', labelKey: 'Settings' },
@@ -57,6 +58,7 @@ export const ADMIN_MENU_NODES: AdminMenuNode[] = [
     { key: 'integrations', labelKey: 'Integrations' },
     { key: 'integrations.catalog', labelKey: 'Catalog', parent: 'integrations' },
     { key: 'integrations.validations', labelKey: 'Validations', parent: 'integrations' },
+    { key: 'integrations.reloj_checador', labelKey: 'Reloj Checador', parent: 'integrations' },
     { key: 'integrations.control_acceso', labelKey: 'Control de Acceso', parent: 'integrations' },
 
     // Identity Validations
