@@ -452,6 +452,7 @@ class ProcesarKycValidacion implements ShouldQueue
         $val->save();
 
         $this->sincronizarPersona($val);
+        $this->sincronizarOperacion($val);
         $this->notificar($val);
     }
 
@@ -465,6 +466,7 @@ class ProcesarKycValidacion implements ShouldQueue
         $val->save();
 
         $this->sincronizarPersona($val);
+        $this->sincronizarOperacion($val);
         $this->notificar($val);
     }
 
@@ -509,6 +511,20 @@ class ProcesarKycValidacion implements ShouldQueue
             }
         } catch (\Throwable $e) {
             Log::warning('No se pudo sincronizar kyc_estatus en la persona: '.$e->getMessage(), [
+                'kyc_validacion_id' => $val->id,
+            ]);
+        }
+    }
+
+    /**
+     * Recalcula el estatus del folio de operación al que pertenece la validación.
+     */
+    private function sincronizarOperacion(KycValidacion $val): void
+    {
+        try {
+            $val->operacion()->withoutGlobalScopes()->first()?->recalcularEstatus();
+        } catch (\Throwable $e) {
+            Log::warning('No se pudo recalcular el folio de operación: '.$e->getMessage(), [
                 'kyc_validacion_id' => $val->id,
             ]);
         }

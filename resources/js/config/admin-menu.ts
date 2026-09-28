@@ -62,8 +62,9 @@ export const ADMIN_MENU_NODES: AdminMenuNode[] = [
     { key: 'integrations.control_acceso', labelKey: 'Control de Acceso', parent: 'integrations' },
 
     // Identity Validations
-    { key: 'identity_validations', labelKey: 'Identity Validations' },
-    { key: 'identity_validations.list', labelKey: 'Identity Validations', parent: 'identity_validations' },
+    { key: 'identity_validations', labelKey: 'Validation Results' },
+    { key: 'identity_validations.list', labelKey: 'Identity', parent: 'identity_validations' },
+    { key: 'identity_validations.documents', labelKey: 'Documents', parent: 'identity_validations' },
 
     // Security
     { key: 'security', labelKey: 'Security' },

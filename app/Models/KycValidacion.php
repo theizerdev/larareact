@@ -30,6 +30,7 @@ class KycValidacion extends Model
         'validable_id',
         'empresa_id',
         'sucursal_id',
+        'operacion_id',
         'curp_capturada',
         'jaak_environment',
         'jaak_session_id',
@@ -78,6 +79,11 @@ class KycValidacion extends Model
     public function sucursal(): BelongsTo
     {
         return $this->belongsTo(Sucursal::class);
+    }
+
+    public function operacion(): BelongsTo
+    {
+        return $this->belongsTo(OperacionValidacion::class, 'operacion_id');
     }
 
     public function estaFinalizada(): bool

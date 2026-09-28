@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use App\Jobs\ProcesarKycValidacion;
 use App\Models\KycValidacion;
+use App\Models\OperacionValidacion;
 use Illuminate\Http\Request;
 
 class KycValidacionController extends Controller
@@ -21,12 +22,13 @@ class KycValidacionController extends Controller
         ]);
 
         $validaciones = KycValidacion::query()
-            ->with('validable')
+            ->with(['validable', 'operacion'])
             ->when($filtros['estatus'] ?? null, fn ($q, $e) => $q->where('estatus', $e))
             ->when($filtros['q'] ?? null, function ($q, $term) {
                 $q->where(function ($sub) use ($term) {
                     $sub->where('curp_capturada', 'like', "%{$term}%")
-                        ->orWhere('jaak_session_id', 'like', "%{$term}%");
+                        ->orWhere('jaak_session_id', 'like', "%{$term}%")
+                        ->orWhereHas('operacion', fn ($o) => $o->where('folio', 'like', "%{$term}%"));
                 });
             })
             ->latest('id')
@@ -55,17 +57,29 @@ class KycValidacionController extends Controller
             ]);
         }
 
+        // La revalidación se queda en el mismo folio; las validaciones anteriores
+        // al folio abren uno nuevo de tipo revalidación.
+        $operacion = $kycValidacion->operacion
+            ?? OperacionValidacion::abrir(
+                $persona,
+                OperacionValidacion::TIPO_REVALIDACION,
+                OperacionValidacion::ORIGEN_PANEL,
+                $request->user()->id,
+            );
+
         $nueva = KycValidacion::create([
             'validable_type' => $kycValidacion->validable_type,
             'validable_id' => $kycValidacion->validable_id,
             'empresa_id' => $kycValidacion->empresa_id,
             'sucursal_id' => $kycValidacion->sucursal_id,
+            'operacion_id' => $operacion->id,
             'curp_capturada' => $kycValidacion->curp_capturada,
             'jaak_environment' => $kycValidacion->jaak_environment,
             'estatus' => KycValidacion::ESTATUS_PENDIENTE,
         ]);
 
         $persona->forceFill(['kyc_estatus' => KycValidacion::ESTATUS_PENDIENTE])->saveQuietly();
+        $operacion->recalcularEstatus();
 
         ProcesarKycValidacion::dispatch($nueva)->afterResponse();
 
@@ -81,6 +95,8 @@ class KycValidacionController extends Controller
 
         return [
             'id' => $v->id,
+            'folio' => $v->operacion?->folio,
+            'operacion_id' => $v->operacion_id,
             'persona_nombre' => $persona
                 ? trim(($persona->nombres ?? '').' '.($persona->apellidos ?? '')) ?: ('#'.$v->validable_id)
                 : __('(deleted)'),

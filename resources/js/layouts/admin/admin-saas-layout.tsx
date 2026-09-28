@@ -807,14 +807,20 @@ export default function AdminSaasLayout({
                             );
                         })()}
 
-                        {/* Identity Validations Group */}
+                        {/* Validation Results Group */}
                         {isMenuVisible('identity_validations') && (() => {
                             const validacionesItems = [
                                 {
-                                    title: 'Identity Validations',
+                                    title: 'Identity',
                                     href: '/admin/validaciones',
                                     permission: 'validaciones.view',
                                     key: 'identity_validations.list',
+                                },
+                                {
+                                    title: 'Documents',
+                                    href: '/admin/validaciones/documentos',
+                                    permission: 'validaciones.view',
+                                    key: 'identity_validations.documents',
                                 },
                             ].filter(item => hasPermission(item.permission) && isMenuVisible(item.key));
 
@@ -823,7 +829,7 @@ export default function AdminSaasLayout({
                             return (
                                 <div className="pt-2">
                                     <CollapsibleNavItem
-                                        title="Identity Validations"
+                                        title="Validation Results"
                                         icon={ShieldCheck}
                                         collapsed={collapsed}
                                         items={validacionesItems}

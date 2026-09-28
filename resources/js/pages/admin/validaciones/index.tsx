@@ -1,4 +1,4 @@
-import { Head, router } from '@inertiajs/react';
+import { Head, Link, router } from '@inertiajs/react';
 import { ShieldCheck, RefreshCw, ChevronDown, Search } from 'lucide-react';
 import React, { useState } from 'react';
 import Swal from 'sweetalert2';
@@ -11,6 +11,8 @@ import { useTranslate } from '@/hooks/use-translate';
 
 interface Validacion {
     id: number;
+    folio: string | null;
+    operacion_id: number | null;
     persona_nombre: string;
     persona_tipo: string;
     curp_capturada: string | null;
@@ -125,7 +127,7 @@ export default function KycValidaciones({ validaciones, filtros, puede_revalidar
                                     value={q}
                                     onChange={(e) => setQ(e.target.value)}
                                     onKeyDown={(e) => e.key === 'Enter' && aplicar({})}
-                                    placeholder={__('Search by CURP...')}
+                                    placeholder={__('Search by CURP or folio...')}
                                     className="h-9 w-48"
                                 />
                                 <Button size="sm" variant="outline" onClick={() => aplicar({})}>
@@ -151,6 +153,7 @@ export default function KycValidaciones({ validaciones, filtros, puede_revalidar
                             <table className="w-full text-sm">
                                 <thead>
                                     <tr className="border-b text-left text-xs uppercase tracking-wide text-muted-foreground">
+                                        <th className="py-2 pr-3">{__('Folio')}</th>
                                         <th className="py-2 pr-3">{__('Name')}</th>
                                         <th className="py-2 pr-3">{__('Type')}</th>
                                         <th className="py-2 pr-3">{__('KYC Status')}</th>
@@ -162,7 +165,7 @@ export default function KycValidaciones({ validaciones, filtros, puede_revalidar
                                 <tbody>
                                     {validaciones.data.length === 0 && (
                                         <tr>
-                                            <td colSpan={6} className="py-8 text-center text-muted-foreground">
+                                            <td colSpan={7} className="py-8 text-center text-muted-foreground">
                                                 {__('No identity validation has been run for this person yet.')}
                                             </td>
                                         </tr>
@@ -173,6 +176,15 @@ export default function KycValidaciones({ validaciones, filtros, puede_revalidar
                                         return (
                                             <React.Fragment key={v.id}>
                                                 <tr className="border-b last:border-0">
+                                                    <td className="py-2 pr-3 font-mono text-xs">
+                                                        {v.folio && v.operacion_id ? (
+                                                            <Link href={`/admin/validaciones/operaciones/${v.operacion_id}`} className="text-teal-700 hover:underline dark:text-teal-400">
+                                                                {v.folio}
+                                                            </Link>
+                                                        ) : (
+                                                            '—'
+                                                        )}
+                                                    </td>
                                                     <td className="py-2 pr-3 font-medium">
                                                         {v.persona_nombre}
                                                         {v.curp_capturada && (
@@ -195,7 +207,7 @@ export default function KycValidaciones({ validaciones, filtros, puede_revalidar
                                                 </tr>
                                                 {open && (
                                                     <tr className="bg-muted/30">
-                                                        <td colSpan={6} className="p-4">
+                                                        <td colSpan={7} className="p-4">
                                                             <div className="flex flex-wrap gap-2">
                                                                 <TriBadge label="CURP valid" value={v.curp_valida} />
                                                                 <TriBadge label="ID document valid" value={v.ine_valida} />
